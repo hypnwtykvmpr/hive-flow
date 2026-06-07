@@ -4,7 +4,7 @@ Spawn agents in the swarm.
 
 ## Usage
 ```bash
-npx hive-flow swarm spawn [options]
+hive-flow swarm spawn [options]
 ```
 
 ## Options
@@ -14,6 +14,6 @@ npx hive-flow swarm spawn [options]
 
 ## Examples
 ```bash
-npx hive-flow swarm spawn --type coder --count 3
-npx hive-flow swarm spawn --type researcher --capabilities "web-search,analysis"
+hive-flow swarm spawn --type coder --count 3
+hive-flow swarm spawn --type researcher --capabilities "web-search,analysis"
 ```

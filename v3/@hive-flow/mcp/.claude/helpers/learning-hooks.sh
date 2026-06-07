@@ -39,8 +39,8 @@ session_start() {
 
   # Check if better-sqlite3 is available
   if ! npm list better-sqlite3 --prefix "$PROJECT_ROOT" >/dev/null 2>&1; then
-    log "Installing better-sqlite3..."
-    npm install --prefix "$PROJECT_ROOT" better-sqlite3 --save-dev --silent 2>/dev/null || true
+    warn "better-sqlite3 not available; skipping learning initialization"
+    return 0
   fi
 
   # Initialize learning service

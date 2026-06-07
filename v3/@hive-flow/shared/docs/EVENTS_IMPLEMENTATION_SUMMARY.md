@@ -333,7 +333,7 @@ await eventStore.append(
 npm test -- event-store.test.ts
 
 # Run example
-npx tsx v3/@hive-flow/shared/src/events/example-usage.ts
+tsx v3/@hive-flow/shared/src/events/example-usage.ts
 ```
 
 ## Next Steps

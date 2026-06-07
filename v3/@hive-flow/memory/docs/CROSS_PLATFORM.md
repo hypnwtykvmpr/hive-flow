@@ -338,7 +338,6 @@ async function getAvailableProviders(): Promise<{
 ### All Platforms
 
 ```bash
-npm install @hive-flow/memory
 ```
 
 Dependencies are installed automatically:
@@ -351,7 +350,6 @@ If you encounter compilation errors with `better-sqlite3`:
 
 ```bash
 # Skip better-sqlite3 compilation
-npm install @hive-flow/memory --no-optional
 
 # The module will automatically use sql.js
 ```
@@ -368,7 +366,6 @@ sudo apt-get install libsqlite3-dev
 sudo yum install sqlite-devel
 
 # Then install
-npm install @hive-flow/memory
 ```
 
 ## Troubleshooting
@@ -478,7 +475,6 @@ RUN apk add --no-cache sqlite-dev python3 make g++
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
 
 # Will use better-sqlite3 if compilation succeeds,
 # otherwise falls back to sql.js automatically

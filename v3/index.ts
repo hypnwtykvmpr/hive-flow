@@ -185,7 +185,6 @@ export const V3_INFO = {
   name: 'hive-flow',
   version: V3_VERSION.full,
   description: 'Complete reimagining of Hive-Flow with 15-agent hierarchical mesh swarm',
-  repository: 'https://github.com/hypnwtykvmpr/hive-flow',
   license: 'MIT',
   engines: {
     node: '>=20.0.0'

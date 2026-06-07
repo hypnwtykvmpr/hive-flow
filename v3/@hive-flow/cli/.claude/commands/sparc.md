@@ -66,20 +66,20 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Run SPARC orchestrator (default)
-npx hive-flow sparc "build complete authentication system"
+hive-flow sparc "build complete authentication system"
 
 # Run a specific mode
-npx hive-flow sparc run architect "design API structure"
-npx hive-flow sparc run tdd "implement user service"
+hive-flow sparc run architect "design API structure"
+hive-flow sparc run tdd "implement user service"
 
 # Execute full TDD workflow
-npx hive-flow sparc tdd "implement user authentication"
+hive-flow sparc tdd "implement user authentication"
 
 # List all modes with details
-npx hive-flow sparc modes --verbose
+hive-flow sparc modes --verbose
 
 # For alpha features
-npx hive-flow@alpha sparc run <mode> "your task"
+hive-flow sparc run <mode> "your task"
 ```
 
 ### Option 3: Local Installation
@@ -121,7 +121,7 @@ mcp__hive-flow__memory_usage {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store specifications
-npx hive-flow memory store "spec_auth" "OAuth2 + JWT requirements" --namespace spec
+hive-flow memory store "spec_auth" "OAuth2 + JWT requirements" --namespace spec
 
 # Store architectural decisions
 ./hive-flow memory store "arch_api" "RESTful microservices design" --namespace arch

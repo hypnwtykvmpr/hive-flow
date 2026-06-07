@@ -36,7 +36,6 @@ services:
       dockerfile: docker/Dockerfile
     environment:
       - NODE_ENV=test
-      - TEST_URL=http://test-server:3000
     depends_on:
       - test-server
     command: npm run test:e2e

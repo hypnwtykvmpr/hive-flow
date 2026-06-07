@@ -115,7 +115,6 @@
   },
   "attribution": {
     "commit": "Co-Authored-By: hive-flow <noreply@hive-flow.invalid>",
-    "pr": "Generated with [hive-flow](https://github.com/hypnwtykvmpr/hive-flow)"
   },
   "hiveFlow": {
     "version": "3.1.0",

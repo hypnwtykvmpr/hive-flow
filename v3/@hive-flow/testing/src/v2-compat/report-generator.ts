@@ -288,12 +288,12 @@ function generateExamplesSection(): string[] {
   lines.push('');
   lines.push('```bash');
   lines.push('# V2 (deprecated but supported)');
-  lines.push('npx hive-flow hive-mind init');
-  lines.push('npx hive-flow hive-mind status');
+  lines.push('hive-flow hive-mind init');
+  lines.push('hive-flow hive-mind status');
   lines.push('');
   lines.push('# V3 (recommended)');
-  lines.push('npx @hive-flow/cli swarm init');
-  lines.push('npx @hive-flow/cli swarm status');
+  lines.push('hive-flow swarm init');
+  lines.push('hive-flow swarm status');
   lines.push('```');
   lines.push('');
 
@@ -357,13 +357,13 @@ function generateMigrationScriptsSection(): string[] {
   lines.push('');
   lines.push('```bash');
   lines.push('# Run the V3 migration tool');
-  lines.push('npx @hive-flow/cli migrate --from v2 --to v3');
+  lines.push('hive-flow migrate --from v2 --to v3');
   lines.push('');
   lines.push('# Migrate configuration');
-  lines.push('npx @hive-flow/cli migrate config --input .hive-flow/config.yaml');
+  lines.push('hive-flow migrate config --input .hive-flow/config.yaml');
   lines.push('');
   lines.push('# Migrate memory database');
-  lines.push('npx @hive-flow/cli migrate memory --input .hive-flow/memory.db');
+  lines.push('hive-flow migrate memory --input .hive-flow/memory.db');
   lines.push('```');
   lines.push('');
 

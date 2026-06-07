@@ -150,7 +150,7 @@ async function initCodexAction(
     // Handle module not found error gracefully
     if (errorMessage.includes('Cannot find module') || errorMessage.includes('@hive-flow/codex')) {
       output.printError('The @hive-flow/codex package is not installed.');
-      output.printInfo('Install it with: npm install @hive-flow/codex');
+      output.printInfo('Install @hive-flow/codex with your configured package manager.');
       output.writeln();
       output.printInfo('Alternatively, copy skills manually from .claude/skills/ to .agents/skills/');
     } else {
@@ -329,7 +329,7 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
       if (startAll) {
         try {
           output.writeln(output.dim('  Initializing memory database...'));
-          execSync('npx @hive-flow/cli@latest memory init 2>/dev/null', {
+          execSync('hive-flow memory init 2>/dev/null', {
             stdio: 'pipe',
             cwd: ctx.cwd,
             timeout: 30000
@@ -344,7 +344,7 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
       if (startDaemon) {
         try {
           output.writeln(output.dim('  Starting daemon...'));
-          execSync('npx @hive-flow/cli@latest daemon start 2>/dev/null &', {
+          execSync('hive-flow daemon start 2>/dev/null &', {
             stdio: 'pipe',
             cwd: ctx.cwd,
             timeout: 10000
@@ -359,7 +359,7 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
       if (startAll) {
         try {
           output.writeln(output.dim('  Initializing swarm...'));
-          execSync('npx @hive-flow/cli@latest swarm init --topology hierarchical 2>/dev/null', {
+          execSync('hive-flow swarm init --topology hierarchical 2>/dev/null', {
             stdio: 'pipe',
             cwd: ctx.cwd,
             timeout: 30000

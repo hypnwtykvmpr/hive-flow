@@ -2,12 +2,9 @@
 
 > **WASM-Accelerated Bridge to Steve Yegge's Gas Town Multi-Agent Orchestrator**
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-gastown-bridge.svg)](https://www.npmjs.com/package/@hive-flow/plugin-gastown-bridge)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Introduction
 
-The **Gas Town Bridge Plugin** brings Steve Yegge's powerful [Gas Town](https://github.com/steveyegge/gastown) multi-agent orchestrator to Hive Flow V3. Gas Town introduces battle-tested concepts for durable workflow execution that complement Hive Flow's swarm intelligence.
 
 ### What is Gas Town?
 
@@ -26,7 +23,7 @@ Gas Town is a 75,000-line Go codebase that implements:
 | Gas Town is Go-only | CLI bridge wraps `gt` and `bd` commands |
 | Go can't compile to WASM (syscalls) | Hybrid architecture: CLI for I/O, WASM for compute |
 | Formula parsing is slow in JS | Rust→WASM provides **352x speedup** |
-| Graph operations bottleneck | WASM DAG ops are **150x faster** |
+| Graph operations bottleneck | WASM DAG ops are **optimized faster** |
 
 ## Features
 
@@ -37,10 +34,10 @@ Gas Town is a 75,000-line Go codebase that implements:
 | Formula parse (TOML→AST) | 53ms | 0.15ms | **352x** |
 | Variable cooking | 35ms | 0.1ms | **350x** |
 | Batch cook (10 formulas) | 350ms | 1ms | **350x** |
-| DAG topological sort | 75ms | 0.5ms | **150x** |
-| Cycle detection | 45ms | 0.3ms | **150x** |
-| Critical path analysis | 120ms | 0.8ms | **150x** |
-| Pattern search (HNSW) | 5000ms | 5ms | **1000x-12500x** |
+| DAG topological sort | 75ms | 0.5ms | **optimized** |
+| Cycle detection | 45ms | 0.3ms | **optimized** |
+| Critical path analysis | 120ms | 0.8ms | **optimized** |
+| Pattern search (HNSW) | 5000ms | 5ms | **optimized** |
 
 ### 🔗 20 MCP Tools
 
@@ -103,7 +100,7 @@ Seamlessly sync between Gas Town's Beads and Hive Flow's AgentDB:
 | Metric | Pure JavaScript | This Plugin (WASM) | Improvement |
 |--------|-----------------|-------------------|-------------|
 | Formula parse | 53ms | 0.15ms | 352x faster |
-| 100-node DAG sort | 75ms | 0.5ms | 150x faster |
+| 100-node DAG sort | 75ms | 0.5ms | optimized faster |
 | Pattern search (10k) | 5000ms | 5ms | 1000x faster |
 | Memory usage | 48MB | 12MB | 4x reduction |
 | Startup time | 850ms | 120ms | 7x faster |
@@ -121,13 +118,11 @@ Seamlessly sync between Gas Town's Beads and Hive Flow's AgentDB:
 
 ```bash
 # Install via Hive Flow CLI (recommended)
-npx hive-flow@latest plugins install -n @hive-flow/plugin-gastown-bridge
+hive-flow plugins install -n @hive-flow/plugin-gastown-bridge
 
 # Or install directly via npm
-npm install @hive-flow/plugin-gastown-bridge
 
 # Prerequisites: Gas Town and Beads CLI (optional - for full CLI integration)
-# See: https://github.com/steveyegge/gastown
 go install github.com/steveyegge/gastown/cmd/gt@latest
 go install github.com/steveyegge/beads/cmd/bd@latest
 ```
@@ -200,7 +195,7 @@ const ast = await plugin.tools.gt_wasm_parse_formula({
   `,
 });
 
-// Resolve dependencies (150x faster)
+// Resolve dependencies (optimized faster)
 const sorted = await plugin.tools.gt_wasm_resolve_deps({
   beads: beadList,
   action: 'topo_sort',
@@ -212,7 +207,7 @@ const cooked = await plugin.tools.gt_wasm_cook_batch({
   vars: [{ env: 'prod' }, { env: 'staging' }],
 });
 
-// Find similar patterns (1000x-12500x faster)
+// Find similar patterns (optimized faster)
 const matches = await plugin.tools.gt_wasm_match_pattern({
   query: 'authentication flow',
   candidates: formulaNames,
@@ -408,7 +403,7 @@ console.log(`Completed: ${status.completed}/${status.total}`);
 ### Optimizing Convoy Execution (WASM)
 
 ```typescript
-// Get optimal execution order (150x faster with WASM)
+// Get optimal execution order (optimized faster with WASM)
 const optimized = await hiveFlow.mcp.call('gt_wasm_optimize_convoy', {
   convoy_id: convoy.id,
   strategy: 'parallel', // or 'serial', 'hybrid'
@@ -587,7 +582,6 @@ interface GasTownBridgeConfig {
 
 ### Tool Reference
 
-See [MCP Tools Documentation](./docs/mcp-tools.md) for complete API reference.
 
 ## Architecture
 
@@ -598,10 +592,10 @@ See [MCP Tools Documentation](./docs/mcp-tools.md) for complete API reference.
 │                                                                      │
 │  ┌─────────────────────┐    ┌─────────────────────────────────────┐ │
 │  │    CLI Bridge       │    │         WASM Computation Layer       │ │
-│  │  (I/O Operations)   │    │           (352x faster)              │ │
+│  │  (I/O Operations)   │    │             (optimized)              │ │
 │  │                     │    │                                      │ │
 │  │  • gt commands      │    │  ┌──────────────┐ ┌──────────────┐  │ │
-│  │  • bd commands      │    │  │ gastown-     │ │ ruvector-    │  │ │
+│  │  • bd commands      │    │  │ gastown-     │ │ gastown-     │  │ │
 │  │  • File read/write  │    │  │ formula-wasm │ │ gnn-wasm     │  │ │
 │  │  • SQLite queries   │    │  │              │ │              │  │ │
 │  │                     │    │  │ • TOML parse │ │ • DAG ops    │  │ │
@@ -613,7 +607,7 @@ See [MCP Tools Documentation](./docs/mcp-tools.md) for complete API reference.
 │                             │                   └──────────────┘  │ │
 │                             │                                      │ │
 │                             │  ┌──────────────┐ ┌──────────────┐  │ │
-│                             │  │ micro-hnsw-  │ │ ruvector-    │  │ │
+│                             │  │ micro-hnsw-  │ │ gastown-     │  │ │
 │                             │  │ wasm         │ │ learning-wasm│  │ │
 │                             │  │              │ │              │  │ │
 │                             │  │ • Pattern    │ │ • SONA       │  │ │
@@ -630,15 +624,9 @@ See [MCP Tools Documentation](./docs/mcp-tools.md) for complete API reference.
 
 ## Related Resources
 
-- [Gas Town GitHub](https://github.com/steveyegge/gastown)
-- [Beads GitHub](https://github.com/steveyegge/beads)
-- [Welcome to Gas Town (Steve Yegge)](https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04)
-- [ADR-043: Gas Town Bridge Plugin](../implementation/adrs/ADR-043-gastown-bridge-plugin.md)
-- [ADR-042: Gas Town Analysis](../implementation/adrs/ADR-042-gas-town-analysis.md)
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 

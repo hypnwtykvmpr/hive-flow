@@ -628,8 +628,6 @@ enabled = true
 
 ## 📚 SUPPORT
 
-- Docs: https://github.com/ruvnet/hive-flow
-- Issues: https://github.com/ruvnet/hive-flow/issues
 
 **Remember: Codex executes, hive-flow orchestrates!**
 
@@ -795,7 +793,7 @@ S3 Fix all 5 PR2 blockers in Graphify's schema-aware loader and stable edge iden
 604 " 🔵 Independent Verification Task: Provider-Auth Fixes in hive-flow
 605 6:01p 🔵 Sentinel Protocol Live-Test for Agent-Task-Rewake Hook
 ### Jun 1, 2026
-606 12:53a ✅ hive-flow README Accuracy Edits: Remove Stale RuVector Product References
+606 12:53a ✅ hive-flow README Accuracy Edits: Remove Stale Hive Flow vector Product References
 608 1:10a 🔵 hive-flow README Contains Multiple Verified Stale Performance Claims
 614 1:01p ✅ Graphify Fork Rebased and Published onto Upstream v8
 615 " 🔵 Hive Flow Tools Require Execution from Hive Flow Repo

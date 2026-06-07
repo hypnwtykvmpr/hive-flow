@@ -1,8 +1,5 @@
 # @hive-flow/plugin-code-intelligence
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-code-intelligence.svg)](https://www.npmjs.com/package/@hive-flow/plugin-code-intelligence)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-code-intelligence.svg)](https://www.npmjs.com/package/@hive-flow/plugin-code-intelligence)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A comprehensive code intelligence plugin combining graph neural networks for code structure analysis with ultra-fast vector search for semantic code similarity. The plugin enables dead code detection, API surface analysis, refactoring impact prediction, and architectural drift monitoring while integrating seamlessly with existing IDE workflows.
 
@@ -19,13 +16,12 @@ A comprehensive code intelligence plugin combining graph neural networks for cod
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-code-intelligence
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-code-intelligence
+hive-flow plugins install --name @hive-flow/plugin-code-intelligence
 ```
 
 ## Quick Start
@@ -340,7 +336,7 @@ const rateLimits = {
 
 ## Dependencies
 
-- `micro-hnsw-wasm`: Semantic code search and clone detection (150x faster)
+- `micro-hnsw-wasm`: Semantic code search and clone detection (optimized faster)
 - `local-gnn-wasm`: Code dependency graphs, call graphs, and control flow analysis
 - `local-mincut-wasm`: Module boundary detection and optimal code splitting
 - `sona`: Self-optimizing learning from code review patterns

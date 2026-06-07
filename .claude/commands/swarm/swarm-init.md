@@ -4,7 +4,7 @@ Initialize a new swarm with specified topology.
 
 ## Usage
 ```bash
-npx hive-flow swarm init [options]
+hive-flow swarm init [options]
 ```
 
 ## Options
@@ -14,6 +14,6 @@ npx hive-flow swarm init [options]
 
 ## Examples
 ```bash
-npx hive-flow swarm init --topology mesh
-npx hive-flow swarm init --topology hierarchical --max-agents 8
+hive-flow swarm init --topology mesh
+hive-flow swarm init --topology hierarchical --max-agents 8
 ```

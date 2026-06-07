@@ -11,7 +11,7 @@ Monitor agent health status, resource usage, and detect issues.
 ## Usage
 
 ```bash
-npx hive-flow agent health [agent-id] [options]
+hive-flow agent health [agent-id] [options]
 ```
 
 ## Options
@@ -26,19 +26,19 @@ npx hive-flow agent health [agent-id] [options]
 
 ```bash
 # Overall health check
-npx hive-flow agent health
+hive-flow agent health
 
 # Specific agent health
-npx hive-flow agent health coder-lx7m9k2
+hive-flow agent health coder-lx7m9k2
 
 # Continuous monitoring
-npx hive-flow agent health --watch
+hive-flow agent health --watch
 
 # Custom interval
-npx hive-flow agent health -w -i 10
+hive-flow agent health -w -i 10
 
 # JSON output
-npx hive-flow agent health --format json
+hive-flow agent health --format json
 ```
 
 ## Output
@@ -99,7 +99,7 @@ Recommendations
 Continuous monitoring with real-time updates:
 
 ```bash
-npx hive-flow agent health --watch
+hive-flow agent health --watch
 
 # Output updates every 5 seconds:
 # [10:30:15] Agent Health: 3 healthy, 0 warning, 0 critical
@@ -134,6 +134,6 @@ Press `Ctrl+C` to stop watching.
 
 ## Related Commands
 
-- `npx hive-flow agent status` - Detailed agent info
-- `npx hive-flow agent metrics` - Performance metrics
-- `npx hive-flow doctor` - System-wide health
+- `hive-flow agent status` - Detailed agent info
+- `hive-flow agent metrics` - Performance metrics
+- `hive-flow doctor` - System-wide health

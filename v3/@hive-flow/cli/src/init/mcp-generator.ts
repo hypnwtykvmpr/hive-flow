@@ -116,18 +116,18 @@ export function generateMCPCommands(options: InitOptions): string[] {
 
   if (isWindows()) {
     if (config.hiveFlow) {
-      commands.push('claude mcp add hive-flow -- cmd /c npx -y @hive-flow/cli@latest mcp start');
+      commands.push('claude mcp add hive-flow -- cmd /c hive-flow mcp start');
     }
     if (config.flowNexus) {
-      commands.push('claude mcp add flow-nexus -- cmd /c npx -y flow-nexus@latest mcp start');
+      commands.push('claude mcp add flow-nexus -- cmd /c flow-nexus mcp start');
     }
   } else {
     // Unix: wrap with retry-on-failure for cache corruption resilience
     if (config.hiveFlow) {
-      commands.push("claude mcp add hive-flow -- npx -y @hive-flow/cli@latest mcp start");
+      commands.push("claude mcp add hive-flow -- hive-flow mcp start");
     }
     if (config.flowNexus) {
-      commands.push("claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start");
+      commands.push("claude mcp add flow-nexus -- flow-nexus mcp start");
     }
   }
 

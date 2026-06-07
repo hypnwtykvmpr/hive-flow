@@ -11,7 +11,7 @@ Display comprehensive performance metrics for agents including V3 performance ga
 ## Usage
 
 ```bash
-npx hive-flow agent metrics [agent-id] [options]
+hive-flow agent metrics [agent-id] [options]
 ```
 
 ## Options
@@ -25,19 +25,19 @@ npx hive-flow agent metrics [agent-id] [options]
 
 ```bash
 # Overall metrics for last 24 hours
-npx hive-flow agent metrics
+hive-flow agent metrics
 
 # Metrics for specific agent
-npx hive-flow agent metrics coder-lx7m9k2
+hive-flow agent metrics coder-lx7m9k2
 
 # Last hour
-npx hive-flow agent metrics -p 1h
+hive-flow agent metrics -p 1h
 
 # Last 7 days
-npx hive-flow agent metrics --period 7d
+hive-flow agent metrics --period 7d
 
 # JSON output
-npx hive-flow agent metrics --format json
+hive-flow agent metrics --format json
 ```
 
 ## Output
@@ -117,6 +117,6 @@ V3 Performance Gains
 
 ## Related Commands
 
-- `npx hive-flow agent status` - Individual agent metrics
-- `npx hive-flow performance benchmark` - Full performance suite
-- `npx hive-flow status` - System-wide status
+- `hive-flow agent status` - Individual agent metrics
+- `hive-flow performance benchmark` - Full performance suite
+- `hive-flow status` - System-wide status

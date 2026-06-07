@@ -24,7 +24,7 @@ mcp__hive-flow__task_orchestrate({
 ```
 
 ### Using CLI (Fallback)
-`npx hive-flow swarm "update dependencies" --strategy maintenance`
+`hive-flow swarm "update dependencies" --strategy maintenance`
 
 ## Agent Roles
 

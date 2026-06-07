@@ -12,7 +12,7 @@ const installAttempts = new Set<string>();
 
 export interface AutoInstallOptions {
   /**
-   * Timeout in milliseconds for npm install (default: 60000)
+   * Timeout in milliseconds for install dependencies (default: 60000)
    */
   timeout?: number;
 

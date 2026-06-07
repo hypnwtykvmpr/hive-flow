@@ -658,7 +658,7 @@ const createCommand: Command = {
       ``,
       `Next steps:`,
       `  cd ${name}`,
-      `  npm install`,
+      `  install dependencies`,
       `  npm run build`,
     ].join('\n'), 'Success');
 

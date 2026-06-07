@@ -265,7 +265,7 @@ const cveCommand: Command = {
         ``,
         `References:`,
         `  - https://nvd.nist.gov/vuln/detail/${checkCve}`,
-        `  - https://github.com/advisories`,
+        `  - GitHub Security Advisory Database`,
       ].join('\n'), 'CVE Details');
     } else {
       output.writeln(output.warning('⚠ No real CVE database configured. Showing example data.'));
@@ -454,7 +454,7 @@ const defendCommand: Command = {
       const aidefence = await import('@hive-flow/aidefence');
       createAIDefence = aidefence.createAIDefence;
     } catch {
-      output.error('AIDefence package not installed. Run: npm install @hive-flow/aidefence');
+      output.error('AIDefence package not installed. Install @hive-flow/aidefence with your configured package manager.');
       return { success: false, message: 'AIDefence not available' };
     }
 

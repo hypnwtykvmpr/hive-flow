@@ -4,7 +4,7 @@ Execute saved workflows.
 
 ## Usage
 ```bash
-npx hive-flow workflow execute [options]
+hive-flow workflow execute [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow workflow execute [options]
 ## Examples
 ```bash
 # Execute workflow
-npx hive-flow workflow execute --name "deploy-api"
+hive-flow workflow execute --name "deploy-api"
 
 # With parameters
-npx hive-flow workflow execute --name "test-suite" --params '{"env": "staging"}'
+hive-flow workflow execute --name "test-suite" --params '{"env": "staging"}'
 
 # Dry run
-npx hive-flow workflow execute --name "deploy-api" --dry-run
+hive-flow workflow execute --name "deploy-api" --dry-run
 ```

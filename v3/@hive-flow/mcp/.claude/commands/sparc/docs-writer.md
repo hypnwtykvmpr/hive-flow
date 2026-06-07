@@ -32,16 +32,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run docs-writer "create API documentation"
+hive-flow sparc run docs-writer "create API documentation"
 
 # For alpha features
-npx hive-flow@alpha sparc run docs-writer "create API documentation"
+hive-flow sparc run docs-writer "create API documentation"
 
 # With namespace
-npx hive-flow sparc run docs-writer "your task" --namespace docs-writer
+hive-flow sparc run docs-writer "your task" --namespace docs-writer
 
 # Non-interactive mode
-npx hive-flow sparc run docs-writer "your task" --non-interactive
+hive-flow sparc run docs-writer "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -73,8 +73,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "docs-writer_context" "important decisions" --namespace docs-writer
+hive-flow memory store "docs-writer_context" "important decisions" --namespace docs-writer
 
 # Query previous work
-npx hive-flow memory query "docs-writer" --limit 5
+hive-flow memory query "docs-writer" --limit 5
 ```

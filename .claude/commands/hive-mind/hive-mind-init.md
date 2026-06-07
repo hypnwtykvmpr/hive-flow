@@ -4,7 +4,7 @@ Initialize the Hive Mind collective intelligence system.
 
 ## Usage
 ```bash
-npx hive-flow hive-mind init [options]
+hive-flow hive-mind init [options]
 ```
 
 ## Options
@@ -13,6 +13,6 @@ npx hive-flow hive-mind init [options]
 
 ## Examples
 ```bash
-npx hive-flow hive-mind init
-npx hive-flow hive-mind init --force
+hive-flow hive-mind init
+hive-flow hive-mind init --force
 ```

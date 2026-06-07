@@ -22,5 +22,5 @@ Complete guide to all 54 available agent types in Hive Flow.
 
 For full list and details:
 ```bash
-npx hive-flow agents list
+hive-flow agents list
 ```

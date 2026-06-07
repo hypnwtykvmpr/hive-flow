@@ -22,7 +22,6 @@ This skill provides professional pair programming capabilities with AI assistanc
 ## Prerequisites
 
 **Required:**
-- Hive Flow CLI installed (`npm install -g hive-flow@alpha`)
 - Git repository (optional but recommended)
 
 **Recommended:**

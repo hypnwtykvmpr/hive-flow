@@ -805,7 +805,7 @@ export const agentTools: MCPTool[] = [
           const { execFileSync } = await import('node:child_process');
           try { execFileSync('which', ['cursor-agent'], { stdio: 'pipe' }); } catch {
             try { execFileSync('which', ['cursor'], { stdio: 'pipe' });
-              response.warning = 'Only Cursor IDE launcher found (not cursor-agent). The \'agent\' subcommand will be prepended automatically, but installing cursor-agent is recommended for reliable headless execution. See: https://docs.cursor.com/agent';
+              response.warning = 'Only Cursor IDE launcher found (not cursor-agent). The \'agent\' subcommand will be prepended automatically, but installing cursor-agent is recommended for reliable headless execution. See: Cursor Agent documentation';
             } catch { /* neither found — spawn already succeeded, don't add noise */ }
           }
         } catch { /* import failure — skip guard */ }

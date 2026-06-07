@@ -58,8 +58,6 @@ export const pluginMetadata = {
   author: 'Hive Flow Team',
   category: 'code-intelligence',
   keywords: ['code', 'intelligence', 'semantic-search', 'architecture', 'refactoring'],
-  homepage: 'https://github.com/ruvnet/hive-flow',
-  repository: 'https://github.com/ruvnet/hive-flow.git',
 };
 
 /**

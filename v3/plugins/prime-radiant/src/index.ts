@@ -257,9 +257,8 @@ export const pluginMetadata = {
   version: '0.1.3',
   description:
     'Mathematical AI interpretability with sheaf cohomology, spectral analysis, and causal inference',
-  author: 'rUv',
+  author: 'Hive Flow',
   license: 'MIT',
-  repository: 'https://github.com/ruvnet/hive-flow',
   wasmSize: '92KB',
   dependencies: {
     required: [

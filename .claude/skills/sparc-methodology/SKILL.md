@@ -481,28 +481,28 @@ mcp__hive-flow__swarm_monitor {
 
 ```bash
 # Execute specific mode
-npx hive-flow sparc run <mode> "task description"
+hive-flow sparc run <mode> "task description"
 
 # Use alpha features
-npx hive-flow@alpha sparc run <mode> "task description"
+hive-flow sparc run <mode> "task description"
 
 # List all available modes
-npx hive-flow sparc modes
+hive-flow sparc modes
 
 # Get help for specific mode
-npx hive-flow sparc help <mode>
+hive-flow sparc help <mode>
 
 # Run with options
-npx hive-flow sparc run <mode> "task" --parallel --monitor
+hive-flow sparc run <mode> "task" --parallel --monitor
 
 # Execute TDD workflow
-npx hive-flow sparc tdd "feature description"
+hive-flow sparc tdd "feature description"
 
 # Batch execution
-npx hive-flow sparc batch <mode1,mode2,mode3> "task"
+hive-flow sparc batch <mode1,mode2,mode3> "task"
 
 # Pipeline execution
-npx hive-flow sparc pipeline "task description"
+hive-flow sparc pipeline "task description"
 ```
 
 ### Method 3: Local Installation
@@ -729,13 +729,13 @@ Message 3: TodoWrite { todos: [...] }
 
 ```bash
 # Before work
-npx hive-flow@alpha hooks pre-task --description "implement auth"
+hive-flow hooks pre-task --description "implement auth"
 
 # During work
-npx hive-flow@alpha hooks post-edit --file "auth.js"
+hive-flow hooks post-edit --file "auth.js"
 
 # After work
-npx hive-flow@alpha hooks post-task --task-id "task-123"
+hive-flow hooks post-task --task-id "task-123"
 ```
 
 ### 4. Test Coverage
@@ -920,58 +920,58 @@ mcp__hive-flow__sparc_mode {
 
 ```bash
 # Step 1: Research and planning
-npx hive-flow sparc run researcher "authentication patterns"
+hive-flow sparc run researcher "authentication patterns"
 
 # Step 2: Architecture design
-npx hive-flow sparc run architect "design auth system"
+hive-flow sparc run architect "design auth system"
 
 # Step 3: TDD implementation
-npx hive-flow sparc tdd "user authentication feature"
+hive-flow sparc tdd "user authentication feature"
 
 # Step 4: Code review
-npx hive-flow sparc run reviewer "review auth implementation"
+hive-flow sparc run reviewer "review auth implementation"
 
 # Step 5: Documentation
-npx hive-flow sparc run documenter "document auth API"
+hive-flow sparc run documenter "document auth API"
 ```
 
 ### Workflow 2: Bug Investigation
 
 ```bash
 # Step 1: Analyze issue
-npx hive-flow sparc run analyzer "investigate bug #456"
+hive-flow sparc run analyzer "investigate bug #456"
 
 # Step 2: Debug systematically
-npx hive-flow sparc run debugger "fix memory leak in service X"
+hive-flow sparc run debugger "fix memory leak in service X"
 
 # Step 3: Create tests
-npx hive-flow sparc run tester "regression tests for bug #456"
+hive-flow sparc run tester "regression tests for bug #456"
 
 # Step 4: Review fix
-npx hive-flow sparc run reviewer "validate bug fix"
+hive-flow sparc run reviewer "validate bug fix"
 ```
 
 ### Workflow 3: Performance Optimization
 
 ```bash
 # Step 1: Profile performance
-npx hive-flow sparc run analyzer "profile API response times"
+hive-flow sparc run analyzer "profile API response times"
 
 # Step 2: Identify bottlenecks
-npx hive-flow sparc run optimizer "optimize database queries"
+hive-flow sparc run optimizer "optimize database queries"
 
 # Step 3: Implement improvements
-npx hive-flow sparc run coder "implement caching layer"
+hive-flow sparc run coder "implement caching layer"
 
 # Step 4: Benchmark results
-npx hive-flow sparc run tester "performance benchmarks"
+hive-flow sparc run tester "performance benchmarks"
 ```
 
 ### Workflow 4: Complete Pipeline
 
 ```bash
 # Execute full development pipeline
-npx hive-flow sparc pipeline "e-commerce checkout feature"
+hive-flow sparc pipeline "e-commerce checkout feature"
 
 # This automatically runs:
 # 1. researcher - Gather requirements
@@ -1066,9 +1066,6 @@ mcp__hive-flow__token_usage {
 
 ## Support and Resources
 
-- **Documentation**: https://github.com/hypnwtykvmpr/hive-flow
-- **Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
-- **NPM Package**: https://www.npmjs.com/package/hive-flow
 - **Community**: Discord server (link in repository)
 
 ---
@@ -1079,19 +1076,19 @@ mcp__hive-flow__token_usage {
 
 ```bash
 # List modes
-npx hive-flow sparc modes
+hive-flow sparc modes
 
 # Run specific mode
-npx hive-flow sparc run <mode> "task"
+hive-flow sparc run <mode> "task"
 
 # TDD workflow
-npx hive-flow sparc tdd "feature"
+hive-flow sparc tdd "feature"
 
 # Full pipeline
-npx hive-flow sparc pipeline "task"
+hive-flow sparc pipeline "task"
 
 # Batch execution
-npx hive-flow sparc batch <modes> "task"
+hive-flow sparc batch <modes> "task"
 ```
 
 ### Most Common MCP Calls

@@ -1,10 +1,5 @@
 # @hive-flow/mcp
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/mcp.svg)](https://www.npmjs.com/package/@hive-flow/mcp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![MCP 2025-11-25](https://img.shields.io/badge/MCP-2025--11--25-blue.svg)](https://modelcontextprotocol.io)
-[![Standalone](https://img.shields.io/badge/Module-Standalone-green.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > **MCP 2025-11-25 Compliant** - Standalone Model Context Protocol server implementation with full Resources, Prompts, and Tasks support
 
@@ -26,7 +21,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/mcp
 ```
 
 ## Quick Start
@@ -81,7 +75,6 @@ const server = createMCPServer({
   host: 'localhost',
   port: 3000,
   corsEnabled: true,
-  corsOrigins: ['http://localhost:8080'],
   auth: {
     enabled: true,
     method: 'token',
@@ -90,7 +83,6 @@ const server = createMCPServer({
 }, logger);
 
 await server.start();
-// Server at http://localhost:3000
 // WebSocket at ws://localhost:3000/ws
 ```
 
@@ -405,7 +397,6 @@ const server = createMCPServer({
 const server = createMCPServer({
   transport: 'http',
   corsEnabled: true,
-  corsOrigins: ['https://your-domain.com'],
 }, logger);
 ```
 

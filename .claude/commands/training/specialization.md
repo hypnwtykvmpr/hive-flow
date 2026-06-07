@@ -56,8 +56,8 @@ Agents share learnings across sessions for cumulative expertise!
 ## CLI Usage
 ```bash
 # Train agent specialization via CLI
-npx hive-flow train agent --type coder --capabilities "react,typescript"
+hive-flow train agent --type coder --capabilities "react,typescript"
 
 # Check specializations
-npx hive-flow agent list --specializations
+hive-flow agent list --specializations
 ```

@@ -236,10 +236,6 @@ export PATH="$PATH:$(pwd)/.claude/helpers"
 ## 📚 Documentation
 
 - [Installation Guide](./docs/installation.md)
-- [Platform-Specific Setup](./docs/platform-setup.md)
-- [Customization Examples](./docs/customization.md)
-- [API Reference](./docs/api-reference.md)
-- [Troubleshooting](./docs/troubleshooting.md)
 
 ## 🤝 Contributing
 

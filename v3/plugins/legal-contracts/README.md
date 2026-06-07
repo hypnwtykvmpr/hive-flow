@@ -1,8 +1,5 @@
 # @hive-flow/plugin-legal-contracts
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-legal-contracts.svg)](https://www.npmjs.com/package/@hive-flow/plugin-legal-contracts)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-legal-contracts.svg)](https://www.npmjs.com/package/@hive-flow/plugin-legal-contracts)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A comprehensive legal contract analysis plugin combining hyperbolic embeddings for legal ontology navigation with fast vector search for clause similarity. The plugin enables automated clause extraction, risk scoring, obligation tracking, and regulatory compliance checking while maintaining attorney-client privilege through on-device processing.
 
@@ -19,13 +16,12 @@ A comprehensive legal contract analysis plugin combining hyperbolic embeddings f
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-legal-contracts
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-legal-contracts
+hive-flow plugins install --name @hive-flow/plugin-legal-contracts
 ```
 
 ## Quick Start

@@ -36,7 +36,7 @@ gh release create v2.0.0 \
   --title "Release v2.0.0"
 
 # Orchestrate with swarm
-npx hive-flow github release-create \
+hive-flow github release-create \
   --version "2.0.0" \
   --build-artifacts \
   --deploy-targets "npm,docker,github"
@@ -45,10 +45,10 @@ npx hive-flow github release-create \
 ### Full Automated Release
 ```bash
 # Initialize release swarm
-npx hive-flow swarm init --topology hierarchical
+hive-flow swarm init --topology hierarchical
 
 # Execute complete release pipeline
-npx hive-flow sparc pipeline "Release v2.0.0 with full validation"
+hive-flow sparc pipeline "Release v2.0.0 with full validation"
 ```
 
 ---
@@ -185,7 +185,6 @@ gh release create $(npm pkg get version) \
   Write("RELEASE_NOTES.md", "[detailed notes]")
 
   // Run comprehensive validation
-  Bash("npm install && npm test && npm run lint && npm run build")
 
   // Create release PR
   Bash(`gh pr create \
@@ -229,7 +228,7 @@ COMMITS=$(gh api repos/:owner/:repo/compare/v1.0.0...HEAD \
   --jq '.commits[].commit.message')
 
 # Generate categorized changelog
-npx hive-flow github changelog \
+hive-flow github changelog \
   --prs "$PRS" \
   --commits "$COMMITS" \
   --from v1.0.0 \
@@ -248,7 +247,7 @@ npx hive-flow github changelog \
 #### Version Agent
 ```bash
 # Intelligent version suggestion
-npx hive-flow github version-suggest \
+hive-flow github version-suggest \
   --current v1.2.3 \
   --analyze-commits \
   --check-compatibility \
@@ -265,7 +264,7 @@ npx hive-flow github version-suggest \
 #### Build Agent
 ```bash
 # Multi-platform build coordination
-npx hive-flow github release-build \
+hive-flow github release-build \
   --platforms "linux,macos,windows" \
   --architectures "x64,arm64" \
   --parallel \
@@ -282,7 +281,7 @@ npx hive-flow github release-build \
 #### Test Agent
 ```bash
 # Comprehensive pre-release testing
-npx hive-flow github release-test \
+hive-flow github release-test \
   --suites "unit,integration,e2e,performance" \
   --environments "node:16,node:18,node:20" \
   --fail-fast false \
@@ -292,7 +291,7 @@ npx hive-flow github release-test \
 #### Deploy Agent
 ```bash
 # Multi-target deployment orchestration
-npx hive-flow github release-deploy \
+hive-flow github release-deploy \
   --targets "npm,docker,github,s3" \
   --staged-rollout \
   --monitor-metrics \
@@ -323,8 +322,6 @@ npx hive-flow github release-deploy \
   Write("CHANGELOG.md", "[consolidated changelog]")
 
   // Run cross-package validation
-  Bash("cd packages/hive-flow && npm install && npm test")
-  Bash("cd packages/hive-flow && npm install && npm test")
   Bash("npm run test:integration")
 
   // Create unified release PR
@@ -369,7 +366,7 @@ deployment:
 #### Execute Staged Deployment
 ```bash
 # Deploy with progressive rollout
-npx hive-flow github release-deploy \
+hive-flow github release-deploy \
   --version v2.0.0 \
   --strategy progressive \
   --config .github/release-deployment.yml \
@@ -382,7 +379,7 @@ npx hive-flow github release-deploy \
 #### Coordinated Multi-Repo Release
 ```bash
 # Synchronize releases across repositories
-npx hive-flow github multi-release \
+hive-flow github multi-release \
   --repos "frontend:v2.0.0,backend:v2.1.0,cli:v1.5.0" \
   --ensure-compatibility \
   --atomic-release \
@@ -416,7 +413,7 @@ npx hive-flow github multi-release \
 #### Emergency Hotfix Workflow
 ```bash
 # Fast-track critical bug fix
-npx hive-flow github emergency-release \
+hive-flow github emergency-release \
   --issue 789 \
   --severity critical \
   --target-version v1.2.4 \
@@ -495,7 +492,6 @@ release:
       build: npm run build
       test: npm run test:all
       publish: npm publish
-      registry: https://registry.npmjs.org
 
     - name: docker-image
       build: docker build -t app:$VERSION .
@@ -578,7 +574,7 @@ release:
 #### Comprehensive Validation Suite
 ```bash
 # Pre-release validation with all checks
-npx hive-flow github release-validate \
+hive-flow github release-validate \
   --checks "
     version-conflicts,
     dependency-compatibility,
@@ -597,7 +593,7 @@ npx hive-flow github release-validate \
 #### Backward Compatibility Testing
 ```bash
 # Test against previous versions
-npx hive-flow github compat-test \
+hive-flow github compat-test \
   --previous-versions "v1.0,v1.1,v1.2" \
   --api-contracts \
   --data-migrations \
@@ -608,7 +604,7 @@ npx hive-flow github compat-test \
 #### Performance Regression Detection
 ```bash
 # Benchmark against baseline
-npx hive-flow github performance-test \
+hive-flow github performance-test \
   --baseline v1.9.0 \
   --candidate v2.0.0 \
   --metrics "throughput,latency,memory,cpu" \
@@ -621,7 +617,7 @@ npx hive-flow github performance-test \
 #### Real-Time Release Monitoring
 ```bash
 # Monitor release health post-deployment
-npx hive-flow github release-monitor \
+hive-flow github release-monitor \
   --version v2.0.0 \
   --metrics "error-rate,latency,throughput,adoption" \
   --alert-thresholds \
@@ -632,7 +628,7 @@ npx hive-flow github release-monitor \
 #### Release Analytics & Insights
 ```bash
 # Analyze release performance and adoption
-npx hive-flow github release-analytics \
+hive-flow github release-analytics \
   --version v2.0.0 \
   --compare-with v1.9.0 \
   --metrics "adoption,performance,stability,feedback" \
@@ -643,7 +639,7 @@ npx hive-flow github release-analytics \
 #### Automated Rollback Configuration
 ```bash
 # Configure intelligent auto-rollback
-npx hive-flow github rollback-config \
+hive-flow github rollback-config \
   --triggers '{
     "error-rate": ">5%",
     "latency-p99": ">1000ms",
@@ -660,7 +656,7 @@ npx hive-flow github rollback-config \
 #### Security Scanning
 ```bash
 # Comprehensive security validation
-npx hive-flow github release-security \
+hive-flow github release-security \
   --scan-dependencies \
   --check-secrets \
   --audit-permissions \
@@ -672,7 +668,7 @@ npx hive-flow github release-security \
 #### Compliance Validation
 ```bash
 # Ensure regulatory compliance
-npx hive-flow github release-compliance \
+hive-flow github release-compliance \
   --standards "SOC2,GDPR,HIPAA" \
   --license-audit \
   --data-governance \
@@ -730,7 +726,7 @@ jobs:
             --jq '.commits[].commit.message')
 
           # Initialize swarm coordination
-          npx hive-flow@alpha swarm init --topology hierarchical
+          hive-flow swarm init --topology hierarchical
 
           # Store release context
           echo "$PRS" > /tmp/release-prs.json
@@ -739,7 +735,7 @@ jobs:
       - name: Generate Release Changelog
         run: |
           # Generate intelligent changelog
-          CHANGELOG=$(npx hive-flow@alpha github changelog \
+          CHANGELOG=$(hive-flow github changelog \
             --prs "$(cat /tmp/release-prs.json)" \
             --commits "$(cat /tmp/release-commits.txt)" \
             --from $PREV_TAG \
@@ -762,7 +758,7 @@ jobs:
           npm run build
 
           # Build platform-specific binaries
-          npx hive-flow@alpha github release-build \
+          hive-flow github release-build \
             --platforms "linux,macos,windows" \
             --architectures "x64,arm64" \
             --parallel
@@ -772,7 +768,7 @@ jobs:
           # Run security validation
           npm audit --audit-level=moderate
 
-          npx hive-flow@alpha github release-security \
+          hive-flow github release-security \
             --scan-dependencies \
             --check-secrets \
             --sign-artifacts
@@ -805,7 +801,7 @@ jobs:
           npm run test:smoke
 
           # Validate deployment
-          npx hive-flow@alpha github release-validate \
+          hive-flow github release-validate \
             --version ${{ github.ref_name }} \
             --smoke-tests \
             --health-checks
@@ -828,7 +824,7 @@ jobs:
       - name: Monitor Release
         run: |
           # Start release monitoring
-          npx hive-flow@alpha github release-monitor \
+          hive-flow github release-monitor \
             --version ${{ github.ref_name }} \
             --duration 1h \
             --alert-on-errors &
@@ -863,7 +859,7 @@ jobs:
 
       - name: Emergency Release
         run: |
-          npx hive-flow@alpha github emergency-release \
+          hive-flow github emergency-release \
             --issue ${{ github.event.issue.number }} \
             --severity critical \
             --fast-track \
@@ -941,7 +937,7 @@ jobs:
 ### Issue: Failed Release Build
 ```bash
 # Debug build failures
-npx hive-flow@alpha diagnostic-run \
+hive-flow diagnostic-run \
   --component build \
   --verbose
 
@@ -959,7 +955,7 @@ npm run test -- --verbose --coverage
 npm run test:ci
 
 # Compare local vs CI environment
-npx hive-flow@alpha github compat-test \
+hive-flow github compat-test \
   --environments "local,ci" \
   --compare
 ```
@@ -967,14 +963,14 @@ npx hive-flow@alpha github compat-test \
 ### Issue: Deployment Rollback Needed
 ```bash
 # Immediate rollback to previous version
-npx hive-flow@alpha github rollback \
+hive-flow github rollback \
   --to-version v1.9.9 \
   --reason "Critical bug in v2.0.0" \
   --preserve-data \
   --notify-users
 
 # Investigate rollback cause
-npx hive-flow@alpha github release-analytics \
+hive-flow github release-analytics \
   --version v2.0.0 \
   --identify-issues
 ```
@@ -982,12 +978,12 @@ npx hive-flow@alpha github release-analytics \
 ### Issue: Version Conflicts
 ```bash
 # Check and resolve version conflicts
-npx hive-flow@alpha github release-validate \
+hive-flow github release-validate \
   --checks version-conflicts \
   --auto-resolve
 
 # Align multi-package versions
-npx hive-flow@alpha github version-sync \
+hive-flow github version-sync \
   --packages "package-a,package-b" \
   --strategy semantic
 ```
@@ -1020,10 +1016,6 @@ npx hive-flow@alpha github version-sync \
 ## Related Resources
 
 ### Documentation
-- [GitHub CLI Documentation](https://cli.github.com/manual/)
-- [Semantic Versioning Spec](https://semver.org/)
-- [Hive Flow SPARC Guide](../../docs/sparc-methodology.md)
-- [Swarm Coordination Patterns](../../docs/swarm-patterns.md)
 
 ### Related Skills
 - **github-pr-management**: PR review and merge automation
@@ -1032,9 +1024,6 @@ npx hive-flow@alpha github version-sync \
 - **deployment-orchestration**: Advanced deployment strategies
 
 ### Support & Community
-- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
-- Discussions: https://github.com/hypnwtykvmpr/hive-flow/discussions
-- Documentation: https://hive-flow.dev/docs
 
 ---
 

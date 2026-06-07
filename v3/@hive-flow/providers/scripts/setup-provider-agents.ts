@@ -1,11 +1,11 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * Provider Agent Setup Script
  *
  * Registers provider-backed agent types, creates hook entries,
  * and validates provider binaries. Idempotent — safe to run multiple times.
  *
- * Usage: npx tsx v3/@hive-flow/providers/scripts/setup-provider-agents.ts
+ * Usage: tsx v3/@hive-flow/providers/scripts/setup-provider-agents.ts
  *
  * @module @hive-flow/providers/scripts/setup-provider-agents
  */
@@ -390,8 +390,8 @@ function main(): void {
 
   if (readyCount === 0) {
     console.log('\nNo provider binaries found. Install at least one:');
-    console.log('  Gemini CLI: npm install -g @anthropic/gemini-cli');
-    console.log('  Codex CLI:  npm install -g @openai/codex');
+    console.log('  Gemini CLI: install @anthropic/gemini-cli with your configured package manager');
+    console.log('  Codex CLI:  install @openai/codex with your configured package manager');
     console.log('  Cursor CLI: Available via Cursor IDE');
   }
 }

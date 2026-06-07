@@ -582,31 +582,31 @@ const benchmarkIntegration = {
 ### Benchmarking Commands
 ```bash
 # Run comprehensive benchmark suite
-npx hive-flow benchmark-run --suite comprehensive --duration 300
+hive-flow benchmark-run --suite comprehensive --duration 300
 
 # Execute specific benchmark
-npx hive-flow benchmark-run --suite throughput --iterations 10
+hive-flow benchmark-run --suite throughput --iterations 10
 
 # Compare with baseline
-npx hive-flow benchmark-compare --current <results> --baseline <baseline>
+hive-flow benchmark-compare --current <results> --baseline <baseline>
 
 # Quality assessment
-npx hive-flow quality-assess --target swarm-performance --criteria throughput,latency
+hive-flow quality-assess --target swarm-performance --criteria throughput,latency
 
 # Performance validation
-npx hive-flow validate-performance --results <file> --criteria <file>
+hive-flow validate-performance --results <file> --criteria <file>
 ```
 
 ### Regression Detection Commands
 ```bash
 # Detect performance regressions
-npx hive-flow detect-regression --current <results> --historical <data>
+hive-flow detect-regression --current <results> --historical <data>
 
 # Set up automated regression monitoring
-npx hive-flow regression-monitor --enable --sensitivity 0.95
+hive-flow regression-monitor --enable --sensitivity 0.95
 
 # Analyze error patterns
-npx hive-flow error-analysis --logs <log-files>
+hive-flow error-analysis --logs <log-files>
 ```
 
 ## Integration Points

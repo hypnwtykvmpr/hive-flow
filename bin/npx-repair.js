@@ -58,7 +58,7 @@ export function repairNpxCache() {
 }
 
 /**
- * Remove corrupted _cacache integrity entries for hive-flow/ruflo packages.
+ * Remove corrupted _cacache integrity entries for hive-flow/hive-flow packages.
  * Fixes ECOMPROMISED by clearing stale integrity hashes so npm re-fetches.
  */
 export function repairCacheIntegrity() {
@@ -76,7 +76,7 @@ export function repairCacheIntegrity() {
             walk(fp);
           } else {
             const content = readFileSync(fp, 'utf-8');
-            if (content.includes('hive-flow') || content.includes('ruflo')) {
+            if (content.includes('hive-flow') || content.includes('hive-flow')) {
               unlinkSync(fp);
               cleaned++;
             }

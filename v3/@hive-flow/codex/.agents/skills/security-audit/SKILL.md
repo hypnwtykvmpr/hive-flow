@@ -27,14 +27,14 @@ Security scanning and vulnerability detection.
 Run comprehensive security analysis
 
 ```bash
-npx @hive-flow/cli security scan --depth full
+hive-flow security scan --depth full
 ```
 
 ### Input Validation Check
 Check for input validation issues
 
 ```bash
-npx @hive-flow/cli security scan --check input-validation
+hive-flow security scan --check input-validation
 ```
 
 

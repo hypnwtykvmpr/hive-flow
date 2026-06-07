@@ -27,10 +27,10 @@ hooks:
 
     # 2. Learn from past architecture patterns (ReasoningBank)
     echo "🧠 Searching for similar architecture patterns..."
-    SIMILAR_ARCH=$(npx hive-flow@alpha memory search-patterns "architecture: $TASK" --k=5 --min-reward=0.85 2>/dev/null || echo "")
+    SIMILAR_ARCH=$(hive-flow memory search-patterns "architecture: $TASK" --k=5 --min-reward=0.85 2>/dev/null || echo "")
     if [ -n "$SIMILAR_ARCH" ]; then
       echo "📚 Found similar system architecture patterns"
-      npx hive-flow@alpha memory get-pattern-stats "architecture: $TASK" --k=5 2>/dev/null || true
+      hive-flow memory get-pattern-stats "architecture: $TASK" --k=5 2>/dev/null || true
     fi
 
     # 3. GNN search for similar system designs
@@ -42,7 +42,7 @@ hooks:
     # 5. Store architecture session start
     SESSION_ID="arch-$(date +%s)-$$"
     echo "SESSION_ID=$SESSION_ID" >> $GITHUB_ENV 2>/dev/null || export SESSION_ID
-    npx hive-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "$SESSION_ID" \
       --task "architecture: $TASK" \
       --input "$(memory_search 'pseudo_complete' | tail -1)" \
@@ -58,7 +58,7 @@ hooks:
     LATENCY_MS=$(($(date +%s%3N) - START_TIME))
 
     # 2. Store architecture pattern for future projects
-    npx hive-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "${SESSION_ID:-arch-$(date +%s)}" \
       --task "architecture: $TASK" \
       --input "$(memory_search 'pseudo_complete' | tail -1)" \
@@ -72,7 +72,7 @@ hooks:
     # 3. Train neural patterns on successful architectures
     if [ "$SUCCESS" = "true" ]; then
       echo "🧠 Training neural pattern from architecture design"
-      npx hive-flow@alpha neural train \
+      hive-flow neural train \
         --pattern-type "coordination" \
         --training-data "architecture-design" \
         --epochs 50 2>/dev/null || true
@@ -437,9 +437,7 @@ info:
   description: Authentication and authorization service
 
 servers:
-  - url: https://api.example.com/v1
     description: Production
-  - url: https://staging-api.example.com/v1
     description: Staging
 
 components:

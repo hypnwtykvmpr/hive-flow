@@ -14,13 +14,12 @@ This package provides a complete system for coordinating work between humans and
 ## Installation
 
 ```bash
-npm install @hive-flow/claims
 ```
 
 Or install via Hive Flow CLI:
 
 ```bash
-npx hive-flow plugins install @hive-flow/claims
+hive-flow plugins install @hive-flow/claims
 ```
 
 ---
@@ -220,19 +219,19 @@ All claim operations are event-sourced (ADR-007):
 
 ```bash
 # Claim an issue
-npx hive-flow claims claim --issue ISSUE-123 --claimant "human:alice"
+hive-flow claims claim --issue ISSUE-123 --claimant "human:alice"
 
 # Release a claim
-npx hive-flow claims release --issue ISSUE-123
+hive-flow claims release --issue ISSUE-123
 
 # View claims board
-npx hive-flow claims board
+hive-flow claims board
 
 # List stealable issues
-npx hive-flow claims stealable
+hive-flow claims stealable
 
 # Rebalance workload
-npx hive-flow claims rebalance --dry-run
+hive-flow claims rebalance --dry-run
 ```
 
 ---

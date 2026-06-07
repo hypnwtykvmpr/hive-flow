@@ -23,7 +23,7 @@ mcp__hive-flow__task_orchestrate({
 ```
 
 ### Using CLI (Fallback)
-`npx hive-flow swarm "optimize performance" --strategy optimization`
+`hive-flow swarm "optimize performance" --strategy optimization`
 
 ## Agent Roles
 

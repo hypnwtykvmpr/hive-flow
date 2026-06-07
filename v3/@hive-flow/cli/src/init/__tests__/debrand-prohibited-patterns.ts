@@ -14,6 +14,25 @@ export const CORE_PROHIBITED: readonly ProhibitedPattern[] = [
   { label: 'old author brand', pattern: /rUv/ },
 ];
 
+export const URL_AND_INSTALL_PROHIBITED: readonly ProhibitedPattern[] = [
+  {
+    label: 'cosmetic URL',
+    pattern:
+      /https?:\/\/(?!(?:localhost|127\.0\.0\.1|YOUR_NODE|test-server|registry\.npmjs\.org|gateway\.pinata\.cloud|api\.pinata\.cloud|api\.web3\.storage|web3\.storage|w3s\.link|dweb\.link|ipfs\.io|cloudflare-ipfs\.com|storage\.googleapis\.com|api\.openai\.com|api\.anthropic\.com|api\.cohere\.ai|generativelanguage\.googleapis\.com|api\.deepseek\.com|openrouter\.ai|dashscope-intl\.aliyuncs\.com|accounts\.google\.com|oauth2\.googleapis\.com|github\.com\/login\/oauth)[/:?#]|(?:localhost|127\.0\.0\.1|YOUR_NODE|test-server)\b)[^\s)"'<>]+/i,
+  },
+  {
+    label: 'GitHub URL',
+    pattern: /https?:\/\/github\.com\/(?!login\/oauth\/)[^\s)"'<>]+/i,
+  },
+  { label: 'npm registry or package URL', pattern: /https?:\/\/(?:www\.)?npmjs\.com\/[^\s)"'<>]+/i },
+  { label: 'npm shield badge', pattern: /https?:\/\/img\.shields\.io\/npm\/[^\s)"'<>]+/i },
+  { label: 'npm install guidance', pattern: /\bnpm\s+install\b/i },
+  {
+    label: 'npx install guidance',
+    pattern: /\bnpx[ \t]+(?:-y[ \t]+)?(?:@hive-flow\/cli|hive-flow(?:@[\w.-]+)?|flow-nexus(?:@[\w.-]+)?|tsx|ts-node|copilot-api)(?:[ \t]|$)/i,
+  },
+];
+
 export const PERF_CLAIM_PROHIBITED: readonly ProhibitedPattern[] = [
   { label: 'fictional HNSW speed multiplier', pattern: /\b(?:150\s*x|12,?500\s*x|150\s*x\s*(?:-|–|to|and)\s*12,?500\s*x)\b/i },
   { label: 'fictional Flash Attention speed range', pattern: /\b2\.49\s*x\s*(?:-|–|to)\s*7\.47\s*x\b/i },
@@ -47,6 +66,7 @@ export const SUSPECT_LEGACY_RU_PREFIX: readonly ProhibitedPattern[] = [
 
 export const DEBRAND_ASSERT_ZERO_PROHIBITED: readonly ProhibitedPattern[] = [
   ...CORE_PROHIBITED,
+  ...URL_AND_INSTALL_PROHIBITED,
   ...PERF_CLAIM_PROHIBITED,
   ...DROPPED_INTEGRATION_PROHIBITED,
   ...DROPPED_UMBRELLA_PROHIBITED,

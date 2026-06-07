@@ -69,16 +69,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run mcp "integrate with external API"
+hive-flow sparc run mcp "integrate with external API"
 
 # For alpha features
-npx hive-flow@alpha sparc run mcp "integrate with external API"
+hive-flow sparc run mcp "integrate with external API"
 
 # With namespace
-npx hive-flow sparc run mcp "your task" --namespace mcp
+hive-flow sparc run mcp "your task" --namespace mcp
 
 # Non-interactive mode
-npx hive-flow sparc run mcp "your task" --non-interactive
+hive-flow sparc run mcp "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -110,8 +110,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "mcp_context" "important decisions" --namespace mcp
+hive-flow memory store "mcp_context" "important decisions" --namespace mcp
 
 # Query previous work
-npx hive-flow memory query "mcp" --limit 5
+hive-flow memory query "mcp" --limit 5
 ```

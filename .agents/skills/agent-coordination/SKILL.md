@@ -35,32 +35,32 @@ Spawn and coordinate agents for complex multi-agent tasks.
 
 ### Spawn Agent
 ```bash
-npx hive-flow agent spawn --type coder --name my-coder
+hive-flow agent spawn --type coder --name my-coder
 ```
 
 ### List Agents
 ```bash
-npx hive-flow agent list --filter active
+hive-flow agent list --filter active
 ```
 
 ### Agent Status
 ```bash
-npx hive-flow agent status --id agent-123
+hive-flow agent status --id agent-123
 ```
 
 ### Agent Metrics
 ```bash
-npx hive-flow agent metrics --id agent-123
+hive-flow agent metrics --id agent-123
 ```
 
 ### Stop Agent
 ```bash
-npx hive-flow agent stop --id agent-123
+hive-flow agent stop --id agent-123
 ```
 
 ### Pool Management
 ```bash
-npx hive-flow agent pool --size 5 --type coder
+hive-flow agent pool --size 5 --type coder
 ```
 
 ## Routing Codes

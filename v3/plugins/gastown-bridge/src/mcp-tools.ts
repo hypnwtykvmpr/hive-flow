@@ -1536,7 +1536,7 @@ export const wasmParseFormulaTool: MCPTool<WasmParseFormulaInput, WasmParseFormu
 /**
  * MCP Tool: gt_wasm_resolve_deps
  *
- * Resolve dependency graph using WASM (150x faster than JS)
+ * Resolve dependency graph using WASM (optimized faster than JS)
  */
 export const wasmResolveDepsTool: MCPTool<WasmResolveDepsInput, WasmResolveDepsResult> = {
   name: 'gt_wasm_resolve_deps',
@@ -1650,11 +1650,11 @@ export const wasmCookBatchTool: MCPTool<WasmCookBatchInput, WasmCookBatchResult>
 /**
  * MCP Tool: gt_wasm_match_pattern
  *
- * Find similar formulas/beads using WASM (150x-12500x faster with HNSW)
+ * Find similar formulas/beads using WASM (optimized faster with HNSW)
  */
 export const wasmMatchPatternTool: MCPTool<WasmMatchPatternInput, WasmMatchPatternResult> = {
   name: 'gt_wasm_match_pattern',
-  description: 'Find similar formulas or beads using HNSW pattern matching (150x-12500x faster)',
+  description: 'Find similar formulas or beads using HNSW pattern matching (optimized faster)',
   category: 'gastown-bridge',
   version: '0.1.0',
   layer: 'wasm',
@@ -1709,7 +1709,7 @@ export const wasmMatchPatternTool: MCPTool<WasmMatchPatternInput, WasmMatchPatte
 /**
  * MCP Tool: gt_wasm_optimize_convoy
  *
- * Optimize convoy execution order using WASM (150x faster than JS)
+ * Optimize convoy execution order using WASM (optimized faster than JS)
  */
 export const wasmOptimizeConvoyTool: MCPTool<WasmOptimizeConvoyInput, WasmOptimizeConvoyResult> = {
   name: 'gt_wasm_optimize_convoy',

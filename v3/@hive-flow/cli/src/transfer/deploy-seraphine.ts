@@ -1,13 +1,13 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * Deploy Seraphine Genesis Model
  * Exports and uploads the first Hive Flow pattern model to IPFS
  *
  * Usage:
- *   npx tsx deploy-seraphine.ts
- *   npx tsx deploy-seraphine.ts --output ./patterns/
- *   npx tsx deploy-seraphine.ts --to-ipfs
- *   npx tsx deploy-seraphine.ts --to-ipfs --anonymize strict
+ *   tsx deploy-seraphine.ts
+ *   tsx deploy-seraphine.ts --output ./patterns/
+ *   tsx deploy-seraphine.ts --to-ipfs
+ *   tsx deploy-seraphine.ts --to-ipfs --anonymize strict
  */
 
 import * as fs from 'fs';
@@ -99,7 +99,7 @@ Seraphine Genesis Deployer
 Deploy the foundational Hive Flow pattern model.
 
 Usage:
-  npx ts-node deploy-seraphine.ts [options]
+  ts-node deploy-seraphine.ts [options]
 
 Options:
   --output, -o <path>     Output file path
@@ -112,9 +112,9 @@ Options:
   --help, -h              Show this help
 
 Examples:
-  npx ts-node deploy-seraphine.ts --output ./seraphine-genesis.cfp.json
-  npx ts-node deploy-seraphine.ts --to-ipfs --anonymize strict
-  npx ts-node deploy-seraphine.ts --to-ipfs --gateway https://dweb.link
+  ts-node deploy-seraphine.ts --output ./seraphine-genesis.cfp.json
+  ts-node deploy-seraphine.ts --to-ipfs --anonymize strict
+  ts-node deploy-seraphine.ts --to-ipfs --gateway https://dweb.link
 `);
 }
 

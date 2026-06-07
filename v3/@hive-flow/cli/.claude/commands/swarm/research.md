@@ -23,7 +23,7 @@ mcp__hive-flow__task_orchestrate({
 ```
 
 ### Using CLI (Fallback)
-`npx hive-flow swarm "research topic X" --strategy research`
+`hive-flow swarm "research topic X" --strategy research`
 
 ## Agent Roles
 

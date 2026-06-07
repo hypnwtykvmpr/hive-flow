@@ -68,11 +68,11 @@ Remember: All code is written by Claude Code using its native tools!
 ## CLI Usage
 ```bash
 # Start development workflow via CLI
-npx hive-flow workflow dev "REST API with auth"
+hive-flow workflow dev "REST API with auth"
 
 # Create custom workflow
-npx hive-flow workflow create --name "api-dev" --steps "design,implement,test,deploy"
+hive-flow workflow create --name "api-dev" --steps "design,implement,test,deploy"
 
 # Execute saved workflow
-npx hive-flow workflow execute api-dev
+hive-flow workflow execute api-dev
 ```

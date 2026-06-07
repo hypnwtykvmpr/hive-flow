@@ -1,10 +1,5 @@
 # @hive-flow/memory
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/memory.svg)](https://www.npmjs.com/package/@hive-flow/memory)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/memory.svg)](https://www.npmjs.com/package/@hive-flow/memory)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Performance](https://img.shields.io/badge/Performance-HNSW-indexed--large-scale HNSW-indexed%20Faster-brightgreen.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > High-performance memory module for Hive Flow V3 - AgentDB unification, HNSW indexing, vector search, self-learning knowledge graph, and hybrid SQLite+AgentDB backend (ADR-009).
 
@@ -25,7 +20,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/memory
 ```
 
 ## Quick Start
@@ -216,7 +210,6 @@ const productIndex = new HNSWIndex({
 
 ## Auto Memory Bridge (ADR-048)
 
-Bidirectional sync between Claude Code's [auto memory](https://code.claude.com/docs/en/memory) files and AgentDB. Auto memory is a persistent directory (`~/.claude/projects/<project>/memory/`) where Claude writes learnings as markdown. `MEMORY.md` (first 200 lines) is loaded into the system prompt; topic files are read on demand.
 
 ### Quick Start
 

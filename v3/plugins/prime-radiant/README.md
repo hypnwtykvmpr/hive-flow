@@ -17,7 +17,6 @@ Think of it as a mathematical "sanity check" layer that catches logical inconsis
 ## Installation
 
 ```bash
-npm install @hive-flow/plugin-prime-radiant
 ```
 
 ---

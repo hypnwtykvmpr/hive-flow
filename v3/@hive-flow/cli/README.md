@@ -2,21 +2,10 @@
 
 <div align="center">
 
-![Hive Flow Banner](https://repository-images.githubusercontent.com/995029641/b9acbe16-0f49-420d-804f-468ba2a73ace)
 
 
 
-[![GitHub Project of the Day](https://img.shields.io/badge/GitHub-Project%20of%20the%20Day-ff6600?style=for-the-badge&logo=github&logoColor=white)](https://github.com/hypnwtykvmpr/hive-flow)
 
-[![Star on GitHub](https://img.shields.io/github/stars/hypnwtykvmpr/hive-flow?style=for-the-badge&logo=github&color=gold)](https://github.com/hypnwtykvmpr/hive-flow)
-[![Monthly Downloads](https://img.shields.io/npm/dm/hive-flow?style=for-the-badge&logo=npm&color=blue&label=Monthly%20Downloads)](https://www.npmjs.com/package/hive-flow)
-[![Total Downloads](https://img.shields.io/npm/dt/hive-flow?style=for-the-badge&logo=npm&color=cyan&label=Total%20Downloads)](https://www.npmjs.com/package/hive-flow)
-[![hive-flow.invalid](https://img.shields.io/badge/hive-flow.invalid-AI%20Platform-green?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://hive-flow.invalid)
-[![Agentics Foundation](https://img.shields.io/badge/Agentics-Foundation-crimson?style=for-the-badge&logo=openai)](https://discord.com/invite/dfxmpwkG2D)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-SDK%20Integrated-green?style=for-the-badge&logo=anthropic)](https://github.com/hypnwtykvmpr/hive-flow)
-[![MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative)](https://opensource.org/licenses/MIT)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/reuvencohen/)
-[![YouTube](https://img.shields.io/badge/YouTube-Subscribe-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@ReuvenCohen)
 
 # **Production-ready multi-agent AI orchestration for Claude Code**
 *Deploy 60+ specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
@@ -145,14 +134,14 @@ Hive Flow commands; do not install or invoke external vector CLIs from this repo
 ### Get Started Fast
 
 ```bash
-# One-line install (recommended)
-curl -fsSL https://cdn.jsdelivr.net/gh/hypnwtykvmpr/hive-flow@main/scripts/install.sh | bash
+# Initialize the current project
+hive-flow init --wizard
 
 # Or full setup with MCP + diagnostics
-curl -fsSL https://cdn.jsdelivr.net/gh/hypnwtykvmpr/hive-flow@main/scripts/install.sh | bash -s -- --full
+hive-flow init --wizard --full
 
-# Or via npx
-npx hive-flow@alpha init --wizard
+# Re-run the wizard later
+hive-flow init --wizard
 ```
 
 ---
@@ -174,7 +163,7 @@ npx hive-flow@alpha init --wizard
 
 ---
 
-### A multi-purpose Agent Tool Kit 
+### A multi-purpose Agent Tool Kit
 
 <details>
 <summary>🔄 <strong>Core Flow</strong> — How requests move through the system</summary>
@@ -418,7 +407,6 @@ swarm_init({
 
 ```bash
 # 1. Install Claude Code globally
-npm install -g @anthropic-ai/claude-code
 
 # 2. (Optional) Skip permissions check for faster setup
 claude --dangerously-skip-permissions
@@ -430,10 +418,8 @@ claude --dangerously-skip-permissions
 
 ```bash
 # curl-style installer with progress display
-curl -fsSL https://cdn.jsdelivr.net/gh/hypnwtykvmpr/hive-flow@main/scripts/install.sh | bash
 
 # Full setup (global + MCP + diagnostics)
-curl -fsSL https://cdn.jsdelivr.net/gh/hypnwtykvmpr/hive-flow@main/scripts/install.sh | bash -s -- --full
 ```
 
 <details>
@@ -441,7 +427,6 @@ curl -fsSL https://cdn.jsdelivr.net/gh/hypnwtykvmpr/hive-flow@main/scripts/insta
 
 | Option | Description |
 |--------|-------------|
-| `--global`, `-g` | Install globally (`npm install -g`) |
 | `--minimal`, `-m` | Skip optional deps (faster, ~15s) |
 | `--setup-mcp` | Auto-configure MCP server for Claude Code |
 | `--doctor`, `-d` | Run diagnostics after install |
@@ -464,25 +449,24 @@ curl ... | bash -s -- --full
 **Speed:**
 | Mode | Time |
 |------|------|
-| npx (cached) | ~3s |
-| npx (fresh) | ~20s |
+| local CLI (warm) | ~3s |
+| local CLI (fresh shell) | ~20s |
 | global | ~35s |
 | --minimal | ~15s |
 
 </details>
 
-#### npm/npx Install
+#### CLI Usage
 
 ```bash
-# Quick start (no install needed)
-npx hive-flow@alpha init
-
-# Or install globally
-npm install -g hive-flow@alpha
+# Initialize the current project
 hive-flow init
 
-# With Bun (faster)
-bunx hive-flow@alpha init
+# Use the guided setup
+hive-flow init --wizard
+
+# Use the full setup profile
+hive-flow init --full
 ```
 
 #### Install Profiles
@@ -494,25 +478,23 @@ bunx hive-flow@alpha init
 
 ```bash
 # Minimal install (skip ML/embeddings)
-npm install -g hive-flow@alpha --omit=optional
 ```
 
 <details>
 <summary>🤖 <strong>OpenAI Codex CLI Support</strong> — Full Codex integration with self-learning</summary>
 
-Hive Flow supports both **Claude Code** and **OpenAI Codex CLI** via the [@hive-flow/codex](https://www.npmjs.com/package/@hive-flow/codex) package, following the [Agentics Foundation](https://agentics.org) standard.
 
 ### Quick Start for Codex
 
 ```bash
 # Initialize for Codex CLI (creates AGENTS.md instead of CLAUDE.md)
-npx hive-flow@alpha init --codex
+hive-flow init --codex
 
 # Full Codex setup with all 137+ skills
-npx hive-flow@alpha init --codex --full
+hive-flow init --codex --full
 
 # Initialize for both platforms (dual mode)
-npx hive-flow@alpha init --dual
+hive-flow init --dual
 ```
 
 ### Platform Comparison
@@ -570,16 +552,16 @@ wait  # Wait for all to complete
 
 ```bash
 # List collaboration templates
-npx hive-flow-codex dual templates
+hive-flow-codex dual templates
 
 # Run feature development swarm (architect → coder → tester → reviewer)
-npx hive-flow-codex dual run --template feature --task "Add user auth"
+hive-flow-codex dual run --template feature --task "Add user auth"
 
 # Run security audit swarm (scanner → analyzer → fixer)
-npx hive-flow-codex dual run --template security --task "src/auth/"
+hive-flow-codex dual run --template security --task "src/auth/"
 
 # Run refactoring swarm (analyzer → planner → refactorer → validator)
-npx hive-flow-codex dual run --template refactor --task "src/legacy/"
+hive-flow-codex dual run --template refactor --task "src/legacy/"
 ```
 
 ### Pre-Built Collaboration Templates
@@ -599,7 +581,7 @@ When you run `init --codex`, the MCP server is automatically registered:
 codex mcp list
 
 # If not present, add manually:
-codex mcp add hive-flow -- npx hive-flow mcp start
+codex mcp add hive-flow -- hive-flow mcp start
 ```
 
 ### Self-Learning Workflow
@@ -655,26 +637,26 @@ The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each ses
 
 ```bash
 # Initialize project
-npx hive-flow@alpha init
+hive-flow init
 
 # Start MCP server for Claude Code integration
-npx hive-flow@alpha mcp start
+hive-flow mcp start
 
 # Run a task with agents
-npx hive-flow@alpha --agent coder --task "Implement user authentication"
+hive-flow --agent coder --task "Implement user authentication"
 
 # List available agents
-npx hive-flow@alpha --list
+hive-flow --list
 ```
 
 ### Upgrading
 
 ```bash
 # Update helpers and statusline (preserves your data)
-npx hive-flow@v3alpha init upgrade
+hive-flow init upgrade
 
 # Update AND add any missing skills/agents/commands
-npx hive-flow@v3alpha init upgrade --add-missing
+hive-flow init upgrade --add-missing
 ```
 
 The `--add-missing` flag automatically detects and installs new skills, agents, and commands that were added in newer versions, without overwriting your existing customizations.
@@ -685,7 +667,7 @@ Add hive-flow as an MCP server for seamless integration:
 
 ```bash
 # Add hive-flow MCP server to Claude Code
-claude mcp add hive-flow -- npx -y hive-flow@latest mcp start
+claude mcp add hive-flow -- hive-flow mcp start
 
 # Verify installation
 claude mcp list
@@ -699,7 +681,7 @@ Once added, Claude Code can use all 175+ hive-flow MCP tools directly:
 - And 170+ more tools...
 
 ---
-## What is it exactly? Agents that learn, build and work perpetually. 
+## What is it exactly? Agents that learn, build and work perpetually.
 
 <details>
 <summary>🆚 <strong>Why Hive Flow v3?</strong></summary>
@@ -1091,7 +1073,7 @@ Hive Flow runs as an MCP (Model Context Protocol) server, allowing you to connec
 
 ```bash
 # Start Hive Flow MCP server in any environment
-npx hive-flow@v3alpha mcp start
+hive-flow mcp start
 ```
 
 <details open>
@@ -1107,8 +1089,8 @@ npx hive-flow@v3alpha mcp start
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1119,7 +1101,6 @@ npx hive-flow@v3alpha mcp start
 
 Restart Claude Desktop after saving. Look for the MCP indicator (hammer icon) in the input box.
 
-*Sources: [Claude Help Center](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop), [Anthropic Desktop Extensions](https://www.anthropic.com/engineering/desktop-extensions)*
 
 </details>
 
@@ -1128,18 +1109,17 @@ Restart Claude Desktop after saving. Look for the MCP indicator (hammer icon) in
 
 ```bash
 # Add via CLI (recommended)
-claude mcp add hive-flow -- npx hive-flow@v3alpha mcp start
+claude mcp add hive-flow -- hive-flow mcp start
 
 # Or add with environment variables
 claude mcp add hive-flow \
   --env ANTHROPIC_API_KEY=sk-ant-... \
-  -- npx hive-flow@v3alpha mcp start
+  -- hive-flow mcp start
 
 # Verify installation
 claude mcp list
 ```
 
-*Sources: [Claude Code MCP Docs](https://code.claude.com/docs/en/mcp)*
 
 </details>
 
@@ -1161,8 +1141,8 @@ Create `.vscode/mcp.json` in your project:
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1171,7 +1151,6 @@ Create `.vscode/mcp.json` in your project:
 }
 ```
 
-*Sources: [VS Code MCP Docs](https://code.visualstudio.com/docs/copilot/customization/mcp-servers), [MCP Integration Guides](https://mcpez.com/integrations)*
 
 </details>
 
@@ -1188,8 +1167,8 @@ Create `.cursor/mcp.json` in your project (or global config):
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1200,7 +1179,6 @@ Create `.cursor/mcp.json` in your project (or global config):
 
 **Important:** Cursor must be in **Agent Mode** (not Ask Mode) to access MCP tools. Cursor supports up to 40 MCP tools.
 
-*Sources: [Cursor MCP Docs](https://docs.cursor.com/context/model-context-protocol), [Cursor Directory](https://cursor.directory/mcp)*
 
 </details>
 
@@ -1215,8 +1193,8 @@ Create `.cursor/mcp.json` in your project (or global config):
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1227,7 +1205,6 @@ Create `.cursor/mcp.json` in your project (or global config):
 
 Click **Refresh** in the MCP settings to connect. Windsurf supports up to 100 MCP tools.
 
-*Sources: [Windsurf MCP Tutorial](https://windsurf.com/university/tutorials/configuring-first-mcp-server), [Windsurf Cascade Docs](https://docs.windsurf.com/windsurf/cascade/mcp)*
 
 </details>
 
@@ -1247,12 +1224,11 @@ For ChatGPT, you need a remote MCP server (not local stdio). Deploy hive-flow to
 
 ```bash
 # Start with HTTP transport
-npx hive-flow@v3alpha mcp start --transport http --port 3000
+hive-flow mcp start --transport http --port 3000
 ```
 
 Then add the server URL in ChatGPT Connectors settings.
 
-*Sources: [OpenAI MCP Docs](https://platform.openai.com/docs/mcp), [Docker MCP for ChatGPT](https://www.docker.com/blog/add-mcp-server-to-chatgpt/)*
 
 </details>
 
@@ -1262,7 +1238,6 @@ Then add the server URL in ChatGPT Connectors settings.
 Google AI Studio supports MCP natively since May 2025, with managed MCP servers for Google services (Maps, BigQuery, etc.) launched December 2025.
 
 **Using MCP SuperAssistant Extension:**
-1. Install [MCP SuperAssistant](https://chrome.google.com/webstore) Chrome extension
 2. Configure your hive-flow MCP server
 3. Use with Google AI Studio, Gemini, and other AI platforms
 
@@ -1277,13 +1252,12 @@ const ai = new GoogleGenAI({ apiKey: 'YOUR_API_KEY' });
 const mcpConfig = {
   servers: [{
     name: 'hive-flow',
-    command: 'npx',
-    args: ['hive-flow@v3alpha', 'mcp', 'start']
+    command: 'hive-flow',
+    args: ['mcp', 'start']
   }]
 };
 ```
 
-*Sources: [Google AI Studio MCP](https://developers.googleblog.com/en/google-ai-studio-native-code-generation-agentic-tools-upgrade/), [Google Cloud MCP Announcement](https://cloud.google.com/blog/products/ai-machine-learning/announcing-official-mcp-support-for-google-services)*
 
 </details>
 
@@ -1300,12 +1274,11 @@ JetBrains AI Assistant supports MCP for IntelliJ IDEA, PyCharm, WebStorm, and ot
 ```json
 {
   "name": "hive-flow",
-  "command": "npx",
-  "args": ["hive-flow@v3alpha", "mcp", "start"]
+  "command": "hive-flow",
+  "args": ["mcp", "start"]
 }
 ```
 
-*Sources: [JetBrains AI Assistant MCP](https://www.jetbrains.com/help/ai-assistant/mcp.html)*
 
 </details>
 
@@ -1384,7 +1357,6 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 ### Install
 
 ```bash
-npm install @hive-flow/guidance@alpha
 ```
 
 ### Quick Usage
@@ -1446,13 +1418,6 @@ chain.verify(envelope); // true — tamper-evident
 
 ### Documentation
 
-- [Architecture Overview](v3/@hive-flow/guidance/docs/guides/architecture-overview.md)
-- [Getting Started](v3/@hive-flow/guidance/docs/guides/getting-started.md)
-- [Enforcement Gates Tutorial](v3/@hive-flow/guidance/docs/tutorials/enforcement-gates.md)
-- [Proof Audit Trail](v3/@hive-flow/guidance/docs/tutorials/proof-audit-trail.md)
-- [Multi-Agent Security](v3/@hive-flow/guidance/docs/guides/multi-agent-security.md)
-- [API Quick Reference](v3/@hive-flow/guidance/docs/reference/api-quick-reference.md)
-- [Full README](v3/@hive-flow/guidance/README.md)
 
 </details>
 
@@ -1531,13 +1496,13 @@ The Hive Mind system implements queen-led hierarchical coordination where strate
 
 **CLI Commands:**
 ```bash
-npx hive-flow hive-mind init                    # Initialize hive mind
-npx hive-flow hive-mind spawn "Build API"       # Spawn with objective
-npx hive-flow hive-mind spawn "..." --queen-type strategic --consensus byzantine
-npx hive-flow hive-mind status                  # Check status
-npx hive-flow hive-mind metrics                 # Performance metrics
-npx hive-flow hive-mind memory                  # Collective memory stats
-npx hive-flow hive-mind sessions                # List active sessions
+hive-flow hive-mind init                    # Initialize hive mind
+hive-flow hive-mind spawn "Build API"       # Spawn with objective
+hive-flow hive-mind spawn "..." --queen-type strategic --consensus byzantine
+hive-flow hive-mind status                  # Check status
+hive-flow hive-mind metrics                 # Performance metrics
+hive-flow hive-mind memory                  # Collective memory stats
+hive-flow hive-mind sessions                # List active sessions
 ```
 
 **Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, SWE-Bench evaluation claims removed
@@ -1552,7 +1517,7 @@ Native integration with Claude Code's experimental Agent Teams feature for spawn
 **Enable Agent Teams:**
 ```bash
 # Automatically enabled with hive-flow init
-npx hive-flow@latest init
+hive-flow init
 
 # Or manually add to .claude/settings.json
 {
@@ -1604,10 +1569,10 @@ TeamDelete()
 
 ```bash
 # Handle idle teammate
-npx hive-flow@latest hooks teammate-idle --auto-assign true
+hive-flow hooks teammate-idle --auto-assign true
 
 # Handle task completion
-npx hive-flow@latest hooks task-completed --task-id <id> --train-patterns
+hive-flow hooks task-completed --task-id <id> --train-patterns
 ```
 
 **Display Modes:** `auto` (default), `in-process`, `tmux` (split-pane)
@@ -1688,35 +1653,23 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-agentic-qe** | 3.0.0-alpha.2 | Quality Engineering with 58 AI agents across 12 DDD contexts. TDD, coverage analysis, security scanning, chaos engineering, accessibility testing. | `npm install @hive-flow/plugin-agentic-qe` |
-| **@hive-flow/plugin-prime-radiant** | 0.1.4 | Mathematical AI interpretability with 6 engines: sheaf cohomology, spectral analysis, causal inference, quantum topology, category theory, HoTT proofs. | `npm install @hive-flow/plugin-prime-radiant` |
-| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `npx hive-flow@latest plugins install -n @hive-flow/plugin-gastown-bridge` |
-| **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `npx hive-flow@latest plugins install -n @hive-flow/teammate-plugin` |
+| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
+| **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
 
 #### 🏥 Domain-Specific Plugins
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-healthcare-clinical** | 0.1.0 | HIPAA-compliant clinical decision support with FHIR/HL7 integration. Symptom analysis, drug interactions, treatment recommendations. | `npm install @hive-flow/plugin-healthcare-clinical` |
-| **@hive-flow/plugin-financial-risk** | 0.1.0 | PCI-DSS/SOX compliant financial risk analysis. Portfolio optimization, fraud detection, regulatory compliance, market simulation. | `npm install @hive-flow/plugin-financial-risk` |
-| **@hive-flow/plugin-legal-contracts** | 0.1.0 | Attorney-client privilege protected contract analysis. Risk identification, clause extraction, compliance verification. | `npm install @hive-flow/plugin-legal-contracts` |
 
 #### 💻 Development Intelligence Plugins
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-code-intelligence** | 0.1.0 | Advanced code analysis with GNN-based pattern recognition. Security vulnerability detection, refactoring suggestions, architecture analysis. | `npm install @hive-flow/plugin-code-intelligence` |
-| **@hive-flow/plugin-test-intelligence** | 0.1.0 | AI-powered test generation and optimization. Coverage analysis, mutation testing, test prioritization, flaky test detection. | `npm install @hive-flow/plugin-test-intelligence` |
-| **@hive-flow/plugin-perf-optimizer** | 0.1.0 | Performance profiling and optimization. Memory leak detection, CPU bottleneck analysis, I/O optimization, caching strategies. | `npm install @hive-flow/plugin-perf-optimizer` |
 
 #### 🧠 Advanced AI/Reasoning Plugins
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-neural-coordination** | 0.1.0 | Multi-agent neural coordination with SONA learning. Agent specialization, knowledge transfer, collective decision making. | `npm install @hive-flow/plugin-neural-coordination` |
-| **@hive-flow/plugin-cognitive-kernel** | 0.1.0 | Cognitive computing kernel for working memory, attention control, meta-cognition, and task scaffolding. Miller's Law (7±2) compliance. | `npm install @hive-flow/plugin-cognitive-kernel` |
-| **@hive-flow/plugin-quantum-optimizer** | 0.1.0 | Quantum-inspired optimization (QAOA, VQE, quantum annealing). Combinatorial optimization, Grover search, tensor networks. | `npm install @hive-flow/plugin-quantum-optimizer` |
-| **@hive-flow/plugin-hyperbolic-reasoning** | 0.1.0 | Hyperbolic geometry for hierarchical reasoning. Poincaré embeddings, tree-like structure analysis, taxonomic inference. | `npm install @hive-flow/plugin-hyperbolic-reasoning` |
 
 **Agentic-QE Plugin Features:**
 - 58 specialized QE agents across 13 bounded contexts
@@ -1755,32 +1708,20 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 ```bash
 # Install Quality Engineering plugin
-npm install @hive-flow/plugin-agentic-qe
 
 # Install AI Interpretability plugin
-npm install @hive-flow/plugin-prime-radiant
 
 # Install Gas Town Bridge plugin (WASM-accelerated orchestration)
-npx hive-flow@latest plugins install -n @hive-flow/plugin-gastown-bridge
+hive-flow plugins install -n @hive-flow/plugin-gastown-bridge
 
 # Install domain-specific plugins
-npm install @hive-flow/plugin-healthcare-clinical
-npm install @hive-flow/plugin-financial-risk
-npm install @hive-flow/plugin-legal-contracts
 
 # Install development intelligence plugins
-npm install @hive-flow/plugin-code-intelligence
-npm install @hive-flow/plugin-test-intelligence
-npm install @hive-flow/plugin-perf-optimizer
 
 # Install advanced AI/reasoning plugins
-npm install @hive-flow/plugin-neural-coordination
-npm install @hive-flow/plugin-cognitive-kernel
-npm install @hive-flow/plugin-quantum-optimizer
-npm install @hive-flow/plugin-hyperbolic-reasoning
 
 # List all installed plugins
-npx hive-flow plugins list --installed
+hive-flow plugins list --installed
 ```
 
 </details>
@@ -1949,8 +1890,8 @@ Workers run automatically based on context, or dispatch manually via MCP tools.
 | **TestGaps** | `testgaps` | Test coverage analysis | Code changes without tests |
 
 ```bash
-npx hive-flow@v3alpha worker dispatch --trigger audit --context "./src"
-npx hive-flow@v3alpha worker status
+hive-flow worker dispatch --trigger audit --context "./src"
+hive-flow worker status
 ```
 
 </details>
@@ -2274,10 +2215,10 @@ hive-flow memory backup --output ./backup.sql
 
 **Quick Commands:**
 ```bash
-npx hive-flow hive-mind init                                    # Initialize
-npx hive-flow hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
-npx hive-flow hive-mind spawn "Research AI" --consensus byzantine --claude
-npx hive-flow hive-mind status                                  # Check status
+hive-flow hive-mind init                                    # Initialize
+hive-flow hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
+hive-flow hive-mind spawn "Research AI" --consensus byzantine --claude
+hive-flow hive-mind status                                  # Check status
 ```
 
 **Hive Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
@@ -2420,7 +2361,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 
 **Setup (Automatic):**
 
-Run `npx hive-flow@v3alpha init` — this generates `.claude/settings.json` with the correct statusline config and creates the helper script at `.claude/helpers/statusline.cjs`.
+Run `hive-flow init` — this generates `.claude/settings.json` with the correct statusline config and creates the helper script at `.claude/helpers/statusline.cjs`.
 
 The generated config uses a **fast local script** (no `npx` cold-start):
 ```json
@@ -2438,7 +2379,7 @@ The generated config uses a **fast local script** (no `npx` cold-start):
 
 If your statusline is not updating, run the upgrade command to regenerate helpers and fix the config:
 ```bash
-npx hive-flow@v3alpha init --update --settings
+hive-flow init --update --settings
 ```
 
 This removes invalid config fields and regenerates the statusline helper with stdin support.
@@ -2488,19 +2429,19 @@ Cross-platform TypeScript-based daemon service with auto-scheduling:
 **Commands:**
 ```bash
 # Start daemon (auto-runs on SessionStart hooks)
-npx hive-flow@v3alpha daemon start
+hive-flow daemon start
 
 # Check status with worker history
-npx hive-flow@v3alpha daemon status
+hive-flow daemon status
 
 # Manually trigger a worker
-npx hive-flow@v3alpha daemon trigger map
+hive-flow daemon trigger map
 
 # Enable/disable workers
-npx hive-flow@v3alpha daemon enable map audit optimize
+hive-flow daemon enable map audit optimize
 
 # Stop daemon
-npx hive-flow@v3alpha daemon stop
+hive-flow daemon stop
 ```
 
 **Daemon Status Output:**
@@ -2616,25 +2557,25 @@ Complete command-line interface for all Hive Flow operations.
 
 ```bash
 # Initialize project with wizard
-npx hive-flow@v3alpha init --wizard
+hive-flow init --wizard
 
 # Start daemon with background workers
-npx hive-flow@v3alpha daemon start
+hive-flow daemon start
 
 # Spawn an agent with specific type
-npx hive-flow@v3alpha agent spawn -t coder --name my-coder
+hive-flow agent spawn -t coder --name my-coder
 
 # Initialize swarm with V3 mode
-npx hive-flow@v3alpha swarm init --v3-mode
+hive-flow swarm init --v3-mode
 
 # Search memory (HNSW-indexed, fast)
-npx hive-flow@v3alpha memory search -q "authentication patterns"
+hive-flow memory search -q "authentication patterns"
 
 # Run security scan
-npx hive-flow@v3alpha security scan --depth full
+hive-flow security scan --depth full
 
 # Performance benchmark
-npx hive-flow@v3alpha performance benchmark --suite all
+hive-flow performance benchmark --suite all
 ```
 
 </details>
@@ -2642,7 +2583,7 @@ npx hive-flow@v3alpha performance benchmark --suite all
 <details>
 <summary>🩺 <strong>Doctor Health Checks</strong> — System diagnostics with auto-fix</summary>
 
-Run `npx hive-flow@v3alpha doctor` to diagnose and fix common issues.
+Run `hive-flow doctor` to diagnose and fix common issues.
 
 **Health Checks Performed:**
 
@@ -2663,16 +2604,16 @@ Run `npx hive-flow@v3alpha doctor` to diagnose and fix common issues.
 
 ```bash
 # Run full diagnostics
-npx hive-flow@v3alpha doctor
+hive-flow doctor
 
 # Run diagnostics with auto-fix
-npx hive-flow@v3alpha doctor --fix
+hive-flow doctor --fix
 
 # Check specific component
-npx hive-flow@v3alpha doctor --component memory
+hive-flow doctor --component memory
 
 # Verbose output
-npx hive-flow@v3alpha doctor --verbose
+hive-flow doctor --verbose
 ```
 
 **Output Example:**
@@ -2722,16 +2663,16 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 
 ```bash
 # Initialize embeddings system
-npx hive-flow@v3alpha embeddings init
+hive-flow embeddings init
 
 # Generate embedding for text
-npx hive-flow@v3alpha embeddings embed "authentication patterns"
+hive-flow embeddings embed "authentication patterns"
 
 # Batch embed multiple texts
-npx hive-flow@v3alpha embeddings batch --file texts.txt
+hive-flow embeddings batch --file texts.txt
 
 # Search with semantic similarity
-npx hive-flow@v3alpha embeddings search "login flow" --top-k 5
+hive-flow embeddings search "login flow" --top-k 5
 ```
 
 **Programmatic:**
@@ -2768,59 +2709,59 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Code Review** | Get thorough reviews with security, performance, and style checks | `npx hive-flow@v3alpha --agent reviewer --task "Review PR #123"` |
-| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `npx hive-flow@v3alpha --agent tester --task "Write tests for auth module"` |
-| **Refactoring** | Safely restructure code while maintaining behavior | `npx hive-flow@v3alpha --agent coder --task "Refactor user service to use repository pattern"` |
-| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `npx hive-flow@v3alpha --agent coder --task "Fix race condition in checkout flow"` |
+| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow --agent reviewer --task "Review PR #123"` |
+| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `hive-flow --agent tester --task "Write tests for auth module"` |
+| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow --agent coder --task "Refactor user service to use repository pattern"` |
+| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow --agent coder --task "Fix race condition in checkout flow"` |
 
 ### 🔒 Security & Compliance
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Security Audit** | Find vulnerabilities before attackers do | `npx hive-flow@v3alpha --agent security-architect --task "Audit for OWASP Top 10"` |
-| **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `npx hive-flow@v3alpha security scan --depth full` |
-| **Compliance Check** | Ensure code meets security standards | `npx hive-flow@v3alpha --agent security-architect --task "Check PCI-DSS compliance"` |
+| **Security Audit** | Find vulnerabilities before attackers do | `hive-flow --agent security-architect --task "Audit for OWASP Top 10"` |
+| **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `hive-flow security scan --depth full` |
+| **Compliance Check** | Ensure code meets security standards | `hive-flow --agent security-architect --task "Check PCI-DSS compliance"` |
 
 ### 🐝 Multi-Agent Swarms
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Feature Development** | Coordinate multiple agents on complex features | `npx hive-flow@v3alpha swarm init --topology hierarchical && npx hive-flow@v3alpha task orchestrate "Build user dashboard"` |
-| **Large Refactors** | Parallel refactoring across many files without conflicts | `npx hive-flow@v3alpha swarm init --topology mesh --max-agents 8` |
-| **Codebase Migration** | Migrate frameworks, languages, or patterns systematically | `npx hive-flow@v3alpha task orchestrate "Migrate from Express to Fastify" --strategy adaptive` |
+| **Feature Development** | Coordinate multiple agents on complex features | `hive-flow swarm init --topology hierarchical && hive-flow task orchestrate "Build user dashboard"` |
+| **Large Refactors** | Parallel refactoring across many files without conflicts | `hive-flow swarm init --topology mesh --max-agents 8` |
+| **Codebase Migration** | Migrate frameworks, languages, or patterns systematically | `hive-flow task orchestrate "Migrate from Express to Fastify" --strategy adaptive` |
 
 ### 📊 Performance & Optimization
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Performance Profiling** | Find and fix bottlenecks in your application | `npx hive-flow@v3alpha --agent perf-analyzer --task "Profile API endpoints"` |
-| **Query Optimization** | Speed up slow database queries | `npx hive-flow@v3alpha hooks route "Optimize database queries"` |
-| **Memory Analysis** | Reduce memory usage and fix leaks | `npx hive-flow@v3alpha --agent perf-analyzer --task "Analyze memory usage patterns"` |
+| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow --agent perf-analyzer --task "Profile API endpoints"` |
+| **Query Optimization** | Speed up slow database queries | `hive-flow hooks route "Optimize database queries"` |
+| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow --agent perf-analyzer --task "Analyze memory usage patterns"` |
 
 ### 🔄 GitHub & DevOps
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **PR Management** | Review, approve, and merge PRs efficiently | `npx hive-flow@v3alpha --agent pr-manager --task "Review open PRs"` |
-| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `npx hive-flow@v3alpha --agent issue-tracker --task "Triage new issues"` |
-| **Release Management** | Coordinate releases with changelogs and versioning | `npx hive-flow@v3alpha --agent release-manager --task "Prepare v2.0 release"` |
-| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `npx hive-flow@v3alpha --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
+| **PR Management** | Review, approve, and merge PRs efficiently | `hive-flow --agent pr-manager --task "Review open PRs"` |
+| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow --agent issue-tracker --task "Triage new issues"` |
+| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow --agent release-manager --task "Prepare v2.0 release"` |
+| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
 
 ### 📋 Spec-Driven Development
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Generate Specs** | Create complete specifications before coding | `npx hive-flow@v3alpha --agent architect --task "Create ADR for authentication system"` |
-| **Validate Implementation** | Ensure code matches specifications | `npx hive-flow@v3alpha hooks progress --detailed` |
-| **Track Compliance** | Monitor spec adherence across the team | `npx hive-flow@v3alpha progress sync` |
+| **Generate Specs** | Create complete specifications before coding | `hive-flow --agent architect --task "Create ADR for authentication system"` |
+| **Validate Implementation** | Ensure code matches specifications | `hive-flow hooks progress --detailed` |
+| **Track Compliance** | Monitor spec adherence across the team | `hive-flow progress sync` |
 
 ### 🧠 Learning & Intelligence
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Bootstrap Intelligence** | Train the system on your codebase patterns | `npx hive-flow@v3alpha hooks pretrain --depth deep` |
-| **Optimize Routing** | Improve task-to-agent matching over time | `npx hive-flow@v3alpha hooks route "<task>" --include-explanation` |
-| **Transfer Learning** | Apply patterns learned from other projects | `npx hive-flow@v3alpha hooks transfer <sourceProject>` |
+| **Bootstrap Intelligence** | Train the system on your codebase patterns | `hive-flow hooks pretrain --depth deep` |
+| **Optimize Routing** | Improve task-to-agent matching over time | `hive-flow hooks route "<task>" --include-explanation` |
+| **Transfer Learning** | Apply patterns learned from other projects | `hive-flow hooks transfer <sourceProject>` |
 
 </details>
 
@@ -2992,7 +2933,7 @@ When hooks run, they emit signals that guide routing decisions. Watch for these 
 
 **Example Hook Output:**
 ```bash
-$ npx hive-flow@v3alpha hooks pre-task --description "convert var to const in utils.ts"
+$ hive-flow hooks pre-task --description "convert var to const in utils.ts"
 
 [AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
 Recommendation: Use Edit tool directly
@@ -3110,8 +3051,8 @@ The stats command shows:
 
 ```bash
 # Example: Edit with pattern learning
-npx hive-flow@v3alpha hooks pre-edit ./src/auth.ts
-npx hive-flow@v3alpha hooks post-edit ./src/auth.ts --success true --train-patterns
+hive-flow hooks pre-edit ./src/auth.ts
+hive-flow hooks post-edit ./src/auth.ts --success true --train-patterns
 ```
 
 #### 🧠 Intelligence & Routing Hooks (8 hooks)
@@ -3129,10 +3070,10 @@ npx hive-flow@v3alpha hooks post-edit ./src/auth.ts --success true --train-patte
 
 ```bash
 # Route a task with explanation
-npx hive-flow@v3alpha hooks route "refactor authentication to use JWT" --include-explanation
+hive-flow hooks route "refactor authentication to use JWT" --include-explanation
 
 # Bootstrap intelligence from your codebase
-npx hive-flow@v3alpha hooks pretrain --depth deep --model-type moe
+hive-flow hooks pretrain --depth deep --model-type moe
 ```
 
 #### 📅 Session Management Hooks (4 hooks)
@@ -3146,10 +3087,10 @@ npx hive-flow@v3alpha hooks pretrain --depth deep --model-type moe
 
 ```bash
 # Start session with auto-daemon
-npx hive-flow@v3alpha hooks session-start --session-id "feature-auth" --start-daemon
+hive-flow hooks session-start --session-id "feature-auth" --start-daemon
 
 # End session and export learnings
-npx hive-flow@v3alpha hooks session-end --export-metrics --persist-patterns
+hive-flow hooks session-end --export-metrics --persist-patterns
 ```
 
 #### 🤖 Intelligence System Hooks (9 hooks)
@@ -3168,13 +3109,13 @@ npx hive-flow@v3alpha hooks session-end --export-metrics --persist-patterns
 
 ```bash
 # Start trajectory for complex task
-npx hive-flow@v3alpha hooks intelligence trajectory-start --task "implement OAuth2"
+hive-flow hooks intelligence trajectory-start --task "implement OAuth2"
 
 # Record successful action
-npx hive-flow@v3alpha hooks intelligence trajectory-step --action "created token service" --quality 0.9
+hive-flow hooks intelligence trajectory-step --action "created token service" --quality 0.9
 
 # End trajectory and trigger learning
-npx hive-flow@v3alpha hooks intelligence trajectory-end --success true
+hive-flow hooks intelligence trajectory-end --success true
 
 # View intelligence diagnostics and improvement trends (ADR-050)
 node .claude/helpers/hook-handler.cjs stats
@@ -3202,13 +3143,13 @@ Workers run automatically based on context, or dispatch manually.
 
 ```bash
 # List all workers
-npx hive-flow@v3alpha hooks worker list
+hive-flow hooks worker list
 
 # Manually dispatch security audit
-npx hive-flow@v3alpha hooks worker dispatch --trigger audit --context "./src/auth"
+hive-flow hooks worker dispatch --trigger audit --context "./src/auth"
 
 # Check worker status
-npx hive-flow@v3alpha hooks worker status
+hive-flow hooks worker status
 ```
 
 ### Model Routing Hooks (3 hooks)
@@ -3223,10 +3164,10 @@ Automatically selects haiku/sonnet/opus based on task complexity.
 
 ```bash
 # Get model recommendation
-npx hive-flow@v3alpha hooks model-route --task "fix typo in README"
+hive-flow hooks model-route --task "fix typo in README"
 # → Recommends: haiku (simple task, low complexity)
 
-npx hive-flow@v3alpha hooks model-route --task "design distributed consensus system"
+hive-flow hooks model-route --task "design distributed consensus system"
 # → Recommends: opus (complex architecture, high reasoning)
 ```
 
@@ -3247,15 +3188,15 @@ npx hive-flow@v3alpha hooks model-route --task "design distributed consensus sys
 # ══════════════════════════════════════════════════════════════════
 
 # Route task to best agent (with intelligence context injection)
-npx hive-flow@v3alpha hooks route "<task>" --include-explanation
+hive-flow hooks route "<task>" --include-explanation
 
 # Start/end session with learning
-npx hive-flow@v3alpha hooks session-start --start-daemon
-npx hive-flow@v3alpha hooks session-end --persist-patterns
+hive-flow hooks session-start --start-daemon
+hive-flow hooks session-end --persist-patterns
 
 # View what the system has learned
-npx hive-flow@v3alpha hooks metrics
-npx hive-flow@v3alpha hooks intelligence stats
+hive-flow hooks metrics
+hive-flow hooks intelligence stats
 
 # Intelligence diagnostics — see if intelligence is improving
 node .claude/helpers/hook-handler.cjs stats          # Human-readable
@@ -3263,10 +3204,10 @@ node .claude/helpers/hook-handler.cjs stats --json   # JSON for scripting
 node .claude/helpers/intelligence.cjs stats           # Direct access
 
 # Bootstrap on new project
-npx hive-flow@v3alpha hooks pretrain --depth deep
+hive-flow hooks pretrain --depth deep
 
 # Dispatch background worker
-npx hive-flow@v3alpha hooks worker dispatch --trigger audit
+hive-flow hooks worker dispatch --trigger audit
 ```
 
 </details>
@@ -3292,38 +3233,38 @@ Share learned patterns across projects, teams, and the community via the decentr
 
 ```bash
 # Export learned patterns to file
-npx hive-flow@v3alpha memory export --format json --output ./patterns.json
+hive-flow memory export --format json --output ./patterns.json
 
 # Export specific namespace
-npx hive-flow@v3alpha memory export --namespace "security" --output ./security-patterns.json
+hive-flow memory export --namespace "security" --output ./security-patterns.json
 
 # Export with embeddings (larger file, faster import)
-npx hive-flow@v3alpha memory export --include-embeddings --output ./full-export.json
+hive-flow memory export --include-embeddings --output ./full-export.json
 
 # Export agent configurations
-npx hive-flow@v3alpha config export --scope project --output ./agent-configs.json
+hive-flow config export --scope project --output ./agent-configs.json
 
 # Export session state
-npx hive-flow@v3alpha session export --session-id "my-session" --output ./session.json
+hive-flow session export --session-id "my-session" --output ./session.json
 ```
 
 ### Import Commands
 
 ```bash
 # Import patterns from file
-npx hive-flow@v3alpha memory import --input ./patterns.json
+hive-flow memory import --input ./patterns.json
 
 # Import and merge with existing (don't overwrite)
-npx hive-flow@v3alpha memory import --input ./patterns.json --merge
+hive-flow memory import --input ./patterns.json --merge
 
 # Import from another project
-npx hive-flow@v3alpha hooks transfer --source-path ../other-project
+hive-flow hooks transfer --source-path ../other-project
 
 # Import agent configurations
-npx hive-flow@v3alpha config import --input ./agent-configs.json --scope project
+hive-flow config import --input ./agent-configs.json --scope project
 
 # Restore session
-npx hive-flow@v3alpha session restore --session-id "my-session"
+hive-flow session restore --session-id "my-session"
 ```
 
 ### Pattern Store (IPFS Marketplace)
@@ -3341,13 +3282,13 @@ Decentralized pattern marketplace for sharing and discovering community patterns
 
 ```bash
 # Search for authentication patterns
-npx hive-flow@v3alpha transfer-store search --query "authentication" --min-rating 4.0
+hive-flow transfer-store search --query "authentication" --min-rating 4.0
 
 # Download a pattern
-npx hive-flow@v3alpha transfer-store download --id "auth-jwt-patterns-v2" --verify
+hive-flow transfer-store download --id "auth-jwt-patterns-v2" --verify
 
 # Publish your patterns
-npx hive-flow@v3alpha transfer-store publish --input ./my-patterns.json --category "security"
+hive-flow transfer-store publish --input ./my-patterns.json --category "security"
 ```
 
 ### Plugin Store
@@ -3365,22 +3306,22 @@ Discover and install community plugins from the **live IPFS registry** with 19 o
 
 ```bash
 # List plugins with live ratings from Cloud Function
-npx hive-flow@v3alpha plugins list
+hive-flow plugins list
 
 # Filter by type
-npx hive-flow@v3alpha plugins list --type integration
+hive-flow plugins list --type integration
 
 # Rate a plugin
-npx hive-flow@v3alpha plugins rate --name @hive-flow/embeddings --rating 5
+hive-flow plugins rate --name @hive-flow/embeddings --rating 5
 
 # Search for MCP tool plugins
-npx hive-flow@v3alpha transfer plugin-search --type "mcp-tool" --verified
+hive-flow transfer plugin-search --type "mcp-tool" --verified
 
 # Get plugin info
-npx hive-flow@v3alpha transfer plugin-info --name "semantic-code-search"
+hive-flow transfer plugin-info --name "semantic-code-search"
 
 # List official plugins
-npx hive-flow@v3alpha transfer plugin-official
+hive-flow transfer plugin-official
 ```
 
 #### Live IPFS Plugin Registry
@@ -3396,7 +3337,6 @@ The official plugin registry is hosted on IPFS with Ed25519 signature verificati
 
 ```bash
 # Fetch live registry directly
-curl -s "https://gateway.pinata.cloud/ipfs/bafkreiahw4ufxwycbwwswt7rgbx6hkgnvg3rophhocatgec4bu5e7tzk2a"
 ```
 
 ### IPFS Integration
@@ -3413,10 +3353,10 @@ Patterns and models are distributed via IPFS for decentralization and integrity.
 
 ```bash
 # Resolve IPNS name to CID
-npx hive-flow@v3alpha transfer ipfs-resolve --name "/ipns/patterns.hive-flow.io"
+hive-flow transfer ipfs-resolve --name "/ipns/patterns.hive-flow.io"
 
 # Detect PII before publishing
-npx hive-flow@v3alpha transfer detect-pii --content "$(cat ./patterns.json)"
+hive-flow transfer detect-pii --content "$(cat ./patterns.json)"
 ```
 
 ### Model & Learning Pattern Import/Export
@@ -3431,7 +3371,6 @@ Share trained neural patterns and learning models via IPFS.
 
 ```bash
 # Export a learning pattern to IPFS
-curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" \
   -H "Authorization: Bearer $PINATA_JWT" \
   -d '{
     "pinataContent": {
@@ -3443,11 +3382,8 @@ curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" \
   }'
 
 # Import a pattern from IPFS CID
-curl -s "https://gateway.pinata.cloud/ipfs/QmYourCIDHere"
 
 # Via Cloud Function (when deployed)
-curl "https://publish-registry-xxx.cloudfunctions.net?action=export-model" -d @model.json
-curl "https://publish-registry-xxx.cloudfunctions.net?action=import-model&cid=QmXxx"
 ```
 
 #### Supported Model Types
@@ -3478,16 +3414,15 @@ Import pre-trained learning patterns for common tasks. **90.5% average accuracy*
 
 ```bash
 # Browse available models
-curl -s "https://gateway.pinata.cloud/ipfs/QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc" | jq '.models[].name'
 
 # Import all models
-npx hive-flow@v3alpha transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
+hive-flow transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
 
 # Import specific category
-npx hive-flow@v3alpha neural import --model security-review-patterns --source ipfs
+hive-flow neural import --model security-review-patterns --source ipfs
 
 # Use patterns in routing
-npx hive-flow@v3alpha hooks route --task "review authentication code" --use-patterns
+hive-flow hooks route --task "review authentication code" --use-patterns
 ```
 
 #### Benefits vs Fresh Install
@@ -3512,7 +3447,7 @@ npx hive-flow@v3alpha hooks route --task "review authentication code" --use-patt
 
 ```bash
 # Install a pattern pack
-npx hive-flow@v3alpha transfer-store download --id "security-essentials" --apply
+hive-flow transfer-store download --id "security-essentials" --apply
 ```
 
 ### Local Neural Training
@@ -3531,25 +3466,25 @@ external vector packages.
 
 ```bash
 # List available pre-trained models from IPFS registry
-npx hive-flow@v3alpha neural list
+hive-flow neural list
 
 # List models by category
-npx hive-flow@v3alpha neural list --category security
+hive-flow neural list --category security
 
 # Train with WASM acceleration
-npx hive-flow@v3alpha neural train -p coordination -e 100 --wasm --flash --contrastive
+hive-flow neural train -p coordination -e 100 --wasm --flash --contrastive
 
 # Train security patterns
-npx hive-flow@v3alpha neural train -p security --wasm --contrastive
+hive-flow neural train -p security --wasm --contrastive
 
 # Benchmark WASM performance
-npx hive-flow@v3alpha neural benchmark -d 256 -i 1000
+hive-flow neural benchmark -d 256 -i 1000
 
 # Import pre-trained models
-npx hive-flow@v3alpha neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
+hive-flow neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
 
 # Export trained patterns to IPFS
-npx hive-flow@v3alpha neural export --ipfs --sign
+hive-flow neural export --ipfs --sign
 ```
 
 #### Benchmark Results
@@ -3888,9 +3823,9 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 /v3-security-overhaul
 
 # Via CLI
-npx hive-flow@v3alpha skill run github-code-review
-npx hive-flow@v3alpha skill list
-npx hive-flow@v3alpha skill info sparc-methodology
+hive-flow skill run github-code-review
+hive-flow skill list
+hive-flow skill info sparc-methodology
 ```
 
 ### Creating Custom Skills
@@ -3947,21 +3882,21 @@ The Claims system manages **who is working on what** — whether human or agent.
 
 | Command | What It Does | Example |
 |---------|--------------|---------|
-| `issues list` | See all issues and their status | `npx hive-flow@v3alpha issues list` |
-| `issues claim` | Claim an issue for yourself/agent | `npx hive-flow@v3alpha issues claim #123 --as coder-1` |
-| `issues release` | Release your claim | `npx hive-flow@v3alpha issues release #123` |
-| `issues handoff` | Hand off to another worker | `npx hive-flow@v3alpha issues handoff #123 --to reviewer` |
-| `issues status` | Update progress on claimed work | `npx hive-flow@v3alpha issues status #123 --progress 75` |
-| `issues stealable` | List abandoned/stuck issues | `npx hive-flow@v3alpha issues stealable` |
-| `issues steal` | Take over stealable issue | `npx hive-flow@v3alpha issues steal #123` |
-| `issues load` | View agent workloads | `npx hive-flow@v3alpha issues load` |
-| `issues rebalance` | Redistribute work evenly | `npx hive-flow@v3alpha issues rebalance --dry-run` |
-| `issues board` | Visual board view | `npx hive-flow@v3alpha issues board` |
+| `issues list` | See all issues and their status | `hive-flow issues list` |
+| `issues claim` | Claim an issue for yourself/agent | `hive-flow issues claim #123 --as coder-1` |
+| `issues release` | Release your claim | `hive-flow issues release #123` |
+| `issues handoff` | Hand off to another worker | `hive-flow issues handoff #123 --to reviewer` |
+| `issues status` | Update progress on claimed work | `hive-flow issues status #123 --progress 75` |
+| `issues stealable` | List abandoned/stuck issues | `hive-flow issues stealable` |
+| `issues steal` | Take over stealable issue | `hive-flow issues steal #123` |
+| `issues load` | View agent workloads | `hive-flow issues load` |
+| `issues rebalance` | Redistribute work evenly | `hive-flow issues rebalance --dry-run` |
+| `issues board` | Visual board view | `hive-flow issues board` |
 
 ### Visual Board View
 
 ```bash
-npx hive-flow@v3alpha issues board
+hive-flow issues board
 ```
 
 ```
@@ -3983,13 +3918,13 @@ When you need to pass work to someone else:
 
 ```bash
 # 1. Request handoff with context
-npx hive-flow@v3alpha issues handoff #123 \
+hive-flow issues handoff #123 \
   --to security-architect \
   --reason "Needs security review" \
   --progress 80
 
 # 2. Target accepts handoff
-npx hive-flow@v3alpha issues accept #123 --as security-architect
+hive-flow issues accept #123 --as security-architect
 
 # 3. Work continues with full context
 ```
@@ -3998,7 +3933,7 @@ npx hive-flow@v3alpha issues accept #123 --as security-architect
 
 ```bash
 # View current load
-npx hive-flow@v3alpha issues load
+hive-flow issues load
 
 # Output:
 # Agent          | Claims | Load  | Status
@@ -4009,7 +3944,7 @@ npx hive-flow@v3alpha issues load
 # security-arch  | 0      | 0%    | 🟢 Available
 
 # Auto-rebalance
-npx hive-flow@v3alpha issues rebalance
+hive-flow issues rebalance
 ```
 
 ### MCP Tools
@@ -4070,14 +4005,14 @@ The Route system uses **Q-Learning** to automatically assign tasks to the best a
 
 | Command | What It Does | Example |
 |---------|--------------|---------|
-| `route task` | Get agent recommendation | `npx hive-flow@v3alpha route task "implement OAuth2"` |
-| `route explain` | Understand routing decision | `npx hive-flow@v3alpha route explain "task"` |
-| `route coverage` | Route based on test coverage | `npx hive-flow@v3alpha route coverage` |
+| `route task` | Get agent recommendation | `hive-flow route task "implement OAuth2"` |
+| `route explain` | Understand routing decision | `hive-flow route explain "task"` |
+| `route coverage` | Route based on test coverage | `hive-flow route coverage` |
 
 ### Example: Route a Task
 
 ```bash
-npx hive-flow@v3alpha route task "refactor authentication to use JWT"
+hive-flow route task "refactor authentication to use JWT"
 
 # Output:
 # ╔══════════════════════════════════════════════════════════════╗
@@ -4104,7 +4039,7 @@ npx hive-flow@v3alpha route task "refactor authentication to use JWT"
 Routes tasks to agents based on **test coverage gaps**:
 
 ```bash
-npx hive-flow@v3alpha route coverage
+hive-flow route coverage
 
 # Finds untested code and routes to tester agent:
 # • src/auth/jwt.ts - 23% coverage → tester
@@ -4116,10 +4051,10 @@ npx hive-flow@v3alpha route coverage
 
 ```bash
 # Route via hooks (preferred)
-npx hive-flow@v3alpha hooks route "implement caching layer" --include-explanation
+hive-flow hooks route "implement caching layer" --include-explanation
 
 # Record outcome for learning
-npx hive-flow@v3alpha hooks post-task --task-id "task-123" --success true --agent coder
+hive-flow hooks post-task --task-id "task-123" --success true --agent coder
 ```
 
 ### How Q-Learning Improves Over Time
@@ -4150,10 +4085,8 @@ Use Hive Flow packages directly in your TypeScript/JavaScript applications.
 
 ```bash
 # Install specific packages
-npm install @hive-flow/cli @hive-flow/memory @hive-flow/swarm
 
 # Or install everything
-npm install hive-flow@v3alpha
 ```
 
 ### Quick Examples
@@ -4190,21 +4123,21 @@ console.log(results);
 **CLI Commands:**
 ```bash
 # Initialize memory database
-npx hive-flow@alpha memory init --force
+hive-flow memory init --force
 
 # Store patterns
-npx hive-flow@alpha memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
-npx hive-flow@alpha memory store --key "pattern-cache" --value "Redis caching for API responses"
+hive-flow memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
+hive-flow memory store --key "pattern-cache" --value "Redis caching for API responses"
 
 # Build HNSW index for fast HNSW-indexed search
-npx hive-flow@alpha memory search --query "authentication" --build-hnsw
+hive-flow memory search --query "authentication" --build-hnsw
 
 # Semantic search (uses HNSW if built)
-npx hive-flow@alpha memory search --query "how to cache data" --limit 5
+hive-flow memory search --query "how to cache data" --limit 5
 
 # List and manage entries
-npx hive-flow@alpha memory list --namespace patterns
-npx hive-flow@alpha memory stats
+hive-flow memory list --namespace patterns
+hive-flow memory stats
 ```
 
 </details>
@@ -4597,7 +4530,7 @@ Flow Nexus is a **cloud platform** for deploying and scaling Hive Flow beyond yo
 /flow-nexus-swarm
 
 # Or via CLI
-npx hive-flow@v3alpha nexus swarm deploy \
+hive-flow nexus swarm deploy \
   --topology hierarchical \
   --max-agents 50 \
   --region us-east-1
@@ -4609,13 +4542,13 @@ Isolated execution environments for running untrusted code:
 
 ```bash
 # Create sandbox
-npx hive-flow@v3alpha nexus sandbox create --language python
+hive-flow nexus sandbox create --language python
 
 # Execute code safely
-npx hive-flow@v3alpha nexus sandbox exec --code "print('Hello')"
+hive-flow nexus sandbox exec --code "print('Hello')"
 
 # Cleanup
-npx hive-flow@v3alpha nexus sandbox destroy
+hive-flow nexus sandbox destroy
 ```
 
 ### Event-Driven Workflows
@@ -4641,10 +4574,10 @@ steps:
 # 1. Sign up at flow-nexus.io
 # 2. Get API key
 # 3. Configure
-npx hive-flow@v3alpha nexus configure --api-key <key>
+hive-flow nexus configure --api-key <key>
 
 # 4. Deploy
-npx hive-flow@v3alpha nexus swarm deploy
+hive-flow nexus swarm deploy
 ```
 
 </details>
@@ -4678,7 +4611,7 @@ Stream-Chain enables **sequential processing** where the output of one agent bec
 /stream-chain
 
 # Define pipeline
-npx hive-flow@v3alpha stream-chain create \
+hive-flow stream-chain create \
   --name "feature-pipeline" \
   --stages "researcher,architect,coder,tester,reviewer"
 ```
@@ -4720,11 +4653,11 @@ stages:
 
 ```bash
 # Run the pipeline
-npx hive-flow@v3alpha stream-chain run feature-pipeline \
+hive-flow stream-chain run feature-pipeline \
   --input '{"requirements": "Add user dashboard with analytics"}'
 
 # Monitor progress
-npx hive-flow@v3alpha stream-chain status feature-pipeline
+hive-flow stream-chain status feature-pipeline
 ```
 
 ### Use Cases
@@ -4764,7 +4697,7 @@ The Pair Programming skill provides **human-AI collaborative coding** with role 
 /pair-programming --mode tdd
 
 # Via CLI
-npx hive-flow@v3alpha pair start --mode navigator
+hive-flow pair start --mode navigator
 ```
 
 ### TDD Mode Workflow
@@ -4804,16 +4737,16 @@ npx hive-flow@v3alpha pair start --mode navigator
 
 ```bash
 # Switch roles mid-session
-npx hive-flow@v3alpha pair switch
+hive-flow pair switch
 
 # Get AI explanation
-npx hive-flow@v3alpha pair explain
+hive-flow pair explain
 
 # Run tests
-npx hive-flow@v3alpha pair test
+hive-flow pair test
 
 # End session with summary
-npx hive-flow@v3alpha pair end
+hive-flow pair end
 ```
 
 </details>
@@ -4870,22 +4803,22 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 ```bash
 # Basic threat scan
-npx hive-flow@v3alpha security defend -i "ignore previous instructions"
+hive-flow security defend -i "ignore previous instructions"
 
 # Scan a file
-npx hive-flow@v3alpha security defend -f ./user-prompts.txt
+hive-flow security defend -f ./user-prompts.txt
 
 # Quick scan (faster)
-npx hive-flow@v3alpha security defend -i "some text" --quick
+hive-flow security defend -i "some text" --quick
 
 # JSON output
-npx hive-flow@v3alpha security defend -i "test" -o json
+hive-flow security defend -i "test" -o json
 
 # View statistics
-npx hive-flow@v3alpha security defend --stats
+hive-flow security defend --stats
 
 # Full security audit
-npx hive-flow@v3alpha security scan --depth full
+hive-flow security scan --depth full
 ```
 
 ### MCP Tools
@@ -5075,17 +5008,13 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 <details>
 <summary><strong>🌐 Browser Automation — @hive-flow/browser</strong></summary>
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/browser?color=blue&label=npm)](https://www.npmjs.com/package/@hive-flow/browser)
 
-AI-optimized browser automation integrating [agent-browser](https://github.com/AugmentCode/agent-browser) with hive-flow for intelligent web automation, trajectory learning, and multi-agent browser coordination.
 
 ### Installation
 
 ```bash
-npm install @hive-flow/browser
 
 # agent-browser CLI (auto-suggested on install, or install manually)
-npm install -g agent-browser@latest
 ```
 
 ### Quick Start
@@ -5102,7 +5031,6 @@ const browser = createBrowserService({
 // Track actions for ReasoningBank/SONA learning
 browser.startTrajectory('Login to dashboard');
 
-await browser.open('https://example.com/login');
 
 // Use element refs (93% context reduction vs CSS selectors)
 const snapshot = await browser.snapshot({ interactive: true });
@@ -5132,7 +5060,6 @@ import { getSecurityScanner, isUrlSafe, containsPII } from '@hive-flow/browser';
 
 // URL threat detection
 const scanner = getSecurityScanner({ requireHttps: true });
-const result = await scanner.scanUrl('https://example.com');
 // { safe: true, threats: [], score: 1.0 }
 
 // PII detection
@@ -5153,7 +5080,6 @@ const template = getWorkflow('login-basic');
 // { steps: [{action: 'open'}, {action: 'fill'}, ...], variables: [...] }
 ```
 
-📖 [Full Documentation](./v3/@hive-flow/browser/README.md)
 
 </details>
 
@@ -5281,17 +5207,17 @@ async function release(version: string, tag: string) {
 ### CLI Commands
 
 ```bash
-# Prepare release
-npx @hive-flow/deployment release --version 2.0.0 --changelog --tag
+# Deploy a release candidate
+hive-flow deployment deploy -e staging --version 2.0.0
 
-# Publish to npm
-npx @hive-flow/deployment publish --tag latest --access public
+# Promote to production
+hive-flow deployment deploy -e prod --version 2.0.0
 
-# Validate package
-npx @hive-flow/deployment validate
+# Check deployment status
+hive-flow deployment status -e prod
 
 # Dry run (no changes)
-npx @hive-flow/deployment release --version 2.0.0 --dry-run
+hive-flow deployment deploy -e staging --version 2.0.0 --dry-run
 ```
 
 </details>
@@ -5476,10 +5402,10 @@ npm run bench:attention
 npm run bench:startup
 
 # Performance report
-npx hive-flow@v3alpha performance report
+hive-flow performance report
 
 # Benchmark specific suite
-npx hive-flow@v3alpha performance benchmark --suite memory
+hive-flow performance benchmark --suite memory
 ```
 
 </details>
@@ -5764,21 +5690,21 @@ Environment setup, configuration options, and platform support.
 ### Windows (PowerShell)
 
 ```powershell
-npx @hive-flow/security@latest audit --platform windows
+hive-flow security scan --target . --type all
 $env:HIVE_FLOW_MODE = "integration"
 ```
 
 ### macOS (Bash/Zsh)
 
 ```bash
-npx @hive-flow/security@latest audit --platform darwin
+hive-flow security scan --target . --type all
 export HIVE_FLOW_SECURITY_MODE="strict"
 ```
 
 ### Linux (Bash)
 
 ```bash
-npx @hive-flow/security@latest audit --platform linux
+hive-flow security scan --target . --type all
 export HIVE_FLOW_MEMORY_PATH="./data"
 ```
 
@@ -5837,7 +5763,6 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 | `OPENAI_API_KEY` | OpenAI API key for GPT models | Optional |
 | `GOOGLE_GEMINI_API_KEY` | Google Gemini API key | Optional |
 | `OPENROUTER_API_KEY` | OpenRouter API key (multi-provider) | Optional |
-| `OLLAMA_URL` | Ollama server URL for local models | `http://localhost:11434` |
 
 ### IPFS/Decentralized Storage
 
@@ -5848,8 +5773,6 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 | `IPFS_TOKEN` | Generic IPFS API token | Optional |
 | `PINATA_API_KEY` | Pinata IPFS API key | Optional |
 | `PINATA_API_SECRET` | Pinata IPFS API secret | Optional |
-| `IPFS_API_URL` | Local IPFS node API URL | `http://localhost:5001` |
-| `IPFS_GATEWAY_URL` | IPFS gateway URL | `https://ipfs.io` |
 
 ### Google Cloud Storage
 
@@ -6156,25 +6079,25 @@ Hive Flow looks for configuration in this order:
 
 ```bash
 # View current configuration
-npx hive-flow@v3alpha config list
+hive-flow config list
 
 # Get specific value
-npx hive-flow@v3alpha config get --key memory.type
+hive-flow config get --key memory.type
 
 # Set configuration value
-npx hive-flow@v3alpha config set --key swarm.maxAgents --value 10
+hive-flow config set --key swarm.maxAgents --value 10
 
 # Export configuration
-npx hive-flow@v3alpha config export > my-config.json
+hive-flow config export > my-config.json
 
 # Import configuration
-npx hive-flow@v3alpha config import --file my-config.json
+hive-flow config import --file my-config.json
 
 # Reset to defaults
-npx hive-flow@v3alpha config reset --key swarm
+hive-flow config reset --key swarm
 
 # Initialize with wizard
-npx hive-flow@v3alpha init --wizard
+hive-flow init --wizard
 ```
 
 </details>
@@ -6198,7 +6121,7 @@ lsof -i :3000
 # Kill existing process
 kill -9 <PID>
 # Restart MCP server
-npx hive-flow@v3alpha mcp start
+hive-flow mcp start
 ```
 
 **Agent spawn failures**
@@ -6212,9 +6135,9 @@ export HIVE_FLOW_MAX_AGENTS=5
 **Pattern search returning no results**
 ```bash
 # Verify patterns are stored
-npx hive-flow@v3alpha hooks metrics
+hive-flow hooks metrics
 # Re-run pretraining if empty
-npx hive-flow@v3alpha hooks pretrain
+hive-flow hooks pretrain
 ```
 
 **Windows path issues**
@@ -6282,20 +6205,20 @@ cp -r ./data ./data-backup-v2
 cp -r ./.hive-flow ./.hive-flow-backup-v2
 
 # STEP 2: Check migration status
-npx hive-flow@v3alpha migrate status
+hive-flow migrate status
 
 # STEP 3: Run migration with dry-run first
-npx hive-flow@v3alpha migrate run --dry-run
+hive-flow migrate run --dry-run
 
 # STEP 4: Execute migration
-npx hive-flow@v3alpha migrate run --from v2
+hive-flow migrate run --from v2
 
 # STEP 5: Verify migration
-npx hive-flow@v3alpha migrate verify
+hive-flow migrate verify
 
 # STEP 6: Initialize V3 learning
-npx hive-flow@v3alpha hooks pretrain
-npx hive-flow@v3alpha doctor --fix
+hive-flow hooks pretrain
+hive-flow doctor --fix
 ```
 
 ### Command Changes Reference
@@ -6362,10 +6285,10 @@ If migration fails, you can rollback:
 
 ```bash
 # Check rollback options
-npx hive-flow@v3alpha migrate rollback --list
+hive-flow migrate rollback --list
 
 # Rollback to V2
-npx hive-flow@v3alpha migrate rollback --to v2
+hive-flow migrate rollback --to v2
 
 # Restore backup manually if needed
 rm -rf ./data
@@ -6374,12 +6297,12 @@ cp -r ./data-backup-v2 ./data
 
 ### Post-Migration Checklist
 
-- [ ] Verify all agents spawn correctly: `npx hive-flow@v3alpha agent list`
-- [ ] Check memory search works: `npx hive-flow@v3alpha memory search -q "test"`
-- [ ] Confirm MCP server starts: `npx hive-flow@v3alpha mcp start`
-- [ ] Run doctor diagnostics: `npx hive-flow@v3alpha doctor`
-- [ ] Test a simple swarm: `npx hive-flow@v3alpha swarm init --topology mesh`
-- [ ] Bootstrap learning: `npx hive-flow@v3alpha hooks pretrain`
+- [ ] Verify all agents spawn correctly: `hive-flow agent list`
+- [ ] Check memory search works: `hive-flow memory search -q "test"`
+- [ ] Confirm MCP server starts: `hive-flow mcp start`
+- [ ] Run doctor diagnostics: `hive-flow doctor`
+- [ ] Test a simple swarm: `hive-flow swarm init --topology mesh`
+- [ ] Bootstrap learning: `hive-flow hooks pretrain`
 
 ### Common Migration Issues
 
@@ -6403,7 +6326,6 @@ cp -r ./data-backup-v2 ./data
 
 | Module | Description | Docs |
 |--------|-------------|------|
-| `@hive-flow/plugins` | Plugin SDK with workers, hooks, providers, security | [README](./v3/@hive-flow/plugins/README.md) |
 | `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/hooks/) |
 | `@hive-flow/memory` | AgentDB unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
@@ -6418,11 +6340,9 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/performance/) |
 | `@hive-flow/deployment` | Release & CI/CD | [Source](./v3/@hive-flow/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |
-| `@hive-flow/browser` | AI-optimized browser automation with agent-browser | [README](./v3/@hive-flow/browser/README.md) |
 
 ### Additional Resources
 
-- [V2 Documentation](./v2/README.md)
 - [Architecture Decisions (ADRs)](./v3/docs/adr/)
 - [API Reference](./v2/docs/technical/)
 - [Examples](./v2/examples/)
@@ -6433,18 +6353,5 @@ cp -r ./data-backup-v2 ./data
 
 | Resource | Link |
 |----------|------|
-| 📚 Documentation | [github.com/hypnwtykvmpr/hive-flow](https://github.com/hypnwtykvmpr/hive-flow) |
-| 🐛 Issues & Bugs | [github.com/hypnwtykvmpr/hive-flow/issues](https://github.com/hypnwtykvmpr/hive-flow/issues) |
-| 💼 Professional Implementation | [hive-flow.invalid](https://hive-flow.invalid) — Enterprise consulting, custom integrations, and production deployment |
-| 💬 Discord Community | [Agentics Foundation](https://discord.com/invite/dfxmpwkG2D) |
 
 ## License
-
-MIT - [Hive Flow](https://github.com/hypnwtykvmpr)
-
-
-
-[![Agentic-Flow](https://img.shields.io/npm/v/agentic-flow?style=for-the-badge&logo=typescript&color=3178c6&label=Agentic-Flow)](https://www.npmjs.com/package/agentic-flow)
-[![Reddit](https://img.shields.io/reddit/subreddit-subscribers/aipromptprogramming?style=for-the-badge&logo=reddit&color=FF4500&label=r/aipromptprogramming)](https://www.reddit.com/r/aipromptprogramming/)
-
-[![Crates.io](https://img.shields.io/badge/crates.io-hypnwtykvmpr-E6732E?style=for-the-badge&logo=rust&logoColor=white)](https://crates.io/users/hypnwtykvmpr)

@@ -4,7 +4,7 @@ Real-time view of swarm activity.
 
 ## Usage
 ```bash
-npx hive-flow monitoring real-time-view [options]
+hive-flow monitoring real-time-view [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow monitoring real-time-view [options]
 ## Examples
 ```bash
 # Start real-time view
-npx hive-flow monitoring real-time-view
+hive-flow monitoring real-time-view
 
 # Filter errors
-npx hive-flow monitoring real-time-view --filter errors
+hive-flow monitoring real-time-view --filter errors
 
 # Highlight pattern
-npx hive-flow monitoring real-time-view --highlight "API"
+hive-flow monitoring real-time-view --highlight "API"
 ```

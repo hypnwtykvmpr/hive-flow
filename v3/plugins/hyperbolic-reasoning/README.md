@@ -1,8 +1,5 @@
 # @hive-flow/plugin-hyperbolic-reasoning
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-hyperbolic-reasoning.svg)](https://www.npmjs.com/package/@hive-flow/plugin-hyperbolic-reasoning)
-[![license](https://img.shields.io/npm/l/@hive-flow/plugin-hyperbolic-reasoning.svg)](https://github.com/ruvnet/hive-flow/blob/main/LICENSE)
-[![downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-hyperbolic-reasoning.svg)](https://www.npmjs.com/package/@hive-flow/plugin-hyperbolic-reasoning)
 
 An exotic reasoning plugin implementing hyperbolic neural networks for superior hierarchical understanding. The plugin enables efficient representation of tree structures, taxonomic reasoning, and hierarchical entailment using Poincare ball embeddings with Mobius operations. Applications include improved ontology navigation, hierarchical code understanding, and organizational relationship modeling.
 
@@ -11,13 +8,12 @@ An exotic reasoning plugin implementing hyperbolic neural networks for superior 
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-hyperbolic-reasoning
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-hyperbolic-reasoning
+hive-flow plugins install --name @hive-flow/plugin-hyperbolic-reasoning
 ```
 
 ## Quick Start
@@ -309,9 +305,6 @@ The plugin supports learning optimal curvature per hierarchy:
 
 | Plugin | Description | Synergy |
 |--------|-------------|---------|
-| [@hive-flow/plugin-neural-coordination](https://www.npmjs.com/package/@hive-flow/plugin-neural-coordination) | Multi-agent coordination | Hierarchical embeddings enable efficient agent organization structures |
-| [@hive-flow/plugin-cognitive-kernel](https://www.npmjs.com/package/@hive-flow/plugin-cognitive-kernel) | Cognitive augmentation | Hyperbolic memory organization for improved episodic retrieval |
-| [@hive-flow/plugin-quantum-optimizer](https://www.npmjs.com/package/@hive-flow/plugin-quantum-optimizer) | Quantum-inspired optimization | Optimizes hierarchical constraint satisfaction and tree operations |
 
 ## License
 

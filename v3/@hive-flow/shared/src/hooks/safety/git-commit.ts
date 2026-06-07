@@ -326,7 +326,7 @@ export class GitCommitHook {
       const additions: string[] = [];
 
       if (this.config.addClaudeReference) {
-        additions.push('\n\nGenerated with [Claude Code](https://claude.com/claude-code)');
+        additions.push('\n\nGenerated with [Claude Code](Claude Code)');
       }
 
       if (this.config.addCoAuthor) {

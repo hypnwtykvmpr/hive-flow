@@ -27,21 +27,21 @@ Multi-agent swarm coordination for complex tasks.
 Start a new swarm with hierarchical topology
 
 ```bash
-npx @hive-flow/cli swarm init --topology hierarchical --max-agents 8
+hive-flow swarm init --topology hierarchical --max-agents 8
 ```
 
 ### Route Task
 Route a task to the appropriate agents
 
 ```bash
-npx @hive-flow/cli hooks route --task "[task description]"
+hive-flow hooks route --task "[task description]"
 ```
 
 ### Monitor Status
 Check the current swarm status
 
 ```bash
-npx @hive-flow/cli swarm status
+hive-flow swarm status
 ```
 
 

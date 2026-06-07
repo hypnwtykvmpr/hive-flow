@@ -61,16 +61,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run devops "deploy to AWS Lambda"
+hive-flow sparc run devops "deploy to AWS Lambda"
 
 # For alpha features
-npx hive-flow@alpha sparc run devops "deploy to AWS Lambda"
+hive-flow sparc run devops "deploy to AWS Lambda"
 
 # With namespace
-npx hive-flow sparc run devops "your task" --namespace devops
+hive-flow sparc run devops "your task" --namespace devops
 
 # Non-interactive mode
-npx hive-flow sparc run devops "your task" --non-interactive
+hive-flow sparc run devops "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -102,8 +102,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "devops_context" "important decisions" --namespace devops
+hive-flow memory store "devops_context" "important decisions" --namespace devops
 
 # Query previous work
-npx hive-flow memory query "devops" --limit 5
+hive-flow memory query "devops" --limit 5
 ```

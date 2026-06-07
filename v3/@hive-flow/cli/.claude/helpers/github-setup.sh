@@ -6,7 +6,6 @@ echo "🔗 Setting up GitHub integration..."
 # Check for gh CLI
 if ! command -v gh &> /dev/null; then
     echo "⚠️  GitHub CLI (gh) not found"
-    echo "Install from: https://cli.github.com/"
     echo "Continuing without GitHub features..."
 else
     echo "✅ GitHub CLI found"
@@ -22,7 +21,7 @@ fi
 
 echo ""
 echo "📦 GitHub swarm commands available:"
-echo "  - npx hive-flow github swarm"
-echo "  - npx hive-flow repo analyze"
-echo "  - npx hive-flow pr enhance"
-echo "  - npx hive-flow issue triage"
+echo "  - hive-flow github swarm"
+echo "  - hive-flow repo analyze"
+echo "  - hive-flow pr enhance"
+echo "  - hive-flow issue triage"

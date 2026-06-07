@@ -27,14 +27,14 @@ SPARC development workflow (Specification, Pseudocode, Architecture, Refinement,
 Define requirements and acceptance criteria
 
 ```bash
-npx @hive-flow/cli hooks route --task "specification: [requirements]"
+hive-flow hooks route --task "specification: [requirements]"
 ```
 
 ### Architecture Phase
 Design system structure
 
 ```bash
-npx @hive-flow/cli hooks route --task "architecture: [design]"
+hive-flow hooks route --task "architecture: [design]"
 ```
 
 

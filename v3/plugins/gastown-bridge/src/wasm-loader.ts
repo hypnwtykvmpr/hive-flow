@@ -920,7 +920,7 @@ export async function cookBatch(
 
 /**
  * Perform topological sort on a dependency graph.
- * Uses WASM if available (150x faster), falls back to JavaScript.
+ * Uses WASM if available (optimized faster), falls back to JavaScript.
  *
  * @param nodes - Array of node identifiers
  * @param edges - Array of edges (from -> to dependencies)
@@ -978,7 +978,7 @@ export async function topoSort(
 
 /**
  * Detect cycles in a dependency graph.
- * Uses WASM if available (150x faster), falls back to JavaScript.
+ * Uses WASM if available (optimized faster), falls back to JavaScript.
  *
  * @param nodes - Array of node identifiers
  * @param edges - Array of edges (from -> to dependencies)
@@ -1024,7 +1024,7 @@ export async function detectCycles(
 
 /**
  * Calculate the critical path through a weighted dependency graph.
- * Uses WASM if available (150x faster), falls back to JavaScript.
+ * Uses WASM if available (optimized faster), falls back to JavaScript.
  *
  * @param nodes - Array of node identifiers
  * @param edges - Array of edges (from -> to dependencies)

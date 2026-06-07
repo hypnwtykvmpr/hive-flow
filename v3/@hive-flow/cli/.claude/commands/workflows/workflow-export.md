@@ -4,7 +4,7 @@ Export workflows for sharing.
 
 ## Usage
 ```bash
-npx hive-flow workflow export [options]
+hive-flow workflow export [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow workflow export [options]
 ## Examples
 ```bash
 # Export workflow
-npx hive-flow workflow export --name "deploy-api"
+hive-flow workflow export --name "deploy-api"
 
 # As YAML
-npx hive-flow workflow export --name "test-suite" --format yaml
+hive-flow workflow export --name "test-suite" --format yaml
 
 # With history
-npx hive-flow workflow export --name "deploy-api" --include-history
+hive-flow workflow export --name "deploy-api" --include-history
 ```

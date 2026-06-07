@@ -78,10 +78,10 @@ async function checkNpmVersion(): Promise<HealthCheck> {
     if (major >= 9) {
       return { name: 'npm Version', status: 'pass', message: `v${version}` };
     } else {
-      return { name: 'npm Version', status: 'warn', message: `v${version} (>= 9 recommended)`, fix: 'npm install -g npm@latest' };
+      return { name: 'npm Version', status: 'warn', message: `v${version} (>= 9 recommended)`, fix: 'Update npm with your configured package manager' };
     }
   } catch {
-    return { name: 'npm Version', status: 'fail', message: 'npm not found', fix: 'Install Node.js from https://nodejs.org' };
+    return { name: 'npm Version', status: 'fail', message: 'npm not found', fix: 'Install Node.js from the Node.js installer' };
   }
 }
 
@@ -176,7 +176,7 @@ async function checkGit(): Promise<HealthCheck> {
     const version = await runCommand('git --version');
     return { name: 'Git', status: 'pass', message: version.replace('git version ', 'v') };
   } catch {
-    return { name: 'Git', status: 'warn', message: 'Not installed', fix: 'Install git from https://git-scm.com' };
+    return { name: 'Git', status: 'warn', message: 'Not installed', fix: 'Install git from the Git installer' };
   }
 }
 
@@ -208,7 +208,7 @@ async function checkMcpServers(): Promise<HealthCheck> {
         if (hasHiveFlow) {
           return { name: 'MCP Servers', status: 'pass', message: `${count} servers (hive-flow configured)` };
         } else {
-          return { name: 'MCP Servers', status: 'warn', message: `${count} servers (hive-flow not found)`, fix: 'claude mcp add hive-flow npx @hive-flow/cli@v3alpha mcp start' };
+          return { name: 'MCP Servers', status: 'warn', message: `${count} servers (hive-flow not found)`, fix: 'claude mcp add hive-flow hive-flow mcp start' };
         }
       } catch {
         // continue to next path
@@ -216,7 +216,7 @@ async function checkMcpServers(): Promise<HealthCheck> {
     }
   }
 
-  return { name: 'MCP Servers', status: 'warn', message: 'No MCP config found', fix: 'claude mcp add hive-flow npx @hive-flow/cli@v3alpha mcp start' };
+  return { name: 'MCP Servers', status: 'warn', message: 'No MCP config found', fix: 'claude mcp add hive-flow hive-flow mcp start' };
 }
 
 // Check disk space (async with proper env inheritance)
@@ -246,11 +246,11 @@ async function checkBuildTools(): Promise<HealthCheck> {
   try {
     const tscVersion = await runCommand('npx tsc --version', 10000); // tsc can be slow
     if (!tscVersion || tscVersion.includes('not found')) {
-      return { name: 'TypeScript', status: 'warn', message: 'Not installed locally', fix: 'npm install -D typescript' };
+      return { name: 'TypeScript', status: 'warn', message: 'Not installed locally', fix: 'Add TypeScript as a dev dependency with your configured package manager' };
     }
     return { name: 'TypeScript', status: 'pass', message: tscVersion.replace('Version ', 'v') };
   } catch {
-    return { name: 'TypeScript', status: 'warn', message: 'Not installed locally', fix: 'npm install -D typescript' };
+    return { name: 'TypeScript', status: 'warn', message: 'Not installed locally', fix: 'Add TypeScript as a dev dependency with your configured package manager' };
   }
 }
 
@@ -338,7 +338,7 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
 
     if (isOutdated) {
       const fix = isNpx
-        ? 'rm -rf ~/.npm/_npx/* && npx -y @hive-flow/cli@latest'
+        ? 'rm -rf ~/.npm/_npx/* && hive-flow'
         : 'npm update @hive-flow/cli';
 
       return {
@@ -376,7 +376,7 @@ async function checkClaudeCode(): Promise<HealthCheck> {
       name: 'Claude Code CLI',
       status: 'warn',
       message: 'Not installed',
-      fix: 'npm install -g @anthropic-ai/claude-code'
+      fix: 'Install Claude Code with your configured package manager'
     };
   }
 }

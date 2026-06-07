@@ -2,8 +2,6 @@
 
 <div align="center">
 
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-SDK%20Integrated-green?style=for-the-badge&logo=anthropic)](https://docs.anthropic.com/en/docs/claude-code)
-[![MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge&logo=opensourceinitiative)](https://opensource.org/licenses/MIT)
 
 # **Production-ready multi-agent AI orchestration for Claude Code**
 *Deploy 60+ specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
@@ -97,8 +95,7 @@ hive-flow init
 # Or full setup with MCP + diagnostics
 hive-flow init -s -- --full
 
-# Or via npx
-hive-flow init --wizard
+# Or via hive-flow init --wizard
 ```
 
 ---
@@ -364,7 +361,6 @@ swarm_init({
 
 ```bash
 # 1. Install Claude Code globally
-npm install -g @anthropic-ai/claude-code
 
 # 2. (Optional) Skip permissions check for faster setup
 claude --dangerously-skip-permissions
@@ -387,7 +383,6 @@ hive-flow init -s -- --full
 
 | Option | Description |
 |--------|-------------|
-| `--global`, `-g` | Install globally (`npm install -g`) |
 | `--minimal`, `-m` | Skip optional deps (faster, ~15s) |
 | `--setup-mcp` | Auto-configure MCP server for Claude Code |
 | `--doctor`, `-d` | Run diagnostics after install |
@@ -410,25 +405,24 @@ curl ... | bash -s -- --full
 **Speed:**
 | Mode | Time |
 |------|------|
-| npx (cached) | ~3s |
-| npx (fresh) | ~20s |
+| local CLI (warm) | ~3s |
+| local CLI (fresh shell) | ~20s |
 | global | ~35s |
 | --minimal | ~15s |
 
 </details>
 
-#### npm/npx Install
+#### CLI Usage
 
 ```bash
-# Quick start (no install needed)
+# Initialize the current project
 hive-flow init
 
-# Or install globally
-npm install -g hive-flow@alpha
-hive-flow init
+# Use the guided setup
+hive-flow init --wizard
 
-# With Bun (faster)
-bunx hive-flow@alpha init
+# Use the full setup profile
+hive-flow init --full
 ```
 
 #### Install Profiles
@@ -440,13 +434,11 @@ bunx hive-flow@alpha init
 
 ```bash
 # Minimal install (skip ML/embeddings)
-npm install -g hive-flow@alpha --omit=optional
 ```
 
 <details>
 <summary>🤖 <strong>OpenAI Codex CLI Support</strong> — Full Codex integration with self-learning</summary>
 
-Hive Flow supports both **Claude Code** and **OpenAI Codex CLI** via the [@hive-flow/codex](https://www.npmjs.com/package/@hive-flow/codex) package, following the [Agentics Foundation](https://agentics.org) standard.
 
 ### Quick Start for Codex
 
@@ -1143,7 +1135,6 @@ hive-flow mcp start
 
 Restart Claude Desktop after saving. Look for the MCP indicator (hammer icon) in the input box.
 
-*Sources: [Claude Help Center](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop), [Anthropic Desktop Extensions](https://www.anthropic.com/engineering/desktop-extensions)*
 
 </details>
 
@@ -1163,7 +1154,6 @@ claude mcp add hive-flow \
 claude mcp list
 ```
 
-*Sources: [Claude Code MCP Docs](https://code.claude.com)/docs/en/mcp)*
 
 </details>
 
@@ -1195,7 +1185,6 @@ Create `.vscode/mcp.json` in your project:
 }
 ```
 
-*Sources: [VS Code MCP Docs](https://code.visualstudio.com/docs/copilot/customization/mcp-servers), [MCP Integration Guides](https://mcpez.com/integrations)*
 
 </details>
 
@@ -1224,7 +1213,6 @@ Create `.cursor/mcp.json` in your project (or global config):
 
 **Important:** Cursor must be in **Agent Mode** (not Ask Mode) to access MCP tools. Cursor supports up to 40 MCP tools.
 
-*Sources: [Cursor MCP Docs](https://docs.cursor.com/context/model-context-protocol), [Cursor Directory](https://cursor.directory/mcp)*
 
 </details>
 
@@ -1251,7 +1239,6 @@ Create `.cursor/mcp.json` in your project (or global config):
 
 Click **Refresh** in the MCP settings to connect. Windsurf supports up to 100 MCP tools.
 
-*Sources: [Windsurf MCP Tutorial](https://windsurf.com/university/tutorials/configuring-first-mcp-server), [Windsurf Cascade Docs](https://docs.windsurf.com/windsurf/cascade/mcp)*
 
 </details>
 
@@ -1276,7 +1263,6 @@ hive-flow mcp start --transport http --port 3000
 
 Then add the server URL in ChatGPT Connectors settings.
 
-*Sources: [OpenAI MCP Docs](https://platform.openai.com/docs/mcp), [Docker MCP for ChatGPT](https://www.docker.com/blog/add-mcp-server-to-chatgpt/)*
 
 </details>
 
@@ -1286,7 +1272,6 @@ Then add the server URL in ChatGPT Connectors settings.
 Google AI Studio supports MCP natively since May 2025, with managed MCP servers for Google services (Maps, BigQuery, etc.) launched December 2025.
 
 **Using MCP SuperAssistant Extension:**
-1. Install [MCP SuperAssistant](https://chrome.google.com/webstore) Chrome extension
 2. Configure your hive-flow MCP server
 3. Use with Google AI Studio, Gemini, and other AI platforms
 
@@ -1307,7 +1292,6 @@ const mcpConfig = {
 };
 ```
 
-*Sources: [Google AI Studio MCP](https://developers.googleblog.com/en/google-ai-studio-native-code-generation-agentic-tools-upgrade/), [Google Cloud MCP Announcement](https://cloud.google.com/blog/products/ai-machine-learning/announcing-official-mcp-support-for-google-services)*
 
 </details>
 
@@ -1329,7 +1313,6 @@ JetBrains AI Assistant supports MCP for IntelliJ IDEA, PyCharm, WebStorm, and ot
 }
 ```
 
-*Sources: [JetBrains AI Assistant MCP](https://www.jetbrains.com/help/ai-assistant/mcp.html)*
 
 </details>
 
@@ -1408,7 +1391,6 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 ### Install
 
 ```bash
-npm install @hive-flow/guidance@alpha
 ```
 
 ### Quick Usage
@@ -1712,8 +1694,6 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-agentic-qe** | 3.0.0-alpha.2 | Quality Engineering with 58 AI agents across 12 DDD contexts. TDD, coverage analysis, security scanning, chaos engineering, accessibility testing. | `npm install @hive-flow/plugin-agentic-qe` |
-| **@hive-flow/plugin-prime-radiant** | 0.1.4 | Mathematical AI interpretability with 6 engines: sheaf cohomology, spectral analysis, causal inference, quantum topology, category theory, HoTT proofs. | `npm install @hive-flow/plugin-prime-radiant` |
 | **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing, Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
 | **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
 
@@ -1721,26 +1701,16 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-healthcare-clinical** | 0.1.0 | HIPAA-compliant clinical decision support with FHIR/HL7 integration. Symptom analysis, drug interactions, treatment recommendations. | `npm install @hive-flow/plugin-healthcare-clinical` |
-| **@hive-flow/plugin-financial-risk** | 0.1.0 | PCI-DSS/SOX compliant financial risk analysis. Portfolio optimization, fraud detection, regulatory compliance, market simulation. | `npm install @hive-flow/plugin-financial-risk` |
-| **@hive-flow/plugin-legal-contracts** | 0.1.0 | Attorney-client privilege protected contract analysis. Risk identification, clause extraction, compliance verification. | `npm install @hive-flow/plugin-legal-contracts` |
 
 #### 💻 Development Intelligence Plugins
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-code-intelligence** | 0.1.0 | Advanced code analysis with GNN-based pattern recognition. Security vulnerability detection, refactoring suggestions, architecture analysis. | `npm install @hive-flow/plugin-code-intelligence` |
-| **@hive-flow/plugin-test-intelligence** | 0.1.0 | AI-powered test generation and optimization. Coverage analysis, mutation testing, test prioritization, flaky test detection. | `npm install @hive-flow/plugin-test-intelligence` |
-| **@hive-flow/plugin-perf-optimizer** | 0.1.0 | Performance profiling and optimization. Memory leak detection, CPU bottleneck analysis, I/O optimization, caching strategies. | `npm install @hive-flow/plugin-perf-optimizer` |
 
 #### 🧠 Advanced AI/Reasoning Plugins
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-neural-coordination** | 0.1.0 | Multi-agent neural coordination with SONA learning. Agent specialization, knowledge transfer, collective decision making. | `npm install @hive-flow/plugin-neural-coordination` |
-| **@hive-flow/plugin-cognitive-kernel** | 0.1.0 | Cognitive computing kernel for working memory, attention control, meta-cognition, and task scaffolding. Miller's Law (7±2) compliance. | `npm install @hive-flow/plugin-cognitive-kernel` |
-| **@hive-flow/plugin-quantum-optimizer** | 0.1.0 | Quantum-inspired optimization (QAOA, VQE, quantum annealing). Combinatorial optimization, Grover search, tensor networks. | `npm install @hive-flow/plugin-quantum-optimizer` |
-| **@hive-flow/plugin-hyperbolic-reasoning** | 0.1.0 | Hyperbolic geometry for hierarchical reasoning. Poincaré embeddings, tree-like structure analysis, taxonomic inference. | `npm install @hive-flow/plugin-hyperbolic-reasoning` |
 
 **Agentic-QE Plugin Features:**
 - 58 specialized QE agents across 13 bounded contexts
@@ -1767,29 +1737,17 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 ```bash
 # Install Quality Engineering plugin
-npm install @hive-flow/plugin-agentic-qe
 
 # Install AI Interpretability plugin
-npm install @hive-flow/plugin-prime-radiant
 
 # Install Gas Town Bridge plugin (WASM-accelerated orchestration)
 hive-flow plugins install -n @hive-flow/plugin-gastown-bridge
 
 # Install domain-specific plugins
-npm install @hive-flow/plugin-healthcare-clinical
-npm install @hive-flow/plugin-financial-risk
-npm install @hive-flow/plugin-legal-contracts
 
 # Install development intelligence plugins
-npm install @hive-flow/plugin-code-intelligence
-npm install @hive-flow/plugin-test-intelligence
-npm install @hive-flow/plugin-perf-optimizer
 
 # Install advanced AI/reasoning plugins
-npm install @hive-flow/plugin-neural-coordination
-npm install @hive-flow/plugin-cognitive-kernel
-npm install @hive-flow/plugin-quantum-optimizer
-npm install @hive-flow/plugin-hyperbolic-reasoning
 
 # List all installed plugins
 hive-flow plugins list --installed
@@ -3365,7 +3323,6 @@ The official plugin registry is hosted on IPFS with Ed25519 signature verificati
 
 ```bash
 # Fetch live registry directly
-curl -s "https://gateway.pinata.cloud/ipfs/bafkreiahw4ufxwycbwwswt7rgbx6hkgnvg3rophhocatgec4bu5e7tzk2a"
 ```
 
 ### IPFS Integration
@@ -3400,7 +3357,6 @@ Share trained neural patterns and learning models via IPFS.
 
 ```bash
 # Export a learning pattern to IPFS
-curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" \
   -H "Authorization: Bearer $PINATA_JWT" \
   -d '{
     "pinataContent": {
@@ -3412,11 +3368,8 @@ curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" \
   }'
 
 # Import a pattern from IPFS CID
-curl -s "https://gateway.pinata.cloud/ipfs/QmYourCIDHere"
 
 # Via Cloud Function (when deployed)
-curl "https://publish-registry-xxx.cloudfunctions.net?action=export-model" -d @model.json
-curl "https://publish-registry-xxx.cloudfunctions.net?action=import-model&cid=QmXxx"
 ```
 
 #### Supported Model Types
@@ -3447,7 +3400,6 @@ Import pre-trained learning patterns for common tasks. **90.5% average accuracy*
 
 ```bash
 # Browse available models
-curl -s "https://gateway.pinata.cloud/ipfs/QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc" | jq '.models[].name'
 
 # Import all models
 hive-flow transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
@@ -4117,10 +4069,8 @@ Use Hive Flow packages directly in your TypeScript/JavaScript applications.
 
 ```bash
 # Install specific packages
-npm install @hive-flow/cli @hive-flow/memory @hive-flow/swarm
 
 # Or install everything
-npm install hive-flow@v3alpha
 ```
 
 ### Quick Examples
@@ -4507,17 +4457,12 @@ Core infrastructure packages powering Hive Flow's intelligence layer.
 <details>
 <summary>⚡ <strong>Agentic-Flow Integration</strong> — Optional AI Infrastructure</summary>
 
-[![npm version](https://img.shields.io/npm/v/agentic-flow?color=blue&label=npm)](https://www.npmjs.com/package/agentic-flow)
-[![npm downloads](https://img.shields.io/npm/dm/agentic-flow?color=green)](https://www.npmjs.com/package/agentic-flow)
-[![GitHub](https://img.shields.io/badge/GitHub-hypnwtykvmpr%2Fagentic--flow-blue?logo=github)](https://github.com/hypnwtykvmpr/agentic-flow)
 
-Hive Flow v3 can optionally interoperate with **[agentic-flow](https://github.com/hypnwtykvmpr/agentic-flow)** when it is installed. Local Hive Flow services remain the fallback path when the integration is unavailable.
 
 ### Quick Start
 
 ```bash
 # Install globally
-npm install -g agentic-flow
 
 # Or run directly with npx
 npx agentic-flow --help
@@ -4829,17 +4774,12 @@ const config = optimizer.getOptimalConfig(agentCount);
 <details>
 <summary>🥋 <strong>Agentic-Jujutsu</strong> — Quantum-Ready AI Version Control</summary>
 
-[![npm version](https://img.shields.io/npm/v/agentic-jujutsu?color=blue&label=npm)](https://www.npmjs.com/package/agentic-jujutsu)
-[![npm downloads](https://img.shields.io/npm/dm/agentic-jujutsu?color=green)](https://www.npmjs.com/package/agentic-jujutsu)
-[![GitHub](https://img.shields.io/badge/GitHub-hypnwtykvmpr%2Fagentic--flow-blue?logo=github)](https://github.com/hypnwtykvmpr/agentic-flow/tree/main/packages/agentic-jujutsu)
 
-**Agentic-Jujutsu** is quantum-ready, self-learning version control designed for multiple AI agents working simultaneously without conflicts. Built on [Jujutsu](https://github.com/martinvonz/jj), it provides 23x faster performance than Git with automatic conflict resolution.
 
 ### Quick Start
 
 ```bash
 # Install globally (zero dependencies - jj binary embedded!)
-npm install -g agentic-jujutsu
 
 # Or run directly with npx
 npx agentic-jujutsu --help
@@ -5598,17 +5538,13 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 <details>
 <summary><strong>🌐 Browser Automation — @hive-flow/browser</strong></summary>
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/browser?color=blue&label=npm)](https://www.npmjs.com/package/@hive-flow/browser)
 
-AI-optimized browser automation integrating [agent-browser](https://github.com/AugmentCode/agent-browser) with hive-flow for intelligent web automation, trajectory learning, and multi-agent browser coordination.
 
 ### Installation
 
 ```bash
-npm install @hive-flow/browser
 
 # agent-browser CLI (auto-suggested on install, or install manually)
-npm install -g agent-browser@latest
 ```
 
 ### Quick Start
@@ -5625,7 +5561,6 @@ const browser = createBrowserService({
 // Track actions for ReasoningBank/SONA learning
 browser.startTrajectory('Login to dashboard');
 
-await browser.open('https://example.com/login');
 
 // Use element refs (93% context reduction vs CSS selectors)
 const snapshot = await browser.snapshot({ interactive: true });
@@ -5655,7 +5590,6 @@ import { getSecurityScanner, isUrlSafe, containsPII } from '@hive-flow/browser';
 
 // URL threat detection
 const scanner = getSecurityScanner({ requireHttps: true });
-const result = await scanner.scanUrl('https://example.com');
 // { safe: true, threats: [], score: 1.0 }
 
 // PII detection
@@ -6461,7 +6395,6 @@ export hive_FLOW_MEMORY_PATH="./data"
 | `OPENAI_API_KEY` | OpenAI API key for GPT models | Optional |
 | `GOOGLE_GEMINI_API_KEY` | Google Gemini API key | Optional |
 | `OPENROUTER_API_KEY` | OpenRouter API key (multi-provider) | Optional |
-| `OLLAMA_URL` | Ollama server URL for local models | `http://localhost:11434` |
 
 ### IPFS/Decentralized Storage
 
@@ -6472,8 +6405,6 @@ export hive_FLOW_MEMORY_PATH="./data"
 | `IPFS_TOKEN` | Generic IPFS API token | Optional |
 | `PINATA_API_KEY` | Pinata IPFS API key | Optional |
 | `PINATA_API_SECRET` | Pinata IPFS API secret | Optional |
-| `IPFS_API_URL` | Local IPFS node API URL | `http://localhost:5001` |
-| `IPFS_GATEWAY_URL` | IPFS gateway URL | `https://ipfs.io` |
 
 ### Google Cloud Storage
 
@@ -7057,12 +6988,9 @@ cp -r ./data-backup-v2 ./data
 
 | Resource | Link |
 |----------|------|
-| 📚 Documentation | [github.com/hypnwtykvmpr/hive-flow](https://github.com/hypnwtykvmpr/hive-flow) |
-| 🐛 Issues & Bugs | [github.com/hypnwtykvmpr/hive-flow/issues](https://github.com/hypnwtykvmpr/hive-flow/issues) |
 
 ## Acknowledgments
 
-Hive Flow is forked from [claude-flow](https://github.com/hypnwtykvmpr/claude-flow) by [Hive Flow](https://github.com/hypnwtykvmpr) (Reuven Cohen). The original project established the foundation for multi-agent AI orchestration on Claude Code. Licensed under MIT.
 
 ## License
 

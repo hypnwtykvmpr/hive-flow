@@ -32,67 +32,67 @@ SPARC development workflow: Specification, Pseudocode, Architecture, Refinement,
 Define requirements, acceptance criteria, and constraints
 
 ```bash
-npx @hive-flow/cli hooks route --task "specification: [requirements]"
+hive-flow hooks route --task "specification: [requirements]"
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli hooks route --task "specification: user authentication with OAuth2, MFA, and session management"
+hive-flow hooks route --task "specification: user authentication with OAuth2, MFA, and session management"
 ```
 
 ### Pseudocode Phase
 Write high-level pseudocode for the implementation
 
 ```bash
-npx @hive-flow/cli hooks route --task "pseudocode: [feature]"
+hive-flow hooks route --task "pseudocode: [feature]"
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli hooks route --task "pseudocode: OAuth2 login flow with token refresh"
+hive-flow hooks route --task "pseudocode: OAuth2 login flow with token refresh"
 ```
 
 ### Architecture Phase
 Design system structure, interfaces, and dependencies
 
 ```bash
-npx @hive-flow/cli hooks route --task "architecture: [design]"
+hive-flow hooks route --task "architecture: [design]"
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli hooks route --task "architecture: auth module with service layer, repository, and API endpoints"
+hive-flow hooks route --task "architecture: auth module with service layer, repository, and API endpoints"
 ```
 
 ### Refinement Phase
 Iterate on the design based on feedback
 
 ```bash
-npx @hive-flow/cli hooks route --task "refinement: [feedback]"
+hive-flow hooks route --task "refinement: [feedback]"
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli hooks route --task "refinement: add rate limiting and brute force protection"
+hive-flow hooks route --task "refinement: add rate limiting and brute force protection"
 ```
 
 ### Completion Phase
 Finalize implementation with tests and documentation
 
 ```bash
-npx @hive-flow/cli hooks route --task "completion: [final checks]"
+hive-flow hooks route --task "completion: [final checks]"
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli hooks route --task "completion: verify all tests pass, update API docs, security review"
+hive-flow hooks route --task "completion: verify all tests pass, update API docs, security review"
 ```
 
 ### SPARC Coordinator
 Spawn SPARC coordinator agent
 
 ```bash
-npx @hive-flow/cli agent spawn --type sparc-coord --name sparc-lead
+hive-flow agent spawn --type sparc-coord --name sparc-lead
 ```
 
 

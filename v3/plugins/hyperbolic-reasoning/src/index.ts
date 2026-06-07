@@ -119,9 +119,8 @@ export const pluginMetadata = {
   version: '3.0.0-alpha.1',
   description: 'Hyperbolic geometry for hierarchical reasoning',
   category: 'exotic',
-  author: 'rUv',
+  author: 'Hive Flow',
   license: 'MIT',
-  repository: 'https://github.com/ruvnet/hive-flow',
   tools: [
     'hyperbolic_embed_hierarchy',
     'hyperbolic_taxonomic_reason',

@@ -28,16 +28,16 @@ Complete agent management commands for Hive Flow V3.
 
 ```bash
 # Spawn a coder agent
-npx hive-flow agent spawn -t coder --name my-coder
+hive-flow agent spawn -t coder --name my-coder
 
 # List all active agents
-npx hive-flow agent list
+hive-flow agent list
 
 # Check agent health
-npx hive-flow agent health
+hive-flow agent health
 
 # View metrics
-npx hive-flow agent metrics --period 24h
+hive-flow agent metrics --period 24h
 ```
 
 ## V3 Agent Categories

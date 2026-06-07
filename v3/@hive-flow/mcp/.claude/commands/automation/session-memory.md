@@ -30,7 +30,7 @@ mcp__hive-flow__context_restore({
 
 **Fallback with npx:**
 ```bash
-npx hive-flow hook session-restore --session-id "sess-123"
+hive-flow hook session-restore --session-id "sess-123"
 ```
 
 ### 3. Memory Types

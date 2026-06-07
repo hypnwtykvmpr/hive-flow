@@ -1,10 +1,5 @@
 # @hive-flow/shared
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/shared.svg)](https://www.npmjs.com/package/@hive-flow/shared)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/shared.svg)](https://www.npmjs.com/package/@hive-flow/shared)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Core](https://img.shields.io/badge/Module-Core-blue.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > Shared utilities, types, and core infrastructure for Hive Flow V3 - the foundation module used by all other @hive-flow packages.
 
@@ -21,7 +16,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/shared
 ```
 
 ## Quick Start

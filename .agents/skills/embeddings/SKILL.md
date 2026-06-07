@@ -26,32 +26,32 @@ Vector embeddings for semantic search and pattern matching with HNSW indexing.
 
 ### Initialize Embeddings
 ```bash
-npx hive-flow embeddings init --backend sqlite
+hive-flow embeddings init --backend sqlite
 ```
 
 ### Embed Text
 ```bash
-npx hive-flow embeddings embed --text "authentication patterns"
+hive-flow embeddings embed --text "authentication patterns"
 ```
 
 ### Batch Embed
 ```bash
-npx hive-flow embeddings batch --file documents.json
+hive-flow embeddings batch --file documents.json
 ```
 
 ### Semantic Search
 ```bash
-npx hive-flow embeddings search --query "security best practices" --top-k 5
+hive-flow embeddings search --query "security best practices" --top-k 5
 ```
 
 ## Memory Integration
 
 ```bash
 # Store with embeddings
-npx hive-flow memory store --key "pattern-1" --value "description" --embed
+hive-flow memory store --key "pattern-1" --value "description" --embed
 
 # Search with embeddings
-npx hive-flow memory search --query "related patterns" --semantic
+hive-flow memory search --query "related patterns" --semantic
 ```
 
 ## Quantization

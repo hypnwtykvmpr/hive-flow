@@ -542,5 +542,4 @@ Use custom commands:
 
 - [Session Management](./session.md)
 - [Configuration](./config.md)
-- [Keyboard Shortcuts](./shortcuts.md)
 - [Getting Started](./README.md)

@@ -6,13 +6,12 @@ Enterprise AI agent orchestration platform. Deploy 60+ specialized agents in coo
 
 ```bash
 # Quick start
-npx hive-flow init --wizard
+hive-flow init --wizard
 
 # Global install
-npm install -g hive-flow
 
 # Add as MCP server
-claude mcp add hive-flow -- npx -y hive-flow mcp start
+claude mcp add hive-flow -- hive-flow mcp start
 ```
 
 ## Usage

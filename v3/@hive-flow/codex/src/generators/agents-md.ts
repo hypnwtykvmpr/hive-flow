@@ -46,7 +46,7 @@ function generateMinimal(options: AgentsMdOptions): string {
 
 ### Setup
 \`\`\`bash
-npm install && ${buildCommand}
+${buildCommand}
 \`\`\`
 
 ### Test
@@ -85,7 +85,7 @@ ${testCommand}
 
 ## Links
 
-- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Documentation:
 `;
 }
 
@@ -127,7 +127,7 @@ ${description}
 
 ### Installation
 \`\`\`bash
-npm install
+install dependencies
 \`\`\`
 
 ### Build
@@ -237,7 +237,7 @@ Types: \`feat\`, \`fix\`, \`docs\`, \`style\`, \`refactor\`, \`perf\`, \`test\`,
 
 ### Storing Patterns
 \`\`\`bash
-npx @hive-flow/cli memory store \\
+hive-flow memory store \\
   --key "pattern-name" \\
   --value "pattern description" \\
   --namespace patterns
@@ -245,15 +245,15 @@ npx @hive-flow/cli memory store \\
 
 ### Searching Memory
 \`\`\`bash
-npx @hive-flow/cli memory search \\
+hive-flow memory search \\
   --query "search terms" \\
   --namespace patterns
 \`\`\`
 
 ## Links
 
-- Documentation: https://github.com/hypnwtykvmpr/hive-flow
-- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
+- Documentation:
+- Issues:
 `;
 }
 
@@ -309,10 +309,10 @@ Hive Flow exposes tools via Model Context Protocol:
 
 \`\`\`bash
 # Start MCP server
-npx @hive-flow/cli mcp start
+hive-flow mcp start
 
 # List available tools
-npx @hive-flow/cli mcp tools
+hive-flow mcp tools
 \`\`\`
 
 ### Available Tools
@@ -364,16 +364,16 @@ Hive Flow uses hooks for lifecycle automation:
 ### Example Usage
 \`\`\`bash
 # Before starting a task
-npx @hive-flow/cli hooks pre-task \\
+hive-flow hooks pre-task \\
   --description "implementing authentication"
 
 # After completing a task
-npx @hive-flow/cli hooks post-task \\
+hive-flow hooks post-task \\
   --task-id "task-123" \\
   --success true
 
 # Route a task to agents
-npx @hive-flow/cli hooks route \\
+hive-flow hooks route \\
   --task "implement OAuth2 login flow"
 \`\`\`
 
@@ -399,13 +399,13 @@ npx @hive-flow/cli hooks route \\
 ### Managing Workers
 \`\`\`bash
 # List workers
-npx @hive-flow/cli hooks worker list
+hive-flow hooks worker list
 
 # Trigger specific worker
-npx @hive-flow/cli hooks worker dispatch --trigger audit
+hive-flow hooks worker dispatch --trigger audit
 
 # Check worker status
-npx @hive-flow/cli hooks worker status
+hive-flow hooks worker status
 \`\`\`
 
 ## Intelligence System
@@ -433,16 +433,16 @@ The Hive Flow intelligence system provides neural learning:
 export HIVE_FLOW_LOG_LEVEL=debug
 
 # Enable verbose mode
-npx @hive-flow/cli --verbose <command>
+hive-flow --verbose <command>
 \`\`\`
 
 ### Health Checks
 \`\`\`bash
 # Run diagnostics
-npx @hive-flow/cli doctor --fix
+hive-flow doctor --fix
 
 # Check system status
-npx @hive-flow/cli status
+hive-flow status
 \`\`\`
 `;
 
@@ -483,10 +483,10 @@ All agent actions are logged to:
 
 \`\`\`bash
 # View recent agent actions
-npx @hive-flow/cli logs --type agent-actions --last 1h
+hive-flow logs --type agent-actions --last 1h
 
 # Export audit log
-npx @hive-flow/cli logs export --format json --output audit.json
+hive-flow logs export --format json --output audit.json
 \`\`\`
 
 ### Compliance
@@ -521,10 +521,10 @@ npx @hive-flow/cli logs export --format json --output audit.json
 
 \`\`\`bash
 # Check current role
-npx @hive-flow/cli claims list
+hive-flow claims list
 
 # Request elevated permissions
-npx @hive-flow/cli claims request --permission deploy:production
+hive-flow claims request --permission deploy:production
 \`\`\`
 
 ## Service Level Agreements (SLAs)
@@ -557,7 +557,7 @@ npx @hive-flow/cli claims request --permission deploy:production
 ### On Security Issue
 1. **Contain** - Immediately stop affected agents
    \`\`\`bash
-   npx @hive-flow/cli agent stop --all --force
+   hive-flow agent stop --all --force
    \`\`\`
 2. **Isolate** - Quarantine compromised resources
 3. **Document** - Record timeline in incident log
@@ -570,10 +570,10 @@ npx @hive-flow/cli claims request --permission deploy:production
 2. **Decide** - Roll back if safe, or forward-fix
    \`\`\`bash
    # Rollback
-   npx @hive-flow/cli deployment rollback --env production
+   hive-flow deployment rollback --env production
 
    # Or forward-fix
-   npx @hive-flow/cli workflow run hotfix
+   hive-flow workflow run hotfix
    \`\`\`
 3. **Document** - Capture reproduction steps
 4. **Fix** - Create hotfix on dedicated branch
@@ -607,10 +607,10 @@ npx @hive-flow/cli claims request --permission deploy:production
 ### Recovery Procedures
 \`\`\`bash
 # Restore from backup
-npx @hive-flow/cli memory restore --snapshot latest
+hive-flow memory restore --snapshot latest
 
 # Restore specific checkpoint
-npx @hive-flow/cli session restore --checkpoint <id>
+hive-flow session restore --checkpoint <id>
 \`\`\`
 
 ### Recovery Time Objectives
@@ -654,7 +654,7 @@ alerts:
 - [ ] Read this AGENTS.md document
 - [ ] Complete security awareness training
 - [ ] Set up local development environment
-- [ ] Run \`npx @hive-flow/cli doctor\` to verify setup
+- [ ] Run \`hive-flow doctor\` to verify setup
 - [ ] Complete first guided task with mentor
 - [ ] Review incident response procedures
 

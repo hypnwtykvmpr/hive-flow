@@ -36,7 +36,7 @@ hooks:
     export PERF_SESSION_ID
 
     # Store session start in memory
-    npx hive-flow@v3alpha memory store \
+    hive-flow memory store \
       --key "performance-engineer/session/${PERF_SESSION_ID}/start" \
       --value "{\"timestamp\": $(date +%s), \"task\": \"$TASK\"}" \
       --namespace "v3-performance" 2>/dev/null || true
@@ -54,7 +54,7 @@ hooks:
     echo "  Memory: ${MEM_USED}MB / ${MEM_TOTAL}MB"
 
     # Start SONA trajectory
-    TRAJECTORY_RESULT=$(npx hive-flow@v3alpha hooks intelligence trajectory-start \
+    TRAJECTORY_RESULT=$(hive-flow hooks intelligence trajectory-start \
       --task "performance-analysis" \
       --context "performance-engineer" 2>&1 || echo "")
 
@@ -90,7 +90,7 @@ hooks:
       # Simple quality score: 0.85 default, higher for longer/more detailed outputs
       QUALITY_SCORE="0.85"
 
-      npx hive-flow@v3alpha hooks intelligence trajectory-end \
+      hive-flow hooks intelligence trajectory-end \
         --session-id "$TRAJECTORY_ID" \
         --verdict "success" \
         --reward "$QUALITY_SCORE" 2>/dev/null || true
@@ -99,7 +99,7 @@ hooks:
     fi
 
     # Store session completion
-    npx hive-flow@v3alpha memory store \
+    hive-flow memory store \
       --key "performance-engineer/session/${PERF_SESSION_ID}/end" \
       --value "{\"timestamp\": $END_TIME, \"quality\": \"$QUALITY_SCORE\"}" \
       --namespace "v3-performance" 2>/dev/null || true
@@ -1087,31 +1087,31 @@ const performanceMCP = {
 
 ```bash
 # Run full benchmark suite
-npx hive-flow@v3alpha performance benchmark --suite all
+hive-flow performance benchmark --suite all
 
 # Profile specific component
-npx hive-flow@v3alpha performance profile --component mcp-server
+hive-flow performance profile --component mcp-server
 
 # Analyze bottlenecks
-npx hive-flow@v3alpha performance analyze --target latency
+hive-flow performance analyze --target latency
 
 # Generate performance report
-npx hive-flow@v3alpha performance report --format detailed
+hive-flow performance report --format detailed
 
 # Optimize specific area
-npx hive-flow@v3alpha performance optimize --focus memory
+hive-flow performance optimize --focus memory
 
 # Real-time metrics
-npx hive-flow@v3alpha status --metrics --watch
+hive-flow status --metrics --watch
 
 # WASM SIMD benchmark
-npx hive-flow@v3alpha performance benchmark --suite wasm-simd
+hive-flow performance benchmark --suite wasm-simd
 
 # Flash attention benchmark
-npx hive-flow@v3alpha performance benchmark --suite flash-attention
+hive-flow performance benchmark --suite flash-attention
 
 # Memory reduction analysis
-npx hive-flow@v3alpha performance analyze --target memory --quantization int8
+hive-flow performance analyze --target memory --quantization int8
 ```
 
 ## SONA Integration

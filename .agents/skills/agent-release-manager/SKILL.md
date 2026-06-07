@@ -29,16 +29,16 @@ tools:
 hooks:
   pre_task: |
     echo "🚀 Initializing release management pipeline..."
-    npx hive-flow hook pre-task --mode release-manager
+    hive-flow hook pre-task --mode release-manager
   post_edit: |
     echo "📝 Validating release changes and updating documentation..."
-    npx hive-flow hook post-edit --mode release-manager --validate-release
+    hive-flow hook post-edit --mode release-manager --validate-release
   post_task: |
     echo "✅ Release management task completed. Updating release status..."
-    npx hive-flow hook post-task --mode release-manager --update-status
+    hive-flow hook post-task --mode release-manager --update-status
   notification: |
     echo "📢 Sending release notifications to stakeholders..."
-    npx hive-flow hook notification --mode release-manager
+    hive-flow hook notification --mode release-manager
 ---
 
 # GitHub Release Manager
@@ -134,12 +134,10 @@ mcp__github__push_files {
 ### 3. Automated Release Validation
 ```javascript
 // Comprehensive release testing
-Bash("cd $workspaces$hive-flow$claude-code-flow$claude-code-flow && npm install")
 Bash("cd $workspaces$hive-flow$claude-code-flow$claude-code-flow && npm run test")
 Bash("cd $workspaces$hive-flow$claude-code-flow$claude-code-flow && npm run lint")
 Bash("cd $workspaces$hive-flow$claude-code-flow$claude-code-flow && npm run build")
 
-Bash("cd $workspaces$hive-flow$hive-flow$npm && npm install")
 Bash("cd $workspaces$hive-flow$hive-flow$npm && npm run test:all")
 Bash("cd $workspaces$hive-flow$hive-flow$npm && npm run lint")
 
@@ -234,8 +232,6 @@ This release is production-ready with comprehensive validation and testing.
   Bash("cd $tmp$release-v1.0.72 && git add -A && git commit -m 'release: Prepare v1.0.72 with comprehensive updates' && git push")
 
   // Run comprehensive validation
-  Bash("cd $workspaces$hive-flow$claude-code-flow$claude-code-flow && npm install && npm test && npm run lint && npm run build")
-  Bash("cd $workspaces$hive-flow$hive-flow$npm && npm install && npm run test:all && npm run lint")
 
   // Create release PR using gh CLI
   Bash(`gh pr create \
@@ -351,10 +347,8 @@ jobs:
           node-version: '20'
       - name: Install and Test
         run: |
-          cd claude-code-flow$claude-code-flow && npm install && npm test
-          cd ../..$hive-flow$npm && npm install && npm test:all
       - name: Validate Release
-        run: npx hive-flow release validate
+        run: hive-flow release validate
 ```
 
 ## Monitoring and Metrics

@@ -38,27 +38,27 @@ Train and optimize neural patterns using SONA, MoE, and EWC++ systems.
 
 ### Train Patterns
 ```bash
-npx hive-flow neural train --model-type moe --epochs 10
+hive-flow neural train --model-type moe --epochs 10
 ```
 
 ### Check Status
 ```bash
-npx hive-flow neural status
+hive-flow neural status
 ```
 
 ### View Patterns
 ```bash
-npx hive-flow neural patterns --type all
+hive-flow neural patterns --type all
 ```
 
 ### Predict
 ```bash
-npx hive-flow neural predict --input "task description"
+hive-flow neural predict --input "task description"
 ```
 
 ### Optimize
 ```bash
-npx hive-flow neural optimize --target latency
+hive-flow neural optimize --target latency
 ```
 
 ## Best Practices

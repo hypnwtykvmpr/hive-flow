@@ -403,7 +403,7 @@ function generateJSON() {
 /**
  * Generate single-line output for Claude Code compatibility
  * This avoids the collision zone issue entirely by using one line
- * @see https://github.com/hypnwtykvmpr/hive-flow/issues/985
+ * @see
  */
 function generateSingleLine() {
   if (!CONFIG.enabled) return '';
@@ -429,7 +429,7 @@ function generateSingleLine() {
  * Generate safe multi-line statusline that avoids Claude Code collision zone
  * The collision zone is columns 15-25 on the second-to-last line.
  * We pad that line with spaces to push content past column 25.
- * @see https://github.com/hypnwtykvmpr/hive-flow/issues/985
+ * @see
  */
 function generateSafeStatusline() {
   if (!CONFIG.enabled) return '';

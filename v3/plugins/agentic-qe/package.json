@@ -39,17 +39,8 @@
     "accessibility",
     "ai-agents"
   ],
-  "author": "rUv",
+  "author": "Hive Flow",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git",
-    "directory": "v3/plugins/agentic-qe"
-  },
-  "homepage": "https://github.com/ruvnet/hive-flow/tree/main/v3/plugins/agentic-qe",
-  "bugs": {
-    "url": "https://github.com/ruvnet/hive-flow/issues"
-  },
   "dependencies": {
     "zod": "^3.23.0"
   },

@@ -157,7 +157,7 @@ async function main() {
     console.log('\n✅ All checks passed! Cross-platform support is properly implemented.\n');
 
     console.log('📋 Next steps:');
-    console.log('   1. npm install           - Install dependencies');
+    console.log('   1. Install project dependencies with your configured package manager');
     console.log('   2. npm test              - Run tests');
     console.log('   3. npm run build         - Compile TypeScript');
     console.log('   4. node examples/cross-platform-usage.js - Test examples\n');

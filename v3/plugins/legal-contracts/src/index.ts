@@ -57,8 +57,6 @@ export const pluginMetadata = {
   author: 'Hive Flow Team',
   category: 'legal',
   keywords: ['legal', 'contracts', 'clause', 'risk', 'compliance'],
-  homepage: 'https://github.com/ruvnet/hive-flow',
-  repository: 'https://github.com/ruvnet/hive-flow.git',
 };
 
 /**

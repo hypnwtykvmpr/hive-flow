@@ -1,10 +1,5 @@
 # @hive-flow/integration
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/integration.svg)](https://www.npmjs.com/package/@hive-flow/integration)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/integration.svg)](https://www.npmjs.com/package/@hive-flow/integration)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![ADR-001](https://img.shields.io/badge/ADR--001-Compliant-green.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > Deep agentic-flow@alpha integration module for Hive Flow V3 - ADR-001 compliance, code deduplication, SONA adapter, and Flash Attention coordinator.
 
@@ -21,10 +16,8 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/integration
 
 # Optional: Install agentic-flow for optimal performance
-npm install agentic-flow@alpha
 ```
 
 ## Quick Start

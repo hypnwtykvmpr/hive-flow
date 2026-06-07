@@ -234,7 +234,7 @@ async function spawnClaudeCodeInstance(
     } catch {
       output.writeln();
       output.printWarning('Claude Code CLI not found in PATH');
-      output.writeln(output.dim('Install it with: npm install -g @anthropic-ai/claude-code'));
+      output.writeln(output.dim('Install Claude Code with your configured package manager.'));
       output.writeln(output.dim('Falling back to displaying instructions...'));
     }
 
@@ -338,7 +338,7 @@ async function spawnClaudeCodeInstance(
       output.writeln(output.bold('📋 Manual Execution Instructions:'));
       output.writeln(output.dim('─'.repeat(50)));
       output.printList([
-        'Install Claude Code: npm install -g @anthropic-ai/claude-code',
+        'Install Claude Code with your configured package manager.',
         `Run with saved prompt: claude < ${promptFile}`,
         `Or copy manually: cat ${promptFile} | claude`,
         `With auto-permissions: claude --dangerously-skip-permissions < ${promptFile}`

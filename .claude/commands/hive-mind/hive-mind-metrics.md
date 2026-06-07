@@ -4,5 +4,5 @@ Command documentation for hive-mind-metrics in category hive-mind.
 
 Usage:
 ```bash
-npx hive-flow hive-mind hive-mind-metrics [options]
+hive-flow hive-mind hive-mind-metrics [options]
 ```

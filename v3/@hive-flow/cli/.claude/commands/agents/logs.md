@@ -11,7 +11,7 @@ View activity logs and history for agents.
 ## Usage
 
 ```bash
-npx hive-flow agent logs <agent-id> [options]
+hive-flow agent logs <agent-id> [options]
 ```
 
 ## Options
@@ -28,23 +28,23 @@ npx hive-flow agent logs <agent-id> [options]
 
 ```bash
 # View last 50 lines
-npx hive-flow agent logs coder-lx7m9k2
+hive-flow agent logs coder-lx7m9k2
 
 # View last 100 lines
-npx hive-flow agent logs coder-lx7m9k2 -n 100
+hive-flow agent logs coder-lx7m9k2 -n 100
 
 # Follow logs (live)
-npx hive-flow agent logs coder-lx7m9k2 --follow
+hive-flow agent logs coder-lx7m9k2 --follow
 
 # Filter by level
-npx hive-flow agent logs coder-lx7m9k2 -l error
+hive-flow agent logs coder-lx7m9k2 -l error
 
 # Logs since time
-npx hive-flow agent logs coder-lx7m9k2 --since "1h"
-npx hive-flow agent logs coder-lx7m9k2 --since "2026-01-08T10:00:00"
+hive-flow agent logs coder-lx7m9k2 --since "1h"
+hive-flow agent logs coder-lx7m9k2 --since "2026-01-08T10:00:00"
 
 # JSON output
-npx hive-flow agent logs coder-lx7m9k2 --format json
+hive-flow agent logs coder-lx7m9k2 --format json
 ```
 
 ## Output
@@ -77,7 +77,7 @@ Logs for coder-lx7m9k2
 Real-time log streaming:
 
 ```bash
-npx hive-flow agent logs coder-lx7m9k2 --follow
+hive-flow agent logs coder-lx7m9k2 --follow
 
 # New logs appear as they occur:
 # 2026-01-08 10:40:15 [INFO]  Task received: refactor-auth
@@ -91,16 +91,16 @@ Press `Ctrl+C` to stop following.
 
 ```bash
 # Last hour
-npx hive-flow agent logs coder-lx7m9k2 --since "1h"
+hive-flow agent logs coder-lx7m9k2 --since "1h"
 
 # Last 30 minutes
-npx hive-flow agent logs coder-lx7m9k2 --since "30m"
+hive-flow agent logs coder-lx7m9k2 --since "30m"
 
 # Specific timestamp
-npx hive-flow agent logs coder-lx7m9k2 --since "2026-01-08T09:00:00"
+hive-flow agent logs coder-lx7m9k2 --since "2026-01-08T09:00:00"
 
 # Today's logs
-npx hive-flow agent logs coder-lx7m9k2 --since "today"
+hive-flow agent logs coder-lx7m9k2 --since "today"
 ```
 
 ## JSON Output
@@ -125,6 +125,6 @@ npx hive-flow agent logs coder-lx7m9k2 --since "today"
 
 ## Related Commands
 
-- `npx hive-flow agent status` - Current agent status
-- `npx hive-flow agent health` - Health monitoring
-- `npx hive-flow agent metrics` - Performance metrics
+- `hive-flow agent status` - Current agent status
+- `hive-flow agent health` - Health monitoring
+- `hive-flow agent metrics` - Performance metrics

@@ -1,10 +1,5 @@
 # @hive-flow/embeddings
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/embeddings.svg)](https://www.npmjs.com/package/@hive-flow/embeddings)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/embeddings.svg)](https://www.npmjs.com/package/@hive-flow/embeddings)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Performance](https://img.shields.io/badge/Performance-<5ms-brightgreen.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > High-performance embedding generation module for Hive Flow V3 - multi-provider support with persistent caching, document chunking, normalization, hyperbolic embeddings, and neural substrate integration.
 
@@ -29,7 +24,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/embeddings
 ```
 
 ## Quick Start
@@ -125,7 +119,6 @@ const service = new OpenAIEmbeddingService({
   apiKey: process.env.OPENAI_API_KEY!,
   model: 'text-embedding-3-small',  // or 'text-embedding-3-large'
   dimensions: 1536,                  // Adjustable for v3 models
-  baseURL: 'https://api.openai.com/v1/embeddings',
   timeout: 30000,
   maxRetries: 3,
   cacheSize: 1000,
@@ -351,7 +344,6 @@ import type {
 OPENAI_API_KEY=sk-...
 
 # Optional: Custom base URL (for Azure OpenAI, etc.)
-OPENAI_BASE_URL=https://your-endpoint.openai.azure.com/
 ```
 
 ## Error Handling

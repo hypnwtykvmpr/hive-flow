@@ -63,7 +63,6 @@ chmod +x .claude/helpers/*.sh .claude/helpers/templates/*.sh
 #### Prerequisites
 ```bash
 # Install Homebrew if not installed
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install required tools
 brew install git jq node
@@ -89,10 +88,8 @@ chmod +x .claude/helpers/*.sh .claude/helpers/templates/*.sh
 #### Prerequisites
 ```powershell
 # Install Git for Windows (includes Git Bash)
-# Download from: https://git-scm.com/download/win
 
 # Install Node.js
-# Download from: https://nodejs.org/
 
 # Install PowerShell 7+ (recommended)
 winget install Microsoft.PowerShell

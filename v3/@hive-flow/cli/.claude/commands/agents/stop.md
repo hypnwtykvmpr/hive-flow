@@ -12,8 +12,8 @@ Stop a running agent with graceful or forced shutdown options.
 ## Usage
 
 ```bash
-npx hive-flow agent stop <agent-id> [options]
-npx hive-flow agent kill <agent-id> [options]  # Alias
+hive-flow agent stop <agent-id> [options]
+hive-flow agent kill <agent-id> [options]  # Alias
 ```
 
 ## Options
@@ -27,16 +27,16 @@ npx hive-flow agent kill <agent-id> [options]  # Alias
 
 ```bash
 # Graceful stop (completes current task)
-npx hive-flow agent stop coder-lx7m9k2
+hive-flow agent stop coder-lx7m9k2
 
 # Force stop (immediate termination)
-npx hive-flow agent stop coder-lx7m9k2 --force
+hive-flow agent stop coder-lx7m9k2 --force
 
 # Custom shutdown timeout
-npx hive-flow agent stop coder-lx7m9k2 --timeout 60
+hive-flow agent stop coder-lx7m9k2 --timeout 60
 
 # Using kill alias
-npx hive-flow agent kill researcher-abc123 -f
+hive-flow agent kill researcher-abc123 -f
 ```
 
 ## Graceful vs Force Stop
@@ -48,7 +48,7 @@ npx hive-flow agent kill researcher-abc123 -f
 4. Notifies swarm coordinator
 
 ```bash
-npx hive-flow agent stop coder-lx7m9k2
+hive-flow agent stop coder-lx7m9k2
 
 # Output:
 # Stopping agent coder-lx7m9k2...
@@ -64,7 +64,7 @@ npx hive-flow agent stop coder-lx7m9k2
 3. May leave tasks incomplete
 
 ```bash
-npx hive-flow agent stop coder-lx7m9k2 --force
+hive-flow agent stop coder-lx7m9k2 --force
 
 # Output:
 # Stopping agent coder-lx7m9k2...
@@ -85,18 +85,18 @@ To stop multiple agents:
 
 ```bash
 # Stop all agents of a type
-npx hive-flow agent list -t coder --format json | \
+hive-flow agent list -t coder --format json | \
   jq -r '.agents[].id' | \
-  xargs -I {} npx hive-flow agent stop {} -f
+  xargs -I {} hive-flow agent stop {} -f
 
 # Stop all idle agents
-npx hive-flow agent list -s idle --format json | \
+hive-flow agent list -s idle --format json | \
   jq -r '.agents[].id' | \
-  xargs -I {} npx hive-flow agent stop {}
+  xargs -I {} hive-flow agent stop {}
 ```
 
 ## Related Commands
 
-- `npx hive-flow agent list` - Find agent IDs
-- `npx hive-flow agent status` - Check status before stopping
-- `npx hive-flow swarm destroy` - Stop all agents in swarm
+- `hive-flow agent list` - Find agent IDs
+- `hive-flow agent status` - Check status before stopping
+- `hive-flow swarm destroy` - Stop all agents in swarm

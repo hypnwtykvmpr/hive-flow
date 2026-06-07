@@ -65,7 +65,7 @@ claude -p "{{this.task}}" --session-id {{this.id}} &
 wait
 
 # Phase 3: Review (Claude Code)
-npx hive-flow@v3alpha memory list --namespace results
+hive-flow memory list --namespace results
 ```
 
 ## Example: Full Hybrid Workflow

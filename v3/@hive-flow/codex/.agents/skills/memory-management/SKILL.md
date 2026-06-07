@@ -26,14 +26,14 @@ AgentDB memory system with HNSW vector search.
 Store a pattern in memory
 
 ```bash
-npx @hive-flow/cli memory store --key "key" --value "value" --namespace patterns
+hive-flow memory store --key "key" --value "value" --namespace patterns
 ```
 
 ### Search Data
 Semantic search in memory
 
 ```bash
-npx @hive-flow/cli memory search --query "search terms" --limit 10
+hive-flow memory search --query "search terms" --limit 10
 ```
 
 

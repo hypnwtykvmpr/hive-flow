@@ -5,7 +5,7 @@
  * Supports interventional queries, confounder identification,
  * and backdoor path analysis.
  *
- * Based on: https://arxiv.org/abs/1305.5506 (Do-Calculus)
+ * Based on: published causal-set reference (Do-Calculus)
  */
 
 import type {

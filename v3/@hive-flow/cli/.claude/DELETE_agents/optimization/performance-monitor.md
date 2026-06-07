@@ -582,31 +582,31 @@ class DashboardProvider {
 ### Monitoring Commands
 ```bash
 # Start comprehensive monitoring
-npx hive-flow performance-report --format detailed --timeframe 24h
+hive-flow performance-report --format detailed --timeframe 24h
 
 # Real-time bottleneck analysis
-npx hive-flow bottleneck-analyze --component swarm-coordination
+hive-flow bottleneck-analyze --component swarm-coordination
 
 # Health check all components
-npx hive-flow health-check --components ["swarm", "agents", "coordination"]
+hive-flow health-check --components ["swarm", "agents", "coordination"]
 
 # Collect specific metrics
-npx hive-flow metrics-collect --components ["cpu", "memory", "network"]
+hive-flow metrics-collect --components ["cpu", "memory", "network"]
 
 # Monitor SLA compliance
-npx hive-flow sla-monitor --service swarm-coordination --threshold 99.9
+hive-flow sla-monitor --service swarm-coordination --threshold 99.9
 ```
 
 ### Alert Configuration
 ```bash
 # Configure performance alerts
-npx hive-flow alert-config --metric cpu_usage --threshold 80 --severity warning
+hive-flow alert-config --metric cpu_usage --threshold 80 --severity warning
 
 # Set up anomaly detection
-npx hive-flow anomaly-setup --models ["statistical", "ml", "time_series"]
+hive-flow anomaly-setup --models ["statistical", "ml", "time_series"]
 
 # Configure notification channels
-npx hive-flow notification-config --channels ["slack", "email", "webhook"]
+hive-flow notification-config --channels ["slack", "email", "webhook"]
 ```
 
 ## Integration Points

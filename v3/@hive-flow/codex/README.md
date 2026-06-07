@@ -2,13 +2,9 @@
 
 <p align="center">
   <strong>OpenAI Codex CLI Adapter for Hive Flow V3</strong><br/>
-  <em>Self-learning multi-agent orchestration following the <a href="https://agentics.org">Agentics Foundation</a> standard</em>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@hive-flow/codex"><img src="https://img.shields.io/npm/v/@hive-flow/codex?label=npm&color=blue" alt="npm version"></a>
-  <a href="https://github.com/hypnwtykvmpr/hive-flow"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
-  <a href="https://agentics.org"><img src="https://img.shields.io/badge/standard-Agentics-purple" alt="Agentics Standard"></a>
 </p>
 
 ---
@@ -64,13 +60,13 @@ Transform OpenAI Codex CLI into a **self-improving AI development system**. Whil
 
 ```bash
 # Initialize for Codex (recommended)
-npx hive-flow@alpha init --codex
+hive-flow init --codex
 
 # Full setup with all 137+ skills
-npx hive-flow@alpha init --codex --full
+hive-flow init --codex --full
 
 # Dual mode (both Claude Code and Codex)
-npx hive-flow@alpha init --dual
+hive-flow init --dual
 ```
 
 **That's it!** The MCP server is auto-registered, skills are installed, and your project is ready for self-learning development.
@@ -110,7 +106,7 @@ codex mcp list
 
 # Expected output:
 # Name         Command  Args                   Status
-# hive-flow  npx      hive-flow mcp start  enabled
+# hive-flow  hive-flow mcp start  enabled
 ```
 
 ### Manual Registration
@@ -118,7 +114,7 @@ codex mcp list
 If MCP is not present, add manually:
 
 ```bash
-codex mcp add hive-flow -- npx hive-flow mcp start
+codex mcp add hive-flow -- hive-flow mcp start
 ```
 
 ### MCP Tools Reference
@@ -275,13 +271,13 @@ project/
 
 ```bash
 # Minimal (fastest init)
-npx hive-flow@alpha init --codex --minimal
+hive-flow init --codex --minimal
 
 # Default
-npx hive-flow@alpha init --codex
+hive-flow init --codex
 
 # Full (all skills)
-npx hive-flow@alpha init --codex --full
+hive-flow init --codex --full
 ```
 
 ### Template Contents
@@ -325,7 +321,7 @@ npx hive-flow@alpha init --codex --full
 Run `init --dual` to set up both platforms:
 
 ```bash
-npx hive-flow@alpha init --dual
+hive-flow init --dual
 ```
 
 This creates:
@@ -549,7 +545,7 @@ Run Claude Code for interactive development and spawn headless Codex workers for
 
 ```bash
 # Initialize dual-mode
-npx hive-flow@alpha init --dual
+hive-flow init --dual
 
 # Creates both:
 # - CLAUDE.md (Claude Code configuration)
@@ -638,19 +634,19 @@ The `@hive-flow/codex` package now includes built-in dual-mode orchestration:
 
 ```bash
 # List available collaboration templates
-npx hive-flow-codex dual templates
+hive-flow-codex dual templates
 
 # Run a feature development swarm
-npx hive-flow-codex dual run --template feature --task "Add user authentication"
+hive-flow-codex dual run --template feature --task "Add user authentication"
 
 # Run a security audit swarm
-npx hive-flow-codex dual run --template security --task "src/auth/"
+hive-flow-codex dual run --template security --task "src/auth/"
 
 # Run a refactoring swarm
-npx hive-flow-codex dual run --template refactor --task "src/legacy/"
+hive-flow-codex dual run --template refactor --task "src/legacy/"
 
 # Check collaboration status
-npx hive-flow-codex dual status
+hive-flow-codex dual status
 ```
 
 ### Pre-Built Templates
@@ -932,14 +928,14 @@ console.log(`Skills generated: ${result.skillsGenerated.length}`);
 2. **Move skills**: `.claude/skills/` → `.agents/skills/`
 3. **Update syntax**: `/skill-name` → `$skill-name`
 4. **Convert settings**: `settings.json` → `config.toml`
-5. **Register MCP**: `codex mcp add hive-flow -- npx hive-flow mcp start`
+5. **Register MCP**: `codex mcp add hive-flow -- hive-flow mcp start`
 
 ### Dual Mode Alternative
 
 Instead of migrating, use dual mode to support both:
 
 ```bash
-npx hive-flow@alpha init --dual
+hive-flow init --dual
 ```
 
 This keeps both `CLAUDE.md` and `AGENTS.md` in sync.
@@ -959,23 +955,23 @@ codex mcp list
 
 # Re-register
 codex mcp remove hive-flow
-codex mcp add hive-flow -- npx hive-flow mcp start
+codex mcp add hive-flow -- hive-flow mcp start
 
 # Test connection
-npx hive-flow mcp test
+hive-flow mcp test
 ```
 
 ### Memory Search Returns Empty
 
 ```bash
 # Initialize memory database
-npx hive-flow memory init --force
+hive-flow memory init --force
 
 # Check if entries exist
-npx hive-flow memory list
+hive-flow memory list
 
 # Manually add a test pattern
-npx hive-flow memory store --key "test" --value "test pattern" --namespace patterns
+hive-flow memory store --key "test" --value "test pattern" --namespace patterns
 ```
 
 ### Skills Not Loading
@@ -988,17 +984,17 @@ ls -la .agents/skills/
 cat .agents/config.toml | grep skills
 
 # Rebuild skills
-npx hive-flow@alpha init --codex --force
+hive-flow init --codex --force
 ```
 
 ### Vector Search Slow
 
 ```bash
 # Check HNSW index
-npx hive-flow memory stats
+hive-flow memory stats
 
 # Rebuild index
-npx hive-flow memory optimize --rebuild-index
+hive-flow memory optimize --rebuild-index
 ```
 
 </details>
@@ -1009,16 +1005,9 @@ npx hive-flow memory optimize --rebuild-index
 
 | Package | Description |
 |---------|-------------|
-| [@hive-flow/cli](https://www.npmjs.com/package/@hive-flow/cli) | Main CLI (26 commands, 140+ subcommands) |
-| [hive-flow](https://www.npmjs.com/package/hive-flow) | Umbrella package |
-| [@hive-flow/memory](https://www.npmjs.com/package/@hive-flow/memory) | AgentDB with HNSW vector search |
-| [@hive-flow/security](https://www.npmjs.com/package/@hive-flow/security) | Security module |
 
 ## License
 
 MIT
 
 ## Support
-
-- Documentation: https://github.com/hypnwtykvmpr/hive-flow
-- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues

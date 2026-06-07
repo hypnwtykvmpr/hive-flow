@@ -381,7 +381,7 @@ export class CursorCLIProvider extends BaseProvider {
     }
     if (!this.binaryPath) {
       return { healthy: false, error: 'Cursor Agent CLI binary not found', timestamp: new Date(),
-        details: { hint: 'Install Cursor Agent from https://cursor.com' } };
+        details: { hint: 'Install Cursor Agent from Cursor installation documentation' } };
     }
     return new Promise((resolve) => {
       execFile(this.binaryPath!, ['--version'], { timeout: 10000 }, (error, stdout) => {

@@ -435,9 +435,7 @@ await rb.optimize();
 ## Learn More
 
 - **AgentDB Integration**: node_modules/agentic-flow/docs/AGENTDB_INTEGRATION.md
-- **GitHub**: https://github.com/hypnwtykvmpr/agentic-flow/tree/main/packages/agentdb
 - **MCP Integration**: `npx agentdb@latest mcp`
-- **Website**: https://agentdb.hive-flow.invalid
 
 ---
 

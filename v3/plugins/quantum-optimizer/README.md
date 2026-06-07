@@ -1,8 +1,5 @@
 # @hive-flow/plugin-quantum-optimizer
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-quantum-optimizer.svg)](https://www.npmjs.com/package/@hive-flow/plugin-quantum-optimizer)
-[![license](https://img.shields.io/npm/l/@hive-flow/plugin-quantum-optimizer.svg)](https://github.com/ruvnet/hive-flow/blob/main/LICENSE)
-[![downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-quantum-optimizer.svg)](https://www.npmjs.com/package/@hive-flow/plugin-quantum-optimizer)
 
 An exotic optimization plugin implementing quantum-inspired algorithms including Quantum Annealing simulation, QAOA (Quantum Approximate Optimization Algorithm) emulation, and Grover-inspired search acceleration. The plugin provides dramatic speedups for dependency resolution, optimal scheduling, and constraint satisfaction while running entirely on classical WASM-accelerated hardware.
 
@@ -11,13 +8,12 @@ An exotic optimization plugin implementing quantum-inspired algorithms including
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-quantum-optimizer
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-quantum-optimizer
+hive-flow plugins install --name @hive-flow/plugin-quantum-optimizer
 ```
 
 ## Quick Start
@@ -291,9 +287,6 @@ Amplitude amplification for unstructured search achieving O(sqrt(N)) complexity.
 
 | Plugin | Description | Synergy |
 |--------|-------------|---------|
-| [@hive-flow/plugin-neural-coordination](https://www.npmjs.com/package/@hive-flow/plugin-neural-coordination) | Multi-agent coordination | Quantum optimizer schedules tasks across coordinated agent swarms |
-| [@hive-flow/plugin-cognitive-kernel](https://www.npmjs.com/package/@hive-flow/plugin-cognitive-kernel) | Cognitive augmentation | Optimizes cognitive load distribution and attention allocation |
-| [@hive-flow/plugin-hyperbolic-reasoning](https://www.npmjs.com/package/@hive-flow/plugin-hyperbolic-reasoning) | Hierarchical reasoning | Quantum algorithms optimize hierarchical constraint satisfaction |
 
 ## License
 

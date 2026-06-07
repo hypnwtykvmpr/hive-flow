@@ -2,14 +2,9 @@
 
 <div align="center">
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/browser?style=for-the-badge&logo=npm&color=blue)](https://www.npmjs.com/package/@hive-flow/browser)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-128%20passing-green?style=for-the-badge&logo=vitest)](./tests)
 
 **AI-Optimized Browser Automation for Hive-Flow Swarms**
 
-*Integrate [agent-browser](https://github.com/AugmentCode/agent-browser) with hive-flow for intelligent web automation, trajectory learning, security scanning, and multi-agent browser coordination.*
 
 </div>
 
@@ -49,13 +44,10 @@ Agent Request → Security Scan → Browser Adapter → agent-browser CLI → Pl
 
 ```bash
 # Install the package
-npm install @hive-flow/browser
 
 # Peer dependency (if not already installed)
-npm install @hive-flow/cli@^3.0.0-alpha
 
 # agent-browser CLI (required)
-npm install -g agent-browser
 ```
 
 ### Requirements
@@ -84,7 +76,6 @@ const browser = createBrowserService({
 const trajectoryId = browser.startTrajectory('Login to dashboard');
 
 // Navigate (automatically security-scanned)
-await browser.open('https://example.com/login');
 
 // Get AI-optimized snapshot with element refs
 const snapshot = await browser.snapshot({ interactive: true });
@@ -153,7 +144,6 @@ Every browser session can record a trajectory for learning:
 const id = browser.startTrajectory('Complete checkout flow');
 
 // All actions are recorded: open, click, fill, type, etc.
-await browser.open('https://shop.example.com/cart');
 await browser.click('@e1'); // Checkout button
 await browser.fill('@e2', '4111111111111111'); // Card number
 // ...
@@ -176,11 +166,9 @@ All URLs are scanned before navigation:
 
 ```typescript
 // Automatic scanning (enabled by default)
-const result = await browser.open('http://suspicious-login.xyz');
 // Returns: { success: false, error: 'Security scan failed: phishing detected' }
 
 // Manual scanning
-const scanResult = await browser.scanUrl('https://example.com');
 // Returns: { safe: true, score: 1.0, threats: [], pii: [] }
 
 // PII detection in form values
@@ -233,7 +221,6 @@ const scanner = getSecurityScanner({
 });
 
 // URL scanning
-const urlResult = await scanner.scanUrl('https://paypa1-secure.xyz/login');
 // Detects: phishing (lookalike domain), suspicious TLD
 
 // Content scanning
@@ -245,7 +232,6 @@ const inputResult = scanner.validateInput('<script>alert(1)</script>', 'comment'
 // Detects: xss threat
 
 // Quick checks
-await isUrlSafe('https://example.com'); // true
 containsPII('My SSN is 123-45-6789'); // true
 ```
 
@@ -274,7 +260,6 @@ const loginTemplate = getWorkflow('login-basic');
 // Validate variables
 const manager = getWorkflowManager();
 const validation = manager.validateVariables('login-basic', {
-  url: 'https://example.com/login',
   username: 'user',
   password: 'pass',
 });
@@ -305,7 +290,6 @@ import { preBrowseHook, postBrowseHook, browserHooks } from '@hive-flow/browser'
 // Before browsing - get recommendations
 const preResult = await preBrowseHook({
   goal: 'Login to admin panel',
-  url: 'https://example.com/admin',
 });
 // {
 //   recommendedSteps: [{action: 'fill', selector: '#username'}, ...],
@@ -352,7 +336,6 @@ const scraper2 = await swarm.spawnAgent('scraper');
 const validator = await swarm.spawnAgent('validator');
 
 // Share data between agents
-swarm.shareData('targetUrls', ['https://example.com/page1', 'https://example.com/page2']);
 
 // Each agent can access shared data
 const urls = swarm.getSharedData<string[]>('targetUrls');
@@ -588,7 +571,6 @@ async function loginAndExtract() {
   browser.startTrajectory('Login and extract user data');
 
   // Login
-  await browser.open('https://app.example.com/login');
   await browser.fill('#email', 'user@example.com');
   await browser.fill('#password', 'secretpassword');
   await browser.click('#login-button');
@@ -677,7 +659,6 @@ async function secureAutomation(url: string, formData: Record<string, string>) {
 
 **agent-browser not found**
 ```bash
-npm install -g agent-browser
 ```
 
 **Playwright browsers missing**
@@ -691,7 +672,6 @@ const browser = createBrowserService({
   allowedDomains: ['trusted-domain.com'],
   // Or disable for specific navigations
 });
-await browser.open('http://trusted-domain.com', { skipSecurityCheck: true });
 ```
 
 **Memory not persisting**
@@ -706,7 +686,6 @@ const trajectory = await browser.endTrajectory(true); // Must await!
 
 ## Contributing
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) in the root repository.
 
 ## License
 
@@ -714,17 +693,11 @@ MIT License - see [LICENSE](../../LICENSE) for details.
 
 ## Links
 
-- [GitHub Repository](https://github.com/hypnwtykvmpr/hive-flow)
-- [agent-browser](https://github.com/AugmentCode/agent-browser)
-- [Hive-Flow Documentation](https://github.com/hypnwtykvmpr/hive-flow#readme)
-- [MCP Protocol](https://modelcontextprotocol.io)
 
 ---
 
 <div align="center">
 
-**Part of the [Hive-Flow](https://github.com/hypnwtykvmpr/hive-flow) ecosystem**
 
-Made with ❤️ by [hypnwtykvmpr](https://github.com/hypnwtykvmpr)
 
 </div>

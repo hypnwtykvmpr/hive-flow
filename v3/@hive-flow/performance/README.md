@@ -1,10 +1,5 @@
 # @hive-flow/performance
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/performance.svg)](https://www.npmjs.com/package/@hive-flow/performance)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/performance.svg)](https://www.npmjs.com/package/@hive-flow/performance)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Benchmarks](https://img.shields.io/badge/Benchmarks-Vitest-green.svg)](https://vitest.dev/)
 
 > Comprehensive performance benchmarking module for Hive Flow V3 - statistical analysis, memory tracking, regression detection, and Flash Attention validation.
 
@@ -21,7 +16,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/performance
 ```
 
 ## Quick Start

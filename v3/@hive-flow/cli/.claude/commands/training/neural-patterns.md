@@ -23,13 +23,13 @@ Every successful operation trains the neural networks:
 ### 2. Manual Training
 ```bash
 # Train coordination patterns (50 epochs)
-npx hive-flow neural train -p coordination -e 50
+hive-flow neural train -p coordination -e 50
 
 # Train optimization patterns with custom learning rate
-npx hive-flow neural train -p optimization -l 0.005
+hive-flow neural train -p optimization -l 0.005
 
 # Quick training (10 epochs)
-npx hive-flow neural train -e 10
+hive-flow neural train -e 10
 ```
 
 ### 3. Pattern Types
@@ -50,20 +50,20 @@ npx hive-flow neural train -e 10
 ### 4. Improvement Tracking
 ```bash
 # Check neural system status
-npx hive-flow neural status
+hive-flow neural status
 ```
 
 ## Pattern Management
 
 ```bash
 # List all persisted patterns
-npx hive-flow neural patterns --action list
+hive-flow neural patterns --action list
 
 # Search patterns by query
-npx hive-flow neural patterns --action list -q "error handling"
+hive-flow neural patterns --action list -q "error handling"
 
 # Analyze patterns
-npx hive-flow neural patterns --action analyze -q "coordination"
+hive-flow neural patterns --action analyze -q "coordination"
 ```
 
 ## Performance Targets
@@ -85,19 +85,19 @@ npx hive-flow neural patterns --action analyze -q "coordination"
 
 ```bash
 # Train neural patterns
-npx hive-flow neural train -p coordination -e 50
+hive-flow neural train -p coordination -e 50
 
 # Check neural status
-npx hive-flow neural status
+hive-flow neural status
 
 # List patterns
-npx hive-flow neural patterns --action list
+hive-flow neural patterns --action list
 
 # Search patterns
-npx hive-flow neural patterns --action list -q "query"
+hive-flow neural patterns --action list -q "query"
 
 # Analyze patterns
-npx hive-flow neural patterns --action analyze -q "coordination"
+hive-flow neural patterns --action analyze -q "coordination"
 ```
 
 ## Related Commands

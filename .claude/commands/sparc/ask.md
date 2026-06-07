@@ -49,16 +49,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run ask "help me choose the right mode"
+hive-flow sparc run ask "help me choose the right mode"
 
 # For alpha features
-npx hive-flow@alpha sparc run ask "help me choose the right mode"
+hive-flow sparc run ask "help me choose the right mode"
 
 # With namespace
-npx hive-flow sparc run ask "your task" --namespace ask
+hive-flow sparc run ask "your task" --namespace ask
 
 # Non-interactive mode
-npx hive-flow sparc run ask "your task" --non-interactive
+hive-flow sparc run ask "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -90,8 +90,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "ask_context" "important decisions" --namespace ask
+hive-flow memory store "ask_context" "important decisions" --namespace ask
 
 # Query previous work
-npx hive-flow memory query "ask" --limit 5
+hive-flow memory query "ask" --limit 5
 ```

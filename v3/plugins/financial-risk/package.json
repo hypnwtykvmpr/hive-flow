@@ -65,17 +65,8 @@
     "mifid2",
     "mcp"
   ],
-  "author": "rUv",
+  "author": "Hive Flow",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git",
-    "directory": "v3/plugins/financial-risk"
-  },
-  "bugs": {
-    "url": "https://github.com/ruvnet/hive-flow/issues"
-  },
-  "homepage": "https://github.com/ruvnet/hive-flow/tree/main/v3/plugins/financial-risk#readme",
   "engines": {
     "node": ">=20.0.0"
   },

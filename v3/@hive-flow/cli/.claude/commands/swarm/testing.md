@@ -23,7 +23,7 @@ mcp__hive-flow__task_orchestrate({
 ```
 
 ### Using CLI (Fallback)
-`npx hive-flow swarm "test application" --strategy testing`
+`hive-flow swarm "test application" --strategy testing`
 
 ## Agent Roles
 

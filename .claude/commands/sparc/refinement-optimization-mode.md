@@ -35,16 +35,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run refinement-optimization-mode "optimize database queries"
+hive-flow sparc run refinement-optimization-mode "optimize database queries"
 
 # For alpha features
-npx hive-flow@alpha sparc run refinement-optimization-mode "optimize database queries"
+hive-flow sparc run refinement-optimization-mode "optimize database queries"
 
 # With namespace
-npx hive-flow sparc run refinement-optimization-mode "your task" --namespace refinement-optimization-mode
+hive-flow sparc run refinement-optimization-mode "your task" --namespace refinement-optimization-mode
 
 # Non-interactive mode
-npx hive-flow sparc run refinement-optimization-mode "your task" --non-interactive
+hive-flow sparc run refinement-optimization-mode "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -76,8 +76,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "refinement-optimization-mode_context" "important decisions" --namespace refinement-optimization-mode
+hive-flow memory store "refinement-optimization-mode_context" "important decisions" --namespace refinement-optimization-mode
 
 # Query previous work
-npx hive-flow memory query "refinement-optimization-mode" --limit 5
+hive-flow memory query "refinement-optimization-mode" --limit 5
 ```

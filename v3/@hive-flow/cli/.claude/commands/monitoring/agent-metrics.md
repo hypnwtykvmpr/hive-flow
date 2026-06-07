@@ -4,7 +4,7 @@ View agent performance metrics.
 
 ## Usage
 ```bash
-npx hive-flow agent metrics [options]
+hive-flow agent metrics [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow agent metrics [options]
 ## Examples
 ```bash
 # All agents metrics
-npx hive-flow agent metrics
+hive-flow agent metrics
 
 # Specific agent
-npx hive-flow agent metrics --agent-id agent-001
+hive-flow agent metrics --agent-id agent-001
 
 # Last hour
-npx hive-flow agent metrics --period 1h
+hive-flow agent metrics --period 1h
 ```

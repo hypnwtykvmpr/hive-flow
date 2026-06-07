@@ -814,7 +814,7 @@ export class V2CompatibilityValidator {
 
     if (cli.breakingChanges > 0) {
       recommendations.push('Update CLI command calls to use V3 equivalents');
-      recommendations.push('Run migration script: npx @hive-flow/cli migrate');
+      recommendations.push('Run migration script: hive-flow migrate');
     }
 
     if (mcp.breakingChanges > 0) {
@@ -1033,10 +1033,10 @@ export function generateCompatibilityReport(report: FullValidationReport): strin
   lines.push('# Deprecated commands will show warnings');
   lines.push('');
   lines.push('# V2 (deprecated)');
-  lines.push('npx hive-flow hive-mind init');
+  lines.push('hive-flow hive-mind init');
   lines.push('');
   lines.push('# V3 (recommended)');
-  lines.push('npx @hive-flow/cli swarm init');
+  lines.push('hive-flow swarm init');
   lines.push('```');
   lines.push('');
   lines.push('### MCP Tool Migration');

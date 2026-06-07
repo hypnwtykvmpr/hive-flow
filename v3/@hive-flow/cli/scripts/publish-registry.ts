@@ -1,20 +1,20 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * Plugin Registry Publisher
  *
  * Publishes the plugin registry to IPFS via Pinata and updates IPNS pointer.
  *
  * Setup:
- * 1. Create Pinata account at https://pinata.cloud
+ * 1. Create Pinata account at Pinata
  * 2. Generate API keys (JWT)
  * 3. Set environment variables:
  *    - PINATA_JWT: Your Pinata JWT token
  *    - REGISTRY_PRIVATE_KEY: Ed25519 private key (hex) for signing
  *
  * Usage:
- *   npx tsx scripts/publish-registry.ts
- *   npx tsx scripts/publish-registry.ts --dry-run
- *   npx tsx scripts/publish-registry.ts --registry ./custom-registry.json
+ *   tsx scripts/publish-registry.ts
+ *   tsx scripts/publish-registry.ts --dry-run
+ *   tsx scripts/publish-registry.ts --registry ./custom-registry.json
  */
 
 import * as fs from 'fs';
@@ -270,7 +270,7 @@ async function main() {
 
   if (!jwt) {
     console.error('❌ PINATA_JWT environment variable is required');
-    console.log('\nGet your JWT from https://pinata.cloud/keys');
+    console.log('\nGet your JWT from Pinata account keys');
     process.exit(1);
   }
 
@@ -334,7 +334,7 @@ async function main() {
     console.log('\n📝 Next steps:');
     console.log('   1. Update DEFAULT_PLUGIN_STORE_CONFIG in discovery.ts with the new CID');
     console.log('   2. If using IPNS, update the IPNS pointer via Pinata dashboard');
-    console.log('   3. Test with: npx hive-flow@latest plugins list');
+    console.log('   3. Test with: hive-flow plugins list');
   } catch (error) {
     console.error('\n❌ Publish failed:', error);
     process.exit(1);

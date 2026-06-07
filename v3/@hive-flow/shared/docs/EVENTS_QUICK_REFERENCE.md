@@ -6,7 +6,6 @@ Fast reference guide for using the Event Store system.
 
 ```bash
 cd v3/@hive-flow/shared
-npm install
 ```
 
 ## Quick Start
@@ -464,7 +463,5 @@ await store.append(createMemoryDeletedEvent(id, ns, key));
 ---
 
 **Quick Links**:
-- [README](./README.md) - Complete documentation
 - [Example](./example-usage.ts) - Working code example
 - [Tests](./event-store.test.ts) - Test suite
-- [Summary](./IMPLEMENTATION_SUMMARY.md) - Implementation overview

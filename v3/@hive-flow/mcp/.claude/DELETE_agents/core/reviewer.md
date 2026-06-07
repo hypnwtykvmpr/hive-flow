@@ -20,26 +20,26 @@ hooks:
     echo "👀 Reviewer agent analyzing: $TASK"
 
     # V3: Initialize task with hooks system
-    npx hive-flow@v3alpha hooks pre-task --description "$TASK"
+    hive-flow hooks pre-task --description "$TASK"
 
     # 1. Learn from past review patterns (ReasoningBank + HNSW fast HNSW-indexed)
-    SIMILAR_REVIEWS=$(npx hive-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
+    SIMILAR_REVIEWS=$(hive-flow memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_REVIEWS" ]; then
       echo "📚 Found similar successful review patterns (HNSW-indexed)"
-      npx hive-flow@v3alpha hooks intelligence --action pattern-search --query "$TASK" --k 5
+      hive-flow hooks intelligence --action pattern-search --query "$TASK" --k 5
     fi
 
     # 2. Learn from missed issues (EWC++ protected)
-    MISSED_ISSUES=$(npx hive-flow@v3alpha memory search --query "$TASK missed issues" --limit 3 --failures-only --use-hnsw)
+    MISSED_ISSUES=$(hive-flow memory search --query "$TASK missed issues" --limit 3 --failures-only --use-hnsw)
     if [ -n "$MISSED_ISSUES" ]; then
       echo "⚠️  Learning from previously missed issues"
     fi
 
     # Create review checklist via memory
-    npx hive-flow@v3alpha memory store --key "review_checklist_$(date +%s)" --value "functionality,security,performance,maintainability,documentation"
+    hive-flow memory store --key "review_checklist_$(date +%s)" --value "functionality,security,performance,maintainability,documentation"
 
     # 3. Store task start via hooks
-    npx hive-flow@v3alpha hooks intelligence --action trajectory-start \
+    hive-flow hooks intelligence --action trajectory-start \
       --session-id "reviewer-$(date +%s)" \
       --task "$TASK"
 
@@ -48,13 +48,13 @@ hooks:
     echo "📝 Review summary stored in memory"
 
     # 1. Calculate review quality metrics
-    ISSUES_FOUND=$(npx hive-flow@v3alpha memory search --query "review_issues" --count-only || echo "0")
-    CRITICAL_ISSUES=$(npx hive-flow@v3alpha memory search --query "review_critical" --count-only || echo "0")
+    ISSUES_FOUND=$(hive-flow memory search --query "review_issues" --count-only || echo "0")
+    CRITICAL_ISSUES=$(hive-flow memory search --query "review_critical" --count-only || echo "0")
     REWARD=$(echo "scale=2; ($ISSUES_FOUND + $CRITICAL_ISSUES * 2) / 20" | bc)
     SUCCESS=$([[ $CRITICAL_ISSUES -eq 0 ]] && echo "true" || echo "false")
 
     # 2. Store learning pattern via V3 hooks (with EWC++ consolidation)
-    npx hive-flow@v3alpha hooks intelligence --action pattern-store \
+    hive-flow hooks intelligence --action pattern-store \
       --session-id "reviewer-$(date +%s)" \
       --task "$TASK" \
       --output "Found $ISSUES_FOUND issues ($CRITICAL_ISSUES critical)" \
@@ -63,12 +63,12 @@ hooks:
       --consolidate-ewc true
 
     # 3. Complete task hook
-    npx hive-flow@v3alpha hooks post-task --task-id "reviewer-$(date +%s)" --success "$SUCCESS"
+    hive-flow hooks post-task --task-id "reviewer-$(date +%s)" --success "$SUCCESS"
 
     # 4. Train on comprehensive reviews (SONA low-latency adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$ISSUES_FOUND" -gt 10 ]; then
       echo "🧠 Training neural pattern from thorough review"
-      npx hive-flow@v3alpha neural train \
+      hive-flow neural train \
         --pattern-type "coordination" \
         --training-data "code-review" \
         --epochs 50 \
@@ -76,7 +76,7 @@ hooks:
     fi
 
     # 5. Trigger audit worker for security analysis
-    npx hive-flow@v3alpha hooks worker dispatch --trigger audit
+    hive-flow hooks worker dispatch --trigger audit
 ---
 
 # Code Review Agent

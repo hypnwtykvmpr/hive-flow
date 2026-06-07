@@ -11,7 +11,7 @@ Manage the agent pool for automatic scaling and resource optimization.
 ## Usage
 
 ```bash
-npx hive-flow agent pool [options]
+hive-flow agent pool [options]
 ```
 
 ## Options
@@ -28,19 +28,19 @@ npx hive-flow agent pool [options]
 
 ```bash
 # View current pool status
-npx hive-flow agent pool
+hive-flow agent pool
 
 # Set pool size
-npx hive-flow agent pool --size 5
+hive-flow agent pool --size 5
 
 # Configure auto-scaling
-npx hive-flow agent pool --min 2 --max 15 --auto-scale
+hive-flow agent pool --min 2 --max 15 --auto-scale
 
 # Pre-warm agents for fast response
-npx hive-flow agent pool --warmup
+hive-flow agent pool --warmup
 
 # Disable auto-scaling
-npx hive-flow agent pool --auto-scale false
+hive-flow agent pool --auto-scale false
 ```
 
 ## Output
@@ -89,7 +89,7 @@ Auto-Scale Rules
 Pre-warm agents to reduce cold-start latency:
 
 ```bash
-npx hive-flow agent pool --warmup
+hive-flow agent pool --warmup
 
 # Pre-warms default agent types:
 # - coder (2 instances)
@@ -122,6 +122,6 @@ agent:
 
 ## Related Commands
 
-- `npx hive-flow agent spawn` - Manual agent spawning
-- `npx hive-flow agent list` - View active agents
-- `npx hive-flow swarm scale` - Swarm-level scaling
+- `hive-flow agent spawn` - Manual agent spawning
+- `hive-flow agent list` - View active agents
+- `hive-flow swarm scale` - Swarm-level scaling

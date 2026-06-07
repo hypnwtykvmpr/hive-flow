@@ -4,9 +4,9 @@
  * Runs without TTY for daemon processes and scheduled tasks
  *
  * Usage:
- *   npx @hive-flow/cli headless --worker <type>
- *   npx @hive-flow/cli headless --daemon
- *   npx @hive-flow/cli headless --benchmark
+ *   hive-flow headless --worker <type>
+ *   hive-flow headless --daemon
+ *   hive-flow headless --benchmark
  *
  * Environment:
  *   HIVE_FLOW_HEADLESS=true

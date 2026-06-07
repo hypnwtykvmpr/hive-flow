@@ -4,7 +4,7 @@ Create reusable workflow templates.
 
 ## Usage
 ```bash
-npx hive-flow workflow create [options]
+hive-flow workflow create [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow workflow create [options]
 ## Examples
 ```bash
 # Create workflow
-npx hive-flow workflow create --name "deploy-api"
+hive-flow workflow create --name "deploy-api"
 
 # From history
-npx hive-flow workflow create --name "test-suite" --from-history
+hive-flow workflow create --name "test-suite" --from-history
 
 # Interactive mode
-npx hive-flow workflow create --interactive
+hive-flow workflow create --interactive
 ```

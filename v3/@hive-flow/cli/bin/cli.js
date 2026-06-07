@@ -5,7 +5,7 @@
  * Hive Flow V3 Command Line Interface
  *
  * Auto-detects MCP mode when stdin is piped and no args provided.
- * This allows: echo '{"jsonrpc":"2.0",...}' | npx @hive-flow/cli
+ * This allows: echo '{"jsonrpc":"2.0",...}' | hive-flow
  *
  * Includes pre-flight npx cache repair to prevent ENOTEMPTY errors
  * in remote/CI environments (known npm 10.x bug).
@@ -49,7 +49,7 @@ const ErrorCodes = {
 // Check if we should run in MCP server mode
 // Conditions:
 //   1. stdin is being piped AND no CLI arguments provided (auto-detect)
-//   2. stdin is being piped AND args are "mcp start" (explicit, e.g. npx hive-flow@alpha mcp start)
+//   2. stdin is being piped AND args are "mcp start" (explicit, e.g. hive-flow mcp start)
 const cliArgs = process.argv.slice(2);
 const isExplicitMCP = cliArgs.length >= 1 && cliArgs[0] === 'mcp' && (cliArgs.length === 1 || cliArgs[1] === 'start');
 const isMCPMode = !process.stdin.isTTY && (process.argv.length === 2 || isExplicitMCP);

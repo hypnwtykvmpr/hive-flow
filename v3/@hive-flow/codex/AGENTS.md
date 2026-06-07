@@ -13,7 +13,6 @@ A Hive Flow powered project
 
 ### Installation
 ```bash
-npm install
 ```
 
 ### Build
@@ -126,7 +125,7 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`
 
 ### Storing Patterns
 ```bash
-npx @hive-flow/cli memory store \
+hive-flow memory store \
   --key "pattern-name" \
   --value "pattern description" \
   --namespace patterns
@@ -134,12 +133,9 @@ npx @hive-flow/cli memory store \
 
 ### Searching Memory
 ```bash
-npx @hive-flow/cli memory search \
+hive-flow memory search \
   --query "search terms" \
   --namespace patterns
 ```
 
 ## Links
-
-- Documentation: https://github.com/hypnwtykvmpr/hive-flow
-- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues

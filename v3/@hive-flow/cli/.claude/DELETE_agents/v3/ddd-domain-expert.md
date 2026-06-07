@@ -194,16 +194,16 @@ When analyzing a domain, produce:
 
 ```bash
 # Analyze domain model
-npx hive-flow@v3alpha ddd analyze --path ./src
+hive-flow ddd analyze --path ./src
 
 # Generate bounded context map
-npx hive-flow@v3alpha ddd context-map
+hive-flow ddd context-map
 
 # Validate aggregate design
-npx hive-flow@v3alpha ddd validate-aggregates
+hive-flow ddd validate-aggregates
 
 # Check ubiquitous language consistency
-npx hive-flow@v3alpha ddd language-check
+hive-flow ddd language-check
 ```
 
 ## Memory Integration

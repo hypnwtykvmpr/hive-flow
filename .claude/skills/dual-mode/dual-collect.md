@@ -54,14 +54,14 @@ Collect and aggregate results from headless Codex workers stored in shared memor
 
 ```bash
 # List all results
-npx hive-flow@v3alpha memory list --namespace {{namespace}}
+hive-flow memory list --namespace {{namespace}}
 
 # Search for specific patterns
-npx hive-flow@v3alpha memory search -q "{{filter}}" -n {{namespace}}
+hive-flow memory search -q "{{filter}}" -n {{namespace}}
 
 # Get detailed entries
 {{#each results}}
-npx hive-flow@v3alpha memory get -k "{{this.key}}" -n {{namespace}}
+hive-flow memory get -k "{{this.key}}" -n {{namespace}}
 {{/each}}
 ```
 

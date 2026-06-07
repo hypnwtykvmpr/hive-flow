@@ -286,7 +286,7 @@ export function getGCSStatus(): {
     return {
       available: false,
       authenticated: false,
-      message: 'gcloud CLI not installed. Install from: https://cloud.google.com/sdk/docs/install',
+      message: 'gcloud CLI not installed. Install from: Google Cloud SDK installation docs',
     };
   }
 

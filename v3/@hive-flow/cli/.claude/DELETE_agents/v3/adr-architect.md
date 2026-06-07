@@ -30,7 +30,7 @@ hooks:
     # Store new ADR in memory
     mcp__hive-flow__memory_usage --action="store" --namespace="decisions" --key="adr:$ADR_NUMBER" --value="$ADR_TITLE"
     # Train pattern on successful decision
-    npx hive-flow@v3alpha hooks intelligence trajectory-step --operation="adr-created" --outcome="success"
+    hive-flow hooks intelligence trajectory-step --operation="adr-created" --outcome="success"
 ---
 
 # V3 ADR Architect Agent
@@ -125,19 +125,19 @@ The following ADRs define the Hive Flow V3 architecture:
 
 ```bash
 # Create new ADR
-npx hive-flow@v3alpha adr create "Decision Title"
+hive-flow adr create "Decision Title"
 
 # List all ADRs
-npx hive-flow@v3alpha adr list
+hive-flow adr list
 
 # Search ADRs
-npx hive-flow@v3alpha adr search "memory backend"
+hive-flow adr search "memory backend"
 
 # Check ADR status
-npx hive-flow@v3alpha adr status ADR-006
+hive-flow adr status ADR-006
 
 # Supersede an ADR
-npx hive-flow@v3alpha adr supersede ADR-005 ADR-012
+hive-flow adr supersede ADR-005 ADR-012
 ```
 
 ## Memory Integration

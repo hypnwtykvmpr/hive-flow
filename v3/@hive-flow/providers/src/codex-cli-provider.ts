@@ -116,7 +116,7 @@ export class CodexCLIProvider extends BaseProvider {
   protected async doInitialize(): Promise<void> {
     this.binaryPath = await this.findBinary();
     if (!this.binaryPath) {
-      this.logger.warn('Codex CLI binary not found in PATH. Install: npm install -g @openai/codex');
+      this.logger.warn('Codex CLI binary not found in PATH. Install Codex CLI with your configured package manager.');
     } else {
       this.logger.info('Codex CLI binary found', { path: this.binaryPath });
     }
@@ -341,7 +341,7 @@ export class CodexCLIProvider extends BaseProvider {
     }
     if (!this.binaryPath) {
       return { healthy: false, error: 'Codex CLI binary not found in PATH', timestamp: new Date(),
-        details: { hint: 'Install: npm install -g @openai/codex' } };
+        details: { hint: 'Install Codex CLI with your configured package manager.' } };
     }
     return new Promise((resolve) => {
       execFile(this.binaryPath!, ['--version'], { timeout: 10000 }, (error, stdout) => {
@@ -378,7 +378,7 @@ export class CodexCLIProvider extends BaseProvider {
   private ensureBinary(): void {
     if (!this.binaryPath) {
       throw new ProviderUnavailableError('codex-cli', {
-        message: 'Codex CLI binary not found in PATH', hint: 'Install: npm install -g @openai/codex',
+        message: 'Codex CLI binary not found in PATH', hint: 'Install Codex CLI with your configured package manager.',
       });
     }
   }

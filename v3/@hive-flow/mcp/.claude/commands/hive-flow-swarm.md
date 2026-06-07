@@ -201,5 +201,3 @@ Swarms automatically use distributed memory for collaboration:
 - Critical Path
 - Resource-aware
 - Adaptive
-
-For detailed documentation, see: https://github.com/hypnwtykvmpr/claude-code-flow/docs/swarm-system.md

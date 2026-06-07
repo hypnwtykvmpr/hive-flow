@@ -20,7 +20,7 @@
  * const trajectoryId = browser.startTrajectory('Login to dashboard');
  *
  * // Perform actions
- * await browser.open('https://example.com/login');
+ * await browser.open('login page URL');
  * await browser.snapshot({ interactive: true });
  * await browser.fill('@e1', 'user@example.com');
  * await browser.fill('@e2', 'password');

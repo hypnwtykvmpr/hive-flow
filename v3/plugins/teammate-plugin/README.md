@@ -2,8 +2,6 @@
 
 Native **TeammateTool** integration plugin for Hive Flow. Bridges Claude Code v2.1.19+ multi-agent orchestration capabilities with Hive Flow's swarm system.
 
-[![npm version](https://badge.fury.io/js/%40hive-flow%2Fteammate-plugin.svg)](https://badge.fury.io/js/%40hive-flow%2Fteammate-plugin)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Requirements
 
@@ -47,7 +45,6 @@ claude plugins install teammate-plugin --registry hive-flow
 ### Via npm
 
 ```bash
-npm install @hive-flow/teammate-plugin
 ```
 
 Or with pnpm:
@@ -60,10 +57,10 @@ pnpm add @hive-flow/teammate-plugin
 
 ```bash
 # Install via hive-flow plugin manager
-npx @hive-flow/cli@latest plugins install --name @hive-flow/teammate-plugin
+hive-flow plugins install --name @hive-flow/teammate-plugin
 
 # Or add to your hive-flow.config.json
-npx @hive-flow/cli@latest config set plugins.teammate-plugin.enabled true
+hive-flow config set plugins.teammate-plugin.enabled true
 ```
 
 ### Verify Installation
@@ -73,7 +70,7 @@ npx @hive-flow/cli@latest config set plugins.teammate-plugin.enabled true
 claude plugins list
 
 # Or via hive-flow
-npx @hive-flow/cli@latest plugins list
+hive-flow plugins list
 ```
 
 ## Quick Start
@@ -293,7 +290,6 @@ await bridge.revokeDelegation('my-team', 'lead-id', 'dev-id');
 // Update context
 await bridge.updateTeamContext('my-team', {
   sharedVariables: {
-    apiEndpoint: 'https://api.example.com',
     version: '1.0.0',
   },
   inheritedPermissions: ['read', 'write'],
@@ -590,7 +586,6 @@ console.log(`Rejections: ${plan.rejections.length}`);
 cd v3/plugins/teammate-plugin
 
 # Install dependencies
-npm install
 
 # Run tests
 npm test
@@ -640,13 +635,13 @@ verifyPlugin().catch(console.error);
 
 ```bash
 # Check plugin is registered
-npx @hive-flow/cli@latest plugins list | grep teammate
+hive-flow plugins list | grep teammate
 
 # Check plugin info
-npx @hive-flow/cli@latest plugins info teammate-plugin
+hive-flow plugins info teammate-plugin
 
 # Test MCP tools
-npx @hive-flow/cli@latest mcp tools | grep teammate
+hive-flow mcp tools | grep teammate
 ```
 
 ## Plugin Registry (IPFS)
@@ -663,7 +658,6 @@ This plugin is published to the Hive Flow Plugin Registry on IPFS for decentrali
   "description": "Native TeammateTool integration for Claude Code v2.1.19+",
   "author": "Hive Flow Team",
   "license": "MIT",
-  "repository": "https://github.com/ruvnet/hive-flow",
   "keywords": ["claude-code", "teammate", "multi-agent", "swarm"],
   "requirements": {
     "claudeCode": ">=2.1.19",
@@ -686,20 +680,20 @@ This plugin is published to the Hive Flow Plugin Registry on IPFS for decentrali
 
 ```bash
 # Install from IPFS-backed registry
-npx @hive-flow/cli@latest plugins install teammate-plugin --registry ipfs
+hive-flow plugins install teammate-plugin --registry ipfs
 
 # Or specify registry CID directly
-npx @hive-flow/cli@latest plugins install teammate-plugin --cid <registry-cid>
+hive-flow plugins install teammate-plugin --cid <registry-cid>
 ```
 
 ### Verify Registry Integrity
 
 ```bash
 # Check plugin hash matches registry
-npx @hive-flow/cli@latest plugins verify teammate-plugin
+hive-flow plugins verify teammate-plugin
 
 # View registry metadata
-npx @hive-flow/cli@latest plugins registry info
+hive-flow plugins registry info
 ```
 
 ## License
@@ -707,7 +701,3 @@ npx @hive-flow/cli@latest plugins registry info
 MIT
 
 ## Related
-
-- [Hive Flow](https://github.com/ruvnet/hive-flow) - Multi-agent orchestration framework
-- [Claude Code](https://github.com/anthropics/claude-code) - Anthropic's CLI for Claude
-- [ADR-027](../implementation/adrs/ADR-027-teammate-tool-integration.md) - Architecture decision record

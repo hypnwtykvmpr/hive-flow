@@ -3,7 +3,7 @@
  *
  * Provides HNSW (Hierarchical Navigable Small World) vector search
  * for patient similarity matching. Integrates with micro-hnsw-wasm
- * for 150x faster similarity search.
+ * for optimized faster similarity search.
  *
  * HIPAA Compliance:
  * - All patient data processed locally in WASM sandbox

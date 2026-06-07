@@ -97,7 +97,7 @@ function antiDriftConfig(): string {
 - Keep shared memory namespace for all agents
 
 \`\`\`bash
-npx @hive-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+hive-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized
 \`\`\``;
 }
 
@@ -110,7 +110,7 @@ When the user requests a complex task, spawn agents in background and WAIT:
 
 \`\`\`javascript
 // STEP 1: Initialize swarm coordination
-Bash("npx @hive-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized")
+Bash("hive-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized")
 
 // STEP 2: Spawn ALL agents IN BACKGROUND in a SINGLE message
 Task({prompt: "Research requirements...", subagent_type: "researcher", run_in_background: true})
@@ -165,11 +165,11 @@ function cliCommandsTable(): string {
 ### Quick CLI Examples
 
 \`\`\`bash
-npx @hive-flow/cli@latest init --wizard
-npx @hive-flow/cli@latest agent spawn -t coder --name my-coder
-npx @hive-flow/cli@latest swarm init --v3-mode
-npx @hive-flow/cli@latest memory search --query "authentication patterns"
-npx @hive-flow/cli@latest doctor --fix
+hive-flow init --wizard
+hive-flow agent spawn -t coder --name my-coder
+hive-flow swarm init --v3-mode
+hive-flow memory search --query "authentication patterns"
+hive-flow doctor --fix
 \`\`\``;
 }
 
@@ -218,9 +218,9 @@ function hooksSystem(): string {
 | \`document\` | normal | Auto-documentation |
 
 \`\`\`bash
-npx @hive-flow/cli@latest hooks pre-task --description "[task]"
-npx @hive-flow/cli@latest hooks post-task --task-id "[id]" --success true
-npx @hive-flow/cli@latest hooks worker dispatch --trigger audit
+hive-flow hooks pre-task --description "[task]"
+hive-flow hooks post-task --task-id "[id]" --success true
+hive-flow hooks worker dispatch --trigger audit
 \`\`\``;
 }
 
@@ -246,16 +246,16 @@ function memoryCommands(): string {
 
 \`\`\`bash
 # Store (REQUIRED: --key, --value; OPTIONAL: --namespace, --ttl, --tags)
-npx @hive-flow/cli@latest memory store --key "pattern-auth" --value "JWT with refresh" --namespace patterns
+hive-flow memory store --key "pattern-auth" --value "JWT with refresh" --namespace patterns
 
 # Search (REQUIRED: --query; OPTIONAL: --namespace, --limit, --threshold)
-npx @hive-flow/cli@latest memory search --query "authentication patterns"
+hive-flow memory search --query "authentication patterns"
 
 # List (OPTIONAL: --namespace, --limit)
-npx @hive-flow/cli@latest memory list --namespace patterns --limit 10
+hive-flow memory list --namespace patterns --limit 10
 
 # Retrieve (REQUIRED: --key; OPTIONAL: --namespace)
-npx @hive-flow/cli@latest memory retrieve --key "pattern-auth" --namespace patterns
+hive-flow memory retrieve --key "pattern-auth" --namespace patterns
 \`\`\``;
 }
 
@@ -266,7 +266,7 @@ function securityRulesLight(): string {
 - NEVER commit .env files or any file containing secrets
 - Always validate user input at system boundaries
 - Always sanitize file paths to prevent directory traversal
-- Run \`npx @hive-flow/cli@latest security scan\` after security-related changes`;
+- Run \`hive-flow security scan\` after security-related changes`;
 }
 
 function buildAndTest(): string {
@@ -299,9 +299,9 @@ function securitySection(): string {
 
 ### Security Scanning
 \`\`\`bash
-npx @hive-flow/cli@latest security scan --depth full
-npx @hive-flow/cli@latest security audit --report
-npx @hive-flow/cli@latest security cve --check
+hive-flow security scan --depth full
+hive-flow security audit --report
+hive-flow security cve --check
 \`\`\`
 
 ### Security Agents
@@ -321,9 +321,9 @@ function performanceSection(): string {
 
 ### Performance Tooling
 \`\`\`bash
-npx @hive-flow/cli@latest performance benchmark --suite all
-npx @hive-flow/cli@latest performance profile --target "[component]"
-npx @hive-flow/cli@latest performance metrics --format table
+hive-flow performance benchmark --suite all
+hive-flow performance profile --target "[component]"
+hive-flow performance metrics --format table
 \`\`\`
 
 ### Performance Agents
@@ -363,9 +363,9 @@ function setupAndBoundary(): string {
   return `## Quick Setup
 
 \`\`\`bash
-claude mcp add hive-flow -- npx -y @hive-flow/cli@latest
-npx @hive-flow/cli@latest daemon start
-npx @hive-flow/cli@latest doctor --fix
+claude mcp add hive-flow -- hive-flow
+hive-flow daemon start
+hive-flow doctor --fix
 \`\`\`
 
 ## Claude Code vs CLI Tools
@@ -376,8 +376,8 @@ npx @hive-flow/cli@latest doctor --fix
 
 ## Support
 
-- Documentation: https://github.com/hypnwtykvmpr/hive-flow
-- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues`;
+- Documentation:
+- Issues: `;
 }
 
 // --- Template Composers ---

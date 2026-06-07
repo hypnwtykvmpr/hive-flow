@@ -8,7 +8,7 @@
  * Auth: GITHUB_TOKEN environment variable (required for copilot-api).
  * Requires active GitHub Copilot subscription.
  *
- * Setup: npx copilot-api (starts local server)
+ * Setup: copilot-api (starts local server)
  *
  * @module @hive-flow/providers/copilot-provider
  */
@@ -87,7 +87,7 @@ export class CopilotProvider extends BaseProvider {
     if (!health.healthy) {
       this.logger.warn(
         `copilot-api not running at ${this.baseUrl.replace('/v1', '')}. ` +
-        'Start it with: npx copilot-api'
+        'Start it with: copilot-api'
       );
     }
   }
@@ -201,7 +201,7 @@ export class CopilotProvider extends BaseProvider {
         healthy: false,
         error: error instanceof Error ? error.message : 'copilot-api not reachable',
         timestamp: new Date(),
-        details: { hint: `copilot-api not running at ${this.baseUrl.replace('/v1', '')}. Start with: npx copilot-api` },
+        details: { hint: `copilot-api not running at ${this.baseUrl.replace('/v1', '')}. Start with: copilot-api` },
       };
     }
   }
@@ -253,7 +253,7 @@ export class CopilotProvider extends BaseProvider {
     const message = errorData.error?.message || 'Unknown error';
     if (response.status === 0 || message.includes('connection')) {
       throw new ProviderUnavailableError('copilot', {
-        message, hint: 'copilot-api not running. Start with: npx copilot-api',
+        message, hint: 'copilot-api not running. Start with: copilot-api',
       });
     }
     throw new LLMProviderError(
@@ -268,7 +268,7 @@ export class CopilotProvider extends BaseProvider {
       if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
         return new ProviderUnavailableError('copilot', {
           originalError: error.message,
-          hint: 'copilot-api not running. Start with: npx copilot-api',
+          hint: 'copilot-api not running. Start with: copilot-api',
         });
       }
     }

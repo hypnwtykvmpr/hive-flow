@@ -4,5 +4,5 @@ Command documentation for hive-mind-wizard in category hive-mind.
 
 Usage:
 ```bash
-npx hive-flow hive-mind hive-mind-wizard [options]
+hive-flow hive-mind hive-mind-wizard [options]
 ```

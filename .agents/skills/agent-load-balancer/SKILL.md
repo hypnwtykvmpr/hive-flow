@@ -358,28 +358,28 @@ class CircuitBreaker {
 ### Load Balancing Commands
 ```bash
 # Initialize load balancer
-npx hive-flow agent spawn load-balancer --type coordinator
+hive-flow agent spawn load-balancer --type coordinator
 
 # Start load balancing
-npx hive-flow load-balance --swarm-id <id> --strategy adaptive
+hive-flow load-balance --swarm-id <id> --strategy adaptive
 
 # Monitor load distribution
-npx hive-flow agent-metrics --type load-balancer
+hive-flow agent-metrics --type load-balancer
 
 # Adjust balancing parameters
-npx hive-flow config-manage --action update --config '{"stealThreshold": 5, "agingBoost": 10}'
+hive-flow config-manage --action update --config '{"stealThreshold": 5, "agingBoost": 10}'
 ```
 
 ### Performance Monitoring
 ```bash
 # Real-time load monitoring
-npx hive-flow performance-report --format detailed
+hive-flow performance-report --format detailed
 
 # Bottleneck analysis
-npx hive-flow bottleneck-analyze --component swarm-coordination
+hive-flow bottleneck-analyze --component swarm-coordination
 
 # Resource utilization tracking
-npx hive-flow metrics-collect --components ["load-balancer", "task-queue"]
+hive-flow metrics-collect --components ["load-balancer", "task-queue"]
 ```
 
 ## Integration Points

@@ -104,14 +104,14 @@ The SPARC methodology enhances GOAP planning by providing a structured framework
 
 ```bash
 # Execute SPARC phases for goal achievement
-npx hive-flow sparc run spec-pseudocode "OAuth2 authentication system"
-npx hive-flow sparc run architect "microservices communication layer"
-npx hive-flow sparc tdd "payment processing feature"
-npx hive-flow sparc pipeline "complete feature implementation"
+hive-flow sparc run spec-pseudocode "OAuth2 authentication system"
+hive-flow sparc run architect "microservices communication layer"
+hive-flow sparc tdd "payment processing feature"
+hive-flow sparc pipeline "complete feature implementation"
 
 # Batch processing for complex goals
-npx hive-flow sparc batch spec,arch,refine "user management system"
-npx hive-flow sparc concurrent tdd tasks.json
+hive-flow sparc batch spec,arch,refine "user management system"
+hive-flow sparc concurrent tdd tasks.json
 ```
 
 ### SPARC-GOAP Feature Implementation Plan
@@ -119,7 +119,7 @@ npx hive-flow sparc concurrent tdd tasks.json
 goal: implement_payment_processing_with_sparc
 sparc_phases:
   specification:
-    command: "npx hive-flow sparc run spec-pseudocode 'payment processing'"
+    command: "hive-flow sparc run spec-pseudocode 'payment processing'"
     deliverables:
       - requirements_doc
       - acceptance_criteria
@@ -130,7 +130,7 @@ sparc_phases:
       - compliance_standards_identified
       
   pseudocode:
-    command: "npx hive-flow sparc run pseudocode 'payment flow algorithms'"
+    command: "hive-flow sparc run pseudocode 'payment flow algorithms'"
     deliverables:
       - payment_flow_logic
       - error_handling_patterns
@@ -140,7 +140,7 @@ sparc_phases:
       - edge_cases_covered
       
   architecture:
-    command: "npx hive-flow sparc run architect 'payment system design'"
+    command: "hive-flow sparc run architect 'payment system design'"
     deliverables:
       - system_components
       - api_contracts
@@ -150,7 +150,7 @@ sparc_phases:
       - security_layers_defined
       
   refinement:
-    command: "npx hive-flow sparc tdd 'payment feature'"
+    command: "hive-flow sparc tdd 'payment feature'"
     deliverables:
       - unit_tests
       - integration_tests
@@ -160,7 +160,7 @@ sparc_phases:
       - all_tests_passing
       
   completion:
-    command: "npx hive-flow sparc run integration 'deploy payment system'"
+    command: "hive-flow sparc run integration 'deploy payment system'"
     deliverables:
       - deployed_system
       - documentation
@@ -419,19 +419,19 @@ class SPARCGoalPlanner {
 
 ```bash
 # 1. Initialize SPARC-GOAP planning
-npx hive-flow sparc run spec-pseudocode "user authentication feature"
+hive-flow sparc run spec-pseudocode "user authentication feature"
 
 # 2. Execute architecture phase
-npx hive-flow sparc run architect "authentication system design"
+hive-flow sparc run architect "authentication system design"
 
 # 3. TDD implementation with goal tracking
-npx hive-flow sparc tdd "authentication feature" --track-goals
+hive-flow sparc tdd "authentication feature" --track-goals
 
 # 4. Complete integration with goal validation
-npx hive-flow sparc run integration "deploy authentication" --validate-goals
+hive-flow sparc run integration "deploy authentication" --validate-goals
 
 # 5. Verify goal achievement
-npx hive-flow sparc verify "authentication feature complete"
+hive-flow sparc verify "authentication feature complete"
 ```
 
 ## Continuous Improvement

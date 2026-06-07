@@ -51,7 +51,7 @@ PROJECT_ID=$(gh project list --owner @me --format json | \
   jq -r '.projects[] | select(.title == "Development Board") | .id')
 
 # Initialize swarm with project
-npx hive-flow@v3alpha github board-init \
+hive-flow github board-init \
   --project-id "$PROJECT_ID" \
   --sync-mode "bidirectional" \
   --create-views "swarm-status,agent-workload,priority"
@@ -66,7 +66,7 @@ gh project field-create $PROJECT_ID --owner @me \
 ### 2. Task Synchronization
 ```bash
 # Sync swarm tasks with project cards
-npx hive-flow@v3alpha github board-sync \
+hive-flow github board-sync \
   --map-status '{
     "todo": "To Do",
     "in_progress": "In Progress",
@@ -80,8 +80,7 @@ npx hive-flow@v3alpha github board-sync \
 ### 3. Real-time Updates
 ```bash
 # Enable real-time board updates
-npx hive-flow@v3alpha github board-realtime \
-  --webhook-endpoint "https://api.example.com/github-sync" \
+hive-flow github board-realtime \
   --update-frequency "immediate" \
   --batch-updates false
 ```
@@ -168,7 +167,7 @@ mapping:
 ### 1. Auto-Assignment
 ```bash
 # Automatically assign cards to agents
-npx hive-flow@v3alpha github board-auto-assign \
+hive-flow github board-auto-assign \
   --strategy "load-balanced" \
   --consider "expertise,workload,availability" \
   --update-cards
@@ -177,7 +176,7 @@ npx hive-flow@v3alpha github board-auto-assign \
 ### 2. Progress Tracking
 ```bash
 # Track and visualize progress
-npx hive-flow@v3alpha github board-progress \
+hive-flow github board-progress \
   --show "burndown,velocity,cycle-time" \
   --time-period "sprint" \
   --export-metrics
@@ -186,7 +185,7 @@ npx hive-flow@v3alpha github board-progress \
 ### 3. Smart Card Movement
 ```bash
 # Intelligent card state transitions
-npx hive-flow@v3alpha github board-smart-move \
+hive-flow github board-smart-move \
   --rules '{
     "auto-progress": "when:all-subtasks-done",
     "auto-review": "when:tests-pass",
@@ -204,11 +203,10 @@ ISSUES=$(gh issue list --label "enhancement" --json number,title,body)
 
 # Add issues to project
 echo "$ISSUES" | jq -r '.[].number' | while read -r issue; do
-  gh project item-add $PROJECT_ID --owner @me --url "https://github.com/$GITHUB_REPOSITORY/issues/$issue"
 done
 
 # Process with swarm
-npx hive-flow@v3alpha github board-import-issues \
+hive-flow github board-import-issues \
   --issues "$ISSUES" \
   --add-to-column "Backlog" \
   --parse-checklist \
@@ -218,7 +216,7 @@ npx hive-flow@v3alpha github board-import-issues \
 ### Bulk Operations
 ```bash
 # Bulk card operations
-npx hive-flow@v3alpha github board-bulk \
+hive-flow github board-bulk \
   --filter "status:blocked" \
   --action "add-label:needs-attention" \
   --notify-assignees
@@ -227,7 +225,7 @@ npx hive-flow@v3alpha github board-bulk \
 ### Card Templates
 ```bash
 # Create cards from templates
-npx hive-flow@v3alpha github board-template \
+hive-flow github board-template \
   --template "feature-development" \
   --variables '{
     "feature": "User Authentication",
@@ -242,7 +240,7 @@ npx hive-flow@v3alpha github board-template \
 ### 1. Multi-Board Sync
 ```bash
 # Sync across multiple boards
-npx hive-flow@v3alpha github multi-board-sync \
+hive-flow github multi-board-sync \
   --boards "Development,QA,Release" \
   --sync-rules '{
     "Development->QA": "when:ready-for-test",
@@ -253,7 +251,7 @@ npx hive-flow@v3alpha github multi-board-sync \
 ### 2. Cross-Organization Sync
 ```bash
 # Sync boards across organizations
-npx hive-flow@v3alpha github cross-org-sync \
+hive-flow github cross-org-sync \
   --source "org1/Project-A" \
   --target "org2/Project-B" \
   --field-mapping "custom" \
@@ -263,7 +261,7 @@ npx hive-flow@v3alpha github cross-org-sync \
 ### 3. External Tool Integration
 ```bash
 # Sync with external tools
-npx hive-flow@v3alpha github board-integrate \
+hive-flow github board-integrate \
   --tool "jira" \
   --mapping "bidirectional" \
   --sync-frequency "5m" \
@@ -286,7 +284,7 @@ ISSUE_METRICS=$(echo "$PROJECT_DATA" | jq -r '.items[] | select(.content.type ==
   done)
 
 # Generate analytics with swarm
-npx hive-flow@v3alpha github board-analytics \
+hive-flow github board-analytics \
   --project-data "$PROJECT_DATA" \
   --issue-metrics "$ISSUE_METRICS" \
   --metrics "throughput,cycle-time,wip" \
@@ -326,7 +324,7 @@ npx hive-flow@v3alpha github board-analytics \
 ### Reports
 ```bash
 # Generate reports
-npx hive-flow@v3alpha github board-report \
+hive-flow github board-report \
   --type "sprint-summary" \
   --format "markdown" \
   --include "velocity,burndown,blockers" \
@@ -338,7 +336,7 @@ npx hive-flow@v3alpha github board-report \
 ### Sprint Management
 ```bash
 # Manage sprints with swarms
-npx hive-flow@v3alpha github sprint-manage \
+hive-flow github sprint-manage \
   --sprint "Sprint 23" \
   --auto-populate \
   --capacity-planning \
@@ -348,7 +346,7 @@ npx hive-flow@v3alpha github sprint-manage \
 ### Milestone Tracking
 ```bash
 # Track milestone progress
-npx hive-flow@v3alpha github milestone-track \
+hive-flow github milestone-track \
   --milestone "v2.0 Release" \
   --update-board \
   --show-dependencies \
@@ -358,7 +356,7 @@ npx hive-flow@v3alpha github milestone-track \
 ### Release Planning
 ```bash
 # Plan releases using board data
-npx hive-flow@v3alpha github release-plan-board \
+hive-flow github release-plan-board \
   --analyze-velocity \
   --estimate-completion \
   --identify-risks \
@@ -370,7 +368,7 @@ npx hive-flow@v3alpha github release-plan-board \
 ### Work Distribution
 ```bash
 # Distribute work among team
-npx hive-flow@v3alpha github board-distribute \
+hive-flow github board-distribute \
   --strategy "skills-based" \
   --balance-workload \
   --respect-preferences \
@@ -380,7 +378,7 @@ npx hive-flow@v3alpha github board-distribute \
 ### Standup Automation
 ```bash
 # Generate standup reports
-npx hive-flow@v3alpha github standup-report \
+hive-flow github standup-report \
   --team "frontend" \
   --include "yesterday,today,blockers" \
   --format "slack" \
@@ -390,7 +388,7 @@ npx hive-flow@v3alpha github standup-report \
 ### Review Coordination
 ```bash
 # Coordinate reviews via board
-npx hive-flow@v3alpha github review-coordinate \
+hive-flow github review-coordinate \
   --board "Code Review" \
   --assign-reviewers \
   --track-feedback \
@@ -422,7 +420,7 @@ npx hive-flow@v3alpha github review-coordinate \
 ### Sync Issues
 ```bash
 # Diagnose sync problems
-npx hive-flow@v3alpha github board-diagnose \
+hive-flow github board-diagnose \
   --check "permissions,webhooks,rate-limits" \
   --test-sync \
   --show-conflicts
@@ -431,7 +429,7 @@ npx hive-flow@v3alpha github board-diagnose \
 ### Performance
 ```bash
 # Optimize board performance
-npx hive-flow@v3alpha github board-optimize \
+hive-flow github board-optimize \
   --analyze-size \
   --archive-completed \
   --index-fields \
@@ -441,7 +439,7 @@ npx hive-flow@v3alpha github board-optimize \
 ### Data Recovery
 ```bash
 # Recover board data
-npx hive-flow@v3alpha github board-recover \
+hive-flow github board-recover \
   --backup-id "2024-01-15" \
   --restore-cards \
   --preserve-current \
@@ -453,7 +451,7 @@ npx hive-flow@v3alpha github board-recover \
 ### Agile Development Board
 ```bash
 # Setup agile board
-npx hive-flow@v3alpha github agile-board \
+hive-flow github agile-board \
   --methodology "scrum" \
   --sprint-length "2w" \
   --ceremonies "planning,review,retro" \
@@ -463,7 +461,7 @@ npx hive-flow@v3alpha github agile-board \
 ### Kanban Flow Board
 ```bash
 # Setup kanban board
-npx hive-flow@v3alpha github kanban-board \
+hive-flow github kanban-board \
   --wip-limits '{
     "In Progress": 5,
     "Review": 3
@@ -475,7 +473,7 @@ npx hive-flow@v3alpha github kanban-board \
 ### Research Project Board
 ```bash
 # Setup research board
-npx hive-flow@v3alpha github research-board \
+hive-flow github research-board \
   --phases "ideation,research,experiment,analysis,publish" \
   --track-citations \
   --collaborate-external
@@ -486,7 +484,7 @@ npx hive-flow@v3alpha github research-board \
 ### Performance Metrics
 ```bash
 # Track board performance
-npx hive-flow@v3alpha github board-kpis \
+hive-flow github board-kpis \
   --metrics '[
     "average-cycle-time",
     "throughput-per-sprint",
@@ -499,7 +497,7 @@ npx hive-flow@v3alpha github board-kpis \
 ### Team Metrics
 ```bash
 # Track team performance
-npx hive-flow@v3alpha github team-metrics \
+hive-flow github team-metrics \
   --board "Development" \
   --per-member \
   --include "velocity,quality,collaboration" \

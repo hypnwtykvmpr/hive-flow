@@ -203,10 +203,10 @@ Complete guide to all 87 available agent types in Hive Flow V3.
 
 ```bash
 # List all agent types
-npx hive-flow agent spawn --help
+hive-flow agent spawn --help
 
 # Spawn any agent
-npx hive-flow agent spawn -t <agent-type>
+hive-flow agent spawn -t <agent-type>
 ```
 
 ## See Also

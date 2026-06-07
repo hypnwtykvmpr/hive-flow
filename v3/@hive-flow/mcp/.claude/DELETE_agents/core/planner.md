@@ -20,40 +20,40 @@ hooks:
     echo "🎯 Planning agent activated for: $TASK"
 
     # V3: Initialize task with hooks system
-    npx hive-flow@v3alpha hooks pre-task --description "$TASK"
+    hive-flow hooks pre-task --description "$TASK"
 
     # 1. Learn from similar past plans (ReasoningBank + HNSW fast HNSW-indexed)
-    SIMILAR_PLANS=$(npx hive-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
+    SIMILAR_PLANS=$(hive-flow memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_PLANS" ]; then
       echo "📚 Found similar successful planning patterns (HNSW-indexed)"
-      npx hive-flow@v3alpha hooks intelligence --action pattern-search --query "$TASK" --k 5
+      hive-flow hooks intelligence --action pattern-search --query "$TASK" --k 5
     fi
 
     # 2. Learn from failed plans (EWC++ protected)
-    FAILED_PLANS=$(npx hive-flow@v3alpha memory search --query "$TASK failures" --limit 3 --failures-only --use-hnsw)
+    FAILED_PLANS=$(hive-flow memory search --query "$TASK failures" --limit 3 --failures-only --use-hnsw)
     if [ -n "$FAILED_PLANS" ]; then
       echo "⚠️  Learning from past planning failures"
     fi
 
-    npx hive-flow@v3alpha memory store --key "planner_start_$(date +%s)" --value "Started planning: $TASK"
+    hive-flow memory store --key "planner_start_$(date +%s)" --value "Started planning: $TASK"
 
     # 3. Store task start via hooks
-    npx hive-flow@v3alpha hooks intelligence --action trajectory-start \
+    hive-flow hooks intelligence --action trajectory-start \
       --session-id "planner-$(date +%s)" \
       --task "$TASK"
 
   post: |
     echo "✅ Planning complete"
-    npx hive-flow@v3alpha memory store --key "planner_end_$(date +%s)" --value "Completed planning: $TASK"
+    hive-flow memory store --key "planner_end_$(date +%s)" --value "Completed planning: $TASK"
 
     # 1. Calculate planning quality metrics
-    TASKS_COUNT=$(npx hive-flow@v3alpha memory search --query "planner_task" --count-only || echo "0")
-    AGENTS_ALLOCATED=$(npx hive-flow@v3alpha memory search --query "planner_agent" --count-only || echo "0")
+    TASKS_COUNT=$(hive-flow memory search --query "planner_task" --count-only || echo "0")
+    AGENTS_ALLOCATED=$(hive-flow memory search --query "planner_agent" --count-only || echo "0")
     REWARD=$(echo "scale=2; ($TASKS_COUNT + $AGENTS_ALLOCATED) / 30" | bc)
     SUCCESS=$([[ $TASKS_COUNT -gt 3 ]] && echo "true" || echo "false")
 
     # 2. Store learning pattern via V3 hooks (with EWC++ consolidation)
-    npx hive-flow@v3alpha hooks intelligence --action pattern-store \
+    hive-flow hooks intelligence --action pattern-store \
       --session-id "planner-$(date +%s)" \
       --task "$TASK" \
       --output "Plan: $TASKS_COUNT tasks, $AGENTS_ALLOCATED agents" \
@@ -62,12 +62,12 @@ hooks:
       --consolidate-ewc true
 
     # 3. Complete task hook
-    npx hive-flow@v3alpha hooks post-task --task-id "planner-$(date +%s)" --success "$SUCCESS"
+    hive-flow hooks post-task --task-id "planner-$(date +%s)" --success "$SUCCESS"
 
     # 4. Train on comprehensive plans (SONA low-latency adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$TASKS_COUNT" -gt 10 ]; then
       echo "🧠 Training neural pattern from comprehensive plan"
-      npx hive-flow@v3alpha neural train \
+      hive-flow neural train \
         --pattern-type "coordination" \
         --training-data "task-planning" \
         --epochs 50 \
@@ -75,7 +75,7 @@ hooks:
     fi
 
     # 5. Trigger map worker for codebase analysis
-    npx hive-flow@v3alpha hooks worker dispatch --trigger map
+    hive-flow hooks worker dispatch --trigger map
 ---
 
 # Strategic Planning Agent

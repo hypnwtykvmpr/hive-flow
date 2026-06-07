@@ -63,7 +63,7 @@ mcp__hive-flow__agent_spawn({
 ### Fallback Configuration
 If MCP tools are unavailable:
 ```bash
-npx hive-flow hook pre-task --auto-spawn-agents
+hive-flow hook pre-task --auto-spawn-agents
 ```
 
 ## Benefits

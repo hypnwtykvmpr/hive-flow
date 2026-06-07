@@ -75,7 +75,6 @@ fi
 
 # Check for rustup
 if ! command -v rustup &> /dev/null; then
-    echo -e "${RED}Error: rustup not found. Please install Rust from https://rustup.rs${NC}"
     exit 1
 fi
 

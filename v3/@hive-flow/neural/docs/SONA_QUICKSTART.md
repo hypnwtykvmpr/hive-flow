@@ -89,7 +89,7 @@ createSONALearningEngine('batch', getModeConfig('batch'));
 Run comprehensive examples:
 ```bash
 cd v3/@hive-flow/neural
-npx tsx examples/sona-usage.ts
+tsx examples/sona-usage.ts
 ```
 
 ## Documentation
@@ -154,7 +154,7 @@ v3/@hive-flow/neural/
 ## Next Steps
 
 1. Read full documentation: `/docs/SONA_INTEGRATION.md`
-2. Run examples: `npx tsx examples/sona-usage.ts`
+2. Run examples: `tsx examples/sona-usage.ts`
 3. Integrate into your code
 4. Monitor performance with `getStats()`
 5. Tune mode based on your needs

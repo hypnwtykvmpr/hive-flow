@@ -13,7 +13,7 @@ PR_DATA=$(gh pr view 123 --json files,additions,deletions,title,body)
 PR_DIFF=$(gh pr diff 123)
 
 # Initialize swarm with PR context
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 123 \
   --pr-data "$PR_DATA" \
   --diff "$PR_DIFF" \
@@ -33,7 +33,7 @@ gh pr comment 123 --body "🔍 Multi-agent code review initiated"
 CHANGED_FILES=$(gh pr view 123 --json files --jq '.files[].path')
 
 # Run security review
-SECURITY_RESULTS=$(npx hive-flow github review-security \
+SECURITY_RESULTS=$(hive-flow github review-security \
   --pr 123 \
   --files "$CHANGED_FILES" \
   --check "owasp,cve,secrets,permissions" \
@@ -54,7 +54,7 @@ fi
 #### Performance Agent
 ```bash
 # Performance analysis
-npx hive-flow github review-performance \
+hive-flow github review-performance \
   --pr 123 \
   --profile "cpu,memory,io" \
   --benchmark-against main \
@@ -64,7 +64,7 @@ npx hive-flow github review-performance \
 #### Architecture Agent
 ```bash
 # Architecture review
-npx hive-flow github review-architecture \
+hive-flow github review-architecture \
   --pr 123 \
   --check "patterns,coupling,cohesion,solid" \
   --visualize-impact \
@@ -202,7 +202,7 @@ review:
 ### 1. Context-Aware Reviews
 ```bash
 # Review with full context
-npx hive-flow github review-context \
+hive-flow github review-context \
   --pr 123 \
   --load-related-prs \
   --analyze-impact \
@@ -212,7 +212,7 @@ npx hive-flow github review-context \
 ### 2. Learning from History
 ```bash
 # Learn from past reviews
-npx hive-flow github review-learn \
+hive-flow github review-learn \
   --analyze-past-reviews \
   --identify-patterns \
   --improve-suggestions \
@@ -222,7 +222,7 @@ npx hive-flow github review-learn \
 ### 3. Cross-PR Analysis
 ```bash
 # Analyze related PRs together
-npx hive-flow github review-batch \
+hive-flow github review-batch \
   --prs "123,124,125" \
   --check-consistency \
   --verify-integration \
@@ -257,7 +257,7 @@ jobs:
           PR_DATA=$(gh pr view $PR_NUM --json files,title,body,labels)
 
           # Run swarm review
-          REVIEW_OUTPUT=$(npx hive-flow github review-all \
+          REVIEW_OUTPUT=$(hive-flow github review-all \
             --pr $PR_NUM \
             --pr-data "$PR_DATA" \
             --agents "security,performance,style,architecture")
@@ -307,7 +307,7 @@ PR_DIFF=$(gh pr diff 123 --color never)
 PR_FILES=$(gh pr view 123 --json files)
 
 # Generate review comments
-COMMENTS=$(npx hive-flow github review-comment \
+COMMENTS=$(hive-flow github review-comment \
   --pr 123 \
   --diff "$PR_DIFF" \
   --files "$PR_FILES" \
@@ -358,7 +358,7 @@ done
 ### Batch Comment Management
 ```bash
 # Manage review comments efficiently
-npx hive-flow github review-comments \
+hive-flow github review-comments \
   --pr 123 \
   --group-by "agent,severity" \
   --summarize \
@@ -381,7 +381,7 @@ protection_rules:
 ### Quality Gates
 ```bash
 # Define quality gates
-npx hive-flow github quality-gates \
+hive-flow github quality-gates \
   --define '{
     "security": {"threshold": "no-critical"},
     "performance": {"regression": "<5%"},
@@ -393,7 +393,7 @@ npx hive-flow github quality-gates \
 ### Review Metrics
 ```bash
 # Track review effectiveness
-npx hive-flow github review-metrics \
+hive-flow github review-metrics \
   --period 30d \
   --metrics "issues-found,false-positives,fix-rate" \
   --export-dashboard
@@ -424,7 +424,7 @@ npx hive-flow github review-metrics \
 ### 1. AI Learning
 ```bash
 # Train on your codebase
-npx hive-flow github review-train \
+hive-flow github review-train \
   --learn-patterns \
   --adapt-to-style \
   --improve-accuracy
@@ -454,7 +454,7 @@ class CustomReviewAgent {
 ### 3. Review Orchestration
 ```bash
 # Orchestrate complex reviews
-npx hive-flow github review-orchestrate \
+hive-flow github review-orchestrate \
   --strategy "risk-based" \
   --allocate-time-budget \
   --prioritize-critical
@@ -465,7 +465,7 @@ npx hive-flow github review-orchestrate \
 ### Security-Critical PR
 ```bash
 # Auth system changes
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 456 \
   --agents "security,authentication,audit" \
   --depth "maximum" \
@@ -475,7 +475,7 @@ npx hive-flow github review-init \
 ### Performance-Sensitive PR
 ```bash
 # Database optimization
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 789 \
   --agents "performance,database,caching" \
   --benchmark \
@@ -485,7 +485,7 @@ npx hive-flow github review-init \
 ### UI Component PR
 ```bash
 # New component library
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 321 \
   --agents "accessibility,style,i18n,docs" \
   --visual-regression \
@@ -497,7 +497,7 @@ npx hive-flow github review-init \
 ### Review Dashboard
 ```bash
 # Launch review dashboard
-npx hive-flow github review-dashboard \
+hive-flow github review-dashboard \
   --real-time \
   --show "agent-activity,issue-trends,fix-rates"
 ```
@@ -505,7 +505,7 @@ npx hive-flow github review-dashboard \
 ### Review Reports
 ```bash
 # Generate review reports
-npx hive-flow github review-report \
+hive-flow github review-report \
   --format "markdown" \
   --include "summary,details,trends" \
   --email-stakeholders

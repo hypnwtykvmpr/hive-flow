@@ -27,7 +27,7 @@ capabilities:
 ### Simple Review
 ```bash
 # Initialize review swarm for PR
-gh pr view 123 --json files,diff | npx hive-flow github review-init --pr 123
+gh pr view 123 --json files,diff | hive-flow github review-init --pr 123
 
 # Post review status
 gh pr comment 123 --body "🔍 Multi-agent code review initiated"
@@ -40,7 +40,7 @@ PR_DATA=$(gh pr view 123 --json files,additions,deletions,title,body)
 PR_DIFF=$(gh pr diff 123)
 
 # Initialize comprehensive review
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 123 \
   --pr-data "$PR_DATA" \
   --diff "$PR_DIFF" \
@@ -108,7 +108,7 @@ PR_DATA=$(gh pr view 123 --json files,additions,deletions,title,body)
 PR_DIFF=$(gh pr diff 123)
 
 # Start multi-agent review
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 123 \
   --pr-data "$PR_DATA" \
   --diff "$PR_DIFF" \
@@ -138,7 +138,7 @@ gh pr comment 123 --body "🔍 Multi-agent code review initiated"
 CHANGED_FILES=$(gh pr view 123 --json files --jq '.files[].path')
 
 # Run security-focused review
-SECURITY_RESULTS=$(npx hive-flow github review-security \
+SECURITY_RESULTS=$(hive-flow github review-security \
   --pr 123 \
   --files "$CHANGED_FILES" \
   --check "owasp,cve,secrets,permissions" \
@@ -215,7 +215,7 @@ fi
 
 ```bash
 # Run performance analysis
-npx hive-flow github review-performance \
+hive-flow github review-performance \
   --pr 123 \
   --profile "cpu,memory,io" \
   --benchmark-against main \
@@ -255,7 +255,7 @@ npx hive-flow github review-performance \
 
 ```bash
 # Architecture review
-npx hive-flow github review-architecture \
+hive-flow github review-architecture \
   --pr 123 \
   --check "patterns,coupling,cohesion,solid" \
   --visualize-impact \
@@ -295,7 +295,7 @@ npx hive-flow github review-architecture \
 
 ```bash
 # Style enforcement with auto-fix
-npx hive-flow github review-style \
+hive-flow github review-style \
   --pr 123 \
   --check "formatting,naming,docs,tests" \
   --auto-fix "formatting,imports,whitespace"
@@ -334,14 +334,14 @@ npx hive-flow github review-style \
 
 ```bash
 # Create swarm from PR description using gh CLI
-gh pr view 123 --json body,title,labels,files | npx hive-flow swarm create-from-pr
+gh pr view 123 --json body,title,labels,files | hive-flow swarm create-from-pr
 
 # Auto-spawn agents based on PR labels
-gh pr view 123 --json labels | npx hive-flow swarm auto-spawn
+gh pr view 123 --json labels | hive-flow swarm auto-spawn
 
 # Create swarm with full PR context
 gh pr view 123 --json body,labels,author,assignees | \
-  npx hive-flow swarm init --from-pr-data
+  hive-flow swarm init --from-pr-data
 ```
 
 ### Label-Based Agent Assignment
@@ -368,7 +368,7 @@ Map PR labels to specialized agents:
 # Small PR (< 100 lines): ring topology
 # Medium PR (100-500 lines): mesh topology
 # Large PR (> 500 lines): hierarchical topology
-npx hive-flow github pr-topology --pr 123
+hive-flow github pr-topology --pr 123
 ```
 
 ---
@@ -399,12 +399,12 @@ createServer((req, res) => {
     const event = JSON.parse(body);
 
     if (event.action === 'opened' && event.pull_request) {
-      execSync(`npx hive-flow github pr-init ${event.pull_request.number}`);
+      execSync(`hive-flow github pr-init ${event.pull_request.number}`);
     }
 
     if (event.comment && event.comment.body.startsWith('/swarm')) {
       const command = event.comment.body;
-      execSync(`npx hive-flow github handle-comment --pr ${event.issue.number} --command "${command}"`);
+      execSync(`hive-flow github handle-comment --pr ${event.issue.number} --command "${command}"`);
     }
 
     res.writeHead(200);
@@ -519,7 +519,7 @@ jobs:
           PR_DIFF=$(gh pr diff $PR_NUM)
 
           # Run swarm review
-          REVIEW_OUTPUT=$(npx hive-flow github review-all \
+          REVIEW_OUTPUT=$(hive-flow github review-all \
             --pr $PR_NUM \
             --pr-data "$PR_DATA" \
             --diff "$PR_DIFF" \
@@ -558,7 +558,7 @@ PR_DIFF=$(gh pr diff 123 --color never)
 PR_FILES=$(gh pr view 123 --json files)
 
 # Generate review comments
-COMMENTS=$(npx hive-flow github review-comment \
+COMMENTS=$(hive-flow github review-comment \
   --pr 123 \
   --diff "$PR_DIFF" \
   --files "$PR_FILES" \
@@ -588,7 +588,7 @@ done
 
 ```bash
 # Manage review comments efficiently
-npx hive-flow github review-comments \
+hive-flow github review-comments \
   --pr 123 \
   --group-by "agent,severity" \
   --summarize \
@@ -617,7 +617,7 @@ protection_rules:
 
 ```bash
 # Set quality gate thresholds
-npx hive-flow github quality-gates \
+hive-flow github quality-gates \
   --define '{
     "security": {"threshold": "no-critical"},
     "performance": {"regression": "<5%"},
@@ -631,7 +631,7 @@ npx hive-flow github quality-gates \
 
 ```bash
 # Monitor review effectiveness
-npx hive-flow github review-metrics \
+hive-flow github review-metrics \
   --period 30d \
   --metrics "issues-found,false-positives,fix-rate,time-to-review" \
   --export-dashboard \
@@ -648,7 +648,7 @@ Analyze PRs with full project context:
 
 ```bash
 # Review with comprehensive context
-npx hive-flow github review-context \
+hive-flow github review-context \
   --pr 123 \
   --load-related-prs \
   --analyze-impact \
@@ -662,14 +662,14 @@ Train review agents on your codebase patterns:
 
 ```bash
 # Learn from past reviews
-npx hive-flow github review-learn \
+hive-flow github review-learn \
   --analyze-past-reviews \
   --identify-patterns \
   --improve-suggestions \
   --reduce-false-positives
 
 # Train on your codebase
-npx hive-flow github review-train \
+hive-flow github review-train \
   --learn-patterns \
   --adapt-to-style \
   --improve-accuracy
@@ -681,7 +681,7 @@ Coordinate reviews across related pull requests:
 
 ```bash
 # Analyze related PRs together
-npx hive-flow github review-batch \
+hive-flow github review-batch \
   --prs "123,124,125" \
   --check-consistency \
   --verify-integration \
@@ -692,7 +692,7 @@ npx hive-flow github review-batch \
 
 ```bash
 # Coordinate swarms across related PRs
-npx hive-flow github multi-pr \
+hive-flow github multi-pr \
   --prs "123,124,125" \
   --strategy "parallel" \
   --share-memory
@@ -760,7 +760,7 @@ module.exports = CustomReviewAgent;
 
 ```bash
 # Register custom review agent
-npx hive-flow github register-agent \
+hive-flow github register-agent \
   --name "custom-reviewer" \
   --file "./custom-review-agent.js" \
   --category "standards"
@@ -782,7 +782,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: npm install
       - run: npm test
       - run: npm run build
 
@@ -792,7 +791,7 @@ jobs:
     steps:
       - name: Run Swarm Review
         run: |
-          npx hive-flow github review-all \
+          hive-flow github review-all \
             --pr ${{ github.event.pull_request.number }} \
             --include-build-results
 ```
@@ -801,7 +800,7 @@ jobs:
 
 ```bash
 # Auto-fix common issues
-npx hive-flow github pr-fix 123 \
+hive-flow github pr-fix 123 \
   --issues "lint,test-failures,formatting" \
   --commit-fixes \
   --push-changes
@@ -811,7 +810,7 @@ npx hive-flow github pr-fix 123 \
 
 ```bash
 # Post swarm progress to PR using gh CLI
-PROGRESS=$(npx hive-flow github pr-progress 123 --format markdown)
+PROGRESS=$(hive-flow github pr-progress 123 --format markdown)
 
 gh pr comment 123 --body "$PROGRESS"
 
@@ -829,7 +828,7 @@ fi
 
 ```bash
 # Review authentication system changes
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 456 \
   --agents "security,authentication,audit" \
   --depth "maximum" \
@@ -841,7 +840,7 @@ npx hive-flow github review-init \
 
 ```bash
 # Review database optimization
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 789 \
   --agents "performance,database,caching" \
   --benchmark \
@@ -853,7 +852,7 @@ npx hive-flow github review-init \
 
 ```bash
 # Review new component library
-npx hive-flow github review-init \
+hive-flow github review-init \
   --pr 321 \
   --agents "accessibility,style,i18n,docs" \
   --visual-regression \
@@ -866,7 +865,7 @@ npx hive-flow github review-init \
 ```bash
 # Review new feature implementation
 gh pr view 456 --json body,labels,files | \
-  npx hive-flow github pr-init 456 \
+  hive-flow github pr-init 456 \
     --topology hierarchical \
     --agents "architect,coder,tester,security" \
     --auto-assign-tasks
@@ -876,7 +875,7 @@ gh pr view 456 --json body,labels,files | \
 
 ```bash
 # Review bug fix with debugging focus
-npx hive-flow github pr-init 789 \
+hive-flow github pr-init 789 \
   --topology mesh \
   --agents "debugger,analyst,tester" \
   --priority high \
@@ -891,7 +890,7 @@ npx hive-flow github pr-init 789 \
 
 ```bash
 # Launch real-time review dashboard
-npx hive-flow github review-dashboard \
+hive-flow github review-dashboard \
   --real-time \
   --show "agent-activity,issue-trends,fix-rates,coverage"
 ```
@@ -900,7 +899,7 @@ npx hive-flow github review-dashboard \
 
 ```bash
 # Create comprehensive review report
-npx hive-flow github review-report \
+hive-flow github review-report \
   --format "markdown" \
   --include "summary,details,trends,recommendations" \
   --email-stakeholders \
@@ -911,7 +910,7 @@ npx hive-flow github review-report \
 
 ```bash
 # Generate PR-specific analytics
-npx hive-flow github pr-report 123 \
+hive-flow github pr-report 123 \
   --metrics "completion-time,agent-efficiency,token-usage,issue-density" \
   --format markdown \
   --compare-baseline
@@ -921,7 +920,7 @@ npx hive-flow github pr-report 123 \
 
 ```bash
 # Export metrics to GitHub Insights
-npx hive-flow github export-metrics \
+hive-flow github export-metrics \
   --pr 123 \
   --to-insights \
   --dashboard-url
@@ -997,7 +996,7 @@ npx hive-flow github export-metrics \
 
 ```bash
 # Auto-merge when swarm completes and passes checks
-SWARM_STATUS=$(npx hive-flow github pr-status 123)
+SWARM_STATUS=$(hive-flow github pr-status 123)
 
 if [[ "$SWARM_STATUS" == "complete" ]]; then
   # Check review requirements
@@ -1063,13 +1062,13 @@ fi
 **Solution:**
 ```bash
 # Check swarm status
-npx hive-flow swarm-status
+hive-flow swarm-status
 
 # Verify GitHub CLI authentication
 gh auth status
 
 # Re-initialize swarm
-npx hive-flow github review-init --pr 123 --force
+hive-flow github review-init --pr 123 --force
 ```
 
 </details>
@@ -1086,7 +1085,7 @@ gh auth status
 gh api rate_limit
 
 # Use batch comment posting
-npx hive-flow github review-comments --pr 123 --batch
+hive-flow github review-comments --pr 123 --batch
 ```
 
 </details>
@@ -1097,13 +1096,13 @@ npx hive-flow github review-comments --pr 123 --batch
 **Solution:**
 ```bash
 # Use incremental review for large PRs
-npx hive-flow github review-init --pr 123 --incremental
+hive-flow github review-init --pr 123 --incremental
 
 # Reduce agent count
-npx hive-flow github review-init --pr 123 --agents "security,style" --max-agents 3
+hive-flow github review-init --pr 123 --agents "security,style" --max-agents 3
 
 # Enable parallel processing
-npx hive-flow github review-init --pr 123 --parallel --cache-results
+hive-flow github review-init --pr 123 --parallel --cache-results
 ```
 
 </details>
@@ -1118,9 +1117,6 @@ npx hive-flow github review-init --pr 123 --parallel --cache-results
 - `swarm-coordination` - Advanced swarm orchestration
 
 ### Documentation
-- [GitHub CLI Documentation](https://cli.github.com/manual/)
-- [Hive Flow Guide](https://github.com/hypnwtykvmpr/hive-flow)
-- [Hive Flow Integration](https://github.com/hypnwtykvmpr/hive-flow)
 
 ### Support
 - GitHub Issues: Report bugs and request features

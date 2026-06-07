@@ -4,5 +4,5 @@ Command documentation for hive-mind-stop in category hive-mind.
 
 Usage:
 ```bash
-npx hive-flow hive-mind hive-mind-stop [options]
+hive-flow hive-mind hive-mind-stop [options]
 ```

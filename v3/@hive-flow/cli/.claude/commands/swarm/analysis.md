@@ -23,7 +23,7 @@ mcp__hive-flow__task_orchestrate({
 ```
 
 ### Using CLI (Fallback)
-`npx hive-flow swarm "analyze system performance" --strategy analysis`
+`hive-flow swarm "analyze system performance" --strategy analysis`
 
 ## Agent Roles
 

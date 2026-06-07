@@ -14,8 +14,8 @@ Matrix of agent capabilities and their specializations.
 ## Querying Capabilities
 ```bash
 # List all capabilities
-npx hive-flow agents capabilities
+hive-flow agents capabilities
 
 # For specific agent
-npx hive-flow agents capabilities --type coder
+hive-flow agents capabilities --type coder
 ```

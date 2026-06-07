@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve, sep } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEBRAND_ASSERT_ZERO_PROHIBITED } from './debrand-prohibited-patterns.js';
 import { isScannedTextFile, REPO_ROOT, trackedFilesForShippedSurfaces } from './debrand-static-scope.js';
@@ -21,6 +21,34 @@ const CLASSIFIED_STATIC_EXCEPTIONS: ReadonlyMap<string, string> = new Map([
     'v3/@hive-flow/cli/src/appliance/rvfa-runner.ts:content:dropped legacy umbrella brand',
     'RVFA reader section identity is deferred to DB-RVFA dual-read migration.',
   ],
+  [
+    'scripts/verify-appliance.sh:content:old RuVector brand',
+    'RVFA appliance verification command and expected binary naming are deferred to DB-RVFA migration.',
+  ],
+  [
+    'scripts/verify-appliance.sh:content:dropped legacy umbrella brand',
+    'RVFA appliance verification command and expected binary naming are deferred to DB-RVFA migration.',
+  ],
+  [
+    'scripts/install.sh:content:npm install guidance',
+    'Installer performs the package-manager install operation; user-facing URL/install guidance is otherwise removed.',
+  ],
+  [
+    'v3/@hive-flow/browser/docker/Dockerfile:content:npm install guidance',
+    'Docker build layer installs package dependencies; this is build logic, not docs guidance.',
+  ],
+  [
+    'v3/@hive-flow/cli/docker/Dockerfile:content:npm install guidance',
+    'Docker build layer installs the published CLI; this is build logic, not docs guidance.',
+  ],
+  [
+    'v3/@hive-flow/cli/docker/Dockerfile.full:content:npm install guidance',
+    'Docker build layer installs the published CLI; this is build logic, not docs guidance.',
+  ],
+  [
+    'v3/@hive-flow/cli/src/commands/doctor.ts:content:npm install guidance',
+    'Doctor --install performs the requested Claude Code install action; ordinary guidance was rewritten.',
+  ],
 ]);
 
 describe('DB-5 static prohibited debrand sweep', () => {
@@ -39,6 +67,12 @@ describe('DB-5 static prohibited debrand sweep', () => {
 
     expect(stale, '[DB-5 grep-zero] remove stale static debrand exception entries').toEqual([]);
   });
+
+  it('does not ship dead relative markdown documentation links in scanned surfaces', () => {
+    const deadLinks = collectDeadMarkdownLinks();
+
+    expect(deadLinks, '[DB-5 docs] remove or repair dead relative documentation links').toEqual([]);
+  });
 });
 
 function collectStaticFindings(): Array<{ key: string; message: string }> {
@@ -56,6 +90,14 @@ function collectStaticFindings(): Array<{ key: string; message: string }> {
             message: `${normalizedPath}: path: ${label}: ${pattern}`,
           });
         }
+        if (label === 'cosmetic URL') {
+          findings.push(...collectCosmeticUrlFindings(normalizedPath, content));
+          return findings;
+        }
+        if (label === 'GitHub URL') {
+          findings.push(...collectGitHubUrlFindings(normalizedPath, content));
+          return findings;
+        }
         if (pattern.test(content)) {
           findings.push({
             key: `${normalizedPath}:content:${label}`,
@@ -65,4 +107,123 @@ function collectStaticFindings(): Array<{ key: string; message: string }> {
         return findings;
       });
     });
+}
+
+function collectCosmeticUrlFindings(relativePath: string, content: string): Array<{ key: string; message: string }> {
+  return collectUrlLiterals(content)
+    .filter(({ url }) => !isAllowedRuntimeUrl(url))
+    .map(({ lineNumber, url }) => ({
+      key: `${relativePath}:line:${lineNumber}:cosmetic URL:${url}`,
+      message: `${relativePath}:${lineNumber}: cosmetic URL: ${url}`,
+    }));
+}
+
+function collectGitHubUrlFindings(relativePath: string, content: string): Array<{ key: string; message: string }> {
+  return collectUrlLiterals(content)
+    .filter(({ url }) => /^https?:\/\/github\.com\//i.test(url))
+    .filter(({ url }) => !url.includes('${'))
+    .filter(({ url }) => !/^https?:\/\/github\.com\/login\/oauth\//i.test(url))
+    .map(({ lineNumber, url }) => ({
+      key: `${relativePath}:line:${lineNumber}:GitHub URL:${url}`,
+      message: `${relativePath}:${lineNumber}: GitHub URL: ${url}`,
+    }));
+}
+
+function collectUrlLiterals(content: string): Array<{ lineNumber: number; url: string }> {
+  const urlPattern = /https?:\/\/[^\s)"'<>]+/gi;
+  return content.split('\n').flatMap((line, index) => {
+    return [...line.matchAll(urlPattern)].map((match) => ({
+      lineNumber: index + 1,
+      url: match[0],
+    }));
+  });
+}
+
+function isAllowedRuntimeUrl(rawUrl: string): boolean {
+  if (rawUrl.includes('${') || rawUrl.includes('$')) return true;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === 'your_node' ||
+    host === 'test-server' ||
+    host === 'registry.npmjs.org' ||
+    host === 'gateway.pinata.cloud' ||
+    host === 'api.pinata.cloud' ||
+    host === 'api.web3.storage' ||
+    host === 'web3.storage' ||
+    host === 'w3s.link' ||
+    host === 'dweb.link' ||
+    host === 'ipfs.io' ||
+    host === 'cloudflare-ipfs.com' ||
+    host === 'storage.googleapis.com' ||
+    host === 'api.openai.com' ||
+    host === 'api.anthropic.com' ||
+    host === 'api.cohere.ai' ||
+    host === 'generativelanguage.googleapis.com' ||
+    host === 'api.deepseek.com' ||
+    host === 'openrouter.ai' ||
+    host === 'dashscope-intl.aliyuncs.com' ||
+    host === 'api.mistral.ai' ||
+    host === 'dist.ipfs.tech' ||
+    host === 'us-central1-hive-flow.cloudfunctions.net' ||
+    host === 'accounts.google.com' ||
+    host === 'oauth2.googleapis.com' ||
+    (host === 'github.com' && parsed.pathname.startsWith('/login/oauth/'))
+  );
+}
+
+function collectDeadMarkdownLinks(): string[] {
+  const linkPattern = /!?\[[^\]]*]\(([^)]+)\)/g;
+  return trackedFilesForShippedSurfaces()
+    .filter((relativePath) => isScannedTextFile(relativePath) && relativePath.endsWith('.md'))
+    .flatMap((relativePath) => {
+      const absolutePath = resolve(REPO_ROOT, relativePath);
+      const content = readFileSync(absolutePath, 'utf8');
+      let inFence = false;
+      return content.split('\n').flatMap((line, index) => {
+        if (/^\s*```/.test(line)) {
+          inFence = !inFence;
+          return [];
+        }
+        if (inFence) return [];
+        return [...line.matchAll(linkPattern)]
+          .map((match) => markdownTargetFrom(match[1]))
+          .filter((target): target is string => Boolean(target))
+          .filter((target) => isRelativeDocTarget(target))
+          .filter((target) => {
+            const targetPath = target.split('#')[0].split('?')[0];
+            const resolved = resolve(REPO_ROOT, dirname(relativePath), targetPath);
+            return !existsSync(resolved);
+          })
+          .map((target) => `${relativePath}:${index + 1}: ${target}`);
+      });
+    });
+}
+
+function markdownTargetFrom(rawTarget: string): string | null {
+  const target = rawTarget.trim().replace(/^<|>$/g, '').split(/\s+/)[0];
+  if (!target || target.startsWith('#')) return null;
+  if (target.startsWith('/') || target.includes('$')) return null;
+  if (/^(?:[a-z]+:)?\/\//i.test(target)) return null;
+  if (/^(?:mailto|tel):/i.test(target)) return null;
+  return target;
+}
+
+function isRelativeDocTarget(target: string): boolean {
+  const withoutAnchor = target.split('#')[0].split('?')[0];
+  return (
+    withoutAnchor.endsWith('.md') ||
+    withoutAnchor.startsWith('docs/') ||
+    withoutAnchor.startsWith('./docs/') ||
+    withoutAnchor.startsWith('../docs/')
+  );
 }

@@ -25,16 +25,16 @@ tools:
 hooks:
   pre_task: |
     echo "🐝 Initializing release swarm coordination..."
-    npx hive-flow@v3alpha hook pre-task --mode release-swarm --init-swarm
+    hive-flow hook pre-task --mode release-swarm --init-swarm
   post_edit: |
     echo "🔄 Synchronizing release swarm state and validating changes..."
-    npx hive-flow@v3alpha hook post-edit --mode release-swarm --sync-swarm
+    hive-flow hook post-edit --mode release-swarm --sync-swarm
   post_task: |
     echo "🎯 Release swarm task completed. Coordinating final deployment..."
-    npx hive-flow@v3alpha hook post-task --mode release-swarm --finalize-release
+    hive-flow hook post-task --mode release-swarm --finalize-release
   notification: |
     echo "📡 Broadcasting release completion across all swarm agents..."
-    npx hive-flow@v3alpha hook notification --mode release-swarm --broadcast
+    hive-flow hook notification --mode release-swarm --broadcast
 ---
 
 # Release Swarm - Intelligent Release Automation
@@ -56,7 +56,7 @@ MERGED_PRS=$(gh pr list --state merged --base main --json number,title,labels,me
   --jq ".[] | select(.mergedAt > \"$(gh release view $LAST_TAG --json publishedAt -q .publishedAt)\")")  
 
 # Plan release with commit analysis
-npx hive-flow@v3alpha github release-plan \
+hive-flow github release-plan \
   --commits "$COMMITS" \
   --merged-prs "$MERGED_PRS" \
   --analyze-commits \
@@ -68,7 +68,7 @@ npx hive-flow@v3alpha github release-plan \
 ### 2. Automated Versioning
 ```bash
 # Smart version bumping
-npx hive-flow@v3alpha github release-version \
+hive-flow github release-version \
   --strategy "semantic" \
   --analyze-changes \
   --check-breaking \
@@ -81,7 +81,7 @@ npx hive-flow@v3alpha github release-version \
 # Generate changelog from PRs and commits
 CHANGELOG=$(gh api repos/:owner/:repo/compare/${LAST_TAG}...HEAD \
   --jq '.commits[].commit.message' | \
-  npx hive-flow@v3alpha github generate-changelog)
+  hive-flow github generate-changelog)
 
 # Create release draft
 gh release create v2.0.0 \
@@ -91,7 +91,7 @@ gh release create v2.0.0 \
   --target main
 
 # Run release orchestration
-npx hive-flow@v3alpha github release-create \
+hive-flow github release-create \
   --version "2.0.0" \
   --changelog "$CHANGELOG" \
   --build-artifacts \
@@ -173,7 +173,7 @@ COMMITS=$(gh api repos/:owner/:repo/compare/v1.0.0...HEAD \
   --jq '.commits[].commit.message')
 
 # Generate categorized changelog
-CHANGELOG=$(npx hive-flow@v3alpha github changelog \
+CHANGELOG=$(hive-flow github changelog \
   --prs "$PRS" \
   --commits "$COMMITS" \
   --contributors "$CONTRIBUTORS" \
@@ -202,7 +202,7 @@ gh pr create \
 ### Version Agent
 ```bash
 # Determine next version
-npx hive-flow@v3alpha github version-suggest \
+hive-flow github version-suggest \
   --current v1.2.3 \
   --analyze-commits \
   --check-compatibility \
@@ -219,7 +219,7 @@ npx hive-flow@v3alpha github version-suggest \
 ### Build Agent
 ```bash
 # Coordinate multi-platform builds
-npx hive-flow@v3alpha github release-build \
+hive-flow github release-build \
   --platforms "linux,macos,windows" \
   --architectures "x64,arm64" \
   --parallel \
@@ -236,7 +236,7 @@ npx hive-flow@v3alpha github release-build \
 ### Test Agent
 ```bash
 # Pre-release testing
-npx hive-flow@v3alpha github release-test \
+hive-flow github release-test \
   --suites "unit,integration,e2e,performance" \
   --environments "node:16,node:18,node:20" \
   --fail-fast false \
@@ -246,7 +246,7 @@ npx hive-flow@v3alpha github release-test \
 ### Deploy Agent
 ```bash
 # Multi-target deployment
-npx hive-flow@v3alpha github release-deploy \
+hive-flow github release-deploy \
   --targets "npm,docker,github,s3" \
   --staged-rollout \
   --monitor-metrics \
@@ -281,7 +281,7 @@ deployment:
 ### 2. Multi-Repo Releases
 ```bash
 # Coordinate releases across repos
-npx hive-flow@v3alpha github multi-release \
+hive-flow github multi-release \
   --repos "frontend:v2.0.0,backend:v2.1.0,cli:v1.5.0" \
   --ensure-compatibility \
   --atomic-release \
@@ -291,7 +291,7 @@ npx hive-flow@v3alpha github multi-release \
 ### 3. Hotfix Automation
 ```bash
 # Emergency hotfix process
-npx hive-flow@v3alpha github hotfix \
+hive-flow github hotfix \
   --issue 789 \
   --target-version v1.2.4 \
   --cherry-pick-commits \
@@ -329,7 +329,7 @@ jobs:
           PRS=$(gh pr list --state merged --base main --json number,title,labels,author \
             --search "merged:>=$(gh release view $PREV_TAG --json publishedAt -q .publishedAt)")
           
-          npx hive-flow@v3alpha github release-init \
+          hive-flow github release-init \
             --tag $RELEASE_TAG \
             --previous-tag $PREV_TAG \
             --prs "$PRS" \
@@ -338,7 +338,7 @@ jobs:
       - name: Generate Release Assets
         run: |
           # Generate changelog from PR data
-          CHANGELOG=$(npx hive-flow@v3alpha github release-changelog \
+          CHANGELOG=$(hive-flow github release-changelog \
             --format markdown)
           
           # Update release notes
@@ -346,7 +346,7 @@ jobs:
             --notes "$CHANGELOG"
           
           # Generate and upload assets
-          npx hive-flow@v3alpha github release-assets \
+          hive-flow github release-assets \
             --changelog \
             --binaries \
             --documentation
@@ -361,20 +361,19 @@ jobs:
       - name: Publish Release
         run: |
           # Publish to package registries
-          npx hive-flow@v3alpha github release-publish \
+          hive-flow github release-publish \
             --platforms all
           
           # Create announcement issue
           gh issue create \
             --title "🚀 Released ${{ github.ref_name }}" \
-            --body "See [release notes](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})" \
             --label "announcement"
 ```
 
 ### Continuous Deployment
 ```bash
 # Automated deployment pipeline
-npx hive-flow@v3alpha github cd-pipeline \
+hive-flow github cd-pipeline \
   --trigger "merge-to-main" \
   --auto-version \
   --deploy-on-success \
@@ -386,7 +385,7 @@ npx hive-flow@v3alpha github cd-pipeline \
 ### Pre-Release Checks
 ```bash
 # Comprehensive validation
-npx hive-flow@v3alpha github release-validate \
+hive-flow github release-validate \
   --checks "
     version-conflicts,
     dependency-compatibility,
@@ -401,7 +400,7 @@ npx hive-flow@v3alpha github release-validate \
 ### Compatibility Testing
 ```bash
 # Test backward compatibility
-npx hive-flow@v3alpha github compat-test \
+hive-flow github compat-test \
   --previous-versions "v1.0,v1.1,v1.2" \
   --api-contracts \
   --data-migrations \
@@ -411,7 +410,7 @@ npx hive-flow@v3alpha github compat-test \
 ### Security Scanning
 ```bash
 # Security validation
-npx hive-flow@v3alpha github release-security \
+hive-flow github release-security \
   --scan-dependencies \
   --check-secrets \
   --audit-permissions \
@@ -423,7 +422,7 @@ npx hive-flow@v3alpha github release-security \
 ### Release Monitoring
 ```bash
 # Monitor release health
-npx hive-flow@v3alpha github release-monitor \
+hive-flow github release-monitor \
   --version v2.0.0 \
   --metrics "error-rate,latency,throughput" \
   --alert-thresholds \
@@ -433,7 +432,7 @@ npx hive-flow@v3alpha github release-monitor \
 ### Automated Rollback
 ```bash
 # Configure auto-rollback
-npx hive-flow@v3alpha github rollback-config \
+hive-flow github rollback-config \
   --triggers '{
     "error-rate": ">5%",
     "latency-p99": ">1000ms",
@@ -446,7 +445,7 @@ npx hive-flow@v3alpha github rollback-config \
 ### Release Analytics
 ```bash
 # Analyze release performance
-npx hive-flow@v3alpha github release-analytics \
+hive-flow github release-analytics \
   --version v2.0.0 \
   --compare-with v1.9.0 \
   --metrics "adoption,performance,stability" \
@@ -458,7 +457,7 @@ npx hive-flow@v3alpha github release-analytics \
 ### Auto-Generated Docs
 ```bash
 # Update documentation
-npx hive-flow@v3alpha github release-docs \
+hive-flow github release-docs \
   --api-changes \
   --migration-guide \
   --example-updates \
@@ -531,7 +530,7 @@ Thanks to all contributors who made this release possible!
 ### NPM Package Release
 ```bash
 # NPM package release
-npx hive-flow@v3alpha github npm-release \
+hive-flow github npm-release \
   --version patch \
   --test-all \
   --publish-beta \
@@ -541,7 +540,7 @@ npx hive-flow@v3alpha github npm-release \
 ### Docker Image Release
 ```bash
 # Docker multi-arch release
-npx hive-flow@v3alpha github docker-release \
+hive-flow github docker-release \
   --platforms "linux/amd64,linux/arm64" \
   --tags "latest,v2.0.0,stable" \
   --scan-vulnerabilities \
@@ -551,7 +550,7 @@ npx hive-flow@v3alpha github docker-release \
 ### Mobile App Release
 ```bash
 # Mobile app store release
-npx hive-flow@v3alpha github mobile-release \
+hive-flow github mobile-release \
   --platforms "ios,android" \
   --build-release \
   --submit-review \
@@ -563,7 +562,7 @@ npx hive-flow@v3alpha github mobile-release \
 ### Hotfix Process
 ```bash
 # Emergency hotfix
-npx hive-flow@v3alpha github emergency-release \
+hive-flow github emergency-release \
   --severity critical \
   --bypass-checks security-only \
   --fast-track \
@@ -573,7 +572,7 @@ npx hive-flow@v3alpha github emergency-release \
 ### Rollback Procedure
 ```bash
 # Immediate rollback
-npx hive-flow@v3alpha github rollback \
+hive-flow github rollback \
   --to-version v1.9.9 \
   --reason "Critical bug in v2.0.0" \
   --preserve-data \

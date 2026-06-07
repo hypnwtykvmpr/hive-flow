@@ -2,10 +2,6 @@
 
 > **Modular AI Agent Coordination System** - A complete reimagining of Hive-Flow with 15-agent hierarchical mesh swarm coordination.
 
-[![Version](https://img.shields.io/badge/version-3.0.0--alpha.1-blue.svg)](https://github.com/hypnwtykvmpr/hive-flow)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/license-MIT-purple.svg)](../LICENSE)
 
 ## Introduction
 
@@ -287,9 +283,9 @@ const prediction = await sona.predict(context);
 Modern CLI with interactive prompts and formatted output.
 
 ```bash
-npx @hive-flow/cli swarm init --topology hierarchical-mesh
-npx @hive-flow/cli agent spawn --type queen-coordinator
-npx @hive-flow/cli memory search "knowledge"
+hive-flow swarm init --topology hierarchical-mesh
+hive-flow agent spawn --type queen-coordinator
+hive-flow memory search "knowledge"
 ```
 
 ### @hive-flow/testing
@@ -398,7 +394,6 @@ Features:
 
 ```bash
 # Clone the repository
-git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow/v3
 
 # Install dependencies
@@ -446,9 +441,6 @@ pnpm test:coverage
 ## Links
 
 ### Documentation
-- [Docs Overview](./docs/README.md)
-- [Implementation Details](./docs/implementation/)
-- [User Guides](./docs/guides/)
 - [Helper System](./helpers/README.md)
 
 ### Modules
@@ -474,7 +466,6 @@ pnpm test:coverage
 - [Hooks Tools](./mcp/tools/hooks-tools.ts)
 
 ### External
-- [GitHub Repository](https://github.com/hypnwtykvmpr/hive-flow)
 
 ## Requirements
 

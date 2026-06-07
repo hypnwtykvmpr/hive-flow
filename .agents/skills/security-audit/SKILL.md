@@ -33,83 +33,83 @@ Comprehensive security scanning and vulnerability detection. Includes input vali
 Run comprehensive security analysis on the codebase
 
 ```bash
-npx @hive-flow/cli security scan --depth full
+hive-flow security scan --depth full
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli security scan --depth full --output security-report.json
+hive-flow security scan --depth full --output security-report.json
 ```
 
 ### Input Validation Check
 Check for input validation issues
 
 ```bash
-npx @hive-flow/cli security scan --check input-validation
+hive-flow security scan --check input-validation
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli security scan --check input-validation --path ./src/api
+hive-flow security scan --check input-validation --path ./src/api
 ```
 
 ### Path Traversal Check
 Check for path traversal vulnerabilities
 
 ```bash
-npx @hive-flow/cli security scan --check path-traversal
+hive-flow security scan --check path-traversal
 ```
 
 ### SQL Injection Check
 Check for SQL injection vulnerabilities
 
 ```bash
-npx @hive-flow/cli security scan --check sql-injection
+hive-flow security scan --check sql-injection
 ```
 
 ### XSS Check
 Check for cross-site scripting vulnerabilities
 
 ```bash
-npx @hive-flow/cli security scan --check xss
+hive-flow security scan --check xss
 ```
 
 ### CVE Scan
 Scan dependencies for known CVEs
 
 ```bash
-npx @hive-flow/cli security cve --scan
+hive-flow security cve --scan
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli security cve --scan --severity high
+hive-flow security cve --scan --severity high
 ```
 
 ### Security Audit Report
 Generate full security audit report
 
 ```bash
-npx @hive-flow/cli security audit --report
+hive-flow security audit --report
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli security audit --report --format markdown --output SECURITY.md
+hive-flow security audit --report --format markdown --output SECURITY.md
 ```
 
 ### Threat Modeling
 Run threat modeling analysis
 
 ```bash
-npx @hive-flow/cli security threats --analyze
+hive-flow security threats --analyze
 ```
 
 ### Validate Secrets
 Check for hardcoded secrets
 
 ```bash
-npx @hive-flow/cli security validate --check secrets
+hive-flow security validate --check secrets
 ```
 
 

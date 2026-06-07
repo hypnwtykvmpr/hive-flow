@@ -55,11 +55,6 @@
   ],
   "author": "Hive Flow Team",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git",
-    "directory": "v3/plugins/code-intelligence"
-  },
   "dependencies": {
     "zod": "^3.23.0"
   },

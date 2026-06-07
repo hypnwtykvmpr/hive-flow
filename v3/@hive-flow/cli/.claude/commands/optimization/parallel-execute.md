@@ -4,7 +4,7 @@ Execute tasks in parallel for maximum efficiency.
 
 ## Usage
 ```bash
-npx hive-flow optimization parallel-execute [options]
+hive-flow optimization parallel-execute [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow optimization parallel-execute [options]
 ## Examples
 ```bash
 # Execute task list
-npx hive-flow optimization parallel-execute --tasks tasks.json
+hive-flow optimization parallel-execute --tasks tasks.json
 
 # Limit parallelism
-npx hive-flow optimization parallel-execute --tasks tasks.json --max-parallel 5
+hive-flow optimization parallel-execute --tasks tasks.json --max-parallel 5
 
 # Custom strategy
-npx hive-flow optimization parallel-execute --strategy adaptive
+hive-flow optimization parallel-execute --strategy adaptive
 ```

@@ -774,7 +774,6 @@ See [CI/CD Guide](docs/CICD.md)
 **Solution**:
 ```bash
 # Install prerequisites
-npm install -g required-package
 .$scripts$install.sh --force
 ```
 

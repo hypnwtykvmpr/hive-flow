@@ -20,10 +20,10 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run batch-executor "process multiple files"
+hive-flow sparc run batch-executor "process multiple files"
 
 # For alpha features
-npx hive-flow@alpha sparc run batch-executor "process multiple files"
+hive-flow sparc run batch-executor "process multiple files"
 ```
 
 ### Option 3: Local Installation

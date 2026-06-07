@@ -5,7 +5,7 @@ Create a specialized swarm for GitHub repository management.
 ## Usage
 
 ```bash
-npx hive-flow github swarm [options]
+hive-flow github swarm [options]
 ```
 
 ## Options
@@ -22,25 +22,25 @@ npx hive-flow github swarm [options]
 ### Basic GitHub swarm
 
 ```bash
-npx hive-flow github swarm --repository owner/repo
+hive-flow github swarm --repository owner/repo
 ```
 
 ### Maintenance-focused swarm
 
 ```bash
-npx hive-flow github swarm -r owner/repo -f maintenance --issue-labels
+hive-flow github swarm -r owner/repo -f maintenance --issue-labels
 ```
 
 ### Development swarm with PR automation
 
 ```bash
-npx hive-flow github swarm -r owner/repo -f development --auto-pr --code-review
+hive-flow github swarm -r owner/repo -f development --auto-pr --code-review
 ```
 
 ### Full-featured triage swarm
 
 ```bash
-npx hive-flow github swarm -r owner/repo -a 8 -f triage --issue-labels --auto-pr
+hive-flow github swarm -r owner/repo -a 8 -f triage --issue-labels --auto-pr
 ```
 
 ## Agent Types

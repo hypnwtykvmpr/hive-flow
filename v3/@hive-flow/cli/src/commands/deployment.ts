@@ -224,10 +224,10 @@ const environmentsCommand: Command = {
         { key: 'protected', header: 'Protected', width: 12 },
       ],
       data: [
-        { name: 'production', url: 'https://api.hive-flow.io', auto: output.error('No'), protected: output.success('Yes') },
-        { name: 'staging', url: 'https://staging.hive-flow.io', auto: output.success('Yes'), protected: output.error('No') },
-        { name: 'development', url: 'https://dev.hive-flow.io', auto: output.success('Yes'), protected: output.error('No') },
-        { name: 'preview/*', url: 'https://pr-*.hive-flow.io', auto: output.success('Yes'), protected: output.error('No') },
+        { name: 'production', url: 'production API', auto: output.error('No'), protected: output.success('Yes') },
+        { name: 'staging', url: 'staging API', auto: output.success('Yes'), protected: output.error('No') },
+        { name: 'development', url: 'development API', auto: output.success('Yes'), protected: output.error('No') },
+        { name: 'preview/*', url: 'preview API', auto: output.success('Yes'), protected: output.error('No') },
       ],
     });
 

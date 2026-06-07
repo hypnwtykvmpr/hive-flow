@@ -11,8 +11,8 @@ Display comprehensive status information for a specific agent including metrics,
 ## Usage
 
 ```bash
-npx hive-flow agent status <agent-id>
-npx hive-flow agent status --id <agent-id>
+hive-flow agent status <agent-id>
+hive-flow agent status --id <agent-id>
 ```
 
 ## Options
@@ -26,13 +26,13 @@ npx hive-flow agent status --id <agent-id>
 
 ```bash
 # Get status by ID
-npx hive-flow agent status coder-lx7m9k2
+hive-flow agent status coder-lx7m9k2
 
 # Using --id flag
-npx hive-flow agent status --id researcher-abc123
+hive-flow agent status --id researcher-abc123
 
 # JSON output
-npx hive-flow agent status coder-lx7m9k2 --format json
+hive-flow agent status coder-lx7m9k2 --format json
 ```
 
 ## Output
@@ -109,7 +109,7 @@ The status command provides:
 
 ## Related Commands
 
-- `npx hive-flow agent list` - Find agent IDs
-- `npx hive-flow agent metrics` - Aggregate metrics
-- `npx hive-flow agent health` - Health check
-- `npx hive-flow agent logs <id>` - Activity logs
+- `hive-flow agent list` - Find agent IDs
+- `hive-flow agent metrics` - Aggregate metrics
+- `hive-flow agent health` - Health check
+- `hive-flow agent logs <id>` - Activity logs

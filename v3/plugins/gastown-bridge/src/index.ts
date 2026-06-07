@@ -972,9 +972,8 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
       name: this.name,
       version: this.version,
       description: this.description,
-      author: 'rUv',
+      author: 'Hive Flow',
       license: 'MIT',
-      repository: 'https://github.com/ruvnet/hive-flow',
       keywords: [
         'hive-flow',
         'plugin',

@@ -104,7 +104,7 @@ export async function executeUpdate(
   }
 
   try {
-    // Execute npm install
+    // Execute install dependencies
     if (!isValidNpmPackageName(update.package) || !isValidVersion(update.latestVersion)) {
       throw new Error(`Invalid package or version: ${update.package}@${update.latestVersion}`);
     }

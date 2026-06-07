@@ -4,7 +4,7 @@ Train neural patterns with SONA (Self-Optimizing Neural Architecture) for adapti
 
 ## Usage
 ```bash
-npx hive-flow neural train [options]
+hive-flow neural train [options]
 ```
 
 ## Options
@@ -27,16 +27,16 @@ Patterns survive process restarts and are loaded automatically on next session.
 
 ```bash
 # Train coordination patterns (50 epochs)
-npx hive-flow neural train -p coordination -e 50
+hive-flow neural train -p coordination -e 50
 
 # Train with custom learning rate
-npx hive-flow neural train -p optimization -l 0.005
+hive-flow neural train -p optimization -l 0.005
 
 # Train from file
-npx hive-flow neural train -d ./training-data.json
+hive-flow neural train -d ./training-data.json
 
 # Quick training (10 epochs)
-npx hive-flow neural train -e 10
+hive-flow neural train -e 10
 ```
 
 ## Output
@@ -51,13 +51,13 @@ Training produces:
 
 ```bash
 # List all persisted patterns
-npx hive-flow neural patterns --action list
+hive-flow neural patterns --action list
 
 # Search patterns by query
-npx hive-flow neural patterns --action list -q "error handling"
+hive-flow neural patterns --action list -q "error handling"
 
 # Analyze patterns
-npx hive-flow neural patterns --action analyze -q "coordination"
+hive-flow neural patterns --action analyze -q "coordination"
 ```
 
 ## Performance Targets

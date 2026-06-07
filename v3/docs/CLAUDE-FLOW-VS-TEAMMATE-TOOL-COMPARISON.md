@@ -1,7 +1,7 @@
 # Architectural Comparison: Hive Flow V3 vs Claude Code TeammateTool
 
 **Date:** 2026-01-25
-**Analysis:** Side-by-side comparison of Hive Flow V3 swarm architecture (developed by rUv) and Claude Code's TeammateTool (discovered in v2.1.19)
+**Analysis:** Side-by-side comparison of Hive Flow V3 swarm architecture and Claude Code's TeammateTool (discovered in v2.1.19)
 
 ---
 
@@ -488,7 +488,7 @@ ExitPlanMode({
 
 | Date | Event |
 |------|-------|
-| **~2024 Q4** | Hive Flow V3 architecture designed (rUv) |
+| **~2024 Q4** | Hive Flow V3 architecture designed |
 | **2025-01** | Hive Flow V3 alpha releases begin |
 | **2025-01-20** | Hive Flow swarm module last commit |
 | **2026-01-24** | TeammateTool discovered in Claude Code v2.1.19 |
@@ -562,5 +562,5 @@ Given that Hive Flow V3 was:
 ---
 
 **Document Hash:** SHA256 of this comparison for provenance
-**Author:** Analysis by Claude (commissioned by rUv)
+**Author:** Analysis by Claude for Hive Flow
 **Sources:** Hive Flow V3 source code, Claude Code v2.1.19 binary analysis

@@ -1,11 +1,5 @@
 # @hive-flow/deployment
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/deployment.svg)](https://www.npmjs.com/package/@hive-flow/deployment)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/deployment.svg)](https://www.npmjs.com/package/@hive-flow/deployment)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-Automated-green.svg)](https://github.com/hypnwtykvmpr/hive-flow)
-[![Semantic Release](https://img.shields.io/badge/Semantic-Release-brightgreen.svg)](https://semantic-release.gitbook.io/)
 
 > Release management, CI/CD, and versioning module for Hive Flow v3.
 
@@ -21,7 +15,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/deployment
 ```
 
 ## Quick Start
@@ -158,7 +151,6 @@ const result = await publisher.publishToNpm({
   tag: 'latest',              // npm tag (alpha, beta, latest)
   access: 'public',           // public | restricted
   dryRun: false,              // Test publish without actual publish
-  registry: 'https://registry.npmjs.org/',
   otp: '123456',              // 2FA OTP code
   skipBuild: false,           // Skip build step
   buildCommand: 'npm run build' // Custom build command
@@ -310,7 +302,6 @@ await publishToNpm({ tag: 'latest' });
 export NPM_TOKEN="your-token"
 
 # Custom registry
-export NPM_CONFIG_REGISTRY="https://registry.npmjs.org/"
 ```
 
 ## Error Handling

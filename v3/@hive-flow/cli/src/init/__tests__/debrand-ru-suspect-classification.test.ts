@@ -11,6 +11,20 @@ interface ClassifiedSuspect {
 
 const CLASSIFIED_SUSPECTS: ReadonlyMap<string, ClassifiedSuspect> = new Map([
   [
+    'package.json:content:suspect legacy ru-prefixed token',
+    {
+      classification: 'migration-deferred',
+      reason: 'Root optional @ruvector dependencies remain load-bearing until the dependency replacement plan lands.',
+    },
+  ],
+  [
+    'scripts/verify-appliance.sh:content:suspect legacy ru-prefixed token',
+    {
+      classification: 'migration-deferred',
+      reason: 'RVFA appliance verifier still targets ruflo/ruvllm binaries and is deferred to DB-RVFA migration.',
+    },
+  ],
+  [
     'v3/@hive-flow/cli/package.json:content:suspect legacy ru-prefixed token',
     {
       classification: 'compatibility-alias',

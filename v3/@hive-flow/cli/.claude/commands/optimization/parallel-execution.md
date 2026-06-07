@@ -32,7 +32,7 @@ For the REST API task:
 ## CLI Usage
 ```bash
 # Execute parallel tasks via CLI
-npx hive-flow parallel "Build REST API" --max-agents 8
+hive-flow parallel "Build REST API" --max-agents 8
 ```
 
 ## Performance Gains

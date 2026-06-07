@@ -5,7 +5,7 @@ Execute pre-task preparations and context loading.
 ## Usage
 
 ```bash
-npx hive-flow hook pre-task [options]
+hive-flow hook pre-task [options]
 ```
 
 ## Options
@@ -21,25 +21,25 @@ npx hive-flow hook pre-task [options]
 ### Basic pre-task hook
 
 ```bash
-npx hive-flow hook pre-task --description "Implement user authentication"
+hive-flow hook pre-task --description "Implement user authentication"
 ```
 
 ### With memory loading
 
 ```bash
-npx hive-flow hook pre-task -d "Continue API development" --load-memory
+hive-flow hook pre-task -d "Continue API development" --load-memory
 ```
 
 ### Manual agent control
 
 ```bash
-npx hive-flow hook pre-task -d "Debug issue #123" --auto-spawn-agents false
+hive-flow hook pre-task -d "Debug issue #123" --auto-spawn-agents false
 ```
 
 ### Full optimization
 
 ```bash
-npx hive-flow hook pre-task -d "Refactor codebase" --optimize-topology --estimate-complexity
+hive-flow hook pre-task -d "Refactor codebase" --optimize-topology --estimate-complexity
 ```
 
 ## Features
@@ -85,7 +85,7 @@ Manual usage in agents:
 
 ```bash
 # In agent coordination
-npx hive-flow hook pre-task --description "Your task here"
+hive-flow hook pre-task --description "Your task here"
 ```
 
 ## Output

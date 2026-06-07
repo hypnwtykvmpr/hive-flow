@@ -4,5 +4,5 @@ Command documentation for hive-mind-sessions in category hive-mind.
 
 Usage:
 ```bash
-npx hive-flow hive-mind hive-mind-sessions [options]
+hive-flow hive-mind hive-mind-sessions [options]
 ```

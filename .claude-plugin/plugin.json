@@ -6,14 +6,6 @@
     "name": "Hive Flow",
     "email": "noreply@hive-flow.invalid"
   },
-  "homepage": "https://github.com/hypnwtykvmpr/hive-flow",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hypnwtykvmpr/hive-flow.git"
-  },
-  "bugs": {
-    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
-  },
   "license": "MIT",
   "keywords": [
     "ai-agents",
@@ -51,7 +43,9 @@
   "mcpServers": {
     "hive-flow": {
       "command": "node",
-      "args": ["/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"],
+      "args": [
+        "/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"
+      ],
       "description": "Core Hive Flow MCP server for swarm coordination, agent management, and task orchestration (40+ tools)",
       "optional": false
     }

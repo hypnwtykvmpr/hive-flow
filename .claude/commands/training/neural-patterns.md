@@ -64,11 +64,11 @@ Parameters: {
 ## CLI Usage
 ```bash
 # Train neural patterns via CLI
-npx hive-flow neural train --type coordination --epochs 50
+hive-flow neural train --type coordination --epochs 50
 
 # Check neural status
-npx hive-flow neural status
+hive-flow neural status
 
 # Analyze patterns
-npx hive-flow neural patterns --analyze
+hive-flow neural patterns --analyze
 ```

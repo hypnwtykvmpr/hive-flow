@@ -19,7 +19,6 @@ In Claude Code:
 
 ```bash
 # Clone the repository
-git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 ```
 
@@ -205,7 +204,7 @@ The swarm automatically:
 claude mcp add hive-flow node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
 
 # Cloud features (optional - requires auth)
-claude mcp add flow-nexus npx flow-nexus@latest mcp start
+claude mcp add flow-nexus flow-nexus mcp start
 ```
 
 ### Test MCP Integration
@@ -297,7 +296,6 @@ cat ~/.claude/settings.json
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version
 
 # Reinstall if needed
-npm install -g hive-flow@alpha
 ```
 
 ### Agents Not Spawning

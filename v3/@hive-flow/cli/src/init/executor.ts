@@ -560,7 +560,7 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
         cvesFixed: 0,
         totalCves: 3,
         lastScan: null,
-        _note: 'Run: npx @hive-flow/cli@latest security scan'
+        _note: 'Run: hive-flow security scan'
       };
       fs.writeFileSync(auditPath, JSON.stringify(audit, null, 2), 'utf-8');
       result.created.push('.hive-flow/security/audit-status.json');
@@ -1395,7 +1395,7 @@ async function writeInitialMetrics(
         patternsLearned: 0,
         sessionsCompleted: 0
       },
-      _note: 'Metrics will update as you use Hive Flow. Run: npx @hive-flow/cli@latest daemon start'
+      _note: 'Metrics will update as you use Hive Flow. Run: hive-flow daemon start'
     };
     fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2), 'utf-8');
     result.created.files.push('.hive-flow/metrics/v3-progress.json');
@@ -1459,7 +1459,7 @@ async function writeInitialMetrics(
       cvesFixed: 0,
       totalCves: 3,
       lastScan: null,
-      _note: 'Run: npx @hive-flow/cli@latest security scan'
+      _note: 'Run: hive-flow security scan'
     };
     fs.writeFileSync(auditPath, JSON.stringify(audit, null, 2), 'utf-8');
     result.created.files.push('.hive-flow/security/audit-status.json');
@@ -1483,7 +1483,7 @@ async function writeCapabilitiesDoc(
 
   const capabilities = `# Hive Flow V3 - Complete Capabilities Reference
 > Generated: ${new Date().toISOString()}
-> Full documentation: https://github.com/hypnwtykvmpr/hive-flow
+> Full documentation:
 
 ## 📋 Table of Contents
 
@@ -1543,13 +1543,13 @@ Hive Flow V3 is a domain-driven design architecture for multi-agent AI coordinat
 ### Quick Commands
 \`\`\`bash
 # Initialize swarm
-npx @hive-flow/cli@latest swarm init --topology hierarchical --max-agents 8 --strategy specialized
+hive-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
 # Check status
-npx @hive-flow/cli@latest swarm status
+hive-flow swarm status
 
 # Monitor activity
-npx @hive-flow/cli@latest swarm monitor
+hive-flow swarm monitor
 \`\`\`
 
 ---
@@ -1633,17 +1633,17 @@ npx @hive-flow/cli@latest swarm monitor
 ### Example Commands
 \`\`\`bash
 # Initialize
-npx @hive-flow/cli@latest init --wizard
+hive-flow init --wizard
 
 # Spawn agent
-npx @hive-flow/cli@latest agent spawn -t coder --name my-coder
+hive-flow agent spawn -t coder --name my-coder
 
 # Memory operations
-npx @hive-flow/cli@latest memory store --key "pattern" --value "data" --namespace patterns
-npx @hive-flow/cli@latest memory search --query "authentication"
+hive-flow memory store --key "pattern" --value "data" --namespace patterns
+hive-flow memory search --query "authentication"
 
 # Diagnostics
-npx @hive-flow/cli@latest doctor --fix
+hive-flow doctor --fix
 \`\`\`
 
 ---
@@ -1742,16 +1742,16 @@ High-confidence insights (>0.8) can transfer between agents.
 ### Memory Commands
 \`\`\`bash
 # Store pattern
-npx @hive-flow/cli@latest memory store --key "name" --value "data" --namespace patterns
+hive-flow memory store --key "name" --value "data" --namespace patterns
 
 # Semantic search
-npx @hive-flow/cli@latest memory search --query "authentication"
+hive-flow memory search --query "authentication"
 
 # List entries
-npx @hive-flow/cli@latest memory list --namespace patterns
+hive-flow memory list --namespace patterns
 
 # Initialize database
-npx @hive-flow/cli@latest memory init --force
+hive-flow memory init --force
 \`\`\`
 
 ---
@@ -1780,16 +1780,16 @@ npx @hive-flow/cli@latest memory init --force
 ### Hive-Mind Commands
 \`\`\`bash
 # Initialize
-npx @hive-flow/cli@latest hive-mind init --queen-type strategic
+hive-flow hive-mind init --queen-type strategic
 
 # Status
-npx @hive-flow/cli@latest hive-mind status
+hive-flow hive-mind status
 
 # Spawn workers
-npx @hive-flow/cli@latest hive-mind spawn --count 5 --type worker
+hive-flow hive-mind spawn --count 5 --type worker
 
 # Consensus
-npx @hive-flow/cli@latest hive-mind consensus --propose "task"
+hive-flow hive-mind consensus --propose "task"
 \`\`\`
 
 ---
@@ -1826,16 +1826,16 @@ npx @hive-flow/cli@latest hive-mind consensus --propose "task"
 ### Optional Integrations
 | Package | Command |
 |---------|---------|
-| flow-nexus | \`npx flow-nexus@latest mcp start\` |
+| flow-nexus | \`flow-nexus mcp start\` |
 | agentic-jujutsu | \`npx agentic-jujutsu@latest\` |
 
 ### MCP Server Setup
 \`\`\`bash
 # Add Hive Flow MCP
-claude mcp add hive-flow -- npx -y @hive-flow/cli@latest
+claude mcp add hive-flow -- hive-flow
 
 # Optional servers
-claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start
+claude mcp add flow-nexus -- flow-nexus mcp start
 \`\`\`
 
 ---
@@ -1845,24 +1845,24 @@ claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start
 ### Essential Commands
 \`\`\`bash
 # Setup
-npx @hive-flow/cli@latest init --wizard
-npx @hive-flow/cli@latest daemon start
-npx @hive-flow/cli@latest doctor --fix
+hive-flow init --wizard
+hive-flow daemon start
+hive-flow doctor --fix
 
 # Swarm
-npx @hive-flow/cli@latest swarm init --topology hierarchical --max-agents 8
-npx @hive-flow/cli@latest swarm status
+hive-flow swarm init --topology hierarchical --max-agents 8
+hive-flow swarm status
 
 # Agents
-npx @hive-flow/cli@latest agent spawn -t coder
-npx @hive-flow/cli@latest agent list
+hive-flow agent spawn -t coder
+hive-flow agent list
 
 # Memory
-npx @hive-flow/cli@latest memory search --query "patterns"
+hive-flow memory search --query "patterns"
 
 # Hooks
-npx @hive-flow/cli@latest hooks pre-task --description "task"
-npx @hive-flow/cli@latest hooks worker dispatch --trigger optimize
+hive-flow hooks pre-task --description "task"
+hive-flow hooks worker dispatch --trigger optimize
 \`\`\`
 
 ### File Structure
@@ -1880,8 +1880,8 @@ npx @hive-flow/cli@latest hooks worker dispatch --trigger optimize
 
 ---
 
-**Full Documentation**: https://github.com/hypnwtykvmpr/hive-flow
-**Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
+**Full Documentation**:
+**Issues**:
 `;
 
   fs.writeFileSync(capabilitiesPath, capabilities, 'utf-8');

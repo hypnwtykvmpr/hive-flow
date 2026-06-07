@@ -4,7 +4,7 @@ Intelligently spawn agents based on workload analysis.
 
 ## Usage
 ```bash
-npx hive-flow automation smart-spawn [options]
+hive-flow automation smart-spawn [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow automation smart-spawn [options]
 ## Examples
 ```bash
 # Smart spawn with analysis
-npx hive-flow automation smart-spawn --analyze
+hive-flow automation smart-spawn --analyze
 
 # Set spawn threshold
-npx hive-flow automation smart-spawn --threshold 5
+hive-flow automation smart-spawn --threshold 5
 
 # Force topology
-npx hive-flow automation smart-spawn --topology hierarchical
+hive-flow automation smart-spawn --topology hierarchical
 ```

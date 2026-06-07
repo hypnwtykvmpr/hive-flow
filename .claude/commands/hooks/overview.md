@@ -37,7 +37,7 @@ Hooks are configured in `.claude/settings.json`:
         "matcher": "^(Write|Edit|MultiEdit)$",
         "hooks": [{
           "type": "command",
-          "command": "npx hive-flow hook pre-edit --file '${tool.params.file_path}'"
+          "command": "hive-flow hook pre-edit --file '${tool.params.file_path}'"
         }]
       }
     ]

@@ -49,7 +49,7 @@ export class GeminiCLIProvider extends BaseProvider {
     if (!this.binaryPath) {
       this.logger.warn(
         'Gemini CLI binary not found in PATH. Install: npm i -g @google/gemini-cli ' +
-        'or see https://github.com/google-gemini/gemini-cli'
+        'or see Gemini CLI documentation'
       );
     } else {
       this.logger.info(`Gemini CLI found at: ${this.binaryPath}`);

@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 #
 # Hive Flow Installer
-# https://github.com/ruvnet/hive-flow
 #
 # Usage:
-#   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/hive-flow@main/scripts/install.sh | bash
-#   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/hive-flow@main/scripts/install.sh | bash -s -- --full
-#   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/hive-flow@main/scripts/install.sh | bash -s -- --global
-#   curl -fsSL https://cdn.jsdelivr.net/gh/ruvnet/hive-flow@main/scripts/install.sh | bash -s -- --minimal
 #
 # Options (via arguments):
-#   --global              Global install (npm install -g)
 #   --minimal             Minimal install (no optional deps)
 #   --full                Full setup (global + MCP + doctor + init)
 #   --version=X.X.X       Specific version
@@ -157,7 +151,6 @@ check_requirements() {
             print_error "Node.js 20+ required (found v${NODE_VERSION})"
             echo ""
             echo "Install Node.js 20+:"
-            echo "  curl -fsSL https://fnm.vercel.app/install | bash"
             echo "  fnm install 20"
             exit 1
         fi
@@ -165,7 +158,6 @@ check_requirements() {
         print_error "Node.js not found"
         echo ""
         echo "Install Node.js 20+:"
-        echo "  curl -fsSL https://fnm.vercel.app/install | bash"
         echo "  fnm install 20"
         exit 1
     fi
@@ -239,7 +231,6 @@ install_package() {
         fi
     else
         print_step "Installing for npx usage..."
-        # Actually run npx to pre-install the package
         npx -y "$PACKAGE" --version >/dev/null 2>&1 || true
         print_substep "Package installed for npx"
     fi
@@ -263,7 +254,6 @@ verify_installation() {
             return 0  # Don't fail - npm might need PATH refresh
         fi
     else
-        # For npx mode, package was already installed during install_package
         VERSION_OUTPUT=$(npx "$PACKAGE" --version 2>/dev/null || echo "")
     fi
 
@@ -304,8 +294,6 @@ show_quickstart() {
     fi
 
     echo ""
-    echo -e "${DIM}Documentation: https://github.com/ruvnet/hive-flow${NC}"
-    echo -e "${DIM}Issues: https://github.com/ruvnet/hive-flow/issues${NC}"
     echo ""
 }
 

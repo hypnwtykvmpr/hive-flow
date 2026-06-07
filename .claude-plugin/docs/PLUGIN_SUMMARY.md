@@ -5,7 +5,6 @@
 **Version**: 2.5.0
 **License**: MIT
 **Author**: Hive Flow
-**Repository**: https://github.com/hypnwtykvmpr/hive-flow
 
 ---
 
@@ -286,10 +285,6 @@ Should show `hive-flow` as active.
 
 ## 🤝 Support & Community
 
-- **Repository**: https://github.com/hypnwtykvmpr/hive-flow
-- **Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
-- **Discussions**: https://github.com/hypnwtykvmpr/hive-flow/discussions
-- **Website**: https://flow-nexus.hive-flow.invalid
 
 ---
 
@@ -329,7 +324,6 @@ The plugin is configured via `.claude-plugin/plugin.json`:
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hypnwtykvmpr/hive-flow.git"
   },
   "mcpServers": {
     "hive-flow": {

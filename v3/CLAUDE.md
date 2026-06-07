@@ -6,7 +6,6 @@ This directory contains the V3 monorepo packages. Root CLAUDE.md rules apply her
 
 ```bash
 # From v3/@hive-flow/<package>
-npm install && npm run build && npm test
 ```
 
 ## Packages

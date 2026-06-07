@@ -106,14 +106,14 @@ hooks:
 
     # 🧠 v2.0.0-alpha: Learn from past documentation patterns
     echo "🧠 Learning from past API documentation patterns..."
-    SIMILAR_DOCS=$(npx hive-flow@alpha memory search-patterns "API documentation: $TASK" --k=5 --min-reward=0.85 2>/dev/null || echo "")
+    SIMILAR_DOCS=$(hive-flow memory search-patterns "API documentation: $TASK" --k=5 --min-reward=0.85 2>/dev/null || echo "")
     if [ -n "$SIMILAR_DOCS" ]; then
       echo "📚 Found similar successful documentation patterns"
-      npx hive-flow@alpha memory get-pattern-stats "API documentation" --k=5 2>/dev/null || true
+      hive-flow memory get-pattern-stats "API documentation" --k=5 2>/dev/null || true
     fi
 
     # Store task start
-    npx hive-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "api-docs-$(date +%s)" \
       --task "Documentation: $TASK" \
       --input "$TASK_CONTEXT" \
@@ -135,7 +135,7 @@ hooks:
     REWARD="0.9"
     SUCCESS="true"
 
-    npx hive-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "api-docs-$(date +%s)" \
       --task "Documentation: $TASK" \
       --output "OpenAPI spec with $ENDPOINT_COUNT endpoints, $SCHEMA_COUNT schemas" \
@@ -146,7 +146,7 @@ hooks:
     # Train neural patterns on successful documentation
     if [ "$SUCCESS" = "true" ]; then
       echo "🧠 Training neural pattern from successful documentation"
-      npx hive-flow@alpha neural train \
+      hive-flow neural train \
         --pattern-type "coordination" \
         --training-data "$TASK_OUTPUT" \
         --epochs 50 2>/dev/null || true
@@ -157,7 +157,7 @@ hooks:
     echo "🔧 Check OpenAPI specification syntax"
 
     # Store failure pattern
-    npx hive-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "api-docs-$(date +%s)" \
       --task "Documentation: $TASK" \
       --output "Failed: {{error_message}}" \
@@ -322,7 +322,6 @@ info:
   version: 1.0.0
   description: API Description
 servers:
-  - url: https://api.example.com
 paths:
   /endpoint:
     get:

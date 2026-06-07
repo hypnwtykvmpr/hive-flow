@@ -33,62 +33,62 @@ Multi-agent swarm coordination for complex tasks. Uses hierarchical topology wit
 Start a new swarm with hierarchical topology (anti-drift)
 
 ```bash
-npx @hive-flow/cli swarm init --topology hierarchical --max-agents 8 --strategy specialized
+hive-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli swarm init --topology hierarchical --max-agents 6 --strategy specialized
+hive-flow swarm init --topology hierarchical --max-agents 6 --strategy specialized
 ```
 
 ### Route Task
 Route a task to the appropriate agents based on task type
 
 ```bash
-npx @hive-flow/cli hooks route --task "[task description]"
+hive-flow hooks route --task "[task description]"
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli hooks route --task "implement OAuth2 authentication flow"
+hive-flow hooks route --task "implement OAuth2 authentication flow"
 ```
 
 ### Spawn Agent
 Spawn a specific agent type
 
 ```bash
-npx @hive-flow/cli agent spawn --type [type] --name [name]
+hive-flow agent spawn --type [type] --name [name]
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli agent spawn --type coder --name impl-auth
+hive-flow agent spawn --type coder --name impl-auth
 ```
 
 ### Monitor Status
 Check the current swarm status
 
 ```bash
-npx @hive-flow/cli swarm status --verbose
+hive-flow swarm status --verbose
 ```
 
 ### Orchestrate Task
 Orchestrate a task across multiple agents
 
 ```bash
-npx @hive-flow/cli task orchestrate --task "[task]" --strategy adaptive
+hive-flow task orchestrate --task "[task]" --strategy adaptive
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli task orchestrate --task "refactor auth module" --strategy parallel --max-agents 4
+hive-flow task orchestrate --task "refactor auth module" --strategy parallel --max-agents 4
 ```
 
 ### List Agents
 List all active agents
 
 ```bash
-npx @hive-flow/cli agent list --filter active
+hive-flow agent list --filter active
 ```
 
 

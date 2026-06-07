@@ -550,10 +550,10 @@ Flow Nexus swarms integrate seamlessly with Hive Flow hooks:
 
 ```bash
 # Pre-task coordination setup
-npx hive-flow@alpha hooks pre-task --description "Initialize swarm"
+hive-flow hooks pre-task --description "Initialize swarm"
 
 # Post-task metrics export
-npx hive-flow@alpha hooks post-task --task-id "swarm-execution"
+hive-flow hooks post-task --task-id "swarm-execution"
 ```
 
 ## Common Use Cases
@@ -587,23 +587,19 @@ npx hive-flow@alpha hooks post-task --task-id "swarm-execution"
 
 ```bash
 # Install Flow Nexus
-npm install -g flow-nexus@latest
 
 # Register account
-npx flow-nexus@latest register
+flow-nexus register
 
 # Login
-npx flow-nexus@latest login
+flow-nexus login
 
 # Add MCP server to Claude Code
-claude mcp add flow-nexus npx flow-nexus@latest mcp start
+claude mcp add flow-nexus flow-nexus mcp start
 ```
 
 ## Support & Resources
 
-- **Platform**: https://flow-nexus.hive-flow.invalid
-- **Documentation**: https://github.com/hypnwtykvmpr/flow-nexus
-- **Issues**: https://github.com/hypnwtykvmpr/flow-nexus/issues
 
 ---
 

@@ -2,7 +2,7 @@
 #
 # Ultra-optimized WASM-accelerated formula operations:
 # - TOML parsing (target: <0.1ms, 500x faster than JavaScript)
-# - Variable cooking/substitution (target: <0.05ms)
+# - Variable cooking/substitution (target: low-latency)
 # - Molecule generation (target: <0.1ms)
 # - Batch processing (target: <1ms for 100 formulas)
 #

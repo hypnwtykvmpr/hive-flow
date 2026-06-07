@@ -5,7 +5,7 @@ Execute post-task cleanup, performance analysis, and memory storage.
 ## Usage
 
 ```bash
-npx hive-flow hook post-task [options]
+hive-flow hook post-task [options]
 ```
 
 ## Options
@@ -21,25 +21,25 @@ npx hive-flow hook post-task [options]
 ### Basic post-task hook
 
 ```bash
-npx hive-flow hook post-task --task-id "auth-implementation"
+hive-flow hook post-task --task-id "auth-implementation"
 ```
 
 ### With full analysis
 
 ```bash
-npx hive-flow hook post-task -t "api-refactor" --analyze-performance --generate-report
+hive-flow hook post-task -t "api-refactor" --analyze-performance --generate-report
 ```
 
 ### Memory storage
 
 ```bash
-npx hive-flow hook post-task -t "bug-fix-123" --store-decisions --export-learnings
+hive-flow hook post-task -t "bug-fix-123" --store-decisions --export-learnings
 ```
 
 ### Quick cleanup
 
 ```bash
-npx hive-flow hook post-task -t "minor-update" --analyze-performance false
+hive-flow hook post-task -t "minor-update" --analyze-performance false
 ```
 
 ## Features
@@ -85,7 +85,7 @@ Manual usage in agents:
 
 ```bash
 # In agent coordination
-npx hive-flow hook post-task --task-id "your-task-id" --analyze-performance true
+hive-flow hook post-task --task-id "your-task-id" --analyze-performance true
 ```
 
 ## Output

@@ -20,10 +20,10 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run innovator "innovative solutions for scaling"
+hive-flow sparc run innovator "innovative solutions for scaling"
 
 # For alpha features
-npx hive-flow@alpha sparc run innovator "innovative solutions for scaling"
+hive-flow sparc run innovator "innovative solutions for scaling"
 ```
 
 ### Option 3: Local Installation

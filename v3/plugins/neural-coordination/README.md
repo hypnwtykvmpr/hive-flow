@@ -1,8 +1,5 @@
 # @hive-flow/plugin-neural-coordination
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-neural-coordination.svg)](https://www.npmjs.com/package/@hive-flow/plugin-neural-coordination)
-[![license](https://img.shields.io/npm/l/@hive-flow/plugin-neural-coordination.svg)](https://github.com/ruvnet/hive-flow/blob/main/LICENSE)
-[![downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-neural-coordination.svg)](https://www.npmjs.com/package/@hive-flow/plugin-neural-coordination)
 
 A cutting-edge multi-agent coordination plugin combining the SONA self-optimizing neural architecture with graph neural networks for agent communication topology optimization. The plugin enables emergent protocol development, neural consensus mechanisms, collective memory formation, and adaptive swarm behavior while maintaining interpretability of agent interactions.
 
@@ -11,13 +8,12 @@ A cutting-edge multi-agent coordination plugin combining the SONA self-optimizin
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-neural-coordination
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-neural-coordination
+hive-flow plugins install --name @hive-flow/plugin-neural-coordination
 ```
 
 ## Quick Start
@@ -256,9 +252,6 @@ interface NeuralCoordinationConfig {
 
 | Plugin | Description | Synergy |
 |--------|-------------|---------|
-| [@hive-flow/plugin-cognitive-kernel](https://www.npmjs.com/package/@hive-flow/plugin-cognitive-kernel) | Cognitive augmentation with working memory | Enhances individual agent reasoning within coordinated swarms |
-| [@hive-flow/plugin-quantum-optimizer](https://www.npmjs.com/package/@hive-flow/plugin-quantum-optimizer) | Quantum-inspired optimization | Optimizes task allocation and resource scheduling across agents |
-| [@hive-flow/plugin-hyperbolic-reasoning](https://www.npmjs.com/package/@hive-flow/plugin-hyperbolic-reasoning) | Hierarchical reasoning | Enables hierarchical agent organization and taxonomic coordination |
 
 ## License
 

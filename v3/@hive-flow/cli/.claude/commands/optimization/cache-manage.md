@@ -4,7 +4,7 @@ Manage operation cache for performance.
 
 ## Usage
 ```bash
-npx hive-flow optimization cache-manage [options]
+hive-flow optimization cache-manage [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow optimization cache-manage [options]
 ## Examples
 ```bash
 # View cache stats
-npx hive-flow optimization cache-manage --action view
+hive-flow optimization cache-manage --action view
 
 # Clear cache
-npx hive-flow optimization cache-manage --action clear
+hive-flow optimization cache-manage --action clear
 
 # Set limits
-npx hive-flow optimization cache-manage --max-size 100 --ttl 3600
+hive-flow optimization cache-manage --max-size 100 --ttl 3600
 ```

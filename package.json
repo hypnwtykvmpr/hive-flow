@@ -7,10 +7,6 @@
   "bin": {
     "hive-flow": "./bin/cli.js"
   },
-  "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
-  "bugs": {
-    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
-  },
   "files": [
     "bin/**",
     "v3/@hive-flow/cli/bin/**",
@@ -86,10 +82,6 @@
     "node": ">=20.0.0",
     "pnpm": ">=8.0.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hypnwtykvmpr/hive-flow.git"
-  },
   "keywords": [
     "hive-flow",
     "claude",
@@ -127,8 +119,7 @@
   ],
   "contributors": [
     {
-      "name": "RuvNet",
-      "url": "https://github.com/ruvnet"
+      "name": "Hive Flow"
     }
   ],
   "license": "MIT",

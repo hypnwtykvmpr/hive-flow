@@ -5,7 +5,7 @@ Cleanup and persist session state before ending work.
 ## Usage
 
 ```bash
-npx hive-flow hook session-end [options]
+hive-flow hook session-end [options]
 ```
 
 ## Options
@@ -21,25 +21,25 @@ npx hive-flow hook session-end [options]
 ### Basic session end
 
 ```bash
-npx hive-flow hook session-end --session-id "dev-session-2024"
+hive-flow hook session-end --session-id "dev-session-2024"
 ```
 
 ### With full export
 
 ```bash
-npx hive-flow hook session-end -s "feature-auth" --export-metrics --generate-summary
+hive-flow hook session-end -s "feature-auth" --export-metrics --generate-summary
 ```
 
 ### Quick close
 
 ```bash
-npx hive-flow hook session-end -s "quick-fix" --save-state false --cleanup-temp
+hive-flow hook session-end -s "quick-fix" --save-state false --cleanup-temp
 ```
 
 ### Complete persistence
 
 ```bash
-npx hive-flow hook session-end -s "major-refactor" --save-state --export-metrics --generate-summary
+hive-flow hook session-end -s "major-refactor" --save-state --export-metrics --generate-summary
 ```
 
 ## Features
@@ -86,7 +86,7 @@ Manual usage in agents:
 
 ```bash
 # At session end
-npx hive-flow hook session-end --session-id "your-session" --generate-summary
+hive-flow hook session-end --session-id "your-session" --generate-summary
 ```
 
 ## Output

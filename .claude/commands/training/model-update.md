@@ -4,7 +4,7 @@ Update neural models with new data.
 
 ## Usage
 ```bash
-npx hive-flow training model-update [options]
+hive-flow training model-update [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow training model-update [options]
 ## Examples
 ```bash
 # Update all models
-npx hive-flow training model-update
+hive-flow training model-update
 
 # Specific model
-npx hive-flow training model-update --model agent-selector
+hive-flow training model-update --model agent-selector
 
 # Incremental with validation
-npx hive-flow training model-update --incremental --validate
+hive-flow training model-update --incremental --validate
 ```

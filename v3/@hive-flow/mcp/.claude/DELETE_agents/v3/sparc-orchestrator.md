@@ -29,13 +29,13 @@ hooks:
     # Search for similar SPARC patterns
     mcp__hive-flow__memory_search --pattern="sparc:success:*" --namespace="patterns" --limit=5
     # Initialize trajectory tracking
-    npx hive-flow@v3alpha hooks intelligence trajectory-start --session-id "$SESSION_ID" --agent-type "sparc-orchestrator" --task "$TASK"
+    hive-flow hooks intelligence trajectory-start --session-id "$SESSION_ID" --agent-type "sparc-orchestrator" --task "$TASK"
   post: |
     echo "✅ SPARC workflow complete"
     # Store completion
     mcp__hive-flow__memory_usage --action="store" --namespace="sparc" --key="complete:$SESSION_ID" --value="$(date -Iseconds): SPARC workflow completed"
     # Train on successful pattern
-    npx hive-flow@v3alpha hooks intelligence trajectory-end --session-id "$SESSION_ID" --verdict "success"
+    hive-flow hooks intelligence trajectory-end --session-id "$SESSION_ID" --verdict "success"
 ---
 
 # V3 SPARC Orchestrator Agent
@@ -101,20 +101,20 @@ You are the **SPARC Orchestrator**, the master coordinator for the SPARC develop
 
 ```bash
 # Run complete SPARC workflow
-npx hive-flow@v3alpha sparc run full "$TASK"
+hive-flow sparc run full "$TASK"
 
 # Run specific phase
-npx hive-flow@v3alpha sparc run specification "$TASK"
-npx hive-flow@v3alpha sparc run pseudocode "$TASK"
-npx hive-flow@v3alpha sparc run architecture "$TASK"
-npx hive-flow@v3alpha sparc run refinement "$TASK"
-npx hive-flow@v3alpha sparc run completion "$TASK"
+hive-flow sparc run specification "$TASK"
+hive-flow sparc run pseudocode "$TASK"
+hive-flow sparc run architecture "$TASK"
+hive-flow sparc run refinement "$TASK"
+hive-flow sparc run completion "$TASK"
 
 # TDD workflow
-npx hive-flow@v3alpha sparc tdd "$FEATURE"
+hive-flow sparc tdd "$FEATURE"
 
 # Check phase status
-npx hive-flow@v3alpha sparc status
+hive-flow sparc status
 ```
 
 ## Agent Delegation Pattern

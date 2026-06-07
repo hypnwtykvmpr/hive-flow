@@ -1052,7 +1052,6 @@ mcp__flow-nexus__sandbox_create({
     apt-get update
     apt-get install -y custom-package
     git clone https:/$github.com$user$repo
-    cd repo && npm install
   `
 })
 ```
@@ -1062,7 +1061,6 @@ mcp__flow-nexus__sandbox_create({
 // Stage 1: Setup
 mcp__flow-nexus__sandbox_execute({
   sandbox_id: "id",
-  code: "npm install && npm run build"
 })
 
 // Stage 2: Run

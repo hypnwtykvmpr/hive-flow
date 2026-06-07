@@ -32,16 +32,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run security-review "audit API security"
+hive-flow sparc run security-review "audit API security"
 
 # For alpha features
-npx hive-flow@alpha sparc run security-review "audit API security"
+hive-flow sparc run security-review "audit API security"
 
 # With namespace
-npx hive-flow sparc run security-review "your task" --namespace security-review
+hive-flow sparc run security-review "your task" --namespace security-review
 
 # Non-interactive mode
-npx hive-flow sparc run security-review "your task" --non-interactive
+hive-flow sparc run security-review "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -73,8 +73,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "security-review_context" "important decisions" --namespace security-review
+hive-flow memory store "security-review_context" "important decisions" --namespace security-review
 
 # Query previous work
-npx hive-flow memory query "security-review" --limit 5
+hive-flow memory query "security-review" --limit 5
 ```

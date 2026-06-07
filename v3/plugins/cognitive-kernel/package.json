@@ -51,11 +51,6 @@
   ],
   "author": "Hive Flow Team",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git",
-    "directory": "v3/plugins/cognitive-kernel"
-  },
   "dependencies": {
     "zod": "^3.22.4"
   },

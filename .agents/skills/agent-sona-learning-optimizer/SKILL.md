@@ -67,10 +67,10 @@ Pre-task and post-task hooks for SONA learning are available via:
 
 ```bash
 # Pre-task: Initialize trajectory
-npx hive-flow@alpha hooks pre-task --description "$TASK"
+hive-flow hooks pre-task --description "$TASK"
 
 # Post-task: Record outcome
-npx hive-flow@alpha hooks post-task --task-id "$ID" --success true
+hive-flow hooks post-task --task-id "$ID" --success true
 ```
 
 ## References

@@ -18,8 +18,7 @@
     "test:watch": "vitest",
     "test:e2e": "vitest run tests/e2e",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
-    "postinstall": "node -e \"const{execSync}=require('child_process');try{execSync('agent-browser --version',{stdio:'ignore'});}catch{console.log('\\n\ud83d\udce6 Installing agent-browser globally...');try{execSync('npm install -g agent-browser@latest',{stdio:'inherit'});console.log('\u2705 agent-browser installed successfully!');}catch(e){console.log('\u26a0\ufe0f  Could not install agent-browser globally. Run manually:\\n   npm install -g agent-browser@latest');}}\""
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "agent-browser": "^0.6.0",
@@ -42,11 +41,6 @@
   ],
   "author": "hypnwtykvmpr",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hypnwtykvmpr/hive-flow.git",
-    "directory": "v3/@hive-flow/browser"
-  },
   "engines": {
     "node": ">=20.0.0"
   }

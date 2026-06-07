@@ -813,8 +813,8 @@ The 4-step intelligence pipeline:
 ```bash
 # Add MCP servers
 claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-claude mcp add hive-flow npx hive-flow mcp start  # Optional
-claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
+claude mcp add hive-flow hive-flow mcp start  # Optional
+claude mcp add flow-nexus flow-nexus mcp start  # Optional
 
 # Start daemon
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
@@ -872,8 +872,6 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ## Support
 
-- Documentation: https://github.com/hypnwtykvmpr/hive-flow
-- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
 
 ---
 

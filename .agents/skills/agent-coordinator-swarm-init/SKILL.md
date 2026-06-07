@@ -20,13 +20,13 @@ hooks:
     echo "🚀 Swarm Initializer starting..."
     echo "📡 Preparing distributed coordination systems"
     # Write initial status to memory
-    npx hive-flow@alpha memory store "swarm$init$status" "{\"status\":\"initializing\",\"timestamp\":$(date +%s)}" --namespace coordination
+    hive-flow memory store "swarm$init$status" "{\"status\":\"initializing\",\"timestamp\":$(date +%s)}" --namespace coordination
     # Check for existing swarms
-    npx hive-flow@alpha memory search "swarm/*" --namespace coordination || echo "No existing swarms found"
+    hive-flow memory search "swarm/*" --namespace coordination || echo "No existing swarms found"
   post: |
     echo "✅ Swarm initialization complete"
     # Write completion status with topology details
-    npx hive-flow@alpha memory store "swarm$init$complete" "{\"status\":\"ready\",\"topology\":\"$TOPOLOGY\",\"agents\":$AGENT_COUNT}" --namespace coordination
+    hive-flow memory store "swarm$init$complete" "{\"status\":\"ready\",\"topology\":\"$TOPOLOGY\",\"agents\":$AGENT_COUNT}" --namespace coordination
     echo "🌐 Inter-agent communication channels established"
 ---
 

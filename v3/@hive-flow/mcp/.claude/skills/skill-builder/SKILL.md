@@ -339,8 +339,6 @@ See [examples/](resources/examples/)
 - [Related Skill 2](#)
 
 ### Resources
-- [External Link 1](https://example.com)
-- [Documentation](https://docs.example.com)
 ```
 
 ---
@@ -774,7 +772,6 @@ See [CI/CD Guide](docs/CICD.md)
 **Solution**:
 ```bash
 # Install prerequisites
-npm install -g required-package
 ./scripts/install.sh --force
 ```
 
@@ -792,9 +789,6 @@ Complete API documentation: [API_REFERENCE.md](docs/API_REFERENCE.md)
 - [Related Skill 2](../related-skill-2/)
 
 ## Resources
-- [Official Documentation](https://example.com/docs)
-- [GitHub Repository](https://github.com/example/repo)
-- [Community Forum](https://forum.example.com)
 
 ---
 
@@ -888,13 +882,8 @@ See `resources/templates/` for available component templates.
 ## Learn More
 
 ### Official Resources
-- [Anthropic Agent Skills Documentation](https://docs.claude.com/en/docs/agents-and-tools/agent-skills)
-- [GitHub Skills Repository](https://github.com/anthropics/skills)
-- [Claude Code Documentation](https://docs.claude.com/en/docs/claude-code)
 
 ### Community
-- [Skills Marketplace](https://github.com/anthropics/skills) - Browse community skills
-- [Anthropic Discord](https://discord.gg/anthropic) - Get help from community
 
 ### Advanced Topics
 - Multi-file skills with complex navigation

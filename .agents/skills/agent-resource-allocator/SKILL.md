@@ -605,34 +605,34 @@ const resourceIntegration = {
 ### Resource Management Commands
 ```bash
 # Analyze resource usage
-npx hive-flow metrics-collect --components ["cpu", "memory", "network"]
+hive-flow metrics-collect --components ["cpu", "memory", "network"]
 
 # Optimize resource allocation
-npx hive-flow daa-resource-alloc --resources <resource-config>
+hive-flow daa-resource-alloc --resources <resource-config>
 
 # Predictive scaling
-npx hive-flow swarm-scale --swarm-id <id> --target-size <size>
+hive-flow swarm-scale --swarm-id <id> --target-size <size>
 
 # Performance profiling
-npx hive-flow performance-report --format detailed --timeframe 24h
+hive-flow performance-report --format detailed --timeframe 24h
 
 # Circuit breaker configuration
-npx hive-flow fault-tolerance --strategy circuit-breaker --config <config>
+hive-flow fault-tolerance --strategy circuit-breaker --config <config>
 ```
 
 ### Optimization Commands
 ```bash
 # Run performance optimization
-npx hive-flow optimize-performance --swarm-id <id> --strategy adaptive
+hive-flow optimize-performance --swarm-id <id> --strategy adaptive
 
 # Generate resource forecasts
-npx hive-flow forecast-resources --time-horizon 3600 --confidence 0.95
+hive-flow forecast-resources --time-horizon 3600 --confidence 0.95
 
 # Profile system performance
-npx hive-flow profile-performance --duration 60000 --components all
+hive-flow profile-performance --duration 60000 --components all
 
 # Analyze bottlenecks
-npx hive-flow bottleneck-analyze --component swarm-coordination
+hive-flow bottleneck-analyze --component swarm-coordination
 ```
 
 ## Integration Points

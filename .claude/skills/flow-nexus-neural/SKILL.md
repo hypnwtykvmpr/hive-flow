@@ -22,11 +22,11 @@ Deploy, train, and manage neural networks in distributed E2B sandbox environment
 
 ```bash
 # Add Flow Nexus MCP server
-claude mcp add flow-nexus npx flow-nexus@latest mcp start
+claude mcp add flow-nexus flow-nexus mcp start
 
 # Register and login
-npx flow-nexus@latest register
-npx flow-nexus@latest login
+flow-nexus register
+flow-nexus login
 ```
 
 ## Core Capabilities
@@ -728,11 +728,5 @@ await mcp__flow-nexus__neural_cluster_terminate({
 
 ## Resources
 
-- Flow Nexus Docs: https://flow-nexus.hive-flow.invalid/docs
-- Neural Network Guide: https://flow-nexus.hive-flow.invalid/docs/neural
-- Template Marketplace: https://flow-nexus.hive-flow.invalid/templates
-- API Reference: https://flow-nexus.hive-flow.invalid/api
 
 ---
-
-**Note**: Distributed training requires authentication. Register at https://flow-nexus.hive-flow.invalid or use `npx flow-nexus@latest register`.

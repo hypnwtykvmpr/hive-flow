@@ -47,7 +47,7 @@ hooks:
     echo "   Threats warned: $THREATS_WARNED"
 
     # Store session metrics
-    npx hive-flow@v3alpha memory store \
+    hive-flow memory store \
       --namespace "security_metrics" \
       --key "$AIDEFENCE_SESSION_ID" \
       --value "{\"scans\": $SCANS_COMPLETED, \"blocked\": $THREATS_BLOCKED, \"warned\": $THREATS_WARNED}" \
@@ -230,7 +230,7 @@ if (result.threats.some(t => t.severity === 'critical')) {
   await guardian.learnFromDetection(input, result);
 
   // Alert
-  npx hive-flow@v3alpha hooks notify \
+  hive-flow hooks notify \
     --severity critical \
     --message "Critical threat blocked by AIDefence Guardian"
 

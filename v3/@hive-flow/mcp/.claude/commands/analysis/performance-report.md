@@ -4,7 +4,7 @@ Generate comprehensive performance reports for swarm operations.
 
 ## Usage
 ```bash
-npx hive-flow analysis performance-report [options]
+hive-flow analysis performance-report [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow analysis performance-report [options]
 ## Examples
 ```bash
 # Generate HTML report
-npx hive-flow analysis performance-report --format html
+hive-flow analysis performance-report --format html
 
 # Compare swarms
-npx hive-flow analysis performance-report --compare swarm-123
+hive-flow analysis performance-report --compare swarm-123
 
 # Full metrics report
-npx hive-flow analysis performance-report --include-metrics --format markdown
+hive-flow analysis performance-report --include-metrics --format markdown
 ```

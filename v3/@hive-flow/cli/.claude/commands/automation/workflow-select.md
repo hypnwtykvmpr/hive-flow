@@ -4,7 +4,7 @@ Automatically select optimal workflow based on task type.
 
 ## Usage
 ```bash
-npx hive-flow automation workflow-select [options]
+hive-flow automation workflow-select [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow automation workflow-select [options]
 ## Examples
 ```bash
 # Select workflow for task
-npx hive-flow automation workflow-select --task "Deploy to production"
+hive-flow automation workflow-select --task "Deploy to production"
 
 # With constraints
-npx hive-flow automation workflow-select --constraints "no-downtime,rollback"
+hive-flow automation workflow-select --constraints "no-downtime,rollback"
 
 # Preview mode
-npx hive-flow automation workflow-select --task "Database migration" --preview
+hive-flow automation workflow-select --task "Database migration" --preview
 ```

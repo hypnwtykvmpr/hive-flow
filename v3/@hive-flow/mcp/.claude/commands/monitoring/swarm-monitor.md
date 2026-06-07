@@ -4,7 +4,7 @@ Real-time swarm monitoring.
 
 ## Usage
 ```bash
-npx hive-flow swarm monitor [options]
+hive-flow swarm monitor [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow swarm monitor [options]
 ## Examples
 ```bash
 # Start monitoring
-npx hive-flow swarm monitor
+hive-flow swarm monitor
 
 # Custom interval
-npx hive-flow swarm monitor --interval 5000
+hive-flow swarm monitor --interval 5000
 
 # With metrics
-npx hive-flow swarm monitor --metrics
+hive-flow swarm monitor --metrics
 ```

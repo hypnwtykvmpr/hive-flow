@@ -5,7 +5,7 @@ Initialize a Hive Flow swarm with specified topology and configuration.
 ## Usage
 
 ```bash
-npx hive-flow swarm init [options]
+hive-flow swarm init [options]
 ```
 
 ## Options
@@ -22,25 +22,25 @@ npx hive-flow swarm init [options]
 ### Basic initialization
 
 ```bash
-npx hive-flow swarm init
+hive-flow swarm init
 ```
 
 ### Mesh topology for research
 
 ```bash
-npx hive-flow swarm init --topology mesh --max-agents 5 --strategy balanced
+hive-flow swarm init --topology mesh --max-agents 5 --strategy balanced
 ```
 
 ### Hierarchical for development
 
 ```bash
-npx hive-flow swarm init --topology hierarchical --max-agents 10 --strategy parallel --auto-spawn
+hive-flow swarm init --topology hierarchical --max-agents 10 --strategy parallel --auto-spawn
 ```
 
 ### GitHub-focused swarm
 
 ```bash
-npx hive-flow swarm init --topology star --github --memory
+hive-flow swarm init --topology star --github --memory
 ```
 
 ## Topologies

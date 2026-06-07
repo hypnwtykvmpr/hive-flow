@@ -7,10 +7,6 @@
   "bin": {
     "hive-flow": "./bin/hive-flow.js"
   },
-  "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
-  "bugs": {
-    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
-  },
   "files": [
     "bin/**",
     "README.md",
@@ -24,11 +20,6 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hypnwtykvmpr/hive-flow.git",
-    "directory": "hive-flow-npm"
   },
   "keywords": [
     "hive-flow",
@@ -50,8 +41,7 @@
   ],
   "contributors": [
     {
-      "name": "Hive Flow",
-      "url": "https://github.com/hypnwtykvmpr"
+      "name": "Hive Flow"
     }
   ],
   "license": "MIT",

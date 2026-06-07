@@ -183,16 +183,16 @@ export class V3AgentSpawner extends AgentSpawner {
 
 ```bash
 # Check integration status
-npx hive-flow@v3alpha integration status
+hive-flow integration status
 
 # Verify no duplicate code
-npx hive-flow@v3alpha integration check-duplicates
+hive-flow integration check-duplicates
 
 # Test extension layer
-npx hive-flow@v3alpha integration test
+hive-flow integration test
 
 # Update agentic-flow dependency
-npx hive-flow@v3alpha integration update-base
+hive-flow integration update-base
 ```
 
 ## Quality Metrics

@@ -50,7 +50,7 @@ gh issue create \
   --label "enhancement,swarm-ready"
 
 # Initialize swarm for issue
-npx hive-flow@alpha hooks pre-task --description "Feature implementation"
+hive-flow hooks pre-task --description "Feature implementation"
 ```
 
 ### Project Board Quick Setup
@@ -61,7 +61,7 @@ PROJECT_ID=$(gh project list --owner @me --format json | \
   jq -r '.projects[0].id')
 
 # Initialize board sync
-npx hive-flow github board-init \
+hive-flow github board-init \
   --project-id "$PROJECT_ID" \
   --sync-mode "bidirectional"
 ```
@@ -146,14 +146,14 @@ gh issue create \
 ISSUE_DATA=$(gh issue view 456 --json title,body,labels,assignees,comments)
 
 # Create swarm from issue
-npx hive-flow github issue-to-swarm 456 \
+hive-flow github issue-to-swarm 456 \
   --issue-data "$ISSUE_DATA" \
   --auto-decompose \
   --assign-agents
 
 # Batch process multiple issues
 ISSUES=$(gh issue list --label "swarm-ready" --json number,title,body,labels)
-npx hive-flow github issues-batch \
+hive-flow github issues-batch \
   --issues "$ISSUES" \
   --parallel
 
@@ -210,14 +210,14 @@ $swarm start
 
 ```bash
 # Analyze and triage unlabeled issues
-npx hive-flow github triage \
+hive-flow github triage \
   --unlabeled \
   --analyze-content \
   --suggest-labels \
   --assign-priority
 
 # Find and link duplicate issues
-npx hive-flow github find-duplicates \
+hive-flow github find-duplicates \
   --threshold 0.8 \
   --link-related \
   --close-duplicates
@@ -235,7 +235,7 @@ npx hive-flow github find-duplicates \
 ISSUE_BODY=$(gh issue view 456 --json body --jq '.body')
 
 # Decompose into subtasks
-SUBTASKS=$(npx hive-flow github issue-decompose 456 \
+SUBTASKS=$(hive-flow github issue-decompose 456 \
   --body "$ISSUE_BODY" \
   --max-subtasks 10 \
   --assign-priorities)
@@ -270,11 +270,11 @@ done
 CURRENT=$(gh issue view 456 --json body,labels)
 
 # Get swarm progress
-PROGRESS=$(npx hive-flow github issue-progress 456)
+PROGRESS=$(hive-flow github issue-progress 456)
 
 # Update checklist in issue body
 UPDATED_BODY=$(echo "$CURRENT" | jq -r '.body' | \
-  npx hive-flow github update-checklist --progress "$PROGRESS")
+  hive-flow github update-checklist --progress "$PROGRESS")
 
 # Edit issue with updated body
 gh issue edit 456 --body "$UPDATED_BODY"
@@ -325,7 +325,7 @@ echo "$STALE_ISSUES" | jq -r '.number' | while read -r num; do
   ISSUE=$(gh issue view $num --json title,body,comments,labels)
 
   # Analyze with swarm
-  ACTION=$(npx hive-flow github analyze-stale \
+  ACTION=$(hive-flow github analyze-stale \
     --issue "$ISSUE" \
     --suggest-action)
 
@@ -367,7 +367,7 @@ PROJECT_ID=$(gh project list --owner @me --format json | \
   jq -r '.projects[] | select(.title == "Development Board") | .id')
 
 # Initialize swarm with project
-npx hive-flow github board-init \
+hive-flow github board-init \
   --project-id "$PROJECT_ID" \
   --sync-mode "bidirectional" \
   --create-views "swarm-status,agent-workload,priority"
@@ -435,7 +435,7 @@ mapping:
 
 ```bash
 # Sync swarm tasks with project cards
-npx hive-flow github board-sync \
+hive-flow github board-sync \
   --map-status '{
     "todo": "To Do",
     "in_progress": "In Progress",
@@ -446,7 +446,7 @@ npx hive-flow github board-sync \
   --update-metadata
 
 # Enable real-time board updates
-npx hive-flow github board-realtime \
+hive-flow github board-realtime \
   --webhook-endpoint "https:/$api.example.com$github-sync" \
   --update-frequency "immediate" \
   --batch-updates false
@@ -464,7 +464,7 @@ echo "$ISSUES" | jq -r '.[].number' | while read -r issue; do
 done
 
 # Process with swarm
-npx hive-flow github board-import-issues \
+hive-flow github board-import-issues \
   --issues "$ISSUES" \
   --add-to-column "Backlog" \
   --parse-checklist \
@@ -480,7 +480,7 @@ npx hive-flow github board-import-issues \
 
 ```bash
 # Automatically assign cards to agents
-npx hive-flow github board-auto-assign \
+hive-flow github board-auto-assign \
   --strategy "load-balanced" \
   --consider "expertise,workload,availability" \
   --update-cards
@@ -490,7 +490,7 @@ npx hive-flow github board-auto-assign \
 
 ```bash
 # Smart card movement based on rules
-npx hive-flow github board-smart-move \
+hive-flow github board-smart-move \
   --rules '{
     "auto-progress": "when:all-subtasks-done",
     "auto-review": "when:tests-pass",
@@ -502,7 +502,7 @@ npx hive-flow github board-smart-move \
 
 ```bash
 # Bulk card operations
-npx hive-flow github board-bulk \
+hive-flow github board-bulk \
   --filter "status:blocked" \
   --action "add-label:needs-attention" \
   --notify-assignees
@@ -583,14 +583,14 @@ npx hive-flow github board-bulk \
 
 ```bash
 # Manage sprints with swarms
-npx hive-flow github sprint-manage \
+hive-flow github sprint-manage \
   --sprint "Sprint 23" \
   --auto-populate \
   --capacity-planning \
   --track-velocity
 
 # Track milestone progress
-npx hive-flow github milestone-track \
+hive-flow github milestone-track \
   --milestone "v2.0 Release" \
   --update-board \
   --show-dependencies \
@@ -601,7 +601,7 @@ npx hive-flow github milestone-track \
 
 ```bash
 # Setup agile board
-npx hive-flow github agile-board \
+hive-flow github agile-board \
   --methodology "scrum" \
   --sprint-length "2w" \
   --ceremonies "planning,review,retro" \
@@ -612,7 +612,7 @@ npx hive-flow github agile-board \
 
 ```bash
 # Setup kanban board
-npx hive-flow github kanban-board \
+hive-flow github kanban-board \
   --wip-limits '{
     "In Progress": 5,
     "Review": 3
@@ -640,7 +640,7 @@ ISSUE_METRICS=$(echo "$PROJECT_DATA" | jq -r '.items[] | select(.content.type ==
   done)
 
 # Generate analytics with swarm
-npx hive-flow github board-analytics \
+hive-flow github board-analytics \
   --project-data "$PROJECT_DATA" \
   --issue-metrics "$ISSUE_METRICS" \
   --metrics "throughput,cycle-time,wip" \
@@ -653,13 +653,13 @@ npx hive-flow github board-analytics \
 
 ```bash
 # Track and visualize progress
-npx hive-flow github board-progress \
+hive-flow github board-progress \
   --show "burndown,velocity,cycle-time" \
   --time-period "sprint" \
   --export-metrics
 
 # Generate reports
-npx hive-flow github board-report \
+hive-flow github board-report \
   --type "sprint-summary" \
   --format "markdown" \
   --include "velocity,burndown,blockers" \
@@ -670,7 +670,7 @@ npx hive-flow github board-report \
 
 ```bash
 # Track board performance
-npx hive-flow github board-kpis \
+hive-flow github board-kpis \
   --metrics '[
     "average-cycle-time",
     "throughput-per-sprint",
@@ -680,7 +680,7 @@ npx hive-flow github board-kpis \
   --dashboard-url
 
 # Track team performance
-npx hive-flow github team-metrics \
+hive-flow github team-metrics \
   --board "Development" \
   --per-member \
   --include "velocity,quality,collaboration" \
@@ -696,7 +696,7 @@ npx hive-flow github team-metrics \
 
 ```bash
 # Plan releases using board data
-npx hive-flow github release-plan-board \
+hive-flow github release-plan-board \
   --analyze-velocity \
   --estimate-completion \
   --identify-risks \
@@ -714,7 +714,7 @@ npx hive-flow github release-plan-board \
 
 ```bash
 # Sync across multiple boards
-npx hive-flow github multi-board-sync \
+hive-flow github multi-board-sync \
   --boards "Development,QA,Release" \
   --sync-rules '{
     "Development->QA": "when:ready-for-test",
@@ -722,7 +722,7 @@ npx hive-flow github multi-board-sync \
   }'
 
 # Cross-organization sync
-npx hive-flow github cross-org-sync \
+hive-flow github cross-org-sync \
   --source "org1/Project-A" \
   --target "org2/Project-B" \
   --field-mapping "custom" \
@@ -738,7 +738,7 @@ npx hive-flow github cross-org-sync \
 
 ```bash
 # Handle issue dependencies
-npx hive-flow github issue-deps 456 \
+hive-flow github issue-deps 456 \
   --resolve-order \
   --parallel-safe \
   --update-blocking
@@ -748,7 +748,7 @@ npx hive-flow github issue-deps 456 \
 
 ```bash
 # Coordinate epic-level swarms
-npx hive-flow github epic-swarm \
+hive-flow github epic-swarm \
   --epic 123 \
   --child-issues "456,457,458" \
   --orchestrate
@@ -763,7 +763,7 @@ npx hive-flow github epic-swarm \
 
 ```bash
 # Handle issues across repositories
-npx hive-flow github cross-repo \
+hive-flow github cross-repo \
   --issue "org$repo#456" \
   --related "org$other-repo#123" \
   --coordinate
@@ -778,7 +778,7 @@ npx hive-flow github cross-repo \
 
 ```bash
 # Distribute work among team
-npx hive-flow github board-distribute \
+hive-flow github board-distribute \
   --strategy "skills-based" \
   --balance-workload \
   --respect-preferences \
@@ -789,7 +789,7 @@ npx hive-flow github board-distribute \
 
 ```bash
 # Generate standup reports
-npx hive-flow github standup-report \
+hive-flow github standup-report \
   --team "frontend" \
   --include "yesterday,today,blockers" \
   --format "slack" \
@@ -800,7 +800,7 @@ npx hive-flow github standup-report \
 
 ```bash
 # Coordinate reviews via board
-npx hive-flow github review-coordinate \
+hive-flow github review-coordinate \
   --board "Code Review" \
   --assign-reviewers \
   --track-feedback \
@@ -991,7 +991,7 @@ jobs:
         with:
           command: |
             if [[ "${{ github.event.label.name }}" == "swarm-ready" ]]; then
-              npx hive-flow github issue-init ${{ github.event.issue.number }}
+              hive-flow github issue-init ${{ github.event.issue.number }}
             fi
 ```
 
@@ -999,7 +999,7 @@ jobs:
 
 ```bash
 # Sync with project board
-npx hive-flow github issue-board-sync \
+hive-flow github issue-board-sync \
   --project "Development" \
   --column-mapping '{
     "To Do": "pending",
@@ -1016,7 +1016,7 @@ npx hive-flow github issue-board-sync \
 
 ```bash
 # Specialized bug handling
-npx hive-flow github bug-swarm 456 \
+hive-flow github bug-swarm 456 \
   --reproduce \
   --isolate \
   --fix \
@@ -1027,7 +1027,7 @@ npx hive-flow github bug-swarm 456 \
 
 ```bash
 # Feature implementation swarm
-npx hive-flow github feature-swarm 456 \
+hive-flow github feature-swarm 456 \
   --design \
   --implement \
   --document \
@@ -1038,7 +1038,7 @@ npx hive-flow github feature-swarm 456 \
 
 ```bash
 # Refactoring swarm
-npx hive-flow github debt-swarm 456 \
+hive-flow github debt-swarm 456 \
   --analyze-impact \
   --plan-migration \
   --execute \
@@ -1093,7 +1093,7 @@ npx hive-flow github debt-swarm 456 \
 
 ```bash
 # Diagnose sync problems
-npx hive-flow github board-diagnose \
+hive-flow github board-diagnose \
   --check "permissions,webhooks,rate-limits" \
   --test-sync \
   --show-conflicts
@@ -1103,7 +1103,7 @@ npx hive-flow github board-diagnose \
 
 ```bash
 # Optimize board performance
-npx hive-flow github board-optimize \
+hive-flow github board-optimize \
   --analyze-size \
   --archive-completed \
   --index-fields \
@@ -1114,7 +1114,7 @@ npx hive-flow github board-optimize \
 
 ```bash
 # Recover board data
-npx hive-flow github board-recover \
+hive-flow github board-recover \
   --backup-id "2024-01-15" \
   --restore-cards \
   --preserve-current \
@@ -1149,7 +1149,7 @@ Automatic tracking of:
 
 ```bash
 # Analyze swarm performance
-npx hive-flow github issue-metrics \
+hive-flow github issue-metrics \
   --issue 456 \
   --metrics "time-to-close,agent-efficiency,subtask-completion"
 ```
@@ -1158,7 +1158,7 @@ npx hive-flow github issue-metrics \
 
 ```bash
 # Generate effectiveness report
-npx hive-flow github effectiveness \
+hive-flow github effectiveness \
   --issues "closed:>2024-01-01" \
   --compare "with-swarm,without-swarm"
 ```
@@ -1215,7 +1215,7 @@ EOF
 
 # 2. Initialize swarm and decompose tasks
 ISSUE_NUM=$(gh issue list --label "swarm-ready" --limit 1 --json number --jq '.[0].number')
-npx hive-flow github issue-init $ISSUE_NUM \
+hive-flow github issue-init $ISSUE_NUM \
   --topology mesh \
   --auto-decompose \
   --assign-agents "architect,coder,tester"
@@ -1226,12 +1226,12 @@ gh project item-add $PROJECT_ID --owner @me \
   --url "https:/$github.com/$GITHUB_REPOSITORY$issues/$ISSUE_NUM"
 
 # 4. Set up automated tracking
-npx hive-flow github board-sync \
+hive-flow github board-sync \
   --auto-move-cards \
   --update-metadata
 
 # 5. Monitor progress
-npx hive-flow github issue-progress $ISSUE_NUM \
+hive-flow github issue-progress $ISSUE_NUM \
   --auto-update-comments \
   --notify-on-completion
 ```
@@ -1243,22 +1243,22 @@ npx hive-flow github issue-progress $ISSUE_NUM \
 ```bash
 # Issue Management
 gh issue create --title "..." --body "..." --label "..."
-npx hive-flow github issue-init <number>
-npx hive-flow github issue-decompose <number>
-npx hive-flow github triage --unlabeled
+hive-flow github issue-init <number>
+hive-flow github issue-decompose <number>
+hive-flow github triage --unlabeled
 
 # Project Boards
-npx hive-flow github board-init --project-id <id>
-npx hive-flow github board-sync
-npx hive-flow github board-analytics
+hive-flow github board-init --project-id <id>
+hive-flow github board-sync
+hive-flow github board-analytics
 
 # Sprint Management
-npx hive-flow github sprint-manage --sprint "Sprint X"
-npx hive-flow github milestone-track --milestone "vX.X"
+hive-flow github sprint-manage --sprint "Sprint X"
+hive-flow github milestone-track --milestone "vX.X"
 
 # Analytics
-npx hive-flow github issue-metrics --issue <number>
-npx hive-flow github board-kpis
+hive-flow github issue-metrics --issue <number>
+hive-flow github board-kpis
 ```
 
 ---

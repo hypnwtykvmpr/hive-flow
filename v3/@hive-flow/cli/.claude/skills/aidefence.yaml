@@ -8,8 +8,6 @@ description: |
 
 author: Hive Flow
 license: MIT
-homepage: https://hive-flow.invalid/aimds
-repository: https://github.com/hypnwtykvmpr/midstream/tree/main/AIMDS
 
 # Package reference
 package: aidefence@^2.1.1
@@ -291,7 +289,4 @@ behavioral_analysis:
 
 # Documentation links
 documentation:
-  readme: https://github.com/hypnwtykvmpr/midstream/blob/main/AIMDS/README.md
-  api: https://hive-flow.invalid/aimds/api
-  patterns: https://hive-flow.invalid/aimds/patterns
   integration: /v3/implementation/adrs/ADR-022-aidefence-integration.md

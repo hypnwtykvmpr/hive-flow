@@ -17,7 +17,6 @@ Monitors for:
 **Missing Dependencies:**
 ```
 Error: Cannot find module 'express'
-→ Automatically runs: npm install express
 → Retries original command
 ```
 
@@ -94,7 +93,7 @@ mcp__hive-flow__task_orchestrate({
 {
   "PostToolUse": [{
     "matcher": "^Bash$",
-    "command": "npx hive-flow hook post-bash --exit-code '${tool.result.exitCode}' --auto-recover"
+    "command": "hive-flow hook post-bash --exit-code '${tool.result.exitCode}' --auto-recover"
   }]
 }
 ```

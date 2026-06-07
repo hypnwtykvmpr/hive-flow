@@ -6,7 +6,7 @@
  * graph neural networks for patient pathway analysis.
  *
  * Features:
- * - Patient similarity search using HNSW (150x faster)
+ * - Patient similarity search using HNSW (optimized faster)
  * - Drug interaction detection using GNN
  * - Clinical pathway recommendations
  * - Medical literature semantic search
@@ -64,7 +64,7 @@ export const pluginMetadata = {
   name: '@hive-flow/plugin-healthcare-clinical',
   version: '3.0.0-alpha.1',
   description: 'HIPAA-compliant clinical decision support with patient similarity, drug interactions, and clinical pathways',
-  author: 'rUv',
+  author: 'Hive Flow',
   license: 'MIT',
   category: 'healthcare',
   tags: ['healthcare', 'clinical', 'hipaa', 'fhir', 'patient-similarity', 'drug-interactions'],

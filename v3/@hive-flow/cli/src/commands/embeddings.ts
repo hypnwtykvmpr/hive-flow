@@ -974,7 +974,7 @@ const hyperbolicCommand: Command = {
 
       if (!hyperbolic || !hyperbolic.euclideanToPoincare) {
         output.printWarning('@hive-flow/embeddings hyperbolic module not available');
-        output.printInfo('Install with: npm install @hive-flow/embeddings');
+        output.printInfo('Install @hive-flow/embeddings with your configured package manager.');
         return { success: false, exitCode: 1 };
       }
 

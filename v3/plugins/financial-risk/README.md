@@ -1,8 +1,5 @@
 # @hive-flow/plugin-financial-risk
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-financial-risk.svg)](https://www.npmjs.com/package/@hive-flow/plugin-financial-risk)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-financial-risk.svg)](https://www.npmjs.com/package/@hive-flow/plugin-financial-risk)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A high-performance financial risk analysis plugin combining sparse inference for efficient market signal processing with graph neural networks for transaction network analysis. The plugin enables real-time anomaly detection, portfolio risk scoring, and automated compliance reporting while maintaining the explainability required by financial regulators (SEC, FINRA, Basel III).
 
@@ -19,13 +16,12 @@ A high-performance financial risk analysis plugin combining sparse inference for
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-financial-risk
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-financial-risk
+hive-flow plugins install --name @hive-flow/plugin-financial-risk
 ```
 
 ## Quick Start

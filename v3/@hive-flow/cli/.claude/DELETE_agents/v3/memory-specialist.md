@@ -912,26 +912,26 @@ mcp__hive-flow__memory_sync --target="peer-agent-1"
 
 ```bash
 # Initialize memory system
-npx hive-flow@v3alpha memory init --backend=hybrid --hnsw-enabled
+hive-flow memory init --backend=hybrid --hnsw-enabled
 
 # Memory health check
-npx hive-flow@v3alpha memory health
+hive-flow memory health
 
 # Search memories
-npx hive-flow@v3alpha memory search -q "authentication patterns" --namespace="patterns"
+hive-flow memory search -q "authentication patterns" --namespace="patterns"
 
 # Consolidate memories
-npx hive-flow@v3alpha memory consolidate --strategy=hybrid --retention=0.7
+hive-flow memory consolidate --strategy=hybrid --retention=0.7
 
 # Export/import namespaces
-npx hive-flow@v3alpha memory export --namespace="project:myapp" --format=json
-npx hive-flow@v3alpha memory import --file="backup.json" --namespace="project:myapp"
+hive-flow memory export --namespace="project:myapp" --format=json
+hive-flow memory import --file="backup.json" --namespace="project:myapp"
 
 # Memory statistics
-npx hive-flow@v3alpha memory stats --namespace="default"
+hive-flow memory stats --namespace="default"
 
 # Quantization
-npx hive-flow@v3alpha memory quantize --namespace="embeddings" --method=int8
+hive-flow memory quantize --namespace="embeddings" --method=int8
 ```
 
 ## Performance Targets

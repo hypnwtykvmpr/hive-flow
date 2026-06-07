@@ -12,7 +12,6 @@ This guide walks through setting up a live IPFS plugin registry using Google Clo
 
 ### 1.1 Create Pinata Account
 
-1. Go to https://pinata.cloud and create an account
 2. Navigate to API Keys section
 3. Create a new API key with these permissions:
    - `pinning/pinFileToIPFS`: true
@@ -32,7 +31,6 @@ If you have Pinata's paid plan with Dedicated Gateways:
 
 ```bash
 # Via Pinata dashboard or API
-curl -X POST "https://api.pinata.cloud/v3/ipfs/keys" \
   -H "Authorization: Bearer $PINATA_JWT" \
   -H "Content-Type: application/json" \
   -d '{"name": "hive-flow-registry"}'
@@ -192,7 +190,6 @@ export async function publishRegistry(req, res) {
     registry.registryPublicKey = `ed25519:${Buffer.from(publicKey).toString('hex')}`;
 
     // Pin to IPFS
-    const pinResponse = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -222,8 +219,6 @@ export async function publishRegistry(req, res) {
       updatedAt: registry.updatedAt,
       pluginCount: registry.plugins.length,
       gateways: [
-        `https://gateway.pinata.cloud/ipfs/${pinResult.IpfsHash}`,
-        `https://ipfs.io/ipfs/${pinResult.IpfsHash}`,
       ],
     });
   } catch (error) {
@@ -254,7 +249,7 @@ gcloud functions deploy publish-registry \
 
 ```bash
 # Generate initial registry
-npx tsx scripts/publish-registry.ts --dry-run > registry.json
+tsx scripts/publish-registry.ts --dry-run > registry.json
 
 # Upload to GCS
 gsutil cp registry.json gs://hive-flow-plugin-registry/registry.json
@@ -292,7 +287,6 @@ steps:
     args: ['-X', 'POST', '${_FUNCTION_URL}']
 
 substitutions:
-  _FUNCTION_URL: 'https://us-central1-hive-flow-registry.cloudfunctions.net/publish-registry'
 
 # Run daily at 2am UTC
 options:
@@ -305,7 +299,6 @@ options:
 gcloud scheduler jobs create http publish-registry-daily \
   --location=us-central1 \
   --schedule="0 2 * * *" \
-  --uri="https://us-central1-hive-flow-registry.cloudfunctions.net/publish-registry" \
   --http-method=POST
 ```
 
@@ -321,7 +314,6 @@ export const DEFAULT_PLUGIN_STORE_CONFIG: PluginStoreConfig = {
       description: 'Official Hive Flow plugin registry',
       // Use the CID from your first publish
       ipnsName: 'YOUR_IPNS_KEY_OR_CID',
-      gateway: 'https://gateway.pinata.cloud',
       // Use your public key from the signing step
       publicKey: 'ed25519:YOUR_PUBLIC_KEY',
       trusted: true,
@@ -359,8 +351,3 @@ export const DEFAULT_PLUGIN_STORE_CONFIG: PluginStoreConfig = {
 - Test secrets access manually
 
 ## References
-
-- [Pinata Docs](https://docs.pinata.cloud/)
-- [Google Cloud Functions](https://cloud.google.com/functions/docs)
-- [IPFS Gateway Spec](https://docs.ipfs.tech/concepts/ipfs-gateway/)
-- [Ed25519 Signatures](https://ed25519.cr.yp.to/)

@@ -4,7 +4,7 @@ Search through stored memory.
 
 ## Usage
 ```bash
-npx hive-flow memory search [options]
+hive-flow memory search [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow memory search [options]
 ## Examples
 ```bash
 # Search memory
-npx hive-flow memory search --query "authentication"
+hive-flow memory search --query "authentication"
 
 # Pattern search
-npx hive-flow memory search --pattern "api-.*"
+hive-flow memory search --pattern "api-.*"
 
 # Limited results
-npx hive-flow memory search --query "config" --limit 10
+hive-flow memory search --query "config" --limit 10
 ```

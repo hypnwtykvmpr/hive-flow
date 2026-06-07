@@ -1,10 +1,5 @@
 # @hive-flow/neural
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/neural.svg)](https://www.npmjs.com/package/@hive-flow/neural)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/neural.svg)](https://www.npmjs.com/package/@hive-flow/neural)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![AI Learning](https://img.shields.io/badge/AI-Self--Learning-purple.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > Self-Optimizing Neural Architecture (SONA) module for Hive Flow V3 - adaptive learning, trajectory tracking, and pattern-based optimization.
 
@@ -21,7 +16,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/neural
 ```
 
 ## Quick Start

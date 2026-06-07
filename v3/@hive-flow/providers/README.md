@@ -1,10 +1,5 @@
 # @hive-flow/providers
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/providers.svg)](https://www.npmjs.com/package/@hive-flow/providers)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/providers.svg)](https://www.npmjs.com/package/@hive-flow/providers)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Providers](https://img.shields.io/badge/Providers-6+-orange.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > Multi-LLM Provider System for Hive Flow V3 - unified interface for Anthropic, OpenAI, Google, Cohere, Ollama, and Hivector with intelligent load balancing, automatic failover, and cost optimization.
 
@@ -52,7 +47,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/providers
 ```
 
 ## Quick Start
@@ -360,7 +354,6 @@ const response = await manager.complete({
       role: 'user',
       content: [
         { type: 'text', text: 'What is in this image?' },
-        { type: 'image', imageUrl: 'https://example.com/image.jpg' },
         // or imageBase64: 'base64-encoded-image'
       ],
     },
@@ -451,11 +444,8 @@ GOOGLE_API_KEY=...
 COHERE_API_KEY=...
 
 # Ollama (local)
-OLLAMA_BASE_URL=http://localhost:11434
 
 # Optional overrides
-ANTHROPIC_BASE_URL=https://api.anthropic.com
-OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
 ## Provider Configuration
@@ -518,7 +508,6 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 ```typescript
 {
   provider: 'ollama',
-  apiUrl: 'http://localhost:11434',
   model: 'llama3.2',
   temperature: 0.7,
   maxTokens: 4096,

@@ -63,16 +63,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run sparc "orchestrate authentication system"
+hive-flow sparc run sparc "orchestrate authentication system"
 
 # For alpha features
-npx hive-flow@alpha sparc run sparc "orchestrate authentication system"
+hive-flow sparc run sparc "orchestrate authentication system"
 
 # With namespace
-npx hive-flow sparc run sparc "your task" --namespace sparc
+hive-flow sparc run sparc "your task" --namespace sparc
 
 # Non-interactive mode
-npx hive-flow sparc run sparc "your task" --non-interactive
+hive-flow sparc run sparc "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -104,8 +104,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "sparc_context" "important decisions" --namespace sparc
+hive-flow memory store "sparc_context" "important decisions" --namespace sparc
 
 # Query previous work
-npx hive-flow memory query "sparc" --limit 5
+hive-flow memory query "sparc" --limit 5
 ```

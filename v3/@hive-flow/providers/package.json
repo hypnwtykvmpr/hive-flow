@@ -25,7 +25,7 @@
     "test:integration": "vitest run src/__tests__/provider-integration.test.ts",
     "test:provider-hardening": "vitest run src/__tests__/openrouter-hardening.test.ts",
     "test:coverage": "vitest run --coverage",
-    "test:quick": "npx tsx src/__tests__/quick-test.ts",
+    "test:quick": "tsx src/__tests__/quick-test.ts",
     "lint": "eslint src/",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"

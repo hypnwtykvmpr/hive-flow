@@ -144,7 +144,7 @@ async function uploadToPinata(
   if (!apiKey || !apiSecret) {
     throw new Error(
       'Pinata API credentials not found. Set PINATA_API_KEY and PINATA_API_SECRET.\n' +
-      'Get credentials at: https://pinata.cloud'
+      'Get credentials at: Pinata'
     );
   }
 

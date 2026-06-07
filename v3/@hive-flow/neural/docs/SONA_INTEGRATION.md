@@ -334,7 +334,7 @@ Run examples:
 
 ```bash
 cd v3/@hive-flow/neural
-npx tsx examples/sona-usage.ts
+tsx examples/sona-usage.ts
 ```
 
 ## Integration with V3 Neural Module
@@ -440,8 +440,6 @@ console.log(status);
 
 ## References
 
-- [LoRA Paper](https://arxiv.org/abs/2106.09685)
-- [EWC Paper](https://arxiv.org/abs/1612.00796)
 - [V3 Neural Module](../README.md)
 
 ## License

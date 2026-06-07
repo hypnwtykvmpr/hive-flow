@@ -134,8 +134,8 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 ```bash
 # Add MCP servers (stdin-piped mode auto-detected)
 claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-claude mcp add hive-flow -- npx -y hive-flow mcp start
-claude mcp add flow-nexus -- npx -y flow-nexus@latest mcp start
+claude mcp add hive-flow -- hive-flow mcp start
+claude mcp add flow-nexus -- flow-nexus mcp start
 
 # Start services and verify
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
@@ -194,7 +194,5 @@ Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin
 
 ## References
 - Full generated capabilities: `.hive-flow/CAPABILITIES.md`
-- Docs: https://github.com/hypnwtykvmpr/hive-flow
-- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
 
 CLI coordinates; Claude Code executes.

@@ -23,7 +23,6 @@ If you've cloned the repository:
 
 ```bash
 # Clone the repository
-git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 
 # In Claude Code, install the plugin
@@ -129,10 +128,8 @@ The plugin defines MCP servers, but you may need to install the packages:
 
 ```bash
 # Core MCP (recommended)
-npm install -g hive-flow@alpha
 
 # Optional cloud features (requires authentication)
-npm install -g flow-nexus@latest
 ```
 
 MCP servers are automatically configured when you install the plugin.
@@ -195,7 +192,6 @@ ls -la agents/
 
 ```
 # Try local installation
-git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 /plugin add .
 ```
@@ -206,8 +202,6 @@ cd hive-flow
 
 - **Documentation**: See README.md for complete documentation
 - **Quick Start**: See docs/QUICKSTART.md for 5-minute guide
-- **GitHub Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
-- **Discussions**: https://github.com/hypnwtykvmpr/hive-flow/discussions
 
 ---
 

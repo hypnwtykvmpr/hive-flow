@@ -18,17 +18,16 @@ Think of it as having a team of QA engineers who never sleep, never miss edge ca
 
 **Via Hive Flow CLI (recommended):**
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-agentic-qe
+hive-flow plugins install --name @hive-flow/plugin-agentic-qe
 ```
 
 **Via npm:**
 ```bash
-npm install @hive-flow/plugin-agentic-qe
 ```
 
 **Verify installation:**
 ```bash
-npx hive-flow plugins list
+hive-flow plugins list
 ```
 
 ---
@@ -40,7 +39,7 @@ npx hive-flow plugins list
 The simplest use case - point it at a file and get tests:
 
 ```bash
-npx hive-flow@v3alpha mcp call aqe/generate-tests \
+hive-flow mcp call aqe/generate-tests \
   --targetPath ./src/utils/calculator.ts \
   --testType unit \
   --framework vitest
@@ -69,7 +68,7 @@ describe('Calculator', () => {
 Give it a requirement, and it runs the full red-green-refactor cycle:
 
 ```bash
-npx hive-flow@v3alpha mcp call aqe/tdd-cycle \
+hive-flow mcp call aqe/tdd-cycle \
   --requirement "Users can reset their password via email" \
   --targetPath ./src/auth \
   --style london
@@ -86,7 +85,7 @@ npx hive-flow@v3alpha mcp call aqe/tdd-cycle \
 Scan your code for vulnerabilities:
 
 ```bash
-npx hive-flow@v3alpha mcp call aqe/security-scan \
+hive-flow mcp call aqe/security-scan \
   --targetPath ./src \
   --scanType sast \
   --compliance owasp-top-10
@@ -135,7 +134,7 @@ if (!evaluation.passed) {
 Use ML to find likely defects:
 
 ```bash
-npx hive-flow@v3alpha mcp call aqe/predict-defects \
+hive-flow mcp call aqe/predict-defects \
   --targetPath ./src/checkout \
   --includeRootCause true
 ```
@@ -160,7 +159,7 @@ Test how your system handles failures. **Always use dryRun first!**
 
 ```bash
 # Step 1: Preview what would happen (safe)
-npx hive-flow@v3alpha mcp call aqe/chaos-inject \
+hive-flow mcp call aqe/chaos-inject \
   --target payment-service \
   --failureType network-latency \
   --duration 30 \
@@ -168,7 +167,7 @@ npx hive-flow@v3alpha mcp call aqe/chaos-inject \
   --dryRun true
 
 # Step 2: Run the actual experiment
-npx hive-flow@v3alpha mcp call aqe/chaos-inject \
+hive-flow mcp call aqe/chaos-inject \
   --target payment-service \
   --failureType network-latency \
   --duration 30 \
@@ -192,7 +191,6 @@ Catch UI changes automatically:
 ```typescript
 // Compare against baseline
 const result = await mcp.call('aqe/visual-regression', {
-  targetUrl: 'http://localhost:3000',
   viewports: [
     { width: 1920, height: 1080 },  // Desktop
     { width: 768, height: 1024 },   // Tablet
@@ -226,7 +224,6 @@ const security = await mcp.call('aqe/security-scan', {
 
 // 3. Check accessibility
 const a11y = await mcp.call('aqe/check-accessibility', {
-  targetUrl: 'http://localhost:3000',
   standard: 'WCAG21-AA'
 });
 

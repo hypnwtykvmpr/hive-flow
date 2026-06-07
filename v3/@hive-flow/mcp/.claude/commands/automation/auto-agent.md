@@ -5,7 +5,7 @@ Automatically spawn and manage agents based on task requirements.
 ## Usage
 
 ```bash
-npx hive-flow auto agent [options]
+hive-flow auto agent [options]
 ```
 
 ## Options
@@ -21,25 +21,25 @@ npx hive-flow auto agent [options]
 ### Basic auto-spawning
 
 ```bash
-npx hive-flow auto agent --task "Build a REST API with authentication"
+hive-flow auto agent --task "Build a REST API with authentication"
 ```
 
 ### Constrained spawning
 
 ```bash
-npx hive-flow auto agent -t "Debug performance issue" --max-agents 3
+hive-flow auto agent -t "Debug performance issue" --max-agents 3
 ```
 
 ### Analysis only
 
 ```bash
-npx hive-flow auto agent -t "Refactor codebase" --no-spawn
+hive-flow auto agent -t "Refactor codebase" --no-spawn
 ```
 
 ### Minimal strategy
 
 ```bash
-npx hive-flow auto agent -t "Fix bug in login" -s minimal
+hive-flow auto agent -t "Fix bug in login" -s minimal
 ```
 
 ## How It Works

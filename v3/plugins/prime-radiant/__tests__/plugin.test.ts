@@ -88,7 +88,7 @@ class MockPrimeRadiantPlugin {
       name: 'prime-radiant',
       version: '0.1.3',
       description: 'Mathematical AI interpretability plugin',
-      author: 'rUv',
+      author: 'Hive Flow',
       license: 'MIT',
       wasmSize: '92KB',
       dependencies: ['@hive-flow/memory', '@hive-flow/security', '@hive-flow/coordination'],

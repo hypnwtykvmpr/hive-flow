@@ -1,8 +1,5 @@
 # @hive-flow/plugin-performance-optimizer
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-performance-optimizer.svg)](https://www.npmjs.com/package/@hive-flow/plugin-performance-optimizer)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-performance-optimizer.svg)](https://www.npmjs.com/package/@hive-flow/plugin-performance-optimizer)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A comprehensive performance optimization plugin combining sparse inference for efficient trace analysis with graph neural networks for dependency chain optimization. The plugin enables intelligent bottleneck detection, memory leak identification, N+1 query detection, and bundle size optimization while providing explainable recommendations based on historical performance patterns.
 
@@ -19,13 +16,12 @@ A comprehensive performance optimization plugin combining sparse inference for e
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-performance-optimizer
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-performance-optimizer
+hive-flow plugins install --name @hive-flow/plugin-performance-optimizer
 ```
 
 ## Quick Start

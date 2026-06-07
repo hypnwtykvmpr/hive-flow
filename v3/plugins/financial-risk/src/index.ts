@@ -66,7 +66,7 @@ export const pluginMetadata = {
   name: '@hive-flow/plugin-financial-risk',
   version: '3.0.0-alpha.1',
   description: 'High-performance financial risk analysis with portfolio risk, anomaly detection, and compliance checking',
-  author: 'rUv',
+  author: 'Hive Flow',
   license: 'MIT',
   category: 'finance',
   tags: ['finance', 'risk', 'portfolio', 'var', 'anomaly-detection', 'compliance', 'basel3', 'mifid2'],

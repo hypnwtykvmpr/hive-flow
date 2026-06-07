@@ -288,10 +288,8 @@ export const PLUGIN_METADATA = {
   name: 'agentic-qe',
   version: '3.2.3',
   description: 'Quality Engineering plugin with 51 specialized agents across 12 DDD bounded contexts',
-  author: 'rUv',
+  author: 'Hive Flow',
   license: 'MIT',
-  homepage: 'https://github.com/ruvnet/agentic-qe',
-  repository: 'https://github.com/ruvnet/agentic-qe',
   minHiveFlowVersion: '3.0.0-alpha.50',
   capabilities: [
     'test-generation',

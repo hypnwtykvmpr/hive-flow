@@ -4,7 +4,7 @@ AI-powered pull request enhancements.
 
 ## Usage
 ```bash
-npx hive-flow github pr-enhance [options]
+hive-flow github pr-enhance [options]
 ```
 
 ## Options
@@ -16,11 +16,11 @@ npx hive-flow github pr-enhance [options]
 ## Examples
 ```bash
 # Enhance PR
-npx hive-flow github pr-enhance --pr-number 123
+hive-flow github pr-enhance --pr-number 123
 
 # Add tests
-npx hive-flow github pr-enhance --pr-number 123 --add-tests
+hive-flow github pr-enhance --pr-number 123 --add-tests
 
 # Full enhancement
-npx hive-flow github pr-enhance --pr-number 123 --add-tests --improve-docs
+hive-flow github pr-enhance --pr-number 123 --add-tests --improve-docs
 ```

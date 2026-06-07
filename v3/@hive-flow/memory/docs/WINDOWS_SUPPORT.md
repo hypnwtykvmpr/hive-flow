@@ -25,7 +25,6 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
   // Pure JavaScript SQL execution
   async initialize(): Promise<void> {
     this.SQL = await initSqlJs({
-      locateFile: (file) => `https://sql.js.org/dist/${file}`
     });
     this.db = new this.SQL.Database();
   }
@@ -223,7 +222,6 @@ Memory Usage       Low              Medium        ~2x
 ### Standard Installation
 
 ```bash
-npm install @hive-flow/memory
 ```
 
 The module will:
@@ -235,7 +233,6 @@ The module will:
 
 ```bash
 # Skip better-sqlite3 compilation entirely
-npm install @hive-flow/memory --no-optional
 ```
 
 ### Docker on Windows
@@ -247,7 +244,6 @@ WORKDIR /app
 COPY package*.json ./
 
 # sql.js will be used automatically
-RUN npm install @hive-flow/memory
 
 COPY . .
 CMD ["node", "index.js"]
@@ -307,7 +303,6 @@ const db = await createDatabase('./memory.db');
 
 ✅ **No Visual Studio required** - sql.js is pure JavaScript/WASM
 ✅ **No Python dependency** - No node-gyp compilation
-✅ **Instant installation** - npm install just works
 ✅ **Same API** - Drop-in replacement for better-sqlite3
 ✅ **Reliable** - No compilation errors, version conflicts
 
@@ -373,7 +368,6 @@ const db = await createDatabase('./memory.db');
 
 **Solution:**
 ```bash
-npm install sql.js
 ```
 
 ### WASM Load Failure
@@ -406,10 +400,6 @@ const db = await createDatabase('./memory.db', {
 
 ## References
 
-- [sql.js Documentation](https://sql.js.org/)
-- [better-sqlite3 Documentation](https://github.com/WiseLibs/better-sqlite3)
-- [SQLite Documentation](https://www.sqlite.org/docs.html)
-- [WebAssembly Documentation](https://webassembly.org/)
 
 ## License
 

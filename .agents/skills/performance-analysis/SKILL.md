@@ -23,17 +23,17 @@ This skill consolidates all performance analysis capabilities:
 
 ### Basic Bottleneck Detection
 ```bash
-npx hive-flow bottleneck detect
+hive-flow bottleneck detect
 ```
 
 ### Generate Performance Report
 ```bash
-npx hive-flow analysis performance-report --format html --include-metrics
+hive-flow analysis performance-report --format html --include-metrics
 ```
 
 ### Analyze and Auto-Fix
 ```bash
-npx hive-flow bottleneck detect --fix --threshold 15
+hive-flow bottleneck detect --fix --threshold 15
 ```
 
 ## Core Capabilities
@@ -42,7 +42,7 @@ npx hive-flow bottleneck detect --fix --threshold 15
 
 #### Command Syntax
 ```bash
-npx hive-flow bottleneck detect [options]
+hive-flow bottleneck detect [options]
 ```
 
 #### Options
@@ -55,19 +55,19 @@ npx hive-flow bottleneck detect [options]
 #### Usage Examples
 ```bash
 # Basic detection for current swarm
-npx hive-flow bottleneck detect
+hive-flow bottleneck detect
 
 # Analyze specific swarm over 24 hours
-npx hive-flow bottleneck detect --swarm-id swarm-123 -t 24h
+hive-flow bottleneck detect --swarm-id swarm-123 -t 24h
 
 # Export detailed analysis
-npx hive-flow bottleneck detect -t 24h -e bottlenecks.json
+hive-flow bottleneck detect -t 24h -e bottlenecks.json
 
 # Auto-fix detected issues
-npx hive-flow bottleneck detect --fix --threshold 15
+hive-flow bottleneck detect --fix --threshold 15
 
 # Low threshold for sensitive detection
-npx hive-flow bottleneck detect --threshold 10 --export critical-issues.json
+hive-flow bottleneck detect --threshold 10 --export critical-issues.json
 ```
 
 #### Metrics Analyzed
@@ -217,7 +217,7 @@ mcp__hive-flow__task_results({
 
 #### Command Syntax
 ```bash
-npx hive-flow analysis performance-report [options]
+hive-flow analysis performance-report [options]
 ```
 
 #### Options
@@ -263,26 +263,26 @@ npx hive-flow analysis performance-report [options]
 #### Usage Examples
 ```bash
 # Generate HTML report with all metrics
-npx hive-flow analysis performance-report --format html --include-metrics
+hive-flow analysis performance-report --format html --include-metrics
 
 # Compare current swarm with previous
-npx hive-flow analysis performance-report --compare swarm-123 --format markdown
+hive-flow analysis performance-report --compare swarm-123 --format markdown
 
 # Custom output with specific sections
-npx hive-flow analysis performance-report \
+hive-flow analysis performance-report \
   --sections summary,metrics,recommendations \
   --output reports$perf-analysis.html \
   --format html
 
 # Weekly performance report
-npx hive-flow analysis performance-report \
+hive-flow analysis performance-report \
   --time-range 7d \
   --include-metrics \
   --format markdown \
   --output docs$weekly-performance.md
 
 # JSON format for CI/CD integration
-npx hive-flow analysis performance-report \
+hive-flow analysis performance-report \
   --format json \
   --output build$performance.json
 ```
@@ -371,11 +371,11 @@ Typical improvements after bottleneck resolution:
 ### Continuous Monitoring
 ```bash
 # Monitor performance in real-time
-npx hive-flow swarm monitor --interval 5
+hive-flow swarm monitor --interval 5
 
 # Generate hourly reports
 while true; do
-  npx hive-flow analysis performance-report \
+  hive-flow analysis performance-report \
     --format json \
     --output logs$perf-$(date +%Y%m%d-%H%M).json
   sleep 3600
@@ -395,12 +395,12 @@ jobs:
       - uses: actions$checkout@v2
       - name: Run Performance Analysis
         run: |
-          npx hive-flow analysis performance-report \
+          hive-flow analysis performance-report \
             --format json \
             --output performance.json
       - name: Check Performance Thresholds
         run: |
-          npx hive-flow bottleneck detect \
+          hive-flow bottleneck detect \
             --threshold 15 \
             --export bottlenecks.json
       - name: Upload Reports
@@ -421,12 +421,12 @@ const fs = require('fs');
 async function analyzePerformance() {
   // Run bottleneck detection
   const bottlenecks = await runCommand(
-    'npx hive-flow bottleneck detect --format json'
+    'hive-flow bottleneck detect --format json'
   );
 
   // Generate performance report
   const report = await runCommand(
-    'npx hive-flow analysis performance-report --format json'
+    'hive-flow analysis performance-report --format json'
   );
 
   // Analyze results
@@ -500,37 +500,37 @@ analyzePerformance().catch(console.error);
 **High Memory Usage**
 ```bash
 # Analyze memory bottlenecks
-npx hive-flow bottleneck detect --threshold 10
+hive-flow bottleneck detect --threshold 10
 
 # Check cache performance
-npx hive-flow cache manage --action stats
+hive-flow cache manage --action stats
 
 # Review memory metrics
-npx hive-flow memory usage
+hive-flow memory usage
 ```
 
 **Slow Task Execution**
 ```bash
 # Identify slow tasks
-npx hive-flow task status --detailed
+hive-flow task status --detailed
 
 # Analyze coordination overhead
-npx hive-flow bottleneck detect --time-range 1h
+hive-flow bottleneck detect --time-range 1h
 
 # Check agent utilization
-npx hive-flow agent metrics
+hive-flow agent metrics
 ```
 
 **Poor Cache Performance**
 ```bash
 # Analyze cache hit rates
-npx hive-flow analysis performance-report --sections metrics
+hive-flow analysis performance-report --sections metrics
 
 # Review cache strategy
-npx hive-flow cache manage --action analyze
+hive-flow cache manage --action analyze
 
 # Enable cache warming
-npx hive-flow bottleneck detect --fix
+hive-flow bottleneck detect --fix
 ```
 
 ## Integration with Other Skills
@@ -542,11 +542,11 @@ npx hive-flow bottleneck detect --fix
 
 ## Related Commands
 
-- `npx hive-flow swarm monitor` - Real-time monitoring
-- `npx hive-flow token usage` - Token optimization analysis
-- `npx hive-flow cache manage` - Cache optimization
-- `npx hive-flow agent metrics` - Agent performance metrics
-- `npx hive-flow task status` - Task execution analysis
+- `hive-flow swarm monitor` - Real-time monitoring
+- `hive-flow token usage` - Token optimization analysis
+- `hive-flow cache manage` - Cache optimization
+- `hive-flow agent metrics` - Agent performance metrics
+- `hive-flow task status` - Task execution analysis
 
 ## See Also
 

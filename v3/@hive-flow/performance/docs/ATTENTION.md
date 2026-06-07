@@ -184,7 +184,7 @@ See `/src/examples/flash-attention-demo.ts` for comprehensive examples:
 
 ```bash
 # Run all examples
-npx tsx v3/@hive-flow/performance/src/examples/flash-attention-demo.ts
+tsx v3/@hive-flow/performance/src/examples/flash-attention-demo.ts
 ```
 
 ## Technical Details

@@ -1,8 +1,5 @@
 # @hive-flow/plugin-healthcare-clinical
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/plugin-healthcare-clinical.svg)](https://www.npmjs.com/package/@hive-flow/plugin-healthcare-clinical)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/plugin-healthcare-clinical.svg)](https://www.npmjs.com/package/@hive-flow/plugin-healthcare-clinical)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A HIPAA-compliant clinical decision support plugin that combines ultra-fast vector search for medical literature retrieval with graph neural networks for patient pathway analysis. The plugin enables semantic search across medical records, drug interaction detection, and evidence-based treatment recommendations while maintaining strict data privacy through on-device WASM processing.
 
@@ -19,13 +16,12 @@ A HIPAA-compliant clinical decision support plugin that combines ultra-fast vect
 ### npm
 
 ```bash
-npm install @hive-flow/plugin-healthcare-clinical
 ```
 
 ### CLI
 
 ```bash
-npx hive-flow plugins install --name @hive-flow/plugin-healthcare-clinical
+hive-flow plugins install --name @hive-flow/plugin-healthcare-clinical
 ```
 
 ## Quick Start
@@ -241,7 +237,7 @@ const rateLimits = {
 
 ## Dependencies
 
-- `micro-hnsw-wasm`: Fast similarity search (150x faster than traditional)
+- `micro-hnsw-wasm`: Fast similarity search (optimized faster than traditional)
 - `local-gnn-wasm`: Graph neural networks for pathway analysis
 - `local-hyperbolic-hnsw-wasm`: Hierarchical medical ontology embeddings
 - `local-sparse-inference-wasm`: Efficient inference on sparse clinical features

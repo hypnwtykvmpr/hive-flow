@@ -107,7 +107,7 @@ export class AnthropicCLIProvider extends BaseProvider {
     if (!this.binaryPath) {
       this.logger.warn(
         'Claude CLI binary not found. Install Claude Code or set CLAUDE_PATH. ' +
-        'See https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview'
+        'See Claude Code documentation'
       );
     } else {
       this.logger.info(`Claude CLI found at: ${this.binaryPath}`);

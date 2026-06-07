@@ -12,7 +12,7 @@ import { HookEvent, HookPriority, type HookHandler, type HookContext, type HookR
 
 /**
  * Official Claude Code hook event types
- * Based on https://code.claude.com/docs/en/hooks
+ * Based on Claude Code hooks documentation
  */
 export type OfficialHookEvent =
   | 'PreToolUse'
@@ -322,7 +322,7 @@ export class OfficialHooksBridge {
    * Create a CLI command for a V3 hook handler
    */
   static createCLICommand(event: HookEvent, handler: string): string {
-    const baseCommand = 'npx hive-flow hooks';
+    const baseCommand = 'hive-flow hooks';
 
     switch (event) {
       case HookEvent.PreEdit:

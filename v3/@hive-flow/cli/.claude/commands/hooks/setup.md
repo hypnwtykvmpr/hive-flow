@@ -4,7 +4,7 @@
 
 ### 1. Initialize with Hooks
 ```bash
-npx hive-flow init --hooks
+hive-flow init --hooks
 ```
 
 This automatically creates:
@@ -15,10 +15,10 @@ This automatically creates:
 ### 2. Test Hook Functionality
 ```bash
 # Test pre-edit hook
-npx hive-flow hook pre-edit --file test.js
+hive-flow hook pre-edit --file test.js
 
 # Test session summary
-npx hive-flow hook session-end --summary
+hive-flow hook session-end --summary
 ```
 
 ### 3. Customize Hooks
@@ -33,7 +33,7 @@ Edit `.claude/settings.json` to customize:
         "matcher": "^Write$",
         "hooks": [{
           "type": "command",
-          "command": "npx hive-flow hook pre-write --file '${tool.params.file_path}'"
+          "command": "hive-flow hook pre-write --file '${tool.params.file_path}'"
         }]
       }
     ]
@@ -72,7 +72,7 @@ Example blocking response:
 export HIVE_FLOW_DEBUG=true
 
 # Test specific hook
-npx hive-flow hook pre-edit --file app.js --debug
+hive-flow hook pre-edit --file app.js --debug
 ```
 
 ## Common Patterns
@@ -86,7 +86,7 @@ Already configured by default for common file types.
   "matcher": "^(Write|Edit)$",
   "hooks": [{
     "type": "command",
-    "command": "npx hive-flow hook check-protected --file '${tool.params.file_path}'"
+    "command": "hive-flow hook check-protected --file '${tool.params.file_path}'"
   }]
 }
 ```

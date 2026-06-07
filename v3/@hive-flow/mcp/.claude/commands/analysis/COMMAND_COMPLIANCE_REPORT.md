@@ -3,7 +3,7 @@
 ## Overview
 Reviewed all command files in `.claude/commands/analysis/` directory to ensure proper usage of:
 - `mcp__hive-flow__*` tools (preferred)
-- `npx hive-flow` commands (as fallback)
+- `hive-flow` commands (as fallback)
 - No direct implementation calls
 
 ## Files Reviewed
@@ -11,13 +11,13 @@ Reviewed all command files in `.claude/commands/analysis/` directory to ensure p
 ### 1. token-efficiency.md
 **Status**: ✅ Updated
 **Changes Made**:
-- Replaced `npx hive-flow hook session-end --export-metrics` with proper MCP tool call
+- Replaced `hive-flow hook session-end --export-metrics` with proper MCP tool call
 - Updated to: `Tool: mcp__hive-flow__token_usage` with appropriate parameters
 - Maintained result format and context
 
 **Before**:
 ```bash
-npx hive-flow hook session-end --export-metrics
+hive-flow hook session-end --export-metrics
 ```
 
 **After**:

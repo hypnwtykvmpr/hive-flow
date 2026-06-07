@@ -210,9 +210,9 @@ Working Directory: ${projectPath}
 Shared Memory Namespace: ${sharedNamespace}
 
 COLLABORATION PROTOCOL:
-1. Search shared memory for context: npx hive-flow@alpha memory search --query "<relevant terms>" --namespace ${sharedNamespace}
+1. Search shared memory for context: hive-flow memory search --query "<relevant terms>" --namespace ${sharedNamespace}
 2. Complete your assigned task
-3. Store your results: npx hive-flow@alpha memory store --key "${config.id}-result" --value "<your summary>" --namespace ${sharedNamespace}
+3. Store your results: hive-flow memory store --key "${config.id}-result" --value "<your summary>" --namespace ${sharedNamespace}
 
 YOUR TASK:
 ${config.prompt}

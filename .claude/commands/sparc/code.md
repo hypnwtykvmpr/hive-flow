@@ -41,16 +41,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run code "implement REST API endpoints"
+hive-flow sparc run code "implement REST API endpoints"
 
 # For alpha features
-npx hive-flow@alpha sparc run code "implement REST API endpoints"
+hive-flow sparc run code "implement REST API endpoints"
 
 # With namespace
-npx hive-flow sparc run code "your task" --namespace code
+hive-flow sparc run code "your task" --namespace code
 
 # Non-interactive mode
-npx hive-flow sparc run code "your task" --non-interactive
+hive-flow sparc run code "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -82,8 +82,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "code_context" "important decisions" --namespace code
+hive-flow memory store "code_context" "important decisions" --namespace code
 
 # Query previous work
-npx hive-flow memory query "code" --limit 5
+hive-flow memory query "code" --limit 5
 ```

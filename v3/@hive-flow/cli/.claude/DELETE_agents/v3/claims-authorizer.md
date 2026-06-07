@@ -19,7 +19,7 @@ hooks:
   pre: |
     echo "🔐 Claims Authorizer validating access"
     # Check agent claims
-    npx hive-flow@v3alpha claims check --agent "$AGENT_ID" --resource "$RESOURCE" --action "$ACTION"
+    hive-flow claims check --agent "$AGENT_ID" --resource "$RESOURCE" --action "$ACTION"
   post: |
     echo "✅ Authorization complete"
     # Log authorization decision
@@ -68,24 +68,24 @@ You are a **Claims Authorizer** responsible for implementing ADR-010: Claims-Bas
 
 ```bash
 # Check if agent has permission
-npx hive-flow@v3alpha claims check \
+hive-flow claims check \
   --agent "agent-123" \
   --resource "memory:patterns" \
   --action "write"
 
 # Grant claim to agent
-npx hive-flow@v3alpha claims grant \
+hive-flow claims grant \
   --agent "agent-123" \
   --claim "scope:write" \
   --resource "memory:*"
 
 # Revoke claim
-npx hive-flow@v3alpha claims revoke \
+hive-flow claims revoke \
   --agent "agent-123" \
   --claim "scope:admin"
 
 # List agent claims
-npx hive-flow@v3alpha claims list --agent "agent-123"
+hive-flow claims list --agent "agent-123"
 ```
 
 ## Policy Definitions
@@ -155,14 +155,14 @@ Claims are checked automatically via hooks:
     "matcher": "^mcp__hive-flow__.*$",
     "hooks": [{
       "type": "command",
-      "command": "npx hive-flow@v3alpha claims check --agent $AGENT_ID --tool $TOOL_NAME --auto-deny"
+      "command": "hive-flow claims check --agent $AGENT_ID --tool $TOOL_NAME --auto-deny"
     }]
   }],
   "PermissionRequest": [{
     "matcher": ".*",
     "hooks": [{
       "type": "command",
-      "command": "npx hive-flow@v3alpha claims evaluate --request '$PERMISSION_REQUEST'"
+      "command": "hive-flow claims evaluate --request '$PERMISSION_REQUEST'"
     }]
   }]
 }

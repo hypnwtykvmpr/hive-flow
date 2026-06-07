@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env tsx
 /**
  * Analyze and auto-optimize the project's CLAUDE.md
  *

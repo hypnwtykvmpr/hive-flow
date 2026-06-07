@@ -167,36 +167,36 @@ export async function generateBuiltInSkill(
         {
           name: 'Initialize Swarm',
           description: 'Start a new swarm with hierarchical topology (anti-drift)',
-          command: 'npx @hive-flow/cli swarm init --topology hierarchical --max-agents 8 --strategy specialized',
-          example: 'npx @hive-flow/cli swarm init --topology hierarchical --max-agents 6 --strategy specialized',
+          command: 'hive-flow swarm init --topology hierarchical --max-agents 8 --strategy specialized',
+          example: 'hive-flow swarm init --topology hierarchical --max-agents 6 --strategy specialized',
         },
         {
           name: 'Route Task',
           description: 'Route a task to the appropriate agents based on task type',
-          command: 'npx @hive-flow/cli hooks route --task "[task description]"',
-          example: 'npx @hive-flow/cli hooks route --task "implement OAuth2 authentication flow"',
+          command: 'hive-flow hooks route --task "[task description]"',
+          example: 'hive-flow hooks route --task "implement OAuth2 authentication flow"',
         },
         {
           name: 'Spawn Agent',
           description: 'Spawn a specific agent type',
-          command: 'npx @hive-flow/cli agent spawn --type [type] --name [name]',
-          example: 'npx @hive-flow/cli agent spawn --type coder --name impl-auth',
+          command: 'hive-flow agent spawn --type [type] --name [name]',
+          example: 'hive-flow agent spawn --type coder --name impl-auth',
         },
         {
           name: 'Monitor Status',
           description: 'Check the current swarm status',
-          command: 'npx @hive-flow/cli swarm status --verbose',
+          command: 'hive-flow swarm status --verbose',
         },
         {
           name: 'Orchestrate Task',
           description: 'Orchestrate a task across multiple agents',
-          command: 'npx @hive-flow/cli task orchestrate --task "[task]" --strategy adaptive',
-          example: 'npx @hive-flow/cli task orchestrate --task "refactor auth module" --strategy parallel --max-agents 4',
+          command: 'hive-flow task orchestrate --task "[task]" --strategy adaptive',
+          example: 'hive-flow task orchestrate --task "refactor auth module" --strategy parallel --max-agents 4',
         },
         {
           name: 'List Agents',
           description: 'List all active agents',
-          command: 'npx @hive-flow/cli agent list --filter active',
+          command: 'hive-flow agent list --filter active',
         },
       ],
       scripts: [
@@ -245,46 +245,46 @@ export async function generateBuiltInSkill(
         {
           name: 'Store Pattern',
           description: 'Store a pattern or knowledge item in memory',
-          command: 'npx @hive-flow/cli memory store --key "[key]" --value "[value]" --namespace patterns',
-          example: 'npx @hive-flow/cli memory store --key "auth-jwt-pattern" --value "JWT validation with refresh tokens" --namespace patterns',
+          command: 'hive-flow memory store --key "[key]" --value "[value]" --namespace patterns',
+          example: 'hive-flow memory store --key "auth-jwt-pattern" --value "JWT validation with refresh tokens" --namespace patterns',
         },
         {
           name: 'Semantic Search',
           description: 'Search memory using semantic similarity',
-          command: 'npx @hive-flow/cli memory search --query "[search terms]" --limit 10',
-          example: 'npx @hive-flow/cli memory search --query "authentication best practices" --limit 5',
+          command: 'hive-flow memory search --query "[search terms]" --limit 10',
+          example: 'hive-flow memory search --query "authentication best practices" --limit 5',
         },
         {
           name: 'Retrieve Entry',
           description: 'Retrieve a specific memory entry by key',
-          command: 'npx @hive-flow/cli memory get --key "[key]" --namespace [namespace]',
-          example: 'npx @hive-flow/cli memory get --key "auth-jwt-pattern" --namespace patterns',
+          command: 'hive-flow memory get --key "[key]" --namespace [namespace]',
+          example: 'hive-flow memory get --key "auth-jwt-pattern" --namespace patterns',
         },
         {
           name: 'List Entries',
           description: 'List all entries in a namespace',
-          command: 'npx @hive-flow/cli memory list --namespace [namespace]',
-          example: 'npx @hive-flow/cli memory list --namespace patterns --limit 20',
+          command: 'hive-flow memory list --namespace [namespace]',
+          example: 'hive-flow memory list --namespace patterns --limit 20',
         },
         {
           name: 'Delete Entry',
           description: 'Delete a memory entry',
-          command: 'npx @hive-flow/cli memory delete --key "[key]" --namespace [namespace]',
+          command: 'hive-flow memory delete --key "[key]" --namespace [namespace]',
         },
         {
           name: 'Initialize HNSW Index',
           description: 'Initialize HNSW vector search index',
-          command: 'npx @hive-flow/cli memory init --enable-hnsw',
+          command: 'hive-flow memory init --enable-hnsw',
         },
         {
           name: 'Memory Stats',
           description: 'Show memory usage statistics',
-          command: 'npx @hive-flow/cli memory stats',
+          command: 'hive-flow memory stats',
         },
         {
           name: 'Export Memory',
           description: 'Export memory to JSON',
-          command: 'npx @hive-flow/cli memory export --output memory-backup.json',
+          command: 'hive-flow memory export --output memory-backup.json',
         },
       ],
       scripts: [
@@ -334,37 +334,37 @@ export async function generateBuiltInSkill(
         {
           name: 'Specification Phase',
           description: 'Define requirements, acceptance criteria, and constraints',
-          command: 'npx @hive-flow/cli hooks route --task "specification: [requirements]"',
-          example: 'npx @hive-flow/cli hooks route --task "specification: user authentication with OAuth2, MFA, and session management"',
+          command: 'hive-flow hooks route --task "specification: [requirements]"',
+          example: 'hive-flow hooks route --task "specification: user authentication with OAuth2, MFA, and session management"',
         },
         {
           name: 'Pseudocode Phase',
           description: 'Write high-level pseudocode for the implementation',
-          command: 'npx @hive-flow/cli hooks route --task "pseudocode: [feature]"',
-          example: 'npx @hive-flow/cli hooks route --task "pseudocode: OAuth2 login flow with token refresh"',
+          command: 'hive-flow hooks route --task "pseudocode: [feature]"',
+          example: 'hive-flow hooks route --task "pseudocode: OAuth2 login flow with token refresh"',
         },
         {
           name: 'Architecture Phase',
           description: 'Design system structure, interfaces, and dependencies',
-          command: 'npx @hive-flow/cli hooks route --task "architecture: [design]"',
-          example: 'npx @hive-flow/cli hooks route --task "architecture: auth module with service layer, repository, and API endpoints"',
+          command: 'hive-flow hooks route --task "architecture: [design]"',
+          example: 'hive-flow hooks route --task "architecture: auth module with service layer, repository, and API endpoints"',
         },
         {
           name: 'Refinement Phase',
           description: 'Iterate on the design based on feedback',
-          command: 'npx @hive-flow/cli hooks route --task "refinement: [feedback]"',
-          example: 'npx @hive-flow/cli hooks route --task "refinement: add rate limiting and brute force protection"',
+          command: 'hive-flow hooks route --task "refinement: [feedback]"',
+          example: 'hive-flow hooks route --task "refinement: add rate limiting and brute force protection"',
         },
         {
           name: 'Completion Phase',
           description: 'Finalize implementation with tests and documentation',
-          command: 'npx @hive-flow/cli hooks route --task "completion: [final checks]"',
-          example: 'npx @hive-flow/cli hooks route --task "completion: verify all tests pass, update API docs, security review"',
+          command: 'hive-flow hooks route --task "completion: [final checks]"',
+          example: 'hive-flow hooks route --task "completion: verify all tests pass, update API docs, security review"',
         },
         {
           name: 'SPARC Coordinator',
           description: 'Spawn SPARC coordinator agent',
-          command: 'npx @hive-flow/cli agent spawn --type sparc-coord --name sparc-lead',
+          command: 'hive-flow agent spawn --type sparc-coord --name sparc-lead',
         },
       ],
       scripts: [
@@ -415,51 +415,51 @@ export async function generateBuiltInSkill(
         {
           name: 'Full Security Scan',
           description: 'Run comprehensive security analysis on the codebase',
-          command: 'npx @hive-flow/cli security scan --depth full',
-          example: 'npx @hive-flow/cli security scan --depth full --output security-report.json',
+          command: 'hive-flow security scan --depth full',
+          example: 'hive-flow security scan --depth full --output security-report.json',
         },
         {
           name: 'Input Validation Check',
           description: 'Check for input validation issues',
-          command: 'npx @hive-flow/cli security scan --check input-validation',
-          example: 'npx @hive-flow/cli security scan --check input-validation --path ./src/api',
+          command: 'hive-flow security scan --check input-validation',
+          example: 'hive-flow security scan --check input-validation --path ./src/api',
         },
         {
           name: 'Path Traversal Check',
           description: 'Check for path traversal vulnerabilities',
-          command: 'npx @hive-flow/cli security scan --check path-traversal',
+          command: 'hive-flow security scan --check path-traversal',
         },
         {
           name: 'SQL Injection Check',
           description: 'Check for SQL injection vulnerabilities',
-          command: 'npx @hive-flow/cli security scan --check sql-injection',
+          command: 'hive-flow security scan --check sql-injection',
         },
         {
           name: 'XSS Check',
           description: 'Check for cross-site scripting vulnerabilities',
-          command: 'npx @hive-flow/cli security scan --check xss',
+          command: 'hive-flow security scan --check xss',
         },
         {
           name: 'CVE Scan',
           description: 'Scan dependencies for known CVEs',
-          command: 'npx @hive-flow/cli security cve --scan',
-          example: 'npx @hive-flow/cli security cve --scan --severity high',
+          command: 'hive-flow security cve --scan',
+          example: 'hive-flow security cve --scan --severity high',
         },
         {
           name: 'Security Audit Report',
           description: 'Generate full security audit report',
-          command: 'npx @hive-flow/cli security audit --report',
-          example: 'npx @hive-flow/cli security audit --report --format markdown --output SECURITY.md',
+          command: 'hive-flow security audit --report',
+          example: 'hive-flow security audit --report --format markdown --output SECURITY.md',
         },
         {
           name: 'Threat Modeling',
           description: 'Run threat modeling analysis',
-          command: 'npx @hive-flow/cli security threats --analyze',
+          command: 'hive-flow security threats --analyze',
         },
         {
           name: 'Validate Secrets',
           description: 'Check for hardcoded secrets',
-          command: 'npx @hive-flow/cli security validate --check secrets',
+          command: 'hive-flow security validate --check secrets',
         },
       ],
       scripts: [
@@ -509,47 +509,47 @@ export async function generateBuiltInSkill(
         {
           name: 'Run Benchmark Suite',
           description: 'Execute all performance benchmarks',
-          command: 'npx @hive-flow/cli performance benchmark --suite all',
-          example: 'npx @hive-flow/cli performance benchmark --suite all --iterations 100 --output bench-results.json',
+          command: 'hive-flow performance benchmark --suite all',
+          example: 'hive-flow performance benchmark --suite all --iterations 100 --output bench-results.json',
         },
         {
           name: 'Profile Code',
           description: 'Profile code execution for CPU and memory',
-          command: 'npx @hive-flow/cli performance profile --target ./src',
-          example: 'npx @hive-flow/cli performance profile --target ./src/api --duration 60s',
+          command: 'hive-flow performance profile --target ./src',
+          example: 'hive-flow performance profile --target ./src/api --duration 60s',
         },
         {
           name: 'Memory Analysis',
           description: 'Analyze memory usage patterns',
-          command: 'npx @hive-flow/cli performance metrics --metric memory',
-          example: 'npx @hive-flow/cli performance metrics --metric memory --threshold 100MB',
+          command: 'hive-flow performance metrics --metric memory',
+          example: 'hive-flow performance metrics --metric memory --threshold 100MB',
         },
         {
           name: 'Latency Analysis',
           description: 'Measure and analyze latency',
-          command: 'npx @hive-flow/cli performance metrics --metric latency',
+          command: 'hive-flow performance metrics --metric latency',
         },
         {
           name: 'Optimize Suggestions',
           description: 'Get automated optimization suggestions',
-          command: 'npx @hive-flow/cli performance optimize --analyze',
-          example: 'npx @hive-flow/cli performance optimize --analyze --apply-safe',
+          command: 'hive-flow performance optimize --analyze',
+          example: 'hive-flow performance optimize --analyze --apply-safe',
         },
         {
           name: 'Performance Report',
           description: 'Generate performance report',
-          command: 'npx @hive-flow/cli performance report',
-          example: 'npx @hive-flow/cli performance report --format html --output perf-report.html',
+          command: 'hive-flow performance report',
+          example: 'hive-flow performance report --format html --output perf-report.html',
         },
         {
           name: 'Compare Benchmarks',
           description: 'Compare benchmark results',
-          command: 'npx @hive-flow/cli performance benchmark --compare baseline.json current.json',
+          command: 'hive-flow performance benchmark --compare baseline.json current.json',
         },
         {
           name: 'WASM Benchmark',
           description: 'Run WASM-specific benchmarks',
-          command: 'npx @hive-flow/cli performance benchmark --suite wasm',
+          command: 'hive-flow performance benchmark --suite wasm',
         },
       ],
       scripts: [
@@ -719,13 +719,13 @@ function generateHelperScript(skillName: string, scriptName: string): string {
 set -e
 
 echo "Initializing hierarchical swarm..."
-npx @hive-flow/cli swarm init \\
+hive-flow swarm init \\
   --topology hierarchical \\
   --max-agents 8 \\
   --strategy specialized
 
 echo "Swarm initialized successfully"
-npx @hive-flow/cli swarm status
+hive-flow swarm status
 `,
       'swarm-monitor': `#!/bin/bash
 # Swarm Orchestration - Monitor Script
@@ -734,7 +734,7 @@ npx @hive-flow/cli swarm status
 set -e
 
 echo "Starting swarm monitor..."
-npx @hive-flow/cli swarm status --watch --interval 5
+hive-flow swarm status --watch --interval 5
 `,
     },
     'memory-management': {
@@ -751,7 +751,7 @@ BACKUP_FILE="\${BACKUP_DIR}/memory_\${TIMESTAMP}.json"
 mkdir -p "$BACKUP_DIR"
 
 echo "Backing up memory to $BACKUP_FILE..."
-npx @hive-flow/cli memory export --output "$BACKUP_FILE"
+hive-flow memory export --output "$BACKUP_FILE"
 
 echo "Backup complete: $BACKUP_FILE"
 `,
@@ -762,10 +762,10 @@ echo "Backup complete: $BACKUP_FILE"
 set -e
 
 echo "Running memory consolidation..."
-npx @hive-flow/cli hooks worker dispatch --trigger consolidate
+hive-flow hooks worker dispatch --trigger consolidate
 
 echo "Memory consolidation complete"
-npx @hive-flow/cli memory stats
+hive-flow memory stats
 `,
     },
     'sparc-methodology': {
@@ -822,27 +822,27 @@ echo "Running full security scan..."
 
 # Input validation
 echo "Checking input validation..."
-npx @hive-flow/cli security scan --check input-validation
+hive-flow security scan --check input-validation
 
 # Path traversal
 echo "Checking path traversal..."
-npx @hive-flow/cli security scan --check path-traversal
+hive-flow security scan --check path-traversal
 
 # SQL injection
 echo "Checking SQL injection..."
-npx @hive-flow/cli security scan --check sql-injection
+hive-flow security scan --check sql-injection
 
 # XSS
 echo "Checking XSS..."
-npx @hive-flow/cli security scan --check xss
+hive-flow security scan --check xss
 
 # Secrets
 echo "Checking for hardcoded secrets..."
-npx @hive-flow/cli security validate --check secrets
+hive-flow security validate --check secrets
 
 # CVE scan
 echo "Scanning dependencies for CVEs..."
-npx @hive-flow/cli security cve --scan
+hive-flow security cve --scan
 
 echo "Security scan complete"
 `,
@@ -853,13 +853,13 @@ echo "Security scan complete"
 set -e
 
 echo "Scanning for CVEs..."
-npx @hive-flow/cli security cve --scan --severity high
+hive-flow security cve --scan --severity high
 
 echo "Attempting auto-remediation..."
 npm audit fix
 
 echo "Re-scanning after remediation..."
-npx @hive-flow/cli security cve --scan
+hive-flow security cve --scan
 
 echo "CVE remediation complete"
 `,
@@ -874,7 +874,7 @@ set -e
 BASELINE_FILE="\${1:-baseline.json}"
 
 echo "Capturing performance baseline..."
-npx @hive-flow/cli performance benchmark \\
+hive-flow performance benchmark \\
   --suite all \\
   --iterations 100 \\
   --output "$BASELINE_FILE"
@@ -892,13 +892,13 @@ CURRENT_FILE="current.json"
 THRESHOLD="\${2:-10}"
 
 echo "Running current benchmarks..."
-npx @hive-flow/cli performance benchmark \\
+hive-flow performance benchmark \\
   --suite all \\
   --iterations 100 \\
   --output "$CURRENT_FILE"
 
 echo "Comparing against baseline..."
-npx @hive-flow/cli performance benchmark \\
+hive-flow performance benchmark \\
   --compare "$BASELINE_FILE" "$CURRENT_FILE" \\
   --threshold "$THRESHOLD"
 

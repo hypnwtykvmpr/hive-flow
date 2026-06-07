@@ -5,7 +5,7 @@ Analyze performance bottlenecks in swarm operations and suggest optimizations.
 ## Usage
 
 ```bash
-npx hive-flow bottleneck detect [options]
+hive-flow bottleneck detect [options]
 ```
 
 ## Options
@@ -21,25 +21,25 @@ npx hive-flow bottleneck detect [options]
 ### Basic bottleneck detection
 
 ```bash
-npx hive-flow bottleneck detect
+hive-flow bottleneck detect
 ```
 
 ### Analyze specific swarm
 
 ```bash
-npx hive-flow bottleneck detect --swarm-id swarm-123
+hive-flow bottleneck detect --swarm-id swarm-123
 ```
 
 ### Last 24 hours with export
 
 ```bash
-npx hive-flow bottleneck detect -t 24h -e bottlenecks.json
+hive-flow bottleneck detect -t 24h -e bottlenecks.json
 ```
 
 ### Auto-fix detected issues
 
 ```bash
-npx hive-flow bottleneck detect --fix --threshold 15
+hive-flow bottleneck detect --fix --threshold 15
 ```
 
 ## Metrics Analyzed

@@ -327,7 +327,7 @@ export class CodexInitializer {
       } catch {
         return {
           registered: false,
-          warning: 'Codex CLI not found. Run: codex mcp add hive-flow -- npx hive-flow mcp start',
+          warning: 'Codex CLI not found. Run: codex mcp add hive-flow -- hive-flow mcp start',
         };
       }
 
@@ -352,13 +352,13 @@ export class CodexInitializer {
         const errorMessage = err instanceof Error ? err.message : String(err);
         return {
           registered: false,
-          warning: `Failed to register MCP server: ${errorMessage}. Run manually: codex mcp add hive-flow -- npx hive-flow mcp start`,
+          warning: `Failed to register MCP server: ${errorMessage}. Run manually: codex mcp add hive-flow -- hive-flow mcp start`,
         };
       }
     } catch {
       return {
         registered: false,
-        warning: 'Could not register MCP server. Run manually: codex mcp add hive-flow -- npx hive-flow mcp start',
+        warning: 'Could not register MCP server. Run manually: codex mcp add hive-flow -- hive-flow mcp start',
       };
     }
   }
@@ -542,7 +542,7 @@ Skills are invoked using \`$skill-name\` syntax. Each skill has:
 
 - Main instructions: \`AGENTS.md\` (project root)
 - Local overrides: \`.codex/AGENTS.override.md\` (gitignored)
-- Hive Flow: https://github.com/hypnwtykvmpr/hive-flow
+- Hive Flow:
 `;
   }
 
@@ -586,7 +586,7 @@ This file provides compatibility for Claude Code users.
 
 \`\`\`bash
 # Install dependencies
-npm install
+install dependencies
 
 # Build the project
 npm run build
@@ -615,7 +615,7 @@ ${this.skills.map(s => `- \`$${s}\` (Codex) / \`/${s}\` (Claude Code)`).join('\n
 
 \`\`\`bash
 # Start MCP server
-npx @hive-flow/cli mcp start
+hive-flow mcp start
 \`\`\`
 
 ## Swarm Orchestration

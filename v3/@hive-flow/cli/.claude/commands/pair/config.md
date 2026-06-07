@@ -507,4 +507,3 @@ hive-flow pair config import my-config.json
 - [Getting Started](./README.md)
 - [Session Management](./session.md)
 - [Modes](./modes.md)
-- [Templates](./templates.md)

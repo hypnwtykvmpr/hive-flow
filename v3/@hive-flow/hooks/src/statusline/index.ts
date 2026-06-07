@@ -255,7 +255,7 @@ export class StatuslineGenerator {
    * This avoids the multi-line collision bug where Claude Code's internal status
    * (written at absolute terminal coordinates ~cols 15-25) bleeds into conversation
    *
-   * @see https://github.com/hypnwtykvmpr/hive-flow/issues/985
+   * @see
    */
   generateSingleLine(): string {
     if (!this.config.enabled) {
@@ -282,7 +282,7 @@ export class StatuslineGenerator {
    * The collision zone is columns 15-25 on the SECOND-TO-LAST line
    * We restructure output so that line has minimal/no content in that zone
    *
-   * @see https://github.com/hypnwtykvmpr/hive-flow/issues/985
+   * @see
    */
   generateSafeStatusline(): string {
     if (!this.config.enabled) {

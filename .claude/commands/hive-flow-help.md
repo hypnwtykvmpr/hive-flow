@@ -66,7 +66,7 @@ Claude-Flow is the ultimate multi-terminal orchestration platform that revolutio
 
 ### Initialize with SPARC:
 ```bash
-npx -y hive-flow@latest init --sparc
+hive-flow init --sparc
 ```
 
 ### Start a development swarm:
@@ -91,13 +91,10 @@ npx -y hive-flow@latest init --sparc
 ```
 
 ## 🎯 Best Practices
-- Use `./hive-flow` instead of `npx hive-flow` after initialization
+- Use `./hive-flow` instead of `hive-flow` after initialization
 - Store important context in memory for cross-session persistence
 - Use swarm mode for complex tasks requiring multiple agents
 - Enable monitoring for real-time progress tracking
 - Use background mode for tasks > 30 minutes
 
 ## 📚 Resources
-- Documentation: https://github.com/hypnwtykvmpr/claude-code-flow/docs
-- Examples: https://github.com/hypnwtykvmpr/claude-code-flow/examples
-- Issues: https://github.com/hypnwtykvmpr/claude-code-flow/issues

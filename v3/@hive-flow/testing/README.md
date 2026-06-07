@@ -1,11 +1,5 @@
 # @hive-flow/testing
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/testing.svg)](https://www.npmjs.com/package/@hive-flow/testing)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/testing.svg)](https://www.npmjs.com/package/@hive-flow/testing)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![TDD](https://img.shields.io/badge/TDD-London%20School-purple.svg)](https://github.com/hypnwtykvmpr/hive-flow)
-[![ADR-008](https://img.shields.io/badge/ADR--008-Vitest-green.svg)](https://vitest.dev/)
 
 > Comprehensive testing framework for V3 Hive-Flow modules. Implements London School TDD patterns with behavior verification, shared fixtures, and mock services.
 
@@ -14,7 +8,6 @@ Based on ADR-008 (Vitest over Jest).
 ## Installation
 
 ```bash
-npm install @hive-flow/testing vitest --save-dev
 ```
 
 ## Quick Start

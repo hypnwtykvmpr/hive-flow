@@ -105,7 +105,7 @@ release-manager: mcp__github__*, mcp__hive-flow__workflow_*
 
 ```bash
 # List all capabilities for an agent type
-npx hive-flow agent spawn -t coder --help
+hive-flow agent spawn -t coder --help
 
 # View agent definition
 cat .claude/agents/core/coder.md

@@ -26,16 +26,16 @@ tools:
 hooks:
   pre_task: |
     echo "🏗️ Initializing repository architecture analysis..."
-    npx hive-flow@v3alpha hook pre-task --mode repo-architect --analyze-structure
+    hive-flow hook pre-task --mode repo-architect --analyze-structure
   post_edit: |
     echo "📐 Validating architecture changes and updating structure documentation..."
-    npx hive-flow@v3alpha hook post-edit --mode repo-architect --validate-structure
+    hive-flow hook post-edit --mode repo-architect --validate-structure
   post_task: |
     echo "🏛️ Architecture task completed. Generating structure recommendations..."
-    npx hive-flow@v3alpha hook post-task --mode repo-architect --generate-recommendations
+    hive-flow hook post-task --mode repo-architect --generate-recommendations
   notification: |
     echo "📋 Notifying stakeholders of architecture improvements..."
-    npx hive-flow@v3alpha hook notification --mode repo-architect
+    hive-flow hook notification --mode repo-architect
 ---
 
 # GitHub Repository Architect
@@ -116,9 +116,9 @@ mcp__github__push_files {
           }
         },
         hooks: {
-          pre_task: "npx hive-flow@v3alpha hook pre-task",
-          post_edit: "npx hive-flow@v3alpha hook post-edit",
-          notification: "npx hive-flow@v3alpha hook notification"
+          pre_task: "hive-flow hook pre-task",
+          post_edit: "hive-flow hook post-edit",
+          notification: "hive-flow hook notification"
         }
       }, null, 2)
     },
@@ -144,9 +144,8 @@ mcp__github__push_files {
 
 ## Quick Start
 \`\`\`bash
-npx hive-flow init --sparc
-npm install
-npx hive-flow start --ui
+hive-flow init --sparc
+hive-flow start --ui
 \`\`\`
 
 ## Features
@@ -187,7 +186,6 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with: { node-version: '20' }
-      - run: npm install && npm test`,
     message: "ci: Standardize integration workflow across repositories",
     branch: "structure/standardization"
   })

@@ -6,9 +6,7 @@
   },
   "metadata": {
     "description": "Enterprise AI agent orchestration marketplace for Claude Code",
-    "version": "2.5.0",
-    "homepage": "https://github.com/hypnwtykvmpr/hive-flow",
-    "repository": "https://github.com/hypnwtykvmpr/hive-flow"
+    "version": "2.5.0"
   },
   "plugins": [
     {
@@ -19,11 +17,6 @@
       "author": {
         "name": "Hive Flow",
         "email": "noreply@hive-flow.invalid"
-      },
-      "homepage": "https://hive-flow.hive-flow.invalid",
-      "repository": "https://github.com/hypnwtykvmpr/hive-flow",
-      "bugs": {
-        "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
       },
       "license": "MIT",
       "keywords": [
@@ -74,7 +67,9 @@
       "mcpServers": {
         "hive-flow": {
           "command": "node",
-          "args": ["/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"],
+          "args": [
+            "/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"
+          ],
           "description": "Core Hive Flow MCP server for swarm coordination (40+ tools)",
           "optional": false
         }

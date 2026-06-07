@@ -92,9 +92,8 @@ export const pluginMetadata = {
   version: '3.0.0-alpha.1',
   description: 'Quantum-inspired optimization for combinatorial problems',
   category: 'exotic',
-  author: 'rUv',
+  author: 'Hive Flow',
   license: 'MIT',
-  repository: 'https://github.com/ruvnet/hive-flow',
   tools: [
     'quantum_annealing_solve',
     'quantum_qaoa_optimize',

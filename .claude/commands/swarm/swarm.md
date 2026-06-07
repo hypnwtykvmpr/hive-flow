@@ -4,7 +4,7 @@ Main swarm orchestration command for Hive Flow.
 
 ## Usage
 ```bash
-npx hive-flow swarm <objective> [options]
+hive-flow swarm <objective> [options]
 ```
 
 ## Options
@@ -17,11 +17,11 @@ npx hive-flow swarm <objective> [options]
 ## Examples
 ```bash
 # Basic swarm
-npx hive-flow swarm "Build REST API"
+hive-flow swarm "Build REST API"
 
 # With strategy
-npx hive-flow swarm "Research AI patterns" --strategy research
+hive-flow swarm "Research AI patterns" --strategy research
 
 # Open in Claude Code
-npx hive-flow swarm "Build API" --claude
+hive-flow swarm "Build API" --claude
 ```

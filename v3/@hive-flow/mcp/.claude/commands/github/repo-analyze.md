@@ -4,7 +4,7 @@ Deep analysis of GitHub repository with AI insights.
 
 ## Usage
 ```bash
-npx hive-flow github repo-analyze [options]
+hive-flow github repo-analyze [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow github repo-analyze [options]
 ## Examples
 ```bash
 # Basic analysis
-npx hive-flow github repo-analyze --repository myorg/myrepo
+hive-flow github repo-analyze --repository myorg/myrepo
 
 # Deep analysis
-npx hive-flow github repo-analyze --repository myorg/myrepo --deep
+hive-flow github repo-analyze --repository myorg/myrepo --deep
 
 # Specific areas
-npx hive-flow github repo-analyze --repository myorg/myrepo --include issues,prs
+hive-flow github repo-analyze --repository myorg/myrepo --include issues,prs
 ```

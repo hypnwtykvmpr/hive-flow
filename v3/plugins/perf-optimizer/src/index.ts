@@ -42,7 +42,6 @@ export const pluginMetadata = {
   tags: ['performance', 'optimization', 'tracing', 'memory', 'database', 'bundle'],
   author: 'Hive Flow Team',
   license: 'MIT',
-  repository: 'https://github.com/ruvnet/hive-flow',
   engines: {
     'hive-flow': '>=3.0.0-alpha.1',
     node: '>=18.0.0',

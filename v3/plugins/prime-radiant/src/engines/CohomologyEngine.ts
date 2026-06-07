@@ -4,7 +4,7 @@
  * Implements coherence checking using sheaf cohomology and Laplacian energy.
  * Energy 0 = fully coherent, Energy 1 = fully contradictory.
  *
- * Based on: https://arxiv.org/abs/1808.04718 (Sheaf Laplacian Theory)
+ * Based on: published cohomology reference (Sheaf Laplacian Theory)
  */
 
 import type {

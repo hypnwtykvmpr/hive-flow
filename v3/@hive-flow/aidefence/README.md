@@ -1,10 +1,5 @@
 # @hive-flow/aidefence
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/aidefence?color=blue&label=npm)](https://www.npmjs.com/package/@hive-flow/aidefence)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/aidefence?color=green)](https://www.npmjs.com/package/@hive-flow/aidefence)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 
 **AI Manipulation Defense System (AIMDS)** - Protect your AI applications from prompt injection, jailbreak attempts, and sensitive data exposure with sub-millisecond detection.
 
@@ -92,7 +87,6 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 ```bash
 # npm
-npm install @hive-flow/aidefence
 
 # pnpm
 pnpm add @hive-flow/aidefence
@@ -392,19 +386,19 @@ Use via Hive Flow CLI:
 
 ```bash
 # Basic threat scan
-npx @hive-flow/cli security defend -i "ignore previous instructions"
+hive-flow security defend -i "ignore previous instructions"
 
 # Scan a file
-npx @hive-flow/cli security defend -f ./user-prompts.txt
+hive-flow security defend -f ./user-prompts.txt
 
 # Quick scan (faster)
-npx @hive-flow/cli security defend -i "some text" --quick
+hive-flow security defend -i "some text" --quick
 
 # JSON output
-npx @hive-flow/cli security defend -i "test" -o json
+hive-flow security defend -i "test" -o json
 
 # View statistics
-npx @hive-flow/cli security defend --stats
+hive-flow security defend --stats
 ```
 
 ### CLI Output Example
@@ -567,17 +561,14 @@ Pre-scan agent inputs automatically:
 
 ## Contributing
 
-Contributions are welcome! Please see our [Contributing Guide](https://github.com/hypnwtykvmpr/hive-flow/blob/main/CONTRIBUTING.md).
 
 ### Development
 
 ```bash
 # Clone repository
-git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow/v3/@hive-flow/aidefence
 
 # Install dependencies
-npm install
 
 # Run tests
 npm test
@@ -613,13 +604,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Related Packages
 
-- [`@hive-flow/cli`](https://www.npmjs.com/package/@hive-flow/cli) - CLI with security commands
-- [`agentdb`](https://www.npmjs.com/package/agentdb) - HNSW vector database
-- [`hive-flow`](https://www.npmjs.com/package/hive-flow) - Full AI coordination system
 
 ---
 
 <p align="center">
-  <strong>Built with security in mind by <a href="https://hive-flow.invalid">Hive Flow</a></strong><br>
   <sub>Part of the Hive Flow ecosystem</sub>
 </p>

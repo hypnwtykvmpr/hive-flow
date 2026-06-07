@@ -20,10 +20,10 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run optimizer "optimize application performance"
+hive-flow sparc run optimizer "optimize application performance"
 
 # For alpha features
-npx hive-flow@alpha sparc run optimizer "optimize application performance"
+hive-flow sparc run optimizer "optimize application performance"
 ```
 
 ### Option 3: Local Installation

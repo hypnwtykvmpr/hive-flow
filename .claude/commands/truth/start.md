@@ -112,7 +112,6 @@ Recent Tasks:
 ```bash
 # Send to monitoring system
 hive-flow truth --format json | \
-  curl -X POST https://metrics.example.com/api/truth \
   -H "Content-Type: application/json" \
   -d @-
 ```

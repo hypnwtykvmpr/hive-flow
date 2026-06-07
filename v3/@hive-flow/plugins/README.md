@@ -7,7 +7,6 @@ A comprehensive plugin development framework providing workers, hooks, providers
 ## Installation
 
 ```bash
-npm install @hive-flow/plugins
 ```
 
 ## Quick Start
@@ -218,7 +217,6 @@ const safePath = Security.safePath('/project', 'src', userInput);
 const data = Security.safeJsonParse<Config>(jsonString);
 
 // Command validation
-const cmd = Security.validateCommand('npm install', { allowedCommands: new Set(['npm', 'npx']) });
 
 // Rate limiting
 const limiter = createRateLimiter({ maxTokens: 100, refillRate: 10, refillInterval: 1000 });

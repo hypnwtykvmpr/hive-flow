@@ -31,76 +31,76 @@ AgentDB memory system with HNSW vector search. Provides fast HNSW-indexed patter
 Store a pattern or knowledge item in memory
 
 ```bash
-npx @hive-flow/cli memory store --key "[key]" --value "[value]" --namespace patterns
+hive-flow memory store --key "[key]" --value "[value]" --namespace patterns
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli memory store --key "auth-jwt-pattern" --value "JWT validation with refresh tokens" --namespace patterns
+hive-flow memory store --key "auth-jwt-pattern" --value "JWT validation with refresh tokens" --namespace patterns
 ```
 
 ### Semantic Search
 Search memory using semantic similarity
 
 ```bash
-npx @hive-flow/cli memory search --query "[search terms]" --limit 10
+hive-flow memory search --query "[search terms]" --limit 10
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli memory search --query "authentication best practices" --limit 5
+hive-flow memory search --query "authentication best practices" --limit 5
 ```
 
 ### Retrieve Entry
 Retrieve a specific memory entry by key
 
 ```bash
-npx @hive-flow/cli memory get --key "[key]" --namespace [namespace]
+hive-flow memory get --key "[key]" --namespace [namespace]
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli memory get --key "auth-jwt-pattern" --namespace patterns
+hive-flow memory get --key "auth-jwt-pattern" --namespace patterns
 ```
 
 ### List Entries
 List all entries in a namespace
 
 ```bash
-npx @hive-flow/cli memory list --namespace [namespace]
+hive-flow memory list --namespace [namespace]
 ```
 
 **Example:**
 ```bash
-npx @hive-flow/cli memory list --namespace patterns --limit 20
+hive-flow memory list --namespace patterns --limit 20
 ```
 
 ### Delete Entry
 Delete a memory entry
 
 ```bash
-npx @hive-flow/cli memory delete --key "[key]" --namespace [namespace]
+hive-flow memory delete --key "[key]" --namespace [namespace]
 ```
 
 ### Initialize HNSW Index
 Initialize HNSW vector search index
 
 ```bash
-npx @hive-flow/cli memory init --enable-hnsw
+hive-flow memory init --enable-hnsw
 ```
 
 ### Memory Stats
 Show memory usage statistics
 
 ```bash
-npx @hive-flow/cli memory stats
+hive-flow memory stats
 ```
 
 ### Export Memory
 Export memory to JSON
 
 ```bash
-npx @hive-flow/cli memory export --output memory-backup.json
+hive-flow memory export --output memory-backup.json
 ```
 
 

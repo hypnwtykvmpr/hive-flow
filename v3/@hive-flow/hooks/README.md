@@ -1,10 +1,5 @@
 # @hive-flow/hooks
 
-[![npm version](https://img.shields.io/npm/v/@hive-flow/hooks.svg)](https://www.npmjs.com/package/@hive-flow/hooks)
-[![npm downloads](https://img.shields.io/npm/dm/@hive-flow/hooks.svg)](https://www.npmjs.com/package/@hive-flow/hooks)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
 
 > Event-driven lifecycle hooks with ReasoningBank learning integration for Hive Flow V3
 
@@ -25,7 +20,6 @@ The `@hive-flow/hooks` package provides a comprehensive hooks system for interce
 
 ```bash
 # Using npm
-npm install @hive-flow/hooks
 
 # Using pnpm
 pnpm add @hive-flow/hooks
@@ -436,5 +430,3 @@ Add to your Claude settings (`~/.claude/settings.json`):
 - [@hive-flow/memory](../memory) - AgentDB memory system
 
 ## License
-
-MIT © [Hive Flow Team](https://github.com/hypnwtykvmpr/hive-flow)

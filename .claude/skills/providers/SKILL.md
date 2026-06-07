@@ -11,7 +11,6 @@ Three CLI providers wrap external AI binaries as subprocess providers:
 |----------|--------|------|---------|
 | `gemini-cli` | `gemini` | Google OAuth (`gemini auth`) | `npm i -g @google/gemini-cli` |
 | `codex-cli` | `codex` | `CODEX_API_KEY` env var or ChatGPT OAuth | `npm i -g @openai/codex` |
-| `cursor-cli` | `cursor` | `CURSOR_API_KEY` env var | `curl https://cursor.com/install -fsSL \| bash` |
 
 ### Check Provider Status
 
@@ -93,5 +92,4 @@ See the `/provider-agents` skill for full documentation.
 
 - **Gemini: "not authenticated"** -- Run `gemini auth` in a terminal
 - **Codex: "binary not found"** -- Run `npm i -g @openai/codex`
-- **Cursor: "binary not found"** -- Install from https://cursor.com
 - **Model resolution warning** -- Ensure model name matches provider (use aliases for portability)

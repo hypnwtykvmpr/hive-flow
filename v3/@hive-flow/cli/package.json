@@ -12,15 +12,6 @@
     "hive-flow-mcp": "./bin/mcp-server.js",
     "hive-flow-statusline": "./bin/statusline.js"
   },
-  "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
-  "bugs": {
-    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hypnwtykvmpr/hive-flow.git",
-    "directory": "v3/@hive-flow/cli"
-  },
   "keywords": [
     "claude",
     "claude-code",
@@ -43,8 +34,7 @@
   ],
   "contributors": [
     {
-      "name": "Hive Flow",
-      "url": "https://github.com/hypnwtykvmpr"
+      "name": "Hive Flow"
     }
   ],
   "license": "MIT",
@@ -89,8 +79,8 @@
     "test:property": "vitest run src/statusline/__tests__/property-contracts.test.ts",
     "test:sentinel": "vitest run src/__tests__/sentinel-rewake.test.ts src/__tests__/mcp-server-notifications.test.ts",
     "test:enforcement": "vitest run src/__tests__/band1-enforcement.test.ts src/__tests__/role-enforcement.test.ts src/__tests__/pipeline-enforcement.test.ts src/__tests__/enforcement-security-property.test.ts",
-    "test:plugin-store": "npx tsx src/plugins/tests/standalone-test.ts",
-    "test:pattern-store": "npx tsx src/transfer/store/tests/standalone-test.ts",
+    "test:plugin-store": "tsx src/plugins/tests/standalone-test.ts",
+    "test:pattern-store": "tsx src/transfer/store/tests/standalone-test.ts",
     "mutation:critical": "stryker run stryker.critical.conf.json",
     "preinstall": "node bin/preinstall.cjs || true",
     "prepublishOnly": "cp ../../../README.md ./README.md",

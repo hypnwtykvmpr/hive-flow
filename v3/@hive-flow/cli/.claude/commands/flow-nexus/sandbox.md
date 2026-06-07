@@ -26,7 +26,6 @@ mcp__flow-nexus__sandbox_execute({
   sandbox_id: "sandbox_id",
   code: `
     console.log('Hello from sandbox!');
-    const result = await fetch('https://api.example.com');
     return result.json();
   `,
   language: "javascript",

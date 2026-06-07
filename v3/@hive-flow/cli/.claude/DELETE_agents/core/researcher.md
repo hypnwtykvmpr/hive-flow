@@ -20,34 +20,34 @@ hooks:
     echo "🔍 Research agent investigating: $TASK"
 
     # V3: Initialize task with hooks system
-    npx hive-flow@v3alpha hooks pre-task --description "$TASK"
+    hive-flow hooks pre-task --description "$TASK"
 
     # 1. Learn from past similar research tasks (ReasoningBank + HNSW fast HNSW-indexed)
-    SIMILAR_RESEARCH=$(npx hive-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
+    SIMILAR_RESEARCH=$(hive-flow memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_RESEARCH" ]; then
       echo "📚 Found similar successful research patterns (HNSW-indexed)"
-      npx hive-flow@v3alpha hooks intelligence --action pattern-search --query "$TASK" --k 5
+      hive-flow hooks intelligence --action pattern-search --query "$TASK" --k 5
     fi
 
     # 2. Store research context via memory
-    npx hive-flow@v3alpha memory store --key "research_context_$(date +%s)" --value "$TASK"
+    hive-flow memory store --key "research_context_$(date +%s)" --value "$TASK"
 
     # 3. Store task start via hooks
-    npx hive-flow@v3alpha hooks intelligence --action trajectory-start \
+    hive-flow hooks intelligence --action trajectory-start \
       --session-id "researcher-$(date +%s)" \
       --task "$TASK"
 
   post: |
     echo "📊 Research findings documented"
-    npx hive-flow@v3alpha memory search --query "research" --limit 5
+    hive-flow memory search --query "research" --limit 5
 
     # 1. Calculate research quality metrics
-    FINDINGS_COUNT=$(npx hive-flow@v3alpha memory search --query "research" --count-only || echo "0")
+    FINDINGS_COUNT=$(hive-flow memory search --query "research" --count-only || echo "0")
     REWARD=$(echo "scale=2; $FINDINGS_COUNT / 20" | bc)
     SUCCESS=$([[ $FINDINGS_COUNT -gt 5 ]] && echo "true" || echo "false")
 
     # 2. Store learning pattern via V3 hooks (with EWC++ consolidation)
-    npx hive-flow@v3alpha hooks intelligence --action pattern-store \
+    hive-flow hooks intelligence --action pattern-store \
       --session-id "researcher-$(date +%s)" \
       --task "$TASK" \
       --output "Research completed with $FINDINGS_COUNT findings" \
@@ -56,12 +56,12 @@ hooks:
       --consolidate-ewc true
 
     # 3. Complete task hook
-    npx hive-flow@v3alpha hooks post-task --task-id "researcher-$(date +%s)" --success "$SUCCESS"
+    hive-flow hooks post-task --task-id "researcher-$(date +%s)" --success "$SUCCESS"
 
     # 4. Train neural patterns on comprehensive research (SONA low-latency adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$FINDINGS_COUNT" -gt 15 ]; then
       echo "🧠 Training neural pattern from comprehensive research"
-      npx hive-flow@v3alpha neural train \
+      hive-flow neural train \
         --pattern-type "coordination" \
         --training-data "research-findings" \
         --epochs 50 \
@@ -69,7 +69,7 @@ hooks:
     fi
 
     # 5. Trigger deepdive worker for extended analysis
-    npx hive-flow@v3alpha hooks worker dispatch --trigger deepdive
+    hive-flow hooks worker dispatch --trigger deepdive
 ---
 
 # Research and Analysis Agent

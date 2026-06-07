@@ -12,8 +12,8 @@ List all active agents in the Hive Flow system with filtering options.
 ## Usage
 
 ```bash
-npx hive-flow agent list [options]
-npx hive-flow agent ls [options]  # Alias
+hive-flow agent list [options]
+hive-flow agent ls [options]  # Alias
 ```
 
 ## Options
@@ -29,22 +29,22 @@ npx hive-flow agent ls [options]  # Alias
 
 ```bash
 # List all active agents
-npx hive-flow agent list
+hive-flow agent list
 
 # List all agents including inactive
-npx hive-flow agent list --all
+hive-flow agent list --all
 
 # Filter by type
-npx hive-flow agent list -t coder
+hive-flow agent list -t coder
 
 # Filter by status
-npx hive-flow agent list -s idle
+hive-flow agent list -s idle
 
 # JSON output for scripting
-npx hive-flow agent list --format json
+hive-flow agent list --format json
 
 # Combined filters
-npx hive-flow agent list -t researcher -s active
+hive-flow agent list -t researcher -s active
 ```
 
 ## Output

@@ -208,7 +208,6 @@ This integration uses hive-flow agents for:
   }
 
   // Run validation tests
-  Bash("cd /workspaces/hive-flow/claude-code-flow/claude-code-flow && npm install")
   Bash("cd /workspaces/hive-flow/claude-code-flow/claude-code-flow && npm test")
   Bash("cd /workspaces/hive-flow/hive-flow/npm && npm test")
 

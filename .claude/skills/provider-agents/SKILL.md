@@ -86,7 +86,6 @@ Use provider agents for investigation and analysis tasks. Use Claude agents when
 - **"binary not found"** -- The provider CLI is not installed. Install it:
   - Gemini: `npm i -g @google/gemini-cli`
   - Codex: `npm i -g @openai/codex`
-  - Cursor: `curl https://cursor.com/install -fsSL | bash`
 - **"not authenticated"** -- Run the provider's auth flow:
   - Gemini: `gemini auth`
   - Codex: Set `CODEX_API_KEY` env var or run `codex auth`

@@ -4,7 +4,7 @@ Analyze token usage patterns and optimize for efficiency.
 
 ## Usage
 ```bash
-npx hive-flow analysis token-usage [options]
+hive-flow analysis token-usage [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow analysis token-usage [options]
 ## Examples
 ```bash
 # Last 24 hours token usage
-npx hive-flow analysis token-usage --period 24h
+hive-flow analysis token-usage --period 24h
 
 # By agent breakdown
-npx hive-flow analysis token-usage --by-agent
+hive-flow analysis token-usage --by-agent
 
 # Export detailed report
-npx hive-flow analysis token-usage --period 7d --export tokens.csv
+hive-flow analysis token-usage --period 7d --export tokens.csv
 ```

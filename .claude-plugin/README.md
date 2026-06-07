@@ -1,8 +1,5 @@
 # 🚀 Hive Flow Plugin - Complete Enterprise AI Agent Orchestration
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](https://github.com/hypnwtykvmpr/hive-flow)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-%3E%3D2.0.0-purple.svg)](https://claude.com/code)
 
 > **Enterprise-grade AI agent orchestration plugin with 150+ commands, 74+ specialized agents, SPARC methodology, swarm coordination, GitHub integration, and neural training capabilities**
 
@@ -288,7 +285,6 @@ In Claude Code:
 Or from local directory:
 
 ```bash
-git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 ```
 
@@ -308,7 +304,7 @@ Then in Claude Code:
 ```bash
 # Add MCP servers to Claude Code
 claude mcp add hive-flow node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
+claude mcp add flow-nexus flow-nexus mcp start  # Optional
 ```
 
 ### 4. Verify Installation
@@ -345,7 +341,6 @@ In Claude Code:
 
 ```bash
 # Clone the repository
-git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow/claude-plugin
 
 # Run installation script
@@ -616,19 +611,11 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
 ## 📖 Documentation
 
 - **[Quickstart Guide](docs/QUICKSTART.md)** - Get started in 5 minutes
-- **[User Guide](docs/USER_GUIDE.md)** - Complete usage documentation
-- **[API Reference](docs/API_REFERENCE.md)** - All commands and agents
-- **[Examples](docs/EXAMPLES.md)** - Real-world usage examples
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
 ---
 
 ## 🤝 Support
 
-- **Documentation**: [GitHub Wiki](https://github.com/hypnwtykvmpr/hive-flow/wiki)
-- **Issues**: [GitHub Issues](https://github.com/hypnwtykvmpr/hive-flow/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/hypnwtykvmpr/hive-flow/discussions)
-- **Website**: [Flow Nexus](https://flow-nexus.hive-flow.invalid)
 
 ---
 
@@ -691,7 +678,6 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=hypnwtykvmpr/hive-flow&type=Date)](https://star-history.com/#hypnwtykvmpr/hive-flow&Date)
 
 ---
 

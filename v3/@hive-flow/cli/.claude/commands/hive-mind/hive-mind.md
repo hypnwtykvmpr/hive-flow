@@ -4,7 +4,7 @@ Hive Mind collective intelligence system for advanced swarm coordination.
 
 ## Usage
 ```bash
-npx hive-flow hive-mind [subcommand] [options]
+hive-flow hive-mind [subcommand] [options]
 ```
 
 ## Subcommands
@@ -17,11 +17,11 @@ npx hive-flow hive-mind [subcommand] [options]
 ## Examples
 ```bash
 # Initialize hive mind
-npx hive-flow hive-mind init
+hive-flow hive-mind init
 
 # Spawn swarm
-npx hive-flow hive-mind spawn "Build microservices"
+hive-flow hive-mind spawn "Build microservices"
 
 # Check status
-npx hive-flow hive-mind status
+hive-flow hive-mind status
 ```

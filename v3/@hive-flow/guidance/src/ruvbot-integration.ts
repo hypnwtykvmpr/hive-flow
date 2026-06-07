@@ -181,7 +181,7 @@ async function requireRuvBot(): Promise<Record<string, unknown>> {
     return mod;
   } catch {
     throw new Error(
-      'ruvbot is not installed. Install it with: npm install ruvbot@0.1.8\n' +
+      'ruvbot is not installed. Add optional peer dependency ruvbot@0.1.8 with your configured package manager.\n' +
       'ruvbot is an optional peer dependency of @hive-flow/guidance.',
     );
   }

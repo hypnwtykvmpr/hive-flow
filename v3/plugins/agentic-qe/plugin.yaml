@@ -9,10 +9,8 @@ description: |
   O(log n) coverage analysis, defect prediction, security compliance,
   contract testing, visual/accessibility testing, and chaos engineering.
 
-author: rUv
+author: Hive Flow
 license: MIT
-homepage: https://github.com/ruvnet/agentic-qe
-repository: https://github.com/ruvnet/agentic-qe
 
 # Plugin metadata
 metadata:

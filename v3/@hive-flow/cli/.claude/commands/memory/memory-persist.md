@@ -4,7 +4,7 @@ Persist memory across sessions.
 
 ## Usage
 ```bash
-npx hive-flow memory persist [options]
+hive-flow memory persist [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow memory persist [options]
 ## Examples
 ```bash
 # Export memory
-npx hive-flow memory persist --export memory-backup.json
+hive-flow memory persist --export memory-backup.json
 
 # Import memory
-npx hive-flow memory persist --import memory-backup.json
+hive-flow memory persist --import memory-backup.json
 
 # Compressed export
-npx hive-flow memory persist --export memory.gz --compress
+hive-flow memory persist --export memory.gz --compress
 ```

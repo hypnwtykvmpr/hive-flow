@@ -20,10 +20,10 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run debugger "fix authentication issues"
+hive-flow sparc run debugger "fix authentication issues"
 
 # For alpha features
-npx hive-flow@alpha sparc run debugger "fix authentication issues"
+hive-flow sparc run debugger "fix authentication issues"
 ```
 
 ### Option 3: Local Installation

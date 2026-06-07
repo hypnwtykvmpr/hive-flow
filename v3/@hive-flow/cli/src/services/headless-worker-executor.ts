@@ -684,7 +684,7 @@ export class HeadlessWorkerExecutor extends EventEmitter {
     if (!available) {
       const result = this.createErrorResult(
         workerType,
-        'Claude Code CLI not available. Install with: npm install -g @anthropic-ai/claude-code'
+        'Claude Code CLI not available. Install Claude Code with your configured package manager.'
       );
       this.emit('error', result);
       return result;

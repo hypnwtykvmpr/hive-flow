@@ -10,7 +10,7 @@
 #   echo '{"jsonrpc":"2.0","id":1,"method":"initialize"}' | docker run --rm -i hive-flow:lite
 #
 # Size comparison:
-#   npx hive-flow@latest (cold): ~1.3GB, 914 packages, 35s startup
+#   hive-flow (cold): ~1.3GB, 914 packages, 35s startup
 #   hive-flow:lite image:        <100MB, ~60 packages, <5s startup
 
 # ── Stage 1: Install ─────────────────────────────────────────────

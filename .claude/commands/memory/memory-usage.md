@@ -4,7 +4,7 @@ Manage persistent memory storage.
 
 ## Usage
 ```bash
-npx hive-flow memory usage [options]
+hive-flow memory usage [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow memory usage [options]
 ## Examples
 ```bash
 # Store memory
-npx hive-flow memory usage --action store --key "project-config" --value '{"api": "v2"}'
+hive-flow memory usage --action store --key "project-config" --value '{"api": "v2"}'
 
 # Retrieve memory
-npx hive-flow memory usage --action retrieve --key "project-config"
+hive-flow memory usage --action retrieve --key "project-config"
 
 # List all keys
-npx hive-flow memory usage --action list
+hive-flow memory usage --action list
 ```

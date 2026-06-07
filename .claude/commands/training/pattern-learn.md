@@ -4,7 +4,7 @@ Learn patterns from successful operations.
 
 ## Usage
 ```bash
-npx hive-flow training pattern-learn [options]
+hive-flow training pattern-learn [options]
 ```
 
 ## Options
@@ -15,11 +15,11 @@ npx hive-flow training pattern-learn [options]
 ## Examples
 ```bash
 # Learn from all ops
-npx hive-flow training pattern-learn
+hive-flow training pattern-learn
 
 # High success only
-npx hive-flow training pattern-learn --threshold 0.9
+hive-flow training pattern-learn --threshold 0.9
 
 # Save patterns
-npx hive-flow training pattern-learn --save optimal-patterns
+hive-flow training pattern-learn --save optimal-patterns
 ```

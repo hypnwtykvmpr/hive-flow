@@ -125,7 +125,6 @@ agent-browser find testid "login-btn" click
 
 ### Login Flow
 ```bash
-agent-browser open https://example.com/login
 agent-browser snapshot -i
 agent-browser fill @e2 "user@example.com"
 agent-browser fill @e3 "password123"
@@ -135,7 +134,6 @@ agent-browser wait --url "**/dashboard"
 
 ### Form Submission
 ```bash
-agent-browser open https://example.com/contact
 agent-browser snapshot -i
 agent-browser fill @e1 "John Doe"
 agent-browser fill @e2 "john@example.com"
@@ -146,7 +144,6 @@ agent-browser wait --text "Thank you"
 
 ### Data Extraction
 ```bash
-agent-browser open https://example.com/products
 agent-browser snapshot -i
 # Iterate through product refs
 agent-browser get text @e1  # Product name
@@ -157,12 +154,10 @@ agent-browser get attr @e3 href  # Link
 ### Multi-Session (Swarm)
 ```bash
 # Session 1: Navigator
-agent-browser --session nav open https://example.com
 agent-browser --session nav state save auth.json
 
 # Session 2: Scraper (uses same auth)
 agent-browser --session scrape state load auth.json
-agent-browser --session scrape open https://example.com/data
 agent-browser --session scrape snapshot -i
 ```
 
@@ -180,19 +175,19 @@ All browser operations are available as MCP tools with `browser/` prefix:
 ### Memory Integration
 ```bash
 # Store successful patterns
-npx @hive-flow/cli memory store --namespace browser-patterns --key "login-flow" --value "snapshot->fill->click->wait"
+hive-flow memory store --namespace browser-patterns --key "login-flow" --value "snapshot->fill->click->wait"
 
 # Retrieve before similar task
-npx @hive-flow/cli memory search --query "login automation"
+hive-flow memory search --query "login automation"
 ```
 
 ### Hooks
 ```bash
 # Pre-browse hook (get context)
-npx @hive-flow/cli hooks pre-edit --file "browser-task.ts"
+hive-flow hooks pre-edit --file "browser-task.ts"
 
 # Post-browse hook (record success)
-npx @hive-flow/cli hooks post-task --task-id "browse-1" --success true
+hive-flow hooks post-task --task-id "browse-1" --success true
 ```
 
 ## Tips

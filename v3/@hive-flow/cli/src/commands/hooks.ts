@@ -288,7 +288,7 @@ const preCommandCommand: Command = {
   ],
   examples: [
     { command: 'hive-flow hooks pre-command -c "rm -rf dist"', description: 'Assess command risk' },
-    { command: 'hive-flow hooks pre-command -c "npm install lodash"', description: 'Check package install' }
+    { command: 'hive-flow hooks pre-command -c "install dependencies lodash"', description: 'Check package install' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const command = ctx.args[0] || ctx.flags.command as string;

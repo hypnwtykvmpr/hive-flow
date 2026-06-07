@@ -35,16 +35,16 @@ mcp__hive-flow__sparc_mode {
 ### Option 2: Using NPX CLI (Fallback when MCP not available)
 ```bash
 # Use when running from terminal or MCP tools unavailable
-npx hive-flow sparc run debug "fix memory leak in service"
+hive-flow sparc run debug "fix memory leak in service"
 
 # For alpha features
-npx hive-flow@alpha sparc run debug "fix memory leak in service"
+hive-flow sparc run debug "fix memory leak in service"
 
 # With namespace
-npx hive-flow sparc run debug "your task" --namespace debug
+hive-flow sparc run debug "your task" --namespace debug
 
 # Non-interactive mode
-npx hive-flow sparc run debug "your task" --non-interactive
+hive-flow sparc run debug "your task" --non-interactive
 ```
 
 ### Option 3: Local Installation
@@ -76,8 +76,8 @@ mcp__hive-flow__memory_search {
 ### Using NPX CLI (Fallback)
 ```bash
 # Store mode-specific context
-npx hive-flow memory store "debug_context" "important decisions" --namespace debug
+hive-flow memory store "debug_context" "important decisions" --namespace debug
 
 # Query previous work
-npx hive-flow memory query "debug" --limit 5
+hive-flow memory query "debug" --limit 5
 ```

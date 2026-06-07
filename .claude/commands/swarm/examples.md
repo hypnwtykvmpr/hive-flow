@@ -35,7 +35,7 @@ mcp__hive-flow__swarm_status({
 
 #### Using CLI (Fallback)
 ```bash
-npx hive-flow swarm "research AI trends" \
+hive-flow swarm "research AI trends" \
   --strategy research \
   --mode distributed \
   --max-agents 6 \
@@ -85,7 +85,7 @@ mcp__hive-flow__swarm_monitor({
 
 #### Using CLI (Fallback)
 ```bash
-npx hive-flow swarm "build REST API" \
+hive-flow swarm "build REST API" \
   --strategy development \
   --mode hierarchical \
   --monitor \
@@ -134,7 +134,7 @@ mcp__hive-flow__performance_report({
 
 #### Using CLI (Fallback)
 ```bash
-npx hive-flow swarm "analyze codebase" \
+hive-flow swarm "analyze codebase" \
   --strategy analysis \
   --mode mesh \
   --parallel \

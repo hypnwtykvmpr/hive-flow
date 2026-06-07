@@ -21,27 +21,27 @@ Create and execute automated workflows for complex multi-step processes.
 
 ### Create Workflow
 ```bash
-npx hive-flow workflow create --name "deploy-flow" --template ci
+hive-flow workflow create --name "deploy-flow" --template ci
 ```
 
 ### Execute Workflow
 ```bash
-npx hive-flow workflow execute --name "deploy-flow" --env production
+hive-flow workflow execute --name "deploy-flow" --env production
 ```
 
 ### List Workflows
 ```bash
-npx hive-flow workflow list
+hive-flow workflow list
 ```
 
 ### Export Template
 ```bash
-npx hive-flow workflow export --name "deploy-flow" --format yaml
+hive-flow workflow export --name "deploy-flow" --format yaml
 ```
 
 ### View Status
 ```bash
-npx hive-flow workflow status --name "deploy-flow"
+hive-flow workflow status --name "deploy-flow"
 ```
 
 ## Built-in Templates

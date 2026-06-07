@@ -112,7 +112,7 @@ const EMPTY_PALETTE: PaletteCodes = Object.freeze({
  */
 export function detectColorDepth(env: NodeJS.ProcessEnv): ColorDepth {
   // 1. NO_COLOR is a hard override — any non-empty value disables color.
-  //    https://no-color.org
+  //    the NO_COLOR convention
   const noColor = env.NO_COLOR;
   if (typeof noColor === 'string' && noColor !== '') return 0;
 

@@ -3,7 +3,6 @@
 ## Installation
 
 ```bash
-npm install @hive-flow/deployment
 ```
 
 ## Common Commands
@@ -235,9 +234,9 @@ See the `/examples` directory for complete working examples:
 
 Run examples:
 ```bash
-npx tsx examples/basic-release.ts
-npx tsx examples/prerelease-workflow.ts
-npx tsx examples/dry-run.ts
+tsx examples/basic-release.ts
+tsx examples/prerelease-workflow.ts
+tsx examples/dry-run.ts
 ```
 
 ## Tips
@@ -277,5 +276,4 @@ await prepareRelease({ bumpType: 'patch' });
 ## Support
 
 - [Full Documentation](./README.md)
-- [Implementation Details](./IMPLEMENTATION.md)
 - [Examples](./examples/)

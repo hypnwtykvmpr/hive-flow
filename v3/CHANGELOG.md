@@ -2,8 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
@@ -225,7 +223,6 @@ Complete restructure into 10 independent @hive-flow modules:
 - Platform-specific configuration paths
 
 ### 🎯 Migration Path
-See [MIGRATION.md](./MIGRATION.md) for detailed upgrade instructions from v2 to v3.
 
 ### 📊 Metrics & Benchmarks
 
@@ -268,12 +265,8 @@ See [MIGRATION.md](./MIGRATION.md) for detailed upgrade instructions from v2 to 
 ### Installation
 ```bash
 # Install v3 alpha
-npm install agentic-flow@3.0.0-alpha.1
 
 # Or specific modules
-npm install @hive-flow/security@latest
-npm install @hive-flow/memory@latest
-npm install @hive-flow/integration@latest
 ```
 
 ### Getting Started
@@ -292,10 +285,5 @@ npx @hive-flow/swarm coordinate --agents 15
 ```
 
 ### Support & Feedback
-- **GitHub Issues**: https://github.com/hypnwtykvmpr/agentic-flow/issues
-- **Documentation**: https://github.com/hypnwtykvmpr/agentic-flow/tree/v3/docs
-- **Migration Guide**: [MIGRATION.md](./MIGRATION.md)
 
 ---
-
-**Full Changelog**: https://github.com/hypnwtykvmpr/agentic-flow/compare/v2.0.1...v3.0.0-alpha.1

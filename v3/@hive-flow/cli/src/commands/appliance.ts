@@ -46,7 +46,7 @@ async function loadModule<T>(path: string, exportName: string, label: string): P
     const mod = await import(path);
     return mod[exportName] as T;
   } catch {
-    output.printError(`RVFA ${label} module not found`, 'Install with: npm install @hive-flow/appliance');
+    output.printError(`RVFA ${label} module not found`, 'Install the @hive-flow/appliance package with your configured package manager.');
     return null;
   }
 }

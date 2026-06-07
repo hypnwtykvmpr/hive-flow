@@ -70,8 +70,8 @@ swarm status                       // ❌ Don't check repeatedly
 
 ## Usage
 ```bash
-npx @hive-flow/cli@latest swarm init --topology hierarchical
-npx @hive-flow/cli@latest swarm status  # Only after completion
+hive-flow swarm init --topology hierarchical
+hive-flow swarm status  # Only after completion
 ```
 
 ## Options

@@ -56,7 +56,7 @@ async function getAIDefence(): Promise<AIDefenceInstance> {
 
   // Don't attempt install more than once per session
   if (installAttempted) {
-    throw new Error('AIDefence package not available. Install with: npm install @hive-flow/aidefence');
+    throw new Error('AIDefence package not available. Install @hive-flow/aidefence with your configured package manager.');
   }
   installAttempted = true;
 
@@ -65,7 +65,7 @@ async function getAIDefence(): Promise<AIDefenceInstance> {
   const installed = await autoInstallPackage(packageName);
 
   if (!installed) {
-    throw new Error('AIDefence package not available. Install with: npm install @hive-flow/aidefence');
+    throw new Error('AIDefence package not available. Install @hive-flow/aidefence with your configured package manager.');
   }
 
   // Retry with ESM cache busting via file:// URL + timestamp

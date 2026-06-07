@@ -41,12 +41,12 @@ Cross-package integration testing and deployment coordination.
 ### Initialize Multi-Repo Coordination
 ```bash
 # Basic swarm initialization
-npx hive-flow skill run github-multi-repo init \
+hive-flow skill run github-multi-repo init \
   --repos "org$frontend,org$backend,org$shared" \
   --topology hierarchical
 
 # Advanced initialization with synchronization
-npx hive-flow skill run github-multi-repo init \
+hive-flow skill run github-multi-repo init \
   --repos "org$frontend,org$backend,org$shared" \
   --topology mesh \
   --shared-memory \
@@ -56,7 +56,7 @@ npx hive-flow skill run github-multi-repo init \
 ### Synchronize Packages
 ```bash
 # Synchronize package versions and dependencies
-npx hive-flow skill run github-multi-repo sync \
+hive-flow skill run github-multi-repo sync \
   --packages "claude-code-flow,hive-flow" \
   --align-versions \
   --update-docs
@@ -65,7 +65,7 @@ npx hive-flow skill run github-multi-repo sync \
 ### Optimize Architecture
 ```bash
 # Analyze and optimize repository structure
-npx hive-flow skill run github-multi-repo optimize \
+hive-flow skill run github-multi-repo optimize \
   --analyze-structure \
   --suggest-improvements \
   --create-templates
@@ -346,7 +346,6 @@ jobs:
       - uses: actions$checkout@v3
       - uses: actions$setup-node@v3
         with: { node-version: '20' }
-      - run: npm install && npm test`,
       message: "ci: Standardize integration workflow",
       branch: "structure$standardization"
     })
@@ -380,7 +379,6 @@ jobs:
     gh repo clone org/$repo /tmp/$repo -- --depth=1
     cd /tmp/$repo
 
-    npm install --save-dev typescript@5.0.0
 
     if npm test; then
       git checkout -b update-typescript-5
@@ -589,7 +587,7 @@ kafka:
 
 ### 1. Microservices Coordination
 ```bash
-npx hive-flow skill run github-multi-repo microservices \
+hive-flow skill run github-multi-repo microservices \
   --services "auth,users,orders,payments" \
   --ensure-compatibility \
   --sync-contracts \
@@ -598,7 +596,7 @@ npx hive-flow skill run github-multi-repo microservices \
 
 ### 2. Library Updates
 ```bash
-npx hive-flow skill run github-multi-repo lib-update \
+hive-flow skill run github-multi-repo lib-update \
   --library "org$shared-lib" \
   --version "2.0.0" \
   --find-consumers \
@@ -608,7 +606,7 @@ npx hive-flow skill run github-multi-repo lib-update \
 
 ### 3. Organization-Wide Changes
 ```bash
-npx hive-flow skill run github-multi-repo org-policy \
+hive-flow skill run github-multi-repo org-policy \
   --policy "add-security-headers" \
   --repos "org/*" \
   --validate-compliance \
@@ -674,7 +672,7 @@ hive-flow/
 
 ### Multi-Repo Dashboard
 ```bash
-npx hive-flow skill run github-multi-repo dashboard \
+hive-flow skill run github-multi-repo dashboard \
   --port 3000 \
   --metrics "agent-activity,task-progress,memory-usage" \
   --real-time
@@ -682,7 +680,7 @@ npx hive-flow skill run github-multi-repo dashboard \
 
 ### Dependency Graph
 ```bash
-npx hive-flow skill run github-multi-repo dep-graph \
+hive-flow skill run github-multi-repo dep-graph \
   --format mermaid \
   --include-agents \
   --show-data-flow
@@ -690,7 +688,7 @@ npx hive-flow skill run github-multi-repo dep-graph \
 
 ### Health Monitoring
 ```bash
-npx hive-flow skill run github-multi-repo health-check \
+hive-flow skill run github-multi-repo health-check \
   --repos "org/*" \
   --check "connectivity,memory,agents" \
   --alert-on-issues
@@ -730,7 +728,7 @@ npx hive-flow skill run github-multi-repo health-check \
 
 ### Caching Strategy
 ```bash
-npx hive-flow skill run github-multi-repo cache-strategy \
+hive-flow skill run github-multi-repo cache-strategy \
   --analyze-patterns \
   --suggest-cache-layers \
   --implement-invalidation
@@ -738,7 +736,7 @@ npx hive-flow skill run github-multi-repo cache-strategy \
 
 ### Parallel Execution
 ```bash
-npx hive-flow skill run github-multi-repo parallel-optimize \
+hive-flow skill run github-multi-repo parallel-optimize \
   --analyze-dependencies \
   --identify-parallelizable \
   --execute-optimal
@@ -746,7 +744,7 @@ npx hive-flow skill run github-multi-repo parallel-optimize \
 
 ### Resource Pooling
 ```bash
-npx hive-flow skill run github-multi-repo resource-pool \
+hive-flow skill run github-multi-repo resource-pool \
   --share-agents \
   --distribute-load \
   --monitor-usage
@@ -756,7 +754,7 @@ npx hive-flow skill run github-multi-repo resource-pool \
 
 ### Connectivity Issues
 ```bash
-npx hive-flow skill run github-multi-repo diagnose-connectivity \
+hive-flow skill run github-multi-repo diagnose-connectivity \
   --test-all-repos \
   --check-permissions \
   --verify-webhooks
@@ -764,7 +762,7 @@ npx hive-flow skill run github-multi-repo diagnose-connectivity \
 
 ### Memory Synchronization
 ```bash
-npx hive-flow skill run github-multi-repo debug-memory \
+hive-flow skill run github-multi-repo debug-memory \
   --check-consistency \
   --identify-conflicts \
   --repair-state
@@ -772,7 +770,7 @@ npx hive-flow skill run github-multi-repo debug-memory \
 
 ### Performance Bottlenecks
 ```bash
-npx hive-flow skill run github-multi-repo perf-analysis \
+hive-flow skill run github-multi-repo perf-analysis \
   --profile-operations \
   --identify-bottlenecks \
   --suggest-optimizations
@@ -782,7 +780,7 @@ npx hive-flow skill run github-multi-repo perf-analysis \
 
 ### 1. Distributed Task Queue
 ```bash
-npx hive-flow skill run github-multi-repo queue \
+hive-flow skill run github-multi-repo queue \
   --backend redis \
   --workers 10 \
   --priority-routing \
@@ -791,7 +789,7 @@ npx hive-flow skill run github-multi-repo queue \
 
 ### 2. Cross-Repo Testing
 ```bash
-npx hive-flow skill run github-multi-repo test \
+hive-flow skill run github-multi-repo test \
   --setup-test-env \
   --link-services \
   --run-e2e \
@@ -800,7 +798,7 @@ npx hive-flow skill run github-multi-repo test \
 
 ### 3. Monorepo Migration
 ```bash
-npx hive-flow skill run github-multi-repo to-monorepo \
+hive-flow skill run github-multi-repo to-monorepo \
   --analyze-repos \
   --suggest-structure \
   --preserve-history \
@@ -811,7 +809,7 @@ npx hive-flow skill run github-multi-repo to-monorepo \
 
 ### Full-Stack Application Update
 ```bash
-npx hive-flow skill run github-multi-repo fullstack-update \
+hive-flow skill run github-multi-repo fullstack-update \
   --frontend "org$web-app" \
   --backend "org$api-server" \
   --database "org$db-migrations" \
@@ -820,7 +818,7 @@ npx hive-flow skill run github-multi-repo fullstack-update \
 
 ### Cross-Team Collaboration
 ```bash
-npx hive-flow skill run github-multi-repo cross-team \
+hive-flow skill run github-multi-repo cross-team \
   --teams "frontend,backend,devops" \
   --task "implement-feature-x" \
   --assign-by-expertise \
