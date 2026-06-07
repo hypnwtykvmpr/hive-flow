@@ -47,10 +47,27 @@ function ambiguous(fallbackVerdict: 'APPROVED' | 'DENIED', maxRisk: RiskLevel): 
   } as InlineJuryResult;
 }
 
+function approved(): InlineJuryResult {
+  return {
+    verdict: 'APPROVED',
+    votes: {},
+    reason: 'inline approved',
+  } as InlineJuryResult;
+}
+
 function bashInput(command: string, sessionId = 'llm-jury-seam-session'): HookInput {
   return {
     tool_name: 'Bash',
     tool_input: { command },
+    cwd: '/project',
+    session_id: sessionId,
+  };
+}
+
+function malformedInput(sessionId = 'llm-jury-malformed-session'): HookInput {
+  return {
+    tool_name: '',
+    tool_input: {},
     cwd: '/project',
     session_id: sessionId,
   };
@@ -112,6 +129,18 @@ function lastLayer(run: GateRun): string | undefined {
 }
 
 describe('Stage-2 LLM jury seam', () => {
+  it('does not teach the vote learner for inline-only approvals', async () => {
+    const root = makeTempRoot('llm-jury-inline-approved');
+    const harness = await loadHarness({ inlineResult: approved() });
+
+    const run = await evaluateWithLog(harness, bashInput('custom --inline-approved'), root);
+
+    expect(run.result.decision).toBe('allow');
+    expect(lastLayer(run)).toBe('inline-jury');
+    expect(harness.evaluateLLMJury).not.toHaveBeenCalled();
+    expect(harness.recordVerdict).not.toHaveBeenCalled();
+  });
+
   it('routes ambiguous inline approval through LLM approval and teaches the vote learner', async () => {
     const root = makeTempRoot('llm-jury-approve');
     const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low') });
@@ -157,7 +186,10 @@ describe('Stage-2 LLM jury seam', () => {
       reason: 'first ambiguous call approved',
       totalLatencyMs: 2,
     });
-    const config = { llm_jury_budget_max_calls: 1 } as Partial<PermissionConfig>;
+    const config = {
+      llm_jury_budget_dir: join(root, 'budget'),
+      llm_jury_budget_max_calls: 1,
+    } as Partial<PermissionConfig>;
 
     await evaluateWithLog(harness, bashInput('custom --first', 'budget-session'), root, config);
     harness.evaluateLLMJury.mockClear();
@@ -168,6 +200,23 @@ describe('Stage-2 LLM jury seam', () => {
 
     expect(run.result.decision).toBe('deny');
     expect(lastLayer(run)).toBe('inline-jury');
+    expect(harness.evaluateLLMJury).not.toHaveBeenCalled();
+    expect(harness.recordVerdict).not.toHaveBeenCalled();
+  });
+
+  it('denies malformed no-subject input without entering the LLM path', async () => {
+    const root = makeTempRoot('llm-jury-malformed');
+    const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low') });
+    harness.evaluateLLMJury.mockResolvedValue({
+      verdict: 'APPROVED',
+      votes: [],
+      reason: 'should not be called',
+      totalLatencyMs: 1,
+    });
+
+    const run = await evaluateWithLog(harness, malformedInput(), root);
+
+    expect(run.result.decision).toBe('deny');
     expect(harness.evaluateLLMJury).not.toHaveBeenCalled();
     expect(harness.recordVerdict).not.toHaveBeenCalled();
   });

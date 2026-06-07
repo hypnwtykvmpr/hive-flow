@@ -25,6 +25,7 @@ async function evaluateWithLog(command: string, config: Partial<PermissionConfig
   try {
     const result = await evaluate(bashInput(command), mergeWithDefaults({
       ...config,
+      disable_vote_learner: true,
       log_file: logFile,
     }));
     const entries = readFileSync(logFile, 'utf8')

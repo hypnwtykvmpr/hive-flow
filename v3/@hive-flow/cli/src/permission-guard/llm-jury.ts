@@ -126,6 +126,12 @@ interface ProviderModule {
   }>;
 }
 
+function getAnthropicApiKey(): string | null {
+  const key = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || '';
+  const trimmed = key.trim();
+  return trimmed ? trimmed : null;
+}
+
 async function loadProviders(): Promise<ProviderModule | null> {
   try {
     return await import('@hive-flow/providers') as unknown as ProviderModule;
@@ -138,6 +144,7 @@ async function callJuror(
   config: JurorConfig,
   userMessage: string,
   providerModule: ProviderModule,
+  apiKey: string,
   modelId?: string,
 ): Promise<LLMJurorVote> {
   const start = performance.now();
@@ -147,6 +154,7 @@ async function callJuror(
     providers: [{
       provider: 'anthropic',
       model: defaultModel,
+      apiKey,
       maxTokens: 256,
       temperature: 0,
     }],
@@ -259,6 +267,9 @@ export async function evaluateLLMJury(
     timeoutMs?: number;
   },
 ): Promise<LLMJuryResult | null> {
+  const apiKey = getAnthropicApiKey();
+  if (!apiKey) return null;
+
   const providerModule = await loadProviders();
   if (!providerModule) return null;
 
@@ -270,7 +281,7 @@ export async function evaluateLLMJury(
 
   // Dispatch all 3 jurors in parallel with timeout
   const jurorPromises = configs.map(config =>
-    callJuror(config, userMessage, providerModule, options?.modelId),
+    callJuror(config, userMessage, providerModule, apiKey, options?.modelId),
   );
 
   const timeoutPromise = new Promise<'timeout'>(resolve =>

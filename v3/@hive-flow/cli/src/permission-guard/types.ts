@@ -187,6 +187,7 @@ export interface PermissionConfig {
   llm_jury_budget_max_calls?: number;
   llm_jury_budget_window_ms?: number;
   llm_jury_budget_dir?: string;
+  disable_vote_learner?: boolean;
 }
 
 // ---------------------------------------------------------------------------

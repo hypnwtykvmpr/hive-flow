@@ -315,6 +315,14 @@ function learningCommand(juryCtx: JuryContext): string {
   return JSON.stringify(juryCtx.toolInput).slice(0, DEFAULT_INPUT_SUMMARY_MAX);
 }
 
+function hasJurySubject(juryCtx: JuryContext): boolean {
+  if (!juryCtx.toolName.trim()) return false;
+  if (juryCtx.toolName.startsWith('mcp__')) return true;
+  if (juryCtx.toolName === 'Bash') return Boolean(juryCtx.toolInput.command?.trim());
+  if (juryCtx.filePath?.trim()) return true;
+  return Object.values(juryCtx.toolInput).some(value => value.trim().length > 0);
+}
+
 async function recordAllowVerdict(juryCtx: JuryContext): Promise<void> {
   try {
     const { normalizeCommand, recordVerdict } = await import('./vote-learner.js');
@@ -360,7 +368,6 @@ async function resolveJury(options: ResolveJuryOptions): Promise<GateResult> {
   const inline = evaluateInlineJury(options.juryCtx);
 
   if (inline.verdict === 'APPROVED') {
-    await recordAllowVerdict(options.juryCtx);
     logDecision(
       options.config,
       options.toolName,
@@ -388,6 +395,20 @@ async function resolveJury(options: ResolveJuryOptions): Promise<GateResult> {
       options.additionalContext,
       inline.reason,
     );
+  }
+
+  if (!hasJurySubject(options.juryCtx)) {
+    const reason = 'DENIED: malformed permission request has no tool target or command to evaluate.';
+    logDecision(
+      options.config,
+      options.toolName,
+      options.inputSummary,
+      'deny',
+      'deterministic',
+      prefixReason(options.logPrefix, 'malformed no-subject request'),
+      { session_id: options.hookInput.session_id },
+    );
+    return { decision: 'deny', reason };
   }
 
   const sessionId = options.hookInput.session_id || process.env.CLAUDE_SESSION_ID || 'unknown-session';
@@ -1428,16 +1449,18 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
     }
 
     // 5b) Check learned patterns
-    try {
-      const { checkLearnedPattern } = await import('./vote-learner.js');
-      const learned = checkLearnedPattern(toolName, cmd);
-      if (learned === 'allow') {
-        const reason = 'learned pattern: approved 5+ times';
-        logDecision(config, toolName, inputSummary, 'allow', 'learned', reason);
-        return { decision: 'allow', reason };
+    if (!config.disable_vote_learner) {
+      try {
+        const { checkLearnedPattern } = await import('./vote-learner.js');
+        const learned = checkLearnedPattern(toolName, cmd);
+        if (learned === 'allow') {
+          const reason = 'learned pattern: approved 5+ times';
+          logDecision(config, toolName, inputSummary, 'allow', 'learned', reason);
+          return { decision: 'allow', reason };
+        }
+      } catch {
+        // vote-learner not available — skip learned patterns
       }
-    } catch {
-      // vote-learner not available — skip learned patterns
     }
 
     // 6) Not matched — inline jury evaluation instead of human escalation
