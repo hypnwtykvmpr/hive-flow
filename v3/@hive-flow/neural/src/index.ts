@@ -46,7 +46,6 @@ export type {
   LoRAWeights,
 
   // EWC Types
-  EWCConfig,
   EWCState,
 
   // Statistics

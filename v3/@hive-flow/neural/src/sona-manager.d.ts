@@ -15,7 +15,7 @@
  * - edge: Resource-constrained (<5MB)
  * - batch: High-throughput processing
  */
-import type { SONAMode, SONAModeConfig, ModeOptimizations, Trajectory, Pattern, PatternMatch, NeuralStats, NeuralEventListener, LoRAConfig, LoRAWeights, EWCConfig } from './types.js';
+import type { SONAMode, SONAModeConfig, ModeOptimizations, Trajectory, Pattern, PatternMatch, NeuralStats, NeuralEventListener, LoRAConfig, LoRAWeights } from './types.js';
 /**
  * SONA Manager - Main orchestrator for neural learning
  */
@@ -96,14 +96,6 @@ export declare class SONAManager {
      * Initialize LoRA weights for a domain
      */
     initializeLoRAWeights(domain?: string): LoRAWeights;
-    /**
-     * Get EWC configuration
-     */
-    getEWCConfig(): EWCConfig;
-    /**
-     * Consolidate EWC after learning a new task
-     */
-    consolidateEWC(): void;
     /**
      * Get current neural system statistics
      */

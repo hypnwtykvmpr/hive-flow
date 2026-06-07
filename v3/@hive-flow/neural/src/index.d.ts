@@ -11,7 +11,7 @@
  *
  * @module @hive-flow/neural
  */
-export type { SONAMode, SONAModeConfig, ModeOptimizations, Trajectory, TrajectoryStep, TrajectoryVerdict, DistilledMemory, Pattern, PatternMatch, PatternEvolution, RLAlgorithm, RLConfig, PPOConfig, DQNConfig, DecisionTransformerConfig, CuriosityConfig, LoRAConfig, LoRAWeights, EWCConfig, EWCState, NeuralStats, NeuralEvent, NeuralEventListener, } from './types.js';
+export type { SONAMode, SONAModeConfig, ModeOptimizations, Trajectory, TrajectoryStep, TrajectoryVerdict, DistilledMemory, Pattern, PatternMatch, PatternEvolution, RLAlgorithm, RLConfig, PPOConfig, DQNConfig, DecisionTransformerConfig, CuriosityConfig, LoRAConfig, LoRAWeights, EWCState, NeuralStats, NeuralEvent, NeuralEventListener, } from './types.js';
 export { SONAManager, createSONAManager, getModeConfig, getModeOptimizations, } from './sona-manager.js';
 export type { ModeImplementation } from './modes/index.js';
 export { BaseModeImplementation, RealTimeMode, BalancedMode, ResearchMode, EdgeMode, BatchMode, } from './modes/index.js';

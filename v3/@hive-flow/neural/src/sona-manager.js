@@ -169,8 +169,6 @@ export class SONAManager {
         this.ewcState = {
             means: new Map(),
             fisher: new Map(),
-            taskCount: 0,
-            lastConsolidation: Date.now(),
         };
         this.isInitialized = true;
     }
@@ -434,37 +432,6 @@ export class SONAManager {
         }
         this.loraWeights.set(domain, weights);
         return weights;
-    }
-    // ==========================================================================
-    // EWC (Elastic Weight Consolidation)
-    // ==========================================================================
-    /**
-     * Get EWC configuration
-     */
-    getEWCConfig() {
-        return {
-            lambda: this.config.ewcLambda,
-            decay: 0.9,
-            fisherSamples: 100,
-            minFisher: 1e-8,
-            online: true,
-        };
-    }
-    /**
-     * Consolidate EWC after learning a new task
-     */
-    consolidateEWC() {
-        if (!this.ewcState)
-            return;
-        const config = this.getEWCConfig();
-        // Update Fisher information with decay
-        for (const [key, fisher] of this.ewcState.fisher) {
-            for (let i = 0; i < fisher.length; i++) {
-                fisher[i] *= config.decay;
-            }
-        }
-        this.ewcState.taskCount++;
-        this.ewcState.lastConsolidation = Date.now();
     }
     // ==========================================================================
     // Statistics

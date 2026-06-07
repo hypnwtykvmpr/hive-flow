@@ -466,30 +466,6 @@ export interface LoRAWeights {
   domain?: string;
 }
 
-// ============================================================================
-// EWC Types (Elastic Weight Consolidation)
-// ============================================================================
-
-/**
- * EWC++ configuration for continual learning
- */
-export interface EWCConfig {
-  /** Lambda (importance weight) */
-  lambda: number;
-
-  /** Decay rate for old Fisher information */
-  decay: number;
-
-  /** Number of samples for Fisher estimation */
-  fisherSamples: number;
-
-  /** Minimum Fisher value (for stability) */
-  minFisher: number;
-
-  /** Use online EWC (EWC++) */
-  online: boolean;
-}
-
 /**
  * EWC state for a parameter set
  */
@@ -499,12 +475,6 @@ export interface EWCState {
 
   /** Fisher information (importance weights) */
   fisher: Map<string, Float32Array>;
-
-  /** Number of tasks learned */
-  taskCount: number;
-
-  /** Last consolidation timestamp */
-  lastConsolidation: number;
 }
 
 // ============================================================================

@@ -125,18 +125,6 @@ export type {
   PatternMatch,
 } from './learning-bridge.js';
 
-// ===== RVF Learning Persistence (ADR-057 Phase 6) =====
-export { RvfLearningStore } from './rvf-learning-store.js';
-export type {
-  RvfLearningStoreConfig,
-  PatternRecord,
-  LoraRecord,
-  EwcRecord,
-  TrajectoryRecord,
-} from './rvf-learning-store.js';
-export { PersistentSonaCoordinator } from './persistent-sona.js';
-export type { PersistentSonaConfig } from './persistent-sona.js';
-
 // ===== Binary Migration (RVF-Compatible Format) =====
 export { BinaryMigrator } from './binary-migration.js';
 export type { BinaryMigrationOptions, BinaryMigrationResult } from './binary-migration.js';
