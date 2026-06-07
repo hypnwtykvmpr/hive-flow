@@ -107,27 +107,27 @@ export interface CommandsConfig {
  * Agents configuration
  */
 export interface AgentsConfig {
-  /** Include core agents (coder, tester, reviewer) */
+  /** Include the canonical agent roster */
   core: boolean;
-  /** Include consensus agents */
+  /** Legacy selector; resolves to the canonical agent roster */
   consensus: boolean;
-  /** Include GitHub agents */
+  /** Legacy selector; resolves to the canonical agent roster */
   github: boolean;
-  /** Include hive-mind agents */
+  /** Legacy selector; resolves to the canonical agent roster */
   hiveMind: boolean;
-  /** Include SPARC agents */
+  /** Legacy selector; resolves to the canonical agent roster */
   sparc: boolean;
-  /** Include swarm coordinators */
+  /** Legacy selector; resolves to the canonical agent roster */
   swarm: boolean;
-  /** Include browser automation agents (agent-browser) */
+  /** Legacy selector; resolves to the canonical agent roster */
   browser: boolean;
-  /** Include V3-specific agents (security, memory, performance, etc.) */
+  /** Legacy selector; resolves to the canonical agent roster */
   v3: boolean;
-  /** Include optimization agents */
+  /** Legacy selector; resolves to the canonical agent roster */
   optimization: boolean;
-  /** Include testing agents */
+  /** Legacy selector; resolves to the canonical agent roster */
   testing: boolean;
-  /** Include dual-mode agents (Claude Code + Codex hybrid) */
+  /** Legacy selector; resolves to the canonical agent roster */
   dualMode: boolean;
   /** Include all agents */
   all: boolean;

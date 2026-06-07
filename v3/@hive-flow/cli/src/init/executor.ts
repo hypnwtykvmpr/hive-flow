@@ -29,6 +29,7 @@ import {
   generateAutoMemoryHook,
 } from './helpers-generator.js';
 import { generateClaudeMd } from './claudemd-generator.js';
+import { CANONICAL_AGENT_TYPES } from '../agents/roster.js';
 
 /**
  * Skills to copy based on configuration
@@ -97,33 +98,35 @@ const COMMANDS_MAP: Record<string, string[]> = {
 /**
  * Agents to copy based on configuration
  */
+export const CANONICAL_INIT_AGENT_FILES = CANONICAL_AGENT_TYPES.map(type => `${type}.yaml`);
+
 const AGENTS_MAP: Record<string, string[]> = {
-  core: ['core'],
-  consensus: ['consensus'],
-  github: ['github'],
-  hiveMind: ['hive-mind'],
-  sparc: ['sparc'],
-  swarm: ['swarm'],
-  browser: ['browser'],  // agent-browser integration
-  dualMode: ['dual-mode'],  // Claude Code + Codex hybrid execution
+  core: CANONICAL_INIT_AGENT_FILES,
+  consensus: CANONICAL_INIT_AGENT_FILES,
+  github: CANONICAL_INIT_AGENT_FILES,
+  hiveMind: CANONICAL_INIT_AGENT_FILES,
+  sparc: CANONICAL_INIT_AGENT_FILES,
+  swarm: CANONICAL_INIT_AGENT_FILES,
+  browser: CANONICAL_INIT_AGENT_FILES,
+  dualMode: CANONICAL_INIT_AGENT_FILES,
   // V3-specific agents
-  v3: ['v3'],
-  optimization: ['optimization'],
-  templates: ['templates'],
-  testing: ['testing'],
-  sublinear: ['sublinear'],
-  flowNexus: ['flow-nexus'],
-  analysis: ['analysis'],
-  architecture: ['architecture'],
-  development: ['development'],
-  devops: ['devops'],
-  documentation: ['documentation'],
-  specialized: ['specialized'],
-  goal: ['goal'],
-  sona: ['sona'],
-  payments: ['payments'],
-  data: ['data'],
-  custom: ['custom'],
+  v3: CANONICAL_INIT_AGENT_FILES,
+  optimization: CANONICAL_INIT_AGENT_FILES,
+  templates: CANONICAL_INIT_AGENT_FILES,
+  testing: CANONICAL_INIT_AGENT_FILES,
+  sublinear: CANONICAL_INIT_AGENT_FILES,
+  flowNexus: CANONICAL_INIT_AGENT_FILES,
+  analysis: CANONICAL_INIT_AGENT_FILES,
+  architecture: CANONICAL_INIT_AGENT_FILES,
+  development: CANONICAL_INIT_AGENT_FILES,
+  devops: CANONICAL_INIT_AGENT_FILES,
+  documentation: CANONICAL_INIT_AGENT_FILES,
+  specialized: CANONICAL_INIT_AGENT_FILES,
+  goal: CANONICAL_INIT_AGENT_FILES,
+  sona: CANONICAL_INIT_AGENT_FILES,
+  payments: CANONICAL_INIT_AGENT_FILES,
+  data: CANONICAL_INIT_AGENT_FILES,
+  custom: CANONICAL_INIT_AGENT_FILES,
 };
 
 /**
@@ -675,14 +678,18 @@ export async function executeUpgradeWithMissing(targetDir: string, upgradeSettin
     // Add missing agents
     if (sourceAgentsDir) {
       const allAgents = Object.values(AGENTS_MAP).flat();
-      for (const agentCategory of [...new Set(allAgents)]) {
-        const sourcePath = path.join(sourceAgentsDir, agentCategory);
-        const targetPath = path.join(agentsDir, agentCategory);
+      for (const agentName of [...new Set(allAgents)]) {
+        const sourcePath = path.join(sourceAgentsDir, agentName);
+        const targetPath = path.join(agentsDir, agentName);
 
         if (fs.existsSync(sourcePath) && !fs.existsSync(targetPath)) {
-          copyDirRecursive(sourcePath, targetPath);
-          result.addedAgents.push(agentCategory);
-          result.created.push(`.claude/agents/${agentCategory}`);
+          if (fs.statSync(sourcePath).isDirectory()) {
+            copyDirRecursive(sourcePath, targetPath);
+          } else {
+            fs.copyFileSync(sourcePath, targetPath);
+          }
+          result.addedAgents.push(agentName);
+          result.created.push(`.claude/agents/${agentName}`);
         }
       }
     }
@@ -993,11 +1000,10 @@ async function copyAgents(
     if (agentsConfig.sparc) agentsToCopy.push(...AGENTS_MAP.sparc);
     if (agentsConfig.swarm) agentsToCopy.push(...AGENTS_MAP.swarm);
     if (agentsConfig.browser) agentsToCopy.push(...AGENTS_MAP.browser);
-    // V3-specific agent categories
+    // Legacy selectors all resolve to the canonical 18-file roster.
     if (agentsConfig.v3) agentsToCopy.push(...(AGENTS_MAP.v3 || []));
     if (agentsConfig.optimization) agentsToCopy.push(...(AGENTS_MAP.optimization || []));
     if (agentsConfig.testing) agentsToCopy.push(...(AGENTS_MAP.testing || []));
-    // Dual-mode agents (Claude Code + Codex hybrid)
     if (agentsConfig.dualMode) agentsToCopy.push(...(AGENTS_MAP.dualMode || []));
   }
 
@@ -1008,21 +1014,26 @@ async function copyAgents(
     return;
   }
 
-  // Copy each agent category
-  for (const agentCategory of [...new Set(agentsToCopy)]) {
-    const sourcePath = path.join(sourceAgentsDir, agentCategory);
-    const targetPath = path.join(targetAgentsDir, agentCategory);
+  // Copy each agent payload file.
+  for (const agentName of [...new Set(agentsToCopy)]) {
+    const sourcePath = path.join(sourceAgentsDir, agentName);
+    const targetPath = path.join(targetAgentsDir, agentName);
 
     if (fs.existsSync(sourcePath)) {
       if (!fs.existsSync(targetPath) || options.force) {
-        copyDirRecursive(sourcePath, targetPath);
-        // Count agent files (.yaml and .md)
-        const yamlFiles = countFiles(sourcePath, '.yaml');
-        const mdFiles = countFiles(sourcePath, '.md');
-        result.summary.agentsCount += yamlFiles + mdFiles;
-        result.created.files.push(`.claude/agents/${agentCategory}`);
+        if (fs.statSync(sourcePath).isDirectory()) {
+          copyDirRecursive(sourcePath, targetPath);
+          // Count agent files (.yaml and .md)
+          const yamlFiles = countFiles(sourcePath, '.yaml');
+          const mdFiles = countFiles(sourcePath, '.md');
+          result.summary.agentsCount += yamlFiles + mdFiles;
+        } else {
+          fs.copyFileSync(sourcePath, targetPath);
+          result.summary.agentsCount++;
+        }
+        result.created.files.push(`.claude/agents/${agentName}`);
       } else {
-        result.skipped.push(`.claude/agents/${agentCategory}`);
+        result.skipped.push(`.claude/agents/${agentName}`);
       }
     }
   }
@@ -1911,54 +1922,73 @@ function findSourceDir(type: 'skills' | 'commands' | 'agents', sourceBaseDir?: s
 
   // If explicit source base directory is provided, use it first
   if (sourceBaseDir) {
-    possiblePaths.push(path.join(sourceBaseDir, '.claude', type));
+    if (type === 'agents') {
+      possiblePaths.push(path.join(sourceBaseDir, 'agents'));
+    } else {
+      possiblePaths.push(path.join(sourceBaseDir, '.claude', type));
+    }
   }
 
-  // IMPORTANT: Check the package's own .claude directory first
+  // IMPORTANT: Check the package's own payload directory first
   // This is the primary path when running as an npm package
   // __dirname is typically /path/to/node_modules/@hive-flow/cli/dist/src/init
   // We need to go up 3 levels to reach the package root (dist/src/init -> dist/src -> dist -> root)
   const packageRoot = path.resolve(__dirname, '..', '..', '..');
-  const packageDotClaude = path.join(packageRoot, '.claude', type);
-  if (fs.existsSync(packageDotClaude)) {
-    possiblePaths.unshift(packageDotClaude); // Add to beginning (highest priority)
+  if (type === 'agents') {
+    const packageAgents = path.join(packageRoot, 'agents');
+    if (fs.existsSync(packageAgents)) {
+      possiblePaths.unshift(packageAgents); // Add to beginning (highest priority)
+    }
+  } else {
+    const packageDotClaude = path.join(packageRoot, '.claude', type);
+    if (fs.existsSync(packageDotClaude)) {
+      possiblePaths.unshift(packageDotClaude); // Add to beginning (highest priority)
+    }
   }
 
-  // From dist/src/init -> go up to project root
-  const distPath = __dirname;
-
-  // Try to find the project root by looking for .claude directory
-  let currentDir = distPath;
-  for (let i = 0; i < 10; i++) {
-    const parentDir = path.dirname(currentDir);
-    const dotClaudePath = path.join(parentDir, '.claude', type);
-    if (fs.existsSync(dotClaudePath)) {
-      possiblePaths.push(dotClaudePath);
+  // From dist/src/init -> go up to project root.
+  // Agents intentionally do not search .claude/agents; the init payload is the
+  // package's flat canonical agents/ directory.
+  if (type !== 'agents') {
+    let currentDir = __dirname;
+    for (let i = 0; i < 10; i++) {
+      const parentDir = path.dirname(currentDir);
+      const dotClaudePath = path.join(parentDir, '.claude', type);
+      if (fs.existsSync(dotClaudePath)) {
+        possiblePaths.push(dotClaudePath);
+      }
+      currentDir = parentDir;
     }
-    currentDir = parentDir;
   }
 
   // Also check relative to process.cwd() for development
-  const cwdBased = [
-    path.join(process.cwd(), '.claude', type),
-    path.join(process.cwd(), '..', '.claude', type),
-    path.join(process.cwd(), '..', '..', '.claude', type),
-  ];
+  const cwdBased = type === 'agents'
+    ? [
+        path.join(process.cwd(), 'v3', '@hive-flow', 'cli', 'agents'),
+        path.join(process.cwd(), 'agents'),
+      ]
+    : [
+        path.join(process.cwd(), '.claude', type),
+        path.join(process.cwd(), '..', '.claude', type),
+        path.join(process.cwd(), '..', '..', '.claude', type),
+      ];
   possiblePaths.push(...cwdBased);
 
   // Check v2 directory for agents
   if (type === 'agents') {
     possiblePaths.push(
-      path.join(process.cwd(), 'v2', '.claude', type),
-      path.join(process.cwd(), '..', 'v2', '.claude', type),
+      path.join(process.cwd(), 'v3', '@hive-flow', 'cli', 'agents'),
+      path.join(process.cwd(), '..', 'v3', '@hive-flow', 'cli', 'agents'),
     );
   }
 
   // Plugin directory
-  possiblePaths.push(
-    path.join(process.cwd(), 'plugin', type),
-    path.join(process.cwd(), '..', 'plugin', type),
-  );
+  if (type !== 'agents') {
+    possiblePaths.push(
+      path.join(process.cwd(), 'plugin', type),
+      path.join(process.cwd(), '..', 'plugin', type),
+    );
+  }
 
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) {
