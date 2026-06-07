@@ -184,8 +184,6 @@ export type {
 } from './hybrid-backend.js';
 export { BinaryBackend } from './binary-backend.js';
 export type { BinaryBackendConfig } from './binary-backend.js';
-export { HnswLite, cosineSimilarity } from './hnsw-lite.js';
-export type { HnswSearchResult } from './hnsw-lite.js';
 export { HNSWIndex } from './hnsw-index.js';
 export type { IVectorIndex, VectorIndexConfig, VectorIndexStats } from './vector-index.js';
 export { CacheManager, TieredCacheManager } from './cache-manager.js';
