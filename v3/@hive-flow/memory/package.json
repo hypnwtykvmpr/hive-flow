@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hive-flow/embeddings": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "agentdb": "3.0.0-alpha.9",
     "sql.js": "^1.14.1"

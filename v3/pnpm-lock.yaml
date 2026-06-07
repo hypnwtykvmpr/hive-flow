@@ -314,6 +314,9 @@ importers:
 
   '@hive-flow/memory':
     dependencies:
+      '@hive-flow/embeddings':
+        specifier: workspace:*
+        version: link:../embeddings
       '@hive-flow/shared':
         specifier: workspace:*
         version: link:../shared
