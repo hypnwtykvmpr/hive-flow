@@ -23,6 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const { isAlreadyAcked, claimAcked } = require('./dedup-marker.cjs');
+const { resolveSessionId } = require('./session-id.cjs');
 
 function loadProtectedPathPolicyModule() {
   const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
@@ -56,6 +57,7 @@ const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
   fallbackRoot: process.cwd(),
 });
 const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
+const OWNER_ACK_GRACE_MS = 15_000; // Align with hive-watcher's normal poll cadence.
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -118,6 +120,37 @@ function buildSummaryLine(item) {
   return parts.join(' ');
 }
 
+function resolveDoneOwnerSessionId(item) {
+  return resolveSessionId({ session_id: item?.data?.ownerSessionId }, {});
+}
+
+function parseCompletedAtMs(item) {
+  const value = item && item.data && item.data.completedAt;
+  if (typeof value !== 'string' || !value.trim()) return NaN;
+  return Date.parse(value);
+}
+
+function shouldDeferToOwner(item, currentSessionId, nowMs = Date.now()) {
+  const ownerSessionId = resolveDoneOwnerSessionId(item);
+  if (!ownerSessionId) return false;
+  if (ownerSessionId === currentSessionId) return false;
+
+  const completedAtMs = parseCompletedAtMs(item);
+  if (!Number.isFinite(completedAtMs)) return false;
+
+  return nowMs - completedAtMs < OWNER_ACK_GRACE_MS;
+}
+
+function claimOwnOrFallback(item, mode, currentSessionId, nowMs = Date.now()) {
+  if (shouldDeferToOwner(item, currentSessionId, nowMs)) return false;
+  return claimAcked(DATA_DIR, item.sanitized, {
+    source: 'hive-sentinel-notify',
+    mode,
+    ownerSessionId: resolveDoneOwnerSessionId(item) || null,
+    claimantSessionId: currentSessionId || null,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Entry points
 // ---------------------------------------------------------------------------
@@ -129,9 +162,9 @@ function handleTeammateIdle() {
     return;
   }
 
-  const claimed = unnotified.filter(item =>
-    claimAcked(DATA_DIR, item.sanitized, { source: 'hive-sentinel-notify', mode: 'teammate-idle' }),
-  );
+  const currentSessionId = resolveSessionId(null, process.env);
+  const nowMs = Date.now();
+  const claimed = unnotified.filter(item => claimOwnOrFallback(item, 'teammate-idle', currentSessionId, nowMs));
   if (claimed.length === 0) {
     process.stdout.write(JSON.stringify({}));
     return;
@@ -160,9 +193,9 @@ function handleStopNotify() {
     return;
   }
 
-  const claimed = unnotified.filter(item =>
-    claimAcked(DATA_DIR, item.sanitized, { source: 'hive-sentinel-notify', mode: 'stop-notify' }),
-  );
+  const currentSessionId = resolveSessionId(null, process.env);
+  const nowMs = Date.now();
+  const claimed = unnotified.filter(item => claimOwnOrFallback(item, 'stop-notify', currentSessionId, nowMs));
   if (claimed.length === 0) {
     process.stdout.write(JSON.stringify({}));
     return;

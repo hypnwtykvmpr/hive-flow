@@ -37,6 +37,7 @@ process.on('uncaughtException', () => {
 
 const path = require('path');
 const fs = require('fs');
+const { resolveSessionId } = require('./session-id.cjs');
 
 const helpersDir = __dirname;
 
@@ -67,6 +68,37 @@ const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
   cwd: path.resolve(helpersDir, '..', '..'),
   fallbackRoot: process.cwd(),
 });
+const OWNER_ACK_GRACE_MS = 15_000;
+
+function resolveDoneOwnerSessionId(item) {
+  return resolveSessionId({ session_id: item?.data?.ownerSessionId }, {});
+}
+
+function parseDoneCompletedAtMs(item) {
+  const value = item && item.data && item.data.completedAt;
+  if (typeof value !== 'string' || !value.trim()) return NaN;
+  return Date.parse(value);
+}
+
+function shouldDeferHiveDoneToOwner(item, currentSessionId, nowMs = Date.now()) {
+  const ownerSessionId = resolveDoneOwnerSessionId(item);
+  if (!ownerSessionId) return false;
+  if (ownerSessionId === currentSessionId) return false;
+
+  const completedAtMs = parseDoneCompletedAtMs(item);
+  if (!Number.isFinite(completedAtMs)) return false;
+
+  return nowMs - completedAtMs < OWNER_ACK_GRACE_MS;
+}
+
+function claimHiveDoneOwnOrFallback(DATA_DIR, item, mode, currentSessionId, nowMs = Date.now(), claimAckedFn) {
+  if (shouldDeferHiveDoneToOwner(item, currentSessionId, nowMs)) return false;
+  return claimAckedFn(DATA_DIR, item.sanitized, {
+    source: mode,
+    ownerSessionId: resolveDoneOwnerSessionId(item) || null,
+    claimantSessionId: currentSessionId || null,
+  });
+}
 
 function preToolUseDecision(decision, reason) {
   const hookSpecificOutput = {
@@ -1825,9 +1857,18 @@ const handlers = {
 
       if (unnotified.length === 0) return console.log('{}');
 
+      const currentSessionId = resolveSessionId(null, process.env);
+      const nowMs = Date.now();
       const messages = [];
       for (const item of unnotified) {
-        if (!claimAcked(DATA_DIR, item.sanitized, { source: 'hook-handler:hive-check-complete' })) continue;
+        if (!claimHiveDoneOwnOrFallback(
+          DATA_DIR,
+          item,
+          'hook-handler:hive-check-complete',
+          currentSessionId,
+          nowMs,
+          claimAcked,
+        )) continue;
         const d = item.data || {};
         const parts = [`hive=${item.hiveId}`];
         if (d.completedAt) parts.push(`at=${d.completedAt}`);
