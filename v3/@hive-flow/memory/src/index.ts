@@ -137,9 +137,9 @@ export type {
 export { PersistentSonaCoordinator } from './persistent-sona.js';
 export type { PersistentSonaConfig } from './persistent-sona.js';
 
-// ===== RVF Migration (Bidirectional) =====
-export { RvfMigrator } from './rvf-migration.js';
-export type { RvfMigrationOptions, RvfMigrationResult } from './rvf-migration.js';
+// ===== Binary Migration (RVF-Compatible Format) =====
+export { BinaryMigrator } from './binary-migration.js';
+export type { BinaryMigrationOptions, BinaryMigrationResult } from './binary-migration.js';
 
 // ===== Knowledge Graph =====
 export { MemoryGraph } from './memory-graph.js';
@@ -194,8 +194,8 @@ export type {
   SemanticQuery,
   HybridQuery,
 } from './hybrid-backend.js';
-export { RvfBackend } from './rvf-backend.js';
-export type { RvfBackendConfig } from './rvf-backend.js';
+export { BinaryBackend } from './binary-backend.js';
+export type { BinaryBackendConfig } from './binary-backend.js';
 export { HnswLite, cosineSimilarity } from './hnsw-lite.js';
 export type { HnswSearchResult } from './hnsw-lite.js';
 export { HNSWIndex } from './hnsw-index.js';

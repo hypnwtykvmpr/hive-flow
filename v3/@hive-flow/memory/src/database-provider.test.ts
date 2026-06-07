@@ -7,7 +7,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, getPlatformInfo, getAvailableProviders } from './database-provider.js';
 import { generateMemoryId, createDefaultEntry } from './types.js';
-import { unlinkSync, existsSync } from 'node:fs';
+import { unlinkSync, existsSync, readFileSync } from 'node:fs';
+import * as memory from './index.js';
 
 describe('DatabaseProvider', () => {
   const testDbPath = './test-database-provider.db';
@@ -59,9 +60,15 @@ describe('DatabaseProvider', () => {
     it('should check available providers', async () => {
       const available = await getAvailableProviders();
 
+      expect(available).toHaveProperty('binary');
       expect(available).toHaveProperty('betterSqlite3');
       expect(available).toHaveProperty('sqlJs');
+      expect(available).toHaveProperty('rvf');
       expect(available).toHaveProperty('json');
+
+      // Binary backend is pure TypeScript and should always be available.
+      expect(available.binary).toBe(true);
+      expect(available.rvf).toBe(true);
 
       // JSON backend should always be available
       expect(available.json).toBe(true);
@@ -98,6 +105,45 @@ describe('DatabaseProvider', () => {
   });
 
   describe('Explicit Provider Selection', () => {
+    it('exports renamed binary backend and migrator from the package barrel', () => {
+      const legacyBackendName = ['Rvf', 'Backend'].join('');
+      const legacyMigratorName = ['Rvf', 'Migrator'].join('');
+
+      expect('BinaryBackend' in memory).toBe(true);
+      expect('BinaryMigrator' in memory).toBe(true);
+      expect(legacyBackendName in memory).toBe(false);
+      expect(legacyMigratorName in memory).toBe(false);
+    });
+
+    it('writes with binary provider and reads deprecated rvf provider alias with RVF magic preserved', async () => {
+      const entry = createDefaultEntry({
+        key: 'binary-alias-test',
+        content: 'binary backend compatibility',
+        namespace: 'binary-test',
+      });
+      entry.embedding = new Float32Array(1536).fill(0.25);
+
+      const binaryDb = await createDatabase(testDbPath, {
+        provider: 'binary',
+        verbose: false,
+        autoPersistInterval: 0,
+      });
+      await binaryDb.store(entry);
+      await binaryDb.shutdown();
+
+      const magic = readFileSync('./test-database-provider.rvf').subarray(0, 4);
+      expect([...magic]).toEqual([0x52, 0x56, 0x46, 0x00]);
+
+      const deprecatedAliasDb = await createDatabase(testDbPath, {
+        provider: 'rvf',
+        verbose: false,
+        autoPersistInterval: 0,
+      });
+      const retrieved = await deprecatedAliasDb.getByKey('binary-test', 'binary-alias-test');
+      expect(retrieved?.content).toBe('binary backend compatibility');
+      await deprecatedAliasDb.shutdown();
+    });
+
     it('should create database with sql.js provider', async () => {
       const available = await getAvailableProviders();
 

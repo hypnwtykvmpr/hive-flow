@@ -22,7 +22,7 @@ function validatePath(p: string): void {
   if (resolved.includes('\0')) throw new Error('Resolved path contains null bytes');
 }
 
-export interface RvfBackendConfig {
+export interface BinaryBackendConfig {
   databasePath: string;
   dimensions?: number;
   metric?: 'cosine' | 'euclidean' | 'dot';
@@ -35,7 +35,7 @@ export interface RvfBackendConfig {
   autoPersistInterval?: number;
 }
 
-interface RvfHeader {
+interface BinaryHeader {
   magic: string;
   version: number;
   dimensions: number;
@@ -54,12 +54,11 @@ const DEFAULT_EF_CONSTRUCTION = 200;
 const DEFAULT_MAX_ELEMENTS = 100000;
 const DEFAULT_PERSIST_INTERVAL = 30000;
 
-export class RvfBackend implements IMemoryBackend {
+export class BinaryBackend implements IMemoryBackend {
   private entries = new Map<string, MemoryEntry>();
   private keyIndex = new Map<string, string>();
   private hnswIndex: HnswLite | null = null;
-  private nativeDb: any = null;
-  private config: Required<RvfBackendConfig>;
+  private config: Required<BinaryBackendConfig>;
   private initialized = false;
   private dirty = false;
   private persisting = false;
@@ -67,7 +66,7 @@ export class RvfBackend implements IMemoryBackend {
   private queryTimes: number[] = [];
   private searchTimes: number[] = [];
 
-  constructor(config: RvfBackendConfig) {
+  constructor(config: BinaryBackendConfig) {
     const dimensions = config.dimensions ?? DEFAULT_DIMENSIONS;
     if (!Number.isInteger(dimensions) || dimensions < 1 || dimensions > 10000) {
       throw new Error(`Invalid dimensions: ${dimensions}. Must be an integer between 1 and 10000.`);
@@ -90,28 +89,24 @@ export class RvfBackend implements IMemoryBackend {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    const useNative = await this.tryNativeInit();
-    if (!useNative) {
-      this.hnswIndex = new HnswLite(
-        this.config.dimensions,
-        this.config.hnswM,
-        this.config.hnswEfConstruction,
-        this.config.metric,
-      );
-      await this.loadFromDisk();
-    }
+    this.hnswIndex = new HnswLite(
+      this.config.dimensions,
+      this.config.hnswM,
+      this.config.hnswEfConstruction,
+      this.config.metric,
+    );
+    await this.loadFromDisk();
 
     if (this.config.autoPersistInterval > 0 && this.config.databasePath !== ':memory:') {
       this.persistTimer = setInterval(() => {
-        if (this.dirty && !this.persisting) this.persistToDisk().catch((e: unknown) => { console.warn('[RvfBackend] non-fatal error:', e); });
+        if (this.dirty && !this.persisting) this.persistToDisk().catch((e: unknown) => { console.warn('[BinaryBackend] non-fatal error:', e); });
       }, this.config.autoPersistInterval);
       if (this.persistTimer.unref) this.persistTimer.unref();
     }
 
     this.initialized = true;
     if (this.config.verbose) {
-      const mode = this.nativeDb ? 'native vector backend' : 'pure-TS fallback';
-      console.log(`[RvfBackend] Initialized (${mode}), ${this.entries.size} entries loaded`);
+      console.log(`[BinaryBackend] Initialized (pure-TS), ${this.entries.size} entries loaded`);
     }
   }
 
@@ -125,11 +120,6 @@ export class RvfBackend implements IMemoryBackend {
 
     if (this.dirty) {
       await this.persistToDisk();
-    }
-
-    if (this.nativeDb) {
-      try { await this.nativeDb.close(); } catch { /* best-effort close — ignore errors on shutdown */ }
-      this.nativeDb = null;
     }
 
     this.entries.clear();
@@ -335,7 +325,7 @@ export class RvfBackend implements IMemoryBackend {
     const recommendations: string[] = [];
 
     if (!this.initialized) issues.push('Backend not initialized');
-    if (!this.hnswIndex && !this.nativeDb) {
+    if (!this.hnswIndex) {
       issues.push('No vector index available');
       recommendations.push('Enable the pure-TS vector index or AgentDB bridge');
     }
@@ -348,20 +338,13 @@ export class RvfBackend implements IMemoryBackend {
       status,
       components: {
         storage: { status: this.initialized ? 'healthy' : 'unhealthy', latency: 0 },
-        index: { status: this.hnswIndex || this.nativeDb ? 'healthy' : 'degraded', latency: 0 },
+        index: { status: this.hnswIndex ? 'healthy' : 'degraded', latency: 0 },
         cache: { status: 'healthy', latency: 0 },
       },
       timestamp: Date.now(),
       issues,
       recommendations,
     };
-  }
-
-  private async tryNativeInit(): Promise<boolean> {
-    if (this.config.verbose) {
-      console.log('[RvfBackend] Using pure-TS fallback');
-    }
-    return false;
   }
 
   private compositeKey(namespace: string, key: string): string {
@@ -406,11 +389,11 @@ export class RvfBackend implements IMemoryBackend {
       const MAX_HEADER_SIZE = 10 * 1024 * 1024; // 10MB max header
       if (headerLen > MAX_HEADER_SIZE || 8 + headerLen > raw.length) return;
       const headerJson = raw.subarray(8, 8 + headerLen).toString('utf-8');
-      let header: RvfHeader;
+      let header: BinaryHeader;
       try {
         header = JSON.parse(headerJson);
       } catch {
-        if (this.config.verbose) console.error('[RvfBackend] Corrupt RVF header');
+        if (this.config.verbose) console.error('[BinaryBackend] Corrupt RVF header');
         return;
       }
       if (!header || typeof header.entryCount !== 'number' || typeof header.version !== 'number') return;
@@ -434,13 +417,13 @@ export class RvfBackend implements IMemoryBackend {
           this.keyIndex.set(this.compositeKey(entry.namespace, entry.key), entry.id);
           if (entry.embedding && this.hnswIndex) this.hnswIndex.add(entry.id, entry.embedding);
         } catch (e) {
-          console.warn('[RvfBackend] Skipping corrupted entry:', e);
+          console.warn('[BinaryBackend] Skipping corrupted entry:', e);
           continue;
         }
       }
     } catch (err) {
       if (this.config.verbose) {
-        console.error('[RvfBackend] Error loading from disk:', err);
+        console.error('[BinaryBackend] Error loading from disk:', err);
       }
     }
   }
@@ -462,7 +445,7 @@ export class RvfBackend implements IMemoryBackend {
       if (e.createdAt < minCreatedAt) minCreatedAt = e.createdAt;
     }
 
-    const header: RvfHeader = {
+    const header: BinaryHeader = {
       magic: MAGIC,
       version: VERSION,
       dimensions: this.config.dimensions,

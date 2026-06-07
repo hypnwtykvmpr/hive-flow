@@ -2,6 +2,7 @@
  * DatabaseProvider - Platform-aware database selection
  *
  * Automatically selects best backend:
+ * - Default: binary backend (pure TypeScript, RVF-compatible on disk)
  * - Linux/macOS: better-sqlite3 (native, fast)
  * - Windows: sql.js (WASM, universal) when native fails
  * - Fallback: JSON file storage
@@ -28,7 +29,8 @@ import { SqlJsBackend, SqlJsBackendConfig } from './sqljs-backend.js';
 /**
  * Available database provider types
  */
-export type DatabaseProvider = 'better-sqlite3' | 'sql.js' | 'json' | 'rvf' | 'auto';
+export type DatabaseProvider = 'better-sqlite3' | 'sql.js' | 'json' | 'binary' | 'rvf' | 'auto';
+type ResolvedDatabaseProvider = Exclude<DatabaseProvider, 'rvf' | 'auto'>;
 
 /**
  * Database creation options
@@ -67,7 +69,7 @@ interface PlatformInfo {
   isWindows: boolean;
   isMacOS: boolean;
   isLinux: boolean;
-  recommendedProvider: DatabaseProvider;
+  recommendedProvider: ResolvedDatabaseProvider;
 }
 
 /**
@@ -80,7 +82,7 @@ function detectPlatform(): PlatformInfo {
   const isLinux = os === 'linux';
 
   // Recommend better-sqlite3 for Unix-like systems, sql.js for Windows
-  const recommendedProvider: DatabaseProvider = isWindows ? 'sql.js' : 'better-sqlite3';
+  const recommendedProvider: ResolvedDatabaseProvider = isWindows ? 'sql.js' : 'better-sqlite3';
 
   return {
     os,
@@ -92,9 +94,9 @@ function detectPlatform(): PlatformInfo {
 }
 
 /**
- * Test if RVF backend is available (always true — pure-TS fallback)
+ * Test if binary backend is available (always true — pure-TS fallback)
  */
-async function testRvf(): Promise<boolean> {
+async function testBinary(): Promise<boolean> {
   return true;
 }
 
@@ -133,12 +135,14 @@ async function testSqlJs(): Promise<boolean> {
 async function selectProvider(
   preferred?: DatabaseProvider,
   verbose: boolean = false
-): Promise<DatabaseProvider> {
+): Promise<ResolvedDatabaseProvider> {
   if (preferred && preferred !== 'auto') {
+    const selected = preferred === 'rvf' ? 'binary' : preferred;
     if (verbose) {
-      console.log(`[DatabaseProvider] Using explicitly specified provider: ${preferred}`);
+      const aliasMessage = preferred === 'rvf' ? ' (deprecated rvf alias)' : '';
+      console.log(`[DatabaseProvider] Using explicitly specified provider: ${selected}${aliasMessage}`);
     }
-    return preferred;
+    return selected;
   }
 
   const platformInfo = detectPlatform();
@@ -148,12 +152,12 @@ async function selectProvider(
     console.log(`[DatabaseProvider] Recommended provider: ${platformInfo.recommendedProvider}`);
   }
 
-  // Try RVF first (always available via pure-TS fallback, native acceleration when installed)
-  if (await testRvf()) {
+  // Try binary first (always available via pure-TS fallback; writes RVF-compatible files)
+  if (await testBinary()) {
     if (verbose) {
-      console.log('[DatabaseProvider] RVF backend available');
+      console.log('[DatabaseProvider] Binary backend available');
     }
-    return 'rvf';
+    return 'binary';
   }
 
   // Try recommended provider
@@ -262,9 +266,9 @@ export async function createDatabase(
       break;
     }
 
-    case 'rvf': {
-      const { RvfBackend } = await import('./rvf-backend.js');
-      backend = new RvfBackend({
+    case 'binary': {
+      const { BinaryBackend } = await import('./binary-backend.js');
+      backend = new BinaryBackend({
         databasePath: path.replace(/\.(db|json)$/, '.rvf'),
         dimensions: 1536,
         verbose,
@@ -305,13 +309,17 @@ export function getPlatformInfo(): PlatformInfo {
  * Check which providers are available
  */
 export async function getAvailableProviders(): Promise<{
+  binary: boolean;
+  /** @deprecated Use binary. Kept for existing configuration probes. */
   rvf: boolean;
   betterSqlite3: boolean;
   sqlJs: boolean;
   json: boolean;
 }> {
+  const binary = await testBinary();
   return {
-    rvf: true,
+    binary,
+    rvf: binary,
     betterSqlite3: await testBetterSqlite3(),
     sqlJs: await testSqlJs(),
     json: true,
