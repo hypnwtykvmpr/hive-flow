@@ -469,6 +469,16 @@ function verifySpawnToken(agentId) {
   }
 }
 
+function resolveSessionScopeId(input = null) {
+  const raw = input?.session_id
+    || input?.sessionId
+    || process.env.CLAUDE_SESSION_ID
+    || process.env.HIVE_FLOW_SESSION_ID
+    || process.env.AGENTIC_FLOW_SESSION_ID
+    || '';
+  return sanitizeScopeId(raw || '');
+}
+
 function resolveScopeContext(input = null) {
   const agentId = getAgentId(input);
   const tokenResult = agentId ? verifySpawnToken(agentId) : { valid: true, reason: 'no agent id' };
@@ -477,10 +487,12 @@ function resolveScopeContext(input = null) {
   const envHiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID || '');
   const roleHiveId = sanitizeScopeId(role?.hiveId || '');
   const hiveId = identityTrusted ? (envHiveId || roleHiveId || null) : null;
+  const sid = resolveSessionScopeId(input) || null;
 
   return {
     agentId: agentId || null,
     hiveId,
+    sid,
     projectId: getProjectScopeId(),
     actorKind: identityTrusted ? 'agent' : (agentId ? 'unknown' : 'coordinator'),
     identityTrusted,
@@ -496,6 +508,9 @@ function loadEffectiveState(ctx) {
   }
   if (ctx.hiveId) {
     scopes.push({ scopeType: 'hive', scopeId: ctx.hiveId });
+  }
+  if (ctx.sid) {
+    scopes.push({ scopeType: 'session', scopeId: ctx.sid });
   }
   scopes.push({ scopeType: 'project', scopeId: ctx.projectId });
   scopes.push({ scopeType: 'global', scopeId: 'global' });
@@ -574,6 +589,10 @@ function isImmuneCoordinator(ctx) {
   return ctx?.actorKind === 'coordinator' && !ctx.agentId && !ctx.identityTrusted;
 }
 
+function isTrustedRootSession(ctx) {
+  return ctx?.actorKind === 'coordinator' && !ctx.agentId && Boolean(ctx.sid);
+}
+
 function chooseEscalationScope(ctx, violation) {
   if (isSubstrateAttack(violation)) {
     return { scopeType: 'global', scopeId: 'global' };
@@ -583,6 +602,9 @@ function chooseEscalationScope(ctx, violation) {
   }
   if (violation.systemic) {
     return { scopeType: 'global', scopeId: 'global' };
+  }
+  if (isTrustedRootSession(ctx)) {
+    return { scopeType: 'session', scopeId: ctx.sid };
   }
   if (isImmuneCoordinator(ctx)) {
     return { scopeType: 'project', scopeId: ctx.projectId };
@@ -601,6 +623,7 @@ function escalateScoped(ctx, violation) {
     scopeId: target.scopeId,
     agentId: ctx.agentId,
     hiveId: ctx.hiveId,
+    sessionId: ctx.sid,
     projectId: ctx.projectId,
     substrateAttack: violation.substrateAttack === true,
     protectedEnforcementAttack: violation.protectedEnforcementAttack === true,

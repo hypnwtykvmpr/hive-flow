@@ -457,7 +457,7 @@ describe('enforcement security property contracts', () => {
     }
   });
 
-  it('scopes unknown ordinary violations to project state instead of global', () => {
+  it('scopes root-session ordinary non-substrate violations to session state instead of project/global', () => {
     process.env.CLAUDE_SESSION_ID = 'coordinator-session-only';
 
     const result = enf.processPreToolUse({
@@ -465,13 +465,74 @@ describe('enforcement security property contracts', () => {
       tool_input: { command: "bash -c 'eval $(echo echo hi)'" },
     });
 
-    const projectId = enf.resolveScopeContext().projectId;
+    const ctx = enf.resolveScopeContext();
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(enf.getAgentId({})).toBeNull();
-    expect(readScopedState('project', projectId)?.level).toBe(enf.LEVELS.WARNED);
+    expect(ctx.sid).toBe('coordinator-session-only');
+    expect(readScopedState('session', 'coordinator-session-only')?.level).toBe(enf.LEVELS.WARNED);
+    expect(readScopedState('project', ctx.projectId)).toBeNull();
     expect(readScopedState('agent', 'coordinator-session-only')).toBeNull();
     expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('does not let one root session ordinary violation restrict a co-resident root session', () => {
+    process.env.CLAUDE_SESSION_ID = 'session-a';
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: "bash -c 'eval $(echo echo hi)'" },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('session', 'session-a')?.level).toBe(enf.LEVELS.WARNED);
+
+    process.env.CLAUDE_SESSION_ID = 'session-b';
+    const sessionB = enf.loadEffectiveState(enf.resolveScopeContext()).effective;
+
+    expect(sessionB.state.level).toBe(enf.LEVELS.NORMAL);
+    expect(readScopedState('session', 'session-b')).toBeNull();
+    expect(readScopedState('project', enf.resolveScopeContext().projectId)).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('includes session scope in effective state MAX for the owning root session', () => {
+    process.env.CLAUDE_SESSION_ID = 'session-owned-level';
+    writeScopedState('session', 'session-owned-level', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 1,
+      restrictedGroups: ['exec'],
+      history: [],
+      integrityCompromised: false,
+    });
+
+    const effective = enf.loadEffectiveState(enf.resolveScopeContext());
+
+    expect(effective.scopes.some((scope: { scopeType: string; scopeId: string }) => (
+      scope.scopeType === 'session' && scope.scopeId === 'session-owned-level'
+    ))).toBe(true);
+    expect(effective.effective.scopeType).toBe('session');
+    expect(effective.effective.scopeId).toBe('session-owned-level');
+    expect(effective.effective.state.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('keeps root-session substrate and systemic violations globally escalated', () => {
+    for (const [name, input] of [
+      ['substrate write', { tool_name: 'Write', tool_input: { file_path: '.claude/helpers/enforcement.cjs' } }],
+      ['systemic inline bypass env', { tool_name: 'Bash', tool_input: { command: 'export HIVE_FLOW_ENFORCEMENT_DISABLED=1' } }],
+    ]) {
+      clearAgentEnv();
+      resetModule();
+      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      process.env.CLAUDE_SESSION_ID = 'global-preserved-session';
+
+      const result = enf.processPreToolUse(input);
+
+      expect(result.hookSpecificOutput.permissionDecision, name).toBe('deny');
+      expect(readScopedState('global', 'global')?.level, name).toBe(enf.LEVELS.RESTRICTED);
+      expect(readScopedState('session', 'global-preserved-session'), name).toBeNull();
+      expect(readScopedState('project', enf.resolveScopeContext().projectId), name).toBeNull();
+    }
   });
 
   it('still escalates coordinator enforcement-file attacks globally', () => {
