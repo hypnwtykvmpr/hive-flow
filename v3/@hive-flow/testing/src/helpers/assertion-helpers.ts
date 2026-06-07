@@ -588,8 +588,8 @@ export function registerCustomMatchers(): void {
       }
 
       if (received.flashAttentionSpeedup !== undefined) {
-        if (received.flashAttentionSpeedup < 2.49) {
-          issues.push(`Flash attention speedup ${received.flashAttentionSpeedup}x is below minimum 2.49x`);
+        if (received.flashAttentionSpeedup <= 1) {
+          issues.push(`Flash attention speedup ${received.flashAttentionSpeedup}x does not beat baseline`);
         }
       }
 

@@ -993,7 +993,7 @@ export class PluginDiscoveryService {
         id: '@hive-flow/plugin-gastown-bridge',
         name: '@hive-flow/plugin-gastown-bridge',
         displayName: 'Gas Town Bridge',
-        description: 'Gas Town orchestrator integration with WASM-accelerated formula parsing, Beads sync, convoy management, and graph analysis (352x faster).',
+        description: 'Gas Town orchestrator integration with WASM-accelerated formula parsing, Beads sync, convoy management, and graph analysis.',
         version: '0.1.0',
         cid: 'bafybeigastownbridgeplugin2024',
         size: 485000,

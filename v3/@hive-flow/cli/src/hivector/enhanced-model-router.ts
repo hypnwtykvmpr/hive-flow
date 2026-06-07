@@ -231,7 +231,7 @@ const LANGUAGE_MAP: Record<string, string> = {
  * Enhanced Model Router with Agent Booster AST integration
  *
  * Provides intelligent 3-tier routing:
- * - Tier 1: Agent Booster for simple code transforms (352x faster, $0)
+ * - Tier 1: Agent Booster for simple code transforms (local, $0)
  * - Tier 2: Sonnet for low-to-moderate complexity tasks
  * - Tier 3: Opus for complex reasoning tasks
  */
