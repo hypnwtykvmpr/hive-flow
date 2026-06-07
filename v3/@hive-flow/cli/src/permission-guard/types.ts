@@ -11,7 +11,7 @@
 
 export type PermissionDecision = 'allow' | 'deny' | 'escalate';
 
-export type JuryVerdict = 'APPROVED' | 'DENIED' | 'TIMEOUT' | 'TIMEOUT_ALLOW' | 'TIMEOUT_DENY' | 'USER_APPROVED' | 'USER_DENIED';
+export type JuryVerdict = 'APPROVED' | 'DENIED' | 'AMBIGUOUS' | 'TIMEOUT' | 'TIMEOUT_ALLOW' | 'TIMEOUT_DENY' | 'USER_APPROVED' | 'USER_DENIED';
 
 // ---------------------------------------------------------------------------
 // Risk classification types
@@ -63,6 +63,8 @@ export interface InlineJuryResult {
   verdict: JuryVerdict;
   votes: Record<string, JuryVote | null>;
   reason: string;
+  fallbackVerdict?: 'APPROVED' | 'DENIED';
+  maxRisk?: RiskLevel;
 }
 
 export interface SignedPatternStore {
@@ -182,6 +184,9 @@ export interface PermissionConfig {
   allow_paths_outside_working_directory: boolean;
   log_file: string;
   notifications: NotificationConfig;
+  llm_jury_budget_max_calls?: number;
+  llm_jury_budget_window_ms?: number;
+  llm_jury_budget_dir?: string;
 }
 
 // ---------------------------------------------------------------------------

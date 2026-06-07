@@ -103,4 +103,10 @@ describe('evaluateInlineJury', () => {
     const result = evaluateInlineJury(ctx({ toolName: 'Read', toolInput: {} }));
     expect(result.verdict).toBe('APPROVED');
   });
+  it('surfaces unknown low-confidence commands as ambiguous with low-risk fallback', () => {
+    const result = evaluateInlineJury(ctx({ toolInput: { command: 'custom-tool --maybe' } }));
+    expect(result.verdict).toBe('AMBIGUOUS');
+    expect(result.fallbackVerdict).toBe('APPROVED');
+    expect(result.maxRisk).toBe('low');
+  });
 });

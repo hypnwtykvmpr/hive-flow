@@ -24,13 +24,14 @@ const READ_ONLY_TOOLS = new Set([
 
 const DEV_CMD_PREFIXES = [
   'git', 'npm', 'npx', 'node', 'tsc', 'eslint', 'prettier', 'jest', 'vitest',
-  'cargo', 'go', 'make', 'cmake', 'python', 'pip', 'brew', 'apt', 'docker', 'kubectl',
+  'cargo', 'go', 'make', 'cmake', 'python', 'python3', 'pip', 'pip3', 'brew', 'apt', 'docker', 'kubectl',
 ];
 
 const SAFE_SHELL_CMDS = new Set([
   'cat', 'ls', 'echo', 'pwd', 'whoami', 'date', 'head', 'tail', 'wc',
   'sort', 'uniq', 'cut', 'tr', 'diff', 'find', 'grep', 'rg', 'sed', 'awk',
-  'stat', 'file', 'which', 'env', 'uname', 'df', 'du',
+  'stat', 'file', 'which', 'env', 'uname', 'df', 'du', 'ps', 'printf',
+  'curl', 'jq', 'mkdir', 'touch', 'cp', 'mv', 'tree',
 ]);
 
 const DEV_EXTENSIONS = new Set([
@@ -198,6 +199,33 @@ export function evaluateConvention(ctx: JuryContext): EvalResult {
 // Combined Pre-Filter Verdict
 // ---------------------------------------------------------------------------
 
+function maxRiskLevel(results: EvalResult[]): NonNullable<InlineJuryResult['maxRisk']> {
+  const riskRank = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
+  return results.reduce((max, result) => {
+    const risk = result.riskLevel || 'low';
+    return riskRank[risk] > riskRank[max] ? risk : max;
+  }, 'low' as NonNullable<InlineJuryResult['maxRisk']>);
+}
+
+function ambiguousResult(votes: Record<string, JuryVote | null>, results: EvalResult[]): InlineJuryResult {
+  const maxRisk = maxRiskLevel(results);
+  const fallbackVerdict = maxRisk === 'none' || maxRisk === 'low' ? 'APPROVED' : 'DENIED';
+  return {
+    verdict: 'AMBIGUOUS',
+    votes,
+    reason: `Inconclusive with ${maxRisk} risk — fallback ${fallbackVerdict.toLowerCase()}`,
+    fallbackVerdict,
+    maxRisk,
+  };
+}
+
+function hasConfidentAllowMajority(goalResult: EvalResult, results: EvalResult[]): boolean {
+  const allowResults = results.filter(r => r.vote === 'allow');
+  const confidentAllowVotes = allowResults.filter(r => r.confidence >= 0.6).length;
+  const hasExplicitGoalRelevance = !(goalResult.reason === 'Default allow for dev work' && goalResult.confidence <= 0.5);
+  return hasExplicitGoalRelevance && confidentAllowVotes >= 2;
+}
+
 /**
  * Run all three deterministic pre-filters and combine their results.
  * This is the fast path (<0.1ms) for clear-cut allow/deny decisions.
@@ -228,22 +256,19 @@ export function evaluateInlineJury(ctx: JuryContext): InlineJuryResult {
     return { verdict: 'DENIED', votes, reason };
   }
 
-  // 2/3 majority + safety allows
-  if (allowCount >= 2) {
-    return { verdict: 'APPROVED', votes, reason: 'Majority approved, safety clear' };
-  }
-
   // 2/3 deny
   if (denyCount >= 2) {
     const reasons = results.filter(r => r.vote === 'deny').map(r => r.reason);
     return { verdict: 'DENIED', votes, reason: reasons.join('; ') };
   }
 
-  // Tie-breaker: use highest risk level
-  const maxRisk = safetyResult.riskLevel || 'low';
-  if (maxRisk === 'high' || maxRisk === 'critical') {
-    return { verdict: 'DENIED', votes, reason: `Inconclusive with ${maxRisk} risk — auto-deny` };
+  // 2/3 majority + safety allows only when the majority is confident. A bare
+  // default benefit-of-the-doubt vote is the ambiguous middle from the design.
+  if (allowCount >= 2 && hasConfidentAllowMajority(goalResult, results)) {
+    return { verdict: 'APPROVED', votes, reason: 'Majority approved, safety clear' };
   }
 
-  return { verdict: 'APPROVED', votes, reason: 'Inconclusive with low risk — auto-allow' };
+  // Tie/split/low-confidence middle: surface ambiguity to the gate. The caller
+  // may ask the Stage-2 LLM jury, but falls back to the prior risk behavior.
+  return ambiguousResult(votes, results);
 }

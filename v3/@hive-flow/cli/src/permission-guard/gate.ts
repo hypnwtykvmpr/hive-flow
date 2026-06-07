@@ -21,9 +21,12 @@ import type {
   AuditLogEntry,
   BashPatternEntry,
   DenyPatternEntry,
+  InlineJuryResult,
+  JuryContext,
 } from './types.js';
 import { deepInspect } from './deep-inspect.js';
 import { evaluateInlineJury } from './jury-evaluator.js';
+import { tryConsumeLLMJuryBudget } from './llm-jury-budget.js';
 import { classifyCommand } from './risk-classifier.js';
 import { mergeWithDefaults } from './default-config.js';
 import { evaluateSelfProtection } from './self-protection.js';
@@ -264,6 +267,175 @@ export function logDecision(
     appendFileSync(logFile, JSON.stringify(entry) + '\n', 'utf-8');
   } catch {
     // Logging failure should never block the decision
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Jury resolution
+// ---------------------------------------------------------------------------
+
+interface ResolveJuryOptions {
+  config: Partial<PermissionConfig>;
+  hookInput: HookInput;
+  toolName: string;
+  inputSummary: string;
+  juryCtx: JuryContext;
+  logPrefix?: string;
+  responsePrefix: string;
+  additionalContext?: (reason: string) => string;
+}
+
+function stringToolInput(toolInput: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(Object.entries(toolInput).map(([key, value]) => [key, String(value)]));
+}
+
+function makeJuryContext(hookInput: HookInput, policyRoot: string, filePath = ''): JuryContext {
+  return {
+    toolName: hookInput.tool_name,
+    toolInput: stringToolInput(hookInput.tool_input || {}),
+    cwd: policyRoot,
+    filePath,
+  };
+}
+
+function prefixReason(prefix: string | undefined, reason: string): string {
+  return prefix ? `${prefix} — ${reason}` : reason;
+}
+
+function fallbackVerdict(inline: InlineJuryResult): 'APPROVED' | 'DENIED' {
+  if (inline.fallbackVerdict === 'APPROVED' || inline.fallbackVerdict === 'DENIED') {
+    return inline.fallbackVerdict;
+  }
+  return inline.maxRisk === 'none' || inline.maxRisk === 'low' ? 'APPROVED' : 'DENIED';
+}
+
+function learningCommand(juryCtx: JuryContext): string {
+  if (juryCtx.toolInput.command) return juryCtx.toolInput.command;
+  if (juryCtx.filePath) return juryCtx.filePath;
+  return JSON.stringify(juryCtx.toolInput).slice(0, DEFAULT_INPUT_SUMMARY_MAX);
+}
+
+async function recordAllowVerdict(juryCtx: JuryContext): Promise<void> {
+  try {
+    const { normalizeCommand, recordVerdict } = await import('./vote-learner.js');
+    recordVerdict(juryCtx.toolName, normalizeCommand(learningCommand(juryCtx)), 'allow');
+  } catch {
+    // Vote learning is opportunistic and must not affect the gate decision.
+  }
+}
+
+function juryResponse(prefix: string, reason: string): string {
+  return `[${prefix}] ${reason}`;
+}
+
+function withAdditionalContext(
+  decision: GateResult,
+  additionalContext: ResolveJuryOptions['additionalContext'],
+  reason: string,
+): GateResult {
+  if (!additionalContext) return decision;
+  return { ...decision, additionalContext: additionalContext(reason) };
+}
+
+function fallbackResult(options: ResolveJuryOptions, inline: InlineJuryResult, fallbackReason: string): GateResult {
+  const verdict = fallbackVerdict(inline);
+  const decision = verdict === 'APPROVED' ? 'allow' : 'deny';
+  logDecision(
+    options.config,
+    options.toolName,
+    options.inputSummary,
+    decision,
+    'inline-jury',
+    prefixReason(options.logPrefix, `jury fallback ${decision}: ${fallbackReason}`),
+    { session_id: options.hookInput.session_id },
+  );
+  const result: GateResult = {
+    decision,
+    reason: juryResponse(options.responsePrefix, inline.reason),
+  };
+  return withAdditionalContext(result, options.additionalContext, inline.reason);
+}
+
+async function resolveJury(options: ResolveJuryOptions): Promise<GateResult> {
+  const inline = evaluateInlineJury(options.juryCtx);
+
+  if (inline.verdict === 'APPROVED') {
+    await recordAllowVerdict(options.juryCtx);
+    logDecision(
+      options.config,
+      options.toolName,
+      options.inputSummary,
+      'allow',
+      'inline-jury',
+      prefixReason(options.logPrefix, `jury approved: ${inline.reason}`),
+      { session_id: options.hookInput.session_id },
+    );
+    return { decision: 'allow', reason: juryResponse(options.responsePrefix, inline.reason) };
+  }
+
+  if (inline.verdict === 'DENIED') {
+    logDecision(
+      options.config,
+      options.toolName,
+      options.inputSummary,
+      'deny',
+      'inline-jury',
+      prefixReason(options.logPrefix, `jury denied: ${inline.reason}`),
+      { session_id: options.hookInput.session_id },
+    );
+    return withAdditionalContext(
+      { decision: 'deny', reason: juryResponse(options.responsePrefix, inline.reason) },
+      options.additionalContext,
+      inline.reason,
+    );
+  }
+
+  const sessionId = options.hookInput.session_id || process.env.CLAUDE_SESSION_ID || 'unknown-session';
+  const budgetAllowed = tryConsumeLLMJuryBudget(sessionId, {
+    maxCalls: options.config.llm_jury_budget_max_calls,
+    windowMs: options.config.llm_jury_budget_window_ms,
+    budgetDir: options.config.llm_jury_budget_dir,
+  });
+  if (!budgetAllowed) {
+    return fallbackResult(options, inline, `budget unavailable or exhausted; ${inline.reason}`);
+  }
+
+  try {
+    const { evaluateLLMJury } = await import('./llm-jury.js');
+    const llm = await evaluateLLMJury(options.juryCtx, { timeoutMs: 12_000 });
+    if (llm?.verdict === 'APPROVED') {
+      await recordAllowVerdict(options.juryCtx);
+      logDecision(
+        options.config,
+        options.toolName,
+        options.inputSummary,
+        'allow',
+        'llm-jury',
+        prefixReason(options.logPrefix, `LLM jury approved: ${llm.reason}`),
+        { session_id: options.hookInput.session_id, juror_latency_ms: llm.totalLatencyMs },
+      );
+      return { decision: 'allow', reason: juryResponse('LLM Jury', llm.reason) };
+    }
+    if (llm?.verdict === 'DENIED') {
+      logDecision(
+        options.config,
+        options.toolName,
+        options.inputSummary,
+        'deny',
+        'llm-jury',
+        prefixReason(options.logPrefix, `LLM jury denied: ${llm.reason}`),
+        { session_id: options.hookInput.session_id, juror_latency_ms: llm.totalLatencyMs },
+      );
+      return withAdditionalContext(
+        { decision: 'deny', reason: juryResponse('LLM Jury', llm.reason) },
+        options.additionalContext,
+        llm.reason,
+      );
+    }
+    return fallbackResult(options, inline, llm ? `LLM returned ${llm.verdict}; ${inline.reason}` : `LLM provider unavailable; ${inline.reason}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return fallbackResult(options, inline, `LLM jury errored (${message}); ${inline.reason}`);
   }
 }
 
@@ -1130,19 +1302,16 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
     // Check escalation prefixes — route through inline jury instead of human
     for (const prefix of config.mcp_escalate_tool_prefixes || []) {
       if (typeof prefix === 'string' && !prefix.startsWith('COMMENT:') && toolName.startsWith(prefix)) {
-        const juryCtx = {
-          toolName: hookInput.tool_name,
-          toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-          cwd: policyRoot,
-          filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
-        };
-        const juryResult = evaluateInlineJury(juryCtx);
-        if (juryResult.verdict === 'APPROVED') {
-          logDecision(config, toolName, inputSummary, 'allow', 'inline-jury', `MCP escalation prefix '${prefix}' — jury approved: ${juryResult.reason}`);
-          return { decision: 'allow', reason: `[Jury] ${juryResult.reason}` };
-        }
-        logDecision(config, toolName, inputSummary, 'deny', 'inline-jury', `MCP escalation prefix '${prefix}' — jury denied: ${juryResult.reason}`);
-        return { decision: 'deny', reason: `[Jury] ${juryResult.reason}`, additionalContext: `Tool '${toolName}' matched escalation prefix '${prefix}'. ${juryResult.reason}` };
+        return await resolveJury({
+          config,
+          hookInput,
+          toolName,
+          inputSummary,
+          juryCtx: makeJuryContext(hookInput, policyRoot, String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || '')),
+          logPrefix: `MCP escalation prefix '${prefix}'`,
+          responsePrefix: 'Jury',
+          additionalContext: reason => `Tool '${toolName}' matched escalation prefix '${prefix}'. ${reason}`,
+        });
       }
     }
 
@@ -1156,19 +1325,16 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
       return { decision: 'deny', reason: `DENIED: MCP tool '${toolName}' blocked by default MCP deny policy.` };
     } else {
       // Default MCP escalation policy — route through inline jury
-      const juryCtx = {
-        toolName: hookInput.tool_name,
-        toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-        cwd: policyRoot,
-        filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
-      };
-      const juryResult = evaluateInlineJury(juryCtx);
-      if (juryResult.verdict === 'APPROVED') {
-        logDecision(config, toolName, inputSummary, 'allow', 'inline-jury', `MCP default escalation — jury approved: ${juryResult.reason}`);
-        return { decision: 'allow', reason: `[Jury] ${juryResult.reason}` };
-      }
-      logDecision(config, toolName, inputSummary, 'deny', 'inline-jury', `MCP default escalation — jury denied: ${juryResult.reason}`);
-      return { decision: 'deny', reason: `[Jury] ${juryResult.reason}`, additionalContext: `MCP tool '${toolName}' requires jury approval. ${juryResult.reason}` };
+      return await resolveJury({
+        config,
+        hookInput,
+        toolName,
+        inputSummary,
+        juryCtx: makeJuryContext(hookInput, policyRoot, String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || '')),
+        logPrefix: 'MCP default escalation',
+        responsePrefix: 'Jury',
+        additionalContext: reason => `MCP tool '${toolName}' requires jury approval. ${reason}`,
+      });
     }
   }
 
@@ -1184,19 +1350,16 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
       return { decision: 'allow' };
     } else if (config.allow_paths_outside_working_directory) {
       // Write outside allowed paths — inline jury decides instead of human
-      const juryCtx = {
-        toolName: hookInput.tool_name,
-        toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-        cwd: policyRoot,
-        filePath,
-      };
-      const juryResult = evaluateInlineJury(juryCtx);
-      if (juryResult.verdict === 'APPROVED') {
-        logDecision(config, toolName, inputSummary, 'allow', 'inline-jury', `write outside allowed paths — jury approved: ${juryResult.reason}`);
-        return { decision: 'allow', reason: `[Jury] ${juryResult.reason}` };
-      }
-      logDecision(config, toolName, inputSummary, 'deny', 'inline-jury', `write outside allowed paths — jury denied: ${juryResult.reason}`);
-      return { decision: 'deny', reason: `[Jury] ${juryResult.reason}`, additionalContext: `Write to '${filePath}' is outside allowed paths. ${juryResult.reason}` };
+      return await resolveJury({
+        config,
+        hookInput,
+        toolName,
+        inputSummary,
+        juryCtx: makeJuryContext(hookInput, policyRoot, filePath),
+        logPrefix: 'write outside allowed paths',
+        responsePrefix: 'Jury',
+        additionalContext: reason => `Write to '${filePath}' is outside allowed paths. ${reason}`,
+      });
     } else {
       const reason = `DENIED: Write target '${filePath}' is outside the project directory and ~/.claude/. Move the file to the project directory or adjust the path.`;
       logDecision(config, toolName, inputSummary, 'deny', 'deterministic', 'outside allowed write paths');
@@ -1279,37 +1442,27 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
 
     // 6) Not matched — inline jury evaluation instead of human escalation
     {
-      const juryCtx = {
-        toolName: hookInput.tool_name,
-        toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-        cwd: policyRoot,
-        filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
-      };
-      const juryResult = evaluateInlineJury(juryCtx);
-      if (juryResult.verdict === 'APPROVED') {
-        logDecision(config, toolName, inputSummary, 'allow', 'inline-jury', juryResult.reason);
-        return { decision: 'allow', reason: `[Inline Jury] ${juryResult.reason}` };
-      }
-      logDecision(config, toolName, inputSummary, 'deny', 'inline-jury', juryResult.reason);
-      return { decision: 'deny', reason: `[Inline Jury] ${juryResult.reason}` };
+      return await resolveJury({
+        config,
+        hookInput,
+        toolName,
+        inputSummary,
+        juryCtx: makeJuryContext(hookInput, policyRoot, String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || '')),
+        responsePrefix: 'Inline Jury',
+      });
     }
   }
 
   // -- Unrecognized tool: inline jury evaluation --
   {
-    const juryCtx = {
-      toolName: hookInput.tool_name,
-      toolInput: Object.fromEntries(Object.entries(hookInput.tool_input).map(([k, v]) => [k, String(v)])),
-      cwd: policyRoot,
-      filePath: String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || ''),
-    };
-    const juryResult = evaluateInlineJury(juryCtx);
-    if (juryResult.verdict === 'APPROVED') {
-      logDecision(config, toolName, inputSummary, 'allow', 'inline-jury', juryResult.reason);
-      return { decision: 'allow', reason: `[Inline Jury] ${juryResult.reason}` };
-    }
-    logDecision(config, toolName, inputSummary, 'deny', 'inline-jury', juryResult.reason);
-    return { decision: 'deny', reason: `[Inline Jury] ${juryResult.reason}` };
+    return await resolveJury({
+      config,
+      hookInput,
+      toolName,
+      inputSummary,
+      juryCtx: makeJuryContext(hookInput, policyRoot, String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || '')),
+      responsePrefix: 'Inline Jury',
+    });
   }
 }
 
