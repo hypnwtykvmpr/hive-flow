@@ -27,7 +27,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { appendPendingWithAck } = require('../.claude/helpers/dedup-marker.cjs');
-const { resolveSessionId } = require('../.claude/helpers/session-id.cjs');
+const { resolveSessionId, sanitizeSessionId } = require('../.claude/helpers/session-id.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -126,6 +126,7 @@ function getPaths(projectDir) {
     tasksDir: path.join(hiveFlowDir, 'tasks'),
     dataDir,
     logsDir: path.join(hiveFlowDir, 'logs'),
+    tmuxPaneDir: path.join(dataDir, 'panes'),
     tmuxPaneFile: path.join(dataDir, 'tmux-pane.txt'),
     stopFile: (hiveId) => path.join(dataDir, 'watcher-' + sanitizeHiveId(hiveId) + '.stop'),
   };
@@ -281,11 +282,22 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
 /**
  * Resolve the tmux pane to target. Priority:
  *   1. Explicit --tmux-pane argument
- *   2. Persisted .hive-flow/data/tmux-pane.txt (captured at SessionStart)
- *   3. null (tmux not available)
+ *   2. Persisted .hive-flow/data/panes/<sessionId>.txt
+ *   3. Persisted .hive-flow/data/tmux-pane.txt (legacy SessionStart fallback)
+ *   4. null (tmux not available)
  */
-function resolveTmuxPane(explicitPane, paths) {
+function resolveTmuxPane(explicitPane, paths, sessionId = null) {
   if (explicitPane) return explicitPane;
+  const sanitizedSessionId = sanitizeSessionId(sessionId);
+  if (sanitizedSessionId && paths.tmuxPaneDir) {
+    try {
+      const sessionPaneFile = path.join(paths.tmuxPaneDir, `${sanitizedSessionId}.txt`);
+      if (fs.existsSync(sessionPaneFile)) {
+        const pane = fs.readFileSync(sessionPaneFile, 'utf8').trim();
+        if (pane) return pane;
+      }
+    } catch { /* ignore */ }
+  }
   try {
     if (fs.existsSync(paths.tmuxPaneFile)) {
       const pane = fs.readFileSync(paths.tmuxPaneFile, 'utf8').trim();
@@ -459,7 +471,7 @@ async function main() {
 
   // Resolve tmux
   const tmuxBin = findTmux();
-  const tmuxPane = resolveTmuxPane(config.tmuxPane, paths);
+  const tmuxPane = resolveTmuxPane(config.tmuxPane, paths, config.sessionId);
   const hasTmux = !!(tmuxBin && tmuxPane);
 
   appendAuditLog(paths, {

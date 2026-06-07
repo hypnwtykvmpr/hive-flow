@@ -356,7 +356,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'mkdir -p \"$CLAUDE_PROJECT_DIR\"/.hive-flow/data && if [ -n \"$TMUX_PANE\" ]; then printf \"%s\" \"$TMUX_PANE\" > \"$CLAUDE_PROJECT_DIR\"/.hive-flow/data/tmux-pane.txt; elif command -v tmux >/dev/null && tmux display-message -p \"#{pane_id}\" 2>/dev/null; then tmux display-message -p \"#{pane_id}\" > \"$CLAUDE_PROJECT_DIR\"/.hive-flow/data/tmux-pane.txt; fi'",
+            "command": "bash -c 'data=\"$CLAUDE_PROJECT_DIR\"/.hive-flow/data; mkdir -p \"$data/panes\"; pane=\"${TMUX_PANE:-}\"; if [ -z \"$pane\" ] && command -v tmux >/dev/null; then pane=\"$(tmux display-message -p \"#{pane_id}\" 2>/dev/null || true)\"; fi; if [ -n \"$pane\" ]; then if [ -n \"${CLAUDE_SESSION_ID:-}\" ]; then sid=\"$(printf \"%s\" \"$CLAUDE_SESSION_ID\" | tr -c \"A-Za-z0-9_-\" \"_\" | sed \"s/^_*//;s/_*$//\" | cut -c1-64)\"; if [ -n \"$sid\" ]; then printf \"%s\" \"$pane\" > \"$data/panes/$sid.txt\"; fi; fi; printf \"%s\" \"$pane\" > \"$data/tmux-pane.txt\"; fi'",
             "timeout": 3000
           },
           {
