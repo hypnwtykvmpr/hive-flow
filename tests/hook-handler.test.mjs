@@ -45,6 +45,10 @@ function runHandler(command, { cwd, env = {}, stdinData = '' } = {}) {
   };
 }
 
+function parseHookOutput(stdout) {
+  return JSON.parse(stdout.trim() || '{}')?.hookSpecificOutput || {};
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -238,28 +242,28 @@ describe('hook-handler.cjs', () => {
   });
 
   // =========================================================================
-  // 8. pre-bash — exits cleanly for safe command
+  // 8. pre-bash — exits cleanly with JSON decisions
   // =========================================================================
   describe('pre-bash', () => {
-    it('exits 0 for a safe command and outputs [OK]', () => {
+    it('exits 0 for a safe command and emits allow JSON', () => {
       const res = runHandler('pre-bash', {
         cwd: tmpDir,
         env: { PROMPT: 'npm test' },
       });
       assert.equal(res.status, 0, `pre-bash should exit 0 for safe command, stderr: ${res.stderr}`);
-      assert.match(res.stdout, /\[OK\]/, 'Should output [OK] for safe command');
+      const output = parseHookOutput(res.stdout);
+      assert.equal(output.permissionDecision, 'allow');
     });
 
-    it('exits non-zero and outputs [BLOCKED] for dangerous command rm -rf /', () => {
+    it('exits 0 and emits deny JSON for dangerous command rm -rf /', () => {
       const res = runHandler('pre-bash', {
         cwd: tmpDir,
         env: { PROMPT: 'rm -rf /' },
       });
-      assert.notEqual(res.status, 0, 'Dangerous command should cause non-zero exit');
-      assert.ok(
-        res.stderr.includes('[BLOCKED]') || res.stdout.includes('[BLOCKED]'),
-        `Dangerous command should produce [BLOCKED] output, stdout: ${res.stdout}, stderr: ${res.stderr}`,
-      );
+      assert.equal(res.status, 0, `pre-bash should exit 0 for denied commands, stderr: ${res.stderr}`);
+      const output = parseHookOutput(res.stdout);
+      assert.equal(output.permissionDecision, 'deny');
+      assert.match(output.permissionDecisionReason || '', /\[BLOCKED\]/);
     });
   });
 
@@ -316,8 +320,8 @@ describe('hook-handler.cjs', () => {
         },
       });
       assert.equal(res.status, 0, `status should exit 0, stderr: ${res.stderr}`);
-      assert.match(res.stdout, /\[AGENT\] Started:/, 'Should output [AGENT] Started: line');
-      assert.match(res.stdout, /name=test-agent/, 'Should include agent name');
+      assert.match(res.stderr, /\[AGENT\] Started:/, 'Should output [AGENT] Started: line');
+      assert.match(res.stderr, /name=test-agent/, 'Should include agent name');
     });
   });
 
@@ -358,12 +362,12 @@ describe('hook-handler.cjs', () => {
   });
 
   // =========================================================================
-  // 15. permission-guard — emits allow JSON on empty/no stdin
+  // 15. permission-guard — emits deny JSON on empty/no stdin
   // =========================================================================
   describe('permission-guard', () => {
-    it('exits 0 and emits allow JSON when stdin is empty', async () => {
+    it('exits 0 and emits deny JSON when stdin is empty', async () => {
       // permission-guard reads stdin; sending empty string triggers the parse-error
-      // path which falls through to allow.
+      // path which fails closed.
       const res = runHandler('permission-guard', {
         cwd: tmpDir,
         stdinData: '',
@@ -376,7 +380,7 @@ describe('hook-handler.cjs', () => {
         assert.fail(`permission-guard output is not valid JSON: ${trimmed}`);
       }
       const decision = parsed?.hookSpecificOutput?.permissionDecision;
-      assert.equal(decision, 'allow', `Expected allow decision, got: ${decision}`);
+      assert.equal(decision, 'deny', `Expected deny decision, got: ${decision}`);
     });
   });
 
