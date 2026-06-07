@@ -3,16 +3,16 @@
   "version": "2.5.0",
   "description": "Enterprise AI agent orchestration plugin with 150+ commands, 74+ specialized agents, SPARC methodology, swarm coordination, GitHub integration, and neural training capabilities",
   "author": {
-    "name": "rUv",
-    "email": "ruv@ruv.net"
+    "name": "Hive Flow",
+    "email": "noreply@hive-flow.invalid"
   },
-  "homepage": "https://github.com/ruvnet/hive-flow",
+  "homepage": "https://github.com/hypnwtykvmpr/hive-flow",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow.git"
   },
   "bugs": {
-    "url": "https://github.com/ruvnet/hive-flow/issues"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
   },
   "license": "MIT",
   "keywords": [

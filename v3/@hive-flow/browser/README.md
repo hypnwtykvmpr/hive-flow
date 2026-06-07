@@ -714,17 +714,17 @@ MIT License - see [LICENSE](../../LICENSE) for details.
 
 ## Links
 
-- [GitHub Repository](https://github.com/ruvnet/hive-flow)
+- [GitHub Repository](https://github.com/hypnwtykvmpr/hive-flow)
 - [agent-browser](https://github.com/AugmentCode/agent-browser)
-- [Hive-Flow Documentation](https://github.com/ruvnet/hive-flow#readme)
+- [Hive-Flow Documentation](https://github.com/hypnwtykvmpr/hive-flow#readme)
 - [MCP Protocol](https://modelcontextprotocol.io)
 
 ---
 
 <div align="center">
 
-**Part of the [Hive-Flow](https://github.com/ruvnet/hive-flow) ecosystem**
+**Part of the [Hive-Flow](https://github.com/hypnwtykvmpr/hive-flow) ecosystem**
 
-Made with ❤️ by [ruvnet](https://github.com/ruvnet)
+Made with ❤️ by [hypnwtykvmpr](https://github.com/hypnwtykvmpr)
 
 </div>

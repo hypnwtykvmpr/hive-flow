@@ -173,9 +173,6 @@ async function loadHivectorGraph(): Promise<IHivectorGraph | null> {
   return null;
 }
 
-/** @deprecated Use loadHivectorGraph. */
-const loadRuVector = loadHivectorGraph;
-
 // ============================================================================
 // Import/Require Parser
 // ============================================================================
@@ -1211,7 +1208,6 @@ export function exportToDot(
 
 export {
   loadHivectorGraph,
-  loadRuVector,
   fallbackMinCut,
   fallbackLouvain,
 };

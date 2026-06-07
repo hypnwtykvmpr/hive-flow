@@ -1,6 +1,6 @@
 # 🚀 Hive Flow Plugin - Complete Enterprise AI Agent Orchestration
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](https://github.com/ruvnet/hive-flow)
+[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-%3E%3D2.0.0-purple.svg)](https://claude.com/code)
 
@@ -282,13 +282,13 @@ Hive Flow is the most comprehensive Claude Code plugin for enterprise AI agent o
 In Claude Code:
 
 ```
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 ```
 
 Or from local directory:
 
 ```bash
-git clone https://github.com/ruvnet/hive-flow.git
+git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 ```
 
@@ -308,7 +308,6 @@ Then in Claude Code:
 ```bash
 # Add MCP servers to Claude Code
 claude mcp add hive-flow node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional
 claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional
 ```
 
@@ -338,7 +337,7 @@ claude plugin list
 
 In Claude Code:
 ```
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 /restart
 ```
 
@@ -346,7 +345,7 @@ In Claude Code:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ruvnet/hive-flow.git
+git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow/claude-plugin
 
 # Run installation script
@@ -525,25 +524,6 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
 - Neural training
 - Performance monitoring
 
-### ruv-swarm MCP (Optional)
-
-```json
-{
-  "mcpServers": {
-    "ruv-swarm": {
-      "command": "npx",
-      "args": ["ruv-swarm", "mcp", "start"]
-    }
-  }
-}
-```
-
-**Tools**: Enhanced coordination features
-- WASM acceleration (2.8-4.4x speed)
-- SIMD optimization
-- Advanced topology management
-- Byzantine fault tolerance
-
 ### Flow Nexus MCP (Optional - Requires Auth)
 
 ```json
@@ -645,16 +625,16 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
 
 ## 🤝 Support
 
-- **Documentation**: [GitHub Wiki](https://github.com/ruvnet/hive-flow/wiki)
-- **Issues**: [GitHub Issues](https://github.com/ruvnet/hive-flow/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/ruvnet/hive-flow/discussions)
-- **Website**: [Flow Nexus](https://flow-nexus.ruv.io)
+- **Documentation**: [GitHub Wiki](https://github.com/hypnwtykvmpr/hive-flow/wiki)
+- **Issues**: [GitHub Issues](https://github.com/hypnwtykvmpr/hive-flow/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/hypnwtykvmpr/hive-flow/discussions)
+- **Website**: [Flow Nexus](https://flow-nexus.hive-flow.invalid)
 
 ---
 
 ## 📊 Performance
 
-- **84.8%** SWE-Bench solve rate
+- SWE-Bench evaluation support
 - **32.3%** token reduction vs. sequential execution
 - **2.8-4.4x** speed improvement with WASM acceleration
 - **27+** neural models for pattern recognition
@@ -711,10 +691,10 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=ruvnet/hive-flow&type=Date)](https://star-history.com/#ruvnet/hive-flow&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=hypnwtykvmpr/hive-flow&type=Date)](https://star-history.com/#hypnwtykvmpr/hive-flow&Date)
 
 ---
 
-**Made with ❤️ by rUv**
+**Made with ❤️ by Hive Flow**
 
 *Enterprise AI Agent Orchestration for Claude Code*

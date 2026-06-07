@@ -2,7 +2,7 @@
  * V3 CLI Doctor Command
  * System diagnostics, dependency checks, config validation
  *
- * Created with ruv.io
+ * Created by Hive Flow
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
@@ -276,7 +276,7 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
             if (
               pkg.version &&
               typeof pkg.name === 'string' &&
-              (pkg.name === '@hive-flow/cli' || pkg.name === 'hive-flow' || pkg.name === 'ruflo')
+              (pkg.name === '@hive-flow/cli' || pkg.name === 'hive-flow' || pkg.name === 'hive-flow')
             ) {
               currentVersion = pkg.version;
               break;

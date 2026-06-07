@@ -2,7 +2,7 @@
  * Local attention kernels for @hive-flow/performance.
  *
  * These are deterministic TypeScript implementations used to avoid a hard
- * runtime dependency on external ruvector packages.
+ * runtime dependency on external vector packages.
  */
 
 export type AttentionVector = Float32Array | number[];

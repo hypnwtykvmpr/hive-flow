@@ -442,7 +442,7 @@ mcp__flow-nexus__market_data()
 
 ### Revenue Sharing
 
-- Earn rUv credits when others deploy your templates
+- Earn Hive Flow credits when others deploy your templates
 - Set pricing (0 for free, or credits for premium)
 - Track usage and earnings via analytics
 - Withdraw credits or use for Flow Nexus services
@@ -458,7 +458,7 @@ mcp__flow-nexus__market_data()
 mcp__flow-nexus__check_balance()
 ```
 
-**Check rUv Balance**
+**Check Hive Flow Balance**
 ```javascript
 mcp__flow-nexus__ruv_balance({
   user_id: "your_user_id"
@@ -1028,13 +1028,13 @@ mcp__flow-nexus__challenge_submit({
 
 ## Support & Resources
 
-- **Documentation**: https:/$docs.flow-nexus.ruv.io
-- **API Reference**: https:/$api.flow-nexus.ruv.io$docs
-- **Status Page**: https:/$status.flow-nexus.ruv.io
-- **Community Forum**: https:/$community.flow-nexus.ruv.io
-- **GitHub Issues**: https:/$github.com$ruvnet$flow-nexus$issues
+- **Documentation**: https:/$docs.flow-nexus.hive-flow.invalid
+- **API Reference**: https:/$api.flow-nexus.hive-flow.invalid$docs
+- **Status Page**: https:/$status.flow-nexus.hive-flow.invalid
+- **Community Forum**: https:/$community.flow-nexus.hive-flow.invalid
+- **GitHub Issues**: https:/$github.com$hypnwtykvmpr$flow-nexus$issues
 - **Discord**: https:/$discord.gg$flow-nexus
-- **Email Support**: support@flow-nexus.ruv.io (Pro/Enterprise only)
+- **Email Support**: support@flow-nexus.hive-flow.invalid (Pro/Enterprise only)
 
 ---
 

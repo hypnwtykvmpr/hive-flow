@@ -56,7 +56,7 @@ hive-flow/
 Users install with:
 
 ```
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 /restart
 ```
 
@@ -99,11 +99,7 @@ The plugin configures 3 MCP servers:
    - Swarm coordination
    - Agent management
 
-2. **ruv-swarm** (Optional)
-   - Enhanced coordination
-   - WASM acceleration
-
-3. **flow-nexus** (Optional)
+2. **flow-nexus** (Optional)
    - 70+ cloud tools
    - Requires authentication
 
@@ -120,7 +116,7 @@ The plugin configures 3 MCP servers:
 
 - **Version**: 2.5.0
 - **License**: MIT
-- **Author**: rUv
+- **Author**: Hive Flow
 - **Compatibility**: Claude Code >= 2.0.0
 
 ## Status

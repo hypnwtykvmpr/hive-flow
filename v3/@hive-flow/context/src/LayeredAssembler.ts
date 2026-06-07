@@ -4,7 +4,7 @@
  * Builds a final LLMRequest by layering system prompts, RAG results,
  * current turn context, and conversation history with strict token budgeting.
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 import { LLMProvider, LLMModel, ProviderManager } from '@hive-flow/providers';

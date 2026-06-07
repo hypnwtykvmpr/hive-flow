@@ -2,10 +2,10 @@
   "name": "hive-flow",
   "version": "3.1.0-alpha.52",
   "description": "Hive Flow - Enterprise AI agent orchestration platform. Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
-  "main": "bin/ruflo.js",
+  "main": "bin/hive-flow.js",
   "type": "module",
   "bin": {
-    "hive-flow": "./bin/ruflo.js"
+    "hive-flow": "./bin/hive-flow.js"
   },
   "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
   "bugs": {
@@ -28,10 +28,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/hypnwtykvmpr/hive-flow.git",
-    "directory": "ruflo"
+    "directory": "hive-flow-npm"
   },
   "keywords": [
-    "hive-flow",
     "hive-flow",
     "claude",
     "claude-code",
@@ -51,8 +50,8 @@
   ],
   "contributors": [
     {
-      "name": "RuvNet",
-      "url": "https://github.com/ruvnet"
+      "name": "Hive Flow",
+      "url": "https://github.com/hypnwtykvmpr"
     }
   ],
   "license": "MIT",

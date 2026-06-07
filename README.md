@@ -4494,7 +4494,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
 | `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
-AgentDB may retain internal `@ruvector/*` transitive dependencies, but Hive Flow no longer exposes standalone `ruvector` CLI, MCP, or PostgreSQL surfaces.
+AgentDB may retain internal vector-search transitive dependencies, but Hive Flow no longer exposes standalone external-vector CLI, MCP, or PostgreSQL surfaces.
 
 </details>
 
@@ -4509,9 +4509,9 @@ Core infrastructure packages powering Hive Flow's intelligence layer.
 
 [![npm version](https://img.shields.io/npm/v/agentic-flow?color=blue&label=npm)](https://www.npmjs.com/package/agentic-flow)
 [![npm downloads](https://img.shields.io/npm/dm/agentic-flow?color=green)](https://www.npmjs.com/package/agentic-flow)
-[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow)
+[![GitHub](https://img.shields.io/badge/GitHub-hypnwtykvmpr%2Fagentic--flow-blue?logo=github)](https://github.com/hypnwtykvmpr/agentic-flow)
 
-Hive Flow v3 can optionally interoperate with **[agentic-flow](https://github.com/ruvnet/agentic-flow)** when it is installed. Local Hive Flow services remain the fallback path when the integration is unavailable.
+Hive Flow v3 can optionally interoperate with **[agentic-flow](https://github.com/hypnwtykvmpr/agentic-flow)** when it is installed. Local Hive Flow services remain the fallback path when the integration is unavailable.
 
 ### Quick Start
 
@@ -4831,7 +4831,7 @@ const config = optimizer.getOptimalConfig(agentCount);
 
 [![npm version](https://img.shields.io/npm/v/agentic-jujutsu?color=blue&label=npm)](https://www.npmjs.com/package/agentic-jujutsu)
 [![npm downloads](https://img.shields.io/npm/dm/agentic-jujutsu?color=green)](https://www.npmjs.com/package/agentic-jujutsu)
-[![GitHub](https://img.shields.io/badge/GitHub-ruvnet%2Fagentic--flow-blue?logo=github)](https://github.com/ruvnet/agentic-flow/tree/main/packages/agentic-jujutsu)
+[![GitHub](https://img.shields.io/badge/GitHub-hypnwtykvmpr%2Fagentic--flow-blue?logo=github)](https://github.com/hypnwtykvmpr/agentic-flow/tree/main/packages/agentic-jujutsu)
 
 **Agentic-Jujutsu** is quantum-ready, self-learning version control designed for multiple AI agents working simultaneously without conflicts. Built on [Jujutsu](https://github.com/martinvonz/jj), it provides 23x faster performance than Git with automatic conflict resolution.
 
@@ -7062,7 +7062,7 @@ cp -r ./data-backup-v2 ./data
 
 ## Acknowledgments
 
-Hive Flow is forked from [claude-flow](https://github.com/ruvnet/claude-flow) by [RuvNet](https://github.com/ruvnet) (Reuven Cohen). The original project established the foundation for multi-agent AI orchestration on Claude Code. Licensed under MIT.
+Hive Flow is forked from [claude-flow](https://github.com/hypnwtykvmpr/claude-flow) by [Hive Flow](https://github.com/hypnwtykvmpr) (Reuven Cohen). The original project established the foundation for multi-agent AI orchestration on Claude Code. Licensed under MIT.
 
 ## License
 

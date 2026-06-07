@@ -1,7 +1,7 @@
 /**
  * V3 Context Assembly Types
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 import type { LLMProvider, LLMModel } from '@hive-flow/providers';

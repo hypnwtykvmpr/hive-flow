@@ -2,11 +2,11 @@
 
 [![npm version](https://img.shields.io/npm/v/@hive-flow/guidance.svg?style=flat-square&label=npm)](https://www.npmjs.com/package/@hive-flow/guidance)
 [![npm downloads](https://img.shields.io/npm/dm/@hive-flow/guidance.svg?style=flat-square&label=downloads)](https://www.npmjs.com/package/@hive-flow/guidance)
-[![license](https://img.shields.io/npm/l/@hive-flow/guidance.svg?style=flat-square)](https://github.com/ruvnet/hive-flow/blob/main/LICENSE)
-[![tests](https://img.shields.io/badge/tests-1%2C328%20passing-brightgreen?style=flat-square)](https://github.com/ruvnet/hive-flow)
+[![license](https://img.shields.io/npm/l/@hive-flow/guidance.svg?style=flat-square)](https://github.com/hypnwtykvmpr/hive-flow/blob/main/LICENSE)
+[![tests](https://img.shields.io/badge/tests-1%2C328%20passing-brightgreen?style=flat-square)](https://github.com/hypnwtykvmpr/hive-flow)
 [![node](https://img.shields.io/badge/node-%3E%3D20-blue?style=flat-square)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![GitHub stars](https://img.shields.io/github/stars/ruvnet/hive-flow?style=flat-square&logo=github)](https://github.com/ruvnet/hive-flow)
+[![GitHub stars](https://img.shields.io/github/stars/hypnwtykvmpr/hive-flow?style=flat-square&logo=github)](https://github.com/hypnwtykvmpr/hive-flow)
 [![hive-flow](https://img.shields.io/npm/v/hive-flow.svg?style=flat-square&label=hive-flow&color=blueviolet)](https://www.npmjs.com/package/hive-flow)
 [![ruvbot](https://img.shields.io/npm/v/ruvbot.svg?style=flat-square&label=ruvbot&color=orange)](https://www.npmjs.com/package/ruvbot)
 
@@ -1181,15 +1181,15 @@ Take 20 real Hive Flow tasks from repo history. Run A without control plane, run
 
 | Resource | URL |
 |----------|-----|
-| **GitHub** | [github.com/ruvnet/hive-flow](https://github.com/ruvnet/hive-flow) |
+| **GitHub** | [github.com/hypnwtykvmpr/hive-flow](https://github.com/hypnwtykvmpr/hive-flow) |
 | **npm: @hive-flow/guidance** | [npmjs.com/package/@hive-flow/guidance](https://www.npmjs.com/package/@hive-flow/guidance) |
 | **npm: hive-flow** | [npmjs.com/package/hive-flow](https://www.npmjs.com/package/hive-flow) |
 | **npm: ruvbot** | [npmjs.com/package/ruvbot](https://www.npmjs.com/package/ruvbot) |
-| **ruv.io** | [ruv.io](https://ruv.io) |
-| **Issues** | [github.com/ruvnet/hive-flow/issues](https://github.com/ruvnet/hive-flow/issues) |
+| **hive-flow.invalid** | [hive-flow.invalid](https://hive-flow.invalid) |
+| **Issues** | [github.com/hypnwtykvmpr/hive-flow/issues](https://github.com/hypnwtykvmpr/hive-flow/issues) |
 | **API Reference** | [docs/reference/api-quick-reference.md](docs/reference/api-quick-reference.md) |
 | **ADR Index** | [docs/adrs/](docs/adrs/) |
 
 ## License
 
-MIT — see [LICENSE](https://github.com/ruvnet/hive-flow/blob/main/LICENSE) for details.
+MIT — see [LICENSE](https://github.com/hypnwtykvmpr/hive-flow/blob/main/LICENSE) for details.

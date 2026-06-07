@@ -2,7 +2,7 @@
  * V3 CLI Providers Command
  * Manage AI providers, models, and configurations
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
@@ -311,7 +311,7 @@ export const providersCommand: Command = {
       'Local intelligence system',
     ]);
     output.writeln();
-    output.writeln(output.dim('Created with ❤️ by ruv.io'));
+    output.writeln(output.dim('Created by Hive Flow'));
     return { success: true };
   },
 };

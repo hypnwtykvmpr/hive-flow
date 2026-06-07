@@ -4,8 +4,8 @@
 
 **Version**: 2.5.0
 **License**: MIT
-**Author**: rUv
-**Repository**: https://github.com/ruvnet/hive-flow
+**Author**: Hive Flow
+**Repository**: https://github.com/hypnwtykvmpr/hive-flow
 
 ---
 
@@ -45,7 +45,7 @@ hive-flow/
 
 ```
 # Install plugin
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 
 # Restart Claude Code
 /restart
@@ -112,13 +112,7 @@ cd hive-flow
    - Memory management
    - Neural training
 
-2. **ruv-swarm** (Optional)
-   - Enhanced coordination
-   - WASM acceleration (2.8-4.4x speed)
-   - SIMD optimization
-   - Advanced topology management
-
-3. **flow-nexus** (Optional)
+2. **flow-nexus** (Optional)
    - 70+ cloud tools
    - E2B sandbox execution
    - Distributed neural training
@@ -159,7 +153,7 @@ cd hive-flow
 - Context persistence
 
 ### Performance
-- 84.8% SWE-Bench solve rate
+- SWE-Bench evaluation support
 - 32.3% token reduction
 - 2.8-4.4x speed improvement with WASM
 - Real-time performance monitoring
@@ -222,7 +216,7 @@ All documentation follows official Claude Code plugin guidelines.
 
 ### Install
 ```
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 ```
 
 ### Update
@@ -282,7 +276,7 @@ Should show `hive-flow` as active.
 
 ## 📈 Performance Metrics
 
-- **SWE-Bench**: 84.8% solve rate
+- **SWE-Bench**: Evaluation support
 - **Token Efficiency**: 32.3% reduction vs sequential
 - **Speed**: 2.8-4.4x with WASM acceleration
 - **Scale**: Up to 100 concurrent agents
@@ -292,17 +286,17 @@ Should show `hive-flow` as active.
 
 ## 🤝 Support & Community
 
-- **Repository**: https://github.com/ruvnet/hive-flow
-- **Issues**: https://github.com/ruvnet/hive-flow/issues
-- **Discussions**: https://github.com/ruvnet/hive-flow/discussions
-- **Website**: https://flow-nexus.ruv.io
+- **Repository**: https://github.com/hypnwtykvmpr/hive-flow
+- **Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
+- **Discussions**: https://github.com/hypnwtykvmpr/hive-flow/discussions
+- **Website**: https://flow-nexus.hive-flow.invalid
 
 ---
 
 ## 📝 License & Attribution
 
 - **License**: MIT
-- **Author**: rUv (ruv@ruv.net)
+- **Author**: Hive Flow (noreply@hive-flow.invalid)
 - **Copyright**: 2025
 - **Open Source**: Free for personal and commercial use
 
@@ -330,12 +324,12 @@ The plugin is configured via `.claude-plugin/plugin.json`:
   "version": "2.5.0",
   "description": "Enterprise AI agent orchestration plugin...",
   "author": {
-    "name": "rUv",
-    "email": "ruv@ruv.net"
+    "name": "Hive Flow",
+    "email": "noreply@hive-flow.invalid"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow.git"
   },
   "mcpServers": {
     "hive-flow": {
@@ -350,7 +344,7 @@ Commands and agents are automatically discovered from `commands/` and `agents/` 
 
 Users install with:
 ```
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 ```
 
 ---

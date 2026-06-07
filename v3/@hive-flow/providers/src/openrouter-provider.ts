@@ -117,7 +117,7 @@ export class OpenRouterProvider extends BaseProvider {
     this.headers = {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'HTTP-Referer': (this.config.providerOptions?.httpReferer as string) || 'https://github.com/ruvnet/hive-flow',
+      'HTTP-Referer': (this.config.providerOptions?.httpReferer as string) || 'https://github.com/hypnwtykvmpr/hive-flow',
       'X-Title': (this.config.providerOptions?.xTitle as string) || 'Hive Flow',
     };
   }

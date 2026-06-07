@@ -77,8 +77,6 @@ else
     ((WARNINGS++))
 fi
 
-# ruv-swarm: No local equivalent — optional package
-echo "  ruv-swarm: Not available (no local build)"
 # flow-nexus: No local equivalent — optional package
 echo "  flow-nexus: Not available (no local build)"
 

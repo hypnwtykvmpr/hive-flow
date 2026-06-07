@@ -118,7 +118,7 @@ mcp__flow-nexus__market_data()
 7. Provide migration guides for updates
 
 ## Revenue Sharing
-- Earn rUv credits when others use your templates
+- Earn Hive Flow credits when others use your templates
 - Set pricing (0 for free templates)
 - Track usage and earnings in analytics
 - Withdraw credits or use for Flow Nexus services

@@ -2,7 +2,7 @@
 name: secure-review
 version: 1.0.0
 description: Security-focused code review with AI manipulation detection
-author: rUv
+author: Hive Flow
 tags: [security, code-review, aidefence]
 
 invocation:

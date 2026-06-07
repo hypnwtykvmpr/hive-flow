@@ -3,7 +3,7 @@
  * Plugin management, installation, and lifecycle
  * Now uses IPFS-based decentralized registry for discovery
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
@@ -927,7 +927,7 @@ export const pluginsCommand: Command = {
     ]);
     output.writeln();
     output.writeln(output.dim('Run "hive-flow plugins list --official" to see all official plugins'));
-    output.writeln(output.dim('Created with ❤️ by ruv.io'));
+    output.writeln(output.dim('Created by Hive Flow'));
     return { success: true };
   },
 };

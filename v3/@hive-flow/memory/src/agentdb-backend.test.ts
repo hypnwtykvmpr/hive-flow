@@ -38,6 +38,17 @@ describe('AgentDBBackend', () => {
 
       await fallbackBackend.shutdown();
     });
+
+    it('accepts the hivector backend name while preserving legacy backend compatibility', async () => {
+      const hiveVectorBackend = new AgentDBBackend({
+        dbPath: ':memory:',
+        vectorBackend: 'hivector',
+      });
+
+      await hiveVectorBackend.initialize();
+      expect(hiveVectorBackend).toBeDefined();
+      await hiveVectorBackend.shutdown();
+    });
   });
 
   describe('Basic CRUD Operations', () => {

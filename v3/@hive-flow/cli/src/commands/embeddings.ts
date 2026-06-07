@@ -10,7 +10,7 @@
  * - Neural substrate integration
  * - Persistent SQLite cache
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
@@ -1115,7 +1115,7 @@ const neuralCommand: Command = {
         driftThreshold,
         decayRate,
         consolidationInterval,
-        ruvector: {
+        hivector: {
           enabled: true,
           sona: true, // Self-Optimizing Neural Architecture
           flashAttention: true,
@@ -1138,7 +1138,7 @@ const neuralCommand: Command = {
 
     const neuralConfig = (config.neural || {}) as Record<string, unknown>;
     const features = (neuralConfig.features || {}) as Record<string, boolean>;
-    const ruvector = (neuralConfig.ruvector || {}) as Record<string, boolean>;
+    const localKernels = ((neuralConfig.hivector || neuralConfig.ruvector) || {}) as Record<string, boolean>;
 
     output.printTable({
       columns: [
@@ -1187,17 +1187,17 @@ const neuralCommand: Command = {
         {
           component: 'SONA',
           description: 'Self-Optimizing Neural Architecture (low-latency)',
-          status: ruvector.sona ? output.success('Enabled') : output.dim('Disabled')
+          status: localKernels.sona ? output.success('Enabled') : output.dim('Disabled')
         },
         {
           component: 'Flash Attention',
           description: 'Flash Attention optimization attention speedup',
-          status: ruvector.flashAttention ? output.success('Enabled') : output.dim('Disabled')
+          status: localKernels.flashAttention ? output.success('Enabled') : output.dim('Disabled')
         },
         {
           component: 'EWC++',
           description: 'Elastic Weight Consolidation (anti-forgetting)',
-          status: ruvector.ewcPlusPlus ? output.success('Enabled') : output.dim('Disabled')
+          status: localKernels.ewcPlusPlus ? output.success('Enabled') : output.dim('Disabled')
         },
         {
           component: 'Hyperbolic Space',
@@ -1734,7 +1734,7 @@ export const embeddingsCommand: Command = {
       'Hyperbolic: Better hierarchical representation',
     ]);
     output.writeln();
-    output.writeln(output.dim('Created with ❤️ by ruv.io'));
+    output.writeln(output.dim('Created by Hive Flow'));
     return { success: true };
   },
 };

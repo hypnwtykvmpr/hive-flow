@@ -567,13 +567,13 @@ Pre-scan agent inputs automatically:
 
 ## Contributing
 
-Contributions are welcome! Please see our [Contributing Guide](https://github.com/ruvnet/hive-flow/blob/main/CONTRIBUTING.md).
+Contributions are welcome! Please see our [Contributing Guide](https://github.com/hypnwtykvmpr/hive-flow/blob/main/CONTRIBUTING.md).
 
 ### Development
 
 ```bash
 # Clone repository
-git clone https://github.com/ruvnet/hive-flow.git
+git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow/v3/@hive-flow/aidefence
 
 # Install dependencies
@@ -620,6 +620,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  <strong>Built with security in mind by <a href="https://ruv.io">rUv</a></strong><br>
+  <strong>Built with security in mind by <a href="https://hive-flow.invalid">Hive Flow</a></strong><br>
   <sub>Part of the Hive Flow ecosystem</sub>
 </p>

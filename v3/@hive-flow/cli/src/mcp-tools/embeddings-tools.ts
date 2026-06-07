@@ -29,6 +29,13 @@ interface EmbeddingsConfig {
     enabled: boolean;
     driftThreshold: number;
     decayRate: number;
+    hivector?: {
+      enabled: boolean;
+      sona: boolean;
+      flashAttention: boolean;
+      ewcPlusPlus: boolean;
+    };
+    /** @deprecated Use hivector. */
     ruvector?: {
       enabled: boolean;
       sona: boolean;
@@ -548,7 +555,7 @@ export const embeddingsTools: MCPTool[] = [
             enabled: true,
             driftThreshold: (input.driftThreshold as number) || 0.3,
             decayRate: (input.decayRate as number) || 0.01,
-            ruvector: {
+            hivector: {
               enabled: true,
               sona: true,
               flashAttention: true,
@@ -667,7 +674,7 @@ export const embeddingsTools: MCPTool[] = [
               neural: {
                 enabled: config.neural.enabled,
                 sonaEnabled: stats.sonaEnabled,
-                ruvector: config.neural.ruvector || { enabled: false },
+                hivector: config.neural.hivector || config.neural.ruvector || { enabled: false },
                 features: config.neural.features || {},
                 realMetrics: {
                   patternsLearned: stats.patternsLearned,
@@ -693,7 +700,7 @@ export const embeddingsTools: MCPTool[] = [
               action: 'status',
               neural: {
                 enabled: config.neural.enabled,
-                ruvector: config.neural.ruvector || { enabled: false },
+                hivector: config.neural.hivector || config.neural.ruvector || { enabled: false },
                 features: config.neural.features || {},
               },
               message: 'Intelligence module not available - showing config only',
@@ -849,7 +856,7 @@ export const embeddingsTools: MCPTool[] = [
           hyperbolic: config.hyperbolic,
           neural: {
             enabled: config.neural.enabled,
-            ruvector: config.neural.ruvector?.enabled ?? false,
+            hivector: (config.neural.hivector ?? config.neural.ruvector)?.enabled ?? false,
           },
         },
         paths: {

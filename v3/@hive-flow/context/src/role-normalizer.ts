@@ -3,7 +3,7 @@
  *
  * Normalizes generic LLM roles (system, user, assistant, tool) for specific providers.
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 import { LLMProvider } from '@hive-flow/providers';

@@ -33,13 +33,13 @@ Complete restructure into 10 independent @hive-flow modules:
 ### ⚡ Performance Improvements
 
 #### Flash Attention Integration
-- **Flash Attention optimization** via @ruvector/attention
+- **Flash Attention optimization** via built-in local attention kernels
 - 50-75% memory reduction during large context processing
 - Native NAPI (fastest), WebAssembly, and JavaScript fallback runtimes
 - Automatic runtime selection based on environment
 
 #### SONA Learning System
-- **low-latency adaptation time** via @ruvector/sona
+- **low-latency adaptation time** via built-in local SONA support
 - Self-organizing neural architecture for agent routing
 - Continuous learning from all agent interactions
 - SWE-Bench evaluation claims removed improvement
@@ -175,9 +175,9 @@ Complete restructure into 10 independent @hive-flow modules:
 ```json
 {
   "agentic-flow": "2.0.1-alpha.74",
-  "agentdb": "2.0.0-alpha.3.4",
-  "@ruvector/attention": "0.1.3",
-  "@ruvector/sona": "0.1.5",
+  "agentdb": "3.0.0-alpha.9",
+  "@hive-flow/attention": "0.1.3",
+  "@hive-flow/sona": "0.1.5",
   "vitest": "^2.1.8",
   "typescript": "^5.7.3"
 }
@@ -248,7 +248,7 @@ See [MIGRATION.md](./MIGRATION.md) for detailed upgrade instructions from v2 to 
 ### 🙏 Acknowledgments
 - Built on agentic-flow@alpha by the Anthropic community
 - AgentDB integration for unified memory
-- RuVector for Flash Attention and SONA learning
+- Hivector for Flash Attention and SONA learning
 - Community feedback and testing
 
 ### 🔮 Coming Soon (v3.0.0-beta)
@@ -292,10 +292,10 @@ npx @hive-flow/swarm coordinate --agents 15
 ```
 
 ### Support & Feedback
-- **GitHub Issues**: https://github.com/ruvnet/agentic-flow/issues
-- **Documentation**: https://github.com/ruvnet/agentic-flow/tree/v3/docs
+- **GitHub Issues**: https://github.com/hypnwtykvmpr/agentic-flow/issues
+- **Documentation**: https://github.com/hypnwtykvmpr/agentic-flow/tree/v3/docs
 - **Migration Guide**: [MIGRATION.md](./MIGRATION.md)
 
 ---
 
-**Full Changelog**: https://github.com/ruvnet/agentic-flow/compare/v2.0.1...v3.0.0-alpha.1
+**Full Changelog**: https://github.com/hypnwtykvmpr/agentic-flow/compare/v2.0.1...v3.0.0-alpha.1

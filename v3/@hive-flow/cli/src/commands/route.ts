@@ -8,7 +8,7 @@
  * - Confidence scoring
  * - Learning from feedback
  *
- * Created with love by ruv.io
+ * Created by Hive Flow
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';

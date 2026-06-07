@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@hive-flow/codex"><img src="https://img.shields.io/npm/v/@hive-flow/codex?label=npm&color=blue" alt="npm version"></a>
-  <a href="https://github.com/ruvnet/hive-flow"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
+  <a href="https://github.com/hypnwtykvmpr/hive-flow"><img src="https://img.shields.io/badge/license-MIT-green" alt="license"></a>
   <a href="https://agentics.org"><img src="https://img.shields.io/badge/standard-Agentics-purple" alt="Agentics Standard"></a>
 </p>
 
@@ -1020,5 +1020,5 @@ MIT
 
 ## Support
 
-- Documentation: https://github.com/ruvnet/hive-flow
-- Issues: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues

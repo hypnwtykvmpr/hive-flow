@@ -45,17 +45,17 @@
     "aimds",
     "llm-security"
   ],
-  "author": "rUv <hello@ruv.io>",
+  "author": "Hive Flow <hello@hive-flow.invalid>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ruvnet/hive-flow.git",
+    "url": "git+https://github.com/hypnwtykvmpr/hive-flow.git",
     "directory": "v3/@hive-flow/aidefence"
   },
   "bugs": {
-    "url": "https://github.com/ruvnet/hive-flow/issues"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
   },
-  "homepage": "https://github.com/ruvnet/hive-flow/tree/main/v3/@hive-flow/aidefence#readme",
+  "homepage": "https://github.com/hypnwtykvmpr/hive-flow/tree/main/v3/@hive-flow/aidefence#readme",
   "publishConfig": {
     "access": "public",
     "tag": "alpha"

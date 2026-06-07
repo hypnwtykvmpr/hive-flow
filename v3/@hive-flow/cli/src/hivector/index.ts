@@ -87,7 +87,6 @@ export {
   detectCircularDependencies,
   exportToDot,
   loadHivectorGraph,
-  loadRuVector,
   fallbackMinCut,
   fallbackLouvain,
   // Cache utilities (NEW)

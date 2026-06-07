@@ -58,16 +58,16 @@
     "AGENTS.md",
     "agentic-ai"
   ],
-  "author": "rUv",
+  "author": "Hive Flow",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git",
+    "url": "https://github.com/hypnwtykvmpr/hive-flow.git",
     "directory": "v3/@hive-flow/codex"
   },
-  "homepage": "https://github.com/ruvnet/hive-flow#readme",
+  "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
   "bugs": {
-    "url": "https://github.com/ruvnet/hive-flow/issues"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -3,7 +3,7 @@
  *
  * Provides rough token counting for budgeting before sending to LLM.
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 import { LLMMessage, LLMContentPart } from './types.js';

@@ -47,17 +47,13 @@ export const analyzeDiffTool: MCPTool = {
         description: 'Use local analysis with graceful fallback',
         default: true,
       },
-      useRuVector: {
-        type: 'boolean',
-        description: 'Deprecated alias for useHivector',
-      },
     },
   },
   handler: async (params: Record<string, unknown>) => {
     const ref = (params.ref as string) || 'HEAD';
     const includeFileRisks = params.includeFileRisks !== false;
     const includeReviewers = params.includeReviewers !== false;
-    const useHivector = (params.useHivector ?? params.useRuVector) !== false;
+    const useHivector = params.useHivector !== false;
 
     try {
       const result = await analyzeDiff({

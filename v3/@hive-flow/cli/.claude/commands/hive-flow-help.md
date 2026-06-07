@@ -98,6 +98,6 @@ npx -y hive-flow@latest init --sparc
 - Use background mode for tasks > 30 minutes
 
 ## 📚 Resources
-- Documentation: https://github.com/ruvnet/claude-code-flow/docs
-- Examples: https://github.com/ruvnet/claude-code-flow/examples
-- Issues: https://github.com/ruvnet/claude-code-flow/issues
+- Documentation: https://github.com/hypnwtykvmpr/claude-code-flow/docs
+- Examples: https://github.com/hypnwtykvmpr/claude-code-flow/examples
+- Issues: https://github.com/hypnwtykvmpr/claude-code-flow/issues

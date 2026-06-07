@@ -151,18 +151,12 @@ export async function loadHivector(): Promise<boolean> {
   return false;
 }
 
-/** @deprecated Use loadHivector. */
-export const loadRuVector = loadHivector;
-
 /**
  * Check if an external vector backend is available.
  */
 export function isHivectorAvailable(): boolean {
   return isAvailable;
 }
-
-/** @deprecated Use isHivectorAvailable. */
-export const isRuVectorAvailable = isHivectorAvailable;
 
 /**
  * Check if external WASM acceleration is enabled.

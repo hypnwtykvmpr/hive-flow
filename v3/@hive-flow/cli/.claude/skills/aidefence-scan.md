@@ -2,7 +2,7 @@
 name: aidefence-scan
 version: 1.0.0
 description: Scan inputs for AI manipulation attempts using AIMDS threat detection
-author: rUv
+author: Hive Flow
 tags: [security, threat-detection, prompt-injection, aidefence]
 
 # Skill metadata

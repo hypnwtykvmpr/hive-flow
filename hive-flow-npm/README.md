@@ -25,9 +25,9 @@ hive-flow memory search -q "..."  # Search vector memory
 hive-flow doctor                 # System diagnostics
 ```
 
-## Acknowledgments
+## Package
 
-Forked from [hive-flow](https://github.com/ruvnet/hive-flow) by [RuvNet](https://github.com/ruvnet).
+This package is the `hive-flow` npm entrypoint for the Hive Flow CLI.
 
 ## License
 

@@ -62,12 +62,12 @@ mcp__hive-flow__agent_spawn { type: "optimizer", name: "Structure Optimizer" }
 mcp__hive-flow__agent_spawn { type: "coordinator", name: "Multi-Repo Coordinator" }
 
 // Analyze current repository structure
-LS("/workspaces/ruv-FANN/claude-code-flow/claude-code-flow")
-LS("/workspaces/ruv-FANN/hive-flow/npm")
+LS("/workspaces/hive-flow/claude-code-flow/claude-code-flow")
+LS("/workspaces/hive-flow/hive-flow/npm")
 
 // Search for related repositories
 mcp__github__search_repositories {
-  query: "user:ruvnet claude",
+  query: "user:hypnwtykvmpr claude",
   sort: "updated",
   order: "desc"
 }
@@ -92,7 +92,7 @@ mcp__github__create_repository {
 
 // Push template structure
 mcp__github__push_files {
-  owner: "ruvnet",
+  owner: "hypnwtykvmpr",
   repo: "claude-project-template",
   branch: "main",
   files: [
@@ -175,8 +175,8 @@ const repositories = [
 // Update common files across repositories
 repositories.forEach(repo => {
   mcp__github__create_or_update_file({
-    owner: "ruvnet",
-    repo: "ruv-FANN",
+    owner: "hypnwtykvmpr",
+    repo: "hive-flow",
     path: `${repo}/.github/workflows/integration.yml`,
     content: `name: Integration Tests
 on: [push, pull_request]
@@ -208,10 +208,10 @@ jobs:
   mcp__hive-flow__agent_spawn { type: "coordinator", name: "Multi-Repo Coordinator" }
 
   // Analyze current repository structures
-  LS("/workspaces/ruv-FANN/claude-code-flow/claude-code-flow")
-  LS("/workspaces/ruv-FANN/hive-flow/npm")
-  Read("/workspaces/ruv-FANN/claude-code-flow/claude-code-flow/package.json")
-  Read("/workspaces/ruv-FANN/hive-flow/npm/package.json")
+  LS("/workspaces/hive-flow/claude-code-flow/claude-code-flow")
+  LS("/workspaces/hive-flow/hive-flow/npm")
+  Read("/workspaces/hive-flow/claude-code-flow/claude-code-flow/package.json")
+  Read("/workspaces/hive-flow/hive-flow/npm/package.json")
 
   // Search for architectural patterns using gh CLI
   ARCH_PATTERNS=$(Bash(`gh search repos "language:javascript template architecture" \
@@ -271,7 +271,7 @@ jobs:
 
 ### 1. **Monorepo Structure Pattern**
 ```
-ruv-FANN/
+hive-flow/
 ├── packages/
 │   ├── claude-code-flow/
 │   │   ├── src/

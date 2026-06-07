@@ -1032,8 +1032,8 @@ npx hive-flow@alpha github version-sync \
 - **deployment-orchestration**: Advanced deployment strategies
 
 ### Support & Community
-- Issues: https:/$github.com$ruvnet$hive-flow$issues
-- Discussions: https:/$github.com$ruvnet$hive-flow$discussions
+- Issues: https:/$github.com$hypnwtykvmpr$hive-flow$issues
+- Discussions: https:/$github.com$hypnwtykvmpr$hive-flow$discussions
 - Documentation: https:/$hive-flow.dev$docs
 
 ---

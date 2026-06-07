@@ -49,13 +49,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git",
+    "url": "https://github.com/hypnwtykvmpr/hive-flow.git",
     "directory": "v3/@hive-flow/claims"
   },
   "bugs": {
-    "url": "https://github.com/ruvnet/hive-flow/issues"
+    "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
   },
-  "homepage": "https://github.com/ruvnet/hive-flow#readme",
+  "homepage": "https://github.com/hypnwtykvmpr/hive-flow#readme",
   "dependencies": {
     "zod": "^3.22.4"
   },

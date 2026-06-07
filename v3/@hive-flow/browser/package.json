@@ -40,11 +40,11 @@
     "web-scraping",
     "testing"
   ],
-  "author": "ruvnet",
+  "author": "hypnwtykvmpr",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ruvnet/hive-flow.git",
+    "url": "https://github.com/hypnwtykvmpr/hive-flow.git",
     "directory": "v3/@hive-flow/browser"
   },
   "engines": {

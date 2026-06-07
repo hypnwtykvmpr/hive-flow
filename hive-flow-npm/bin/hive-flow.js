@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Hive Flow CLI - thin wrapper around @hive-flow/cli with ruflo branding
+// Hive Flow CLI - thin wrapper around @hive-flow/cli with hive-flow branding
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import { existsSync } from 'node:fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Walk up from ruflo/bin/ to find @hive-flow/cli in node_modules
+// Walk up from hive-flow/bin/ to find @hive-flow/cli in node_modules
 function findCliPath() {
   let dir = resolve(__dirname, '..');
   for (let i = 0; i < 10; i++) {
@@ -37,7 +37,7 @@ const isMCPMode = !process.stdin.isTTY && (process.argv.length === 2 || isExplic
 if (isMCPMode) {
   await import(toImportURL(join(cliBase, 'bin', 'cli.js')));
 } else {
-  // CLI mode: use ruflo branding
+  // CLI mode: use hive-flow branding
   const { CLI } = await import(toImportURL(join(cliBase, 'dist', 'src', 'index.js')));
   const cli = new CLI({
     name: 'hive-flow',

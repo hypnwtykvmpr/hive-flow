@@ -789,7 +789,7 @@ SendMessage({
 ### 12 Background Workers
 `ultralearn`, `optimize`, `consolidate`, `predict`, `audit`, `map`, `preload`, `deepdive`, `document`, `refactor`, `benchmark`, `testgaps`
 
-## Intelligence System (RuVector)
+## Intelligence System (Hivector)
 
 V3 includes the Hive Flow intelligence system:
 - **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)

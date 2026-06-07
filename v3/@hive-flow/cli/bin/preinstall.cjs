@@ -54,7 +54,7 @@ try {
 } catch (e) { /* non-fatal */ }
 
 // 2. Remove corrupted integrity entries from _cacache (fixes ECOMPROMISED)
-//    Scans index-v5 hash buckets for entries referencing hive-flow or ruflo
+//    Scans index-v5 hash buckets for entries referencing hive-flow or hive-flow
 //    packages and removes them so npm re-fetches with correct integrity.
 try {
   var cacheIndex = path.join(npmDir, '_cacache', 'index-v5');
@@ -78,7 +78,7 @@ try {
                 var filePath = path.join(subPath, files[fi]);
                 try {
                   var content = fs.readFileSync(filePath, 'utf-8');
-                  if (content.indexOf('hive-flow') !== -1 || content.indexOf('ruflo') !== -1) {
+                  if (content.indexOf('hive-flow') !== -1 || content.indexOf('hive-flow') !== -1) {
                     fs.unlinkSync(filePath);
                   }
                 } catch (e2) { /* skip unreadable */ }
@@ -87,7 +87,7 @@ try {
               // File at second level
               try {
                 var content2 = fs.readFileSync(subPath, 'utf-8');
-                if (content2.indexOf('hive-flow') !== -1 || content2.indexOf('ruflo') !== -1) {
+                if (content2.indexOf('hive-flow') !== -1 || content2.indexOf('hive-flow') !== -1) {
                   fs.unlinkSync(subPath);
                 }
               } catch (e2) { /* skip unreadable */ }

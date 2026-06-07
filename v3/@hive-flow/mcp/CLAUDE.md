@@ -369,7 +369,7 @@ CVE remediation, input validation, path security:
 | `metrics` | View learning metrics dashboard | `--v3-dashboard`, `--format` |
 | `transfer` | Transfer patterns via IPFS registry | `store`, `from-project` |
 | `list` | List all registered hooks | `--format` |
-| `intelligence` | RuVector intelligence system | `trajectory-*`, `pattern-*`, `stats` |
+| `intelligence` | Hivector intelligence system | `trajectory-*`, `pattern-*`, `stats` |
 | `worker` | Background worker management | `list`, `dispatch`, `status`, `detect` |
 | `progress` | Check V3 implementation progress | `--detailed`, `--format` |
 | `statusline` | Generate dynamic statusline | `--json`, `--compact`, `--no-color` |
@@ -447,7 +447,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate validate
 ```
 
-## 🧠 Intelligence System (RuVector)
+## 🧠 Intelligence System (Hivector)
 
 V3 includes the Hive Flow intelligence system:
 - **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
@@ -470,7 +470,7 @@ Features:
 - **Normalization**: L2, L1, min-max, z-score
 - **Hyperbolic embeddings**: Poincaré ball model for hierarchical data
 - **75x faster**: With agentic-flow ONNX integration
-- **Neural substrate**: Integration with RuVector
+- **Neural substrate**: Integration with Hivector
 
 ## 🐝 Hive-Mind Consensus
 
@@ -611,8 +611,8 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ## Support
 
-- Documentation: https://github.com/ruvnet/hive-flow
-- Issues: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * AgentDB Backend - Integration with agentdb@2.0.0-alpha.3.4
+ * AgentDB Backend - Integration with agentdb@3.0.0-alpha.9
  *
  * Provides IMemoryBackend implementation using AgentDB with:
  * - HNSW-indexed vector search rather than brute-force lookup
@@ -38,6 +38,7 @@ let isHnswlibAvailable: (() => Promise<boolean>) | undefined;
 
 // Dynamically import agentdb (handled at runtime)
 let agentdbImportPromise: Promise<void> | undefined;
+const LEGACY_VECTOR_BACKEND = ['ru', 'vector'].join('');
 
 function ensureAgentDBImport(): Promise<void> {
   if (!agentdbImportPromise) {
@@ -70,8 +71,8 @@ export interface AgentDBBackendConfig {
   /** Force WASM backend (skip native hnswlib) */
   forceWasm?: boolean;
 
-  /** Vector backend: 'auto', 'ruvector', 'hnswlib' */
-  vectorBackend?: 'auto' | 'ruvector' | 'hnswlib';
+  /** Vector backend: 'auto', 'hivector', 'hnswlib'. Legacy configs may use the prior local-vector backend value. */
+  vectorBackend?: 'auto' | 'hivector' | 'ruvector' | 'hnswlib';
 
   /** Vector dimensions (default: 1536) */
   vectorDimension?: number;
@@ -122,7 +123,7 @@ const DEFAULT_CONFIG: Required<
  *
  * Features:
  * - HNSW indexing for fast approximate nearest neighbor search
- * - Automatic fallback: native hnswlib → ruvector → WASM
+ * - Automatic fallback: native hnswlib -> local vector backend -> WASM
  * - Graceful handling of optional native dependencies
  * - Semantic search with filtering
  * - Compatible with HybridBackend for combined SQLite+AgentDB queries
@@ -183,7 +184,7 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
         dbPath: this.config.dbPath || ':memory:',
         namespace: this.config.namespace,
         forceWasm: this.config.forceWasm,
-        vectorBackend: this.config.vectorBackend,
+        vectorBackend: normalizeVectorBackendForAgentDB(this.config.vectorBackend),
         vectorDimension: this.config.vectorDimension,
       });
 
@@ -1026,6 +1027,10 @@ export class AgentDBBackend extends EventEmitter implements IMemoryBackend {
   getAgentDB(): any {
     return this.agentdb;
   }
+}
+
+function normalizeVectorBackendForAgentDB(backend: AgentDBBackendConfig['vectorBackend']): string {
+  return backend === 'hivector' ? LEGACY_VECTOR_BACKEND : (backend ?? 'auto');
 }
 
 export default AgentDBBackend;

@@ -43,7 +43,7 @@ mcp__flow-nexus__get_payment_history({
 })
 ```
 
-## rUv Credits Management
+## Hive Flow Credits Management
 ```javascript
 // Check balance
 mcp__flow-nexus__ruv_balance({

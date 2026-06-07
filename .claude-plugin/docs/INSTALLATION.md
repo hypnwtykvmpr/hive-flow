@@ -7,7 +7,7 @@
 In Claude Code:
 
 ```
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 ```
 
 This will:
@@ -23,7 +23,7 @@ If you've cloned the repository:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ruvnet/hive-flow.git
+git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 
 # In Claude Code, install the plugin
@@ -87,9 +87,8 @@ Available for delegation:
 
 ### ✅ MCP Integration
 
-3 MCP servers with 110+ tools:
+2 MCP servers with 110+ tools:
 - **hive-flow**: Core orchestration (40+ tools) - Required
-- **ruv-swarm**: Enhanced coordination - Optional
 - **flow-nexus**: Cloud features (70+ tools) - Optional
 
 ---
@@ -131,9 +130,6 @@ The plugin defines MCP servers, but you may need to install the packages:
 ```bash
 # Core MCP (recommended)
 npm install -g hive-flow@alpha
-
-# Optional enhanced coordination
-npm install -g ruv-swarm
 
 # Optional cloud features (requires authentication)
 npm install -g flow-nexus@latest
@@ -177,7 +173,7 @@ Agents are automatically available for Claude Code to delegate to when appropria
 /plugin list
 
 # Try installing again
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 ```
 
 ### Commands Not Showing
@@ -199,7 +195,7 @@ ls -la agents/
 
 ```
 # Try local installation
-git clone https://github.com/ruvnet/hive-flow.git
+git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 /plugin add .
 ```
@@ -210,8 +206,8 @@ cd hive-flow
 
 - **Documentation**: See README.md for complete documentation
 - **Quick Start**: See docs/QUICKSTART.md for 5-minute guide
-- **GitHub Issues**: https://github.com/ruvnet/hive-flow/issues
-- **Discussions**: https://github.com/ruvnet/hive-flow/discussions
+- **GitHub Issues**: https://github.com/hypnwtykvmpr/hive-flow/issues
+- **Discussions**: https://github.com/hypnwtykvmpr/hive-flow/discussions
 
 ---
 
@@ -229,7 +225,7 @@ This will remove all commands, agents, and hooks.
 
 **Version**: 2.5.0
 **License**: MIT
-**Author**: rUv
+**Author**: Hive Flow
 
 ---
 

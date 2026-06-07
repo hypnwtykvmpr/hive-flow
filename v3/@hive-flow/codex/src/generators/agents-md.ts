@@ -214,7 +214,7 @@ ${skillsTable}
 
 [optional body]
 
-Co-Authored-By: hive-flow <ruv@ruv.net>
+Co-Authored-By: hive-flow <noreply@hive-flow.invalid>
 \`\`\`
 
 Types: \`feat\`, \`fix\`, \`docs\`, \`style\`, \`refactor\`, \`perf\`, \`test\`, \`chore\`

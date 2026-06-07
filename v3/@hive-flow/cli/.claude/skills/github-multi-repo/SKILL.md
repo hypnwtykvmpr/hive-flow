@@ -153,8 +153,8 @@ mcp__hive-flow__swarm_init({
   Task("Integration Tester", "Validate synchronization", "tester")
 
   // Read package states
-  Read("/workspaces/ruv-FANN/claude-code-flow/claude-code-flow/package.json")
-  Read("/workspaces/ruv-FANN/hive-flow/npm/package.json")
+  Read("/workspaces/hive-flow/claude-code-flow/claude-code-flow/package.json")
+  Read("/workspaces/hive-flow/hive-flow/npm/package.json")
 
   // Align versions using gh CLI
   Bash(`gh api repos/:owner/:repo/git/refs \
@@ -255,8 +255,8 @@ mcp__hive-flow__swarm_init({
   Task("Best Practices Researcher", "Research architecture patterns", "researcher")
 
   // Analyze current structures
-  LS("/workspaces/ruv-FANN/claude-code-flow/claude-code-flow")
-  LS("/workspaces/ruv-FANN/hive-flow/npm")
+  LS("/workspaces/hive-flow/claude-code-flow/claude-code-flow")
+  LS("/workspaces/hive-flow/hive-flow/npm")
 
   // Search for best practices
   Bash(`gh search repos "language:javascript template architecture" \
@@ -335,7 +335,7 @@ mcp__hive-flow__swarm_init({
   // Update common files across all repositories
   repositories.forEach(repo => {
     mcp__github__create_or_update_file({
-      repo: "ruv-FANN",
+      repo: "hive-flow",
       path: `${repo}/.github/workflows/integration.yml`,
       content: `name: Integration Tests
 on: [push, pull_request]
@@ -619,7 +619,7 @@ npx hive-flow skill run github-multi-repo org-policy \
 
 ### Monorepo Structure
 ```
-ruv-FANN/
+hive-flow/
 ├── packages/
 │   ├── claude-code-flow/
 │   │   ├── src/

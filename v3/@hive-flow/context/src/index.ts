@@ -4,7 +4,7 @@
  * Provides structured, token-budgeted, and provider-agnostic context assembly
  * with support for RAG, history compression, and multi-model orchestration.
  *
- * Created with ❤️ by ruv.io
+ * Created by Hive Flow
  */
 
 export * from './types.js';

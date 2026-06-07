@@ -1,5 +1,5 @@
 /**
- * ruvLLM GGUF Inference Engine -- Pure Node.js GGUF Model Interface
+ * Local LLM GGUF Inference Engine -- Pure Node.js GGUF Model Interface
  *
  * Provides:
  *   1. GGUF binary header parsing (metadata without loading weights)

@@ -1,14 +1,14 @@
 {
   "name": "hive-flow-marketplace",
   "owner": {
-    "name": "rUv",
-    "email": "noreply@ruv.net"
+    "name": "Hive Flow",
+    "email": "noreply@hive-flow.invalid"
   },
   "metadata": {
     "description": "Enterprise AI agent orchestration marketplace for Claude Code",
     "version": "2.5.0",
-    "homepage": "https://github.com/ruvnet/hive-flow",
-    "repository": "https://github.com/ruvnet/hive-flow"
+    "homepage": "https://github.com/hypnwtykvmpr/hive-flow",
+    "repository": "https://github.com/hypnwtykvmpr/hive-flow"
   },
   "plugins": [
     {
@@ -17,13 +17,13 @@
       "description": "Enterprise AI agent orchestration plugin with 150+ commands, 74+ specialized agents, SPARC methodology, swarm coordination, GitHub integration, and neural training capabilities",
       "version": "2.5.0",
       "author": {
-        "name": "rUv",
-        "email": "ruv@ruv.net"
+        "name": "Hive Flow",
+        "email": "noreply@hive-flow.invalid"
       },
-      "homepage": "https://hive-flow.ruv.io",
-      "repository": "https://github.com/ruvnet/hive-flow",
+      "homepage": "https://hive-flow.hive-flow.invalid",
+      "repository": "https://github.com/hypnwtykvmpr/hive-flow",
       "bugs": {
-        "url": "https://github.com/ruvnet/hive-flow/issues"
+        "url": "https://github.com/hypnwtykvmpr/hive-flow/issues"
       },
       "license": "MIT",
       "keywords": [
@@ -65,7 +65,7 @@
         "Cross-session memory persistence",
         "Real-time performance monitoring",
         "110+ MCP tools across 3 servers",
-        "84.8% SWE-Bench solve rate"
+        "SWE-Bench evaluation support"
       ],
       "requirements": {
         "claudeCode": ">=2.0.0",

@@ -437,4 +437,4 @@ Add to your Claude settings (`~/.claude/settings.json`):
 
 ## License
 
-MIT © [Hive Flow Team](https://github.com/ruvnet/hive-flow)
+MIT © [Hive Flow Team](https://github.com/hypnwtykvmpr/hive-flow)

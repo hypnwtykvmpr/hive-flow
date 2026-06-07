@@ -685,8 +685,6 @@ const ANALYSIS_CACHE_TTL_MS = 3000; // 3 seconds
 export async function analyzeDiff(options: {
   ref?: string;
   useHivector?: boolean;
-  /** @deprecated Use useHivector. */
-  useRuVector?: boolean;
   skipCache?: boolean;
 }): Promise<DiffAnalysisResult> {
   const ref = options.ref || 'HEAD';
@@ -737,8 +735,6 @@ export async function analyzeDiff(options: {
 export function analyzeDiffSync(options: {
   ref?: string;
   useHivector?: boolean;
-  /** @deprecated Use useHivector. */
-  useRuVector?: boolean;
 }): DiffAnalysisResult {
   const ref = options.ref || 'HEAD';
 

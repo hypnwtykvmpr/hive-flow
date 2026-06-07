@@ -1,4 +1,4 @@
-# Ruflo v3.5 — Docker Compose Profiles
+# Hive Flow v3.5 — Docker Compose Profiles
 #
 # Profiles:
 #   lite     — MCP server only (stdio), minimal footprint
@@ -20,7 +20,7 @@ services:
     build:
       context: ../../../..
       dockerfile: v3/@hive-flow/cli/docker/Dockerfile
-    image: ruflo:lite
+    image: hive-flow:lite
     stdin_open: true
     environment:
       - NODE_ENV=production
@@ -34,29 +34,29 @@ services:
           cpus: "0.25"
           memory: 128M
     healthcheck:
-      test: ["CMD", "ruflo", "doctor", "--quiet"]
+      test: ["CMD", "hive-flow", "doctor", "--quiet"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
 
   # ── full: CLI + daemon + optional deps (~800MB) ────────────────
-  ruflo-full:
+  hive-flow-full:
     profiles: ["full"]
     build:
       context: ../../../..
       dockerfile: v3/@hive-flow/cli/docker/Dockerfile.full
-    image: ruflo:full
+    image: hive-flow:full
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - NODE_ENV=production
       - HIVE_FLOW_LOG_LEVEL=${HIVE_FLOW_LOG_LEVEL:-info}
       - HIVE_FLOW_MEMORY_BACKEND=hybrid
     volumes:
-      - ruflo-state:/home/ruflo/.hive-flow
-      - ruflo-logs:/var/log/ruflo
+      - hive-flow-state:/home/hive-flow/.hive-flow
+      - hive-flow-logs:/var/log/hive-flow
     ports:
-      - "${RUFLO_MCP_PORT:-3000}:3000"
+      - "${HIVE_FLOW_MCP_PORT:-3000}:3000"
     deploy:
       resources:
         limits:
@@ -65,9 +65,9 @@ services:
         reservations:
           cpus: "1"
           memory: 2G
-    command: ["ruflo", "daemon", "start", "--foreground"]
+    command: ["hive-flow", "daemon", "start", "--foreground"]
     healthcheck:
-      test: ["CMD", "ruflo", "doctor", "--quiet"]
+      test: ["CMD", "hive-flow", "doctor", "--quiet"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -79,7 +79,7 @@ services:
     build:
       context: ../../../..
       dockerfile: v3/@hive-flow/cli/docker/Dockerfile
-    image: ruflo:lite
+    image: hive-flow:lite
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - CLAUDE_CODE_HEADLESS=true
@@ -87,10 +87,10 @@ services:
       - HIVE_FLOW_WORKERS=${HIVE_FLOW_WORKERS:-audit,optimize,testgaps}
       - NODE_ENV=production
     volumes:
-      - worker-state:/home/ruflo/.hive-flow
-      - worker-logs:/var/log/ruflo
+      - worker-state:/home/hive-flow/.hive-flow
+      - worker-logs:/var/log/hive-flow
     deploy:
-      replicas: ${RUFLO_WORKER_REPLICAS:-3}
+      replicas: ${HIVE_FLOW_WORKER_REPLICAS:-3}
       resources:
         limits:
           cpus: "2"
@@ -102,16 +102,16 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 3
-    command: ["ruflo", "daemon", "start", "--foreground", "--headless"]
+    command: ["hive-flow", "daemon", "start", "--foreground", "--headless"]
     healthcheck:
-      test: ["CMD", "ruflo", "doctor", "--quiet"]
+      test: ["CMD", "hive-flow", "doctor", "--quiet"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
 
 volumes:
-  ruflo-state:
-  ruflo-logs:
+  hive-flow-state:
+  hive-flow-logs:
   worker-state:
   worker-logs:

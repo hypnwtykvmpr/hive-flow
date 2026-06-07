@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@hive-flow/embeddings.svg)](https://www.npmjs.com/package/@hive-flow/embeddings)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Performance](https://img.shields.io/badge/Performance-<5ms-brightgreen.svg)](https://github.com/ruvnet/hive-flow)
+[![Performance](https://img.shields.io/badge/Performance-<5ms-brightgreen.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
 > High-performance embedding generation module for Hive Flow V3 - multi-provider support with persistent caching, document chunking, normalization, hyperbolic embeddings, and neural substrate integration.
 

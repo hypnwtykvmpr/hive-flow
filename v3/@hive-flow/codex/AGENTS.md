@@ -103,7 +103,7 @@ Use `$skill-name` syntax to invoke:
 
 [optional body]
 
-Co-Authored-By: hive-flow <ruv@ruv.net>
+Co-Authored-By: hive-flow <noreply@hive-flow.invalid>
 ```
 
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`
@@ -141,5 +141,5 @@ npx @hive-flow/cli memory search \
 
 ## Links
 
-- Documentation: https://github.com/ruvnet/hive-flow
-- Issues: https://github.com/ruvnet/hive-flow/issues
+- Documentation: https://github.com/hypnwtykvmpr/hive-flow
+- Issues: https://github.com/hypnwtykvmpr/hive-flow/issues

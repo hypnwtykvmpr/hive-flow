@@ -4,13 +4,13 @@
 [![npm downloads](https://img.shields.io/npm/dm/@hive-flow/providers.svg)](https://www.npmjs.com/package/@hive-flow/providers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Providers](https://img.shields.io/badge/Providers-6+-orange.svg)](https://github.com/ruvnet/hive-flow)
+[![Providers](https://img.shields.io/badge/Providers-6+-orange.svg)](https://github.com/hypnwtykvmpr/hive-flow)
 
-> Multi-LLM Provider System for Hive Flow V3 - unified interface for Anthropic, OpenAI, Google, Cohere, Ollama, and RuVector with intelligent load balancing, automatic failover, and cost optimization.
+> Multi-LLM Provider System for Hive Flow V3 - unified interface for Anthropic, OpenAI, Google, Cohere, Ollama, and Hivector with intelligent load balancing, automatic failover, and cost optimization.
 
 ## Features
 
-- **6+ LLM Providers** - Anthropic, OpenAI, Google, Cohere, Ollama, RuVector
+- **6+ LLM Providers** - Anthropic, OpenAI, Google, Cohere, Ollama, Hivector
 - **Load Balancing** - Round-robin, latency-based, least-loaded, cost-based strategies
 - **Automatic Failover** - Seamless provider switching on failures
 - **Request Caching** - LRU cache with configurable TTL

@@ -2,7 +2,7 @@
  * V3 CLI Setup Command
  * Global environment setup for Hive Flow
  *
- * Created with ruv.io
+ * Created by Hive Flow
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';

@@ -6,7 +6,7 @@ tags: [swarm, workflow, cloud, agents, automation, message-queue]
 version: 1.0.0
 requires:
   - flow-nexus MCP server
-  - Active Flow Nexus account (register at flow-nexus.ruv.io)
+  - Active Flow Nexus account (register at flow-nexus.hive-flow.invalid)
 ---
 
 # Flow Nexus Swarm & Workflow Orchestration
@@ -601,9 +601,9 @@ claude mcp add flow-nexus npx flow-nexus@latest mcp start
 
 ## Support & Resources
 
-- **Platform**: https://flow-nexus.ruv.io
-- **Documentation**: https://github.com/ruvnet/flow-nexus
-- **Issues**: https://github.com/ruvnet/flow-nexus/issues
+- **Platform**: https://flow-nexus.hive-flow.invalid
+- **Documentation**: https://github.com/hypnwtykvmpr/flow-nexus
+- **Issues**: https://github.com/hypnwtykvmpr/flow-nexus/issues
 
 ---
 

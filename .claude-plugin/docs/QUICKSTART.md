@@ -11,7 +11,7 @@ Get started with Hive Flow in 5 minutes!
 In Claude Code:
 
 ```
-/plugin add ruvnet/hive-flow
+/plugin add hypnwtykvmpr/hive-flow
 /restart
 ```
 
@@ -19,7 +19,7 @@ In Claude Code:
 
 ```bash
 # Clone the repository
-git clone https://github.com/ruvnet/hive-flow.git
+git clone https://github.com/hypnwtykvmpr/hive-flow.git
 cd hive-flow
 ```
 
@@ -203,9 +203,6 @@ The swarm automatically:
 ```bash
 # Core MCP (required)
 claude mcp add hive-flow node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-
-# Enhanced coordination (optional)
-claude mcp add ruv-swarm npx ruv-swarm mcp start
 
 # Cloud features (optional - requires auth)
 claude mcp add flow-nexus npx flow-nexus@latest mcp start

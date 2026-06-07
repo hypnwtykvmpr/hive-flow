@@ -47,7 +47,7 @@ I am a **self-optimizing agent** powered by SONA (Self-Optimizing Neural Archite
 
 ## Performance Characteristics
 
-Based on vibecast test-ruvector-sona benchmarks:
+Based on Hive Flow local SONA benchmark targets:
 
 ### Throughput
 - **2211 ops$sec** (target)
@@ -75,5 +75,5 @@ npx hive-flow@alpha hooks post-task --task-id "$ID" --success true
 
 ## References
 
-- **Package**: @ruvector$sona@0.1.1
-- **Integration Guide**: docs/RUVECTOR_SONA_INTEGRATION.md
+- **Component**: Hive Flow local SONA kernels
+- **Integration Guide**: docs/HIVE_FLOW_SONA_INTEGRATION.md

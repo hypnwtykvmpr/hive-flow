@@ -6,10 +6,10 @@ description: |
   Provides real-time threat detection, behavioral analysis, and adaptive
   mitigation with 25-level meta-learning capabilities.
 
-author: rUv
+author: Hive Flow
 license: MIT
-homepage: https://ruv.io/aimds
-repository: https://github.com/ruvnet/midstream/tree/main/AIMDS
+homepage: https://hive-flow.invalid/aimds
+repository: https://github.com/hypnwtykvmpr/midstream/tree/main/AIMDS
 
 # Package reference
 package: aidefence@^2.1.1
@@ -291,7 +291,7 @@ behavioral_analysis:
 
 # Documentation links
 documentation:
-  readme: https://github.com/ruvnet/midstream/blob/main/AIMDS/README.md
-  api: https://ruv.io/aimds/api
-  patterns: https://ruv.io/aimds/patterns
+  readme: https://github.com/hypnwtykvmpr/midstream/blob/main/AIMDS/README.md
+  api: https://hive-flow.invalid/aimds/api
+  patterns: https://hive-flow.invalid/aimds/patterns
   integration: /v3/implementation/adrs/ADR-022-aidefence-integration.md
