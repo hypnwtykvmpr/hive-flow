@@ -7,25 +7,44 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
+import {
+  CANONICAL_AGENT_TYPES,
+  isCanonicalAgentType,
+  loadCanonicalRoster,
+  type CanonicalAgentType,
+} from '../agents/roster.js';
 
 // Available agent types with descriptions
-const AGENT_TYPES = [
-  { value: 'coder', label: 'Coder', hint: 'Code development with neural patterns' },
-  { value: 'researcher', label: 'Researcher', hint: 'Research with web access and data analysis' },
-  { value: 'tester', label: 'Tester', hint: 'Comprehensive testing with automation' },
-  { value: 'reviewer', label: 'Reviewer', hint: 'Code review with security and quality checks' },
-  { value: 'architect', label: 'Architect', hint: 'System design with enterprise patterns' },
-  { value: 'coordinator', label: 'Coordinator', hint: 'Multi-agent orchestration and workflow' },
-  { value: 'analyst', label: 'Analyst', hint: 'Performance analysis and optimization' },
-  { value: 'optimizer', label: 'Optimizer', hint: 'Performance optimization and bottleneck analysis' },
-  { value: 'security-architect', label: 'Security Architect', hint: 'Security architecture and threat modeling' },
-  { value: 'security-auditor', label: 'Security Auditor', hint: 'CVE remediation and security testing' },
-  { value: 'memory-specialist', label: 'Memory Specialist', hint: 'AgentDB unification (150x-12,500x faster)' },
-  { value: 'swarm-specialist', label: 'Swarm Specialist', hint: 'Unified coordination engine' },
-  { value: 'performance-engineer', label: 'Performance Engineer', hint: '2.49x-7.47x optimization targets' },
-  { value: 'core-architect', label: 'Core Architect', hint: 'Domain-driven design restructure' },
-  { value: 'test-architect', label: 'Test Architect', hint: 'TDD London School methodology' }
-];
+function titleCaseAgentType(type: CanonicalAgentType): string {
+  return type.split('-').map(part => part[0]!.toUpperCase() + part.slice(1)).join(' ');
+}
+
+function tryLoadRosterDescriptions(): Map<CanonicalAgentType, string> {
+  try {
+    return new Map(loadCanonicalRoster().map(agent => [agent.type, agent.description]));
+  } catch {
+    return new Map();
+  }
+}
+
+function tryLoadRosterCapabilities(): Map<CanonicalAgentType, string[]> {
+  try {
+    return new Map(loadCanonicalRoster().map(agent => [agent.type, agent.capabilities]));
+  } catch {
+    return new Map();
+  }
+}
+
+const ROSTER_DESCRIPTIONS = tryLoadRosterDescriptions();
+const ROSTER_CAPABILITIES = tryLoadRosterCapabilities();
+
+export const AGENT_TYPES = CANONICAL_AGENT_TYPES.map(type => ({
+  value: type,
+  label: titleCaseAgentType(type),
+  hint: ROSTER_DESCRIPTIONS.get(type) ?? `${titleCaseAgentType(type)} agent`,
+}));
+
+const AGENT_CAPABILITIES = ROSTER_CAPABILITIES;
 
 // Agent spawn subcommand
 const spawnCommand: Command = {
@@ -77,7 +96,7 @@ const spawnCommand: Command = {
     }
   ],
   examples: [
-    { command: 'hive-flow agent spawn --type coder --name bot-1', description: 'Spawn a coder agent' },
+    { command: 'hive-flow agent spawn --type implementer --name bot-1', description: 'Spawn an implementer agent' },
     { command: 'hive-flow agent spawn -t researcher --task "Research React 19"', description: 'Spawn researcher with task' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
@@ -471,7 +490,7 @@ const metricsCommand: Command = {
         avgResponseTime: '1.45s'
       },
       byType: [
-        { type: 'coder', count: 2, tasks: 45, successRate: '97%' },
+        { type: 'implementer', count: 2, tasks: 45, successRate: '97%' },
         { type: 'researcher', count: 1, tasks: 32, successRate: '95%' },
         { type: 'tester', count: 1, tasks: 50, successRate: '98%' }
       ],
@@ -900,7 +919,7 @@ export const agentCommand: Command = {
   subcommands: [spawnCommand, listCommand, statusCommand, stopCommand, metricsCommand, poolCommand, healthCommand, logsCommand],
   options: [],
   examples: [
-    { command: 'hive-flow agent spawn -t coder', description: 'Spawn a coder agent' },
+    { command: 'hive-flow agent spawn -t implementer', description: 'Spawn an implementer agent' },
     { command: 'hive-flow agent list', description: 'List all agents' },
     { command: 'hive-flow agent status agent-001', description: 'Show agent status' }
   ],
@@ -928,19 +947,7 @@ export const agentCommand: Command = {
 
 // Helper functions
 function getAgentCapabilities(type: string): string[] {
-  const capabilities: Record<string, string[]> = {
-    coder: ['code-generation', 'refactoring', 'debugging', 'testing'],
-    researcher: ['web-search', 'data-analysis', 'summarization', 'citation'],
-    tester: ['unit-testing', 'integration-testing', 'coverage-analysis', 'automation'],
-    reviewer: ['code-review', 'security-audit', 'quality-check', 'documentation'],
-    architect: ['system-design', 'pattern-analysis', 'scalability', 'documentation'],
-    coordinator: ['task-orchestration', 'agent-management', 'workflow-control'],
-    'security-architect': ['threat-modeling', 'security-patterns', 'compliance', 'audit'],
-    'memory-specialist': ['vector-search', 'agentdb', 'caching', 'optimization'],
-    'performance-engineer': ['benchmarking', 'profiling', 'optimization', 'monitoring']
-  };
-
-  return capabilities[type] || ['general'];
+  return isCanonicalAgentType(type) ? AGENT_CAPABILITIES.get(type) || ['general'] : ['general'];
 }
 
 function formatStatus(status: unknown): string {

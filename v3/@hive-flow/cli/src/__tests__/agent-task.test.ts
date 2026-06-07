@@ -78,7 +78,7 @@ interface AgentRecord {
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
   return {
     agentId: 'test-agent-1',
-    agentType: 'coder',
+    agentType: 'implementer',
     status: 'idle',
     health: 1.0,
     taskCount: 0,
@@ -186,7 +186,7 @@ describe('agent_spawn handler model normalization', () => {
 
     try {
       const result = await spawnHandler({
-        agentType: 'reviewer',
+        agentType: 'verifier',
         provider: ' OpenRouter ',
         model: ' Xiaomi/MIMO-V2.5-PRO ',
       }) as Record<string, unknown>;
@@ -208,7 +208,7 @@ describe('agent_spawn handler model normalization', () => {
     const { getPersistedStore } = setupStoreMocks(makeStore());
 
     const result = await spawnHandler({
-      agentType: 'coder',
+      agentType: 'implementer',
       provider: 'CODEX-CLI',
       model: 'OPUS',
     }) as Record<string, unknown>;

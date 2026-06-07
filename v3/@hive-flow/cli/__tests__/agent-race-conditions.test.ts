@@ -79,7 +79,7 @@ interface AgentStore {
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
   return {
     agentId: `agent-test-${Math.random().toString(36).slice(2, 10)}`,
-    agentType: 'coder',
+    agentType: 'implementer',
     status: 'idle',
     health: 1.0,
     taskCount: 0,
@@ -174,7 +174,7 @@ describe('Agent Race Condition Stress Tests', () => {
       delete process.env.HIVE_FLOW_AGENT_TOKEN;
       const { getPersistedStore } = setupStoreMocks(makeStore());
 
-      const result = await spawnHandler({ agentType: 'coder', agentId: 'spawn-token-check' });
+      const result = await spawnHandler({ agentType: 'implementer', agentId: 'spawn-token-check' });
 
       expect((result as AgentHandlerResult).success).toBe(true);
       expect(process.env.HIVE_FLOW_AGENT_TOKEN).toBeUndefined();
@@ -189,7 +189,7 @@ describe('Agent Race Condition Stress Tests', () => {
 
       const results = await Promise.all(
         Array.from({ length: 20 }, (_, i) =>
-          spawnHandler({ agentType: 'coder', agentId: `spawn-${i}` }),
+          spawnHandler({ agentType: 'implementer', agentId: `spawn-${i}` }),
         ),
       );
 
@@ -216,7 +216,7 @@ describe('Agent Race Condition Stress Tests', () => {
       // Spawn 20 agents WITHOUT explicit IDs — forces auto-generation
       const results = await Promise.all(
         Array.from({ length: 20 }, () =>
-          spawnHandler({ agentType: 'worker' }),
+          spawnHandler({ agentType: 'implementer' }),
         ),
       );
 
@@ -243,7 +243,7 @@ describe('Agent Race Condition Stress Tests', () => {
 
       // Spawn 10 new + terminate 5 existing — all at once
       const spawnPromises = Array.from({ length: 10 }, (_, i) =>
-        spawnHandler({ agentType: 'coder', agentId: `new-${i}` }),
+        spawnHandler({ agentType: 'implementer', agentId: `new-${i}` }),
       );
       const terminatePromises = Array.from({ length: 5 }, (_, i) =>
         terminateHandler({ agentId: `existing-${i}` }),
@@ -292,7 +292,7 @@ describe('Agent Race Condition Stress Tests', () => {
       for (let batch = 0; batch < 20; batch++) {
         const results = await Promise.all(
           Array.from({ length: 50 }, () =>
-            spawnHandler({ agentType: 'worker' }),
+            spawnHandler({ agentType: 'implementer' }),
           ),
         );
         for (const r of results) {
@@ -332,7 +332,7 @@ describe('Agent Race Condition Stress Tests', () => {
         }
         setupStoreMocks(makeStore(agents));
 
-        const result = (await spawnHandler({ agentType: 'worker' })) as AgentHandlerResult & {
+        const result = (await spawnHandler({ agentType: 'implementer' })) as AgentHandlerResult & {
           code?: string;
           workingCount?: number;
           capacity?: number;
@@ -359,7 +359,7 @@ describe('Agent Race Condition Stress Tests', () => {
         }
         setupStoreMocks(makeStore(agents));
 
-        const result = (await spawnHandler({ agentType: 'worker', agentId: 'boundary-spawn' })) as AgentHandlerResult;
+        const result = (await spawnHandler({ agentType: 'implementer', agentId: 'boundary-spawn' })) as AgentHandlerResult;
 
         expect(result.success).toBe(true);
         expect(result.agentId).toBe('boundary-spawn');
@@ -380,7 +380,7 @@ describe('Agent Race Condition Stress Tests', () => {
         }
         setupStoreMocks(makeStore(agents));
 
-        const result = (await spawnHandler({ agentType: 'worker', agentId: 'post-termination-spawn' })) as AgentHandlerResult;
+        const result = (await spawnHandler({ agentType: 'implementer', agentId: 'post-termination-spawn' })) as AgentHandlerResult;
 
         expect(result.success).toBe(true);
         expect(result.agentId).toBe('post-termination-spawn');
@@ -695,15 +695,15 @@ describe('Agent Race Condition Stress Tests', () => {
   describe('agent_pool lifecycle timestamps', () => {
     it('sets terminatedAt when scaling idle agents down', async () => {
       const agents = {
-        'pool-1': makeAgent({ agentId: 'pool-1', agentType: 'coder', status: 'idle' }),
-        'pool-2': makeAgent({ agentId: 'pool-2', agentType: 'coder', status: 'idle' }),
-        'pool-3': makeAgent({ agentId: 'pool-3', agentType: 'coder', status: 'idle' }),
+        'pool-1': makeAgent({ agentId: 'pool-1', agentType: 'implementer', status: 'idle' }),
+        'pool-2': makeAgent({ agentId: 'pool-2', agentType: 'implementer', status: 'idle' }),
+        'pool-3': makeAgent({ agentId: 'pool-3', agentType: 'implementer', status: 'idle' }),
       };
       const { getPersistedStore } = setupStoreMocks(makeStore(agents));
 
       const result = await poolHandler({
         action: 'scale',
-        agentType: 'coder',
+        agentType: 'implementer',
         targetSize: 1,
       }) as { removed?: string[] };
 
@@ -718,15 +718,15 @@ describe('Agent Race Condition Stress Tests', () => {
 
     it('sets terminatedAt when draining idle agents', async () => {
       const agents = {
-        'drain-1': makeAgent({ agentId: 'drain-1', agentType: 'coder', status: 'idle' }),
-        'drain-2': makeAgent({ agentId: 'drain-2', agentType: 'coder', status: 'busy' }),
-        'drain-3': makeAgent({ agentId: 'drain-3', agentType: 'coder', status: 'idle' }),
+        'drain-1': makeAgent({ agentId: 'drain-1', agentType: 'implementer', status: 'idle' }),
+        'drain-2': makeAgent({ agentId: 'drain-2', agentType: 'implementer', status: 'busy' }),
+        'drain-3': makeAgent({ agentId: 'drain-3', agentType: 'implementer', status: 'idle' }),
       };
       const { getPersistedStore } = setupStoreMocks(makeStore(agents));
 
       const result = await poolHandler({
         action: 'drain',
-        agentType: 'coder',
+        agentType: 'implementer',
       }) as { drained?: number };
 
       expect(result.drained).toBe(2);
@@ -756,7 +756,7 @@ describe('Agent Race Condition Stress Tests', () => {
 
       // Operations should still complete (either by waiting or cleaning up stale lock)
       const result = await spawnHandler({
-        agentType: 'coder',
+        agentType: 'implementer',
         agentId: 'lock-test-1',
       });
 
@@ -772,7 +772,7 @@ describe('Agent Race Condition Stress Tests', () => {
       const results: any[] = [];
       for (let i = 0; i < 5; i++) {
         const r = await spawnHandler({
-          agentType: 'coder',
+          agentType: 'implementer',
           agentId: `seq-${i}`,
         });
         results.push(r);

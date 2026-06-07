@@ -21,6 +21,13 @@ import {
 } from './scoreboard-instrumentation.js';
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
+import {
+  CANONICAL_AGENT_TYPES,
+  DEFAULT_CANONICAL_AGENT_TYPE,
+  canonicalAgentTypesDescription,
+  isCanonicalAgentType,
+  type CanonicalAgentType,
+} from '../agents/roster.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -245,22 +252,25 @@ function validateAgentModelForTask(agent: AgentRecord): { ok: boolean; error?: s
 }
 
 // Default model mappings for agent types (can be overridden)
-const AGENT_TYPE_MODEL_DEFAULTS: Record<string, AgentModel> = {
-  // Complex agents → opus
-  'architect': 'opus',
+export const AGENT_TYPE_MODEL_DEFAULTS: Record<CanonicalAgentType, AgentModel> = {
+  investigator: 'sonnet',
+  researcher: 'sonnet',
+  verifier: 'opus',
+  architect: 'opus',
+  planner: 'opus',
+  implementer: 'sonnet',
+  tester: 'sonnet',
+  auditor: 'opus',
+  'bug-hunter': 'sonnet',
+  debugger: 'sonnet',
   'security-architect': 'opus',
-  'system-architect': 'opus',
-  'core-architect': 'opus',
-  // Medium complexity → sonnet
-  'coder': 'sonnet',
-  'reviewer': 'sonnet',
-  'researcher': 'sonnet',
-  'tester': 'sonnet',
-  'analyst': 'sonnet',
-  // Simple/fast agents → sonnet
-  'formatter': 'sonnet',
-  'linter': 'sonnet',
-  'documenter': 'sonnet',
+  'security-reviewer': 'opus',
+  'red-team': 'opus',
+  'blue-team': 'opus',
+  'performance-engineer': 'sonnet',
+  'memory-specialist': 'opus',
+  documenter: 'sonnet',
+  coordinator: 'sonnet',
 };
 
 // Lazy-loaded model router
@@ -341,7 +351,7 @@ async function determineAgentModel(
   }
 
   // 3. Agent type defaults
-  const defaultModel = AGENT_TYPE_MODEL_DEFAULTS[agentType];
+  const defaultModel = isCanonicalAgentType(agentType) ? AGENT_TYPE_MODEL_DEFAULTS[agentType] : undefined;
   if (defaultModel) {
     return { model: defaultModel, routedBy: 'default' };
   }
@@ -594,7 +604,11 @@ export const agentTools: MCPTool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        agentType: { type: 'string', description: 'Type of agent to spawn' },
+        agentType: {
+          type: 'string',
+          enum: [...CANONICAL_AGENT_TYPES],
+          description: `Canonical agent type to spawn. Valid agent types: ${canonicalAgentTypesDescription()}`,
+        },
         agentId: { type: 'string', description: 'Optional custom agent ID' },
         config: { type: 'object', description: 'Agent configuration' },
         domain: { type: 'string', description: 'Agent domain' },
@@ -613,8 +627,16 @@ export const agentTools: MCPTool[] = [
     },
     handler: async (input) => {
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
-      const agentType = input.agentType as string;
+      const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
       const config = (input.config as Record<string, unknown>) || {};
+
+      if (!isCanonicalAgentType(agentType)) {
+        return {
+          success: false,
+          code: 'invalid-agent-type',
+          error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+        };
+      }
 
       // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 60).
       // The runbook specifies a 50 working + 10 queued cap; without a persistent
@@ -1031,7 +1053,12 @@ export const agentTools: MCPTool[] = [
       properties: {
         action: { type: 'string', enum: ['status', 'scale', 'drain', 'fill'], description: 'Pool action' },
         targetSize: { type: 'number', description: 'Target pool size (for scale action)' },
-        agentType: { type: 'string', description: 'Agent type filter' },
+        agentType: {
+          type: 'string',
+          enum: [...CANONICAL_AGENT_TYPES],
+          description: `Agent type filter. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+          default: DEFAULT_CANONICAL_AGENT_TYPE,
+        },
       },
       required: ['action'],
     },
@@ -1076,7 +1103,18 @@ export const agentTools: MCPTool[] = [
 
       if (action === 'scale') {
         const targetSize = (input.targetSize as number) || 5;
-        const agentType = (input.agentType as string) || 'worker';
+        const agentType = typeof input.agentType === 'string' && input.agentType.trim()
+          ? input.agentType.trim()
+          : DEFAULT_CANONICAL_AGENT_TYPE;
+
+        if (!isCanonicalAgentType(agentType)) {
+          return {
+            action,
+            success: false,
+            code: 'invalid-agent-type',
+            error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+          };
+        }
 
         return withStoreLock(() => {
           const freshStore = loadAgentStore();

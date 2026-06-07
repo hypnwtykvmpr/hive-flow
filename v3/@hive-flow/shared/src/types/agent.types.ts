@@ -105,7 +105,7 @@ export interface AgentBatchResult<T> {
 /**
  * Agent type configuration map
  */
-export type AgentTypeConfigMap = Record<AgentType | string, Partial<AgentProfile>>;
+export type AgentTypeConfigMap = Record<AgentType, Partial<AgentProfile>>;
 
 /**
  * Agent event payloads

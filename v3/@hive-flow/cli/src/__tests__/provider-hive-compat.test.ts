@@ -20,6 +20,10 @@ vi.mock('../mcp-tools/agent-tools.js', () => ({
   agentTools: [] as Array<{ name: string; handler: (input: Record<string, unknown>) => unknown }>,
 }));
 
+vi.mock('../mcp-tools/mcp-enforcement-gate.js', () => ({
+  assertDispatchAllowed: vi.fn(() => ({ allowed: true, risk: 3 })),
+}));
+
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { loadAgentStore, saveAgentStore, agentTools } from '../mcp-tools/agent-tools.js';
 import { hiveMindTools } from '../mcp-tools/hive-mind-tools.js';
@@ -216,7 +220,7 @@ describe('Provider-Hive Compatibility', () => {
       const { getSaveAgentStoreCalls } = setupFsMocks(makeHiveState());
       const spawnTool = getTool('hive-mind_spawn');
 
-      await spawnTool.handler({ count: 1, agentType: 'worker', prefix: 'test' });
+      await spawnTool.handler({ count: 1, agentType: 'implementer', prefix: 'test' });
 
       expect(saveAgentStore).toHaveBeenCalled();
       const calls = getSaveAgentStoreCalls();
@@ -225,6 +229,21 @@ describe('Provider-Hive Compatibility', () => {
       const agentIds = Object.keys(store.agents);
       expect(agentIds.length).toBe(1);
       expect(agentIds[0]).toMatch(/^test-/);
+      expect(store.agents[agentIds[0]].agentType).toBe('implementer');
+    });
+
+    it('hive-mind spawn rejects removed agent aliases before writing the canonical store', async () => {
+      const { getSaveAgentStoreCalls } = setupFsMocks(makeHiveState());
+      const spawnTool = getTool('hive-mind_spawn');
+
+      const result = await spawnTool.handler({ count: 1, agentType: 'worker', prefix: 'test' }) as AnyResult;
+
+      expect(result).toMatchObject({
+        success: false,
+        code: 'invalid-agent-type',
+      });
+      expect(String(result.error)).toContain('Valid agent types:');
+      expect(getSaveAgentStoreCalls()).toHaveLength(0);
     });
 
     it('consensus execute finds provider metadata in canonical store', async () => {
@@ -455,7 +474,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       const result = await spawnTool.handler({
-        count: 1, agentType: 'coder', prefix: 'codex',
+        count: 1, agentType: 'implementer', prefix: 'codex',
         provider: 'codex-cli', model: 'gpt-5.5',
       }) as AnyResult;
 
@@ -470,7 +489,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       const result = await spawnTool.handler({
-        count: 1, agentType: 'reviewer', prefix: 'cur',
+        count: 1, agentType: 'verifier', prefix: 'cur',
         provider: 'cursor-cli', model: 'auto',
       }) as AnyResult;
 
@@ -485,7 +504,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       const result = await spawnTool.handler({
-        count: 1, agentType: 'reasoner', prefix: 'deepseek',
+        count: 1, agentType: 'researcher', prefix: 'deepseek',
         provider: 'deepseek', model: 'deepseek-v4-pro',
       }) as AnyResult;
 
@@ -500,7 +519,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       const result = await spawnTool.handler({
-        count: 1, agentType: 'worker', prefix: 'local',
+        count: 1, agentType: 'implementer', prefix: 'local',
       }) as AnyResult;
 
       expect(result.success).toBe(true);
@@ -611,7 +630,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       const result = await spawnTool.handler({
-        count: 2, agentType: 'reviewer', prefix: 'gemini-w',
+        count: 2, agentType: 'verifier', prefix: 'gemini-w',
         provider: 'gemini-cli', model: 'gemini-3.1-pro-preview',
       }) as AnyResult;
 
@@ -627,7 +646,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       const result = await spawnTool.handler({
-        count: 2, agentType: 'coder', prefix: 'codex-w',
+        count: 2, agentType: 'implementer', prefix: 'codex-w',
         provider: 'codex-cli', model: 'gpt-5.5',
       }) as AnyResult;
 
@@ -642,7 +661,7 @@ describe('Provider-Hive Compatibility', () => {
       const spawnTool = getTool('hive-mind_spawn');
 
       const result = await spawnTool.handler({
-        count: 2, agentType: 'reasoner', prefix: 'deepseek-w',
+        count: 2, agentType: 'researcher', prefix: 'deepseek-w',
         provider: 'deepseek', model: 'deepseek-v4-pro',
       }) as AnyResult;
 

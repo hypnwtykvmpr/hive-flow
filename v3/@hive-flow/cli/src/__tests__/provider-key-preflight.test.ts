@@ -65,7 +65,7 @@ interface AgentRecord {
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
   return {
     agentId: 'test-openrouter-agent',
-    agentType: 'coder',
+    agentType: 'implementer',
     status: 'idle',
     health: 1,
     taskCount: 0,
@@ -198,7 +198,7 @@ describe('PH-B8 provider-key preflight', () => {
     const { getPersistedStore } = setupStoreMocks(makeStore());
 
     const result = await agentSpawnTool.handler({
-      agentType: 'reviewer',
+      agentType: 'verifier',
       provider: 'openrouter',
       model: 'mini',
     }) as Record<string, unknown>;

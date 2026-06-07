@@ -14,6 +14,7 @@ import { spawn as childSpawn, execSync } from 'child_process';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { CANONICAL_AGENT_TYPES, DEFAULT_CANONICAL_AGENT_TYPE } from '../agents/roster.js';
 
 // Worker type definitions for prompt generation
 interface HiveWorker {
@@ -520,7 +521,8 @@ const spawnCommand: Command = {
       short: 't',
       description: 'Agent type',
       type: 'string',
-      default: 'worker'
+      choices: [...CANONICAL_AGENT_TYPES],
+      default: DEFAULT_CANONICAL_AGENT_TYPE
     },
     {
       name: 'prefix',
@@ -570,7 +572,7 @@ const spawnCommand: Command = {
   examples: [
     { command: 'hive-flow hive-mind spawn -n 5', description: 'Spawn 5 workers' },
     { command: 'hive-flow hive-mind spawn -n 3 -r specialist', description: 'Spawn 3 specialists' },
-    { command: 'hive-flow hive-mind spawn -t coder -p my-coder', description: 'Spawn coder with custom prefix' },
+    { command: 'hive-flow hive-mind spawn -t implementer -p my-implementer', description: 'Spawn implementer with custom prefix' },
     { command: 'hive-flow hive-mind spawn --claude -o "Build a REST API"', description: 'Launch Claude Code with objective' },
     { command: 'hive-flow hive-mind spawn -n 5 --claude -o "Research AI patterns"', description: 'Spawn workers and launch Claude Code' }
   ],
@@ -578,7 +580,7 @@ const spawnCommand: Command = {
     // Parse count with fallback to default
     const count = (ctx.flags.count as number) || 1;
     const role = (ctx.flags.role as string) || 'worker';
-    const agentType = (ctx.flags.type as string) || 'worker';
+    const agentType = (ctx.flags.type as string) || DEFAULT_CANONICAL_AGENT_TYPE;
     const prefix = (ctx.flags.prefix as string) || 'hive-worker';
     const launchClaude = ctx.flags.claude as boolean;
     let objective = (ctx.flags.objective as string) || ctx.args.join(' ');

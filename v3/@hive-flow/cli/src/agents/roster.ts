@@ -25,6 +25,10 @@ export const CANONICAL_AGENT_TYPES = [
 
 export type CanonicalAgentType = typeof CANONICAL_AGENT_TYPES[number];
 
+export const DEFAULT_CANONICAL_AGENT_TYPE: CanonicalAgentType = 'implementer';
+
+const CANONICAL_AGENT_TYPE_SET = new Set<string>(CANONICAL_AGENT_TYPES);
+
 export interface CanonicalAgentRecord {
   name: CanonicalAgentType;
   type: CanonicalAgentType;
@@ -198,4 +202,12 @@ export function loadCanonicalRoster(agentsDir = resolveCanonicalAgentsDir()): Ca
 
 export function getCanonicalAgentTypes(agentsDir = resolveCanonicalAgentsDir()): CanonicalAgentType[] {
   return loadCanonicalRoster(agentsDir).map(record => record.type);
+}
+
+export function isCanonicalAgentType(value: unknown): value is CanonicalAgentType {
+  return typeof value === 'string' && CANONICAL_AGENT_TYPE_SET.has(value);
+}
+
+export function canonicalAgentTypesDescription(): string {
+  return CANONICAL_AGENT_TYPES.join(', ');
 }

@@ -12,16 +12,24 @@ export type AgentStatus = 'spawning' | 'active' | 'idle' | 'busy' | 'error' | 't
  * Agent type classification
  */
 export type AgentType =
-  | 'coder'
-  | 'reviewer'
-  | 'tester'
+  | 'investigator'
   | 'researcher'
-  | 'planner'
+  | 'verifier'
   | 'architect'
-  | 'coordinator'
-  | 'security'
-  | 'performance'
-  | 'custom';
+  | 'planner'
+  | 'implementer'
+  | 'tester'
+  | 'auditor'
+  | 'bug-hunter'
+  | 'debugger'
+  | 'security-architect'
+  | 'security-reviewer'
+  | 'red-team'
+  | 'blue-team'
+  | 'performance-engineer'
+  | 'memory-specialist'
+  | 'documenter'
+  | 'coordinator';
 
 /**
  * Agent capability declaration
@@ -38,7 +46,7 @@ export interface IAgentCapability {
 export interface IAgentConfig {
   readonly id: string;
   readonly name: string;
-  readonly type: AgentType | string;
+  readonly type: AgentType;
 
   capabilities: string[];
   maxConcurrentTasks: number;
@@ -65,7 +73,7 @@ export interface IAgentConfig {
 export interface IAgent {
   readonly id: string;
   readonly name: string;
-  readonly type: AgentType | string;
+  readonly type: AgentType;
   readonly config: IAgentConfig;
   readonly createdAt: Date;
 

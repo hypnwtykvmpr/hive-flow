@@ -10,6 +10,12 @@ import type { MCPTool } from './types.js';
 import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import type { AgentProvider } from './agent-tools.js';
+import {
+  CANONICAL_AGENT_TYPES,
+  DEFAULT_CANONICAL_AGENT_TYPE,
+  canonicalAgentTypesDescription,
+  isCanonicalAgentType,
+} from '../agents/roster.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -213,7 +219,12 @@ export const hiveMindTools: MCPTool[] = [
       properties: {
         count: { type: 'number', description: 'Number of workers to spawn (default: 1)', default: 1 },
         role: { type: 'string', enum: ['worker', 'specialist', 'scout'], description: 'Worker role in hive', default: 'worker' },
-        agentType: { type: 'string', description: 'Agent type for spawned workers', default: 'worker' },
+        agentType: {
+          type: 'string',
+          enum: [...CANONICAL_AGENT_TYPES],
+          description: `Agent type for spawned workers. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+          default: DEFAULT_CANONICAL_AGENT_TYPE,
+        },
         prefix: { type: 'string', description: 'Prefix for worker IDs', default: 'hive-worker' },
         provider: { type: 'string', enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'], description: 'AI provider' },
         model: { type: 'string', description: 'Model to use' },
@@ -228,8 +239,18 @@ export const hiveMindTools: MCPTool[] = [
 
       const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
       const role = (input.role as string) || 'worker';
-      const agentType = (input.agentType as string) || 'worker';
+      const agentType = typeof input.agentType === 'string' && input.agentType.trim()
+        ? input.agentType.trim()
+        : DEFAULT_CANONICAL_AGENT_TYPE;
       const prefix = (input.prefix as string) || 'hive-worker';
+
+      if (!isCanonicalAgentType(agentType)) {
+        return {
+          success: false,
+          code: 'invalid-agent-type',
+          error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+        };
+      }
 
       return await withStoreLock(() => {
         const agentStore = loadAgentStore();
@@ -667,7 +688,7 @@ export const hiveMindTools: MCPTool[] = [
         );
 
         // Phase 2: Poll for results with back-off until timeout
-        const POLL_INTERVAL = 2000;
+        const POLL_INTERVAL = process.env.VITEST === 'true' ? 0 : 2000;
         const pollDeadline = Date.now() + taskTimeout;
         const pending = new Map<string, { worker: typeof providerWorkers[0]; taskId: string }>();
         const completedResults = new Map<string, Record<string, unknown>>();
