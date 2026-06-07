@@ -42,7 +42,7 @@ const DEV_EXTENSIONS = new Set([
 // Safety deny patterns
 // ---------------------------------------------------------------------------
 
-const EXFILTRATION = /\bcurl\s.*(-X\s*POST|--data|--upload-file|-F\s).*\b(?:https?:\/\/)/;
+const EXFILTRATION = /\bcurl\b(?=[\s\S]*\b[Hh][Tt][Tt][Pp][Ss]?:\/\/)(?=[\s\S]*(?:(?:^|\s)-d(?:\b|\S+)|--data(?:-binary|-raw|-urlencode)?(?:\b|=)|(?:^|\s)-T(?:\b|\S+)|--upload-file(?:\b|=)|(?:^|\s)-F(?:\b|\S+)|--form(?:\b|=)|(?:^|\s)-X\s*POST\b))/;
 const CREDENTIAL_PATHS = /(?:~\/|\/home\/\w+\/|\/root\/)\.(?:ssh|aws|gnupg|config\/gcloud)|\/etc\/(?:shadow|passwd|sudoers)/;
 const REVERSE_SHELL = /bash\s+-i\s+>&\s*\/dev\/tcp|nc\s+-e|python.*socket.*connect/;
 const SYSTEM_DESTROY = /\brm\s+-rf\s+\/\s*$|\bdd\s+if=\/dev\/zero\s+of=\/dev\/sd|\bmkfs\b|\bshred\b/;
