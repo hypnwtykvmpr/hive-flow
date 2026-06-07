@@ -1,7 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuditLogEntry, GateResult, HookInput, InlineJuryResult, PermissionConfig, RiskLevel } from '../types.js';
 
 interface GateRun {
@@ -20,12 +21,21 @@ interface Harness {
 
 const tempRoots: string[] = [];
 
-afterEach(() => {
-  vi.resetModules();
+function resetMockedModules(): void {
   vi.restoreAllMocks();
+  vi.clearAllMocks();
+  vi.resetModules();
   vi.doUnmock('../jury-evaluator.js');
   vi.doUnmock('../llm-jury.js');
   vi.doUnmock('../vote-learner.js');
+}
+
+beforeEach(() => {
+  resetMockedModules();
+});
+
+afterEach(() => {
+  resetMockedModules();
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
   }
@@ -78,6 +88,11 @@ async function loadHarness(options: {
   mockLLM?: boolean;
   llmUnavailable?: boolean;
 } = {}): Promise<Harness> {
+  vi.resetModules();
+  vi.doUnmock('../jury-evaluator.js');
+  vi.doUnmock('../llm-jury.js');
+  vi.doUnmock('../vote-learner.js');
+
   const evaluateInlineJury = vi.fn(() => options.inlineResult ?? ambiguous('APPROVED', 'low'));
   const evaluateLLMJury = vi.fn();
   const recordVerdict = vi.fn();
@@ -95,8 +110,9 @@ async function loadHarness(options: {
     vi.doUnmock('../llm-jury.js');
   }
 
+  const gateModuleId = `../gate.js?llm-jury-seam=${randomUUID()}`;
   const [{ evaluate }, { mergeWithDefaults }] = await Promise.all([
-    import('../gate.js'),
+    import(gateModuleId) as Promise<typeof import('../gate.js')>,
     import('../default-config.js'),
   ]);
 
@@ -184,7 +200,12 @@ describe('Stage-2 LLM jury seam', () => {
 
   it('falls back without calling the LLM once the per-session budget is exhausted', async () => {
     const root = makeTempRoot('llm-jury-budget');
-    const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low') });
+    const harness = await loadHarness();
+    harness.evaluateInlineJury.mockImplementation((ctx) =>
+      ctx.toolInput.command?.includes('--second')
+        ? ambiguous('DENIED', 'high')
+        : ambiguous('APPROVED', 'low'),
+    );
     harness.evaluateLLMJury.mockResolvedValue({
       verdict: 'APPROVED',
       votes: [],
@@ -199,7 +220,6 @@ describe('Stage-2 LLM jury seam', () => {
     await evaluateWithLog(harness, bashInput('custom --first', 'budget-session'), root, config);
     harness.evaluateLLMJury.mockClear();
     harness.recordVerdict.mockClear();
-    harness.evaluateInlineJury.mockReturnValue(ambiguous('DENIED', 'high'));
 
     const run = await evaluateWithLog(harness, bashInput('custom --second', 'budget-session'), root, config);
 
@@ -228,8 +248,7 @@ describe('Stage-2 LLM jury seam', () => {
 
   it('falls back to the inline risk default when the provider is unavailable', async () => {
     const root = makeTempRoot('llm-jury-null');
-    const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low') });
-    harness.evaluateLLMJury.mockResolvedValue(null);
+    const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low'), llmUnavailable: true });
 
     const run = await evaluateWithLog(harness, bashInput('custom --provider-null'), root);
 
@@ -258,16 +277,12 @@ describe('Stage-2 LLM jury seam', () => {
 
   it('preserves current ambiguous fallback behavior when the LLM provider is unavailable', async () => {
     const root = makeTempRoot('llm-jury-real-null');
-    const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low'), llmUnavailable: true });
+    const harness = await loadHarness({ inlineResult: ambiguous('DENIED', 'high'), llmUnavailable: true });
 
-    const lowRun = await evaluateWithLog(harness, bashInput('custom --real-provider-null-low', 'real-null-low'), root);
-    harness.evaluateInlineJury.mockReturnValue(ambiguous('DENIED', 'high'));
     const highRun = await evaluateWithLog(harness, bashInput('custom --real-provider-null-high', 'real-null-high'), root);
 
-    expect(lowRun.result.decision).toBe('allow');
-    expect(lastLayer(lowRun)).toBe('inline-jury');
     expect(highRun.result.decision).toBe('deny');
     expect(lastLayer(highRun)).toBe('inline-jury');
-    expect(harness.evaluateLLMJury).toHaveBeenCalledTimes(2);
+    expect(harness.evaluateLLMJury).toHaveBeenCalledTimes(1);
   });
 });
