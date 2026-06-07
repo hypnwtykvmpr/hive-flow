@@ -10,6 +10,7 @@ const root = resolve(here, '../../../../../');
 const watcherPath = resolve(root, 'scripts', 'hive-watcher.cjs');
 const hiveCheckPath = resolve(root, 'scripts', 'hive-check-complete.cjs');
 const dedupMarkerPath = resolve(root, '.claude', 'helpers', 'dedup-marker.cjs');
+const sessionIdPath = resolve(root, '.claude', 'helpers', 'session-id.cjs');
 
 function makeTempProject(): string {
   return mkdtempSync(join(tmpdir(), 'hive-flow-cjs-contract-'));
@@ -41,6 +42,7 @@ describe('hive watcher script module contract', () => {
       mkdirSync(dataDir, { recursive: true });
       writeFileSync(join(scriptsDir, 'hive-check-complete.cjs'), readFileSync(hiveCheckPath, 'utf8'), 'utf8');
       writeFileSync(join(helperDir, 'dedup-marker.cjs'), readFileSync(dedupMarkerPath, 'utf8'), 'utf8');
+      writeFileSync(join(helperDir, 'session-id.cjs'), readFileSync(sessionIdPath, 'utf8'), 'utf8');
       writeFileSync(
         join(dataDir, 'hive-demo.done'),
         JSON.stringify({ hiveId: 'demo', completedAt: '2026-06-02T00:00:00.000Z', completedCount: 2 }),

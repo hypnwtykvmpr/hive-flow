@@ -25,6 +25,7 @@
 const fs = require('fs');
 const path = require('path');
 const { isAlreadyAcked, claimAcked } = require('../.claude/helpers/dedup-marker.cjs');
+const { resolveSessionId } = require('../.claude/helpers/session-id.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -32,6 +33,7 @@ const { isAlreadyAcked, claimAcked } = require('../.claude/helpers/dedup-marker.
 
 const PROJECT_DIR = path.resolve(__dirname, '..');
 const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
+const OWNER_ACK_GRACE_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,6 +96,36 @@ function buildSummaryLine(item) {
   return parts.join(' ');
 }
 
+function resolveDoneOwnerSessionId(item) {
+  return resolveSessionId({ session_id: item?.data?.ownerSessionId }, {});
+}
+
+function parseDoneCompletedAtMs(item) {
+  const value = item && item.data && item.data.completedAt;
+  if (typeof value !== 'string' || !value.trim()) return NaN;
+  return Date.parse(value);
+}
+
+function shouldDeferToOwner(item, currentSessionId, nowMs = Date.now()) {
+  const ownerSessionId = resolveDoneOwnerSessionId(item);
+  if (!ownerSessionId) return false;
+  if (ownerSessionId === currentSessionId) return false;
+
+  const completedAtMs = parseDoneCompletedAtMs(item);
+  if (!Number.isFinite(completedAtMs)) return false;
+
+  return nowMs - completedAtMs < OWNER_ACK_GRACE_MS;
+}
+
+function claimOwnOrFallback(item, currentSessionId, nowMs = Date.now()) {
+  if (shouldDeferToOwner(item, currentSessionId, nowMs)) return false;
+  return claimAcked(DATA_DIR, item.sanitized, {
+    source: 'hive-check-complete',
+    ownerSessionId: resolveDoneOwnerSessionId(item) || null,
+    claimantSessionId: currentSessionId || null,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -105,9 +137,9 @@ function handlePostToolUse() {
     return;
   }
 
-  const claimed = unnotified.filter(item =>
-    claimAcked(DATA_DIR, item.sanitized, { source: 'hive-check-complete' }),
-  );
+  const currentSessionId = resolveSessionId(null, process.env);
+  const nowMs = Date.now();
+  const claimed = unnotified.filter(item => claimOwnOrFallback(item, currentSessionId, nowMs));
   if (claimed.length === 0) {
     process.stdout.write(JSON.stringify({}));
     return;

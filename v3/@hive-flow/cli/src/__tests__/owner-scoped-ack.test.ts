@@ -9,6 +9,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../../../../../');
 const notifyScript = resolve(root, '.claude/helpers/hive-sentinel-notify.cjs');
 const hookHandlerScript = resolve(root, '.claude/helpers/hook-handler.cjs');
+const standaloneHiveCheckScript = resolve(root, 'scripts/hive-check-complete.cjs');
+const dedupMarkerScript = resolve(root, '.claude/helpers/dedup-marker.cjs');
+const sessionIdScript = resolve(root, '.claude/helpers/session-id.cjs');
 
 function makeProject(): string {
   return mkdtempSync(join(tmpdir(), 'hive-flow-owner-ack-'));
@@ -74,6 +77,41 @@ function runHookHandlerHiveCheck(project: string, sessionId: string | null) {
   return JSON.parse(result.stdout || '{}') as Record<string, unknown>;
 }
 
+function installStandaloneHiveCheck(project: string): string {
+  const scriptsDir = join(project, 'scripts');
+  const helpersDir = join(project, '.claude', 'helpers');
+  mkdirSync(scriptsDir, { recursive: true });
+  mkdirSync(helpersDir, { recursive: true });
+  writeFileSync(join(scriptsDir, 'hive-check-complete.cjs'), readFileSync(standaloneHiveCheckScript, 'utf8'), 'utf8');
+  writeFileSync(join(helpersDir, 'dedup-marker.cjs'), readFileSync(dedupMarkerScript, 'utf8'), 'utf8');
+  writeFileSync(join(helpersDir, 'session-id.cjs'), readFileSync(sessionIdScript, 'utf8'), 'utf8');
+  return join(scriptsDir, 'hive-check-complete.cjs');
+}
+
+function runStandaloneHiveCheck(project: string, sessionId: string | null) {
+  const script = installStandaloneHiveCheck(project);
+  const env = {
+    ...process.env,
+    CLAUDE_PROJECT_DIR: project,
+    HIVE_FLOW_PROJECT_ROOT: project,
+  };
+  if (sessionId === null) {
+    delete env.CLAUDE_SESSION_ID;
+  } else {
+    env.CLAUDE_SESSION_ID = sessionId;
+  }
+
+  const result = spawnSync(process.execPath, [script, 'post-tool-use'], {
+    cwd: project,
+    env,
+    encoding: 'utf8',
+    timeout: 5000,
+  });
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe('');
+  return JSON.parse(result.stdout || '{}') as Record<string, unknown>;
+}
+
 function ackPath(project: string, hiveId: string): string {
   return join(dataDir(project), `hive-${hiveId}.acked`);
 }
@@ -89,6 +127,13 @@ function expectEmptyHookOutput(output: Record<string, unknown>): void {
 function expectCompletionHookOutput(output: Record<string, unknown>, hiveId: string): void {
   const hook = output.hookSpecificOutput as { additionalContext?: string } | undefined;
   expect(hook?.additionalContext).toContain(`[HIVE COMPLETE: ${hiveId}]`);
+}
+
+function expectHookContextContains(output: Record<string, unknown>, ...needles: string[]): void {
+  const hook = output.hookSpecificOutput as { additionalContext?: string } | undefined;
+  for (const needle of needles) {
+    expect(hook?.additionalContext).toContain(needle);
+  }
 }
 
 function runNotifyAsync(project: string, sessionId: string): Promise<{ claimed: boolean; output: string }> {
@@ -233,6 +278,56 @@ describe('R2 owner-scoped hive completion ack', () => {
       const hook = owner.hookSpecificOutput as { additionalContext?: string } | undefined;
       expect(hook?.additionalContext).toContain('[HIVE_COMPLETE] hive=hive-post-tool-owned');
       expect(existsSync(ackPath(project, 'hive-post-tool-owned'))).toBe(true);
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it('applies owner preference to the standalone hive-check-complete post-tool-use path', () => {
+    const project = makeProject();
+    try {
+      writeDone(project, 'hive-standalone-owned', {
+        ownerSessionId: 'sid-owner',
+        completedAt: new Date().toISOString(),
+      });
+
+      expectEmptyHookOutput(runStandaloneHiveCheck(project, 'sid-foreign'));
+      expect(existsSync(ackPath(project, 'hive-standalone-owned'))).toBe(false);
+
+      const owner = runStandaloneHiveCheck(project, 'sid-owner');
+      expectCompletionHookOutput(owner, 'hive-standalone-owned');
+      expect(readAck(project, 'hive-standalone-owned')).toMatchObject({
+        source: 'hive-check-complete',
+        claimantSessionId: 'sid-owner',
+        ownerSessionId: 'sid-owner',
+      });
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it('lets standalone hive-check-complete fall back after grace and for legacy done files', () => {
+    const project = makeProject();
+    try {
+      writeDone(project, 'hive-standalone-old', {
+        ownerSessionId: 'sid-owner',
+        completedAt: new Date(Date.now() - 60_000).toISOString(),
+      });
+      writeDone(project, 'hive-standalone-legacy', { ownerSessionId: undefined });
+
+      const output = runStandaloneHiveCheck(project, 'sid-foreign');
+
+      expectHookContextContains(output, 'hive-standalone-old', 'hive-standalone-legacy');
+      expect(readAck(project, 'hive-standalone-old')).toMatchObject({
+        source: 'hive-check-complete',
+        claimantSessionId: 'sid-foreign',
+        ownerSessionId: 'sid-owner',
+      });
+      expect(readAck(project, 'hive-standalone-legacy')).toMatchObject({
+        source: 'hive-check-complete',
+        claimantSessionId: 'sid-foreign',
+        ownerSessionId: null,
+      });
     } finally {
       rmSync(project, { recursive: true, force: true });
     }
