@@ -470,6 +470,15 @@ function ensureHiveWatcherLaunched(toolName, sanitizedId) {
     if (!fs.existsSync(watcherScript)) return;
 
     const progressFile = path.join(HIVE_FLOW_DIR, 'data', `watcher-${sanitizedId}.json`);
+    const hivePath = path.join(HIVE_FLOW_DIR, 'hives', sanitizedId, 'hive.json');
+    let hiveRecord = null;
+    try {
+      if (fs.existsSync(hivePath)) {
+        hiveRecord = JSON.parse(fs.readFileSync(hivePath, 'utf8'));
+      }
+    } catch {
+      hiveRecord = null;
+    }
     let watcherAlive = false;
     try {
       if (fs.existsSync(progressFile)) {
@@ -490,13 +499,21 @@ function ensureHiveWatcherLaunched(toolName, sanitizedId) {
 
     if (watcherAlive) return;
 
-    let tmuxPane = '';
+    const ownerSessionId = typeof hiveRecord?.ownerSessionId === 'string' && hiveRecord.ownerSessionId.trim()
+      ? hiveRecord.ownerSessionId.trim()
+      : '';
+    let tmuxPane = typeof hiveRecord?.ownerTmuxPane === 'string' && hiveRecord.ownerTmuxPane.trim()
+      ? hiveRecord.ownerTmuxPane.trim()
+      : '';
     try {
-      const tmuxFile = path.join(HIVE_FLOW_DIR, 'data', 'tmux-pane.txt');
-      if (fs.existsSync(tmuxFile)) tmuxPane = fs.readFileSync(tmuxFile, 'utf8').trim();
+      if (!tmuxPane) {
+        const tmuxFile = path.join(HIVE_FLOW_DIR, 'data', 'tmux-pane.txt');
+        if (fs.existsSync(tmuxFile)) tmuxPane = fs.readFileSync(tmuxFile, 'utf8').trim();
+      }
     } catch { /* no tmux */ }
 
     const args = [watcherScript, sanitizedId, '--project-dir', PROJECT_DIR];
+    if (ownerSessionId) args.push('--sessionId', ownerSessionId);
     if (tmuxPane) args.push('--tmux-pane', tmuxPane);
 
     const child = spawn(process.execPath, args, {
@@ -511,6 +528,7 @@ function ensureHiveWatcherLaunched(toolName, sanitizedId) {
       event: 'watcher-launched',
       hiveId: sanitizedId,
       pid: child.pid || null,
+      ownerSessionId: ownerSessionId || null,
       tmuxPane: tmuxPane || null,
     });
   } catch (err) {

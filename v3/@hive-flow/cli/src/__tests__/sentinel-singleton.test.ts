@@ -58,10 +58,19 @@ describe('sentinel watcher singleton spawn guard', () => {
     const rmdir = vi.spyOn(fs, 'rmdirSync').mockReturnValue(undefined as any);
     const { spawn, unref } = mockSpawn(12_345);
 
-    expect(sentinel.spawnDetachedWatcher('hive-test-001', '%3')).toBe(12_345);
+    expect(sentinel.spawnDetachedWatcher('hive-test-001', '%3', 'owner-session')).toBe(12_345);
     expect(mkdir).toHaveBeenCalledWith(expect.stringMatching(/watcher-hive-test-001\.lock$/));
     expect(spawn).toHaveBeenCalledTimes(1);
-    expect(spawn.mock.calls[0][1]).toEqual([watcherScript, 'hive-test-001', '--project-dir', repoRoot, '--tmux-pane', '%3']);
+    expect(spawn.mock.calls[0][1]).toEqual([
+      watcherScript,
+      'hive-test-001',
+      '--project-dir',
+      repoRoot,
+      '--sessionId',
+      'owner-session',
+      '--tmux-pane',
+      '%3',
+    ]);
     expect(spawn.mock.calls[0][2]).toMatchObject({
       detached: true,
       stdio: 'ignore',

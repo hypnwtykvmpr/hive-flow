@@ -12,6 +12,7 @@ export const ENGINE_SOURCE_FILES = [
   ['.claude/helpers/hook-handler.cjs', 'hook-handler.cjs'],
   ['.claude/helpers/settings-reconciler.cjs', 'settings-reconciler.cjs'],
   ['.claude/helpers/provider-tracker.cjs', 'provider-tracker.cjs'],
+  ['.claude/helpers/session-id.cjs', 'session-id.cjs'],
   ['v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs', 'protected-paths.cjs'],
   ['v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json', 'protected-paths.policy.json'],
 ] as const;

@@ -62,7 +62,12 @@ fs.writeFileSync(path.join(dataDir, 'watcher-spawned.json'), JSON.stringify({
   );
 }
 
-function writeHiveRecord(root: string, hiveId: string, workerCount = 5): void {
+function writeHiveRecord(
+  root: string,
+  hiveId: string,
+  workerCount = 5,
+  owner: { ownerSessionId?: string; ownerTmuxPane?: string } = {},
+): void {
   const hiveDir = join(root, '.hive-flow', 'hives', hiveId);
   mkdirSync(hiveDir, { recursive: true });
   writeFileSync(
@@ -71,6 +76,7 @@ function writeHiveRecord(root: string, hiveId: string, workerCount = 5): void {
       {
         hiveId,
         queenId: 'queen-1',
+        ...owner,
         budget: { workersAllocated: workerCount },
         workers: Array.from({ length: workerCount }, (_, index) => ({
           workerId: `worker-${index + 1}`,
@@ -115,14 +121,14 @@ describe('hive enforcement watcher launch', () => {
     try {
       const hiveId = 'hive-ready';
       installHookAndWatcher(root);
-      writeHiveRecord(root, hiveId, 5);
+      writeHiveRecord(root, hiveId, 5, { ownerSessionId: 'owner-session', ownerTmuxPane: '%55' });
 
       expect(invokeHook(root, hiveId)).toBe('{}');
 
       const spawnedPath = join(root, '.hive-flow', 'data', 'watcher-spawned.json');
       expect(waitForFile(spawnedPath)).toBe(true);
       const spawned = JSON.parse(readFileSync(spawnedPath, 'utf8'));
-      expect(spawned.args).toEqual([hiveId, '--project-dir', root]);
+      expect(spawned.args).toEqual([hiveId, '--project-dir', root, '--sessionId', 'owner-session', '--tmux-pane', '%55']);
       expect(spawned.cwd).toBe(root);
       expect(spawned.projectDirEnv).toBe(root);
       expect(readAuditEvents(root)).toEqual(['watcher-launched', 'hive-enforcement-ok']);

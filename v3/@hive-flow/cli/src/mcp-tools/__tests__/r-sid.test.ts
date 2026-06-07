@@ -1,0 +1,265 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRequire } from 'node:module';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import vm from 'node:vm';
+import type { AgentRecord, AgentStore } from '../agent-tools.js';
+
+const mockAgentState = vi.hoisted(() => {
+  const state: { store: AgentStore } = {
+    store: { agents: {}, version: '3.0.0' },
+  };
+  return state;
+});
+
+vi.mock('../agent-tools.js', () => {
+  function makeAgent(agentId: string, agentType = 'worker'): AgentRecord {
+    return {
+      agentId,
+      agentType,
+      status: 'idle',
+      health: 100,
+      taskCount: 0,
+      config: {},
+      createdAt: new Date(0).toISOString(),
+      provider: 'codex-cli',
+      model: 'sonnet',
+    };
+  }
+
+  return {
+    agentTools: [],
+    loadAgentStore: () => mockAgentState.store,
+    saveAgentStore: (store: AgentStore) => { mockAgentState.store = store; },
+    withStoreLock: async (scopeOrFn: string | (() => unknown), maybeFn?: () => unknown) => {
+      const fn = typeof scopeOrFn === 'function' ? scopeOrFn : maybeFn!;
+      return fn();
+    },
+    transitionAgent: (agent: AgentRecord, status: AgentRecord['status']) => {
+      agent.status = status;
+      return true;
+    },
+    propagateEnforcementToSubAgent: async () => undefined,
+    __makeAgent: makeAgent,
+  };
+});
+
+import { queenTools } from '../queen-tools.js';
+import { loadHive } from '../hive-store.js';
+import { resolveSessionId } from '../session-id.js';
+import { setWorkflowHookDispatcher } from '../workflow-executor.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, '../../../../../..');
+const requireFromHere = createRequire(import.meta.url);
+const cjsSession = requireFromHere(join(repoRoot, '.claude/helpers/session-id.cjs')) as {
+  resolveSessionId: (input?: Record<string, unknown> | null, env?: Record<string, string | undefined>) => string | null;
+};
+
+const originalCwd = process.cwd();
+const originalEnv = {
+  CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
+  AGENTIC_FLOW_SESSION_ID: process.env.AGENTIC_FLOW_SESSION_ID,
+  TMUX_PANE: process.env.TMUX_PANE,
+};
+
+let root = '';
+
+function resetAgentStore(): void {
+  mockAgentState.store = {
+    version: '3.0.0',
+    agents: {
+      'queen-1': {
+        agentId: 'queen-1',
+        agentType: 'queen',
+        status: 'idle',
+        health: 100,
+        taskCount: 0,
+        config: {},
+        createdAt: new Date(0).toISOString(),
+        provider: 'codex-cli',
+        model: 'sonnet',
+      },
+    },
+  };
+}
+
+function getQueenTool(name: string) {
+  const tool = queenTools.find(t => t.name === name);
+  if (!tool) throw new Error(`Missing queen tool ${name}`);
+  return tool;
+}
+
+function loadWatcherModule() {
+  const script = join(repoRoot, 'scripts', 'hive-watcher.cjs');
+  const source = readFileSync(script, 'utf8').replace(/\nmain\(\)\.catch\([\s\S]*$/, '\n');
+  const module = { exports: {} as Record<string, unknown> };
+  const context = {
+    require: createRequire(pathToFileURL(script)),
+    module,
+    exports: module.exports,
+    __filename: script,
+    __dirname: dirname(script),
+    process,
+    console,
+    Buffer,
+    setTimeout,
+    clearTimeout,
+  };
+
+  vm.runInNewContext(
+    `${source}
+module.exports = {
+  parseArgs,
+  getPaths,
+  writeDoneMarker,
+  appendPendingCompletion,
+};
+`,
+    context,
+    { filename: script },
+  );
+
+  return module.exports as {
+    parseArgs: (argv?: string[], env?: Record<string, string | undefined>) => {
+      hiveId: string | null;
+      sessionId: string | null;
+      tmuxPane: string | null;
+      projectDir: string;
+    };
+    getPaths: (projectDir: string) => { dataDir: string };
+    writeDoneMarker: (
+      paths: { dataDir: string },
+      hiveId: string,
+      status: Record<string, unknown>,
+      ownerSessionId?: string | null,
+    ) => void;
+    appendPendingCompletion: (
+      paths: { dataDir: string },
+      hiveId: string,
+      status: Record<string, unknown>,
+      summary: string,
+      ownerSessionId?: string | null,
+    ) => void;
+  };
+}
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), 'r-sid-'));
+  process.chdir(root);
+  process.env.CLAUDE_PROJECT_DIR = root;
+  process.env.CLAUDE_SESSION_ID = 'env-session';
+  process.env.AGENTIC_FLOW_SESSION_ID = 'provider-session';
+  process.env.TMUX_PANE = '%42';
+  resetAgentStore();
+  setWorkflowHookDispatcher(null);
+});
+
+afterEach(() => {
+  setWorkflowHookDispatcher(null);
+  process.chdir(originalCwd);
+  for (const [key, value] of Object.entries(originalEnv)) {
+    if (value === undefined) {
+      delete process.env[key as keyof typeof originalEnv];
+    } else {
+      process.env[key as keyof typeof originalEnv] = value;
+    }
+  }
+  if (root) rmSync(root, { recursive: true, force: true });
+});
+
+describe('R-sid multi-session enabler', () => {
+  it('keeps CJS and TS resolveSessionId behavior in parity', () => {
+    const cases: Array<{
+      input?: Record<string, unknown> | null;
+      env?: Record<string, string | undefined>;
+      expected: string | null;
+    }> = [
+      {
+        input: { session_id: 'payload-session' },
+        env: { CLAUDE_SESSION_ID: 'env-session', AGENTIC_FLOW_SESSION_ID: 'provider-session' },
+        expected: 'payload-session',
+      },
+      {
+        input: {},
+        env: { CLAUDE_SESSION_ID: 'env-session', AGENTIC_FLOW_SESSION_ID: 'provider-session' },
+        expected: 'env-session',
+      },
+      {
+        input: null,
+        env: { AGENTIC_FLOW_SESSION_ID: 'provider-session' },
+        expected: 'provider-session',
+      },
+      {
+        input: { session_id: '../bad.session' },
+        env: { CLAUDE_SESSION_ID: 'ignored' },
+        expected: 'bad_session',
+      },
+      {
+        input: {},
+        env: {},
+        expected: null,
+      },
+    ];
+
+    for (const testCase of cases) {
+      expect(resolveSessionId(testCase.input, testCase.env)).toBe(testCase.expected);
+      expect(cjsSession.resolveSessionId(testCase.input, testCase.env)).toBe(testCase.expected);
+    }
+  });
+
+  it('stamps ownerSessionId and ownerTmuxPane on hive.json during queen_mission_assign', async () => {
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'R-sid mission',
+      description: 'Verify owner session stamping',
+      session_id: 'payload-session',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const hive = loadHive(String(result.hiveId));
+    expect(hive?.ownerSessionId).toBe('payload-session');
+    expect(hive?.ownerTmuxPane).toBe('%42');
+  });
+
+  it('threads watcher --sessionId into parsed config and completion payloads while preserving null fallback', () => {
+    const watcher = loadWatcherModule();
+    const parsed = watcher.parseArgs(
+      ['hive-owned', '--project-dir', root, '--sessionId', '../watcher.session', '--queenId', 'queen-1'],
+      {},
+    );
+    expect(parsed.hiveId).toBe('hive-owned');
+    expect(parsed.sessionId).toBe('watcher_session');
+
+    const fallback = watcher.parseArgs(['hive-owned', '--project-dir', root], {});
+    expect(fallback.sessionId).toBe(null);
+
+    const paths = watcher.getPaths(root);
+    watcher.writeDoneMarker(paths, 'hive-owned', {
+      completedCount: 1,
+      failedCount: 0,
+    }, parsed.sessionId);
+    const done = JSON.parse(readFileSync(join(paths.dataDir, 'hive-hive-owned.done'), 'utf8'));
+    expect(done.ownerSessionId).toBe('watcher_session');
+
+    watcher.appendPendingCompletion(paths, 'hive-pending', {
+      completedCount: 1,
+      failedCount: 0,
+      idleCount: 0,
+      terminatedCount: 0,
+    }, 'completed=1 failed=0', parsed.sessionId);
+    const pending = readFileSync(join(paths.dataDir, 'pending-notifications.jsonl'), 'utf8')
+      .trim()
+      .split('\n')
+      .map(line => JSON.parse(line));
+    expect(pending[pending.length - 1]).toMatchObject({
+      kind: 'hive',
+      hiveId: 'hive-pending',
+      ownerSessionId: 'watcher_session',
+    });
+  });
+});

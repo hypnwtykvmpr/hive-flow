@@ -108,6 +108,10 @@ export interface DelegationMetrics {
 export interface HiveRecord {
   hiveId: string;
   queenId: string;
+  /** Session that launched this hive, used for multi-session completion routing. */
+  ownerSessionId?: string | null;
+  /** tmux pane snapshot from the launching session, when available. */
+  ownerTmuxPane?: string | null;
   status: HiveStatus;
   /** Error message when status is 'failed' (Condition 4) */
   error?: string;

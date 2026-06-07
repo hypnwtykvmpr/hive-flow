@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-06-06T18:51:35.015Z",
+  "syncedAt": "2026-06-07T20:40:22.698Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -25,6 +25,10 @@
     {
       "name": "provider-tracker.cjs",
       "sha256": "41ce7aba580572e5357f1fd4d6335f0af637136618ff70ecf4fe8b819c68f949"
+    },
+    {
+      "name": "session-id.cjs",
+      "sha256": "a0cfa3c876013ca9b3ade9139394961cda23523e6f2063e552b819a614306737"
     },
     {
       "name": "protected-paths.cjs",

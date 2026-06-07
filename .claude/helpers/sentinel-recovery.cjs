@@ -22,6 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const childProcess = require('child_process');
+const { resolveSessionId } = require('./session-id.cjs');
 
 function loadProtectedPathPolicyModule() {
   const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
@@ -81,13 +82,17 @@ function readJson(filePath) {
 /**
  * Check if a hive is still active by reading its hive.json.
  */
-function isHiveActive(hiveId) {
-  if (!hiveId) return false;
+function loadHiveRecord(hiveId) {
+  if (!hiveId) return null;
   // Sanitize hive ID (same as hive-watcher.cjs)
   const sanitized = String(hiveId).replace(/[/\\.]+/g, '_').replace(/^_+|_+$/g, '');
-  if (!sanitized) return false;
+  if (!sanitized) return null;
   const hivePath = path.join(HIVES_DIR, sanitized, 'hive.json');
-  const record = readJson(hivePath);
+  return readJson(hivePath);
+}
+
+function isHiveActive(hiveId) {
+  const record = loadHiveRecord(hiveId);
   return record && record.status === 'active';
 }
 
@@ -152,7 +157,7 @@ function findWatcherFiles() {
  * Spawn a detached watcher process for the given hive.
  * Returns the new PID or null on failure.
  */
-function spawnDetachedWatcher(hiveId, tmuxPane) {
+function spawnDetachedWatcher(hiveId, tmuxPane, ownerSessionId = null) {
   if (!fs.existsSync(WATCHER_SCRIPT)) return null;
 
   const sanitized = sanitizeHiveId(hiveId);
@@ -188,6 +193,10 @@ function spawnDetachedWatcher(hiveId, tmuxPane) {
     if (!lockAcquired) return null;
 
     const args = [WATCHER_SCRIPT, hiveId, '--project-dir', PROJECT_DIR];
+    const sessionId = ownerSessionId ? resolveSessionId({ session_id: ownerSessionId }, {}) : null;
+    if (sessionId) {
+      args.push('--sessionId', sessionId);
+    }
     if (tmuxPane) {
       args.push('--tmux-pane', tmuxPane);
     }
@@ -244,11 +253,14 @@ function main() {
     }
 
     // Watcher appears dead — check if hive is still active
-    if (!isHiveActive(hiveId)) {
+    const hiveRecord = loadHiveRecord(hiveId);
+    if (!hiveRecord || hiveRecord.status !== 'active') {
       // Hive is no longer active — clean up stale progress file
       try { fs.unlinkSync(filePath); } catch { /* best-effort */ }
       continue;
     }
+    const ownerSessionId = data.ownerSessionId || hiveRecord.ownerSessionId || null;
+    const ownerTmuxPane = hiveRecord.ownerTmuxPane || data.ownerTmuxPane || tmuxPane;
 
     // Dead watcher + active hive — needs recovery
     const entry = {
@@ -260,7 +272,7 @@ function main() {
       newPid: null,
     };
 
-    const newPid = spawnDetachedWatcher(hiveId, tmuxPane);
+    const newPid = spawnDetachedWatcher(hiveId, ownerTmuxPane, ownerSessionId);
     if (newPid) {
       entry.respawned = true;
       entry.newPid = newPid;

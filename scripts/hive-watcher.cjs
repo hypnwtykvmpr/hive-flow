@@ -27,6 +27,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { appendPendingWithAck } = require('../.claude/helpers/dedup-marker.cjs');
+const { resolveSessionId } = require('../.claude/helpers/session-id.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -78,13 +79,16 @@ function resolveExplicitProjectRoot(projectDir) {
 // Argument parsing
 // ---------------------------------------------------------------------------
 
-function parseArgs() {
-  const args = process.argv.slice(2);
+function parseArgs(argv = process.argv.slice(2), env = process.env) {
+  const args = Array.isArray(argv) ? argv : process.argv.slice(2);
   const result = {
     hiveId: null,
+    sessionId: null,
+    queenId: null,
     tmuxPane: null,
     projectDir: defaultProjectRoot(),
   };
+  let explicitSessionId = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--tmux-pane' && args[i + 1]) {
@@ -94,14 +98,18 @@ function parseArgs() {
     } else if (args[i] === '--hiveId' && args[i + 1]) {
       result.hiveId = args[++i];
     } else if (args[i] === '--sessionId' && args[i + 1]) {
-      ++i; // consumed but not used by watcher
+      explicitSessionId = args[++i];
     } else if (args[i] === '--queenId' && args[i + 1]) {
-      ++i; // consumed but not used by watcher
+      result.queenId = args[++i];
     } else if (!args[i].startsWith('--') && !result.hiveId) {
       result.hiveId = args[i];
     }
   }
 
+  result.sessionId = resolveSessionId(
+    explicitSessionId ? { session_id: explicitSessionId } : null,
+    env || {},
+  );
   return result;
 }
 
@@ -261,6 +269,8 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
     terminatedCount,
     allComplete,
     workerCount: hive.workers.length,
+    ownerSessionId: hive.ownerSessionId || null,
+    ownerTmuxPane: hive.ownerTmuxPane || null,
   };
 }
 
@@ -321,7 +331,7 @@ function tmuxSendKeys(tmuxBin, pane, message) {
 // Progress file writer
 // ---------------------------------------------------------------------------
 
-function writeProgressFile(paths, hiveId, status) {
+function writeProgressFile(paths, hiveId, status, ownerSessionId = null) {
   try {
     const sanitized = sanitizeHiveId(hiveId);
     if (!sanitized) return;
@@ -331,6 +341,7 @@ function writeProgressFile(paths, hiveId, status) {
       hiveId,
       watcherPid: process.pid,
       ...status,
+      ownerSessionId: ownerSessionId || status.ownerSessionId || null,
       updatedAt: new Date().toISOString(),
     };
     const tmpPath = progressPath + '.tmp.' + process.pid;
@@ -353,7 +364,7 @@ function cleanupProgressFile(paths, hiveId) {
   } catch { /* best-effort */ }
 }
 
-function writeDoneMarker(paths, hiveId, status) {
+function writeDoneMarker(paths, hiveId, status, ownerSessionId = null) {
   try {
     const sanitized = sanitizeHiveId(hiveId);
     if (!sanitized) return;
@@ -365,6 +376,7 @@ function writeDoneMarker(paths, hiveId, status) {
       summary: `completed=${status.completedCount || 0} failed=${status.failedCount || 0}`,
       completedCount: status.completedCount || 0,
       failedCount: status.failedCount || 0,
+      ownerSessionId: ownerSessionId || status.ownerSessionId || null,
     };
     const tmpPath = donePath + '.tmp.' + process.pid;
     fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
@@ -372,7 +384,7 @@ function writeDoneMarker(paths, hiveId, status) {
   } catch { /* best-effort */ }
 }
 
-function appendPendingCompletion(paths, hiveId, status, summary) {
+function appendPendingCompletion(paths, hiveId, status, summary, ownerSessionId = null) {
   try {
     const sanitized = sanitizeHiveId(hiveId);
     if (!sanitized) return;
@@ -387,8 +399,12 @@ function appendPendingCompletion(paths, hiveId, status, summary) {
       failedCount: status.failedCount,
       idleCount: status.idleCount,
       terminatedCount: status.terminatedCount,
+      ownerSessionId: ownerSessionId || status.ownerSessionId || null,
     });
-    appendPendingWithAck(paths.dataDir, sanitized, line, { source: 'hive-watcher' });
+    appendPendingWithAck(paths.dataDir, sanitized, line, {
+      source: 'hive-watcher',
+      ownerSessionId: ownerSessionId || status.ownerSessionId || null,
+    });
   } catch { /* best-effort */ }
 }
 
@@ -450,6 +466,7 @@ async function main() {
     event: 'watcher-started',
     hiveId,
     pid: process.pid,
+    ownerSessionId: config.sessionId || 'none',
     tmuxPane: tmuxPane || 'none',
     hasTmux,
   });
@@ -502,7 +519,9 @@ async function main() {
     const status = pollWorkers(paths.hivesDir, paths.tasksDir, hiveId);
 
     // Write progress file every cycle
-    writeProgressFile(paths, hiveId, status);
+    const ownerSessionId = config.sessionId || status.ownerSessionId || null;
+
+    writeProgressFile(paths, hiveId, status, ownerSessionId);
 
     // Check if hive was externally terminated/completed/failed
     if (status.hiveStatus && status.hiveStatus !== 'active' && status.hiveStatus !== 'pending') {
@@ -539,8 +558,8 @@ async function main() {
         idleCount: status.idleCount,
         terminatedCount: status.terminatedCount,
       });
-      writeDoneMarker(paths, hiveId, status);
-      appendPendingCompletion(paths, hiveId, status, summary);
+      writeDoneMarker(paths, hiveId, status, ownerSessionId);
+      appendPendingCompletion(paths, hiveId, status, summary, ownerSessionId);
 
       // Wake advocate via tmux
       if (hasTmux) {

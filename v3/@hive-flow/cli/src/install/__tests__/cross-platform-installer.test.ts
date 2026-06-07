@@ -23,6 +23,7 @@ function makeProjectRoot(): string {
     '.claude/helpers/hook-handler.cjs',
     '.claude/helpers/settings-reconciler.cjs',
     '.claude/helpers/provider-tracker.cjs',
+    '.claude/helpers/session-id.cjs',
     'v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs',
     'v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json',
   ]) {
@@ -71,6 +72,7 @@ describe('cross-platform enforcement installer', () => {
       expect(chmodCalls).toEqual([]);
       expect(getPlatformProviderForPlatform('win32').name).toContain('Windows PBKDF2 + AES-256-CBC');
       expect(existsSync(join(binDir, 'provider-tracker.cjs'))).toBe(true);
+      expect(existsSync(join(binDir, 'session-id.cjs'))).toBe(true);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
       rmSync(binDir, { recursive: true, force: true });
@@ -100,7 +102,7 @@ describe('cross-platform enforcement installer', () => {
     })).resolves.toBe(true);
   });
 
-  it('performs engine-only then hooks-only install with the complete 8-file relocated set', async () => {
+  it('performs engine-only then hooks-only install with the complete 9-file relocated set', async () => {
     const projectRoot = makeProjectRoot();
     const homeDir = mkdtempSync(join(tmpdir(), 'hf-p2-e2e-home-'));
     try {
@@ -123,7 +125,7 @@ describe('cross-platform enforcement installer', () => {
       for (const file of ENGINE_TARGET_FILES) {
         expect(existsSync(join(binDir, file)), file).toBe(true);
       }
-      expect(ENGINE_TARGET_FILES).toHaveLength(8);
+      expect(ENGINE_TARGET_FILES).toHaveLength(9);
       expect(existsSync(join(binDir, '.version'))).toBe(true);
 
       const settings = JSON.parse(readFileSync(join(homeDir, '.claude', 'settings.json'), 'utf8'));
