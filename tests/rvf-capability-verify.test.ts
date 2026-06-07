@@ -2,20 +2,20 @@
  * RVF Comprehensive Capability Verification
  *
  * Tests EVERY capability across all RVF modules to confirm 100% functionality:
- * 1. RvfBackend — IMemoryBackend contract (17 methods)
+ * 1. BinaryBackend — IMemoryBackend contract (17 methods)
  * 2. HnswLite — Vector search (add, remove, search, metrics)
  * 3. RvfEventLog — Append-only event sourcing
  * 4. RvfEmbeddingCache — Binary file cache with LRU/TTL
  * 5. RvfEmbeddingService — Hash-based embedding generation
  * 6. RvfLearningStore — SONA learning artifact persistence
  * 7. PersistentSonaCoordinator — Pattern matching + learning loops
- * 8. RvfMigrator — Bidirectional migration (JSON↔RVF, SQLite↔RVF)
+ * 8. BinaryMigrator — Bidirectional migration (JSON↔RVF, SQLite↔RVF)
  * 9. Security — Path validation, input validation, atomic writes
  * 10. Performance — Timer unref, safe iteration, no stack overflow
  * 11. Forward/Backward compat — Binary format v1/v2
  * 12. DatabaseProvider — Auto-selection of RVF backend
  */
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import { describe, it, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync,
@@ -25,15 +25,15 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 // --- Module Imports ---
-import { RvfBackend } from '../v3/@hive-flow/memory/src/rvf-backend.js';
-import type { RvfBackendConfig } from '../v3/@hive-flow/memory/src/rvf-backend.js';
+import { BinaryBackend } from '../v3/@hive-flow/memory/src/binary-backend.js';
+import type { BinaryBackendConfig } from '../v3/@hive-flow/memory/src/binary-backend.js';
 import { HnswLite, cosineSimilarity } from '../v3/@hive-flow/memory/src/hnsw-lite.js';
 import { RvfEventLog } from '../v3/@hive-flow/shared/src/events/rvf-event-log.js';
 import { RvfEmbeddingCache } from '../v3/@hive-flow/embeddings/src/rvf-embedding-cache.js';
 import { RvfEmbeddingService } from '../v3/@hive-flow/embeddings/src/rvf-embedding-service.js';
 import { RvfLearningStore } from '../v3/@hive-flow/memory/src/rvf-learning-store.js';
 import { PersistentSonaCoordinator } from '../v3/@hive-flow/memory/src/persistent-sona.js';
-import { RvfMigrator } from '../v3/@hive-flow/memory/src/rvf-migration.js';
+import { BinaryMigrator } from '../v3/@hive-flow/memory/src/binary-migration.js';
 
 // --- Helpers ---
 let tmpDir: string;
@@ -56,14 +56,14 @@ function makeEntryWithEmbedding(id: string, ns = 'default', content = 'test') {
 }
 
 // =============================================================================
-// 1. RvfBackend — Full IMemoryBackend Contract
+// 1. BinaryBackend — Full IMemoryBackend Contract
 // =============================================================================
-describe('1. RvfBackend — IMemoryBackend Contract', () => {
-  let backend: RvfBackend;
+describe('1. BinaryBackend — IMemoryBackend Contract', () => {
+  let backend: BinaryBackend;
 
   beforeEach(async () => {
     tmpDir = mkdtempSync(join(tmpdir(), 'rvf-cap-'));
-    backend = new RvfBackend({ databasePath: tmp('mem.rvf'), dimensions: 64 });
+    backend = new BinaryBackend({ databasePath: tmp('mem.rvf'), dimensions: 64 });
     await backend.initialize();
   });
 
@@ -180,7 +180,7 @@ describe('1. RvfBackend — IMemoryBackend Contract', () => {
     await backend.shutdown();
 
     // Re-open
-    const b2 = new RvfBackend({ databasePath: tmp('mem.rvf'), dimensions: 64 });
+    const b2 = new BinaryBackend({ databasePath: tmp('mem.rvf'), dimensions: 64 });
     await b2.initialize();
     const entry = await b2.get('p1');
     assert.ok(entry);
@@ -601,7 +601,7 @@ describe('7. PersistentSonaCoordinator — Learning', () => {
   it('storePattern + findSimilarPatterns', () => {
     const emb = Array.from({ length: 64 }, (_, i) => Math.sin(i));
     const id = sona.storePattern('test', emb);
-    assert.ok(id.startsWith('pat-'));
+    assert.ok(id.startsWith('pat_'));
 
     const similar = sona.findSimilarPatterns(emb, 5);
     assert.ok(similar.length > 0);
@@ -655,24 +655,24 @@ describe('7. PersistentSonaCoordinator — Learning', () => {
 });
 
 // =============================================================================
-// 8. RvfMigrator — Bidirectional Migration
+// 8. BinaryMigrator — Bidirectional Migration
 // =============================================================================
-describe('8. RvfMigrator — Migration', () => {
+describe('8. BinaryMigrator — Migration', () => {
   beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-mig-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
   it('detectFormat: json, rvf, unknown', async () => {
     writeFileSync(tmp('j.json'), '[{"id":"1"}]');
-    assert.equal(await RvfMigrator.detectFormat(tmp('j.json')), 'json');
+    assert.equal(await BinaryMigrator.detectFormat(tmp('j.json')), 'json');
 
     // Create RVF file
-    const b = new RvfBackend({ databasePath: tmp('d.rvf') });
+    const b = new BinaryBackend({ databasePath: tmp('d.rvf') });
     await b.initialize();
     await b.store(makeEntry('x'));
     await b.shutdown();
-    assert.equal(await RvfMigrator.detectFormat(tmp('d.rvf')), 'rvf');
+    assert.equal(await BinaryMigrator.detectFormat(tmp('d.rvf')), 'rvf');
 
-    assert.equal(await RvfMigrator.detectFormat(tmp('no-exist')), 'unknown');
+    assert.equal(await BinaryMigrator.detectFormat(tmp('no-exist')), 'unknown');
   });
 
   it('fromJsonFile + toJsonFile roundtrip', async () => {
@@ -680,11 +680,11 @@ describe('8. RvfMigrator — Migration', () => {
     const embEntry = { ...entries[0], embedding: [0.1, 0.2, 0.3] };
     writeFileSync(tmp('src.json'), JSON.stringify([embEntry, entries[1]]));
 
-    const r1 = await RvfMigrator.fromJsonFile(tmp('src.json'), tmp('out.rvf'));
+    const r1 = await BinaryMigrator.fromJsonFile(tmp('src.json'), tmp('out.rvf'));
     assert.equal(r1.success, true);
     assert.equal(r1.entriesMigrated, 2);
 
-    const r2 = await RvfMigrator.toJsonFile(tmp('out.rvf'), tmp('export.json'));
+    const r2 = await BinaryMigrator.toJsonFile(tmp('out.rvf'), tmp('export.json'));
     assert.equal(r2.success, true);
     assert.equal(r2.entriesMigrated, 2);
 
@@ -694,7 +694,7 @@ describe('8. RvfMigrator — Migration', () => {
 
   it('autoMigrate: json source', async () => {
     writeFileSync(tmp('auto.json'), JSON.stringify([makeEntry('a1')]));
-    const result = await RvfMigrator.autoMigrate(tmp('auto.json'), tmp('auto.rvf'));
+    const result = await BinaryMigrator.autoMigrate(tmp('auto.json'), tmp('auto.rvf'));
     assert.equal(result.success, true);
     assert.equal(result.sourceFormat, 'json');
   });
@@ -704,7 +704,7 @@ describe('8. RvfMigrator — Migration', () => {
     writeFileSync(tmp('prog.json'), JSON.stringify(items));
 
     const progress: any[] = [];
-    await RvfMigrator.fromJsonFile(tmp('prog.json'), tmp('prog.rvf'), {
+    await BinaryMigrator.fromJsonFile(tmp('prog.json'), tmp('prog.rvf'), {
       batchSize: 5,
       onProgress: (p) => progress.push({ ...p }),
     });
@@ -719,12 +719,12 @@ describe('9. Security — Validation & Atomic Writes', () => {
   beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-sec-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('RvfBackend rejects null bytes in path', () => {
-    assert.throws(() => new RvfBackend({ databasePath: '/tmp/evil\0path.rvf' }), /null bytes/);
+  it('BinaryBackend rejects null bytes in path', () => {
+    assert.throws(() => new BinaryBackend({ databasePath: '/tmp/evil\0path.rvf' }), /null bytes/);
   });
 
-  it('RvfBackend allows :memory: path', () => {
-    const b = new RvfBackend({ databasePath: ':memory:' });
+  it('BinaryBackend allows :memory: path', () => {
+    const b = new BinaryBackend({ databasePath: ':memory:' });
     assert.ok(b); // no throw
   });
 
@@ -742,8 +742,8 @@ describe('9. Security — Validation & Atomic Writes', () => {
     );
   });
 
-  it('RvfBackend uses atomic writes (no .tmp left behind)', async () => {
-    const b = new RvfBackend({ databasePath: tmp('atomic.rvf'), autoPersistInterval: 0 });
+  it('BinaryBackend uses atomic writes (no .tmp left behind)', async () => {
+    const b = new BinaryBackend({ databasePath: tmp('atomic.rvf'), autoPersistInterval: 0 });
     await b.initialize();
     await b.store(makeEntry('at1'));
     await b.shutdown();
@@ -779,7 +779,7 @@ describe('10. Performance — Timers & Iteration', () => {
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
   it('clearNamespace safely handles large datasets', async () => {
-    const b = new RvfBackend({ databasePath: ':memory:', dimensions: 4 });
+    const b = new BinaryBackend({ databasePath: ':memory:', dimensions: 4 });
     await b.initialize();
     const entries = Array.from({ length: 500 }, (_, i) => makeEntry(`e${i}`, 'bulk'));
     await b.bulkInsert(entries);
@@ -790,7 +790,7 @@ describe('10. Performance — Timers & Iteration', () => {
   });
 
   it('persistToDisk handles 10K entries without stack overflow', async () => {
-    const b = new RvfBackend({ databasePath: tmp('big.rvf'), dimensions: 4, autoPersistInterval: 0 });
+    const b = new BinaryBackend({ databasePath: tmp('big.rvf'), dimensions: 4, autoPersistInterval: 0 });
     await b.initialize();
     const entries = Array.from({ length: 10000 }, (_, i) => ({
       ...makeEntry(`lg${i}`),
@@ -800,7 +800,7 @@ describe('10. Performance — Timers & Iteration', () => {
     await b.shutdown(); // triggers persistToDisk — no stack overflow
 
     // Verify it persisted
-    const b2 = new RvfBackend({ databasePath: tmp('big.rvf'), dimensions: 4 });
+    const b2 = new BinaryBackend({ databasePath: tmp('big.rvf'), dimensions: 4 });
     await b2.initialize();
     assert.equal(await b2.count(), 10000);
     await b2.shutdown();

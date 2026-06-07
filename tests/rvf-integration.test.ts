@@ -1,4 +1,4 @@
-import { describe, it, before, after, beforeEach } from 'node:test';
+import { describe, it, beforeAll as before, afterAll as after, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -59,11 +59,11 @@ describe('Provider Selection', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('createDatabase with provider "rvf" creates an RvfBackend', async () => {
+  it('createDatabase with provider "rvf" creates an BinaryBackend', async () => {
     const db = await createDatabase(join(tmpDir, 'test-rvf.rvf'), {
       provider: 'rvf',
     });
-    // RvfBackend exposes healthCheck that reports index component
+    // BinaryBackend exposes healthCheck that reports index component
     const health = await db.healthCheck();
     assert.ok(health);
     assert.equal(health.status, 'healthy');
@@ -286,7 +286,7 @@ describe('Data Migration (JSON -> RVF)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('entries from JsonBackend can be migrated to RvfBackend', async () => {
+  it('entries from JsonBackend can be migrated to BinaryBackend', async () => {
     // Step 1: Create JsonBackend with entries
     const jsonDb = await createDatabase(join(dir, 'source.json'), {
       provider: 'json',
@@ -298,7 +298,7 @@ describe('Data Migration (JSON -> RVF)', () => {
     ];
     await jsonDb.bulkInsert(entries);
 
-    // Step 2: Create RvfBackend
+    // Step 2: Create BinaryBackend
     const rvfDb = await createDatabase(join(dir, 'dest.rvf'), {
       provider: 'rvf',
     });

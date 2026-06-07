@@ -1,9 +1,9 @@
-import { describe, it, before, after, beforeEach, afterEach } from 'node:test';
+import { describe, it, beforeAll as before, afterAll as after, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { RvfBackend } from '../v3/@hive-flow/memory/src/rvf-backend.js';
+import { BinaryBackend } from '../v3/@hive-flow/memory/src/binary-backend.js';
 import type {
   MemoryEntry,
   MemoryQuery,
@@ -49,13 +49,13 @@ function randomVec(dim = 4): Float32Array {
 
 // -- Tests --
 
-describe('RvfBackend', () => {
+describe('BinaryBackend', () => {
   let tmpDir: string;
-  let backend: RvfBackend;
+  let backend: BinaryBackend;
 
   beforeEach(async () => {
     tmpDir = makeTmpDir();
-    backend = new RvfBackend({
+    backend = new BinaryBackend({
       databasePath: join(tmpDir, 'test.rvf'),
       dimensions: 4,
       autoPersistInterval: 0, // disable timer in tests
@@ -71,7 +71,7 @@ describe('RvfBackend', () => {
   // ---- 1. Constructor & Config ----
   describe('constructor & config', () => {
     it('should apply default config values', async () => {
-      const b = new RvfBackend({ databasePath: ':memory:' });
+      const b = new BinaryBackend({ databasePath: ':memory:' });
       await b.initialize();
       const stats = await b.getStats();
       assert.equal(stats.totalEntries, 0);
@@ -79,7 +79,7 @@ describe('RvfBackend', () => {
     });
 
     it('should accept custom dimensions and metric', async () => {
-      const b = new RvfBackend({
+      const b = new BinaryBackend({
         databasePath: ':memory:',
         dimensions: 8,
         metric: 'dot',
@@ -110,7 +110,7 @@ describe('RvfBackend', () => {
       await backend.store(entry);
       await backend.shutdown();
 
-      const b2 = new RvfBackend({
+      const b2 = new BinaryBackend({
         databasePath: join(tmpDir, 'test.rvf'),
         dimensions: 4,
         autoPersistInterval: 0,
@@ -124,7 +124,7 @@ describe('RvfBackend', () => {
     });
 
     it('should be a no-op when shutdown is called before init', async () => {
-      const b = new RvfBackend({ databasePath: ':memory:' });
+      const b = new BinaryBackend({ databasePath: ':memory:' });
       await b.shutdown(); // should not throw
     });
   });
@@ -379,7 +379,7 @@ describe('RvfBackend', () => {
       await backend.store(makeEntry({ id: 'emb-1', embedding: vec }));
       await backend.shutdown();
 
-      const b2 = new RvfBackend({
+      const b2 = new BinaryBackend({
         databasePath: join(tmpDir, 'test.rvf'),
         dimensions: 4,
         autoPersistInterval: 0,
@@ -394,7 +394,7 @@ describe('RvfBackend', () => {
     });
 
     it(':memory: path does not create a file', async () => {
-      const b = new RvfBackend({ databasePath: ':memory:', dimensions: 4 });
+      const b = new BinaryBackend({ databasePath: ':memory:', dimensions: 4 });
       await b.initialize();
       await b.store(makeEntry());
       await b.shutdown();
@@ -459,7 +459,7 @@ describe('RvfBackend', () => {
     });
 
     it('healthCheck returns unhealthy before init', async () => {
-      const b = new RvfBackend({ databasePath: ':memory:', dimensions: 4 });
+      const b = new BinaryBackend({ databasePath: ':memory:', dimensions: 4 });
       const health = await b.healthCheck();
       assert.equal(health.status, 'unhealthy');
       assert.ok(health.issues.length > 0);
@@ -478,7 +478,7 @@ describe('RvfBackend', () => {
 
     it('init with missing file dir creates it on persist', async () => {
       const deepPath = join(tmpDir, 'sub', 'dir', 'deep.rvf');
-      const b = new RvfBackend({
+      const b = new BinaryBackend({
         databasePath: deepPath,
         dimensions: 4,
         autoPersistInterval: 0,
@@ -494,7 +494,7 @@ describe('RvfBackend', () => {
       const { writeFileSync } = await import('node:fs');
       writeFileSync(path, Buffer.from('RVF\0garbage data here'));
 
-      const b = new RvfBackend({
+      const b = new BinaryBackend({
         databasePath: path,
         dimensions: 4,
         autoPersistInterval: 0,

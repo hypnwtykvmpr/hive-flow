@@ -2771,19 +2771,19 @@ RVF files use a simple binary layout: a 4-byte magic header (`RVF\0`), a JSON me
 You don't need to pick a backend. The `DatabaseProvider` tries each option in order and uses the first one available:
 
 ```
-RVF (pure TypeScript) → better-sqlite3 (native) → sql.js (WASM) → JSON (fallback)
+Binary backend (RVF-compatible, pure TypeScript) → better-sqlite3 (native) → sql.js (WASM) → JSON (fallback)
 ```
 
-RVF is always available since it has zero dependencies, so it wins by default. If you have `better-sqlite3` installed (e.g., for advanced queries), it gets priority.
+The binary backend is always available since it has zero dependencies, so it wins by default and stores data in RVF-compatible files.
 
 ### Vector search with HnswLite
 
 RVF includes `HnswLite` — a pure TypeScript implementation of the HNSW (Hierarchical Navigable Small World) algorithm for fast nearest-neighbor search. It's used automatically when storing entries with embeddings.
 
 ```typescript
-import { RvfBackend } from '@hive-flow/memory';
+import { BinaryBackend } from '@hive-flow/memory';
 
-const backend = new RvfBackend({ databasePath: './memory.rvf' });
+const backend = new BinaryBackend({ databasePath: './memory.rvf' });
 await backend.initialize();
 
 // Store entries — embeddings are indexed automatically
@@ -2797,20 +2797,20 @@ Supports cosine, dot product, and Euclidean distance metrics. For large datasets
 
 ### Migrating from older formats
 
-The `RvfMigrator` converts between JSON files, SQLite databases, and RVF:
+The `BinaryMigrator` converts between JSON files, SQLite databases, and RVF:
 
 ```typescript
-import { RvfMigrator } from '@hive-flow/memory';
+import { BinaryMigrator } from '@hive-flow/memory';
 
 // Auto-detect format and migrate
-await RvfMigrator.autoMigrate('./old-memory.db', './memory.rvf');
+await BinaryMigrator.autoMigrate('./old-memory.db', './memory.rvf');
 
 // Or be explicit
-await RvfMigrator.fromJsonFile('./backup.json', './memory.rvf');
-await RvfMigrator.fromSqlite('./legacy.db', './memory.rvf');
+await BinaryMigrator.fromJsonFile('./backup.json', './memory.rvf');
+await BinaryMigrator.fromSqlite('./legacy.db', './memory.rvf');
 
 // Export back to JSON for inspection
-await RvfMigrator.toJsonFile('./memory.rvf', './export.json');
+await BinaryMigrator.toJsonFile('./memory.rvf', './export.json');
 ```
 
 Format detection works by reading the first few bytes of the file — no file extension guessing.
@@ -5480,7 +5480,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@hive-flow/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
-| `@hive-flow/memory` | Unified vector storage | AgentDB, RVF binary format, HnswLite, RvfMigrator, SONA persistence, LearningBridge, MemoryGraph |
+| `@hive-flow/memory` | Unified vector storage | AgentDB, RVF binary format, HnswLite, BinaryMigrator, SONA persistence, LearningBridge, MemoryGraph |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
