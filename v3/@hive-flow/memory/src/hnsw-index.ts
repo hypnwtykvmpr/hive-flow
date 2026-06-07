@@ -13,6 +13,7 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { readFile, writeFile } from 'node:fs/promises';
 import {
   DistanceMetric,
   HNSWConfig,
@@ -24,6 +25,12 @@ import {
   QuantizationConfig,
   QuantizedVector,
 } from './types.js';
+import {
+  IVectorIndex,
+  VectorIndexConfig,
+  VectorIndexStats,
+  distanceToHigherScore,
+} from './vector-index.js';
 
 /**
  * Binary Min Heap for O(log n) priority queue operations
@@ -218,7 +225,19 @@ interface HNSWNode {
  * - Insert: O(log n) amortized
  * - Memory: O(n * M * L) where M is max connections, L is layers
  */
-export class HNSWIndex extends EventEmitter {
+type SerializedHNSWIndex = {
+  version: 1;
+  config: {
+    dimensions: number;
+    M: number;
+    efConstruction: number;
+    maxElements: number;
+    metric: DistanceMetric;
+  };
+  vectors: Array<{ id: string; vector: number[] }>;
+};
+
+export class HNSWIndex extends EventEmitter implements IVectorIndex {
   private config: HNSWConfig;
   private nodes: Map<string, HNSWNode> = new Map();
   private entryPoint: string | null = null;
@@ -238,7 +257,7 @@ export class HNSWIndex extends EventEmitter {
   } | null = null;
 
   // Performance tracking
-  private stats: {
+  private performanceStats: {
     searchCount: number;
     totalSearchTime: number;
     insertCount: number;
@@ -254,22 +273,94 @@ export class HNSWIndex extends EventEmitter {
 
   constructor(config: Partial<HNSWConfig> = {}) {
     super();
-    this.config = this.mergeConfig(config);
-    if (this.config.M && this.config.M < 2) this.config.M = 2;
+    this.config = this.configure(config);
+  }
 
-    if (this.config.quantization) {
-      const q = this.config.quantization;
-      if (q.type === 'product') {
-        this.pqNumSubvectors = q.subquantizers ?? 8;
-        this.pqNumCentroids = q.codebookSize ?? 256;
-        if (this.config.dimensions % this.pqNumSubvectors !== 0) {
-          throw new Error(
-            `Dimensions (${this.config.dimensions}) must be divisible by subquantizers (${this.pqNumSubvectors})`
-          );
-        }
-        this.pqSubvectorDim = this.config.dimensions / this.pqNumSubvectors;
-      }
+  /**
+   * Initialize the storage-free IVectorIndex surface.
+   */
+  async init(config: VectorIndexConfig): Promise<void> {
+    this.config = this.configure({
+      dimensions: config.dims,
+      M: config.M,
+      efConstruction: config.efConstruction,
+      maxElements: config.maxElements,
+      metric: config.metric,
+    });
+    this.clear();
+  }
+
+  async add(id: string, vector: Float32Array): Promise<void> {
+    await this.addPoint(id, vector);
+  }
+
+  async addBatch(items: Array<{ id: string; vector: Float32Array }>): Promise<void> {
+    for (const item of items) {
+      await this.addPoint(item.id, item.vector);
     }
+  }
+
+  async remove(id: string): Promise<boolean> {
+    return this.removePoint(id);
+  }
+
+  async searchKNN(
+    query: Float32Array,
+    k: number,
+    ef?: number
+  ): Promise<Array<{ id: string; score: number }>> {
+    const results = await this.search(query, k, ef);
+    return results
+      .map((result) => ({
+        id: result.id,
+        score: distanceToHigherScore(this.config.metric, result.distance),
+      }))
+      .sort((a, b) => b.score - a.score);
+  }
+
+  size(): number {
+    return this.nodes.size;
+  }
+
+  async save(path: string): Promise<void> {
+    const serialized: SerializedHNSWIndex = {
+      version: 1,
+      config: {
+        dimensions: this.config.dimensions,
+        M: this.config.M,
+        efConstruction: this.config.efConstruction,
+        maxElements: this.config.maxElements,
+        metric: this.config.metric,
+      },
+      vectors: Array.from(this.nodes.values()).map((node) => ({
+        id: node.id,
+        vector: Array.from(node.vector),
+      })),
+    };
+    await writeFile(path, JSON.stringify(serialized, null, 2), 'utf8');
+  }
+
+  async load(path: string): Promise<void> {
+    const serialized = JSON.parse(await readFile(path, 'utf8')) as SerializedHNSWIndex;
+    if (serialized.version !== 1) {
+      throw new Error(`Unsupported HNSW index format version: ${serialized.version}`);
+    }
+    this.config = this.configure(serialized.config);
+    await this.rebuild(
+      serialized.vectors.map((item) => ({
+        id: item.id,
+        vector: new Float32Array(item.vector),
+      }))
+    );
+  }
+
+  stats(): VectorIndexStats {
+    const current = this.getStats();
+    return {
+      vectorCount: current.vectorCount,
+      memoryUsage: current.memoryUsage,
+      avgSearchTime: current.avgSearchTime,
+    };
   }
 
   /**
@@ -342,8 +433,8 @@ export class HNSWIndex extends EventEmitter {
     }
 
     const duration = performance.now() - startTime;
-    this.stats.insertCount++;
-    this.stats.totalInsertTime += duration;
+    this.performanceStats.insertCount++;
+    this.performanceStats.totalInsertTime += duration;
 
     this.emit('point:added', { id, level, duration });
   }
@@ -432,8 +523,8 @@ export class HNSWIndex extends EventEmitter {
       const results = candidates.slice(0, k);
 
       const duration = performance.now() - startTime;
-      this.stats.searchCount++;
-      this.stats.totalSearchTime += duration;
+      this.performanceStats.searchCount++;
+      this.performanceStats.totalSearchTime += duration;
 
       return results;
     } finally {
@@ -513,7 +604,7 @@ export class HNSWIndex extends EventEmitter {
   async rebuild(
     entries: Array<{ id: string; vector: Float32Array }>
   ): Promise<void> {
-    this.stats.buildStartTime = performance.now();
+    this.performanceStats.buildStartTime = performance.now();
 
     this.nodes.clear();
     this.entryPoint = null;
@@ -523,7 +614,7 @@ export class HNSWIndex extends EventEmitter {
       await this.addPoint(entry.id, entry.vector);
     }
 
-    const buildTime = performance.now() - this.stats.buildStartTime;
+    const buildTime = performance.now() - this.performanceStats.buildStartTime;
 
     this.emit('index:rebuilt', {
       vectorCount: this.nodes.size,
@@ -537,8 +628,8 @@ export class HNSWIndex extends EventEmitter {
   getStats(): HNSWStats {
     const vectorCount = this.nodes.size;
     const avgSearchTime =
-      this.stats.searchCount > 0
-        ? this.stats.totalSearchTime / this.stats.searchCount
+      this.performanceStats.searchCount > 0
+        ? this.performanceStats.totalSearchTime / this.performanceStats.searchCount
         : 0;
 
     // Estimate memory usage
@@ -566,7 +657,7 @@ export class HNSWIndex extends EventEmitter {
       vectorCount,
       memoryUsage,
       avgSearchTime,
-      buildTime: performance.now() - this.stats.buildStartTime,
+      buildTime: performance.now() - this.performanceStats.buildStartTime,
       compressionRatio,
     };
   }
@@ -578,7 +669,7 @@ export class HNSWIndex extends EventEmitter {
     this.nodes.clear();
     this.entryPoint = null;
     this.maxLevel = 0;
-    this.stats = {
+    this.performanceStats = {
       searchCount: 0,
       totalSearchTime: 0,
       insertCount: 0,
@@ -594,14 +685,34 @@ export class HNSWIndex extends EventEmitter {
     return this.nodes.has(id);
   }
 
-  /**
-   * Get the number of vectors in the index
-   */
-  get size(): number {
-    return this.nodes.size;
-  }
-
   // ===== Private Methods =====
+
+  private configure(config: Partial<HNSWConfig>): HNSWConfig {
+    const merged = this.mergeConfig(config);
+    if (merged.M && merged.M < 2) merged.M = 2;
+
+    this.pqCodebook = null;
+    this.pqNumSubvectors = 0;
+    this.pqSubvectorDim = 0;
+    this.pqNumCentroids = 256;
+    this.pqTrained = false;
+
+    if (merged.quantization) {
+      const q = merged.quantization;
+      if (q.type === 'product') {
+        this.pqNumSubvectors = q.subquantizers ?? 8;
+        this.pqNumCentroids = q.codebookSize ?? 256;
+        if (merged.dimensions % this.pqNumSubvectors !== 0) {
+          throw new Error(
+            `Dimensions (${merged.dimensions}) must be divisible by subquantizers (${this.pqNumSubvectors})`
+          );
+        }
+        this.pqSubvectorDim = merged.dimensions / this.pqNumSubvectors;
+      }
+    }
+
+    return merged;
+  }
 
   private mergeConfig(config: Partial<HNSWConfig>): HNSWConfig {
     return {

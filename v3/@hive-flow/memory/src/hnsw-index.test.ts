@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { HNSWIndex } from './hnsw-index.js';
 
@@ -54,26 +57,34 @@ describe('HNSWIndex', () => {
     });
   });
 
-  describe('persistence characterization', () => {
-    it('keeps HNSW graph data in memory only and exposes no persistence API', async () => {
+  describe('persistence', () => {
+    it('saves and loads searchable index content through the IVectorIndex API', async () => {
+      const tempDir = await mkdtemp(join(tmpdir(), 'hive-flow-hnsw-'));
+      const savePath = join(tempDir, 'index.json');
       const config = { dimensions: 2, M: 16, metric: 'cosine' as const };
-      const index = new HNSWIndex(config);
-      await index.addPoint('persisted-only-in-process', new Float32Array([1, 0]));
 
-      expect(index.size).toBe(1);
-      await expect(index.search(new Float32Array([1, 0]), 1)).resolves.toEqual([
-        { id: 'persisted-only-in-process', distance: 0 },
-      ]);
+      try {
+        const index = new HNSWIndex(config);
+        await index.addPoint('persisted-across-processes', new Float32Array([1, 0]));
 
-      const freshIndex = new HNSWIndex(config);
-      expect(freshIndex.size).toBe(0);
-      await expect(freshIndex.search(new Float32Array([1, 0]), 1)).resolves.toEqual([]);
+        expect(index.size()).toBe(1);
+        await expect(index.search(new Float32Array([1, 0]), 1)).resolves.toEqual([
+          { id: 'persisted-across-processes', distance: 0 },
+        ]);
 
-      const publicSurface = freshIndex as unknown as Record<string, unknown>;
-      expect(publicSurface.save).toBeUndefined();
-      expect(publicSurface.load).toBeUndefined();
-      expect(publicSurface.serialize).toBeUndefined();
-      expect(publicSurface.deserialize).toBeUndefined();
+        await index.save(savePath);
+
+        const freshIndex = new HNSWIndex(config);
+        expect(freshIndex.size()).toBe(0);
+
+        await freshIndex.load(savePath);
+        expect(freshIndex.size()).toBe(1);
+        await expect(freshIndex.search(new Float32Array([1, 0]), 1)).resolves.toEqual([
+          { id: 'persisted-across-processes', distance: 0 },
+        ]);
+      } finally {
+        await rm(tempDir, { recursive: true, force: true });
+      }
     });
   });
 });

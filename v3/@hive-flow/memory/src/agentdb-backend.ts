@@ -11,7 +11,9 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { readFile, writeFile } from 'node:fs/promises';
 import {
+  DistanceMetric,
   IMemoryBackend,
   MemoryEntry,
   MemoryEntryInput,
@@ -29,6 +31,7 @@ import {
   CacheStats,
   HNSWStats,
 } from './types.js';
+import type { IVectorIndex, VectorIndexConfig, VectorIndexStats } from './vector-index.js';
 
 // ===== AgentDB Optional Import =====
 
@@ -112,6 +115,209 @@ const DEFAULT_CONFIG: Required<
   cacheEnabled: true,
   maxEntries: 1000000,
 };
+
+type SerializedAgentDBVectorIndex = {
+  version: 1;
+  config: VectorIndexConfig;
+  vectors: Array<{ id: string; vector: number[] }>;
+};
+
+type AgentDBHNSWSearchResult = { id: string | number; distance: number; similarity: number };
+
+type AgentDBNativeHNSWIndex = {
+  buildIndex(tableName?: string): Promise<void>;
+  search(
+    query: Float32Array,
+    k: number,
+    options?: { threshold?: number; filters?: Record<string, unknown> }
+  ): Promise<AgentDBHNSWSearchResult[]>;
+  getStats(): { numElements?: number; avgSearchTimeMs?: number };
+  setEfSearch?(ef: number): void;
+  clear(): void;
+};
+
+function toAgentDBMetric(metric: DistanceMetric): 'cosine' | 'l2' | 'ip' {
+  switch (metric) {
+    case 'cosine':
+      return 'cosine';
+    case 'euclidean':
+      return 'l2';
+    case 'dot':
+      return 'ip';
+    case 'manhattan':
+      throw new Error('AgentDBVectorIndex does not support manhattan metric');
+  }
+}
+
+/**
+ * Thin IVectorIndex adapter for AgentDB's native HNSWIndex.
+ *
+ * This keeps the Hive Flow vector-index seam storage-free while making the
+ * AgentDB/HNSW provider reachable as the Rust-replaceable default slot.
+ */
+export class AgentDBVectorIndex implements IVectorIndex {
+  private nativeIndex: AgentDBNativeHNSWIndex | null = null;
+  private config: VectorIndexConfig | null = null;
+  private activeIds = new Set<string>();
+  private insertedIds = new Set<string>();
+  private vectors = new Map<string, Float32Array>();
+  private searchCount = 0;
+  private totalSearchTime = 0;
+
+  async init(config: VectorIndexConfig): Promise<void> {
+    await ensureAgentDBImport();
+    if (!HNSWIndex) {
+      throw new Error('AgentDB HNSWIndex is not available');
+    }
+
+    this.config = config;
+    this.activeIds.clear();
+    this.insertedIds.clear();
+    this.vectors.clear();
+    this.searchCount = 0;
+    this.totalSearchTime = 0;
+    this.nativeIndex = this.createNativeIndex();
+  }
+
+  async add(id: string, vector: Float32Array): Promise<void> {
+    this.activeIds.add(id);
+    this.insertedIds.add(id);
+    this.vectors.set(id, new Float32Array(vector));
+    await this.rebuildNativeIndex();
+  }
+
+  async addBatch(items: Array<{ id: string; vector: Float32Array }>): Promise<void> {
+    for (const item of items) {
+      this.activeIds.add(item.id);
+      this.insertedIds.add(item.id);
+      this.vectors.set(item.id, new Float32Array(item.vector));
+    }
+    await this.rebuildNativeIndex();
+  }
+
+  async remove(id: string): Promise<boolean> {
+    if (!this.activeIds.has(id)) {
+      return false;
+    }
+    this.activeIds.delete(id);
+    this.vectors.delete(id);
+    await this.rebuildNativeIndex();
+    return true;
+  }
+
+  async searchKNN(
+    query: Float32Array,
+    k: number,
+    ef?: number
+  ): Promise<Array<{ id: string; score: number }>> {
+    const nativeIndex = this.requireNativeIndex();
+    if (this.activeIds.size === 0) {
+      return [];
+    }
+    if (ef !== undefined) {
+      nativeIndex.setEfSearch?.(ef);
+    }
+    const start = performance.now();
+    const rawResults = await nativeIndex.search(query, Math.max(k, this.insertedIds.size));
+    const duration = performance.now() - start;
+    this.searchCount++;
+    this.totalSearchTime += duration;
+
+    return rawResults
+      .map((result) => ({ id: String(result.id), score: result.similarity }))
+      .filter((result) => this.activeIds.has(result.id))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, k);
+  }
+
+  size(): number {
+    return this.activeIds.size;
+  }
+
+  async save(path: string): Promise<void> {
+    const serialized: SerializedAgentDBVectorIndex = {
+      version: 1,
+      config: this.requireConfig(),
+      vectors: Array.from(this.vectors.entries()).map(([id, vector]) => ({
+        id,
+        vector: Array.from(vector),
+      })),
+    };
+    await writeFile(`${path}.ivector.json`, JSON.stringify(serialized, null, 2), 'utf8');
+  }
+
+  async load(path: string): Promise<void> {
+    const serialized = JSON.parse(
+      await readFile(`${path}.ivector.json`, 'utf8')
+    ) as SerializedAgentDBVectorIndex;
+    if (serialized.version !== 1) {
+      throw new Error(`Unsupported AgentDB vector-index format version: ${serialized.version}`);
+    }
+    await this.init(serialized.config);
+    await this.addBatch(
+      serialized.vectors.map((item) => ({
+        id: item.id,
+        vector: new Float32Array(item.vector),
+      }))
+    );
+  }
+
+  stats(): VectorIndexStats {
+    const nativeStats = this.nativeIndex?.getStats();
+    const estimatedMemoryUsage = this.activeIds.size * (this.config?.dims ?? 0) * 4;
+    return {
+      vectorCount: nativeStats?.numElements ?? this.activeIds.size,
+      memoryUsage: estimatedMemoryUsage,
+      avgSearchTime:
+        nativeStats?.avgSearchTimeMs ??
+        (this.searchCount > 0 ? this.totalSearchTime / this.searchCount : 0),
+    };
+  }
+
+  private requireNativeIndex(): AgentDBNativeHNSWIndex {
+    if (!this.nativeIndex) {
+      throw new Error('AgentDBVectorIndex is not initialized. Call init() first.');
+    }
+    return this.nativeIndex;
+  }
+
+  private requireConfig(): VectorIndexConfig {
+    if (!this.config) {
+      throw new Error('AgentDBVectorIndex is not initialized. Call init() first.');
+    }
+    return this.config;
+  }
+
+  private createNativeIndex(): AgentDBNativeHNSWIndex {
+    const config = this.requireConfig();
+    const db = {
+      prepare: () => ({
+        all: () =>
+          Array.from(this.vectors.entries()).map(([id, embedding]) => ({
+            id,
+            embedding,
+          })),
+      }),
+    };
+
+    return new HNSWIndex(db, {
+      dimension: config.dims,
+      metric: toAgentDBMetric(config.metric),
+      M: config.M,
+      efConstruction: config.efConstruction,
+      efSearch: config.efConstruction,
+      maxElements: config.maxElements,
+      persistIndex: false,
+    }) as AgentDBNativeHNSWIndex;
+  }
+
+  private async rebuildNativeIndex(): Promise<void> {
+    this.nativeIndex = this.createNativeIndex();
+    if (this.vectors.size > 0) {
+      await this.nativeIndex.buildIndex('ivector_index');
+    }
+  }
+}
 
 // ===== AgentDB Backend Implementation =====
 

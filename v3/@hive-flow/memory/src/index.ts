@@ -181,7 +181,7 @@ export type {
 // ===== Core Components =====
 export { AgentDBAdapter } from './agentdb-adapter.js';
 export type { AgentDBAdapterConfig } from './agentdb-adapter.js';
-export { AgentDBBackend } from './agentdb-backend.js';
+export { AgentDBBackend, AgentDBVectorIndex } from './agentdb-backend.js';
 export type { AgentDBBackendConfig } from './agentdb-backend.js';
 export { SQLiteBackend } from './sqlite-backend.js';
 export type { SQLiteBackendConfig } from './sqlite-backend.js';
@@ -199,6 +199,7 @@ export type { BinaryBackendConfig } from './binary-backend.js';
 export { HnswLite, cosineSimilarity } from './hnsw-lite.js';
 export type { HnswSearchResult } from './hnsw-lite.js';
 export { HNSWIndex } from './hnsw-index.js';
+export type { IVectorIndex, VectorIndexConfig, VectorIndexStats } from './vector-index.js';
 export { CacheManager, TieredCacheManager } from './cache-manager.js';
 export { QueryBuilder, query, QueryTemplates } from './query-builder.js';
 export type { SortDirection, SortField } from './query-builder.js';
