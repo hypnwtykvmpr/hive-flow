@@ -118,6 +118,7 @@ async function evaluateWithLog(
     llm_jury_budget_dir: join(root, 'budget'),
     llm_jury_budget_max_calls: 12,
     llm_jury_budget_window_ms: 300_000,
+    disable_vote_learner: true,
     ...config,
   } as Partial<PermissionConfig>));
   const entries = readFileSync(logFile, 'utf8')
