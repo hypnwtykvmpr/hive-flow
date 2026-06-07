@@ -21,7 +21,7 @@ import { RvfaReader } from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const EXPECTED_SECTION_IDS = ['kernel', 'runtime', 'ruflo', 'models', 'data', 'verify'];
+const EXPECTED_SECTION_IDS = ['kernel', 'runtime', 'hive-flow', 'models', 'data', 'verify'];
 
 /** Paths to clean up after each test. */
 const cleanupPaths: string[] = [];
@@ -98,6 +98,18 @@ describe('RvfaBuilder', () => {
     for (const expected of EXPECTED_SECTION_IDS) {
       assert.ok(sectionIds.includes(expected), `Missing section: ${expected}`);
     }
+    assert.equal(sectionIds.length, EXPECTED_SECTION_IDS.length);
+  });
+
+  it('round-trips the Hive Flow section written by the builder', async () => {
+    const builder = makeBuilder('cloud');
+    const result = await builder.build();
+    const reader = RvfaReader.fromBuffer(readFileSync(result.outputPath));
+    assert.deepEqual(reader.getSections().map((s) => s.id), EXPECTED_SECTION_IDS);
+    const section = JSON.parse(reader.extractSection('hive-flow').toString('utf-8')) as Record<string, unknown>;
+    assert.equal(section.type, 'hive-flow');
+    assert.equal((section.package as Record<string, unknown>).name, 'hive-flow');
+    assert.equal(typeof (section.package as Record<string, unknown>).version, 'string');
   });
 
   it('section checksums validate', async () => {

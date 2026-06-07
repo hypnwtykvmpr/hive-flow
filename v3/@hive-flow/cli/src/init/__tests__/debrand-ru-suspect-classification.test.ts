@@ -18,13 +18,6 @@ const CLASSIFIED_SUSPECTS: ReadonlyMap<string, ClassifiedSuspect> = new Map([
     },
   ],
   [
-    'scripts/verify-appliance.sh:content:suspect legacy ru-prefixed token',
-    {
-      classification: 'migration-deferred',
-      reason: 'RVFA appliance verifier still targets ruflo/ruvllm binaries and is deferred to DB-RVFA migration.',
-    },
-  ],
-  [
     'v3/@hive-flow/cli/package.json:content:suspect legacy ru-prefixed token',
     {
       classification: 'compatibility-alias',
@@ -36,20 +29,6 @@ const CLASSIFIED_SUSPECTS: ReadonlyMap<string, ClassifiedSuspect> = new Map([
     {
       classification: 'migration-deferred',
       reason: 'RVFA/local-LLM appliance naming is deferred to DB-RVFA because it crosses serialized appliance boundaries.',
-    },
-  ],
-  [
-    'v3/@hive-flow/cli/src/appliance/ruvllm-bridge.ts:content:suspect legacy ru-prefixed token',
-    {
-      classification: 'migration-deferred',
-      reason: 'RVFA/local-LLM appliance naming is deferred to DB-RVFA because it crosses serialized appliance boundaries.',
-    },
-  ],
-  [
-    'v3/@hive-flow/cli/src/appliance/rvfa-builder.ts:content:suspect legacy ru-prefixed token',
-    {
-      classification: 'migration-deferred',
-      reason: 'Emits RVFA section/provider values; changing them requires DB-RVFA dual-read round-trip coverage.',
     },
   ],
   [

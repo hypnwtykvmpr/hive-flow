@@ -1,7 +1,7 @@
 /**
  * RVFA Appliance Builder -- Constructs self-contained .rvf appliance files.
  *
- * Creates a single binary containing kernel, runtime, Ruflo CLI, models/keys,
+ * Creates a single binary containing kernel, runtime, Hive Flow CLI, models/keys,
  * AgentDB data, and the verification suite. See ADR-058.
  */
 
@@ -21,7 +21,7 @@ export interface BuildOptions {
   profile: 'cloud' | 'hybrid' | 'offline';
   arch: string;
   output: string;
-  rufloVersion?: string;
+  hiveFlowVersion?: string;
   models?: string[];
   apiKeys?: string;
   verbose?: boolean;
@@ -46,7 +46,7 @@ const AES_ALG = 'aes-256-gcm' as const;
 
 // ── Catalog ──────────────────────────────────────────────────
 
-const RUFLO_COMMANDS = 'init agent swarm memory mcp task session config status start workflow hooks hive-mind daemon neural security performance providers plugins deployment embeddings claims migrate process doctor completions'.split(' ');
+const HIVE_FLOW_COMMANDS = 'init agent swarm memory mcp task session config status start workflow hooks hive-mind daemon neural security performance providers plugins deployment embeddings claims migrate process doctor completions'.split(' ');
 
 const AGENT_TYPES = 'coder reviewer tester planner researcher security-architect security-auditor memory-specialist performance-engineer hierarchical-coordinator mesh-coordinator adaptive-coordinator collective-intelligence-coordinator swarm-memory-manager byzantine-coordinator raft-manager gossip-coordinator consensus-builder crdt-synchronizer quorum-manager security-manager perf-analyzer performance-benchmarker task-orchestrator memory-coordinator smart-agent github-modes pr-manager code-review-swarm issue-tracker release-manager workflow-automation project-board-sync repo-architect multi-repo-swarm sparc-coord sparc-coder specification pseudocode architecture refinement backend-dev mobile-dev ml-developer cicd-engineer api-docs system-architect code-analyzer base-template-generator tdd-london-swarm production-validator'.split(' ');
 
@@ -99,7 +99,7 @@ export function decryptApiKeys(buf: Buffer, passphrase: string): Record<string, 
 
 // ── Builder ──────────────────────────────────────────────────
 
-type SectionId = 'kernel' | 'runtime' | 'ruflo' | 'models' | 'data' | 'verify';
+type SectionId = 'kernel' | 'runtime' | 'hive-flow' | 'models' | 'data' | 'verify';
 
 export class RvfaBuilder {
   private opts: Required<BuildOptions>;
@@ -109,7 +109,7 @@ export class RvfaBuilder {
       arch: options.arch || 'x86_64',
       profile: options.profile,
       output: resolve(options.output),
-      rufloVersion: options.rufloVersion || detectRufloVersion(),
+      hiveFlowVersion: options.hiveFlowVersion || detectHiveFlowVersion(),
       models: options.models ?? defaultModelsForProfile(options.profile),
       apiKeys: options.apiKeys ?? '',
       verbose: options.verbose ?? false,
@@ -126,7 +126,7 @@ export class RvfaBuilder {
     const stages: { id: SectionId; raw: Buffer; label: string }[] = [
       { id: 'kernel',  raw: this.buildKernelSection(),  label: 'Kernel (Alpine rootfs)' },
       { id: 'runtime', raw: this.buildRuntimeSection(), label: 'Runtime (Node.js + Claude Code)' },
-      { id: 'ruflo',   raw: this.buildRufloSection(),   label: 'Ruflo CLI' },
+      { id: 'hive-flow', raw: this.buildHiveFlowSection(), label: 'Hive Flow CLI' },
       { id: 'models',  raw: this.buildModelsSection(),  label: `Models (${this.opts.profile})` },
       { id: 'data',    raw: this.buildDataSection(),    label: 'Data (AgentDB)' },
       { id: 'verify',  raw: this.buildVerifySection(),  label: 'Verify (test suite)' },
@@ -176,7 +176,7 @@ export class RvfaBuilder {
     return jsonBuf({
       type: 'kernel', distribution: 'alpine', version: '3.23', arch: this.opts.arch,
       packages: ['busybox', 'dumb-init', 'musl'],
-      init: '/sbin/init -> ruflo-init (PID 1)',
+      init: '/sbin/init -> hive-flow-init (PID 1)',
       features: ['minimal rootfs', 'read-only root filesystem', 'tmpfs for /tmp and /run', 'seccomp profile applied'],
       sizeTarget: '~5MB compressed',
       note: 'Manifest-only: actual rootfs fetched during full build pipeline',
@@ -195,18 +195,18 @@ export class RvfaBuilder {
     });
   }
 
-  private buildRufloSection(): Buffer {
+  private buildHiveFlowSection(): Buffer {
     let packageMeta: Record<string, unknown> | null = null;
     try {
-      const raw = execSync('npm pack ruflo@latest --dry-run --json 2>/dev/null', { encoding: 'utf-8', timeout: 15_000 });
+      const raw = execSync('npm pack hive-flow@latest --dry-run --json 2>/dev/null', { encoding: 'utf-8', timeout: 15_000 });
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) packageMeta = parsed[0];
     } catch { /* manifest-only fallback */ }
 
     return jsonBuf({
-      type: 'ruflo', version: this.opts.rufloVersion,
-      package: packageMeta ?? { name: 'ruflo', version: this.opts.rufloVersion },
-      commands: RUFLO_COMMANDS, commandCount: RUFLO_COMMANDS.length,
+      type: 'hive-flow', version: this.opts.hiveFlowVersion,
+      package: packageMeta ?? { name: 'hive-flow', version: this.opts.hiveFlowVersion },
+      commands: HIVE_FLOW_COMMANDS, commandCount: HIVE_FLOW_COMMANDS.length,
       agents: AGENT_TYPES, agentCount: AGENT_TYPES.length,
       hooks: { count: HOOK_TYPES.length, types: HOOK_TYPES },
       workers: { count: WORKER_TYPES.length, types: WORKER_TYPES },
@@ -233,7 +233,7 @@ export class RvfaBuilder {
 
     if (p === 'hybrid') {
       const content: Record<string, unknown> = {
-        type: 'models', profile: 'hybrid', provider: 'hybrid', engine: 'ruvllm+api-vault',
+        type: 'models', profile: 'hybrid', provider: 'hybrid', engine: 'local-llm+api-vault',
         localModels: resolveModels(this.opts.models),
         routing: { tier1: { handler: 'agent-booster', latency: '<1ms' }, tier2: { handler: 'local-model', latency: '~200ms' }, tier3: { handler: 'cloud-api', latency: '2-5s' }, complexityThreshold: 0.3 },
       };
@@ -248,7 +248,7 @@ export class RvfaBuilder {
     // offline
     const names = this.opts.models.length > 0 ? this.opts.models : ['phi-3-mini-q4', 'qwen2.5-coder-3b-q4'];
     return jsonBuf({
-      type: 'models', profile: 'offline', provider: 'ruvllm', engine: 'ruvllm',
+      type: 'models', profile: 'offline', provider: 'local-llm', engine: 'local-llm',
       models: resolveModels(names),
       routing: { tier1: { handler: 'agent-booster-wasm', latency: '<1ms' }, tier2: { handler: 'phi-3-mini-q4', latency: '~200ms' }, tier3: { handler: 'qwen2.5-coder-3b-q4', latency: '~2s' }, fallbackToCloud: false },
       kvCache: { backend: 'rvf', persistence: true },
@@ -257,7 +257,7 @@ export class RvfaBuilder {
   }
 
   private buildDataSection(): Buffer {
-    // Empty RVF database header (matches rvf-backend.ts RVF\0 magic)
+    // Empty RVF database header (matches binary-backend.ts RVF\0 magic)
     const rvfMagic = Buffer.from([0x52, 0x56, 0x46, 0x00]);
     const hdrJson = Buffer.from(JSON.stringify({
       magic: 'RVF\0', version: 1, dimensions: 1536, metric: 'cosine',
@@ -289,10 +289,10 @@ export class RvfaBuilder {
       this.log(`    Bundled verify-appliance.sh (${fmtBytes(script.length)})`);
     } else {
       script = Buffer.from([
-        '#!/bin/sh', 'set -e', 'RUFLO_CMD="${RUFLO_CMD:-ruflo}"',
+        '#!/bin/sh', 'set -e', 'HIVE_FLOW_CMD="${HIVE_FLOW_CMD:-hive-flow}"',
         'echo "Running basic verification..."',
-        '$RUFLO_CMD --version && echo "  OK: CLI" || echo "  FAIL: CLI"',
-        '$RUFLO_CMD doctor && echo "  OK: Doctor" || echo "  FAIL: Doctor"',
+        '$HIVE_FLOW_CMD --version && echo "  OK: CLI" || echo "  FAIL: CLI"',
+        '$HIVE_FLOW_CMD doctor && echo "  OK: Doctor" || echo "  FAIL: Doctor"',
         'echo "Verification complete."',
       ].join('\n'), 'utf-8');
       this.log('    Using stub verify script (verify-appliance.sh not found)');
@@ -311,13 +311,13 @@ export class RvfaBuilder {
   // ── Header ───────────────────────────────────────────────
 
   private buildHeaderPartial(): Partial<RvfaHeader> {
-    const providerMap: Record<string, RvfaModelConfig['provider']> = { cloud: 'api-vault', hybrid: 'hybrid', offline: 'ruvllm' };
+    const providerMap: Record<string, RvfaModelConfig['provider']> = { cloud: 'api-vault', hybrid: 'hybrid', offline: 'local-llm' };
     const caps = ['cli-26-commands', 'agents-60-plus', 'hooks-17', 'workers-12', 'mcp-215-tools', 'agentdb-rvf', 'hnsw-search', 'sona-patterns', 'security-scanning', 'performance-profiling', 'hive-mind-consensus', 'plugin-registry'];
-    if (this.opts.profile !== 'cloud') caps.push('local-inference-ruvllm');
+    if (this.opts.profile !== 'cloud') caps.push('local-inference-local-llm');
     if (this.opts.profile !== 'offline') caps.push('cloud-api-vault');
 
     const boot: RvfaBootConfig = {
-      entrypoint: '/opt/ruflo/bin/cli.js',
+      entrypoint: '/opt/hive-flow/bin/cli.js',
       args: ['--profile', this.opts.profile],
       env: { NODE_ENV: 'production', HIVE_FLOW_MEMORY_BACKEND: 'hybrid', HIVE_FLOW_LOG_LEVEL: 'info' },
       isolation: this.opts.profile === 'cloud' ? 'container' : 'native',
@@ -325,13 +325,13 @@ export class RvfaBuilder {
 
     const models: RvfaModelConfig = {
       provider: providerMap[this.opts.profile],
-      engine: this.opts.profile === 'cloud' ? undefined : 'ruvllm-0.1.0',
+      engine: this.opts.profile === 'cloud' ? undefined : 'local-llm-0.1.0',
       models: this.opts.models.length > 0 ? this.opts.models : undefined,
       vaultEncryption: this.opts.profile !== 'offline' ? 'aes-256-gcm' : undefined,
     };
 
     return {
-      magic: 'RVFA', version: 1, name: 'ruflo-appliance', appVersion: this.opts.rufloVersion,
+      magic: 'RVFA', version: 1, name: 'hive-flow-appliance', appVersion: this.opts.hiveFlowVersion,
       arch: this.opts.arch, platform: 'linux', profile: this.opts.profile,
       created: new Date().toISOString(), boot, models, capabilities: caps,
     };
@@ -363,7 +363,7 @@ function parseEnvFile(content: string): Record<string, string> {
   return result;
 }
 
-function detectRufloVersion(): string {
+function detectHiveFlowVersion(): string {
   try {
     const p = resolve(dirname(new URL(import.meta.url).pathname), '../../package.json');
     if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf-8')).version ?? '3.5.0';

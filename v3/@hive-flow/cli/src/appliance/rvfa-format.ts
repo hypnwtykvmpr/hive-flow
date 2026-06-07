@@ -1,6 +1,6 @@
 /**
- * RVFA (RuVector Format Appliance) — Binary format reader/writer
- * for self-contained Ruflo appliances.
+ * RVFA (Hive Flow appliance format) -- Binary format reader/writer
+ * for self-contained Hive Flow appliances.
  *
  * Binary layout:
  *   [4B magic "RVFA"] [4B version u32LE] [4B header_len u32LE]
@@ -62,7 +62,7 @@ export interface RvfaBootConfig {
 }
 
 export interface RvfaModelConfig {
-  provider: 'ruvllm' | 'api-vault' | 'hybrid';
+  provider: 'local-llm' | 'ruvllm' | 'api-vault' | 'hybrid';
   engine?: string;
   models?: string[];
   vaultEncryption?: string;
@@ -101,21 +101,21 @@ export function createDefaultHeader(
     cloud: { provider: 'api-vault', vaultEncryption: 'aes-256-gcm' },
     hybrid: {
       provider: 'hybrid',
-      engine: 'ruvllm-0.1.0',
+      engine: 'local-llm-0.1.0',
       models: ['phi-3-mini-q4'],
       vaultEncryption: 'aes-256-gcm',
     },
     offline: {
-      provider: 'ruvllm',
-      engine: 'ruvllm-0.1.0',
+      provider: 'local-llm',
+      engine: 'local-llm-0.1.0',
       models: ['phi-3-mini-q4'],
     },
   };
 
   const capDefaults: Record<string, string[]> = {
     cloud: ['mcp', 'swarm', 'memory', 'hooks', 'neural', 'api-vault'],
-    hybrid: ['mcp', 'swarm', 'memory', 'hooks', 'neural', 'ruvllm', 'api-vault'],
-    offline: ['mcp', 'swarm', 'memory', 'hooks', 'neural', 'ruvllm'],
+    hybrid: ['mcp', 'swarm', 'memory', 'hooks', 'neural', 'local-llm', 'api-vault'],
+    offline: ['mcp', 'swarm', 'memory', 'hooks', 'neural', 'local-llm'],
   };
 
   return {
@@ -129,7 +129,7 @@ export function createDefaultHeader(
     created: new Date().toISOString(),
     sections: [],
     boot: {
-      entrypoint: '/opt/ruflo/bin/ruflo',
+      entrypoint: '/opt/hive-flow/bin/hive-flow',
       args: ['--appliance'],
       env: {},
       isolation: profile === 'cloud' ? 'container' : 'native',
@@ -158,7 +158,7 @@ export function validateHeader(header: unknown): header is RvfaHeader {
   if (!oneOf(boot.isolation, ['container', 'microvm', 'native'])) return false;
 
   if (!obj(h.models)) return false;
-  if (!oneOf((h.models as Record<string, unknown>).provider, ['ruvllm', 'api-vault', 'hybrid'])) return false;
+  if (!oneOf((h.models as Record<string, unknown>).provider, ['local-llm', 'ruvllm', 'api-vault', 'hybrid'])) return false;
 
   for (const sec of h.sections as unknown[]) {
     if (!obj(sec)) return false;
@@ -193,7 +193,7 @@ export class RvfaWriter {
   /**
    * Add a section to the appliance image.
    *
-   * @param id      Section identifier (e.g. 'kernel', 'runtime', 'ruflo').
+   * @param id      Section identifier (e.g. 'kernel', 'runtime', 'hive-flow').
    * @param data    Raw (uncompressed) section payload.
    * @param options Optional compression and MIME type overrides.
    */

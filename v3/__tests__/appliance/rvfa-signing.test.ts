@@ -49,17 +49,17 @@ function tmpDir(): string {
   return d;
 }
 
-function buildTestRvfa(name = 'test-appliance'): Buffer {
+function buildTestRvfa(name = 'test-appliance', cliSectionId = 'hive-flow'): Buffer {
   const header = createDefaultHeader('cloud');
   const writer = new RvfaWriter({ ...header, name });
   writer.addSection('kernel', Buffer.from('kernel-data'), { compression: 'none' });
   writer.addSection('runtime', Buffer.from('runtime-data'), { compression: 'none' });
-  writer.addSection('ruflo', Buffer.from('ruflo-data'), { compression: 'none' });
+  writer.addSection(cliSectionId, Buffer.from('hive-flow-data'), { compression: 'none' });
   return writer.build();
 }
 
-function writeTestRvfa(name = 'test-appliance'): string {
-  const buf = buildTestRvfa(name);
+function writeTestRvfa(name = 'test-appliance', cliSectionId = 'hive-flow'): string {
+  const buf = buildTestRvfa(name, cliSectionId);
   const p = tmpPath('.rvf');
   writeFileSync(p, buf);
   return p;
@@ -202,6 +202,18 @@ describe('RvfaSigner.signAppliance', () => {
     const header = reader.getHeader();
     assert.equal(header.name, 'test-appliance');
     assert.ok((header as Record<string, unknown>).signature, 'Header should contain signature field');
+  });
+
+  it('still signs legacy appliances with the old CLI section id', async () => {
+    const kp = await generateKeyPair();
+    const signer = new RvfaSigner(kp.privateKey);
+    const rvfaPath = writeTestRvfa('legacy-sign-test', 'ruflo');
+
+    await signer.signAppliance(rvfaPath);
+
+    const header = RvfaReader.fromBuffer(readFileSync(rvfaPath)).getHeader();
+    assert.ok(header.sections.some((section) => section.id === 'ruflo'));
+    assert.ok((header as Record<string, unknown>).signature);
   });
 });
 

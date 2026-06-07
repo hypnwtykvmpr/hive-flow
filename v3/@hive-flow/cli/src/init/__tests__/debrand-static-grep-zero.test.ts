@@ -6,28 +6,8 @@ import { isScannedTextFile, REPO_ROOT, trackedFilesForShippedSurfaces } from './
 
 const CLASSIFIED_STATIC_EXCEPTIONS: ReadonlyMap<string, string> = new Map([
   [
-    'v3/@hive-flow/cli/src/appliance/rvfa-builder.ts:content:dropped legacy umbrella brand',
-    'RVFA serialized section/package identity is deferred to DB-RVFA dual-read migration.',
-  ],
-  [
-    'v3/@hive-flow/cli/src/appliance/rvfa-format.ts:content:old RuVector brand',
-    'RVFA format name is an on-disk identity and is deferred to DB-RVFA/DB-6 handling.',
-  ],
-  [
-    'v3/@hive-flow/cli/src/appliance/rvfa-format.ts:content:dropped legacy umbrella brand',
-    'RVFA default boot/format strings are deferred to DB-RVFA dual-read migration.',
-  ],
-  [
     'v3/@hive-flow/cli/src/appliance/rvfa-runner.ts:content:dropped legacy umbrella brand',
     'RVFA reader section identity is deferred to DB-RVFA dual-read migration.',
-  ],
-  [
-    'scripts/verify-appliance.sh:content:old RuVector brand',
-    'RVFA appliance verification command and expected binary naming are deferred to DB-RVFA migration.',
-  ],
-  [
-    'scripts/verify-appliance.sh:content:dropped legacy umbrella brand',
-    'RVFA appliance verification command and expected binary naming are deferred to DB-RVFA migration.',
   ],
   [
     'scripts/install.sh:content:npm install guidance',

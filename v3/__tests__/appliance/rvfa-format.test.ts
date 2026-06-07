@@ -28,7 +28,7 @@ function makeWriter(profile: 'cloud' | 'hybrid' | 'offline' = 'cloud') {
 function addTestSections(writer: RvfaWriter): void {
   writer.addSection('kernel', Buffer.from('kernel-payload'), { compression: 'none' });
   writer.addSection('runtime', Buffer.from('runtime-payload'), { compression: 'gzip' });
-  writer.addSection('ruflo', Buffer.from('ruflo-payload'), { compression: 'none' });
+  writer.addSection('hive-flow', Buffer.from('hive-flow-payload'), { compression: 'none' });
 }
 
 // -- 1. Format constants ------------------------------------------------------
@@ -60,12 +60,15 @@ describe('createDefaultHeader', () => {
     });
   }
 
-  it('cloud profile does not include ruvllm capability', () => {
-    assert.ok(!createDefaultHeader('cloud').capabilities.includes('ruvllm'));
+  it('cloud profile does not include local model capability', () => {
+    assert.ok(!createDefaultHeader('cloud').capabilities.includes('local-llm'));
   });
 
-  it('offline profile includes ruvllm capability', () => {
-    assert.ok(createDefaultHeader('offline').capabilities.includes('ruvllm'));
+  it('offline profile writes the local model provider and capability', () => {
+    const header = createDefaultHeader('offline');
+    assert.equal(header.models.provider, 'local-llm');
+    assert.equal(header.models.engine, 'local-llm-0.1.0');
+    assert.ok(header.capabilities.includes('local-llm'));
   });
 });
 
@@ -114,6 +117,20 @@ describe('validateHeader', () => {
     const h = createDefaultHeader('cloud');
     (h.models as Record<string, unknown>).provider = 'bad';
     assert.equal(validateHeader(h), false);
+  });
+
+  it('accepts the new local model provider', () => {
+    const h = createDefaultHeader('offline');
+    h.models.provider = 'local-llm';
+    h.models.engine = 'local-llm-0.1.0';
+    assert.ok(validateHeader(h));
+  });
+
+  it('accepts the legacy local model provider for old appliances', () => {
+    const h = createDefaultHeader('offline');
+    h.models.provider = 'ruvllm';
+    h.models.engine = 'ruvllm-0.1.0';
+    assert.ok(validateHeader(h));
   });
 });
 
@@ -190,7 +207,7 @@ describe('RvfaWriter', () => {
     const writer = makeWriter();
     writer.addSection('kernel', Buffer.from('aaa'), { compression: 'none' });
     writer.addSection('runtime', Buffer.from('bbbbb'), { compression: 'none' });
-    writer.addSection('ruflo', Buffer.from('ccccccc'), { compression: 'none' });
+    writer.addSection('hive-flow', Buffer.from('ccccccc'), { compression: 'none' });
 
     const reader = RvfaReader.fromBuffer(writer.build());
     const sections = reader.getSections();
@@ -288,14 +305,25 @@ describe('RvfaReader', () => {
     const writer = makeWriter();
     writer.addSection('kernel', Buffer.from('k'), { compression: 'none' });
     writer.addSection('runtime', Buffer.from('r'), { compression: 'none' });
-    writer.addSection('ruflo', Buffer.from('f'), { compression: 'none' });
+    writer.addSection('hive-flow', Buffer.from('f'), { compression: 'none' });
     writer.addSection('models', Buffer.from('m'), { compression: 'none' });
     writer.addSection('data', Buffer.from('d'), { compression: 'none' });
     writer.addSection('verify', Buffer.from('v'), { compression: 'none' });
     const reader = RvfaReader.fromBuffer(writer.build());
     assert.equal(reader.getSections().length, 6);
     assert.equal(reader.extractSection('kernel').toString(), 'k');
+    assert.equal(reader.extractSection('hive-flow').toString(), 'f');
     assert.equal(reader.extractSection('verify').toString(), 'v');
+  });
+
+  it('still reads legacy appliances with the old CLI section id', () => {
+    const writer = makeWriter();
+    writer.addSection('kernel', Buffer.from('k'), { compression: 'none' });
+    writer.addSection('runtime', Buffer.from('r'), { compression: 'none' });
+    writer.addSection('ruflo', Buffer.from('legacy-cli'), { compression: 'none' });
+
+    const reader = RvfaReader.fromBuffer(writer.build());
+    assert.equal(reader.extractSection('ruflo').toString(), 'legacy-cli');
   });
 
   it('throws when extracting a nonexistent section', () => {

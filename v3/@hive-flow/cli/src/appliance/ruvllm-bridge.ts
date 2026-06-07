@@ -1,12 +1,12 @@
 /**
- * ruvLLM Bridge -- local language model inference
+ * Local LLM Bridge -- local language model inference
  *
  * Provides 3-tier routing:
  *   Tier 1: Agent Booster (<1ms) -- simple transforms
- *   Tier 2: Local model via ruvLLM (~200ms) -- routing, classification
+ *   Tier 2: Local model via GGUF (~200ms) -- routing, classification
  *   Tier 3: Cloud API (2-5s) -- complex reasoning
  *
- * @module @hive-flow/cli/appliance/ruvllm-bridge
+ * @module @hive-flow/cli/appliance/local-llm-bridge
  */
 
 import { readdir, stat } from 'node:fs/promises';
@@ -15,7 +15,7 @@ import type { GgufEngine as GgufEngineType } from './gguf-engine.js';
 
 // ── Configuration ───────────────────────────────────────────
 
-export interface RuvllmConfig {
+export interface LocalLlmConfig {
   modelsDir: string;         // Path to GGUF model files
   defaultModel?: string;     // Default model name
   maxTokens?: number;        // Default max tokens
@@ -25,7 +25,7 @@ export interface RuvllmConfig {
   verbose?: boolean;
 }
 
-const DEFAULT_CONFIG: Required<RuvllmConfig> = {
+const DEFAULT_CONFIG: Required<LocalLlmConfig> = {
   modelsDir: './models', defaultModel: '', maxTokens: 512,
   temperature: 0.7, contextSize: 4096, kvCachePath: '', verbose: false,
 };
@@ -69,9 +69,9 @@ export interface TierRouting {
 export interface BridgeStatus {
   available: boolean;
   ggufEngine: boolean;
-  ruvectorCore: boolean;
-  ruvectorRouter: boolean;
-  ruvectorSona: boolean;
+  hivectorCore: boolean;
+  hivectorRouter: boolean;
+  hivectorSona: boolean;
   modelsLoaded: string[];
   kvCacheSize: number;
 }
@@ -118,15 +118,15 @@ function estimateComplexity(desc: string): number {
 
 // ── Bridge ──────────────────────────────────────────────────
 
-export class RuvllmBridge {
-  private config: Required<RuvllmConfig>;
+export class LocalLlmBridge {
+  private config: Required<LocalLlmConfig>;
   private models: Map<string, ModelInfo> = new Map();
   private activeModel: string | null = null;
   private kvCacheEntries = 0;
   private ggufEngine: GgufEngineType | null = null;
 
-  constructor(config: RuvllmConfig) {
-    if (!config.modelsDir) throw new Error('RuvllmConfig.modelsDir is required');
+  constructor(config: LocalLlmConfig) {
+    if (!config.modelsDir) throw new Error('LocalLlmConfig.modelsDir is required');
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
@@ -151,8 +151,8 @@ export class RuvllmBridge {
 
     if (this.config.verbose) {
       const pkgs = [this.ggufEngine && 'gguf-engine'].filter(Boolean);
-      if (pkgs.length) console.log(`[ruvLLM] Loaded: ${pkgs.join(', ')}`);
-      console.log(`[ruvLLM] ${this.models.size} model(s) in ${this.config.modelsDir}`);
+      if (pkgs.length) console.log(`[local-llm] Loaded: ${pkgs.join(', ')}`);
+      console.log(`[local-llm] ${this.models.size} model(s) in ${this.config.modelsDir}`);
     }
   }
 
@@ -206,7 +206,7 @@ export class RuvllmBridge {
           return { text: r.text, model: modelName, tokensUsed: r.tokensUsed, latencyMs: performance.now() - start, tier: 2, cached: false };
         }
       } catch (err) {
-        if (this.config.verbose) console.warn('[ruvLLM] Local generation failed, tier 3 fallback:', err);
+        if (this.config.verbose) console.warn('[local-llm] Local generation failed, tier 3 fallback:', err);
       }
     }
 
@@ -229,9 +229,9 @@ export class RuvllmBridge {
     return {
       available: this.models.size > 0 || this.ggufEngine !== null,
       ggufEngine: this.ggufEngine !== null,
-      ruvectorCore: false,
-      ruvectorRouter: false,
-      ruvectorSona: false,
+      hivectorCore: false,
+      hivectorRouter: false,
+      hivectorSona: false,
       modelsLoaded: [...this.models.values()].filter((m) => m.loaded).map((m) => m.name),
       kvCacheSize: this.kvCacheEntries,
     };
@@ -287,19 +287,19 @@ export class RuvllmBridge {
 
 // ── Singleton accessor ──────────────────────────────────────
 
-let instance: RuvllmBridge | null = null;
+let instance: LocalLlmBridge | null = null;
 
-/** Get or create the singleton RuvllmBridge. Config required on first call. */
-export function getRuvllmBridge(config?: RuvllmConfig): RuvllmBridge {
-  if (!instance && config) instance = new RuvllmBridge(config);
-  if (!instance) throw new Error('ruvLLM bridge not initialized. Call with config first.');
+/** Get or create the singleton LocalLlmBridge. Config required on first call. */
+export function getLocalLlmBridge(config?: LocalLlmConfig): LocalLlmBridge {
+  if (!instance && config) instance = new LocalLlmBridge(config);
+  if (!instance) throw new Error('local-llm bridge not initialized. Call with config first.');
   return instance;
 }
 
 /** Reset the singleton (useful for tests). */
-export function resetRuvllmBridge(): void { instance = null; }
+export function resetLocalLlmBridge(): void { instance = null; }
 
 /** Check whether the local GGUF engine module is importable without loading the bridge. */
-export async function isRuvllmAvailable(): Promise<boolean> {
+export async function isLocalLlmAvailable(): Promise<boolean> {
   try { await import('./gguf-engine.js'); return true; } catch { return false; }
 }

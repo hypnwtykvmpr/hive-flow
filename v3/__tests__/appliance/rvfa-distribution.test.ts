@@ -58,7 +58,7 @@ function buildTestRvfa(
   const secs = sections ?? [
     { id: 'kernel', data: 'kernel-payload-original' },
     { id: 'runtime', data: 'runtime-payload-original' },
-    { id: 'ruflo', data: 'ruflo-payload-original' },
+    { id: 'hive-flow', data: 'hive-flow-payload-original' },
   ];
   for (const s of secs) {
     writer.addSection(s.id, Buffer.from(s.data), { compression: 'none' });
@@ -280,8 +280,31 @@ describe('RvfaPatcher.applyPatch', () => {
     const runtime = reader.extractSection('runtime');
     assert.equal(runtime.toString('utf-8'), 'runtime-payload-original');
 
-    const ruflo = reader.extractSection('ruflo');
-    assert.equal(ruflo.toString('utf-8'), 'ruflo-payload-original');
+    const hiveFlow = reader.extractSection('hive-flow');
+    assert.equal(hiveFlow.toString('utf-8'), 'hive-flow-payload-original');
+  });
+
+  it('still patches legacy appliances with the old CLI section id', async () => {
+    const rvfaPath = writeTestRvfa('legacy-patch-app', '3.5.0', [
+      { id: 'kernel', data: 'kernel-payload-original' },
+      { id: 'runtime', data: 'runtime-payload-original' },
+      { id: 'ruflo', data: 'legacy-cli-payload-original' },
+    ]);
+
+    const patch = await RvfaPatcher.createPatch({
+      targetName: 'legacy-patch-app',
+      targetVersion: '3.5.0',
+      sectionId: 'kernel',
+      sectionData: Buffer.from('brand-new-kernel-payload'),
+      patchVersion: '1.0.0',
+    });
+
+    const result = await RvfaPatcher.applyPatch(rvfaPath, patch, { verify: true });
+
+    assert.ok(result.success, `Apply failed: ${result.errors.join(', ')}`);
+    const reader = RvfaReader.fromBuffer(readFileSync(rvfaPath));
+    assert.equal(reader.extractSection('kernel').toString('utf-8'), 'brand-new-kernel-payload');
+    assert.equal(reader.extractSection('ruflo').toString('utf-8'), 'legacy-cli-payload-original');
   });
 
   it('creates a backup file', async () => {

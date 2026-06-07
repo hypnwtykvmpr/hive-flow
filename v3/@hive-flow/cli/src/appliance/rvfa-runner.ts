@@ -1,5 +1,5 @@
 /**
- * RVFA Runner -- Boot and run self-contained Ruflo appliances.
+ * RVFA Runner -- Boot and run self-contained Hive Flow appliances.
  *
  * Supports three run modes (cli, mcp, verify) and two isolation
  * strategies (native Node.js, container via Docker).
@@ -61,11 +61,6 @@ function spawnAsync(
 const fail = (stderr: string): RunResult => ({ exitCode: 1, stdout: '', stderr, duration: 0 });
 const cleanup = (dir: string) => rm(dir, { recursive: true, force: true }).catch(() => {}); // intentional: fire-and-forget temp dir removal
 
-/** Check whether the reader has a section with the given id. */
-function hasSection(reader: RvfaReader, id: string): boolean {
-  return reader.getSections().some((s) => s.id === id);
-}
-
 /** Safely extract a section, returning null if absent. */
 function tryExtract(reader: RvfaReader, id: string): Buffer | null {
   try {
@@ -73,6 +68,14 @@ function tryExtract(reader: RvfaReader, id: string): Buffer | null {
   } catch {
     return null;
   }
+}
+
+function extractHiveFlowSection(reader: RvfaReader): Buffer | null {
+  return tryExtract(reader, 'hive-flow') ?? tryExtract(reader, 'ruflo');
+}
+
+function isLocalOnlyProvider(provider: string): boolean {
+  return provider === 'local-llm' || provider === 'ruvllm';
 }
 
 // ── Runner ──────────────────────────────────────────────────
@@ -113,7 +116,7 @@ export class RvfaRunner {
   }
 
   /**
-   * Run natively via Node.js: extract RUFLO section to a temp dir,
+   * Run natively via Node.js: extract the Hive Flow section to a temp dir,
    * configure env vars, optionally decrypt API-key vault, and spawn.
    */
   async runNative(options: RunOptions): Promise<RunResult> {
@@ -121,11 +124,11 @@ export class RvfaRunner {
     try {
       await mkdir(workDir, { recursive: true });
 
-      const ruflo = tryExtract(this.reader, 'ruflo');
-      if (!ruflo) return fail('RVFA appliance does not contain a "ruflo" section');
+      const hiveFlow = extractHiveFlowSection(this.reader);
+      if (!hiveFlow) return fail('RVFA appliance does not contain a "hive-flow" section');
 
-      const entryFile = join(workDir, 'ruflo-bundle.js');
-      await writeFile(entryFile, ruflo);
+      const entryFile = join(workDir, 'hive-flow-bundle.js');
+      await writeFile(entryFile, hiveFlow);
 
       const env: Record<string, string> = {
         ...this.header.boot.env,
@@ -135,7 +138,7 @@ export class RvfaRunner {
         RVFA_PROFILE: this.header.profile,
       };
 
-      if (options.passphrase && this.header.models.provider !== 'ruvllm') {
+      if (options.passphrase && !isLocalOnlyProvider(this.header.models.provider)) {
         const vault = tryExtract(this.reader, 'models');
         if (vault) {
           const keys = await this.decryptVault(vault, options.passphrase);
@@ -146,7 +149,7 @@ export class RvfaRunner {
       const args = [...this.header.boot.args];
       if (options.mode === 'mcp') args.push('--mcp', '--transport', 'stdio');
 
-      return spawnAsync(this.header.boot.entrypoint || 'node', [entryFile, ...args], {
+      return await spawnAsync(this.header.boot.entrypoint || 'node', [entryFile, ...args], {
         cwd: workDir, env, verbose: options.verbose,
       });
     } finally {
@@ -168,9 +171,9 @@ export class RvfaRunner {
     try {
       await mkdir(workDir, { recursive: true });
 
-      const ruflo = tryExtract(this.reader, 'ruflo');
-      if (!ruflo) return fail('RVFA appliance does not contain a "ruflo" section');
-      await writeFile(join(workDir, 'ruflo-bundle.js'), ruflo);
+      const hiveFlow = extractHiveFlowSection(this.reader);
+      if (!hiveFlow) return fail('RVFA appliance does not contain a "hive-flow" section');
+      await writeFile(join(workDir, 'hive-flow-bundle.js'), hiveFlow);
 
       const data = tryExtract(this.reader, 'data');
       if (data) await writeFile(join(workDir, 'data.bin'), data);
@@ -182,8 +185,8 @@ export class RvfaRunner {
       const baseImage = this.header.platform === 'alpine' ? 'node:20-alpine' : 'node:20-slim';
       const cmdArgs = this.header.boot.args.map((a) => `, "${a}"`).join('');
       const dockerfile = [
-        `FROM ${baseImage}`, 'WORKDIR /app', 'COPY ruflo-bundle.js .',
-        data ? 'COPY data.bin .' : '', `CMD ["node", "ruflo-bundle.js"${cmdArgs}]`,
+        `FROM ${baseImage}`, 'WORKDIR /app', 'COPY hive-flow-bundle.js .',
+        data ? 'COPY data.bin .' : '', `CMD ["node", "hive-flow-bundle.js"${cmdArgs}]`,
       ].filter(Boolean).join('\n');
       await writeFile(join(workDir, 'Dockerfile'), dockerfile);
 
@@ -195,7 +198,7 @@ export class RvfaRunner {
         return { ...build, stderr: `Docker build failed:\n${build.stderr}` };
       }
 
-      return spawnAsync('docker', ['run', '--rm', ...envFlags, imageName], { verbose: options.verbose });
+      return await spawnAsync('docker', ['run', '--rm', ...envFlags, imageName], { verbose: options.verbose });
     } finally {
       await cleanup(workDir);
     }
@@ -230,7 +233,7 @@ export class RvfaRunner {
     try {
       await mkdir(workDir, { recursive: true });
       await writeFile(join(workDir, 'verify.js'), verifyPayload);
-      return spawnAsync('node', [join(workDir, 'verify.js')], {
+      return await spawnAsync('node', [join(workDir, 'verify.js')], {
         cwd: workDir, verbose: options.verbose,
         env: { RVFA_APPLIANCE_NAME: this.header.name, RVFA_APPLIANCE_VERSION: this.header.appVersion },
       });
