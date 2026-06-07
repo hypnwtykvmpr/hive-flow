@@ -76,6 +76,7 @@ function malformedInput(sessionId = 'llm-jury-malformed-session'): HookInput {
 async function loadHarness(options: {
   inlineResult?: InlineJuryResult;
   mockLLM?: boolean;
+  llmUnavailable?: boolean;
 } = {}): Promise<Harness> {
   const evaluateInlineJury = vi.fn(() => options.inlineResult ?? ambiguous('APPROVED', 'low'));
   const evaluateLLMJury = vi.fn();
@@ -85,7 +86,10 @@ async function loadHarness(options: {
 
   vi.doMock('../jury-evaluator.js', () => ({ evaluateInlineJury }));
   vi.doMock('../vote-learner.js', () => ({ checkLearnedPattern, normalizeCommand, recordVerdict }));
-  if (options.mockLLM !== false) {
+  if (options.llmUnavailable) {
+    evaluateLLMJury.mockResolvedValue(null);
+    vi.doMock('../llm-jury.js', () => ({ evaluateLLMJury }));
+  } else if (options.mockLLM !== false) {
     vi.doMock('../llm-jury.js', () => ({ evaluateLLMJury }));
   } else {
     vi.doUnmock('../llm-jury.js');
@@ -251,9 +255,9 @@ describe('Stage-2 LLM jury seam', () => {
     expect(lastLayer(run)).toBe('inline-jury');
   });
 
-  it('preserves current ambiguous fallback behavior when the real provider module is unavailable', async () => {
+  it('preserves current ambiguous fallback behavior when the LLM provider is unavailable', async () => {
     const root = makeTempRoot('llm-jury-real-null');
-    const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low'), mockLLM: false });
+    const harness = await loadHarness({ inlineResult: ambiguous('APPROVED', 'low'), llmUnavailable: true });
 
     const lowRun = await evaluateWithLog(harness, bashInput('custom --real-provider-null-low', 'real-null-low'), root);
     harness.evaluateInlineJury.mockReturnValue(ambiguous('DENIED', 'high'));
@@ -263,5 +267,6 @@ describe('Stage-2 LLM jury seam', () => {
     expect(lastLayer(lowRun)).toBe('inline-jury');
     expect(highRun.result.decision).toBe('deny');
     expect(lastLayer(highRun)).toBe('inline-jury');
+    expect(harness.evaluateLLMJury).toHaveBeenCalledTimes(2);
   });
 });
