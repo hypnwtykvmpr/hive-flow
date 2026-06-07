@@ -19,13 +19,17 @@ import {
   type QLearningRouter,
   type RouteDecision,
 } from '../hivector/index.js';
+import {
+  isCanonicalAgentType,
+  type CanonicalAgentType,
+} from '../agents/roster.js';
 
 // ============================================================================
 // Agent Type Definitions
 // ============================================================================
 
-interface AgentType {
-  id: string;
+export interface AgentType {
+  id: CanonicalAgentType;
   name: string;
   description: string;
   capabilities: string[];
@@ -35,16 +39,31 @@ interface AgentType {
 /**
  * Available agent types for routing
  */
-const AGENT_TYPES: AgentType[] = [
-  { id: 'coder', name: 'Coder', description: 'Implements features and writes code', capabilities: ['coding', 'implementation', 'refactoring'], priority: 1 },
+export const ROUTE_AGENT_TYPES: AgentType[] = [
+  { id: 'implementer', name: 'Implementer', description: 'Implements features and writes code', capabilities: ['coding', 'implementation', 'refactoring'], priority: 1 },
   { id: 'tester', name: 'Tester', description: 'Creates tests and validates functionality', capabilities: ['testing', 'validation', 'quality'], priority: 2 },
-  { id: 'reviewer', name: 'Reviewer', description: 'Reviews code quality and security', capabilities: ['review', 'security', 'best-practices'], priority: 3 },
+  { id: 'verifier', name: 'Verifier', description: 'Reviews code quality and verifies correctness', capabilities: ['review', 'verification', 'quality'], priority: 3 },
   { id: 'architect', name: 'Architect', description: 'Designs system architecture', capabilities: ['design', 'architecture', 'planning'], priority: 4 },
   { id: 'researcher', name: 'Researcher', description: 'Researches requirements and patterns', capabilities: ['research', 'analysis', 'documentation'], priority: 5 },
-  { id: 'optimizer', name: 'Optimizer', description: 'Optimizes performance and efficiency', capabilities: ['optimization', 'performance', 'profiling'], priority: 6 },
+  { id: 'performance-engineer', name: 'Performance Engineer', description: 'Optimizes performance and efficiency', capabilities: ['optimization', 'performance', 'profiling'], priority: 6 },
   { id: 'debugger', name: 'Debugger', description: 'Debugs issues and fixes bugs', capabilities: ['debugging', 'troubleshooting', 'fixing'], priority: 7 },
   { id: 'documenter', name: 'Documenter', description: 'Creates and updates documentation', capabilities: ['documentation', 'writing', 'explaining'], priority: 8 },
 ];
+
+const AGENT_TYPES = ROUTE_AGENT_TYPES;
+
+export const ROUTER_TARGET_ALIASES = {
+  coder: 'implementer',
+  reviewer: 'verifier',
+  optimizer: 'performance-engineer',
+  formatter: 'implementer',
+  linter: 'verifier',
+} as const satisfies Record<string, CanonicalAgentType>;
+
+export function resolveRouterTarget(route: string): CanonicalAgentType | undefined {
+  if (isCanonicalAgentType(route)) return route;
+  return ROUTER_TARGET_ALIASES[route as keyof typeof ROUTER_TARGET_ALIASES];
+}
 
 // ============================================================================
 // Router Singleton
@@ -70,8 +89,10 @@ async function getRouter(): Promise<QLearningRouter> {
 /**
  * Get agent type by route name
  */
-function getAgentType(route: string): AgentType | undefined {
-  return AGENT_TYPES.find(a => a.id === route);
+export function getAgentType(route: string): AgentType | undefined {
+  const target = resolveRouterTarget(route);
+  if (!target) return undefined;
+  return AGENT_TYPES.find(a => a.id === target);
 }
 
 // ============================================================================
@@ -113,7 +134,7 @@ const routeTaskCommand: Command = {
   examples: [
     { command: 'hive-flow route task "implement authentication"', description: 'Route task to best agent' },
     { command: 'hive-flow route task "write unit tests" --q-learning', description: 'Use Q-Learning routing' },
-    { command: 'hive-flow route task "review code" --agent reviewer', description: 'Force specific agent' },
+    { command: 'hive-flow route task "review code" --agent verifier', description: 'Force specific agent' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const taskDescription = ctx.args[0];
@@ -171,19 +192,20 @@ const routeTaskCommand: Command = {
       const router = await getRouter();
       const result: RouteDecision = router.route(taskDescription, useExploration);
       const agent = getAgentType(result.route) || AGENT_TYPES[0];
+      const agentId = agent.id;
 
       spinner.succeed(`Routed to ${agent.name}`);
 
       if (jsonOutput) {
         output.printJson({
           task: taskDescription,
-          agentId: result.route,
+          agentId,
           agentName: agent.name,
           confidence: result.confidence,
           qValues: result.qValues,
           explored: result.explored,
           alternatives: result.alternatives.map(a => ({
-            agentId: a.route,
+            agentId: getAgentType(a.route)?.id || a.route,
             agentName: getAgentType(a.route)?.name || a.route,
             score: a.score,
           })),
@@ -207,7 +229,7 @@ const routeTaskCommand: Command = {
         output.printBox([
           `Task: ${taskDescription}`,
           ``,
-          `Agent: ${output.highlight(agent.name)} (${result.route})`,
+          `Agent: ${output.highlight(agent.name)} (${agentId})`,
           `Confidence: ${confidenceColor(`${(confidence * 100).toFixed(1)}%`)}`,
           `Q-Value: ${maxQValue.toFixed(3)}`,
           `Exploration: ${result.explored ? output.warning('Yes') : 'No'}`,
@@ -232,7 +254,7 @@ const routeTaskCommand: Command = {
         }
       }
 
-      return { success: true, data: { agentId: result.route, result } };
+      return { success: true, data: { agentId, result } };
     } catch (error) {
       spinner.fail('Routing failed');
       output.printError(error instanceof Error ? error.message : String(error));
@@ -410,7 +432,7 @@ const feedbackCommand: Command = {
     },
   ],
   examples: [
-    { command: 'hive-flow route feedback -t "implement auth" -a coder -r 0.9', description: 'Positive feedback' },
+    { command: 'hive-flow route feedback -t "implement auth" -a implementer -r 0.9', description: 'Positive feedback' },
     { command: 'hive-flow route feedback -t "write tests" -a tester -r -0.5', description: 'Negative feedback' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
@@ -436,13 +458,13 @@ const feedbackCommand: Command = {
     try {
       const router = await getRouter();
       const clampedReward = Math.max(-1, Math.min(1, reward));
-      const tdError = router.update(taskDescription, agentId, clampedReward, nextTask);
+      const tdError = router.update(taskDescription, agent.id, clampedReward, nextTask);
 
       output.printSuccess(`Feedback recorded for agent "${agent.name}"`);
       output.writeln();
       output.printBox([
         `Task: ${taskDescription}`,
-        `Agent: ${agent.name} (${agentId})`,
+        `Agent: ${agent.name} (${agent.id})`,
         `Reward: ${clampedReward >= 0 ? output.success(clampedReward.toFixed(2)) : output.error(clampedReward.toFixed(2))}`,
         `TD Error: ${Math.abs(tdError).toFixed(4)}`,
         nextTask ? `Next Task: ${nextTask}` : '',
@@ -843,7 +865,7 @@ export const routeCommand: Command = {
   examples: [
     { command: 'hive-flow route "implement feature"', description: 'Route task to best agent' },
     { command: 'hive-flow route "write tests" --q-learning', description: 'Use Q-Learning routing' },
-    { command: 'hive-flow route --agent coder "fix bug"', description: 'Force specific agent' },
+    { command: 'hive-flow route --agent implementer "fix bug"', description: 'Force specific agent' },
     { command: 'hive-flow route list-agents', description: 'List available agents' },
     { command: 'hive-flow route stats', description: 'Show routing statistics' },
   ],

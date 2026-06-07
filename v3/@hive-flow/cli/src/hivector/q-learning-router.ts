@@ -152,16 +152,18 @@ const DEFAULT_CONFIG: QLearningRouterConfig = {
 /**
  * Route names mapping
  */
-const ROUTE_NAMES = [
-  'coder',
+export const Q_LEARNING_ROUTE_NAMES = [
+  'implementer',
   'tester',
-  'reviewer',
+  'verifier',
   'architect',
   'researcher',
-  'optimizer',
+  'performance-engineer',
   'debugger',
   'documenter',
-];
+] as const;
+
+const ROUTE_NAMES: readonly string[] = Q_LEARNING_ROUTE_NAMES;
 
 /**
  * Task feature keywords for state representation
@@ -354,7 +356,7 @@ export class QLearningRouter {
       .slice(1, 4); // Top 3 alternatives
 
     const decision: RouteDecision = {
-      route: ROUTE_NAMES[actionIdx] || 'coder',
+      route: ROUTE_NAMES[actionIdx] || 'implementer',
       confidence,
       qValues,
       explored: shouldExplore,
