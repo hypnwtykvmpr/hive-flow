@@ -1,12 +1,8 @@
 /**
  * V3 Intelligence Module
- * Optimized SONA (Self-Optimizing Neural Architecture) and ReasoningBank
- * for adaptive learning and pattern recognition
+ * Local signal and pattern-bank helpers for adaptive pattern recognition.
  *
- * Performance targets:
- * - Signal recording: low-latency (achieved: ~0.01ms)
- * - Pattern search: O(log n) with HNSW
- * - Memory efficient circular buffers
+ * Performance depends on corpus size and the active embedding backend.
  *
  * @module v3/cli/intelligence
  */
@@ -130,7 +126,7 @@ interface StoredPattern {
 // Default Configuration
 // ============================================================================
 
-const DEFAULT_SONA_CONFIG: SonaConfig = {
+const DEFAULT_INTELLIGENCE_CONFIG: SonaConfig = {
   instantLoopEnabled: true,
   backgroundLoopEnabled: false,
   loraLearningRate: 0.001,
@@ -143,15 +139,14 @@ const DEFAULT_SONA_CONFIG: SonaConfig = {
 };
 
 // ============================================================================
-// Optimized Local SONA Implementation
+// Local signal and pattern-bank implementation
 // ============================================================================
 
 /**
- * Lightweight SONA Coordinator
+ * Lightweight signal coordinator.
  * Uses circular buffer for O(1) signal recording
- * Achieves low-latency per operation
  */
-class LocalSonaCoordinator {
+class LocalSignalCoordinator {
   private config: SonaConfig;
   private signals: Signal[];
   private signalHead: number = 0;
@@ -166,8 +161,7 @@ class LocalSonaCoordinator {
   }
 
   /**
-   * Record a signal - O(1) operation
-   * Target: low-latency
+   * Record a signal using circular-buffer insertion.
    */
   recordSignal(signal: Signal): void {
     const start = performance.now();
@@ -234,11 +228,11 @@ class LocalSonaCoordinator {
 }
 
 /**
- * Lightweight ReasoningBank
+ * Lightweight local pattern bank.
  * Uses Map for O(1) storage and array for similarity search
  * Supports persistence to disk
  */
-class LocalReasoningBank {
+class LocalPatternBank {
   private patterns: Map<string, StoredPattern> = new Map();
   private patternList: StoredPattern[] = [];
   private maxSize: number;
@@ -466,8 +460,8 @@ class LocalReasoningBank {
 // Module State
 // ============================================================================
 
-let sonaCoordinator: LocalSonaCoordinator | null = null;
-let reasoningBank: LocalReasoningBank | null = null;
+let signalCoordinator: LocalSignalCoordinator | null = null;
+let reasoningBank: LocalPatternBank | null = null;
 let intelligenceInitialized = false;
 let globalStats = {
   trajectoriesRecorded: 0,
@@ -514,8 +508,7 @@ function savePersistedStats(): void {
 // ============================================================================
 
 /**
- * Initialize the intelligence system (SONA + ReasoningBank)
- * Uses optimized local implementations
+ * Initialize the local intelligence system.
  */
 export async function initializeIntelligence(config?: Partial<SonaConfig>): Promise<{
   success: boolean;
@@ -526,7 +519,7 @@ export async function initializeIntelligence(config?: Partial<SonaConfig>): Prom
   if (intelligenceInitialized) {
     return {
       success: true,
-      sonaEnabled: !!sonaCoordinator,
+      sonaEnabled: !!signalCoordinator,
       reasoningBankEnabled: !!reasoningBank
     };
   }
@@ -534,15 +527,14 @@ export async function initializeIntelligence(config?: Partial<SonaConfig>): Prom
   try {
     // Merge config with defaults
     const finalConfig: SonaConfig = {
-      ...DEFAULT_SONA_CONFIG,
+      ...DEFAULT_INTELLIGENCE_CONFIG,
       ...config
     };
 
-    // Initialize local SONA (optimized for low-latency)
-    sonaCoordinator = new LocalSonaCoordinator(finalConfig);
+    signalCoordinator = new LocalSignalCoordinator(finalConfig);
 
     // Initialize local ReasoningBank with persistence enabled
-    reasoningBank = new LocalReasoningBank({
+    reasoningBank = new LocalPatternBank({
       maxSize: finalConfig.maxPatterns,
       persistence: true
     });
@@ -569,10 +561,10 @@ export async function initializeIntelligence(config?: Partial<SonaConfig>): Prom
 
 /**
  * Record a trajectory step for learning
- * Performance: low-latency without embedding generation
+ * Uses the configured embedding backend when no embedding is supplied.
  */
 export async function recordStep(step: TrajectoryStep): Promise<boolean> {
-  if (!sonaCoordinator) {
+  if (!signalCoordinator) {
     const init = await initializeIntelligence();
     if (!init.success) return false;
   }
@@ -598,8 +590,7 @@ export async function recordStep(step: TrajectoryStep): Promise<boolean> {
       }
     }
 
-    // Record in SONA - low-latency
-    sonaCoordinator!.recordSignal({
+    signalCoordinator!.recordSignal({
       type: step.type,
       content: step.content,
       embedding,
@@ -634,13 +625,13 @@ export async function recordTrajectory(
   steps: TrajectoryStep[],
   verdict: 'success' | 'failure' | 'partial'
 ): Promise<boolean> {
-  if (!sonaCoordinator) {
+  if (!signalCoordinator) {
     const init = await initializeIntelligence();
     if (!init.success) return false;
   }
 
   try {
-    sonaCoordinator!.recordTrajectory({
+    signalCoordinator!.recordTrajectory({
       steps,
       verdict,
       timestamp: Date.now()
@@ -716,30 +707,30 @@ export async function findSimilarPatterns(
  * Get intelligence system statistics
  */
 export function getIntelligenceStats(): IntelligenceStats {
-  const sonaStats = sonaCoordinator?.stats();
+  const signalStats = signalCoordinator?.stats();
   const bankStats = reasoningBank?.stats();
 
   return {
-    sonaEnabled: !!sonaCoordinator,
+    sonaEnabled: !!signalCoordinator,
     reasoningBankSize: bankStats?.size ?? 0,
     patternsLearned: bankStats?.patternCount ?? 0,
     trajectoriesRecorded: globalStats.trajectoriesRecorded,
     lastAdaptation: globalStats.lastAdaptation,
-    avgAdaptationTime: sonaStats?.avgAdaptationMs ?? 0
+    avgAdaptationTime: signalStats?.avgAdaptationMs ?? 0
   };
 }
 
 /**
- * Get SONA coordinator for advanced operations
+ * Get the local signal coordinator for advanced operations.
  */
-export function getSonaCoordinator(): LocalSonaCoordinator | null {
-  return sonaCoordinator;
+export function getSonaCoordinator(): LocalSignalCoordinator | null {
+  return signalCoordinator;
 }
 
 /**
  * Get ReasoningBank for advanced operations
  */
-export function getReasoningBank(): LocalReasoningBank | null {
+export function getReasoningBank(): LocalPatternBank | null {
   return reasoningBank;
 }
 
@@ -747,7 +738,7 @@ export function getReasoningBank(): LocalReasoningBank | null {
  * Clear intelligence state
  */
 export function clearIntelligence(): void {
-  sonaCoordinator = null;
+  signalCoordinator = null;
   reasoningBank = null;
   intelligenceInitialized = false;
   globalStats = {
@@ -757,7 +748,7 @@ export function clearIntelligence(): void {
 }
 
 /**
- * Benchmark SONA adaptation time
+ * Benchmark local signal-recording overhead.
  */
 export function benchmarkAdaptation(iterations: number = 1000): {
   totalMs: number;
@@ -766,7 +757,7 @@ export function benchmarkAdaptation(iterations: number = 1000): {
   maxMs: number;
   targetMet: boolean;
 } {
-  if (!sonaCoordinator) {
+  if (!signalCoordinator) {
     initializeIntelligence();
   }
 
@@ -775,7 +766,7 @@ export function benchmarkAdaptation(iterations: number = 1000): {
 
   for (let i = 0; i < iterations; i++) {
     const start = performance.now();
-    sonaCoordinator!.recordSignal({
+    signalCoordinator!.recordSignal({
       type: 'test',
       content: `benchmark_${i}`,
       embedding: testEmbedding,
@@ -794,7 +785,7 @@ export function benchmarkAdaptation(iterations: number = 1000): {
     avgMs,
     minMs,
     maxMs,
-    targetMet: avgMs < 0.05
+    targetMet: false
   };
 }
 

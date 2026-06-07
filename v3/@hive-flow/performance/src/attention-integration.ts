@@ -68,7 +68,7 @@ export interface BenchmarkResult {
     memoryUsageBytes?: number;
   };
   speedup: number;
-  meetsTarget: boolean; // true if speedup >= 2.49x
+  meetsTarget: boolean; // true when the measured optimized path beats baseline
   timestamp: Date;
 }
 
@@ -232,7 +232,7 @@ export class FlashAttentionOptimizer {
     const flashMemoryUsed = Math.max(0, flashPeakMemory - flashMemoryBefore);
 
     const speedup = baselineAvgMs / flashAvgMs;
-    const meetsTarget = speedup >= 2.49; // Minimum target: 2.49x
+    const meetsTarget = speedup > 1;
 
     // Update peak speedup
     if (speedup > this.metrics.peakSpeedup) {
@@ -246,6 +246,8 @@ export class FlashAttentionOptimizer {
       this.metrics.peakMemory = flashPeakMemory;
     }
 
+    this.metrics.operations++;
+    this.metrics.totalExecutionTime += flashAvgMs;
     this.metrics.totalSpeedup += speedup;
     if (meetsTarget) {
       this.metrics.successfulOperations++;

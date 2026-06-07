@@ -8,7 +8,7 @@
  * - Experience replay
  *
  * Suitable for smaller state spaces or discretized environments.
- * Performance Target: <1ms per update
+ * Performance note: local implementation; no fixed latency guarantee.
  */
 
 import type { Trajectory, RLConfig } from '../types.js';

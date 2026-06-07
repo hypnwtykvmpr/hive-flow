@@ -3,13 +3,11 @@
  *
  * V2 Compatibility - Neural network and ML tools
  *
- * ✅ HYBRID Implementation:
- * - Uses @hive-flow/embeddings for REAL embeddings when available
- * - Falls back to simulated embeddings when @hive-flow/embeddings not installed
- * - Pattern storage and search with cosine similarity
- * - Training progress tracked (actual model training requires external tools)
- *
- * Note: For production neural features, use @hive-flow/neural module
+ * Honest local implementation:
+ * - Uses @hive-flow/embeddings when available
+ * - Falls back to deterministic hash embeddings
+ * - Supports local pattern storage and cosine-similarity search
+ * - Reports model training/compression/optimization as unavailable
  */
 
 import type { MCPTool } from './types.js';
@@ -50,71 +48,6 @@ try {
   // @hive-flow/embeddings not available, will use fallback
 }
 
-// ── SONA / PatternLearner interfaces (mirrors @hive-flow/neural public API) ──
-
-/** Stored pattern shape returned by PatternLearner */
-interface SONAPattern {
-  patternId?: string;
-  name: string;
-  domain: string;
-  embedding: Float32Array;
-  strategy: string;
-  successRate: number;
-  usageCount: number;
-  createdAt?: number;
-  qualityHistory: number[];
-  evolutionHistory: unknown[];
-}
-
-/** Match result from PatternLearner.findMatches */
-interface PatternMatch {
-  pattern: SONAPattern;
-  similarity: number;
-}
-
-/** Minimal SONAManager interface used by neural-tools */
-interface SONAManagerLike {
-  initialize(): Promise<void>;
-  beginTrajectory(label: string, domain: string): string;
-  recordStep(trajectoryId: string, action: string, reward: number, stateEmbedding: Float32Array): void;
-  completeTrajectory(trajectoryId: string, quality: number): void;
-  triggerLearning(context: string): Promise<void>;
-  storePattern(pattern: SONAPattern): SONAPattern;
-}
-
-/** Minimal PatternLearner interface used by neural-tools */
-interface PatternLearnerLike {
-  findMatches(query: Float32Array, topK: number): PatternMatch[];
-  getPatterns(): SONAPattern[];
-}
-
-// Lazy-loaded @hive-flow/neural integration
-let sonaModule: {
-  SONAManager: unknown;
-  PatternLearner: unknown;
-  createSONAManager: (mode?: string | undefined) => SONAManagerLike;
-  createPatternLearner: (config?: Record<string, unknown> | undefined) => PatternLearnerLike;
-} | null = null;
-
-let sonaManager: SONAManagerLike | null = null;
-let patternLearner: PatternLearnerLike | null = null;
-let sonaInitialized = false;
-
-async function getSonaManager(): Promise<SONAManagerLike | null> {
-  if (sonaInitialized) return sonaManager;
-  sonaInitialized = true;
-  try {
-    sonaModule = await import('@hive-flow/neural') as typeof sonaModule;
-    sonaManager = sonaModule!.createSONAManager('balanced');
-    await sonaManager.initialize();
-    patternLearner = sonaModule!.createPatternLearner();
-    return sonaManager;
-  } catch {
-    // @hive-flow/neural not available, will use file-based fallback
-    return null;
-  }
-}
-
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
 const NEURAL_DIR = 'neural';
@@ -125,7 +58,7 @@ interface NeuralModel {
   id: string;
   name: string;
   type: 'moe' | 'transformer' | 'classifier' | 'embedding';
-  status: 'untrained' | 'training' | 'ready' | 'error';
+  status: 'untrained' | 'ready' | 'error';
   accuracy: number;
   trainedAt?: string;
   epochs: number;
@@ -180,6 +113,16 @@ function saveNeuralStore(store: NeuralStore): void {
   writeFileSync(getNeuralPath(), JSON.stringify(store, null, 2), 'utf-8');
 }
 
+function stableId(prefix: string, parts: unknown[]): string {
+  const raw = JSON.stringify(parts);
+  let hash = 2166136261;
+  for (let i = 0; i < raw.length; i++) {
+    hash ^= raw.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${prefix}-${(hash >>> 0).toString(36)}`;
+}
+
 // Generate embedding - uses real embeddings if available, falls back to hash-based
 async function generateEmbedding(text?: string, dims: number = 384): Promise<number[]> {
   // If real embeddings available and text provided, use them
@@ -208,8 +151,8 @@ async function generateEmbedding(text?: string, dims: number = 384): Promise<num
     return embedding;
   }
 
-  // Pure random fallback
-  return Array.from({ length: dims }, () => Math.random() * 2 - 1);
+  // Deterministic empty-input fallback.
+  return Array.from({ length: dims }, (_, i) => ((i % 17) - 8) / 8);
 }
 
 // Cosine similarity for pattern search
@@ -226,17 +169,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB) || 1);
 }
 
-// Simulated predictions fallback when SONA has no patterns
-function generateSimulatedPredictions(topK: number): Array<{ label: string; confidence: number }> {
-  return [
-    { label: 'coder', confidence: 0.75 + Math.random() * 0.2 },
-    { label: 'researcher', confidence: 0.5 + Math.random() * 0.3 },
-    { label: 'reviewer', confidence: 0.3 + Math.random() * 0.4 },
-    { label: 'tester', confidence: 0.2 + Math.random() * 0.3 },
-  ]
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, topK);
-}
+const UNAVAILABLE_NEURAL_MESSAGE =
+  'Neural model training is unavailable in this build; use neural_patterns for local deterministic pattern storage and search.';
 
 export const neuralTools: MCPTool[] = [
   {
@@ -255,82 +189,17 @@ export const neuralTools: MCPTool[] = [
       required: ['modelType'],
     },
     handler: async (input) => {
-      const mgr = await getSonaManager();
-      const store = loadNeuralStore();
-      const modelId = (input.modelId as string) || `model-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const modelId = (input.modelId as string) || stableId('model', [input.modelType, input.data ?? null]);
       const modelType = input.modelType as NeuralModel['type'];
       const epochs = (input.epochs as number) || 10;
 
-      const model: NeuralModel = {
-        id: modelId,
-        name: `${modelType}-model`,
-        type: modelType,
-        status: 'training',
-        accuracy: 0,
-        epochs,
-        config: {
-          learningRate: input.learningRate || 0.001,
-          batchSize: 32,
-        },
-      };
-
-      store.models[modelId] = model;
-      saveNeuralStore(store);
-
-      let usedSona = false;
-
-      if (mgr) {
-        try {
-          // Create trajectory via SONAManager
-          const trajectoryId = mgr.beginTrajectory(
-            `neural_train:${modelType}:${modelId}`,
-            'code'
-          );
-
-          // Record training steps from epochs
-          for (let i = 0; i < Math.min(epochs, 20); i++) {
-            const reward = 0.5 + (i / epochs) * 0.4 + Math.random() * 0.1;
-            const stateEmbedding = new Float32Array(
-              await generateEmbedding(`${modelType}-epoch-${i}`, 768)
-            );
-            mgr.recordStep(trajectoryId, `train-epoch-${i}`, reward, stateEmbedding);
-          }
-
-          // Complete trajectory with final quality
-          const finalQuality = 0.85 + Math.random() * 0.1;
-          mgr.completeTrajectory(trajectoryId, finalQuality);
-
-          // Trigger learning
-          await mgr.triggerLearning('neural_train');
-
-          model.status = 'ready';
-          model.accuracy = finalQuality;
-          model.trainedAt = new Date().toISOString();
-          usedSona = true;
-        } catch {
-          // Fall back to simulated training below
-        }
-      }
-
-      if (!usedSona) {
-        // Simulated training fallback
-        await new Promise(resolve => setTimeout(resolve, 100));
-        model.status = 'ready';
-        model.accuracy = 0.85 + Math.random() * 0.1;
-        model.trainedAt = new Date().toISOString();
-      }
-
-      saveNeuralStore(store);
-
       return {
-        success: true,
-        simulated: !usedSona,
+        success: false,
+        status: 'unavailable',
+        error: UNAVAILABLE_NEURAL_MESSAGE,
         modelId,
         type: modelType,
-        status: model.status,
-        accuracy: model.accuracy,
         epochs,
-        trainedAt: model.trainedAt,
       };
     },
   },
@@ -348,7 +217,6 @@ export const neuralTools: MCPTool[] = [
       required: ['input'],
     },
     handler: async (input) => {
-      const mgr = await getSonaManager();
       const store = loadNeuralStore();
       const modelId = input.modelId as string;
       const inputText = input.input as string;
@@ -366,36 +234,18 @@ export const neuralTools: MCPTool[] = [
       const embedding = await generateEmbedding(inputText, 384);
       const latency = Math.round(performance.now() - startTime);
 
-      let predictions: Array<{ label: string; confidence: number }>;
-      let usedSona = false;
-
-      if (mgr && patternLearner) {
-        try {
-          // Use PatternLearner.findMatches for real pattern-based prediction
-          const queryEmbedding = new Float32Array(embedding);
-          const matches = patternLearner.findMatches(queryEmbedding, topK);
-
-          if (matches.length > 0) {
-            predictions = matches.map((m: PatternMatch) => ({
-              label: m.pattern.domain || m.pattern.name || 'unknown',
-              confidence: m.similarity,
-            }));
-            usedSona = true;
-          } else {
-            // No patterns yet — fall back to simulated predictions
-            predictions = generateSimulatedPredictions(topK);
-          }
-        } catch {
-          predictions = generateSimulatedPredictions(topK);
-        }
-      } else {
-        predictions = generateSimulatedPredictions(topK);
-      }
+      const predictions = Object.values(store.patterns)
+        .map((pattern) => ({
+          label: pattern.type || pattern.name || 'unknown',
+          confidence: cosineSimilarity(embedding, pattern.embedding),
+        }))
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, topK);
 
       return {
         success: true,
         _realEmbedding: !!realEmbeddings,
-        _sonaPatterns: usedSona,
+        _localHeuristic: true,
         modelId: model?.id || 'default',
         input: inputText,
         predictions,
@@ -421,53 +271,10 @@ export const neuralTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const mgr = await getSonaManager();
       const store = loadNeuralStore();
       const action = (input.action as string) || 'list';
 
       if (action === 'list') {
-        // Try PatternLearner first
-        if (mgr && patternLearner) {
-          try {
-            const sonaPatterns = patternLearner.getPatterns();
-            const typeFilter = input.type as string;
-            const filtered = typeFilter
-              ? sonaPatterns.filter((p: SONAPattern) => p.domain === typeFilter)
-              : sonaPatterns;
-
-            // Merge with file-based patterns
-            const filePatterns = Object.values(store.patterns);
-            const fileFiltered = typeFilter ? filePatterns.filter(p => p.type === typeFilter) : filePatterns;
-
-            const combined = [
-              ...filtered.map((p: SONAPattern) => ({
-                id: p.patternId,
-                name: p.name,
-                type: p.domain,
-                usageCount: p.usageCount,
-                createdAt: new Date(p.createdAt ?? 0).toISOString(),
-                source: 'sona',
-              })),
-              ...fileFiltered.map(p => ({
-                id: p.id,
-                name: p.name,
-                type: p.type,
-                usageCount: p.usageCount,
-                createdAt: p.createdAt,
-                source: 'file',
-              })),
-            ];
-
-            return {
-              patterns: combined,
-              total: combined.length,
-              _sonaPatterns: filtered.length,
-            };
-          } catch {
-            // Fall through to file-based
-          }
-        }
-
         const patterns = Object.values(store.patterns);
         const typeFilter = input.type as string;
         const filtered = typeFilter ? patterns.filter(p => p.type === typeFilter) : patterns;
@@ -499,29 +306,7 @@ export const neuralTools: MCPTool[] = [
         // Generate embedding from pattern name/content
         const embedding = await generateEmbedding(patternName, 384);
 
-        let sonaPatternId: string | null = null;
-
-        // Store in SONAManager if available
-        if (mgr) {
-          try {
-            const sonaPattern = mgr.storePattern({
-              name: patternName,
-              domain: patternType,
-              embedding: new Float32Array(embedding),
-              strategy: patternName,
-              successRate: 0.5,
-              usageCount: 0,
-              qualityHistory: [],
-              evolutionHistory: [],
-            });
-            sonaPatternId = sonaPattern.patternId ?? null;
-          } catch {
-            // Fall through to file-based storage
-          }
-        }
-
-        // Also store in file-based store for backward compatibility
-        const patternId = sonaPatternId || `pattern-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const patternId = (input.patternId as string) || stableId('pattern', [patternName, patternType, input.data ?? null]);
 
         const pattern: Pattern = {
           id: patternId,
@@ -539,7 +324,7 @@ export const neuralTools: MCPTool[] = [
         return {
           success: true,
           _realEmbedding: !!realEmbeddings,
-          _sonaStored: !!sonaPatternId,
+          _localHeuristic: true,
           patternId,
           name: pattern.name,
           type: pattern.type,
@@ -552,34 +337,6 @@ export const neuralTools: MCPTool[] = [
         const query = input.query as string;
         const queryEmbedding = await generateEmbedding(query, 384);
 
-        // Try PatternLearner.findMatches first
-        if (mgr && patternLearner) {
-          try {
-            const queryFloat32 = new Float32Array(queryEmbedding);
-            const matches = patternLearner.findMatches(queryFloat32, 10);
-
-            if (matches.length > 0) {
-              return {
-                _realSimilarity: true,
-                _realEmbedding: !!realEmbeddings,
-                _sonaSearch: true,
-                query,
-                results: matches.map((m: PatternMatch) => ({
-                  id: m.pattern.patternId,
-                  name: m.pattern.name,
-                  type: m.pattern.domain,
-                  similarity: m.similarity,
-                })),
-                total: matches.length,
-              };
-            }
-            // No matches in SONA — fall through to file-based search
-          } catch {
-            // Fall through to file-based search
-          }
-        }
-
-        // File-based cosine similarity search
         const results = Object.values(store.patterns)
           .map(p => ({
             ...p,
@@ -591,6 +348,7 @@ export const neuralTools: MCPTool[] = [
         return {
           _realSimilarity: true,
           _realEmbedding: !!realEmbeddings,
+          _localHeuristic: true,
           query,
           results: results.map(r => ({
             id: r.id,
@@ -629,26 +387,12 @@ export const neuralTools: MCPTool[] = [
     },
     handler: async (input) => {
       const method = (input.method as string) || 'quantize';
-      const targetSize = (input.targetSize as number) || 0.25;
-
-      const compressionResults = {
-        quantize: { ratio: 3.92, method: 'Int8', memory: '75% reduction' },
-        prune: { ratio: 2.5, method: 'Magnitude pruning', memory: '60% reduction' },
-        distill: { ratio: 4.0, method: 'Knowledge distillation', memory: '75% reduction' },
-      };
-
-      const result = compressionResults[method as keyof typeof compressionResults] || compressionResults.quantize;
 
       return {
-        success: true,
-        simulated: true,
+        success: false,
+        status: 'unavailable',
+        error: 'Neural model compression is unavailable because no local neural model runtime is present.',
         method,
-        originalSize: '1536 dims',
-        compressedSize: `${Math.floor(1536 * targetSize)} dims`,
-        compressionRatio: result.ratio,
-        memoryReduction: result.memory,
-        qualityRetention: 0.98,
-        latencyImprovement: '2.5x faster',
       };
     },
   },
@@ -683,7 +427,7 @@ export const neuralTools: MCPTool[] = [
         models: {
           total: models.length,
           ready: models.filter(m => m.status === 'ready').length,
-          training: models.filter(m => m.status === 'training').length,
+          training: 0,
           avgAccuracy: models.length > 0
             ? models.reduce((sum, m) => sum + m.accuracy, 0) / models.length
             : 0,
@@ -697,10 +441,11 @@ export const neuralTools: MCPTool[] = [
           totalEmbeddingDims: patterns.length > 0 ? patterns[0].embedding.length : 384,
         },
         features: {
-          hnsw: true,
-          quantization: true,
+          localPatternSearch: true,
+          modelTraining: false,
+          compression: false,
+          optimization: false,
           flashAttention: false,
-          reasoningBank: true,
         },
       };
     },
@@ -719,35 +464,11 @@ export const neuralTools: MCPTool[] = [
     handler: async (input) => {
       const target = (input.target as string) || 'balanced';
 
-      const optimizations: Record<string, { applied: string[]; improvement: string }> = {
-        speed: {
-          applied: ['Flash Attention', 'Batch processing', 'SIMD vectorization'],
-          improvement: 'Flash Attention optimization faster inference',
-        },
-        memory: {
-          applied: ['Int8 quantization', 'Gradient checkpointing', 'Memory pooling'],
-          improvement: '50-75% memory reduction',
-        },
-        accuracy: {
-          applied: ['EWC++ regularization', 'Ensemble averaging', 'Data augmentation'],
-          improvement: '3-5% accuracy boost',
-        },
-        balanced: {
-          applied: ['HNSW indexing', 'Smart caching', 'Adaptive batch size'],
-          improvement: 'Balanced 30% improvement across metrics',
-        },
-      };
-
-      const result = optimizations[target] || optimizations.balanced;
-
       return {
-        success: true,
-        simulated: true,
+        success: false,
+        status: 'unavailable',
+        error: 'Neural model optimization is unavailable because no local neural model runtime is present.',
         target,
-        optimizations: result.applied,
-        improvement: result.improvement,
-        status: 'applied',
-        timestamp: new Date().toISOString(),
       };
     },
   },

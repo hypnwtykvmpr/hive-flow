@@ -8,7 +8,7 @@
  * - PPO
  * - Decision Transformer
  *
- * Performance target: <10ms per update
+ * Runtime measurements are sanity-checked with generous CI headroom.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -71,7 +71,7 @@ describe('Q-Learning Algorithm', () => {
     expect(stats.qTableSize).toBeGreaterThan(0);
   });
 
-  it('should update under performance target (<1ms)', () => {
+  it('should update within a generous runtime sanity limit', () => {
     const trajectory = createTestTrajectory(10);
 
     const startTime = performance.now();
@@ -281,7 +281,7 @@ describe('DQN Algorithm', () => {
     expect(result.epsilon).toBeGreaterThan(0);
   });
 
-  it('should update under performance target (<10ms)', () => {
+  it('should update within a generous runtime sanity limit', () => {
     // Add experiences
     for (let i = 0; i < 5; i++) {
       dqn.addExperience(createTestTrajectory(10));
@@ -291,8 +291,7 @@ describe('DQN Algorithm', () => {
     dqn.update();
     const elapsed = performance.now() - startTime;
 
-    // Allow generous overhead for neural network in test environment
-    // (actual production target is <10ms, but tests run in CI may be slower)
+    // Allow generous overhead for local numerical work in test environments.
     expect(elapsed).toBeLessThan(500);
   });
 
@@ -401,7 +400,7 @@ describe('PPO Algorithm', () => {
     expect(result.entropy).toBeGreaterThanOrEqual(0);
   });
 
-  it('should update under performance target (<10ms for small batches)', () => {
+  it('should update small batches within a generous runtime sanity limit', () => {
     const smallPPO = createPPO({
       miniBatchSize: 16,
       epochs: 1,
@@ -517,7 +516,7 @@ describe('Decision Transformer', () => {
     expect(result.accuracy).toBeLessThanOrEqual(1);
   });
 
-  it('should train under performance target (<10ms per batch)', () => {
+  it('should train within a generous runtime sanity limit', () => {
     for (let i = 0; i < 3; i++) {
       dt.addTrajectory(createTestTrajectory(5));
     }

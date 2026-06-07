@@ -56,7 +56,7 @@ async function benchmarkExample() {
   console.log(`Flash Attention: ${result.flashAttention.averageTimeMs.toFixed(3)}ms`);
   console.log(`Baseline: ${result.baseline.averageTimeMs.toFixed(3)}ms`);
   console.log(`Speedup: ${result.speedup.toFixed(2)}x`);
-  console.log(`Meets target (≥2.49x): ${result.meetsTarget ? 'YES ✓' : 'NO ✗'}`);
+  console.log(`Beats baseline: ${result.meetsTarget ? 'YES' : 'NO'}`);
 }
 
 // ============================================================================

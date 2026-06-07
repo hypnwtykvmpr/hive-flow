@@ -1,7 +1,7 @@
 /**
  * FlashAttentionOptimizer Test Suite
  *
- * Comprehensive tests for Flash Attention integration with 2.49x-7.47x speedup validation.
+ * Comprehensive tests for Flash Attention integration with measured baseline validation.
  * Tests cover initialization, optimization, benchmarking, metrics tracking, and memory management.
  */
 
@@ -176,12 +176,11 @@ describe('FlashAttentionOptimizer', () => {
       expect(result.speedup).toBeCloseTo(expectedSpeedup, 2);
     });
 
-    it('should validate against V3 minimum target (2.49x)', () => {
+    it('should validate against the measured baseline', () => {
       const result = optimizer.benchmark();
 
-      // Target: 2.49x-7.47x speedup
       expect(result.speedup).toBeGreaterThan(0); // At least some speedup
-      expect(result.meetsTarget).toBe(result.speedup >= 2.49);
+      expect(result.meetsTarget).toBe(result.speedup > 1);
 
       // Result should have correct structure
       expect(typeof result.speedup).toBe('number');
@@ -217,13 +216,10 @@ describe('FlashAttentionOptimizer', () => {
     it('should return average speedup after benchmark', () => {
       const result = optimizer.benchmark();
 
-      // Note: benchmark() updates metrics but getSpeedup() uses operations count
-      // which is only updated by optimize(). This tests the current behavior.
       const speedup = optimizer.getSpeedup();
 
-      // Since benchmark doesn't increment operations, speedup would be 0
-      // But the benchmark result itself has the speedup
       expect(result.speedup).toBeGreaterThan(0);
+      expect(speedup).toBeGreaterThan(0);
     });
 
     it('should calculate average across multiple benchmarks', () => {
@@ -447,13 +443,12 @@ describe('Performance Validation', () => {
     expect(result.flashAttention.opsPerSecond).toBeCloseTo(expectedFlashOps, 1);
   });
 
-  it('should validate V3 performance targets', () => {
+  it('should validate measured baseline performance', () => {
     const optimizer = createFlashAttentionOptimizer(512);
     const result = optimizer.benchmark();
 
-    // V3 target: 2.49x-7.47x speedup
     if (result.meetsTarget) {
-      expect(result.speedup).toBeGreaterThanOrEqual(2.49);
+      expect(result.speedup).toBeGreaterThan(1);
     }
   });
 });

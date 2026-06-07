@@ -1,11 +1,8 @@
 /**
  * V3 Neural/Learning System Types
- * Core type definitions for SONA learning modes and ReasoningBank integration
+ * Core type definitions retained for local learning compatibility.
  *
- * Performance Targets:
- * - SONA adaptation: low-latency
- * - Pattern matching: <1ms
- * - Learning step: <10ms
+ * Timing depends on the selected local implementation and runtime environment.
  */
 
 // ============================================================================
@@ -13,19 +10,19 @@
 // ============================================================================
 
 /**
- * Available SONA learning modes with their characteristics
+ * Legacy mode labels retained for compatibility.
  */
 export type SONAMode = 'real-time' | 'balanced' | 'research' | 'edge' | 'batch';
 
 /**
- * Configuration for each SONA mode
+ * Configuration shape for compatibility with older callers.
  */
 export interface SONAModeConfig {
   /** Mode identifier */
   mode: SONAMode;
 
-  /** LoRA rank (1-16, higher = more expressive but slower) */
-  loraRank: number;
+  /** Legacy adapter rank retained for compatibility; no LoRA runtime is shipped. */
+  adapterRank: number;
 
   /** Learning rate (0.001-0.01, sweet spot is 0.002) */
   learningRate: number;
@@ -59,8 +56,8 @@ export interface ModeOptimizations {
   /** Enable SIMD vectorization */
   enableSIMD: boolean;
 
-  /** Use micro-LoRA (reduced parameter count) */
-  useMicroLoRA: boolean;
+  /** Prefer lightweight local adapters when an implementation provides them. */
+  useLocalAdapter: boolean;
 
   /** Enable gradient checkpointing */
   gradientCheckpointing: boolean;
@@ -417,13 +414,13 @@ export interface CuriosityConfig extends RLConfig {
 }
 
 // ============================================================================
-// LoRA Types
+// Local Adapter Types
 // ============================================================================
 
 /**
- * LoRA adapter configuration
+ * Local adapter configuration.
  */
-export interface LoRAConfig {
+export interface AdapterConfig {
   /** Adapter rank (1, 2, 4, 8, 16) */
   rank: number;
 
@@ -436,14 +433,14 @@ export interface LoRAConfig {
   /** Target modules to adapt */
   targetModules: string[];
 
-  /** Use micro-LoRA (optimized for speed) */
-  microLoRA: boolean;
+  /** Prefer lightweight local adapter updates when available. */
+  lightweight: boolean;
 }
 
 /**
- * LoRA adapter weights
+ * Local adapter weights.
  */
-export interface LoRAWeights {
+export interface AdapterWeights {
   /** Adapter identifier */
   adapterId: string;
 
@@ -520,7 +517,7 @@ export interface NeuralStats {
   /** Current configuration */
   config: {
     mode: SONAMode;
-    loraRank: number;
+    adapterRank: number;
     learningRate: number;
     algorithm: RLAlgorithm;
   };

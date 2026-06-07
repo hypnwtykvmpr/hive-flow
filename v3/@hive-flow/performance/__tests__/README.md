@@ -26,7 +26,7 @@ Tests for `FlashAttentionOptimizer` class and related functions.
 - Flash Attention performance measurement
 - Baseline performance measurement
 - Speedup calculation
-- V3 target validation (2.49x minimum)
+- Baseline comparison validation
 - Metrics tracking (peak speedup, success operations)
 
 #### getSpeedup() Method (3 tests)
@@ -56,7 +56,7 @@ Tests for `FlashAttentionOptimizer` class and related functions.
 #### Performance Validation (3 tests)
 - Speedup improvement demonstration
 - Operations per second tracking
-- V3 target validation (2.49x-7.47x)
+- Baseline comparison validation
 
 #### Edge Cases (4 tests)
 - Small dimensions (32D)
@@ -75,7 +75,7 @@ Tests for `AttentionBenchmarkRunner` class and formatting utilities.
 - Flash Attention performance measurement
 - Baseline performance measurement
 - Speedup calculation
-- Target validation (2.49x)
+- Baseline comparison validation
 - Timestamp inclusion
 - Different dimensions (128, 256, 512, 1024)
 - Varying key counts (10, 50, 100, 200)
@@ -107,8 +107,8 @@ Tests for `AttentionBenchmarkRunner` class and formatting utilities.
 
 #### validateV3Targets() Method (5 tests)
 - V3 target validation
-- Minimum target check (2.49x)
-- Maximum target check (7.47x)
+- Baseline comparison target check
+- Runtime speedup shape check
 - Valid speedup values
 - Correct dimension usage (512)
 
@@ -184,9 +184,9 @@ npx vitest run __tests__/ --reporter=verbose
 
 ## V3 Performance Targets Validated
 
-The test suite validates against V3 performance targets:
+The test suite validates measured runtime comparisons:
 
-- **Flash Attention Speedup**: 2.49x - 7.47x (minimum 2.49x)
+- **Flash Attention Speedup**: optimized path compared with measured baseline
 - **Memory Efficiency**: Reduction tracking and validation
 - **Operations/Second**: Throughput measurement and comparison
 - **Execution Time**: <1s for optimization, reasonable benchmark times

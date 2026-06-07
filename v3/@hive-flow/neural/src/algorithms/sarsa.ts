@@ -7,7 +7,7 @@
  * - Expected SARSA variant (optional)
  * - Eligibility traces (SARSA-lambda)
  *
- * Performance Target: <1ms per update
+ * Performance note: local implementation; no fixed latency guarantee.
  */
 
 import type { Trajectory, RLConfig } from '../types.js';

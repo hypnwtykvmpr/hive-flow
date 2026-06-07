@@ -7,7 +7,7 @@
  * - Value function clipping
  * - Entropy bonus
  *
- * Performance Target: <10ms per update step
+ * Performance note: local implementation; no fixed latency guarantee.
  */
 
 import type {
@@ -126,8 +126,7 @@ export class PPOAlgorithm {
   }
 
   /**
-   * Perform PPO update
-   * Target: <10ms
+   * Perform PPO update.
    */
   update(): { policyLoss: number; valueLoss: number; entropy: number } {
     const startTime = performance.now();

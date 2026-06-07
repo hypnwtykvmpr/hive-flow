@@ -7,7 +7,7 @@
  * - Causal transformer attention
  * - Offline RL from trajectories
  *
- * Performance Target: <10ms per forward pass
+ * Performance note: local implementation; no fixed latency guarantee.
  */
 
 import type {
@@ -124,8 +124,7 @@ export class DecisionTransformer {
   }
 
   /**
-   * Train on buffered trajectories
-   * Target: <10ms per batch
+   * Train on buffered trajectories.
    */
   train(): { loss: number; accuracy: number } {
     const startTime = performance.now();

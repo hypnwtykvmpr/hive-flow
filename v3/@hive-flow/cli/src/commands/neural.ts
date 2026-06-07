@@ -11,7 +11,7 @@ import { output } from '../output.js';
 // Train subcommand - local neural training with optional compatibility flags
 const trainCommand: Command = {
   name: 'train',
-  description: 'Train neural patterns with local MicroLoRA and attention kernels',
+  description: 'Record local neural-pattern signals with deterministic adapter and attention kernels',
   options: [
     { name: 'pattern', short: 'p', type: 'string', description: 'Pattern type: coordination, optimization, prediction, security, testing', default: 'coordination' },
     { name: 'epochs', short: 'e', type: 'number', description: 'Number of training epochs', default: '50' },
@@ -233,7 +233,7 @@ const trainCommand: Command = {
               scaledGradient[i] = gradient[i] * difficulty;
             }
 
-            // Train with MicroLoRA
+            // Record a local adapter update.
             await localTraining.trainPattern(anchor, scaledGradient, operatorType);
             adaptations++;
 
@@ -320,13 +320,13 @@ const trainCommand: Command = {
       if (useWasm && wasmFeatures.length > 0) {
         tableData.push(
           { metric: 'Local Features', value: wasmFeatures.slice(0, 3).join(', ') },
-          { metric: 'LoRA Adaptations', value: String(adaptations) },
+          { metric: 'Local Adapter Updates', value: String(adaptations) },
           { metric: 'Avg Loss', value: (totalLoss / Math.max(1, epochs)).toFixed(4) }
         );
 
-        if (localTrainingStats?.microLoraStats) {
+        if (localTrainingStats?.adapterStats) {
           tableData.push(
-            { metric: 'MicroLoRA Delta Norm', value: localTrainingStats.microLoraStats.deltaNorm.toFixed(6) }
+            { metric: 'Adapter Delta Norm', value: localTrainingStats.adapterStats.deltaNorm.toFixed(6) }
           );
         }
 
@@ -451,7 +451,7 @@ const statusCommand: Command = {
             component: 'Local Training',
             status: localTrainingStats.initialized ? output.success('Active') : output.dim('Not loaded'),
             details: localTrainingStats.initialized
-              ? `MicroLoRA: ${localTrainingStats.totalAdaptations} adapts`
+              ? `Local adapter: ${localTrainingStats.totalAdaptations} updates`
               : 'Call neural train to initialize',
           },
           {
@@ -499,9 +499,9 @@ const statusCommand: Command = {
           { metric: 'Trajectories Recorded', value: String(stats.trajectoriesRecorded) },
           { metric: 'Patterns Learned', value: String(stats.patternsLearned) },
           { metric: 'HNSW Dimensions', value: String(hnswStatus.dimensions) },
-          { metric: 'SONA Adaptation (avg)', value: `${(adaptBench.avgMs * 1000).toFixed(2)}μs` },
-          { metric: 'SONA Adaptation (max)', value: `${(adaptBench.maxMs * 1000).toFixed(2)}μs` },
-          { metric: 'Target Met (low-latency)', value: adaptBench.targetMet ? output.success('Yes') : output.warning('No') },
+          { metric: 'Local Signal Record (avg)', value: `${(adaptBench.avgMs * 1000).toFixed(2)}μs` },
+          { metric: 'Local Signal Record (max)', value: `${(adaptBench.maxMs * 1000).toFixed(2)}μs` },
+          { metric: 'Benchmark Status', value: adaptBench.targetMet ? output.success('Measured') : output.warning('Measured') },
           {
             metric: 'Last Adaptation',
             value: stats.lastAdaptation
@@ -516,10 +516,10 @@ const statusCommand: Command = {
             { metric: 'Local Adaptations', value: String(localTrainingStats.totalAdaptations) },
             { metric: 'Local Forwards', value: String(localTrainingStats.totalForwards) },
           );
-          if (localTrainingStats.microLoraStats) {
+          if (localTrainingStats.adapterStats) {
             detailedData.push(
-              { metric: 'MicroLoRA Delta Norm', value: localTrainingStats.microLoraStats.deltaNorm.toFixed(6) },
-              { metric: 'MicroLoRA Adapt Count', value: String(localTrainingStats.microLoraStats.adaptCount) },
+              { metric: 'Adapter Delta Norm', value: localTrainingStats.adapterStats.deltaNorm.toFixed(6) },
+              { metric: 'Adapter Update Count', value: String(localTrainingStats.adapterStats.adaptCount) },
             );
           }
           if (sonaAvailable && localTrainingStats.sonaStats?.stats) {
@@ -1584,31 +1584,30 @@ const benchmarkCommand: Command = {
       }
 
       spinner.start();
-      spinner.setText('Benchmarking MicroLoRA adaptation...');
+      spinner.setText('Benchmarking local adapter updates...');
 
-      const microLora = localTraining.benchmarkMicroLora(dim, iterations);
+      const localAdapter = localTraining.benchmarkLocalAdapter(dim, iterations);
 
-      spinner.succeed('MicroLoRA benchmark complete');
+      spinner.succeed('Local adapter benchmark complete');
 
       output.writeln();
       output.printTable({
         columns: [
-          { key: 'metric', header: 'MicroLoRA Metric', width: 25 },
+          { key: 'metric', header: 'Local Adapter Metric', width: 25 },
           { key: 'value', header: 'Value', width: 25 },
         ],
         data: [
           { metric: 'Dimension', value: String(dim) },
           { metric: 'Iterations', value: iterations.toLocaleString() },
-          { metric: 'Total Time', value: `${microLora.totalTimeMs.toFixed(2)}ms` },
-          { metric: 'Avg Adaptation', value: `${(microLora.averageTimeMs * 1000).toFixed(2)}μs` },
-          { metric: 'Adaptations/sec', value: microLora.adaptationsPerSecond.toLocaleString() },
-          { metric: 'Target (<100μs)', value: microLora.averageTimeMs * 1000 < 100 ? output.success('PASS') : output.warning('CHECK') },
+          { metric: 'Total Time', value: `${localAdapter.totalTimeMs.toFixed(2)}ms` },
+          { metric: 'Avg Update', value: `${(localAdapter.averageTimeMs * 1000).toFixed(2)}μs` },
+          { metric: 'Updates/sec', value: localAdapter.adaptationsPerSecond.toLocaleString() },
         ],
       });
 
       localTraining.cleanup();
 
-      return { success: true, data: { results, microLora } };
+      return { success: true, data: { results, localAdapter } };
     } catch (error) {
       spinner.fail('Benchmark failed');
       output.printError(error instanceof Error ? error.message : String(error));

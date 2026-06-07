@@ -118,7 +118,7 @@ import { compareResults, printComparisonReport } from '@hive-flow/performance';
 
 // Compare current vs baseline
 const comparisons = compareResults(baselineResults, currentResults, {
-  'vector-search': 1,      // Target: <1ms
+  'vector-search': 1,
   'memory-write': 5,       // Target: <5ms
   'cli-startup': 500       // Target: <500ms
 });
@@ -151,8 +151,8 @@ V3_PERFORMANCE_TARGETS = {
   'agent-spawn': 200,           // <200ms (4x faster)
 
   // Memory Operations
-  'vector-search': 1,           // <1ms (fast)
-  'hnsw-indexing': 10,          // <10ms
+  'vector-search': 1,
+  'hnsw-indexing': 10,
   'memory-write': 5,            // <5ms (10x faster)
   'cache-hit': 0.1,             // <0.1ms
 
@@ -163,7 +163,7 @@ V3_PERFORMANCE_TARGETS = {
   'message-throughput': 0.1,    // <0.1ms per message
 
   // SONA Learning
-  'sona-adaptation': 0.05       // low-latency
+  'sona-adaptation': 0.05
 };
 
 // Check if target is met

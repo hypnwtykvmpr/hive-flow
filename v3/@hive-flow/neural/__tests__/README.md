@@ -51,7 +51,7 @@ Tests for reinforcement learning algorithms:
 #### Q-Learning (8 tests)
 - Initialization
 - Q-value updates from trajectory
-- Performance target (<1ms)
+- Runtime sanity check
 - Exploration rate decay
 - Epsilon-greedy action selection
 - Q-value retrieval
@@ -73,7 +73,7 @@ Tests for reinforcement learning algorithms:
 - Initialization
 - Experience replay buffer
 - DQN update mechanism
-- Performance target (<10ms)
+- Runtime sanity check
 - Double DQN support
 - Epsilon-greedy action selection
 - Q-value retrieval
@@ -84,7 +84,7 @@ Tests for reinforcement learning algorithms:
 - Initialization
 - Experience collection
 - PPO update with clipping
-- Performance target (<10ms for small batches)
+- Small-batch runtime sanity check
 - GAE advantage computation
 - Policy action sampling
 - Multiple training epochs
@@ -95,7 +95,7 @@ Tests for reinforcement learning algorithms:
 - Trajectory buffer management
 - Incomplete trajectory handling
 - Training on buffered trajectories
-- Performance target (<10ms per batch)
+- Runtime sanity check
 - Return-conditioned action generation
 - Causal attention masking
 - Bounded trajectory buffer
@@ -162,19 +162,8 @@ Tests for pattern learning and ReasoningBank:
 
 ## Performance Targets
 
-All tests validate against these performance targets:
-
-| Operation | Target | Test Coverage |
-|-----------|--------|---------------|
-| SONA learn() | <0.05ms | ✓ |
-| SONA adapt() | <0.1ms | ✓ |
-| Q-Learning update | <1ms | ✓ |
-| SARSA update | <1ms | ✓ |
-| DQN update | <10ms | ✓ |
-| PPO update | <10ms | ✓ |
-| Decision Transformer train | <10ms | ✓ |
-| ReasoningBank retrieval | <10ms | ✓ |
-| ReasoningBank distillation | <10ms | ✓ |
+The tests include runtime sanity checks with generous CI headroom. They do not
+claim fixed production latency targets.
 
 ## Running Tests
 

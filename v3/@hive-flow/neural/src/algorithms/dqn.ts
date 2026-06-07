@@ -8,7 +8,7 @@
  * - Dueling architecture (optional)
  * - Epsilon-greedy exploration
  *
- * Performance Target: <10ms per update step
+ * Performance note: local implementation; no fixed latency guarantee.
  */
 
 import type {
@@ -117,8 +117,7 @@ export class DQNAlgorithm {
   }
 
   /**
-   * Perform DQN update
-   * Target: <10ms
+   * Perform DQN update.
    */
   update(): { loss: number; epsilon: number } {
     const startTime = performance.now();

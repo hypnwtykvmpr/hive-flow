@@ -7,7 +7,7 @@
  * - Entropy regularization
  * - Advantage normalization
  *
- * Performance Target: <10ms per update step
+ * Performance note: local implementation; no fixed latency guarantee.
  */
 
 import type {
@@ -130,8 +130,7 @@ export class A2CAlgorithm {
   }
 
   /**
-   * Perform A2C update
-   * Target: <10ms
+   * Perform A2C update.
    */
   update(): { policyLoss: number; valueLoss: number; entropy: number } {
     const startTime = performance.now();

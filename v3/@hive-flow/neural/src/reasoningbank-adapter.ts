@@ -9,11 +9,8 @@
  *
  * Based on Algorithm 3 & 4 from ReasoningBank paper.
  *
- * Performance Targets:
- * - Pattern retrieval: <5ms
- * - Verdict judgment: <10ms
- * - Memory distillation: <50ms
- * - Consolidation: <100ms
+ * Performance notes:
+ * - Timings depend on corpus size and runtime environment.
  */
 
 import type {
@@ -21,9 +18,7 @@ import type {
   TrajectoryVerdict,
   DistilledMemory,
   Pattern,
-  SONAMode,
 } from './types.js';
-import { createSONAManager, SONAManager } from './sona-manager.js';
 import { createPatternLearner, PatternLearner } from './pattern-learner.js';
 
 // ============================================================================
@@ -94,8 +89,8 @@ export interface ReasoningBankConfig {
   /** Enable reasoning agents */
   enableReasoning?: boolean;
 
-  /** SONA mode */
-  sonaMode?: SONAMode;
+  /** Legacy mode label retained for compatibility */
+  sonaMode?: string;
 
   /** Duplicate similarity threshold */
   duplicateThreshold?: number;
@@ -131,7 +126,6 @@ export interface ReasoningBankConfig {
 
 export class ReasoningBankAdapter {
   private readonly config: Required<ReasoningBankConfig>;
-  private readonly sonaManager: SONAManager;
   private readonly patternLearner: PatternLearner;
   private patterns: Map<string, ReasoningBankPattern> = new Map();
   private newPatternsSinceConsolidation = 0;
@@ -154,7 +148,6 @@ export class ReasoningBankAdapter {
       confidencePriorFailure: config?.confidencePriorFailure ?? 0.5,
     };
 
-    this.sonaManager = createSONAManager(this.config.sonaMode);
     this.patternLearner = createPatternLearner({
       maxPatterns: 5000,
       matchThreshold: 0.7,
@@ -165,7 +158,6 @@ export class ReasoningBankAdapter {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    await this.sonaManager.initialize();
     this.initialized = true;
   }
 

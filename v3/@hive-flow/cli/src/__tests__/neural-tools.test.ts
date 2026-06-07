@@ -105,7 +105,7 @@ describe('neural-tools', () => {
   // ========================================================================
 
   describe('neural_train', () => {
-    it('trains a model and returns success', async () => {
+    it('reports model training as unavailable', async () => {
       const { getPersistedStore } = setupMocks();
 
       const result = (await trainTool.handler({
@@ -113,17 +113,16 @@ describe('neural-tools', () => {
         epochs: 5,
       })) as Record<string, unknown>;
 
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
       expect(result.type).toBe('moe');
       expect(result.epochs).toBe(5);
-      expect(result.status).toBe('ready');
-      expect(result.accuracy).toBeGreaterThan(0);
-      expect(result.trainedAt).toBeDefined();
+      expect(result.status).toBe('unavailable');
+      expect(String(result.error)).toContain('unavailable');
       expect(result.modelId).toBeDefined();
 
-      // Model persisted to store
+      // Unavailable training must not persist a fake model.
       const store = getPersistedStore();
-      expect(Object.keys(store.models).length).toBe(1);
+      expect(Object.keys(store.models).length).toBe(0);
     });
 
     it('uses provided modelId', async () => {
@@ -147,14 +146,15 @@ describe('neural-tools', () => {
       expect(result.epochs).toBe(10);
     });
 
-    it('marks simulated=true when SONA is unavailable', async () => {
+    it('does not mark unavailable training as simulated success', async () => {
       setupMocks();
 
       const result = (await trainTool.handler({
         modelType: 'embedding',
       })) as Record<string, unknown>;
 
-      expect(result.simulated).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.simulated).toBeUndefined();
     });
   });
 
@@ -398,35 +398,36 @@ describe('neural-tools', () => {
   // ========================================================================
 
   describe('neural_compress', () => {
-    it('returns compression results for quantize', async () => {
+    it('reports compression as unavailable for quantize', async () => {
       const result = (await compressTool.handler({
         method: 'quantize',
         targetSize: 0.25,
       })) as Record<string, unknown>;
 
-      expect(result.success).toBe(true);
-      expect(result.simulated).toBe(true);
+      expect(result.success).toBe(false);
       expect(result.method).toBe('quantize');
-      expect(result.compressionRatio).toBe(3.92);
-      expect(result.qualityRetention).toBe(0.98);
+      expect(result.status).toBe('unavailable');
+      expect(String(result.error)).toContain('unavailable');
     });
 
-    it('returns compression results for prune', async () => {
+    it('reports compression as unavailable for prune', async () => {
       const result = (await compressTool.handler({
         method: 'prune',
       })) as Record<string, unknown>;
 
       expect(result.method).toBe('prune');
-      expect(result.compressionRatio).toBe(2.5);
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('unavailable');
     });
 
-    it('returns compression results for distill', async () => {
+    it('reports compression as unavailable for distill', async () => {
       const result = (await compressTool.handler({
         method: 'distill',
       })) as Record<string, unknown>;
 
       expect(result.method).toBe('distill');
-      expect(result.compressionRatio).toBe(4.0);
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('unavailable');
     });
 
     it('defaults to quantize method', async () => {
@@ -445,7 +446,7 @@ describe('neural-tools', () => {
       setupMocks({
         models: {
           'm1': { id: 'm1', status: 'ready', accuracy: 0.9 },
-          'm2': { id: 'm2', status: 'training', accuracy: 0 },
+          'm2': { id: 'm2', status: 'error', accuracy: 0 },
         },
         patterns: {
           'p1': { id: 'p1', type: 'code', embedding: [0.1] },
@@ -458,7 +459,7 @@ describe('neural-tools', () => {
       const models = result.models as Record<string, unknown>;
       expect(models.total).toBe(2);
       expect(models.ready).toBe(1);
-      expect(models.training).toBe(1);
+      expect(models.training).toBe(0);
 
       const patterns = result.patterns as Record<string, unknown>;
       expect(patterns.total).toBe(1);
@@ -496,21 +497,21 @@ describe('neural-tools', () => {
   // ========================================================================
 
   describe('neural_optimize', () => {
-    it('returns optimization results for speed', async () => {
+    it('reports optimization as unavailable for speed', async () => {
       const result = (await optimizeTool.handler({ target: 'speed' })) as Record<string, unknown>;
 
-      expect(result.success).toBe(true);
-      expect(result.simulated).toBe(true);
+      expect(result.success).toBe(false);
       expect(result.target).toBe('speed');
-      expect(Array.isArray(result.optimizations)).toBe(true);
-      expect(result.status).toBe('applied');
+      expect(result.status).toBe('unavailable');
+      expect(String(result.error)).toContain('unavailable');
     });
 
-    it('returns optimization results for memory', async () => {
+    it('reports optimization as unavailable for memory', async () => {
       const result = (await optimizeTool.handler({ target: 'memory' })) as Record<string, unknown>;
 
       expect(result.target).toBe('memory');
-      expect((result.optimizations as string[])).toContain('Int8 quantization');
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('unavailable');
     });
 
     it('returns optimization results for accuracy', async () => {

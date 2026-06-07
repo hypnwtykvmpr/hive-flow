@@ -157,19 +157,18 @@ const profiles = await runner.runMemoryProfile([256, 512, 1024]);
 
 ##### validateV3Targets(): Promise<ValidationResult>
 
-Validate against V3 performance targets (Flash Attention optimization).
+Validate whether the optimized path beats the baseline for the sampled runtime.
 
 ```typescript
 const validation = await runner.validateV3Targets();
-console.log(validation.meetsMinimum); // true if ≥2.49x
+console.log(validation.meetsMinimum); // true when optimized path beats baseline
 ```
 
 ## Performance Targets
 
-The V3 module targets the following Flash Attention performance improvements:
+The V3 module measures Flash Attention performance against the current runtime baseline:
 
-- **Minimum Speedup**: 2.49x
-- **Maximum Speedup**: 7.47x
+- **Baseline Comparison**: optimized path should be faster than baseline on the sampled workload
 - **Memory Reduction**: ~50%
 - **Target Use Cases**:
   - Small (128D): Mobile/edge devices
@@ -231,7 +230,7 @@ const metrics = optimizer.getMetrics();
 
 ## Troubleshooting
 
-### Low Speedup (<2.49x)
+### Low Speedup
 
 - Increase `dim` parameter (larger dimensions benefit more)
 - Increase `numKeys` (more keys = more benefit)

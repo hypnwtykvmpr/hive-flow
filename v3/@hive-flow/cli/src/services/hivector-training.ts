@@ -3,8 +3,8 @@
  *
  * This preserves the CLI's public training API without downloading or loading
  * external vector packages. The implementations below are deterministic
- * TypeScript fallbacks for LoRA-style adaptation, attention, trajectories, and
- * SONA-like pattern lookup.
+ * TypeScript fallbacks for local vector adaptation, attention, and trajectory
+ * statistics.
  */
 
 interface AttentionBenchmarkResult {
@@ -13,23 +13,13 @@ interface AttentionBenchmarkResult {
   opsPerSecond: number;
 }
 
-interface MicroLoraBenchmarkResult {
+interface LocalAdapterBenchmarkResult {
   averageTimeMs: number;
   totalTimeMs: number;
   adaptationsPerSecond: number;
 }
 
-interface SonaEngineInstance {
-  forceLearn(embedding: Float32Array, reward: number): void;
-  findPatterns(embedding: number[], k: number): unknown[];
-  tick(): void;
-  getStats(): string;
-  isEnabled(): boolean;
-  setEnabled(enabled: boolean): void;
-  flush(): void;
-}
-
-class LocalMicroLoRA {
+class LocalAdapter {
   private readonly delta: Float32Array;
   private adaptationCount = 0n;
   private forwardPasses = 0n;
@@ -104,8 +94,8 @@ class LocalMicroLoRA {
   }
 }
 
-class LocalScopedLoRA {
-  private readonly adapters = new Map<number, LocalMicroLoRA>();
+class LocalScopedAdapter {
+  private readonly adapters = new Map<number, LocalAdapter>();
   private fallbackEnabled = false;
 
   constructor(
@@ -165,12 +155,12 @@ class LocalScopedLoRA {
     this.adapters.clear();
   }
 
-  private adapterFor(operatorType: number): LocalMicroLoRA {
+  private adapterFor(operatorType: number): LocalAdapter {
     const normalized = Number.isFinite(operatorType) ? Math.trunc(operatorType) : 0;
     const key = normalized >= 0 ? normalized : 0;
     let adapter = this.adapters.get(key);
     if (!adapter) {
-      adapter = new LocalMicroLoRA(this.dimensions, this.alpha, this.learningRate);
+      adapter = new LocalAdapter(this.dimensions, this.alpha, this.learningRate);
       this.adapters.set(this.fallbackEnabled ? key : operatorType, adapter);
     }
     return adapter;
@@ -365,54 +355,9 @@ class LocalHardNegativeMiner {
   }
 }
 
-class LocalSonaEngine implements SonaEngineInstance {
-  private enabled = true;
-  private ticks = 0;
-  private readonly patterns: Array<{ embedding: number[]; reward: number }> = [];
-
-  forceLearn(embedding: Float32Array, reward: number): void {
-    this.patterns.push({ embedding: Array.from(embedding), reward });
-  }
-
-  findPatterns(embedding: number[], k: number): unknown[] {
-    const query = Float32Array.from(embedding);
-    return this.patterns
-      .map((pattern) => ({
-        reward: pattern.reward,
-        similarity: cosine(query, Float32Array.from(pattern.embedding)),
-      }))
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, k);
-  }
-
-  tick(): void {
-    this.ticks++;
-  }
-
-  getStats(): string {
-    return JSON.stringify({
-      patterns_stored: this.patterns.length,
-      ewc_tasks: 0,
-      ticks: this.ticks,
-    });
-  }
-
-  isEnabled(): boolean {
-    return this.enabled;
-  }
-
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
-  }
-
-  flush(): void {
-    // Local in-memory engine has no pending external buffers.
-  }
-}
-
 // Local training modules
-let microLoRA: LocalMicroLoRA | null = null;
-let scopedLoRA: LocalScopedLoRA | null = null;
+let localAdapter: LocalAdapter | null = null;
+let scopedAdapter: LocalScopedAdapter | null = null;
 let trajectoryBuffer: LocalTrajectoryBuffer | null = null;
 let flashAttention: LocalAttention | null = null;
 let moeAttention: LocalMoEAttention | null = null;
@@ -422,8 +367,7 @@ let contrastiveLoss: LocalInfoNceLoss | null = null;
 let curriculum: LocalCurriculumScheduler | null = null;
 let hardMiner: LocalHardNegativeMiner | null = null;
 
-// SONA engine (optional enhancement)
-let sonaEngine: SonaEngineInstance | null = null;
+// SONA runtime training is unavailable in this build.
 let sonaAvailable = false;
 
 // Training state
@@ -444,9 +388,9 @@ export interface TrainingConfig {
   useHyperbolic?: boolean;
   totalSteps?: number;    // For curriculum
   warmupSteps?: number;
-  // SONA options (v2 enhancement)
-  useSona?: boolean;      // Enable SONA self-optimizing neural architecture
-  sonaRank?: number;      // SONA LoRA rank (default: 4)
+  // Legacy compatibility flags. SONA runtime training remains unavailable.
+  useSona?: boolean;
+  sonaRank?: number;
 }
 
 export interface TrainingResult {
@@ -477,12 +421,12 @@ export async function initializeTraining(config: TrainingConfig = {}): Promise<{
   const alpha = config.alpha || 0.1;
 
   try {
-    microLoRA = new LocalMicroLoRA(dim, alpha, lr);
-    features.push(`Local MicroLoRA (${dim}-dim)`);
+    localAdapter = new LocalAdapter(dim, alpha, lr);
+    features.push(`Local adapter (${dim}-dim)`);
 
-    scopedLoRA = new LocalScopedLoRA(dim, alpha, lr);
-    scopedLoRA.set_category_fallback(true);
-    features.push('Local ScopedLoRA (17 operators)');
+    scopedAdapter = new LocalScopedAdapter(dim, alpha, lr);
+    scopedAdapter.set_category_fallback(true);
+    features.push('Local scoped adapters (17 operators)');
 
     trajectoryBuffer = new LocalTrajectoryBuffer(
       config.trajectoryCapacity || 10000,
@@ -523,10 +467,8 @@ export async function initializeTraining(config: TrainingConfig = {}): Promise<{
     features.push('Local hard negative mining');
 
     if (config.useSona !== false) {
-      const sonaRank = config.sonaRank || 4;
-      sonaEngine = new LocalSonaEngine();
-      sonaAvailable = true;
-      features.push(`Local SONA (${dim}-dim, rank-${sonaRank})`);
+      sonaAvailable = false;
+      features.push('SONA runtime unavailable; using local heuristic adapters');
     }
 
     initialized = true;
@@ -564,33 +506,32 @@ export const OperatorType = {
 } as const;
 
 /**
- * Train a pattern with MicroLoRA
+ * Train a pattern with the local adapter.
  */
 export async function trainPattern(
   embedding: Float32Array,
   gradient: Float32Array,
   operatorType?: number
 ): Promise<{ deltaNorm: number; adaptCount: bigint }> {
-  if (!initialized || !microLoRA) {
+  if (!initialized || !localAdapter) {
     throw new Error('Training system not initialized');
   }
 
   // Use scoped LoRA if operator type specified
-  if (operatorType !== undefined && scopedLoRA) {
-    scopedLoRA.adapt_array(operatorType, gradient);
+  if (operatorType !== undefined && scopedAdapter) {
+    scopedAdapter.adapt_array(operatorType, gradient);
     return {
-      deltaNorm: scopedLoRA.delta_norm(operatorType),
-      adaptCount: scopedLoRA.adapt_count(operatorType),
+      deltaNorm: scopedAdapter.delta_norm(operatorType),
+      adaptCount: scopedAdapter.adapt_count(operatorType),
     };
   }
 
-  // Standard MicroLoRA adaptation
-  microLoRA.adapt_array(gradient);
+  localAdapter.adapt_array(gradient);
   totalAdaptations++;
 
   return {
-    deltaNorm: microLoRA.delta_norm(),
-    adaptCount: microLoRA.adapt_count(),
+    deltaNorm: localAdapter.delta_norm(),
+    adaptCount: localAdapter.adapt_count(),
   };
 }
 
@@ -601,17 +542,17 @@ export function forward(
   input: Float32Array,
   operatorType?: number
 ): Float32Array {
-  if (!initialized || !microLoRA) {
+  if (!initialized || !localAdapter) {
     throw new Error('Training system not initialized');
   }
 
   totalForwards++;
 
-  if (operatorType !== undefined && scopedLoRA) {
-    return scopedLoRA.forward_array(operatorType, input);
+  if (operatorType !== undefined && scopedAdapter) {
+    return scopedAdapter.forward_array(operatorType, input);
   }
 
-  return microLoRA.forward_array(input);
+  return localAdapter.forward_array(input);
 }
 
 /**
@@ -625,10 +566,10 @@ export function adaptWithReward(
     throw new Error('Training system not initialized');
   }
 
-  if (operatorType !== undefined && scopedLoRA) {
-    scopedLoRA.adapt_with_reward(operatorType, improvement);
-  } else if (microLoRA) {
-    microLoRA.adapt_with_reward(improvement);
+  if (operatorType !== undefined && scopedAdapter) {
+    scopedAdapter.adapt_with_reward(operatorType, improvement);
+  } else if (localAdapter) {
+    localAdapter.adapt_with_reward(improvement);
   }
 
   totalAdaptations++;
@@ -810,24 +751,24 @@ export async function benchmarkTraining(
 }
 
 /**
- * Benchmark local MicroLoRA adaptation.
+ * Benchmark local adapter adaptation.
  */
-export function benchmarkMicroLora(
+export function benchmarkLocalAdapter(
   dim?: number,
   iterations?: number,
-): MicroLoraBenchmarkResult {
+): LocalAdapterBenchmarkResult {
   const dimensions = Math.min(dim || 256, 256);
   const runs = Math.max(1, iterations || 1000);
-  const lora = new LocalMicroLoRA(dimensions, 0.1, 0.01);
+  const adapter = new LocalAdapter(dimensions, 0.1, 0.01);
   const gradient = deterministicVector(dimensions, 29);
 
   const start = performance.now();
   for (let i = 0; i < runs; i++) {
-    lora.adapt_array(gradient);
+    adapter.adapt_array(gradient);
   }
   const totalTimeMs = performance.now() - start;
   const averageTimeMs = totalTimeMs / runs;
-  lora.free();
+  adapter.free();
 
   return {
     averageTimeMs,
@@ -837,60 +778,40 @@ export function benchmarkMicroLora(
 }
 
 // ============================================
-// SONA Functions (v2 enhancement, optional)
+// Legacy SONA compatibility functions
 // ============================================
 
 /**
  * Check if SONA is available
  */
 export function isSonaAvailable(): boolean {
-  return sonaAvailable && sonaEngine !== null;
+  return sonaAvailable;
 }
 
 /**
- * Force-learn a pattern with SONA (1.6μs, 624k ops/s)
- * This is a one-shot learning mechanism for immediate pattern storage
+ * SONA runtime training is unavailable in this build.
  */
 export function sonaForceLearn(
-  embedding: Float32Array,
-  reward: number
+  _embedding: Float32Array,
+  _reward: number
 ): void {
-  if (!sonaEngine) {
-    throw new Error('SONA not initialized. Call initializeTraining with useSona: true');
-  }
-
-  sonaEngine.forceLearn(embedding, reward);
-  totalSonaLearns++;
+  throw new Error('SONA runtime training is unavailable; use trainPattern and recordTrajectory for local heuristic learning.');
 }
 
 /**
- * Search for similar patterns with SONA (16.7μs, 60k searches/s)
- * Returns the k most similar patterns from the pattern bank
+ * SONA runtime pattern search is unavailable in this build.
  */
 export function sonaFindPatterns(
-  embedding: Float32Array,
-  k: number = 5
+  _embedding: Float32Array,
+  _k: number = 5
 ): unknown[] {
-  if (!sonaEngine) {
-    throw new Error('SONA not initialized. Call initializeTraining with useSona: true');
-  }
-
-  // SONA requires Array, not Float32Array
-  const embeddingArray = Array.from(embedding);
-  totalSonaSearches++;
-  return sonaEngine.findPatterns(embeddingArray, k);
+  return [];
 }
 
 /**
- * Process SONA background tasks (0.13μs, 7.5M ticks/s)
- * Call periodically to process background learning and consolidation
+ * Legacy no-op for callers that periodically tick optional learning backends.
  */
 export function sonaTick(): void {
-  if (!sonaEngine) {
-    return; // Silent no-op if SONA not available
-  }
-
-  sonaEngine.tick();
 }
 
 /**
@@ -903,57 +824,25 @@ export function getSonaStats(): {
   totalLearns: number;
   totalSearches: number;
 } {
-  if (!sonaEngine) {
-    return {
-      available: false,
-      enabled: false,
-      stats: null,
-      totalLearns: totalSonaLearns,
-      totalSearches: totalSonaSearches,
-    };
-  }
-
-  try {
-    const statsJson = sonaEngine.getStats();
-    const stats = JSON.parse(statsJson);
-    return {
-      available: true,
-      enabled: sonaEngine.isEnabled(),
-      stats,
-      totalLearns: totalSonaLearns,
-      totalSearches: totalSonaSearches,
-    };
-  } catch {
-    return {
-      available: true,
-      enabled: false,
-      stats: null,
-      totalLearns: totalSonaLearns,
-      totalSearches: totalSonaSearches,
-    };
-  }
+  return {
+    available: false,
+    enabled: false,
+    stats: null,
+    totalLearns: totalSonaLearns,
+    totalSearches: totalSonaSearches,
+  };
 }
 
 /**
  * Enable/disable SONA learning
  */
-export function setSonaEnabled(enabled: boolean): void {
-  if (!sonaEngine) {
-    return;
-  }
-
-  sonaEngine.setEnabled(enabled);
+export function setSonaEnabled(_enabled: boolean): void {
 }
 
 /**
- * Flush SONA buffers (persist any pending patterns)
+ * Legacy no-op; there are no SONA buffers in this build.
  */
 export function sonaFlush(): void {
-  if (!sonaEngine) {
-    return;
-  }
-
-  sonaEngine.flush();
 }
 
 /**
@@ -963,13 +852,13 @@ export function getTrainingStats(): {
   initialized: boolean;
   totalAdaptations: number;
   totalForwards: number;
-  microLoraStats?: {
+  adapterStats?: {
     paramCount: number;
     adaptCount: bigint;
     forwardCount: bigint;
     deltaNorm: number;
   };
-  scopedLoraStats?: {
+  scopedAdapterStats?: {
     totalAdaptCount: bigint;
     totalForwardCount: bigint;
   };
@@ -983,19 +872,19 @@ export function getTrainingStats(): {
     totalForwards,
   };
 
-  if (microLoRA) {
-    stats.microLoraStats = {
-      paramCount: microLoRA.param_count(),
-      adaptCount: microLoRA.adapt_count(),
-      forwardCount: microLoRA.forward_count(),
-      deltaNorm: microLoRA.delta_norm(),
+  if (localAdapter) {
+    stats.adapterStats = {
+      paramCount: localAdapter.param_count(),
+      adaptCount: localAdapter.adapt_count(),
+      forwardCount: localAdapter.forward_count(),
+      deltaNorm: localAdapter.delta_norm(),
     };
   }
 
-  if (scopedLoRA) {
-    stats.scopedLoraStats = {
-      totalAdaptCount: scopedLoRA.total_adapt_count(),
-      totalForwardCount: scopedLoRA.total_forward_count(),
+  if (scopedAdapter) {
+    stats.scopedAdapterStats = {
+      totalAdaptCount: scopedAdapter.total_adapt_count(),
+      totalForwardCount: scopedAdapter.total_forward_count(),
     };
   }
 
@@ -1019,14 +908,9 @@ export function getTrainingStats(): {
  * Reset the training system
  */
 export function resetTraining(): void {
-  if (microLoRA) microLoRA.reset();
-  if (scopedLoRA) scopedLoRA.reset_all();
+  if (localAdapter) localAdapter.reset();
+  if (scopedAdapter) scopedAdapter.reset_all();
   if (trajectoryBuffer) trajectoryBuffer.reset();
-
-  // Reset SONA stats (engine doesn't have reset, just flush)
-  if (sonaEngine) {
-    sonaEngine.flush();
-  }
 
   totalAdaptations = 0;
   totalForwards = 0;
@@ -1043,14 +927,14 @@ export function exportWeights(): {
   adaptCount: bigint;
   trajectoryStats: ReturnType<typeof getTrajectoryStats>;
 } | null {
-  if (!initialized || !microLoRA) {
+  if (!initialized || !localAdapter) {
     return null;
   }
 
   return {
-    dim: microLoRA.dim(),
-    deltaNorm: microLoRA.delta_norm(),
-    adaptCount: microLoRA.adapt_count(),
+    dim: localAdapter.dim(),
+    deltaNorm: localAdapter.delta_norm(),
+    adaptCount: localAdapter.adapt_count(),
     trajectoryStats: getTrajectoryStats(),
   };
 }
@@ -1059,25 +943,20 @@ export function exportWeights(): {
  * Cleanup resources
  */
 export function cleanup(): void {
-  if (microLoRA) {
-    microLoRA.free();
-    microLoRA = null;
+  if (localAdapter) {
+    localAdapter.free();
+    localAdapter = null;
   }
-  if (scopedLoRA) {
-    scopedLoRA.free();
-    scopedLoRA = null;
+  if (scopedAdapter) {
+    scopedAdapter.free();
+    scopedAdapter = null;
   }
   if (trajectoryBuffer) {
     trajectoryBuffer.free();
     trajectoryBuffer = null;
   }
 
-  // Cleanup SONA
-  if (sonaEngine) {
-    sonaEngine.flush();
-    sonaEngine = null;
-    sonaAvailable = false;
-  }
+  sonaAvailable = false;
 
   flashAttention = null;
   moeAttention = null;

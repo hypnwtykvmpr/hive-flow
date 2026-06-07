@@ -2,7 +2,7 @@
  * Token Optimizer - Integrates agentic-flow Agent Booster capabilities
  *
  * Combines:
- * - Agent Booster (352x code edit speedup)
+ * - Optional Agent Booster code-edit acceleration when available
  * - ReasoningBank (32% token reduction via semantic retrieval)
  * - Configuration Tuning (batch/cache/topology optimization)
  *
@@ -135,8 +135,7 @@ export class TokenOptimizer extends EventEmitter {
   }
 
   /**
-   * Optimized code edit using Agent Booster (352x faster)
-   * Faster edits = fewer timeouts = fewer retry tokens
+   * Optimized code edit using Agent Booster when available.
    */
   async optimizedEdit(
     filePath: string,
@@ -177,7 +176,7 @@ export class TokenOptimizer extends EventEmitter {
 
   /**
    * Get optimal swarm configuration to prevent failures
-   * 100% success rate = no wasted retry tokens
+   * Get a conservative swarm configuration to reduce retries.
    */
   getOptimalConfig(agentCount: number): {
     batchSize: number;
