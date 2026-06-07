@@ -4,13 +4,13 @@
 [![npm downloads](https://img.shields.io/npm/dm/@hive-flow/memory.svg)](https://www.npmjs.com/package/@hive-flow/memory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Performance](https://img.shields.io/badge/Performance-150x--12500x%20Faster-brightgreen.svg)](https://github.com/ruvnet/hive-flow)
+[![Performance](https://img.shields.io/badge/Performance-HNSW-indexed--large-scale HNSW-indexed%20Faster-brightgreen.svg)](https://github.com/ruvnet/hive-flow)
 
 > High-performance memory module for Hive Flow V3 - AgentDB unification, HNSW indexing, vector search, self-learning knowledge graph, and hybrid SQLite+AgentDB backend (ADR-009).
 
 ## Features
 
-- **150x-12,500x Faster Search** - HNSW (Hierarchical Navigable Small World) vector index for ultra-fast similarity search
+- **fast HNSW-indexed Search** - HNSW (Hierarchical Navigable Small World) vector index for ultra-fast similarity search
 - **Hybrid Backend** - SQLite for structured data + AgentDB for vectors (ADR-009)
 - **Auto Memory Bridge** - Bidirectional sync between Claude Code auto memory and AgentDB (ADR-048)
 - **Self-Learning** - LearningBridge connects insights to SONA/ReasoningBank neural pipeline (ADR-049)
@@ -525,7 +525,7 @@ const scopes = await listAgentScopes('/workspaces/my-project');
 
 | Operation | V2 Performance | V3 Performance | Improvement |
 |-----------|---------------|----------------|-------------|
-| Vector Search | 150ms | <1ms | **150x** |
+| Vector Search | 150ms | <1ms | **HNSW-indexed** |
 | Bulk Insert | 500ms | 5ms | **100x** |
 | Memory Write | 50ms | <5ms | **10x** |
 | Cache Hit | 5ms | <0.1ms | **50x** |

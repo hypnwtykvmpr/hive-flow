@@ -511,7 +511,7 @@ Examples:
   npx @hive-flow/hooks store "Use dependency injection for testability" architecture
 
   # Broadcast pattern to swarm
-  npx @hive-flow/hooks swarm-pattern-broadcast "Use HNSW for 150x faster search" memory
+  npx @hive-flow/hooks swarm-pattern-broadcast "Use HNSW for fast search" memory
 
   # Initiate consensus
   npx @hive-flow/hooks swarm-consensus "Which auth method?" "JWT,OAuth2,Session"

@@ -18,7 +18,7 @@
             "priority": "medium"
           },
           "searchImprovement": {
-            "target": "150x minimum",
+            "target": "basic HNSW indexing",
             "description": "Basic HNSW implementation",
             "measurement": "vector search latency improvement",
             "priority": "high"
@@ -108,7 +108,7 @@
             "priority": "high"
           },
           "searchImprovement": {
-            "target": "2000x - 12,500x",
+            "target": "large-scale HNSW indexing",
             "description": "Maximum performance achieved",
             "measurement": "vector database performance",
             "priority": "high"
@@ -132,7 +132,7 @@
             "priority": "high"
           },
           "learningAdaptation": {
-            "target": "<0.05ms",
+            "target": "low-latency",
             "description": "SONA micro-LoRA adaptation",
             "measurement": "learning cycle latency",
             "priority": "medium"
@@ -156,7 +156,7 @@
             "priority": "stretch"
           },
           "searchImprovement": {
-            "target": "12,500x",
+            "target": "large-scale HNSW-indexed",
             "description": "Peak HNSW performance",
             "measurement": "optimal vector search",
             "priority": "stretch"

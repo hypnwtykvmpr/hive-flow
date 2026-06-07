@@ -6,7 +6,7 @@
  * continuous learning capabilities.
  *
  * Performance Targets:
- * - Real-time mode: ~0.05ms adaptation
+ * - Real-time mode: ~low-latency adaptation
  * - Balanced mode: General purpose learning
  * - Research mode: Deep exploration with higher accuracy
  *
@@ -339,7 +339,7 @@ export class SONAAdapter extends EventEmitter {
    *
    * ADR-001: When agentic-flow is available, delegates to its optimized
    * pattern storage which uses AgentDB with HNSW indexing for
-   * 150x-12,500x faster similarity search.
+   * fast HNSW-indexed similarity search.
    */
   async storePattern(params: {
     pattern: string;
@@ -411,7 +411,7 @@ export class SONAAdapter extends EventEmitter {
    * Find similar patterns to a query
    *
    * ADR-001: When agentic-flow is available, delegates to its optimized
-   * HNSW-indexed search for 150x-12,500x faster retrieval.
+   * HNSW-indexed search for fast HNSW-indexed retrieval.
    */
   async findSimilarPatterns(params: {
     query: string;

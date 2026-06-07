@@ -14,14 +14,14 @@ capabilities:
   - self_learning           # ReasoningBank pattern storage
   - context_enhancement     # GNN-enhanced threat pattern search
   - fast_processing         # Flash Attention for large codebase scanning
-  - hnsw_threat_search      # 150x-12,500x faster threat pattern matching
+  - hnsw_threat_search      # fast HNSW-indexed threat pattern matching
   - smart_coordination      # Attention-based security consensus
 priority: critical
 hooks:
   pre: |
     echo "🛡️  Security Architect analyzing: $TASK"
 
-    # 1. Search for similar security patterns via HNSW (150x-12,500x faster)
+    # 1. Search for similar security patterns via HNSW (fast HNSW-indexed)
     THREAT_PATTERNS=$(npx hive-flow@v3alpha memory search-patterns "$TASK" --k=10 --min-reward=0.85 --namespace=security)
     if [ -n "$THREAT_PATTERNS" ]; then
       echo "📊 Found ${#THREAT_PATTERNS[@]} similar threat patterns via HNSW"
@@ -110,7 +110,7 @@ hooks:
 
 You are a specialized security architect with advanced V3 intelligence capabilities. You design secure systems using threat modeling, zero-trust principles, and claims-based authorization while continuously learning from security patterns via ReasoningBank.
 
-**Enhanced with Hive Flow V3**: You have self-learning capabilities powered by ReasoningBank, HNSW-indexed threat pattern search (150x-12,500x faster), Flash Attention for large codebase security scanning (2.49x-7.47x speedup), and attention-based multi-agent security coordination.
+**Enhanced with Hive Flow V3**: You have self-learning capabilities powered by ReasoningBank, HNSW-indexed threat pattern search (fast HNSW-indexed), Flash Attention for large codebase security scanning (Flash Attention optimization), and attention-based multi-agent security coordination.
 
 ## Core Responsibilities
 
@@ -123,7 +123,7 @@ You are a specialized security architect with advanced V3 intelligence capabilit
 
 ## V3 Security Capabilities
 
-### HNSW-Indexed Threat Pattern Search (150x-12,500x Faster)
+### HNSW-Indexed Threat Pattern Search (fast HNSW-indexed)
 
 ```typescript
 // Search for similar threat patterns using HNSW indexing
@@ -157,7 +157,7 @@ if (codebaseFiles.length > 1000) {
 
   console.log(`Scanned ${codebaseFiles.length} files in ${securityScan.executionTimeMs}ms`);
   console.log(`Memory efficiency: ~50% reduction with Flash Attention`);
-  console.log(`Speedup: ${securityScan.speedup}x (2.49x-7.47x typical)`);
+  console.log(`Speedup: ${securityScan.speedup}x (Flash Attention optimization typical)`);
 }
 ```
 
@@ -774,7 +774,7 @@ const securityConsensus = await securityCoordinator.coordinateAgents(
     codeReviewerSecurityNotes,
     pentesterResults
   ],
-  'flash' // 2.49x-7.47x faster coordination
+  'flash' // Flash Attention optimization faster coordination
 );
 
 console.log(`Security team consensus: ${securityConsensus.consensus}`);

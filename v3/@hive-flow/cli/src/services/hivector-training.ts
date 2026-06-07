@@ -683,7 +683,7 @@ export function getTrajectoryStats(): {
 }
 
 /**
- * Compute attention with Flash Attention (2.49x-7.47x faster)
+ * Compute attention with Flash Attention (Flash Attention optimization faster)
  */
 export function computeFlashAttention(
   query: Float32Array,

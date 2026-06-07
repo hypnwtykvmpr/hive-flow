@@ -133,7 +133,7 @@ Detection time: 0.08ms
 ### Safe Input
 ```
 ✅ No threats detected
-Detection time: 0.05ms
+Detection time: low-latency
 ```
 
 ### PII Warning

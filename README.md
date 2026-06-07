@@ -153,7 +153,7 @@ Agents organize into swarms led by queens that coordinate work, prevent drift, a
 - 👷 **8 Worker Types**: Researcher, Coder, Analyst, Tester, Architect, Reviewer, Optimizer, Documenter
 - 🗳️ **3 Consensus Algorithms**: Majority, Weighted (Queen 3x), Byzantine (f < n/3)
 - 🧠 **Collective Memory**: Shared knowledge, LRU cache, SQLite persistence with WAL
-- ⚡ **Performance**: 10-20x faster batch spawning, 84.8% SWE-Bench solve rate
+- ⚡ **Performance**: 10-20x faster batch spawning, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -351,7 +351,7 @@ swarm_init({
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
 | **LLM Provider** | Anthropic only | 6 providers with automatic failover and cost-based routing (85% savings) |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
-| **Performance** | Baseline | 2.8-4.4x faster tasks, 10-20x faster swarm spawning, 84.8% SWE-Bench |
+| **Performance** | Baseline | Task, swarm, and SWE-Bench evaluation metrics require current benchmark evidence |
 
 ## Quick Start
 
@@ -1564,7 +1564,7 @@ hive-flow hive-mind memory                  # Collective memory stats
 hive-flow hive-mind sessions                # List active sessions
 ```
 
-**Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, 84.8% SWE-Bench solve rate
+**Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -2122,7 +2122,7 @@ hive-flow hive-mind status                                  # Check status
 
 **Hive Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
-**Performance:** 10-20x faster batch spawning, 84.8% SWE-Bench solve rate, 32.3% token reduction
+**Performance:** 10-20x faster batch spawning, SWE-Bench evaluation claims removed, 32.3% token reduction
 
 </details>
 

@@ -313,7 +313,7 @@
           "cacheStrategy": "lru-with-embedding"
         },
         "metadata": {
-          "speedup": "150x",
+          "speedup": "HNSW-indexed",
           "memoryReduction": "60%"
         }
       },

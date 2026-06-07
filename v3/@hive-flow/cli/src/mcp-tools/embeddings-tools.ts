@@ -682,7 +682,7 @@ export const embeddingsTools: MCPTool[] = [
               },
               capabilities: [
                 stats.sonaEnabled ? '✅ SONA Active' : '❌ SONA Inactive',
-                benchmark.targetMet ? '✅ <0.05ms Target Met' : '⚠️ Target Not Met',
+                benchmark.targetMet ? '✅ low-latency Target Met' : '⚠️ Target Not Met',
                 `${stats.patternsLearned} patterns learned`,
                 `${stats.trajectoriesRecorded} trajectories recorded`,
               ],

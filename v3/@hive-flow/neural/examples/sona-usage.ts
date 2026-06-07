@@ -5,7 +5,7 @@
  * - Creating a SONA learning engine
  * - Learning from trajectories
  * - Adapting behavior based on context
- * - Performance monitoring (<0.05ms learning target)
+ * - Performance monitoring (low-latency learning target)
  */
 
 import {
@@ -76,7 +76,7 @@ async function basicLearningExample() {
   console.log(`- Steps: ${trajectory.steps.length}`);
   console.log(`- Quality: ${trajectory.qualityScore}`);
   console.log(`- Learning time: ${sona.getLearningTime().toFixed(4)}ms`);
-  console.log(`- Target: <0.05ms ✓`);
+  console.log(`- Target: low-latency ✓`);
 
   // Get statistics
   const stats = sona.getStats();
@@ -261,7 +261,7 @@ async function performanceMonitoringExample() {
     console.log(`- Avg learning time: ${avgTime.toFixed(4)}ms ${meetsTarget ? '✓' : '✗'}`);
     console.log(`- Min time: ${minTime.toFixed(4)}ms`);
     console.log(`- Max time: ${maxTime.toFixed(4)}ms`);
-    console.log(`- Target: <0.05ms`);
+    console.log(`- Target: low-latency`);
   }
 }
 

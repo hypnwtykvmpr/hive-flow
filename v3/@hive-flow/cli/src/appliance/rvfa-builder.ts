@@ -272,7 +272,7 @@ export class RvfaBuilder {
       components: {
         agentDb: { format: 'rvf', magicBytes: 'RVF\\0', databaseSize: rvfDb.length },
         hnswIndex: { type: 'hnsw-index', dimensions: 1536, metric: 'cosine', m: 16, efConstruction: 200, maxElements: 100_000, vectorCount: 0 },
-        sonaPatterns: { type: 'sona-patterns', version: 1, architecture: 'self-optimizing-neural', adaptationTime: '<0.05ms', patterns: [], expertCount: 8, moeConfig: { topK: 2, capacityFactor: 1.25, loadBalancingLoss: 0.01 } },
+        sonaPatterns: { type: 'sona-patterns', version: 1, architecture: 'self-optimizing-neural', adaptationTime: 'low-latency', patterns: [], expertCount: 8, moeConfig: { topK: 2, capacityFactor: 1.25, loadBalancingLoss: 0.01 } },
         pluginRegistry: { source: 'ipfs', snapshotted: true, pluginCount: 20 },
       },
     });

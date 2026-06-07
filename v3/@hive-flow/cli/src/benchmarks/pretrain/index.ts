@@ -3,7 +3,7 @@
  * Comprehensive benchmarks for SONA, EWC++, MoE, pattern learning
  *
  * Metrics measured:
- * - SONA adaptation latency (<0.05ms target)
+ * - SONA adaptation latency (low-latency target)
  * - Pattern learning throughput
  * - EWC++ consolidation effectiveness
  * - Memory retrieval accuracy

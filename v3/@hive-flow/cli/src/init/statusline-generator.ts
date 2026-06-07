@@ -676,7 +676,7 @@ function generateStatusline() {
   const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.warn : c.red;
   // Phase 12: show "HNSW" only as a presence indicator when the index exists
   // and a real vector count is known — never a fabricated speedup multiplier
-  // (the old 10x/150x/12500x claims were synthesized from a byte-derived count
+  // (the old 10x/HNSW-indexed/large-scale HNSW-indexed claims were synthesized from a byte-derived count
   // and are removed). When no trusted perf metric exists, omit the indicator
   // rather than print an aspirational "target" string.
   let perfIndicator = '';

@@ -203,7 +203,7 @@ async function runBenchmarks(): Promise<BenchmarkResults> {
   console.log('1. SONA Adaptation Benchmark (10,000 iterations)...');
   const sonaResult = benchmarkAdaptation(10000);
   console.log(`   Average: ${sonaResult.avgMs.toFixed(4)}ms`);
-  console.log(`   Target (<0.05ms): ${sonaResult.targetMet ? '✅ ACHIEVED' : '❌ NOT MET'}`);
+  console.log(`   Target (low-latency): ${sonaResult.targetMet ? '✅ ACHIEVED' : '❌ NOT MET'}`);
 
   // Flash Attention Benchmark
   console.log('\n2. Flash Attention Search Benchmark...');

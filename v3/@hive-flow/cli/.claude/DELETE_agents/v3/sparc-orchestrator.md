@@ -176,7 +176,7 @@ mcp__hive-flow__memory_search --pattern="sparc:*:$PROJECT_TYPE" --namespace="pat
 
 ## Integration with V3 Features
 
-- **HNSW Search**: Find similar SPARC patterns (150x faster)
+- **HNSW Search**: Find similar SPARC patterns (fast)
 - **Flash Attention**: Process large specifications efficiently
 - **EWC++**: Prevent forgetting successful patterns
 - **Claims Auth**: Enforce phase access control

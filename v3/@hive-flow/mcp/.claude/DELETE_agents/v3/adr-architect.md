@@ -178,7 +178,7 @@ mcp__hive-flow__memory_usage --action="retrieve" --namespace="decisions" --key="
 
 ## Integration with V3
 
-- **HNSW Search**: Find similar ADRs 150x faster
+- **HNSW Search**: Find similar ADRs fast
 - **ReasoningBank**: Learn from decision outcomes
 - **Claims Auth**: Control who can approve ADRs
 - **Swarm Coordination**: Distribute ADR enforcement across agents

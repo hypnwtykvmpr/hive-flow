@@ -556,7 +556,7 @@ export class SwarmHub implements ISwarmHub {
       activeAgents: ['agent-1', 'agent-5', 'agent-6', 'agent-7', 'agent-8', 'agent-9', 'agent-13'],
       goals: [
         'Complete core module implementation',
-        'Unify memory system with AgentDB (150x improvement)',
+        'Unify memory system with AgentDB (HNSW indexing improvement)',
         'Merge 4 coordination systems into single SwarmCoordinator',
         'Optimize MCP server',
         'Implement TDD London School tests'
@@ -591,8 +591,8 @@ export class SwarmHub implements ISwarmHub {
         'agent-13', 'agent-14', 'agent-15'
       ],
       goals: [
-        'Achieve 2.49x-7.47x Flash Attention speedup',
-        'Verify 150x-12,500x AgentDB search improvement',
+        'Achieve Flash Attention optimization',
+        'Verify HNSW-indexed AgentDB search improvement',
         'Complete deployment pipeline',
         'Final test coverage push (>90%)',
         'Release v3.0.0'
@@ -633,10 +633,10 @@ export class SwarmHub implements ISwarmHub {
       {
         id: 'ms-memory-unification',
         name: 'Memory Unification Complete',
-        description: 'Single memory service with AgentDB backend achieving 150x improvement',
+        description: 'Single memory service with AgentDB backend achieving HNSW indexing improvement',
         criteria: [
           { description: 'AgentDB integrated', met: false, evidence: null },
-          { description: '150x search improvement verified', met: false, evidence: null },
+          { description: 'HNSW-indexed search improvement verified', met: false, evidence: null },
           { description: 'Hybrid backend working', met: false, evidence: null }
         ],
         status: 'pending',
@@ -671,8 +671,8 @@ export class SwarmHub implements ISwarmHub {
         name: 'Performance Targets Met',
         description: 'All performance targets achieved and verified',
         criteria: [
-          { description: '2.49x-7.47x Flash Attention speedup', met: false, evidence: null },
-          { description: '150x-12,500x AgentDB search', met: false, evidence: null },
+          { description: 'Flash Attention optimization', met: false, evidence: null },
+          { description: 'HNSW-indexed AgentDB search', met: false, evidence: null },
           { description: '50-75% memory reduction', met: false, evidence: null },
           { description: '<500ms startup time', met: false, evidence: null }
         ],

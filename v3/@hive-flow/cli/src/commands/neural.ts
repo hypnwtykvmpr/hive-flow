@@ -501,7 +501,7 @@ const statusCommand: Command = {
           { metric: 'HNSW Dimensions', value: String(hnswStatus.dimensions) },
           { metric: 'SONA Adaptation (avg)', value: `${(adaptBench.avgMs * 1000).toFixed(2)}μs` },
           { metric: 'SONA Adaptation (max)', value: `${(adaptBench.maxMs * 1000).toFixed(2)}μs` },
-          { metric: 'Target Met (<0.05ms)', value: adaptBench.targetMet ? output.success('Yes') : output.warning('No') },
+          { metric: 'Target Met (low-latency)', value: adaptBench.targetMet ? output.success('Yes') : output.warning('No') },
           {
             metric: 'Last Adaptation',
             value: stats.lastAdaptation

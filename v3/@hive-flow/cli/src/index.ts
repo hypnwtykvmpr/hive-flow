@@ -323,8 +323,8 @@ export class CLI {
     this.output.writeln(this.output.bold('V3 FEATURES:'));
     this.output.printList([
       '15-agent hierarchical mesh coordination',
-      'AgentDB with HNSW indexing (150x-12,500x faster)',
-      'Flash Attention (2.49x-7.47x speedup)',
+      'AgentDB with HNSW-indexed search',
+      'Flash Attention optimization',
       'Unified SwarmCoordinator engine',
       'Event-sourced state management',
       'Domain-Driven Design architecture'

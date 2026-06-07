@@ -1186,12 +1186,12 @@ const neuralCommand: Command = {
       data: [
         {
           component: 'SONA',
-          description: 'Self-Optimizing Neural Architecture (<0.05ms)',
+          description: 'Self-Optimizing Neural Architecture (low-latency)',
           status: ruvector.sona ? output.success('Enabled') : output.dim('Disabled')
         },
         {
           component: 'Flash Attention',
-          description: '2.49x-7.47x attention speedup',
+          description: 'Flash Attention optimization attention speedup',
           status: ruvector.flashAttention ? output.success('Enabled') : output.dim('Disabled')
         },
         {
@@ -1728,7 +1728,7 @@ export const embeddingsCommand: Command = {
     output.writeln();
     output.writeln('Performance:');
     output.printList([
-      'HNSW indexing: 150x-12,500x faster search',
+      'HNSW indexing for fast search',
       'Agentic Flow: 75x faster than Transformers.js (~3ms)',
       'Persistent cache: SQLite-backed, survives restarts',
       'Hyperbolic: Better hierarchical representation',

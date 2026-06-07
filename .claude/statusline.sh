@@ -40,7 +40,7 @@ BRIGHT_CYAN='\033[1;36m'
 # V3 Development Targets
 DOMAINS_TOTAL=5
 AGENTS_TARGET=15
-PERF_TARGET="2.49x-7.47x"
+PERF_TARGET="Flash Attention optimization"
 SECURITY_CVES=3
 
 # Default values

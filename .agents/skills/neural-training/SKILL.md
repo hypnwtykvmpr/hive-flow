@@ -19,7 +19,7 @@ Train and optimize neural patterns using SONA, MoE, and EWC++ systems.
 
 ## Intelligence Pipeline
 
-1. **RETRIEVE** — Fetch relevant patterns via HNSW (150x-12,500x faster)
+1. **RETRIEVE** — Fetch relevant patterns via HNSW (fast HNSW-indexed)
 2. **JUDGE** — Evaluate with verdicts (success$failure)
 3. **DISTILL** — Extract key learnings via LoRA
 4. **CONSOLIDATE** — Prevent catastrophic forgetting via EWC++
@@ -28,11 +28,11 @@ Train and optimize neural patterns using SONA, MoE, and EWC++ systems.
 
 | Component | Purpose | Performance |
 |-----------|---------|-------------|
-| SONA | Self-optimizing adaptation | <0.05ms |
+| SONA | Self-optimizing adaptation | low-latency |
 | MoE | Expert routing | 8 experts |
-| HNSW | Pattern search | 150x-12,500x |
+| HNSW | Pattern search | HNSW-indexed |
 | EWC++ | Prevent forgetting | Continuous |
-| Flash Attention | Speed | 2.49x-7.47x |
+| Flash Attention | Speed | Flash Attention optimization |
 
 ## Commands
 

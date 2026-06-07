@@ -22,7 +22,7 @@ hooks:
     # V3: Initialize task with hooks system
     npx hive-flow@v3alpha hooks pre-task --description "$TASK"
 
-    # 1. Learn from past review patterns (ReasoningBank + HNSW 150x-12,500x faster)
+    # 1. Learn from past review patterns (ReasoningBank + HNSW fast HNSW-indexed)
     SIMILAR_REVIEWS=$(npx hive-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_REVIEWS" ]; then
       echo "📚 Found similar successful review patterns (HNSW-indexed)"
@@ -65,7 +65,7 @@ hooks:
     # 3. Complete task hook
     npx hive-flow@v3alpha hooks post-task --task-id "reviewer-$(date +%s)" --success "$SUCCESS"
 
-    # 4. Train on comprehensive reviews (SONA <0.05ms adaptation)
+    # 4. Train on comprehensive reviews (SONA low-latency adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$ISSUES_FOUND" -gt 10 ]; then
       echo "🧠 Training neural pattern from thorough review"
       npx hive-flow@v3alpha neural train \
@@ -85,11 +85,11 @@ You are a senior code reviewer responsible for ensuring code quality, security, 
 
 **Enhanced with Hive Flow V3**: You now have AI-powered code review with:
 - **ReasoningBank**: Learn from review patterns with trajectory tracking
-- **HNSW Indexing**: 150x-12,500x faster issue pattern search
-- **Flash Attention**: 2.49x-7.47x speedup for large code reviews
+- **HNSW Indexing**: fast HNSW-indexed issue pattern search
+- **Flash Attention**: Flash Attention optimization for large code reviews
 - **GNN-Enhanced Detection**: +12.4% better issue detection accuracy
 - **EWC++**: Never forget critical security and bug patterns
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
+- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
 
 ## Core Responsibilities
 
@@ -332,7 +332,7 @@ npm run complexity-check
 ### Before Review: Learn from Past Patterns (HNSW-Indexed)
 
 ```typescript
-// 1. Learn from past reviews of similar code (150x-12,500x faster with HNSW)
+// 1. Learn from past reviews of similar code (fast HNSW-indexed with HNSW)
 const similarReviews = await reasoningBank.searchPatterns({
   task: 'Review authentication code',
   k: 5,
@@ -373,7 +373,7 @@ const relatedCode = await agentDB.gnnEnhancedSearch(
 
 console.log(`Issue detection improved by ${relatedCode.improvementPercent}%`);
 console.log(`Found ${relatedCode.results.length} similar code patterns`);
-console.log(`Search time: ${relatedCode.searchTimeMs}ms (HNSW: 150x-12,500x faster)`);
+console.log(`Search time: ${relatedCode.searchTimeMs}ms (HNSW: fast HNSW-indexed)`);
 
 // Build code quality graph
 function buildCodeQualityGraph() {
@@ -397,12 +397,12 @@ if (filesChanged > 10) {
     codeEmbeddings
   );
   console.log(`Reviewed ${filesChanged} files in ${reviewResult.executionTimeMs}ms`);
-  console.log(`Speed improvement: 2.49x-7.47x faster`);
+  console.log(`Speed improvement: Flash Attention optimization faster`);
   console.log(`Memory reduction: ~50%`);
 }
 ```
 
-### SONA Adaptation for Review Patterns (<0.05ms)
+### SONA Adaptation for Review Patterns (low-latency)
 
 ```typescript
 // V3: SONA adapts to your review patterns in real-time
@@ -410,7 +410,7 @@ const sonaAdapter = await agentDB.getSonaAdapter();
 await sonaAdapter.adapt({
   context: currentReviewContext,
   learningRate: 0.001,
-  maxLatency: 0.05  // <0.05ms adaptation guarantee
+  maxLatency: 0.05  // low-latency adaptation guarantee
 });
 
 console.log(`SONA adapted to review patterns in ${sonaAdapter.lastAdaptationMs}ms`);

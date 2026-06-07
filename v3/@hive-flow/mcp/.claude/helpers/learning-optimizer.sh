@@ -91,7 +91,7 @@ optimize_patterns() {
     "level": "$([ $intel_score -lt 25 ] && echo "learning" || ([ $intel_score -lt 50 ] && echo "developing" || ([ $intel_score -lt 75 ] && echo "proficient" || echo "expert")))"
   },
   "sona": {
-    "adaptationTime": "0.05ms",
+    "adaptationTime": "low-latency",
     "microLoraEnabled": true
   }
 }

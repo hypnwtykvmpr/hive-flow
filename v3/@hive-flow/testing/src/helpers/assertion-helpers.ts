@@ -275,13 +275,13 @@ function removeFields(obj: Record<string, unknown>, fields: string[]): Record<st
  * });
  */
 export function assertV3PerformanceTargets(metrics: V3PerformanceMetrics): void {
-  // Search speedup: 150x - 12500x
+  // Search speedup: HNSW-indexed
   if (metrics.searchSpeedup !== undefined) {
     expect(metrics.searchSpeedup).toBeGreaterThanOrEqual(150);
     expect(metrics.searchSpeedup).toBeLessThanOrEqual(12500);
   }
 
-  // Flash attention speedup: 2.49x - 7.47x
+  // Flash attention speedup: Flash Attention optimization
   if (metrics.flashAttentionSpeedup !== undefined) {
     expect(metrics.flashAttentionSpeedup).toBeGreaterThanOrEqual(2.49);
     expect(metrics.flashAttentionSpeedup).toBeLessThanOrEqual(7.47);
@@ -583,7 +583,7 @@ export function registerCustomMatchers(): void {
 
       if (received.searchSpeedup !== undefined) {
         if (received.searchSpeedup < 150) {
-          issues.push(`Search speedup ${received.searchSpeedup}x is below minimum 150x`);
+          issues.push(`Search speedup ${received.searchSpeedup}x is below minimum HNSW-indexed`);
         }
       }
 

@@ -8,10 +8,10 @@
  * - CLI Startup: <500ms (5x faster)
  * - MCP Init: <400ms (4.5x faster)
  * - Agent Spawn: <200ms (4x faster)
- * - Vector Search: <1ms (150x faster)
+ * - Vector Search: <1ms (fast)
  * - Memory Write: <5ms (10x faster)
  * - Swarm Consensus: <100ms (5x faster)
- * - Flash Attention: 2.49x-7.47x speedup
+ * - Flash Attention: optimization enabled
  * - Memory Usage: <256MB (50% reduction)
  */
 

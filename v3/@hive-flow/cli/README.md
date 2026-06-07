@@ -82,12 +82,12 @@ flowchart TB
     subgraph RUVECTOR["🧠 Local Vector Intelligence Layer"]
         direction TB
         subgraph ROW1[" "]
-            SONA[SONA<br/>Self-Optimize<br/>&lt;0.05ms]
+            SONA[SONA<br/>Self-Optimize<br/>&lt;low-latency]
             EWC[EWC++<br/>No Forgetting]
             FLASH[Flash Attention<br/>2.49-7.47x]
         end
         subgraph ROW2[" "]
-            HNSW[HNSW<br/>150x-12,500x faster]
+            HNSW[HNSW<br/>fast HNSW-indexed]
             RB[ReasoningBank<br/>Pattern Store]
             HYP[Hyperbolic<br/>Poincaré]
         end
@@ -128,7 +128,7 @@ flowchart TB
 
 | Component | Purpose | Performance |
 |-----------|---------|-------------|
-| **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | <0.05ms adaptation |
+| **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | low-latency adaptation |
 | **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves 95%+ knowledge |
 | **Local Attention** | Deterministic attention-style scoring | Offline, no external package |
 | **Vector Search** | Local vector search and hashing | Offline, no external package |
@@ -209,7 +209,7 @@ Agents organize into swarms led by queens that coordinate work, prevent drift, a
 - 👷 **8 Worker Types**: Researcher, Coder, Analyst, Tester, Architect, Reviewer, Optimizer, Documenter
 - 🗳️ **3 Consensus Algorithms**: Majority, Weighted (Queen 3x), Byzantine (f < n/3)
 - 🧠 **Collective Memory**: Shared knowledge, LRU cache, SQLite persistence with WAL
-- ⚡ **Performance**: 10-20x faster batch spawning, 84.8% SWE-Bench solve rate
+- ⚡ **Performance**: 10-20x faster batch spawning, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -220,12 +220,12 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns 150x faster |
+| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns fast |
 | Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
 | Self-Learning | LearningBridge, SONA, ReasoningBank | Triggers learning from insights, confidence lifecycle (ADR-049) |
 | Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
 | Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls (75x faster) |
-| Learning | SONA, MoE, ReasoningBank | Self-improves from results (<0.05ms adaptation) |
+| Learning | SONA, MoE, ReasoningBank | Self-improves from results (low-latency adaptation) |
 | Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
 
 </details>
@@ -396,18 +396,18 @@ swarm_init({
 | **Coordination** | Manual orchestration between tasks | Queen-led hierarchy with 5 consensus algorithms (Raft, Byzantine, Gossip) |
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
-| **Memory** | Session-only, no persistence | HNSW vector memory with 150x-12,500x faster retrieval + knowledge graph |
+| **Memory** | Session-only, no persistence | HNSW vector memory with fast HNSW-indexed retrieval + knowledge graph |
 | **Vector Database** | ⛔ No native support | 🐘 Local Vector Store with 77+ SQL functions, ~61µs search, 16,400 QPS |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
-| **Learning** | Static behavior, no adaptation | SONA self-learning with <0.05ms adaptation, LearningBridge for insights |
+| **Learning** | Static behavior, no adaptation | SONA self-learning with low-latency adaptation, LearningBridge for insights |
 | **Agent Scoping** | Single project scope | 3-scope agent memory (project/local/user) with cross-agent transfer |
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
 | **LLM Provider** | Anthropic only | 6 providers with automatic failover and cost-based routing (85% savings) |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
-| **Performance** | Baseline | 2.8-4.4x faster tasks, 10-20x faster swarm spawning, 84.8% SWE-Bench |
+| **Performance** | Baseline | Task, swarm, and SWE-Bench evaluation metrics require current benchmark evidence |
 
 ## Quick Start
 
@@ -645,7 +645,7 @@ The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each ses
 ### Vector Search Details
 
 - **Embedding Dimensions**: 384
-- **Search Algorithm**: HNSW (150x-12,500x faster)
+- **Search Algorithm**: HNSW (fast HNSW-indexed)
 - **Similarity Scoring**: 0-1 (higher = better)
   - Score > 0.7: Strong match, use pattern
   - Score 0.5-0.7: Partial match, adapt
@@ -696,7 +696,7 @@ claude mcp list
 Once added, Claude Code can use all 175+ ruflo MCP tools directly:
 - `swarm_init` - Initialize agent swarms
 - `agent_spawn` - Spawn specialized agents
-- `memory_search` - Search patterns with HNSW (150x faster)
+- `memory_search` - Search patterns with HNSW (fast)
 - `hooks_route` - Intelligent task routing
 - And 170+ more tools...
 
@@ -723,7 +723,7 @@ Ruflo v3 introduces **self-learning neural capabilities** that no other agent or
 
 | Feature | Ruflo v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **Vector Memory** | ✅ HNSW (150x faster) | ⛔ | Via plugins | ⛔ | ⛔ |
+| **Vector Memory** | ✅ HNSW (fast) | ⛔ | Via plugins | ⛔ | ⛔ |
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -774,10 +774,10 @@ What makes Ruflo different from other agent frameworks? These 10 capabilities wo
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
-| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture, <0.05ms adaptation |
+| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture, low-latency adaptation |
 | 🔒 | **EWC++** | Preserves learned patterns when training on new ones — no forgetting | Elastic Weight Consolidation prevents catastrophic forgetting |
 | 🎯 | **MoE** | Routes tasks through 8 specialized expert networks based on task type | Mixture of 8 Experts with dynamic gating |
-| ⚡ | **Flash Attention** | Accelerates attention computation 2-7x for faster agent responses | 2.49x-7.47x speedup for attention computations |
+| ⚡ | **Flash Attention** | Accelerates attention computation 2-7x for faster agent responses | Flash Attention optimization for attention computations |
 | 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
 | 📦 | **LoRA** | Compresses model weights 128x so agents fit in limited memory | 128x memory compression via Low-Rank Adaptation |
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
@@ -973,7 +973,7 @@ flowchart LR
     end
 
     subgraph Storage["💾 Storage"]
-        HNSW[(HNSW Index<br/>150x faster)]
+        HNSW[(HNSW Index<br/>fast)]
         SQLite[(SQLite Cache)]
         AgentDB[(AgentDB)]
         Graph[MemoryGraph<br/>PageRank + Communities]
@@ -1542,7 +1542,7 @@ npx ruflo hive-mind memory                  # Collective memory stats
 npx ruflo hive-mind sessions                # List active sessions
 ```
 
-**Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, 84.8% SWE-Bench solve rate
+**Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -1680,7 +1680,7 @@ Build custom plugins with the fluent builder API. Create MCP tools, hooks, worke
 | **HookBuilder** | Build hooks with conditions and transformers | Priorities, conditional execution |
 | **WorkerPool** | Managed worker pool with auto-scaling | Min/max workers, task queuing |
 | **ProviderRegistry** | LLM provider management with fallback | Cost optimization, automatic failover |
-| **AgentDBBridge** | Vector storage with HNSW indexing | 150x faster search, batch operations |
+| **AgentDBBridge** | Vector storage with HNSW indexing | fast search, batch operations |
 
 **Plugin Performance:** Load <20ms, Hook execution <0.5ms, Worker spawn <50ms
 
@@ -1816,7 +1816,7 @@ Pre-built WASM plugins for semantic search, intent routing, and pattern storage.
 | **IntentRouterPlugin** | Routes user intents to optimal handlers | 95%+ accuracy |
 | **HookPatternLibraryPlugin** | Pre-built patterns for common tasks | Security, testing, performance |
 | **MCPToolOptimizerPlugin** | Optimizes MCP tool selection | Context-aware suggestions |
-| **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | 150x faster search |
+| **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | fast search |
 | **AgentConfigGeneratorPlugin** | Generates optimized agent configurations | From pretrain data |
 
 </details>
@@ -2103,8 +2103,8 @@ npx ruflo@v3alpha worker status
 | Component | Description | Performance |
 |-----------|-------------|-------------|
 | **AgenticFlowBridge** | local compatibility API integration | ADR-001 compliant |
-| **SONA Adapter** | Learning system integration | <0.05ms adaptation |
-| **Flash Attention** | Attention mechanism coordinator | 2.49x-7.47x speedup |
+| **SONA Adapter** | Learning system integration | low-latency adaptation |
+| **Flash Attention** | Attention mechanism coordinator | Flash Attention optimization |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
 | **Feature Flags** | Dynamic feature management | 9 configurable flags |
 | **Runtime Detection** | NAPI, WASM, JS auto-selection | Optimal performance |
@@ -2142,7 +2142,7 @@ npx ruflo@v3alpha worker status
 | **Memory** | Memory write | <5ms |
 | **Swarm** | Agent coordination | <50ms |
 | **Swarm** | Consensus latency | <100ms |
-| **Neural** | SONA adaptation | <0.05ms |
+| **Neural** | SONA adaptation | low-latency |
 
 </details>
 
@@ -2151,7 +2151,7 @@ npx ruflo@v3alpha worker status
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **SONA Learning** | Self-Optimizing Neural Architecture | <0.05ms adaptation |
+| **SONA Learning** | Self-Optimizing Neural Architecture | low-latency adaptation |
 | **5 Learning Modes** | real-time, balanced, research, edge, batch | Mode-specific optimization |
 | **9 RL Algorithms** | PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer, etc. | Comprehensive RL |
 | **LoRA Integration** | Low-Rank Adaptation for efficient fine-tuning | Minimal memory overhead |
@@ -2163,7 +2163,7 @@ npx ruflo@v3alpha worker status
 |---------|-------------|-------------|
 | **Scalar Quantization** | Reduce vector precision for memory savings | 4x memory reduction |
 | **Product Quantization** | Compress vectors into codebooks | 8-32x memory reduction |
-| **HNSW Indexing** | Hierarchical Navigable Small World graphs | 150x-12,500x faster search |
+| **HNSW Indexing** | Hierarchical Navigable Small World graphs | fast HNSW-indexed search |
 | **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
 | **Batch Processing** | Process multiple embeddings in single call | 10x throughput |
 | **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
@@ -2219,7 +2219,7 @@ ruflo embeddings search -q "authentication patterns"
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **pgvector Integration** | Native PostgreSQL vector operations | 150x faster than in-memory |
+| **pgvector Integration** | Native PostgreSQL vector operations | fast than in-memory |
 | **Attention Mechanisms** | Self, multi-head, cross-attention in SQL | GPU-accelerated |
 | **Graph Neural Networks** | GNN operations via SQL functions | Message passing, aggregation |
 | **Hyperbolic Embeddings** | Poincaré ball model in PostgreSQL | Better hierarchy representation |
@@ -2251,7 +2251,7 @@ ruflo memory backup --output ./backup.sql
 |-----------|---------|----------|
 | `001_create_extension` | Enable pgvector | Vector type, operators |
 | `002_create_vector_tables` | Core tables | embeddings, patterns, agents |
-| `003_create_indices` | HNSW indices | 150x faster search |
+| `003_create_indices` | HNSW indices | fast search |
 | `004_create_functions` | Vector functions | Similarity, clustering |
 | `005_create_attention_functions` | Attention ops | Self/multi-head attention |
 | `006_create_gnn_functions` | GNN operations | Message passing, aggregation |
@@ -2284,7 +2284,7 @@ npx ruflo hive-mind status                                  # Check status
 
 **Ruflo Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
-**Performance:** 10-20x faster batch spawning, 84.8% SWE-Bench solve rate, 32.3% token reduction
+**Performance:** 10-20x faster batch spawning, SWE-Bench evaluation claims removed, 32.3% token reduction
 
 </details>
 
@@ -2295,9 +2295,9 @@ npx ruflo hive-mind status                                  # Check status
 |---------|-------------|---------|
 | **ADR-001 Compliance** | Build on agentic-flow, don't duplicate | Eliminates 10,000+ duplicate lines |
 | **Core Foundation** | Use agentic-flow as the base layer | Unified architecture |
-| **SONA Integration** | Seamless learning system connection | <0.05ms adaptation |
-| **Flash Attention** | Optimized attention mechanisms | 2.49x-7.47x speedup |
-| **AgentDB Bridge** | Vector storage integration | 150x-12,500x faster search |
+| **SONA Integration** | Seamless learning system connection | low-latency adaptation |
+| **Flash Attention** | Optimized attention mechanisms | Flash Attention optimization |
+| **AgentDB Bridge** | Vector storage integration | fast HNSW-indexed search |
 | **Feature Flags** | Dynamic capability management | 9 configurable features |
 | **Runtime Detection** | NAPI/WASM/JS auto-selection | Optimal performance per platform |
 | **Graceful Fallback** | Works with or without agentic-flow | Always functional |
@@ -2367,7 +2367,7 @@ npx ruflo hive-mind status                                  # Check status
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **ReasoningBank** | Pattern storage with HNSW indexing | 150x faster retrieval |
+| **ReasoningBank** | Pattern storage with HNSW indexing | fast retrieval |
 | **GuidanceProvider** | Context-aware development guidance | Real-time suggestions |
 | **PatternLearning** | Automatic strategy extraction | Continuous improvement |
 | **QualityTracking** | Success/failure rate per pattern | Performance metrics |
@@ -2399,7 +2399,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 **Output Format:**
 ```
 ▊ Hive Flow V3 ● ruvnet  │  ⎇ main  │  Opus 4.6  | ●42% ctx  | $0.15
-🏗️ DDD [●●●●○] 4/5  ⚡ HNSW 150x  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 AgentDB ●1.2K vectors
+🏗️ DDD [●●●●○] 4/5  ⚡ HNSW HNSW-indexed  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 AgentDB ●1.2K vectors
 ```
 
 | Indicator | Description | Source |
@@ -2411,7 +2411,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 | `●42% ctx` | Context window usage | Stdin JSON `context_window.used_percentage` |
 | `$0.15` | Session cost | Stdin JSON `cost.total_cost_usd` |
 | `[●●●●○]` | DDD domain progress bar | `.hive-flow/metrics/v3-progress.json` |
-| `⚡ HNSW 150x` | HNSW search speedup | AgentDB file stats |
+| `⚡ HNSW HNSW-indexed` | HNSW search speedup | AgentDB file stats |
 | `◉/○` | Swarm coordination status | Process detection |
 | `[12/8]` | Active agents / max agents | `ps aux` process count |
 | `👥 3` | Sub-agents spawned | Task tool agent count |
@@ -2585,7 +2585,7 @@ Complete command-line interface for all Ruflo operations.
 | `init` | 4 | Project initialization with wizard, presets, skills, hooks |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | AgentDB memory with vector search (150x-12,500x faster) |
+| `memory` | 11 | AgentDB memory with vector search (fast HNSW-indexed) |
 | `mcp` | 9 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 7 | Session state management and persistence |
@@ -2629,7 +2629,7 @@ npx ruflo@v3alpha agent spawn -t coder --name my-coder
 # Initialize swarm with V3 mode
 npx ruflo@v3alpha swarm init --v3-mode
 
-# Search memory (HNSW-indexed, 150x faster)
+# Search memory (HNSW-indexed, fast)
 npx ruflo@v3alpha memory search -q "authentication patterns"
 
 # Run security scan
@@ -2901,7 +2901,7 @@ The statusline shows live context metrics read from `autopilot-state.json`:
 |------|---------|---------|----------|
 | 1 | **SQLite** (default) | `.hive-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
 | 2 | **Local Vector Store** | Configurable remote | TB-scale, pgvector embeddings, GNN search |
-| 3 | **AgentDB + HNSW** | In-memory + persist | 150x-12,500x faster semantic search |
+| 3 | **AgentDB + HNSW** | In-memory + persist | fast HNSW-indexed semantic search |
 | 4 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
 
 ### Configuration
@@ -2970,7 +2970,7 @@ Hooks intercept operations (file edits, commands, tasks) and learn from outcomes
 │ past patterns│   │ successful? │    │ learnings   │    │ forgetting  │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
      HNSW              Verdict            LoRA              EWC++
-   150x faster        success/fail      compression       memory lock
+   fast        success/fail      compression       memory lock
 ```
 
 ### Hook Signals (ADR-026 Model Routing)
@@ -3020,7 +3020,7 @@ UserPrompt:
     → Inject top-5 patterns into Claude's context:
 
     [INTELLIGENCE] Relevant patterns for this task:
-      * (0.95) HNSW gives 150x-12,500x speedup [rank #1, 12x accessed]
+      * (0.95) HNSW gives HNSW-indexed speedup [rank #1, 12x accessed]
       * (0.88) London School TDD preferred [rank #3, 8x accessed]
 
 PostEdit:
@@ -3082,7 +3082,7 @@ The stats command shows:
     Never accessed:     3
 
   Top Patterns (by composite score)
-    #1  HNSW gives 150x-12,500x speedup
+    #1  HNSW gives HNSW-indexed speedup
          conf=0.600  pr=0.2099  score=0.3659  accessed=2x
     #2  London School TDD preferred
          conf=0.600  pr=0.1995  score=0.3597  accessed=2x
@@ -3164,7 +3164,7 @@ npx ruflo@v3alpha hooks session-end --export-metrics --persist-patterns
 | `trajectory-step` | RL | Record an action with reward signal |
 | `trajectory-end` | RL | Finish recording, trigger learning |
 | `pattern-store` | Memory | Store a pattern with HNSW indexing |
-| `pattern-search` | Memory | Find similar patterns (150x faster) |
+| `pattern-search` | Memory | Find similar patterns (fast) |
 | `stats` | Analytics | Intelligence diagnostics, confidence trends, improvement tracking |
 | `attention` | Focus | Compute attention-weighted similarity |
 
@@ -3758,7 +3758,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
-| `agentdb-vector-search` | Semantic search with 150x faster retrieval | Building RAG systems, knowledge bases |
+| `agentdb-vector-search` | Semantic search with fast retrieval | Building RAG systems, knowledge bases |
 | `agentdb-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
 | `agentdb-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
 | `agentdb-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
@@ -3828,8 +3828,8 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 |-------|--------------|-------------|
 | `v3-ddd-architecture` | Bounded contexts, modular design, clean architecture | Large-scale refactoring |
 | `v3-security-overhaul` | CVE fixes, secure-by-default patterns | Security hardening |
-| `v3-memory-unification` | AgentDB unification, 150x-12,500x search improvements | Memory optimization |
-| `v3-performance-optimization` | 2.49x-7.47x speedup, memory reduction | Performance tuning |
+| `v3-memory-unification` | AgentDB unification, HNSW indexing improvements | Memory optimization |
+| `v3-performance-optimization` | Flash Attention optimization, memory reduction | Performance tuning |
 | `v3-swarm-coordination` | 15-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
 | `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
 | `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
@@ -4166,7 +4166,7 @@ npm install ruflo@v3alpha
 ```typescript
 import { AgentDB } from '@hive-flow/memory';
 
-// Initialize with HNSW indexing (150x faster)
+// Initialize with HNSW indexing (fast)
 const db = new AgentDB({
   path: './data/memory',
   hnsw: { m: 16, efConstruction: 200 }
@@ -4198,7 +4198,7 @@ npx ruflo@alpha memory init --force
 npx ruflo@alpha memory store --key "pattern-auth" --value "JWT authentication with refresh tokens"
 npx ruflo@alpha memory store --key "pattern-cache" --value "Redis caching for API responses"
 
-# Build HNSW index for 150x-12,500x faster search
+# Build HNSW index for fast HNSW-indexed search
 npx ruflo@alpha memory search --query "authentication" --build-hnsw
 
 # Semantic search (uses HNSW if built)
@@ -5019,7 +5019,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@hive-flow/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
-| `@hive-flow/memory` | Unified vector storage | AgentDB, HNSW indexing, 150x faster search, LearningBridge, MemoryGraph, AgentMemoryScope |
+| `@hive-flow/memory` | Unified vector storage | AgentDB, HNSW indexing, fast search, LearningBridge, MemoryGraph, AgentMemoryScope |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/plugins` | WASM extensions | local vector plugins, semantic search, intent routing |
@@ -5050,7 +5050,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Memory** | Pattern retrieval | <10ms | ✅ 6ms |
 | **Swarm** | Agent spawn | <200ms | ✅ 150ms |
 | **Swarm** | Consensus latency | <100ms | ✅ 75ms |
-| **Neural** | SONA adaptation | <0.05ms | ✅ 0.03ms |
+| **Neural** | SONA adaptation | low-latency | ✅ 0.03ms |
 | **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms (71.9x headroom) |
 | **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms (8.2x headroom) |
 | **Learning** | Insight recording | <5ms | ✅ 0.12ms (41x headroom) |
@@ -5314,7 +5314,7 @@ Statistical benchmarking, memory tracking, regression detection, and V3 performa
 | **Auto-Calibration** | Adjusts iterations for statistical significance | Automatic |
 | **Regression Detection** | Compare against baselines with significance testing | <10ms |
 | **V3 Targets** | Built-in targets for all performance metrics | Preconfigured |
-| **Flash Attention** | Validate 2.49x-7.47x speedup targets | Integrated |
+| **Flash Attention** | Validate Flash Attention optimization targets | Integrated |
 
 ### Quick Start
 
@@ -5348,7 +5348,7 @@ V3_PERFORMANCE_TARGETS = {
   'agent-spawn': 200,           // <200ms (4x faster)
 
   // Memory Operations
-  'vector-search': 1,           // <1ms (150x faster)
+  'vector-search': 1,           // <1ms (fast)
   'hnsw-indexing': 10,          // <10ms
   'memory-write': 5,            // <5ms (10x faster)
   'cache-hit': 0.1,             // <0.1ms
@@ -5360,7 +5360,7 @@ V3_PERFORMANCE_TARGETS = {
   'message-throughput': 0.1,    // <0.1ms per message
 
   // SONA Learning
-  'sona-adaptation': 0.05       // <0.05ms
+  'sona-adaptation': 0.05       // low-latency
 };
 
 // Check if target is met
@@ -6256,7 +6256,7 @@ export HIVE_FLOW_HNSW_EF=100
 ┌─────────────────────────────────────────────────────────────┐
 │                    V2 → V3 IMPROVEMENTS                     │
 ├───────────────────────┬─────────────────────────────────────┤
-│ Memory Search         │ 150x - 12,500x faster (HNSW)        │
+│ Memory Search         │ HNSW-indexed        │
 │ Pattern Matching      │ Self-learning (ReasoningBank)       │
 │ Security              │ CVE remediation + strict validation │
 │ Modular Architecture  │ 18 @hive-flow/* packages          │

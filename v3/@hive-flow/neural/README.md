@@ -10,7 +10,7 @@
 
 ## Features
 
-- **SONA Learning** - Self-Optimizing Neural Architecture with <0.05ms adaptation time
+- **SONA Learning** - Self-Optimizing Neural Architecture with low-latency adaptation time
 - **5 Learning Modes** - Real-time, Balanced, Research, Edge, and Batch modes
 - **9 RL Algorithms** - PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer, and more
 - **LoRA Integration** - Low-Rank Adaptation for efficient fine-tuning
@@ -219,7 +219,7 @@ sona.addEventListener((event) => {
 
 | Metric | Target | Typical |
 |--------|--------|---------|
-| Adaptation latency | <0.05ms | 0.02ms |
+| Adaptation latency | low-latency | 0.02ms |
 | Pattern retrieval | <1ms | 0.5ms |
 | Learning step | <10ms | 5ms |
 | Quality improvement | +55% | +40-60% |

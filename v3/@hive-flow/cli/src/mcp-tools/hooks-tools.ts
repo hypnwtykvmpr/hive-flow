@@ -855,9 +855,9 @@ export const hooksMetrics: MCPTool = {
         avgRiskScore: 0.15,
       },
       performance: {
-        flashAttention: '2.49x-7.47x speedup',
+        flashAttention: 'Flash Attention optimization',
         memoryReduction: '50-75% reduction',
-        searchImprovement: '150x-12,500x faster',
+        searchImprovement: 'fast HNSW-indexed',
         tokenReduction: '32.3% fewer tokens',
       },
       status: '[SIMULATED] healthy',
@@ -1652,13 +1652,13 @@ export const hooksIntelligence: MCPTool = {
           implemented: true,
           indexSize: realStats.memory.indexSize,
           memorySizeBytes: realStats.memory.memorySizeBytes,
-          note: 'HNSW vector indexing with 150x-12,500x speedup',
+          note: 'HNSW vector indexing with HNSW-indexed speedup',
         },
         flashAttention: {
           enabled: true,
           status: flashAvailable ? 'active' : 'loading',
           implemented: true, // NOW IMPLEMENTED in alpha.102
-          note: flashAvailable ? 'Flash Attention with O(N) memory (2.49x-7.47x speedup)' : 'Flash Attention loading...',
+          note: flashAvailable ? 'Flash Attention with O(N) memory (Flash Attention optimization)' : 'Flash Attention loading...',
         },
         ewc: {
           enabled: true,
@@ -2489,7 +2489,7 @@ export const hooksIntelligenceAttention: MCPTool = {
       results,
       stats: {
         computeTimeMs,
-        speedup: mode === 'flash' ? '2.49x-7.47x' : mode === 'moe' ? '1.5x-3x' : '1.5x-2x',
+        speedup: mode === 'flash' ? 'Flash Attention optimization' : mode === 'moe' ? '1.5x-3x' : '1.5x-2x',
         memoryReduction: mode === 'flash' ? '50-75%' : '25-40%',
       },
       implementation,

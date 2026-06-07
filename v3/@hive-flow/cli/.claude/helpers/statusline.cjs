@@ -660,13 +660,13 @@ function generateStatusline() {
   const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.yellow : c.red;
   let perfIndicator;
   if (agentdb.hasHnsw && agentdb.vectorCount > 0) {
-    const speedup = agentdb.vectorCount > 10000 ? '12500x' : agentdb.vectorCount > 1000 ? '150x' : '10x';
+    const speedup = agentdb.vectorCount > 10000 ? 'large-scale HNSW-indexed' : agentdb.vectorCount > 1000 ? 'HNSW-indexed' : '10x';
     perfIndicator = `${c.brightGreen}\u26A1 HNSW ${speedup}${c.reset}`;
   } else if (progress.patternsLearned > 0) {
     const pk = progress.patternsLearned >= 1000 ? `${(progress.patternsLearned / 1000).toFixed(1)}k` : String(progress.patternsLearned);
     perfIndicator = `${c.brightYellow}\uD83D\uDCDA ${pk} patterns${c.reset}`;
   } else {
-    perfIndicator = `${c.dim}\u26A1 target: 150x-12500x${c.reset}`;
+    perfIndicator = `${c.dim}\u26A1 target: HNSW-indexed${c.reset}`;
   }
   lines.push(
     `${c.brightCyan}\uD83C\uDFD7\uFE0F  DDD Domains${c.reset}    ${progressBar(progress.domainsCompleted, progress.totalDomains)}  ` +

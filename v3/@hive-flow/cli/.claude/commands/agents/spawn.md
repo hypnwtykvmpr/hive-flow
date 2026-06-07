@@ -41,8 +41,8 @@ npx hive-flow agent spawn -t researcher # Research
 ```bash
 npx hive-flow agent spawn -t security-architect     # Security design
 npx hive-flow agent spawn -t security-auditor       # CVE remediation
-npx hive-flow agent spawn -t memory-specialist      # AgentDB (150x-12,500x faster)
-npx hive-flow agent spawn -t performance-engineer   # 2.49x-7.47x optimization
+npx hive-flow agent spawn -t memory-specialist      # AgentDB (fast HNSW-indexed)
+npx hive-flow agent spawn -t performance-engineer   # Flash Attention optimization optimization
 npx hive-flow agent spawn -t core-architect         # DDD design
 ```
 

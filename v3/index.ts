@@ -26,8 +26,8 @@
  * - ADR-010: Remove Deno support (Node.js 20+ only)
  *
  * Performance Targets:
- * - Flash Attention: 2.49x-7.47x speedup
- * - AgentDB Search: 150x-12,500x improvement
+ * - Flash Attention: optimization enabled
+ * - AgentDB Search: HNSW indexing improvements
  * - Memory Reduction: 50-75%
  * - Code Reduction: <5,000 lines (vs 15,000+)
  * - Startup Time: <500ms
@@ -203,8 +203,8 @@ export const V3_INFO = {
     'Node.js 20+ focus (ADR-010)'
   ],
   performanceTargets: {
-    flashAttention: '2.49x-7.47x speedup',
-    agentDbSearch: '150x-12,500x improvement',
+    flashAttention: 'Flash Attention optimization',
+    agentDbSearch: 'HNSW indexing improvements',
     memoryReduction: '50-75%',
     codeReduction: '<5,000 lines',
     startupTime: '<500ms'

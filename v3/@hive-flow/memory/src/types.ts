@@ -2,7 +2,7 @@
  * V3 Unified Memory Types
  *
  * Type definitions for the unified memory system based on AgentDB with HNSW indexing.
- * Supports 150x-12,500x faster vector search compared to brute-force approaches.
+ * Supports fast HNSW-indexed vector search compared to brute-force approaches.
  *
  * @module v3/memory/types
  */
@@ -643,7 +643,7 @@ export type MemoryEventHandler = (event: MemoryEvent) => void | Promise<void>;
  * SONA learning mode for adaptive memory
  */
 export type SONAMode =
-  | 'real-time'   // <0.05ms adaptation
+  | 'real-time'   // low-latency adaptation
   | 'balanced'    // Balance between speed and accuracy
   | 'research'    // Maximum accuracy, slower
   | 'edge'        // Optimized for edge devices
@@ -731,10 +731,10 @@ export const PERFORMANCE_TARGETS = {
   MEMORY_REDUCTION_TARGET: 0.5, // 50%
 
   /** Minimum search improvement over brute force */
-  MIN_SEARCH_IMPROVEMENT: 150, // 150x
+  MIN_SEARCH_IMPROVEMENT: 150, // HNSW-indexed
 
   /** Maximum search improvement over brute force */
-  MAX_SEARCH_IMPROVEMENT: 12500, // 12,500x
+  MAX_SEARCH_IMPROVEMENT: 12500, // large-scale HNSW-indexed
 } as const;
 
 // ===== Re-exports from ADR-049 modules =====

@@ -4,7 +4,7 @@ Local Flash Attention-compatible capabilities for the V3 performance module.
 
 ## Overview
 
-This module provides high-performance attention mechanisms optimized for V3's 2.49x-7.47x speedup targets. Flash Attention reduces memory usage by ~50% while achieving significant performance improvements through block-wise computation.
+This module provides high-performance attention mechanisms optimized for V3's Flash Attention optimization targets. Flash Attention reduces memory usage by ~50% while achieving significant performance improvements through block-wise computation.
 
 ## Features
 
@@ -52,7 +52,7 @@ console.log(`Meets target: ${result.meetsTarget ? 'YES' : 'NO'}`);
 ```typescript
 import { quickValidation } from '@hive-flow/performance';
 
-// Validate V3 performance targets (2.49x-7.47x)
+// Validate V3 performance targets (Flash Attention optimization)
 const isValid = await quickValidation();
 // Prints detailed validation report
 ```
@@ -157,7 +157,7 @@ const profiles = await runner.runMemoryProfile([256, 512, 1024]);
 
 ##### validateV3Targets(): Promise<ValidationResult>
 
-Validate against V3 performance targets (2.49x-7.47x).
+Validate against V3 performance targets (Flash Attention optimization).
 
 ```typescript
 const validation = await runner.validateV3Targets();

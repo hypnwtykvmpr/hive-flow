@@ -197,7 +197,7 @@ import { AttentionService } from 'agentdb';
 // Initialize attention service for mesh coordination
 const attentionService = new AttentionService({
   embeddingDim: 384,
-  runtime: 'napi' // 2.49x-7.47x faster
+  runtime: 'napi' // Flash Attention optimization faster
 });
 
 // Peer-to-peer mesh coordination with equal influence

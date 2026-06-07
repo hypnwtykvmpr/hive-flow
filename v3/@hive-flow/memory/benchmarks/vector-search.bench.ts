@@ -1,7 +1,7 @@
 /**
  * Vector Search Benchmark
  *
- * Target: <1ms (150x faster than current ~150ms)
+ * Target: <1ms (fast than current ~150ms)
  *
  * Measures vector similarity search performance including
  * linear search baseline vs HNSW optimized search.

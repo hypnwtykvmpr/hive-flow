@@ -21,9 +21,17 @@ const CORE_PROHIBITED: ProhibitedPattern[] = [
   { label: 'old RuVector brand', pattern: /\bRuVector\b/ },
 ];
 
+const PERF_CLAIM_PROHIBITED: ProhibitedPattern[] = [
+  { label: 'fictional HNSW speed multiplier', pattern: /\b(?:150\s*x|12,?500\s*x|150\s*x\s*(?:-|–|to|and)\s*12,?500\s*x)\b/i },
+  { label: 'fictional Flash Attention speed range', pattern: /\b2\.49\s*x\s*(?:-|–|to)\s*7\.47\s*x\b/i },
+  { label: 'fictional SWE-Bench solve rate', pattern: /\b84\.8\s*%/ },
+  { label: 'fictional SONA adaptation latency', pattern: /(?:<\s*)?0\.05\s*ms/i },
+  { label: 'old RuVector intelligence label', pattern: /RuVector Intelligence System/ },
+];
+
 const CODEX_GENERATOR_PROHIBITED: ProhibitedPattern[] = [
   ...CORE_PROHIBITED,
-  { label: 'co-located branded performance claim', pattern: /150x-12,500x/ },
+  ...PERF_CLAIM_PROHIBITED,
 ];
 
 function fullInitOptions(targetDir: string): InitOptions {
@@ -88,7 +96,7 @@ describe('debrand generator output', () => {
       assertNoProhibitedStrings(
         'cli-init',
         collectFiles(cliRoot, ['CLAUDE.md', '.claude/settings.json', '.hive-flow/CAPABILITIES.md']),
-        CORE_PROHIBITED,
+        [...CORE_PROHIBITED, ...PERF_CLAIM_PROHIBITED],
       );
       const generatedMemorySkill = await generateBuiltInSkill('memory-management');
       assertNoProhibitedStrings(

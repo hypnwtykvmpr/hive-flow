@@ -185,7 +185,7 @@ function generateEnhancedMarkdown(report: FullValidationReport, options: ReportO
   lines.push('| Hooks | 42 hooks | All supported | Full |');
   lines.push('| API Classes | 5 interfaces | Via aliases | Full |');
   lines.push('| Memory Backend | SQLite | Hybrid (SQLite + AgentDB) | Enhanced |');
-  lines.push('| Search | Brute-force | HNSW indexed (150x faster) | Enhanced |');
+  lines.push('| Search | Brute-force | HNSW indexed (fast) | Enhanced |');
   lines.push('| Deno Runtime | Supported | Removed (Node.js 20+) | Breaking |');
   lines.push('');
 

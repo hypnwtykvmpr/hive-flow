@@ -7,7 +7,7 @@
  * Format matches the working .claude/statusline.sh output:
  * ▊ Hive Flow V3 ● ruvnet  │  ⎇ v3  │  Opus 4.5
  * ─────────────────────────────────────────────────────
- * 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ 1.0x → 2.49x-7.47x
+ * 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ 1.0x → Flash Attention optimization
  * 🤖 Swarm  ◉ [58/15]  👥 0    🟢 CVE 3/3    💾 22282MB    📂  47%    🧠  10%
  * 🔧 Architecture    DDD ● 98%  │  Security ●CLEAN  │  Memory ●AgentDB  │  Integration ●
  */
@@ -522,8 +522,8 @@ export class StatuslineGenerator {
     }
 
     return {
-      flashAttentionTarget: '2.49x-7.47x',
-      searchImprovement: '150x-12,500x',
+      flashAttentionTarget: 'Flash Attention optimization',
+      searchImprovement: 'HNSW-indexed',
       memoryReduction: '50-75%',
     };
   }
@@ -686,7 +686,7 @@ export function parseStatuslineData(json: string): StatuslineData | null {
       security: data.security ?? { status: 'PENDING', cvesFixed: 0, totalCves: 3 },
       swarm: data.swarm ?? { activeAgents: 0, maxAgents: DEFAULT_MAX_AGENTS, coordinationActive: false },
       hooks: data.hooks ?? { status: 'INACTIVE', patternsLearned: 0, routingAccuracy: 0, totalOperations: 0 },
-      performance: data.performance ?? { flashAttentionTarget: '2.49x-7.47x', searchImprovement: '150x', memoryReduction: '50%' },
+      performance: data.performance ?? { flashAttentionTarget: 'Flash Attention optimization', searchImprovement: 'HNSW-indexed', memoryReduction: '50%' },
       lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date(),
     };
   } catch {

@@ -497,7 +497,7 @@ const metricsCommand: Command = {
       performance: {
         flashAttention: '2.8x speedup',
         memoryReduction: '52%',
-        searchImprovement: '150x faster'
+        searchImprovement: 'fast'
       }
     };
 

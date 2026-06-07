@@ -68,7 +68,7 @@ By Agent Type
 V3 Performance Gains
   - Flash Attention: 2.8x speedup
   - Memory Reduction: 52%
-  - Search: 150x faster
+  - Search: fast
 ```
 
 ## Metrics Explained
@@ -86,10 +86,10 @@ V3 Performance Gains
 ### V3 Performance Gains
 | Metric | Target | Description |
 |--------|--------|-------------|
-| Flash Attention | 2.49x-7.47x | Neural attention speedup |
+| Flash Attention | Flash Attention optimization | Neural attention speedup |
 | Memory Reduction | 50-75% | Quantization savings |
-| HNSW Search | 150x-12,500x | Vector search improvement |
-| SONA Adaptation | <0.05ms | Real-time learning |
+| HNSW Search | HNSW-indexed | Vector search improvement |
+| SONA Adaptation | low-latency | Real-time learning |
 
 ## JSON Output
 
@@ -110,7 +110,7 @@ V3 Performance Gains
   "performance": {
     "flashAttention": "2.8x speedup",
     "memoryReduction": "52%",
-    "searchImprovement": "150x faster"
+    "searchImprovement": "fast"
   }
 }
 ```

@@ -109,7 +109,7 @@ export class RealTimeMode extends BaseModeImplementation {
     }
     /**
      * Apply LoRA with minimal overhead
-     * Target: <0.05ms
+     * Target: low-latency
      */
     async applyLoRA(input, weights) {
         if (!weights) {

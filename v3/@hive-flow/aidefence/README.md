@@ -41,7 +41,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 - **50+ built-in patterns** for prompt injection, jailbreaks, and social engineering
 - **PII detection** for emails, SSNs, API keys, passwords, and credit cards
 - **Self-learning capabilities** using ReasoningBank patterns
-- **HNSW vector search** integration for 150x-12,500x faster pattern matching
+- **HNSW vector search** integration for fast HNSW-indexed pattern matching
 
 ### Why AIDefence?
 
@@ -82,7 +82,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 ### Security Integrations
 
 - **Claude Code** - CLI command and MCP tools
-- **AgentDB** - HNSW-indexed vector search (150x faster)
+- **AgentDB** - HNSW-indexed vector search (fast)
 - **Swarm Coordination** - Multi-agent security consensus
 - **Hooks System** - Pre/post operation scanning
 
@@ -490,7 +490,7 @@ const result = await mcp.call('aidefence_scan', {
 ### Optimization Tips
 
 1. **Use `quickScan()` for high-volume screening**
-2. **Enable AgentDB for HNSW search** (150x faster)
+2. **Enable AgentDB for HNSW search** (fast)
 3. **Batch similar inputs** for pattern caching
 4. **Disable learning** in read-only scenarios
 

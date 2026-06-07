@@ -38,7 +38,7 @@ export declare class RealTimeMode extends BaseModeImplementation {
     learn(trajectories: Trajectory[], config: SONAModeConfig, ewcState: EWCState): Promise<number>;
     /**
      * Apply LoRA with minimal overhead
-     * Target: <0.05ms
+     * Target: low-latency
      */
     applyLoRA(input: Float32Array, weights?: LoRAWeights): Promise<Float32Array>;
     getStats(): Record<string, number>;

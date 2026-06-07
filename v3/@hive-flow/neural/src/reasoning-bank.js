@@ -118,7 +118,7 @@ export class ReasoningBank {
     /**
      * Retrieve relevant memories using Maximal Marginal Relevance (MMR)
      *
-     * Uses AgentDB HNSW index for 150x faster retrieval when available.
+     * Uses AgentDB HNSW index for fast retrieval when available.
      *
      * @param queryEmbedding - Query vector for similarity search
      * @param k - Number of results to return (default: config.retrievalK)

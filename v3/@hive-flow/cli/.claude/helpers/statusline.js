@@ -258,7 +258,7 @@ function generateStatusline() {
   lines.push(
     `${c.brightCyan}🏗️  DDD Domains${c.reset}    ${progressBar(progress.domainsCompleted, progress.totalDomains)}  ` +
     `${domainsColor}${progress.domainsCompleted}${c.reset}/${c.brightWhite}${progress.totalDomains}${c.reset}    ` +
-    `${c.brightYellow}⚡ 1.0x${c.reset} ${c.dim}→${c.reset} ${c.brightYellow}2.49x-7.47x${c.reset}`
+    `${c.brightYellow}⚡ 1.0x${c.reset} ${c.dim}→${c.reset} ${c.brightYellow}Flash Attention optimization${c.reset}`
   );
 
   // Line 2: Swarm + CVE + Memory + Context + Intelligence
@@ -298,8 +298,8 @@ function generateJSON() {
     swarm: getSwarmStatus(),
     system: getSystemMetrics(),
     performance: {
-      flashAttentionTarget: '2.49x-7.47x',
-      searchImprovement: '150x-12,500x',
+      flashAttentionTarget: 'Flash Attention optimization',
+      searchImprovement: 'HNSW-indexed',
       memoryReduction: '50-75%',
     },
     lastUpdated: new Date().toISOString(),

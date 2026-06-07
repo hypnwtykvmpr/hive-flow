@@ -105,7 +105,7 @@ export class HiveFlowMCP extends AgenticFlowMCP {
 import { MemoryService } from 'agentic-flow';
 
 export class V3MemoryService extends MemoryService {
-  // Add HNSW indexing (150x-12,500x faster)
+  // Add HNSW-indexed search
   async searchVectors(query: string, k: number) {
     return this.hnswIndex.search(query, k);
   }

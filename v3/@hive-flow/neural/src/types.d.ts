@@ -3,7 +3,7 @@
  * Core type definitions for SONA learning modes and ReasoningBank integration
  *
  * Performance Targets:
- * - SONA adaptation: <0.05ms
+ * - SONA adaptation: low-latency
  * - Pattern matching: <1ms
  * - Learning step: <10ms
  */

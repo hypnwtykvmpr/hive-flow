@@ -340,7 +340,7 @@ export const searchResults: Record<string, SearchResult[]> = {
   memoryOptimization: [
     {
       key: 'pattern:memory:hnsw-tuning',
-      value: { M: 16, efConstruction: 200, speedup: '150x' },
+      value: { M: 16, efConstruction: 200, speedup: 'HNSW-indexed' },
       score: 0.94,
       metadata: { type: 'procedural', tags: ['memory', 'optimization', 'hnsw'] },
       distance: 0.06,
@@ -396,7 +396,7 @@ export const learnedPatterns: Record<string, LearnedPattern> = {
     sessionId: 'session-002',
     task: 'Optimize vector search',
     input: 'Improve HNSW search performance',
-    output: 'Tuned M=16, efConstruction=200 for 150x speedup',
+    output: 'Tuned M=16, efConstruction=200 for HNSW indexing speedup',
     reward: 0.98,
     success: true,
     critique: 'Excellent parameter tuning, validated with benchmarks',

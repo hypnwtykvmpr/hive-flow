@@ -71,8 +71,8 @@ case "$COMMAND" in
 **Architecture**: Domain-Driven Design with 15 @hive-flow modules
 **Priority**: Security-first (CVE-1, CVE-2, CVE-3 remediation)
 **Performance Targets**:
-- HNSW search: 150x-12,500x faster
-- Flash Attention: 2.49x-7.47x speedup
+- HNSW search: fast HNSW-indexed
+- Flash Attention: optimization enabled
 - Memory: 50-75% reduction
 
 **Active Patterns**:

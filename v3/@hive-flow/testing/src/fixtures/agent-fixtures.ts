@@ -302,7 +302,7 @@ export const agentConfigs: Record<string, AgentConfig> = {
     name: 'Performance Engineer',
     capabilities: agentCapabilities['performance-engineer'],
     priority: 80,
-    metadata: { targets: { flashAttention: '2.49x-7.47x' }, domain: 'performance' },
+    metadata: { targets: { flashAttention: 'Flash Attention optimization' }, domain: 'performance' },
   },
 
   coreArchitect: {

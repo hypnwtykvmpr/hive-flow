@@ -33,7 +33,7 @@ This module provides a **complete multi-agent coordination system** with hive-mi
 │   └── Learning from outcomes
 │
 ├── AttentionCoordinator 🧠 ATTENTION MECHANISMS
-│   ├── Flash Attention (2.49x-7.47x speedup)
+│   ├── Flash Attention optimization
 │   ├── Multi-Head Attention (8 heads)
 │   ├── Linear Attention (O(n) complexity)
 │   ├── Hyperbolic Attention (Poincaré hierarchies)
@@ -390,7 +390,7 @@ const attention = createAttentionCoordinator({
   topology: coordinator.getTopology(),
 });
 
-// Flash Attention - 2.49x-7.47x speedup for long sequences
+// Flash Attention - Flash Attention optimization for long sequences
 const flashResult = await attention.coordinate(agents, task, { type: 'flash' });
 
 // Multi-Head Attention - 8 parallel attention heads

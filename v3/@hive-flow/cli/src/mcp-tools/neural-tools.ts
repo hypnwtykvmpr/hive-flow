@@ -722,7 +722,7 @@ export const neuralTools: MCPTool[] = [
       const optimizations: Record<string, { applied: string[]; improvement: string }> = {
         speed: {
           applied: ['Flash Attention', 'Batch processing', 'SIMD vectorization'],
-          improvement: '2.49x-7.47x faster inference',
+          improvement: 'Flash Attention optimization faster inference',
         },
         memory: {
           applied: ['Int8 quantization', 'Gradient checkpointing', 'Memory pooling'],

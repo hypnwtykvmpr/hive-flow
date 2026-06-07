@@ -1504,8 +1504,8 @@ async function writeCapabilitiesDoc(
 Hive Flow V3 is a domain-driven design architecture for multi-agent AI coordination with:
 
 - **Multi-Agent Swarm Coordination** with hierarchical and mesh topologies
-- **HNSW Vector Search** - 150x-12,500x faster pattern retrieval
-- **SONA Neural Learning** - Self-optimizing with <0.05ms adaptation
+- **HNSW Vector Search** - fast HNSW-indexed pattern retrieval
+- **SONA Neural Learning** - Self-optimizing with low-latency adaptation
 - **Byzantine Fault Tolerance** - Queen-led consensus mechanisms
 - **MCP Server Integration** - Model Context Protocol support
 
@@ -1707,11 +1707,11 @@ npx @hive-flow/cli@latest doctor --fix
 ## Memory & Intelligence
 
 ### Local Intelligence System
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms)
+- **SONA**: Self-Optimizing Neural Architecture (low-latency)
 - **MoE**: Mixture of Experts routing
-- **HNSW**: 150x-12,500x faster search
+- **HNSW**: fast HNSW-indexed search
 - **EWC++**: Prevents catastrophic forgetting
-- **Flash Attention**: 2.49x-7.47x speedup
+- **Flash Attention**: Flash Attention optimization
 - **Int8 Quantization**: 3.92x memory reduction
 
 ### 4-Step Intelligence Pipeline
@@ -1798,13 +1798,13 @@ npx @hive-flow/cli@latest hive-mind consensus --propose "task"
 
 | Metric | Target | Status |
 |--------|--------|--------|
-| HNSW Search | 150x-12,500x faster | ✅ Implemented |
+| HNSW Search | HNSW-indexed | ✅ Implemented |
 | Memory Reduction | 50-75% | ✅ Implemented (3.92x) |
 | SONA Integration | Pattern learning | ✅ Implemented |
-| Flash Attention | 2.49x-7.47x | 🔄 In Progress |
+| Flash Attention | Flash Attention optimization | 🔄 In Progress |
 | MCP Response | <100ms | ✅ Achieved |
 | CLI Startup | <500ms | ✅ Achieved |
-| SONA Adaptation | <0.05ms | 🔄 In Progress |
+| SONA Adaptation | low-latency | 🔄 In Progress |
 | Graph Build (1k) | <200ms | ✅ 2.78ms (71.9x headroom) |
 | PageRank (1k) | <100ms | ✅ 12.21ms (8.2x headroom) |
 | Insight Recording | <5ms/each | ✅ 0.12ms (41x headroom) |

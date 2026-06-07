@@ -8,9 +8,9 @@
  * This module implements ADR-001: Adopt agentic-flow as Core Foundation
  *
  * Key Features:
- * - SONA Learning: Real-time adaptation with <0.05ms response
- * - Flash Attention: 2.49x-7.47x speedup with 50-75% memory reduction
- * - AgentDB: 150x-12,500x faster search via HNSW indexing
+ * - SONA Learning: Real-time adaptation with low-latency response
+ * - Flash Attention: optimization enabled with 50-75% memory reduction
+ * - AgentDB: fast HNSW-indexed search via HNSW indexing
  * - Intelligence Bridge: 19 hook tools + 9 learning tools
  * - Trajectory Tracking: Experience replay for continuous learning
  *
@@ -459,9 +459,9 @@ export const METADATA = {
     'Multi-Model Router (cost optimization)',
   ],
   performance: {
-    flashAttentionSpeedup: '2.49x-7.47x',
-    agentDBSearchSpeedup: '150x-12,500x',
-    sonaAdaptationLatency: '<0.05ms',
+    flashAttentionSpeedup: 'Flash Attention optimization',
+    agentDBSearchSpeedup: 'HNSW-indexed',
+    sonaAdaptationLatency: 'low-latency',
     memoryReduction: '50-75%',
   },
   workerPatterns: {

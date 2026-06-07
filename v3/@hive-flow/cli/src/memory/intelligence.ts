@@ -4,7 +4,7 @@
  * for adaptive learning and pattern recognition
  *
  * Performance targets:
- * - Signal recording: <0.05ms (achieved: ~0.01ms)
+ * - Signal recording: low-latency (achieved: ~0.01ms)
  * - Pattern search: O(log n) with HNSW
  * - Memory efficient circular buffers
  *
@@ -149,7 +149,7 @@ const DEFAULT_SONA_CONFIG: SonaConfig = {
 /**
  * Lightweight SONA Coordinator
  * Uses circular buffer for O(1) signal recording
- * Achieves <0.05ms per operation
+ * Achieves low-latency per operation
  */
 class LocalSonaCoordinator {
   private config: SonaConfig;
@@ -167,7 +167,7 @@ class LocalSonaCoordinator {
 
   /**
    * Record a signal - O(1) operation
-   * Target: <0.05ms
+   * Target: low-latency
    */
   recordSignal(signal: Signal): void {
     const start = performance.now();
@@ -538,7 +538,7 @@ export async function initializeIntelligence(config?: Partial<SonaConfig>): Prom
       ...config
     };
 
-    // Initialize local SONA (optimized for <0.05ms)
+    // Initialize local SONA (optimized for low-latency)
     sonaCoordinator = new LocalSonaCoordinator(finalConfig);
 
     // Initialize local ReasoningBank with persistence enabled
@@ -569,7 +569,7 @@ export async function initializeIntelligence(config?: Partial<SonaConfig>): Prom
 
 /**
  * Record a trajectory step for learning
- * Performance: <0.05ms without embedding generation
+ * Performance: low-latency without embedding generation
  */
 export async function recordStep(step: TrajectoryStep): Promise<boolean> {
   if (!sonaCoordinator) {
@@ -598,7 +598,7 @@ export async function recordStep(step: TrajectoryStep): Promise<boolean> {
       }
     }
 
-    // Record in SONA - <0.05ms
+    // Record in SONA - low-latency
     sonaCoordinator!.recordSignal({
       type: step.type,
       content: step.content,

@@ -503,7 +503,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 - **Strategy**: specialized (clear roles, no overlap)
 - **Consensus**: raft (leader maintains authoritative state)
 - **Memory Backend**: hybrid (SQLite + AgentDB)
-- **HNSW Indexing**: Enabled (150x-12,500x faster)
+- **HNSW Indexing**: Enabled (fast HNSW-indexed)
 - **Neural Learning**: Enabled (SONA)
 
 ## V3 CLI Commands (26 Commands, 140+ Subcommands)
@@ -515,7 +515,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 | `init` | 4 | Project initialization with wizard, presets, skills, hooks |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | AgentDB memory with vector search (150x-12,500x faster) |
+| `memory` | 11 | AgentDB memory with vector search (fast HNSW-indexed) |
 | `mcp` | 9 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 7 | Session state management and persistence |
@@ -791,12 +791,12 @@ SendMessage({
 
 ## Intelligence System (RuVector)
 
-V3 includes the RuVector Intelligence System:
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
+V3 includes the Hive Flow intelligence system:
+- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
 - **MoE**: Mixture of Experts for specialized routing
-- **HNSW**: 150x-12,500x faster pattern search
+- **HNSW**: fast HNSW-indexed pattern search
 - **EWC++**: Elastic Weight Consolidation (prevents forgetting)
-- **Flash Attention**: 2.49x-7.47x speedup
+- **Flash Attention**: Flash Attention optimization
 
 The 4-step intelligence pipeline:
 1. **RETRIEVE** — Fetch relevant patterns via HNSW

@@ -316,7 +316,7 @@ function performanceSection(): string {
 - Always run benchmarks before and after performance changes
 - Always profile before optimizing — never guess at bottlenecks
 - Prefer algorithmic improvements over micro-optimizations
-- Keep HNSW search within 150x-12,500x faster target
+- Keep HNSW search within fast HNSW-indexed target
 - Keep memory reduction within 50-75% target with quantization
 
 ### Performance Tooling
@@ -335,10 +335,10 @@ npx @hive-flow/cli@latest performance metrics --format table
 function intelligenceSystem(): string {
   return `## Intelligence System
 
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
-- **HNSW**: 150x-12,500x faster pattern search
+- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
+- **HNSW**: fast HNSW-indexed pattern search
 - **EWC++**: Elastic Weight Consolidation (prevents forgetting)
-- **Flash Attention**: 2.49x-7.47x speedup
+- **Flash Attention**: Flash Attention optimization
 
 The 4-step intelligence pipeline:
 1. **RETRIEVE** - Fetch relevant patterns via HNSW

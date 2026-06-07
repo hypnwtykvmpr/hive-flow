@@ -37,7 +37,7 @@ console.log(`Confidence: ${adapted.confidence}`);
 
 ```typescript
 // Learning
-await sona.learn(trajectory);              // Learn from trajectory (<0.05ms)
+await sona.learn(trajectory);              // Learn from trajectory (low-latency)
 console.log(sona.getLearningTime());       // Get learning time
 
 // Adaptation
@@ -60,7 +60,7 @@ sona.setEnabled(false);                    // Disable learning
 ## Learning Modes
 
 ```typescript
-// Real-time: Fastest (<0.05ms)
+// Real-time: Fastest (low-latency)
 createSONALearningEngine('real-time', getModeConfig('real-time'));
 
 // Balanced: Default (1ms)
@@ -80,9 +80,9 @@ createSONALearningEngine('batch', getModeConfig('batch'));
 
 | Operation | Target | Achieved |
 |-----------|--------|----------|
-| Learning  | <0.05ms | ~0.03ms ✓ |
+| Learning  | low-latency | ~0.03ms ✓ |
 | Adaptation | <0.1ms | ~0.06ms ✓ |
-| Pattern search | <1ms | ~0.05ms ✓ |
+| Pattern search | <1ms | ~low-latency ✓ |
 
 ## Examples
 
@@ -165,4 +165,4 @@ v3/@hive-flow/neural/
 
 **Package**: `@hive-flow/neural`
 
-**Performance**: <0.05ms learning target achieved
+**Performance**: low-latency learning target achieved

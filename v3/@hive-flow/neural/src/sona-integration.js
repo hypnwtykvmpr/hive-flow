@@ -4,7 +4,7 @@
  * Provides local SONA-compatible learning for V3 usage with:
  * - Trajectory tracking and verdict judgment
  * - Pattern extraction and memory distillation
- * - Sub-0.05ms learning performance target
+ * - Sub-low-latency learning performance target
  * - Clean TypeScript API with proper types
  *
  * @module sona-integration
@@ -181,7 +181,7 @@ function modeToConfig(mode, modeConfig) {
  * SONA Learning Engine - local implementation for V3 usage
  *
  * Performance targets:
- * - learn(): <0.05ms
+ * - learn(): low-latency
  * - adapt(): <0.1ms
  * - Full learning cycle: <10ms
  */
@@ -201,7 +201,7 @@ export class SONALearningEngine {
     /**
      * Learn from a trajectory
      *
-     * Performance target: <0.05ms
+     * Performance target: low-latency
      *
      * @param trajectory - Trajectory to learn from
      */

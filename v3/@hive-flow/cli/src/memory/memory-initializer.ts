@@ -578,7 +578,7 @@ export async function addToHNSWIndex(
 }
 
 /**
- * Search HNSW index (150x faster than brute-force)
+ * Search HNSW index (fast than brute-force)
  * Returns results sorted by similarity (highest first)
  */
 export async function searchHNSWIndex(
@@ -2028,7 +2028,7 @@ export async function storeEntry(options: {
 
 /**
  * Search entries using sql.js with vector similarity
- * Uses HNSW index for 150x faster search when available
+ * Uses HNSW index for fast search when available
  */
 export async function searchEntries(options: {
   query: string;
@@ -2080,7 +2080,7 @@ export async function searchEntries(options: {
     const queryEmb = await generateEmbedding(query);
     const queryEmbedding = queryEmb.embedding;
 
-    // Try HNSW search first (150x faster)
+    // Try HNSW search first (fast)
     const hnswResults = await searchHNSWIndex(queryEmbedding, { k: limit, namespace });
     if (hnswResults && hnswResults.length > 0) {
       // Filter by threshold

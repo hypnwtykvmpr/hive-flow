@@ -8,10 +8,10 @@
  * - CLI Startup: <500ms (5x faster)
  * - MCP Init: <400ms (4.5x faster)
  * - Agent Spawn: <200ms (4x faster)
- * - Vector Search: <1ms (150x faster)
+ * - Vector Search: <1ms (fast)
  * - Memory Write: <5ms (10x faster)
  * - Swarm Consensus: <100ms (5x faster)
- * - Flash Attention: 2.49x-7.47x speedup
+ * - Flash Attention: optimization enabled
  * - Memory Usage: <256MB (50% reduction)
  */
 
@@ -528,7 +528,7 @@ export const V3_PERFORMANCE_TARGETS = {
   'agent-spawn': 200,           // <200ms (4x faster)
 
   // Memory Operations
-  'vector-search': 1,           // <1ms (150x faster)
+  'vector-search': 1,           // <1ms (fast)
   'hnsw-indexing': 10,          // <10ms
   'memory-write': 5,            // <5ms (10x faster)
   'cache-hit': 0.1,             // <0.1ms
@@ -544,7 +544,7 @@ export const V3_PERFORMANCE_TARGETS = {
   'multi-head-attention': 200,  // Baseline comparison target
 
   // SONA Learning
-  'sona-adaptation': 0.05,      // <0.05ms
+  'sona-adaptation': 0.05,      // low-latency
 } as const;
 
 export type PerformanceTarget = keyof typeof V3_PERFORMANCE_TARGETS;

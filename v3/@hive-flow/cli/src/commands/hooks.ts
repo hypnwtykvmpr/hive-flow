@@ -1878,7 +1878,7 @@ const intelligenceCommand: Command = {
     },
     {
       name: 'enable-sona',
-      description: 'Enable SONA sub-0.05ms learning',
+      description: 'Enable SONA sub-low-latency learning',
       type: 'boolean',
       default: true
     },
@@ -2049,7 +2049,7 @@ const intelligenceCommand: Command = {
 
       // SONA Component
       output.writeln();
-      output.writeln(output.bold('🧠 SONA (Sub-0.05ms Learning)'));
+      output.writeln(output.bold('🧠 SONA (Sub-low-latency learning)'));
       const sona = result.components?.sona;
       if (sona?.enabled) {
         output.printTable({
@@ -4215,7 +4215,7 @@ export const hooksCommand: Command = {
       '🧠 ReasoningBank adaptive learning',
       '⚡ Local attention coordination',
       '🔍 AgentDB-compatible local search',
-      '📊 84.8% SWE-Bench solve rate',
+      '📊 SWE-Bench evaluation claims removed',
       '🎯 32.3% token reduction',
       '🚀 2.8-4.4x speed improvement',
       '👥 Agent Teams integration (auto task assignment)'

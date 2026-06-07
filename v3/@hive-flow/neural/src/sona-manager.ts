@@ -4,7 +4,7 @@
  * Manages learning modes and provides adaptive optimization for agent tasks.
  *
  * Performance Targets:
- * - Adaptation: <0.05ms
+ * - Adaptation: low-latency
  * - Pattern retrieval: <1ms
  * - Learning step: <10ms
  *
@@ -482,7 +482,7 @@ export class SONAManager {
 
     // Verify performance target
     if (latency > 0.05 && this.currentMode !== 'research' && this.currentMode !== 'batch') {
-      console.warn(`SONA adaptation exceeded target: ${latency.toFixed(3)}ms > 0.05ms`);
+      console.warn(`SONA adaptation exceeded target: ${latency.toFixed(3)}ms > low-latency`);
     }
 
     return output;

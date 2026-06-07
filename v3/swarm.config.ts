@@ -277,7 +277,7 @@ export const agentRoleMapping = {
     domain: 'core' as AgentDomain,
     responsibilities: [
       'Memory system unification',
-      'AgentDB integration (150x-12500x)',
+      'AgentDB integration (HNSW-indexed)',
       'Hybrid backend implementation'
     ]
   },
@@ -327,7 +327,7 @@ export const agentRoleMapping = {
     domain: 'integration' as AgentDomain,
     responsibilities: [
       'Neural system integration',
-      'SONA learning (<0.05ms)',
+      'SONA learning (low-latency)',
       'Pattern recognition'
     ]
   },
@@ -347,7 +347,7 @@ export const agentRoleMapping = {
     domain: 'performance' as AgentDomain,
     responsibilities: [
       'Benchmark suite',
-      '2.49x-7.47x Flash Attention',
+      'Flash Attention optimization',
       'Memory optimization (50-75%)'
     ]
   },

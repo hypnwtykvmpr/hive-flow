@@ -1017,7 +1017,7 @@ function generateStatusline() {
   }
 
   // Row 7 (DDD Domains 0/5) \u2014 OMIT: synthetic, daemon-not-running upstream cause.
-  // Row 8 (\u26A1 target: 150x-12500x) \u2014 OMIT: marketing placeholder. Both rows removed.
+  // Row 8 (\u26A1 target: HNSW-indexed) \u2014 OMIT: marketing placeholder. Both rows removed.
 
   // Line 2: Swarm + Hooks (Row 11 REPLACE: live c/m/cmd counts) \u2014 subAgents(10)/CVE(12)/heap(13)/intelligence(14) OMITted.
   // Tri-state coloration:

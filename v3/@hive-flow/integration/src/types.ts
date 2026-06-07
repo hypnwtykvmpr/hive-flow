@@ -15,7 +15,7 @@
  * Each mode optimizes for different performance characteristics.
  */
 export type SONALearningMode =
-  | 'real-time'   // ~0.05ms adaptation, sub-millisecond response
+  | 'real-time'   // ~low-latency adaptation, sub-millisecond response
   | 'balanced'    // General purpose learning, moderate latency
   | 'research'    // Deep exploration mode, higher accuracy
   | 'edge'        // Resource-constrained environments
@@ -118,7 +118,7 @@ export interface SONALearningStats {
 
 /**
  * Attention mechanism types supported by agentic-flow.
- * Flash Attention provides 2.49x-7.47x speedup with 50-75% memory reduction.
+ * Flash Attention provides Flash Attention optimization with 50-75% memory reduction.
  */
 export type AttentionMechanism =
   | 'flash'       // Flash Attention - fastest, 75% memory reduction
@@ -182,7 +182,7 @@ export interface AttentionMetrics {
 // ===== AgentDB Types =====
 
 /**
- * AgentDB provides 150x-12,500x faster search via HNSW indexing.
+ * AgentDB provides fast HNSW-indexed search via HNSW indexing.
  */
 export interface AgentDBConfiguration {
   /** Vector dimension */

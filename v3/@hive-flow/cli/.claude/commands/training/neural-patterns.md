@@ -70,7 +70,7 @@ npx hive-flow neural patterns --action analyze -q "coordination"
 
 | Metric | Target |
 |--------|--------|
-| SONA Adaptation | <0.05ms (achieved: ~2μs) |
+| SONA Adaptation | low-latency (achieved: ~2μs) |
 | Pattern Search | O(log n) with HNSW |
 | Memory Efficient | Circular buffers |
 

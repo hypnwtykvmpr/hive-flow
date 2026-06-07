@@ -272,7 +272,7 @@ function generateFull(options: AgentsMdOptions): string {
 | Memory Reduction | 50-75% | Int8 quantization |
 | MCP Response | <100ms | API latency |
 | CLI Startup | <500ms | Cold start |
-| SONA Adaptation | <0.05ms | Neural learning |
+| SONA Adaptation | low-latency | Neural learning |
 
 ## Testing
 
@@ -413,7 +413,7 @@ npx @hive-flow/cli hooks worker status
 The Hive Flow intelligence system provides neural learning:
 
 ### Components
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
+- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
 - **MoE**: Mixture of Experts for specialized routing
 - **HNSW**: Hierarchical Navigable Small World for fast search
 - **EWC++**: Elastic Weight Consolidation (prevents forgetting)

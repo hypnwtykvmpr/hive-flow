@@ -93,7 +93,7 @@ export class HiveFlowAgent extends AgenticFlowAgent {
 ```typescript
 interface SONAIntegration {
   modes: {
-    realTime: '~0.05ms adaptation',
+    realTime: '~low-latency adaptation',
     balanced: 'general purpose learning',
     research: 'deep exploration mode',
     edge: 'resource-constrained environments',
@@ -112,11 +112,11 @@ class HiveFlowSONAAdapter {
 
 ### **Flash Attention Integration**
 ```typescript
-// Target: 2.49x-7.47x speedup
+// Target: Flash Attention optimization
 class FlashAttentionIntegration {
   async optimizeAttention(): Promise<AttentionResult> {
     return this.agenticFlow.attention.flashAttention({
-      speedupTarget: '2.49x-7.47x',
+      speedupTarget: 'Flash Attention optimization',
       memoryReduction: '50-75%',
       mechanisms: ['multi-head', 'linear', 'local', 'global']
     });
@@ -126,13 +126,13 @@ class FlashAttentionIntegration {
 
 ### **AgentDB Coordination**
 ```typescript
-// 150x-12,500x faster search via HNSW
+// fast HNSW-indexed search via HNSW
 class AgentDBIntegration {
   async setupCrossAgentMemory(): Promise<void> {
     await this.agentdb.enableCrossAgentSharing({
       indexType: 'HNSW',
       dimensions: 1536,
-      speedupTarget: '150x-12500x'
+      speedupTarget: 'HNSW-indexed'
     });
   }
 }
@@ -245,10 +245,10 @@ class CompatibilityCleanup {
 
 ### **Flash Attention Optimization**
 ```typescript
-// Target: 2.49x-7.47x speedup
+// Target: Flash Attention optimization
 const attentionBenchmark = {
   baseline: 'current attention mechanism',
-  target: '2.49x-7.47x improvement',
+  target: 'Flash Attention improvements',
   memoryReduction: '50-75%',
   implementation: 'agentic-flow@alpha Flash Attention'
 };
@@ -256,20 +256,20 @@ const attentionBenchmark = {
 
 ### **AgentDB Search Performance**
 ```typescript
-// Target: 150x-12,500x improvement
+// Target: HNSW indexing improvements
 const searchBenchmark = {
   baseline: 'linear search in current memory systems',
-  target: '150x-12,500x via HNSW indexing',
+  target: 'HNSW-indexed via HNSW indexing',
   implementation: 'agentic-flow@alpha AgentDB'
 };
 ```
 
 ### **SONA Learning Performance**
 ```typescript
-// Target: <0.05ms adaptation
+// Target: low-latency adaptation
 const sonaBenchmark = {
   baseline: 'no real-time learning',
-  target: '<0.05ms adaptation time',
+  target: 'low-latency adaptation time',
   modes: ['real-time', 'balanced', 'research', 'edge', 'batch']
 };
 ```
@@ -313,10 +313,10 @@ class BackwardCompatibility {
 - [ ] **Duplicate Logic**: <5% remaining
 
 ### **Performance Targets**
-- [ ] **Flash Attention**: 2.49x-7.47x speedup validated
-- [ ] **Search Performance**: 150x-12,500x improvement
+- [ ] **Flash Attention**: Flash Attention optimization validated
+- [ ] **Search Performance**: HNSW indexing improvements
 - [ ] **Memory Usage**: 50-75% reduction
-- [ ] **SONA Adaptation**: <0.05ms response time
+- [ ] **SONA Adaptation**: low-latency response time
 
 ### **Feature Parity**
 - [ ] **100% Feature Compatibility**: All v2 features available

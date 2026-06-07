@@ -5,7 +5,7 @@
  * ReasoningBank integration, pattern learning, and RL algorithms.
  *
  * Performance Targets:
- * - SONA adaptation: <0.05ms
+ * - SONA adaptation: low-latency
  * - Pattern matching: <1ms
  * - Learning step: <10ms
  *

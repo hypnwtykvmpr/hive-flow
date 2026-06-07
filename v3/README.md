@@ -13,8 +13,8 @@ Hive Flow V3 is a next-generation AI agent coordination system built on 10 Archi
 
 V3 represents a complete architectural overhaul:
 - **10x faster testing** with Vitest
-- **150x-12,500x faster search** with HNSW indexing
-- **2.49x-7.47x Flash Attention speedup**
+- **fast HNSW-indexed search** with HNSW indexing
+- **Flash Attention optimization**
 - **50-75% memory reduction**
 
 ## Features
@@ -43,8 +43,8 @@ V3 represents a complete architectural overhaul:
 | Event Bus (100k events) | <50ms | ~6ms |
 | Map Lookup (100k gets) | <20ms | ~16ms |
 | Array.find vs Map O(1) | N/A | 978x speedup |
-| Flash Attention | 2.49x-7.47x | Validated |
-| AgentDB Search | 150x-12,500x | HNSW indexed |
+| Flash Attention | Flash Attention optimization | Validated |
+| AgentDB Search | HNSW-indexed | HNSW indexed |
 
 ## Architecture
 
@@ -219,7 +219,7 @@ const valid = await hasher.verify('password', hash);
 ```
 
 ### @hive-flow/memory
-Unified memory service with AgentDB, HNSW indexing, and 150x-12,500x faster search.
+Unified memory service with AgentDB, HNSW indexing, and fast HNSW-indexed search.
 
 ```typescript
 import { HybridMemoryRepository, HNSWIndex } from '@hive-flow/memory';
@@ -436,12 +436,12 @@ pnpm test:coverage
 
 | Category | Metric | Target |
 |----------|--------|--------|
-| **Search** | AgentDB HNSW | 150x-12,500x faster |
-| **Attention** | Flash Attention | 2.49x-7.47x speedup |
+| **Search** | AgentDB HNSW | fast HNSW-indexed |
+| **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | 50-75% |
 | **Code** | Total lines | <5,000 |
 | **Startup** | Cold start | <500ms |
-| **Learning** | SONA adaptation | <0.05ms |
+| **Learning** | SONA adaptation | low-latency |
 
 ## Links
 

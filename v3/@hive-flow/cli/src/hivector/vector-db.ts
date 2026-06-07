@@ -3,7 +3,7 @@
  *
  * Provides local vector operations for:
  * - Semantic similarity search
- * - HNSW indexing (150x faster)
+ * - HNSW indexing (fast)
  * - Embedding generation
  *
  * External vector modules are intentionally detached; local fallback is the

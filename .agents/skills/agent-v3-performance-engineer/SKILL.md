@@ -7,7 +7,7 @@ description: Agent skill for v3-performance-engineer - invoke with $agent-v3-per
 name: v3-performance-engineer
 version: "3.0.0-alpha"
 updated: "2026-01-04"
-description: V3 Performance Engineer for achieving aggressive performance targets. Responsible for 2.49x-7.47x Flash Attention speedup, 150x-12,500x search improvements, and comprehensive benchmarking suite.
+description: V3 Performance Engineer for achieving aggressive performance targets. Responsible for Flash Attention optimization, HNSW indexing improvements, and comprehensive benchmarking suite.
 color: yellow
 metadata:
   v3_role: "specialist"
@@ -20,11 +20,11 @@ hooks:
     echo "⚡ V3 Performance Engineer starting optimization mission..."
 
     echo "🎯 Performance targets:"
-    echo "  • Flash Attention: 2.49x-7.47x speedup"
-    echo "  • AgentDB Search: 150x-12,500x improvement"
+    echo "  • Flash Attention: optimization enabled"
+    echo "  • AgentDB Search: HNSW indexing improvements"
     echo "  • Memory Usage: 50-75% reduction"
     echo "  • Startup Time: <500ms"
-    echo "  • SONA Learning: <0.05ms adaptation"
+    echo "  • SONA Learning: low-latency adaptation"
 
     # Check performance tools
     command -v npm &>$dev$null && echo "📦 npm available for benchmarking"
@@ -40,7 +40,7 @@ hooks:
       --session-id "v3-perf-$(date +%s)" \
       --task "Performance: $TASK" \
       --agent "v3-performance-engineer" \
-      --performance-targets "2.49x-7.47x" 2>$dev$null || true
+      --performance-targets "Flash Attention optimization" 2>$dev$null || true
 ---
 
 # V3 Performance Engineer
@@ -59,7 +59,7 @@ Validate and optimize hive-flow v3 to achieve industry-leading performance impro
 │           FLASH ATTENTION               │
 ├─────────────────────────────────────────┤
 │  Baseline: Standard attention mechanism │
-│  Target:   2.49x - 7.47x speedup       │
+│  Target:   Flash Attention optimization       │
 │  Memory:   50-75% reduction             │
 │  Method:   agentic-flow@alpha integration│
 └─────────────────────────────────────────┘
@@ -71,7 +71,7 @@ Validate and optimize hive-flow v3 to achieve industry-leading performance impro
 │            SEARCH OPTIMIZATION         │
 ├─────────────────────────────────────────┤
 │  Current:  O(n) linear search           │
-│  Target:   150x - 12,500x improvement   │
+│  Target:   HNSW indexing improvements   │
 │  Method:   AgentDB HNSW indexing        │
 │  Latency:  Sub-100ms for 1M+ entries    │
 └─────────────────────────────────────────┘
@@ -84,7 +84,7 @@ Validate and optimize hive-flow v3 to achieve industry-leading performance impro
 ├─────────────────────────────────────────┤
 │  Startup:    <500ms (cold start)        │
 │  Memory:     50-75% reduction           │
-│  SONA:       <0.05ms adaptation         │
+│  SONA:       low-latency adaptation         │
 │  Code Size:  <5k lines (vs 15k+)       │
 └─────────────────────────────────────────┘
 ```
@@ -366,11 +366,11 @@ class PerformanceRegression {
 ## Success Validation Framework
 
 ### **Target Achievement Checklist**
-- [ ] **Flash Attention**: 2.49x-7.47x speedup validated across all scenarios
-- [ ] **Search Performance**: 150x-12,500x improvement confirmed with HNSW
+- [ ] **Flash Attention**: Flash Attention optimization validated across all scenarios
+- [ ] **Search Performance**: HNSW indexing improvements confirmed with HNSW
 - [ ] **Memory Reduction**: 50-75% memory usage reduction achieved
 - [ ] **Startup Performance**: <500ms cold start consistently achieved
-- [ ] **SONA Adaptation**: <0.05ms adaptation time validated
+- [ ] **SONA Adaptation**: low-latency adaptation time validated
 - [ ] **15-Agent Coordination**: Efficient parallel execution confirmed
 - [ ] **Regression Testing**: No performance regressions detected
 
@@ -383,7 +383,7 @@ class PerformanceRegression {
 ## Coordination with V3 Team
 
 ### **Memory Specialist (Agent #7)**
-- Validate AgentDB 150x-12,500x search improvements
+- Validate AgentDB HNSW indexing improvements
 - Benchmark memory usage optimization
 - Test cross-agent memory sharing performance
 

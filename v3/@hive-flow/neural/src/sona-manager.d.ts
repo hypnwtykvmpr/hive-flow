@@ -4,7 +4,7 @@
  * Manages learning modes and provides adaptive optimization for agent tasks.
  *
  * Performance Targets:
- * - Adaptation: <0.05ms
+ * - Adaptation: low-latency
  * - Pattern retrieval: <1ms
  * - Learning step: <10ms
  *

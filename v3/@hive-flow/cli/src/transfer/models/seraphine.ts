@@ -325,7 +325,7 @@ export const SERAPHINE_CUSTOM_PATTERNS: CustomPattern[] = [
       cacheStrategy: 'lru-with-embedding',
     },
     metadata: {
-      speedup: '150x',
+      speedup: 'HNSW-indexed',
       memoryReduction: '60%',
     },
   },

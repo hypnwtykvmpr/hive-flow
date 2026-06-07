@@ -22,7 +22,7 @@ hooks:
     # V3: Initialize task with hooks system
     npx hive-flow@v3alpha hooks pre-task --description "$TASK"
 
-    # 1. Learn from similar past plans (ReasoningBank + HNSW 150x-12,500x faster)
+    # 1. Learn from similar past plans (ReasoningBank + HNSW fast HNSW-indexed)
     SIMILAR_PLANS=$(npx hive-flow@v3alpha memory search --query "$TASK" --limit 5 --min-score 0.8 --use-hnsw)
     if [ -n "$SIMILAR_PLANS" ]; then
       echo "📚 Found similar successful planning patterns (HNSW-indexed)"
@@ -64,7 +64,7 @@ hooks:
     # 3. Complete task hook
     npx hive-flow@v3alpha hooks post-task --task-id "planner-$(date +%s)" --success "$SUCCESS"
 
-    # 4. Train on comprehensive plans (SONA <0.05ms adaptation)
+    # 4. Train on comprehensive plans (SONA low-latency adaptation)
     if [ "$SUCCESS" = "true" ] && [ "$TASKS_COUNT" -gt 10 ]; then
       echo "🧠 Training neural pattern from comprehensive plan"
       npx hive-flow@v3alpha neural train \
@@ -84,11 +84,11 @@ You are a strategic planning specialist responsible for breaking down complex ta
 
 **Enhanced with Hive Flow V3**: You now have AI-powered strategic planning with:
 - **ReasoningBank**: Learn from planning outcomes with trajectory tracking
-- **HNSW Indexing**: 150x-12,500x faster plan pattern search
-- **Flash Attention**: 2.49x-7.47x speedup for large task analysis
+- **HNSW Indexing**: fast HNSW-indexed plan pattern search
+- **Flash Attention**: Flash Attention optimization for large task analysis
 - **GNN-Enhanced Mapping**: +12.4% better dependency detection
 - **EWC++**: Never forget successful planning strategies
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
+- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
 - **MoE Routing**: Optimal agent assignment via Mixture of Experts
 
 ## Core Responsibilities
@@ -166,7 +166,7 @@ plan:
 ### Before Planning: Learn from History (HNSW-Indexed)
 
 ```typescript
-// 1. Learn from similar past plans (150x-12,500x faster with HNSW)
+// 1. Learn from similar past plans (fast HNSW-indexed with HNSW)
 const similarPlans = await reasoningBank.searchPatterns({
   task: 'Plan authentication implementation',
   k: 5,
@@ -207,7 +207,7 @@ const dependencyGraph = await agentDB.gnnEnhancedSearch(
 
 console.log(`Dependency mapping improved by ${dependencyGraph.improvementPercent}%`);
 console.log(`Identified ${dependencyGraph.results.length} critical dependencies`);
-console.log(`Search time: ${dependencyGraph.searchTimeMs}ms (HNSW: 150x-12,500x faster)`);
+console.log(`Search time: ${dependencyGraph.searchTimeMs}ms (HNSW: fast HNSW-indexed)`);
 
 // Build task dependency graph
 function buildTaskDependencyGraph() {
@@ -250,12 +250,12 @@ if (subtasksCount > 20) {
     taskEmbeddings
   );
   console.log(`Analyzed ${subtasksCount} tasks in ${analysis.executionTimeMs}ms`);
-  console.log(`Speed improvement: 2.49x-7.47x faster`);
+  console.log(`Speed improvement: Flash Attention optimization faster`);
   console.log(`Memory reduction: ~50%`);
 }
 ```
 
-### SONA Adaptation for Planning Patterns (<0.05ms)
+### SONA Adaptation for Planning Patterns (low-latency)
 
 ```typescript
 // V3: SONA adapts to your planning patterns in real-time
@@ -263,7 +263,7 @@ const sonaAdapter = await agentDB.getSonaAdapter();
 await sonaAdapter.adapt({
   context: currentPlanningContext,
   learningRate: 0.001,
-  maxLatency: 0.05  // <0.05ms adaptation guarantee
+  maxLatency: 0.05  // low-latency adaptation guarantee
 });
 
 console.log(`SONA adapted to planning patterns in ${sonaAdapter.lastAdaptationMs}ms`);

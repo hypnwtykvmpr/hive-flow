@@ -46,7 +46,7 @@ const FEATURE_FLAG_DEFINITIONS: Record<keyof FeatureFlags, FeatureFlagInfo> = {
   },
   enableFlashAttention: {
     name: 'enableFlashAttention',
-    description: 'Enable Flash Attention for 2.49x-7.47x speedup',
+    description: 'Enable Flash Attention for Flash Attention optimization',
     defaultValue: true,
     experimental: false,
     performanceImpact: 'none',

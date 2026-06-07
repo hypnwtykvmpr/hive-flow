@@ -12,9 +12,9 @@
  * agentic-flow's Agent implementations, eliminating 10,000+ lines of duplicate code.
  *
  * Performance Benefits:
- * - Flash Attention: 2.49x-7.47x speedup for context processing
- * - SONA Learning: <0.05ms adaptation for real-time learning
- * - AgentDB: 150x-12,500x faster memory/pattern search
+ * - Flash Attention: optimization enabled for context processing
+ * - SONA Learning: low-latency adaptation for real-time learning
+ * - AgentDB: fast HNSW-indexed memory/pattern search
  *
  * @module v3/integration/agentic-flow-agent
  * @version 3.0.0-alpha.1
@@ -348,9 +348,9 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
    * delegate to agentic-flow's optimized implementations.
    *
    * Benefits:
-   * - Flash Attention for faster context processing (2.49x-7.47x speedup)
-   * - SONA learning for real-time adaptation (<0.05ms)
-   * - AgentDB for faster memory search (150x-12,500x improvement)
+   * - Flash Attention for faster context processing (Flash Attention optimization)
+   * - SONA learning for real-time adaptation (low-latency)
+   * - AgentDB for faster memory search (HNSW indexing improvements)
    *
    * @param ref - The agentic-flow Agent reference
    */
@@ -477,9 +477,9 @@ export class AgenticFlowAgent extends EventEmitter implements IAgent {
    *
    * ADR-001: When agentic-flow is available, delegates task execution
    * to agentic-flow's Agent.execute() which leverages:
-   * - Flash Attention for 2.49x-7.47x faster processing
+   * - Flash Attention for Flash Attention optimization faster processing
    * - SONA learning for real-time adaptation
-   * - AgentDB for 150x-12,500x faster memory retrieval
+   * - AgentDB for fast HNSW-indexed memory retrieval
    *
    * @param task - Task to execute
    * @returns Task result with output or error

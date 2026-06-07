@@ -107,7 +107,7 @@ const benchmarkCommand: Command = {
       }
 
       const mean = flashTimes.reduce((a, b) => a + b, 0) / flashTimes.length;
-      // Compare to baseline (single-vector comparison takes ~0.5μs, so 100 vectors baseline ~0.05ms)
+      // Compare to baseline (single-vector comparison takes ~0.5μs, so 100 vectors baseline ~low-latency)
       const baselineMs = 0.05;
       const speedup = baselineMs / mean;
       results.push({
@@ -149,7 +149,7 @@ const benchmarkCommand: Command = {
 
         const mean = searchTimes.reduce((a, b) => a + b, 0) / searchTimes.length;
         // Brute force baseline: ~0.5μs per vector comparison, 1000 vectors = 0.5ms
-        // HNSW should be O(log n) ~150x faster
+        // HNSW should be O(log n) ~fast
         const baselineBruteForce = hnswStatus.entryCount * 0.0005;
         const speedup = baselineBruteForce / (mean / 1000);
         results.push({
@@ -181,7 +181,7 @@ const benchmarkCommand: Command = {
         mean: `${(sonaResult.avgMs * 1000).toFixed(2)}μs`,
         p95: `${(sonaResult.maxMs * 1000).toFixed(2)}μs`,
         p99: `${(sonaResult.maxMs * 1000).toFixed(2)}μs`,
-        improvement: sonaResult.targetMet ? output.success('<0.05ms ✓') : output.warning('Above target'),
+        improvement: sonaResult.targetMet ? output.success('low-latency ✓') : output.warning('Above target'),
       });
     }
 
@@ -638,8 +638,8 @@ export const performanceCommand: Command = {
     output.writeln();
     output.writeln('Performance Targets:');
     output.printList([
-      'HNSW Search: 150x-12,500x faster than brute force',
-      'Flash Attention: 2.49x-7.47x speedup',
+      'HNSW Search: HNSW-indexed rather than brute force',
+      'Flash Attention: optimization enabled',
       'Memory: 50-75% reduction with quantization',
     ]);
     output.writeln();

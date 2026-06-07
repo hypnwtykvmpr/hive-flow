@@ -256,7 +256,7 @@ Do NOT run manual memory/hooks/neural commands after completing work. Just stop.
 | `init` | 4 | Project initialization with wizard, presets, skills, hooks |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | AgentDB memory with vector search (150x-12,500x faster) |
+| `memory` | 11 | AgentDB memory with vector search (fast HNSW-indexed) |
 | `mcp` | 9 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 7 | Session state management and persistence |
@@ -449,12 +449,12 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ## 🧠 Intelligence System (RuVector)
 
-V3 includes the RuVector Intelligence System:
-- **SONA**: Self-Optimizing Neural Architecture (<0.05ms adaptation)
+V3 includes the Hive Flow intelligence system:
+- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
 - **MoE**: Mixture of Experts for specialized routing
-- **HNSW**: 150x-12,500x faster pattern search
+- **HNSW**: fast HNSW-indexed pattern search
 - **EWC++**: Elastic Weight Consolidation (prevents forgetting)
-- **Flash Attention**: 2.49x-7.47x speedup
+- **Flash Attention**: Flash Attention optimization
 
 The 4-step intelligence pipeline:
 1. **RETRIEVE** - Fetch relevant patterns via HNSW
@@ -491,12 +491,12 @@ Features:
 
 | Metric | Target |
 |--------|--------|
-| Flash Attention | 2.49x-7.47x speedup |
-| HNSW Search | 150x-12,500x faster |
+| Flash Attention | Flash Attention optimization |
+| HNSW Search | HNSW-indexed |
 | Memory Reduction | 50-75% with quantization |
 | MCP Response | <100ms |
 | CLI Startup | <500ms |
-| SONA Adaptation | <0.05ms |
+| SONA Adaptation | low-latency |
 
 ## 🔧 Environment Variables
 

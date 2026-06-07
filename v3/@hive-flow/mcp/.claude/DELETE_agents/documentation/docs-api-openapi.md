@@ -281,7 +281,7 @@ const template = await reasoningBank.searchPatterns({
 ### Fast Documentation Generation
 
 ```typescript
-// Use Flash Attention for large API specs (2.49x-7.47x faster)
+// Use Flash Attention for large API specs (Flash Attention optimization faster)
 if (endpointCount > 50) {
   const result = await agentDB.flashAttention(
     queryEmbedding,

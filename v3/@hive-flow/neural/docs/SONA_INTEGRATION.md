@@ -6,7 +6,7 @@ Local SONA-compatible learning integration for the V3 Neural Module.
 
 The SONA (Self-Optimizing Neural Architecture) integration provides runtime-adaptive learning capabilities with sub-millisecond performance:
 
-- **Learning Performance**: <0.05ms per trajectory (target)
+- **Learning Performance**: low-latency per trajectory (target)
 - **Adaptation Performance**: <0.1ms per context
 - **Memory Efficient**: LoRA-based (1-16 rank)
 - **Platform Support**: Pure TypeScript local runtime
@@ -81,7 +81,7 @@ new SONALearningEngine(mode: SONAMode, modeConfig: SONAModeConfig)
 
 Learn from a completed trajectory.
 
-**Performance target**: <0.05ms
+**Performance target**: low-latency
 
 ```typescript
 await sona.learn(trajectory);
@@ -194,7 +194,7 @@ patterns.forEach(p => {
 
 Optimized for minimum latency:
 - **LoRA Rank**: 1 (micro-LoRA only)
-- **Max Latency**: 0.05ms
+- **Max Latency**: low-latency
 - **Background Interval**: 1 minute
 - **Use Case**: Interactive applications, chatbots
 
@@ -307,18 +307,18 @@ interface JsLearnedPattern {
 
 | Mode       | Avg Time | Target  | Memory  |
 |------------|----------|---------|---------|
-| Real-time  | ~0.03ms  | <0.05ms | 100MB   |
-| Balanced   | ~0.04ms  | <0.05ms | 200MB   |
+| Real-time  | ~0.03ms  | low-latency | 100MB   |
+| Balanced   | ~0.04ms  | low-latency | 200MB   |
 | Research   | ~0.08ms  | <0.10ms | 500MB   |
-| Edge       | ~0.02ms  | <0.05ms | 50MB    |
-| Batch      | ~0.05ms  | <0.10ms | 1GB     |
+| Edge       | ~0.02ms  | low-latency | 50MB    |
+| Batch      | ~low-latency  | <0.10ms | 1GB     |
 
 ### Adaptation Performance
 
 | Operation           | Time     |
 |---------------------|----------|
 | Micro-LoRA Apply    | ~0.01ms  |
-| Pattern Search (k=5)| ~0.05ms  |
+| Pattern Search (k=5)| ~low-latency  |
 | Total Adaptation    | ~0.06ms  |
 
 ## Examples
