@@ -318,7 +318,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       agentdb:
-        specifier: ^3.0.0-alpha.9
+        specifier: 3.0.0-alpha.9
         version: 3.0.0-alpha.9(patch_hash=wumnx5im6nspqhravoz7zskt4q)(@types/node@20.19.27)(better-sqlite3@11.10.0)
       sql.js:
         specifier: ^1.14.1

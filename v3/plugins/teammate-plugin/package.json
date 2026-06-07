@@ -65,7 +65,7 @@
   },
   "dependencies": {
     "eventemitter3": "^5.0.1",
-    "@Hive Flow/bmssp": "^1.0.0"
+    "@ruvnet/bmssp": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

@@ -17,7 +17,7 @@ async function loadBMSSP(): Promise<void> {
   if (WasmGraph) return;
 
   try {
-    const bmssp = await import('@Hive Flow/bmssp');
+    const bmssp = await import('@ruvnet/bmssp');
     await bmssp.default(); // Initialize WASM
     WasmGraph = bmssp.WasmGraph;
   } catch (error) {
