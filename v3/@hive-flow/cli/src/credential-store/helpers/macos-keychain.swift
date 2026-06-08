@@ -1,50 +1,123 @@
 import Foundation
-import LocalAuthentication
 import Security
+
+struct HelperInput: Decodable {
+    let secret: String?
+}
 
 @main
 struct HiveFlowMacOSKeychainHelper {
     static func main() {
-        if CommandLine.arguments.contains("--describe") {
-            print("Hive Flow macOS Keychain helper: generic-password items, optional LAContext user-presence ACL")
-            return
-        }
-
-        let context = LAContext()
-        context.localizedFallbackTitle = ""
-
-        var accessError: Unmanaged<CFError>?
-        let access = SecAccessControlCreateWithFlags(
-            nil,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            [.userPresence],
-            &accessError
-        )
-
-        if access == nil {
-            let message = accessError?.takeRetainedValue().localizedDescription ?? "unknown SecAccessControl error"
-            fputs("SecAccessControl unavailable: \(message)\n", stderr)
+        do {
+            try run()
+        } catch {
+            fputs("\(error.localizedDescription)\n", stderr)
             exit(2)
         }
+    }
 
-        // The non-interactive automated test path deliberately does not enable
-        // this ACL. This helper is the manual/biometric path: after LAContext
-        // succeeds, Keychain releases the generic-password bytes. The random
-        // vault KEK leaves the API only as the Keychain item's secret data after
-        // OS unlock; Secure Enclave symmetric import is not attempted.
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "hive-flow-provider-key:manual-helper-probe",
-            kSecAttrAccount as String: NSUserName(),
-            kSecUseAuthenticationContext as String: context,
-            kSecAttrAccessControl as String: access as Any,
-        ]
+    private static func run() throws {
+        let args = CommandLine.arguments
+        if args.contains("--describe") {
+            print("Hive Flow macOS Keychain helper: generic-password items; secrets arrive via stdin JSON, never argv")
+            return
+        }
+        guard args.count >= 2 else {
+            throw HelperError.usage("usage: macos-keychain-helper status|store|retrieve|delete <service> <account>")
+        }
 
-        if CommandLine.arguments.contains("--dry-run-query") {
-            print("query-ready:\(query.count)")
+        let command = args[1]
+        if command == "status" {
+            print("available")
             return
         }
 
-        print("helper-ready")
+        guard args.count >= 4 else {
+            throw HelperError.usage("usage: macos-keychain-helper \(command) <service> <account>")
+        }
+
+        let service = args[2]
+        let account = args[3]
+        let input = try readInput()
+
+        switch command {
+        case "store":
+            guard let secret = input.secret, let data = Data(base64Encoded: secret) else {
+                throw HelperError.usage("store requires stdin JSON with base64 secret")
+            }
+            try store(service: service, account: account, data: data)
+        case "retrieve":
+            if let data = try retrieve(service: service, account: account) {
+                print(data.base64EncodedString())
+            }
+        case "delete":
+            try delete(service: service, account: account)
+        default:
+            throw HelperError.usage("unsupported command: \(command)")
+        }
+    }
+
+    private static func readInput() throws -> HelperInput {
+        let data = FileHandle.standardInput.readDataToEndOfFile()
+        if data.isEmpty { return HelperInput(secret: nil) }
+        return try JSONDecoder().decode(HelperInput.self, from: data)
+    }
+
+    private static func query(service: String, account: String) -> [String: Any] {
+        return [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+    }
+
+    private static func store(service: String, account: String, data: Data) throws {
+        let base = query(service: service, account: account)
+        let deleteStatus = SecItemDelete(base as CFDictionary)
+        if deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound {
+            try check(deleteStatus, "delete existing item")
+        }
+
+        var item = base
+        item[kSecValueData as String] = data
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        try check(SecItemAdd(item as CFDictionary, nil), "store item")
+    }
+
+    private static func retrieve(service: String, account: String) throws -> Data? {
+        var q = query(service: service, account: account)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(q as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        try check(status, "retrieve item")
+        return result as? Data
+    }
+
+    private static func delete(service: String, account: String) throws {
+        let status = SecItemDelete(query(service: service, account: account) as CFDictionary)
+        if status != errSecSuccess && status != errSecItemNotFound {
+            try check(status, "delete item")
+        }
+    }
+
+    private static func check(_ status: OSStatus, _ action: String) throws {
+        guard status == errSecSuccess else {
+            let message = SecCopyErrorMessageString(status, nil) as String? ?? "OSStatus \(status)"
+            throw HelperError.keychain("\(action) failed: \(message)")
+        }
+    }
+}
+
+enum HelperError: LocalizedError {
+    case usage(String)
+    case keychain(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .usage(let message), .keychain(let message):
+            return message
+        }
     }
 }

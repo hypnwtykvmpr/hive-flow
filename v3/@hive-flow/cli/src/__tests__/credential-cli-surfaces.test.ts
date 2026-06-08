@@ -91,6 +91,7 @@ beforeEach(() => {
   vi.spyOn(output, 'printInfo').mockImplementation(() => undefined);
   vi.spyOn(output, 'printSuccess').mockImplementation(() => undefined);
   vi.spyOn(output, 'printError').mockImplementation(() => undefined);
+  vi.spyOn(output, 'printWarning').mockImplementation(() => undefined);
   vi.spyOn(output, 'printJson').mockImplementation(() => undefined);
   vi.spyOn(output, 'printBox').mockImplementation(() => undefined);
   vi.spyOn(output, 'createSpinner').mockReturnValue({
@@ -114,6 +115,15 @@ describe('credential CLI surfaces', () => {
       secret: 'or-cli-secret',
     }));
     expect(JSON.stringify(result)).not.toContain('or-cli-secret');
+  });
+
+  it('config key set warns when provider material is supplied in argv instead of stdin', async () => {
+    const result = await nested(configCommand, 'key', 'set').action!(
+      ctx({ provider: 'OpenRouter', value: 'or-cli-secret' }),
+    );
+
+    expect(result?.success).toBe(true);
+    expect(output.printWarning).toHaveBeenCalledWith(expect.stringMatching(/argv|stdin|shell history/i));
   });
 
   it('config key status reports non-secret presence, drift, holder-cache, and unlock fields', async () => {

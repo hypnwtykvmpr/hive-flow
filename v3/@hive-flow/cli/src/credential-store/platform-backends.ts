@@ -146,51 +146,41 @@ abstract class BaseCredentialStore implements CredentialStoreProvider, KekProvid
 export class MacOSKeychainCredentialStore extends BaseCredentialStore {
   readonly backendName = 'macos-keychain';
   private readonly accountName: string;
-  private readonly keychainPath?: string;
-  private readonly keychainPassword?: string;
+  private readonly helperCommand: string;
 
   constructor(options: PlatformCredentialStoreOptions = {}) {
     super(options);
     this.accountName = options.accountName ?? this.env.USER ?? 'user';
-    this.keychainPath = options.keychainPath;
-    this.keychainPassword = options.keychainPassword;
+    this.helperCommand = options.helperCommand ?? this.env.HIVE_FLOW_MACOS_CREDENTIAL_HELPER ?? 'hive-flow-macos-keychain-helper';
   }
 
   async status(provider?: string): Promise<CredentialStoreStatus> {
     if (this.platform !== 'darwin') return unavailable('macOS Keychain backend requires darwin');
     try {
-      run(this.execFileSync, '/usr/bin/security', ['list-keychains'], { stdio: 'pipe' });
+      run(this.execFileSync, this.helperCommand, ['status'], { stdio: 'pipe', env: this.env });
       return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
     } catch (error) {
-      return unavailable(`security CLI unavailable: ${(error as Error).message}`);
+      return unavailable(`macOS keychain helper unavailable: ${(error as Error).message}`);
     }
   }
 
   protected async storeSecretKind(kind: SecretKind, provider: string, secret: Uint8Array | string): Promise<void> {
     await this.requireReady();
-    this.unlockKeychain();
-    this.deleteKeychainItem(kind, provider);
-    const args = [
-      'add-generic-password',
-      '-s', this.serviceName(kind, provider),
-      '-a', this.accountName,
-      '-w', encodeSecret(secret),
-      ...(this.keychainPath ? [this.keychainPath] : []),
-    ];
-    run(this.execFileSync, '/usr/bin/security', args, { stdio: 'pipe' });
+    run(this.execFileSync, this.helperCommand, [
+      'store',
+      this.serviceName(kind, provider),
+      this.accountName,
+    ], { input: `${JSON.stringify(this.helperInput({ secret: encodeSecret(secret) }))}\n`, stdio: 'pipe', env: this.env });
   }
 
   protected async retrieveSecretKind(kind: SecretKind, provider: string): Promise<Buffer | null> {
     await this.requireReady();
-    this.unlockKeychain();
     try {
-      return decodeSecret(run(this.execFileSync, '/usr/bin/security', [
-        'find-generic-password',
-        '-s', this.serviceName(kind, provider),
-        '-a', this.accountName,
-        '-w',
-        ...(this.keychainPath ? [this.keychainPath] : []),
-      ], { stdio: 'pipe' }));
+      return decodeSecret(run(this.execFileSync, this.helperCommand, [
+        'retrieve',
+        this.serviceName(kind, provider),
+        this.accountName,
+      ], { input: `${JSON.stringify(this.helperInput())}\n`, stdio: 'pipe', env: this.env }));
     } catch {
       return null;
     }
@@ -198,33 +188,23 @@ export class MacOSKeychainCredentialStore extends BaseCredentialStore {
 
   protected async deleteSecretKind(kind: SecretKind, provider: string): Promise<void> {
     await this.requireReady();
-    this.deleteKeychainItem(kind, provider);
+    try {
+      run(this.execFileSync, this.helperCommand, [
+        'delete',
+        this.serviceName(kind, provider),
+        this.accountName,
+      ], { input: `${JSON.stringify(this.helperInput())}\n`, stdio: 'pipe', env: this.env });
+    } catch {
+      // Missing keychain items are fine during delete.
+    }
   }
 
   private serviceName(kind: SecretKind, provider: string): string {
     return `${this.servicePrefix}:${kind}:${provider}`;
   }
 
-  private unlockKeychain(): void {
-    if (!this.keychainPath || !this.keychainPassword) return;
-    run(this.execFileSync, '/usr/bin/security', [
-      'unlock-keychain',
-      '-p', this.keychainPassword,
-      this.keychainPath,
-    ], { stdio: 'pipe' });
-  }
-
-  private deleteKeychainItem(kind: SecretKind, provider: string): void {
-    try {
-      run(this.execFileSync, '/usr/bin/security', [
-        'delete-generic-password',
-        '-s', this.serviceName(kind, provider),
-        '-a', this.accountName,
-        ...(this.keychainPath ? [this.keychainPath] : []),
-      ], { stdio: 'pipe' });
-    } catch {
-      // Missing keychain items are fine during upsert/delete.
-    }
+  private helperInput(extra: { secret?: string } = {}): Record<string, string> {
+    return { ...extra };
   }
 }
 

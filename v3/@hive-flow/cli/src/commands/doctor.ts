@@ -181,7 +181,7 @@ export async function checkCredentialStore(): Promise<HealthCheck> {
         message: status.present
           ? `OpenRouter key present; holder cache ${status.holderCache ? 'reachable' : 'not reachable'}`
           : 'Credential backend unlock available, but OpenRouter key is not stored',
-        fix: status.present ? undefined : 'hive-flow config key set -p openrouter -v <key>',
+        fix: status.present ? undefined : 'printf "%s\\n" "$OPENROUTER_API_KEY" | hive-flow config key set -p openrouter --stdin',
       };
     }
     if (status.unlock === 'locked') {

@@ -3,6 +3,7 @@
  * Configuration management
  */
 
+import { readFileSync } from 'node:fs';
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
@@ -430,19 +431,26 @@ const keySetCommand: Command = {
   description: 'Store a provider key in the platform credential store and initialize the encrypted vault',
   options: [
     { name: 'provider', short: 'p', description: 'Provider name', type: 'string', required: true },
-    { name: 'value', short: 'v', description: 'Provider API key value', type: 'string' },
+    { name: 'value', short: 'v', description: 'Provider API key value (discouraged: visible in argv)', type: 'string' },
+    { name: 'stdin', description: 'Read the provider API key from stdin instead of argv', type: 'boolean', default: false },
     { name: 'degraded', description: 'Allow degraded backend setup for explicit test/CI lanes', type: 'boolean', default: false },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const provider = String(ctx.flags.provider || ctx.args[0] || '').trim();
-    const secret = typeof ctx.flags.value === 'string' && ctx.flags.value.length > 0
+    const argvSecret = typeof ctx.flags.value === 'string' && ctx.flags.value.length > 0
       ? ctx.flags.value
       : typeof ctx.args[1] === 'string'
         ? ctx.args[1]
         : '';
+    const secret = ctx.flags.stdin
+      ? readFileSync(0, 'utf8').replace(/\r?\n$/, '')
+      : argvSecret;
     if (!provider || !secret) {
       output.printError('Provider and key value are required');
       return { success: false, exitCode: 1 };
+    }
+    if (!ctx.flags.stdin && argvSecret) {
+      output.printWarning('Provider key was supplied in argv and may appear in shell history or process listings; prefer: hive-flow config key set -p <provider> --stdin');
     }
     const result = await storeProviderCredential({
       provider,
@@ -520,7 +528,7 @@ const keyCommand: Command = {
   description: 'Manage provider keys in the Hive Flow credential store',
   subcommands: [keySetCommand, keyStatusCommand, keyRepairCommand, keyRemoveCommand],
   examples: [
-    { command: 'hive-flow config key set -p openrouter -v <key>', description: 'Store OpenRouter key' },
+    { command: 'printf "%s\\n" "$OPENROUTER_API_KEY" | hive-flow config key set -p openrouter --stdin', description: 'Store OpenRouter key without putting it in argv' },
     { command: 'hive-flow config key status -p openrouter --json', description: 'Check key status without printing values' },
     { command: 'hive-flow config key repair', description: 'Create or repair encrypted vault metadata' },
     { command: 'hive-flow config key remove -p openrouter', description: 'Remove OpenRouter key' },

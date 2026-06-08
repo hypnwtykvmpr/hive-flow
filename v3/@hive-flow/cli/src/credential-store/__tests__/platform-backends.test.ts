@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import fc from 'fast-check';
 import { afterEach, describe, expect, it } from 'vitest';
 import { generateKek } from '../kek.js';
@@ -76,6 +76,29 @@ function makeWindowsRunner() {
       return Buffer.from('');
     }
     throw new Error(`unexpected windows helper args ${args.join(' ')}`);
+  };
+  return { calls, runner };
+}
+
+function makeMacOSHelperRunner() {
+  const calls: Array<{ file: string; args: readonly string[]; input?: Uint8Array | string }> = [];
+  const items = new Map<string, string>();
+  const keyFromArgs = (args: readonly string[]) => `${args[1] ?? ''}\0${args[2] ?? ''}\0${args[3] ?? ''}`;
+  const runner: Runner = (file, args, options = {}) => {
+    calls.push({ file, args: [...args], input: options.input });
+    if (file !== 'hive-flow-macos-keychain-helper') throw new Error(`unexpected command ${file}`);
+    if (args[0] === 'status') return Buffer.from('available\n');
+    if (args[0] === 'store') {
+      const payload = JSON.parse(String(options.input ?? '{}')) as { secret?: string };
+      items.set(keyFromArgs(args), String(payload.secret ?? ''));
+      return Buffer.from('');
+    }
+    if (args[0] === 'retrieve') return Buffer.from(`${items.get(keyFromArgs(args)) ?? ''}\n`);
+    if (args[0] === 'delete') {
+      items.delete(keyFromArgs(args));
+      return Buffer.from('');
+    }
+    throw new Error(`unexpected macOS helper args ${args.join(' ')}`);
   };
   return { calls, runner };
 }
@@ -188,45 +211,86 @@ describe('Windows Credential Manager backend', () => {
 });
 
 describe('macOS Keychain backend', () => {
-  const createdKeychains: string[] = [];
+  it('stores provider secrets and KEK envelopes through the macOS helper stdin without argv secret material', async () => {
+    const { calls, runner } = makeMacOSHelperRunner();
+    const backend = new MacOSKeychainCredentialStore({
+      platform: 'darwin',
+      helperCommand: 'hive-flow-macos-keychain-helper',
+      execFileSync: runner,
+    });
+    const secret = Buffer.from('or-macos-secret');
+    await backend.storeSecret('OpenRouter', secret);
+    await expect(backend.retrieveSecret('openrouter')).resolves.toEqual(secret);
 
-  afterEach(() => {
-    for (const keychainPath of createdKeychains.splice(0)) {
-      try {
-        execFileSync('/usr/bin/security', ['delete-keychain', keychainPath], { stdio: 'pipe' });
-      } catch {
-        // Cleanup best effort; test keychains are under the temporary directory.
-      }
-      rmSync(dirname(keychainPath), { recursive: true, force: true });
-    }
+    const kek = generateKek(size => Buffer.alloc(size, 3));
+    const sealed = await backend.sealKek(kek);
+    expect(Buffer.from(sealed.sealed).includes(kek)).toBe(false);
+    await expect(backend.unsealKek(sealed)).resolves.toEqual(kek);
+
+    const argv = calls.flatMap(call => call.args).join(' ');
+    const helperInputs = calls
+      .filter(call => call.file === 'hive-flow-macos-keychain-helper' && call.args[0] === 'store')
+      .map(call => String(call.input ?? ''));
+    expect(argv).not.toContain(secret.toString('utf8'));
+    expect(argv).not.toContain(base64(secret));
+    expect(helperInputs.join('\n')).toContain(base64(secret));
   });
 
-  it.skipIf(process.platform !== 'darwin' || !commandExists('security'))(
-    'round-trips provider secrets and KEK envelopes in a dedicated non-interactive test keychain',
+  it.skipIf(
+    process.platform !== 'darwin'
+    || process.env.HIVE_FLOW_RUN_NATIVE_MACOS_CREDENTIAL_TESTS !== '1'
+    || !commandExists('swiftc'),
+  )(
+    'round-trips provider secrets and KEK envelopes through the native macOS helper and user Keychain',
     async () => {
       const root = mkdtempSync(join(tmpdir(), 'hive-flow-keychain-'));
-      const keychainPath = join(root, 'hive-flow-test.keychain-db');
-      createdKeychains.push(keychainPath);
-      const password = `hf-test-${process.pid}-${Date.now()}`;
-      execFileSync('/usr/bin/security', ['create-keychain', '-p', password, keychainPath], { stdio: 'pipe' });
-      execFileSync('/usr/bin/security', ['unlock-keychain', '-p', password, keychainPath], { stdio: 'pipe' });
-      execFileSync('/usr/bin/security', ['set-keychain-settings', '-lut', '21600', keychainPath], { stdio: 'pipe' });
+      const helperPath = join(root, 'macos-keychain-helper');
+      const moduleCache = join(root, 'module-cache');
+      const servicePrefix = `hive-flow-provider-key-test-${process.pid}-${Date.now()}`;
+      const accountName = process.env.USER ?? 'user';
+      const providerService = `${servicePrefix}:provider-secret:native-macos-${process.pid}-${Date.now()}`;
+      const kekService = `${servicePrefix}:kek:vault-kek`;
+      execFileSync('/usr/bin/swiftc', [
+        '-module-cache-path', moduleCache,
+        '-parse-as-library',
+        resolve(__dirname, '..', 'helpers', 'macos-keychain.swift'),
+        '-o',
+        helperPath,
+      ], { stdio: 'pipe' });
 
-      const backend = new MacOSKeychainCredentialStore({
-        platform: 'darwin',
-        keychainPath,
-        keychainPassword: password,
-      });
-      const secret = Buffer.from('or-macos-secret');
-      await backend.storeSecret('OpenRouter', secret);
-      await expect(backend.retrieveSecret('openrouter')).resolves.toEqual(secret);
-
+      const secret = Buffer.from('or-native-macos-secret');
       const kek = generateKek(size => Buffer.alloc(size, 3));
-      const sealed = await backend.sealKek(kek);
-      expect(Buffer.from(sealed.sealed).includes(kek)).toBe(false);
-      await expect(backend.unsealKek(sealed)).resolves.toEqual(kek);
-      await expect(backend.status('openrouter')).resolves.toMatchObject({ available: true, provider: 'openrouter' });
+      const encodedSecret = base64(secret);
+      const encodedKek = base64(kek);
+      try {
+        execFileSync(helperPath, ['store', providerService, accountName], {
+          input: `${JSON.stringify({ secret: encodedSecret })}\n`,
+          stdio: 'pipe',
+        });
+        execFileSync(helperPath, ['store', kekService, accountName], {
+          input: `${JSON.stringify({ secret: encodedKek })}\n`,
+          stdio: 'pipe',
+        });
+
+        expect(String(execFileSync(helperPath, ['retrieve', providerService, accountName], {
+          input: '{}\n',
+          stdio: 'pipe',
+        })).trim()).toBe(encodedSecret);
+        expect(String(execFileSync(helperPath, ['retrieve', kekService, accountName], {
+          input: '{}\n',
+          stdio: 'pipe',
+        })).trim()).toBe(encodedKek);
+      } finally {
+        try {
+          execFileSync(helperPath, ['delete', providerService, accountName], { input: '{}\n', stdio: 'pipe' });
+          execFileSync(helperPath, ['delete', kekService, accountName], { input: '{}\n', stdio: 'pipe' });
+        } catch {
+          // Cleanup is best effort for an opt-in native lane.
+        }
+        rmSync(root, { recursive: true, force: true });
+      }
     },
+    120_000,
   );
 
   it.skipIf(process.platform !== 'darwin' || !commandExists('swiftc'))(
