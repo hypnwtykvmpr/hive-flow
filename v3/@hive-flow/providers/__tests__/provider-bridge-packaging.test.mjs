@@ -49,7 +49,9 @@ describe('provider bridge packaging contract', () => {
       'scripts/provider-agent-bridge.mjs',
       'scripts/bridge-grep-validators.mjs',
       'scripts/provider-auth-helpers.mjs',
+      'scripts/sandbox-runner.mjs',
     ]));
+    expect(pkg.exports).toHaveProperty('./scripts/sandbox-runner.mjs');
   });
 
   it('dry-run package file list includes the bridge and required local helpers', () => {
@@ -58,6 +60,7 @@ describe('provider bridge packaging contract', () => {
     expect(files).toContain('scripts/provider-agent-bridge.mjs');
     expect(files).toContain('scripts/bridge-grep-validators.mjs');
     expect(files).toContain('scripts/provider-auth-helpers.mjs');
+    expect(files).toContain('scripts/sandbox-runner.mjs');
     expect(files).not.toContain('scripts/setup-provider-agents.ts');
   });
 

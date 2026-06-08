@@ -1,0 +1,9 @@
+{
+  "status": "denied",
+  "denyReason": "sandbox-unavailable:no-verified-backend",
+  "diagnostics": {
+    "reason": "sandbox-unavailable:no-verified-backend",
+    "verifiedBackend": null,
+    "availability": []
+  }
+}
