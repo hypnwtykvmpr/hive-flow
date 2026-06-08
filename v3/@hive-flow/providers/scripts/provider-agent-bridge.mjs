@@ -1041,69 +1041,7 @@ async function createProviderConfig(providerName, model, timeoutMs, agentToken) 
   });
 }
 
-// ===== MCP Tool Execution =====
-
-let _mcpClient = null;
-
-async function loadMCPClient() {
-  if (_mcpClient) return _mcpClient;
-
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  // Relative path: providers/scripts/ -> cli/dist/src/mcp-client.js
-  const mcpClientPath = join(__dirname, '..', '..', 'cli', 'dist', 'src', 'mcp-client.js');
-
-  if (existsSync(mcpClientPath)) {
-    try {
-      const mod = await import(pathToFileURL(mcpClientPath).href);
-      if (mod && (typeof mod.callMCPTool === 'function' || typeof mod.default?.callMCPTool === 'function')) {
-        // Normalise: if callMCPTool is only on the default export, lift it
-        _mcpClient = typeof mod.callMCPTool === 'function' ? mod : mod.default;
-        stderrLogger.debug('MCP client loaded from dist', { path: mcpClientPath });
-        bridgeLog('info', 'MCP client loaded', { source: 'dist', path: mcpClientPath });
-        return _mcpClient;
-      }
-      stderrLogger.warn('MCP client module loaded but callMCPTool not found', {
-        exports: Object.keys(mod).slice(0, 10),
-      });
-    } catch (importErr) {
-      stderrLogger.warn('MCP client dist import failed, trying fallbacks', {
-        error: (importErr.message || String(importErr)).slice(0, 300),
-      });
-      bridgeLog('warn', 'MCP client dist import failed', {
-        path: mcpClientPath,
-        error: (importErr.message || String(importErr)).slice(0, 300),
-        code: importErr.code || null,
-      });
-    }
-  }
-
-  // Fallback: try package import
-  try {
-    const mod = await import('@hive-flow/cli/mcp-client');
-    if (mod && (typeof mod.callMCPTool === 'function' || typeof mod.default?.callMCPTool === 'function')) {
-      _mcpClient = typeof mod.callMCPTool === 'function' ? mod : mod.default;
-      bridgeLog('info', 'MCP client loaded', { source: 'package-subpath' });
-      return _mcpClient;
-    }
-  } catch {
-    // Final fallback
-    try {
-      const mod = await import('@hive-flow/cli');
-      if (mod && (typeof mod.callMCPTool === 'function' || typeof mod.default?.callMCPTool === 'function')) {
-        _mcpClient = typeof mod.callMCPTool === 'function' ? mod : mod.default;
-        bridgeLog('info', 'MCP client loaded', { source: 'package-main' });
-        return _mcpClient;
-      }
-    } catch {
-      // All paths exhausted
-    }
-  }
-
-  stderrLogger.warn('MCP client unavailable — all import paths failed');
-  bridgeLog('warn', 'MCP client unavailable', { triedDist: mcpClientPath });
-  return null;
-}
+// ===== Bridge Tool Execution =====
 
 // ===== Bridge Filesystem Security Guardrails =====
 
@@ -1327,8 +1265,7 @@ const BRIDGE_BLOCKED_TOOLS = new Set([
 ]);
 
 // Built-in filesystem tool handlers — always available to provider agents.
-// These bypass the MCP client entirely so providers can read/write/edit files
-// even when the CLI MCP client is unavailable in the bridge subprocess.
+// These execute only through the bridge-owned registry below.
 const BRIDGE_FILESYSTEM_TOOLS = {
   'read_file': ({ path: filePath }) => {
     const safePath = validateFilePath(filePath);
@@ -1648,57 +1585,64 @@ const BRIDGE_FILESYSTEM_TOOLS = {
   },
 };
 
-async function executeMCPTool(toolName, toolArgs) {
-  // Built-in filesystem tools — handle before MCP client or blocklist checks
-  const fsHandler = BRIDGE_FILESYSTEM_TOOLS[toolName];
-  if (fsHandler) {
-    let parsedFsArgs;
-    if (typeof toolArgs === 'string') {
-      try { parsedFsArgs = JSON.parse(toolArgs); } catch { parsedFsArgs = {}; }
-    } else {
-      parsedFsArgs = toolArgs || {};
-    }
-    try {
-      const result = fsHandler(parsedFsArgs);
-      return typeof result === 'string' ? result : JSON.stringify(result);
-    } catch (err) {
-      return { status: 'error', error: err.message || String(err) };
-    }
+const BRIDGE_TOOL_REGISTRY = {
+  ...BRIDGE_FILESYSTEM_TOOLS,
+};
+
+function parseBridgeToolArgs(toolArgs) {
+  if (typeof toolArgs === 'string') {
+    try { return JSON.parse(toolArgs); } catch { return {}; }
+  }
+  return toolArgs || {};
+}
+
+function bridgeDeniedTool(toolName, denyReason, error) {
+  return {
+    status: 'denied',
+    denyReason,
+    error,
+    tool: toolName,
+  };
+}
+
+export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
+  const normalizedToolName = typeof toolName === 'string' ? toolName : '';
+
+  if (!normalizedToolName) {
+    return bridgeDeniedTool(String(toolName || ''), 'invalid-tool', 'Tool name must be a non-empty string.');
   }
 
-  // SEC-002: Check blocklist before any execution
   if (BRIDGE_BLOCKED_TOOLS.has(toolName)) {
     stderrLogger.warn(`Tool blocked by bridge security policy: ${toolName}`);
-    return {
-      status: 'error',
-      error: `Tool '${toolName}' is blocked for provider agents (bridge security policy).`,
-    };
+    return bridgeDeniedTool(
+      toolName,
+      'blocked-tool',
+      `Tool '${toolName}' is blocked for provider agents (bridge security policy).`,
+    );
   }
 
-  const mcpClient = await loadMCPClient();
-
-  if (!mcpClient || !mcpClient.callMCPTool) {
-    stderrLogger.warn(`MCP client unavailable — cannot execute tool: ${toolName}`);
-    return {
-      status: 'error',
-      error: `MCP client not available. Tool '${toolName}' was not executed.`,
-    };
+  if (toolName.startsWith('mcp__')) {
+    stderrLogger.warn(`MCP alias denied by provider bridge: ${toolName}`);
+    return bridgeDeniedTool(
+      toolName,
+      'mcp-alias-denied',
+      `Tool '${toolName}' is not available to provider agents. Use bridge-owned tools only.`,
+    );
   }
 
-  let parsedArgs;
-  if (typeof toolArgs === 'string') {
-    try {
-      parsedArgs = JSON.parse(toolArgs);
-    } catch {
-      parsedArgs = {};
-    }
-  } else {
-    parsedArgs = toolArgs || {};
+  const handler = BRIDGE_TOOL_REGISTRY[toolName];
+  if (!handler) {
+    stderrLogger.warn(`Unknown provider bridge tool denied: ${toolName}`);
+    return bridgeDeniedTool(
+      toolName,
+      'unknown-tool',
+      `Tool '${toolName}' is not in the provider bridge registry.`,
+    );
   }
 
   try {
-    const result = await mcpClient.callMCPTool(toolName, parsedArgs);
-    return result;
+    const result = await handler(parseBridgeToolArgs(toolArgs), ctx);
+    return typeof result === 'string' ? result : JSON.stringify(result);
   } catch (err) {
     stderrLogger.error(`Tool execution failed: ${toolName}`, err.message || err);
     return {
@@ -1709,22 +1653,29 @@ async function executeMCPTool(toolName, toolArgs) {
   }
 }
 
+export async function executeBridgeTool(toolName, toolArgs, ctx = {}) {
+  bridgeLog('info', 'Bridge tool dispatch', {
+    ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
+    tool: toolName,
+    source: ctx.source || 'provider-response',
+  });
+  if (typeof ctx.recordExecution === 'function') {
+    try { ctx.recordExecution(toolName); } catch { /* test hooks must not break execution */ }
+  }
+  return evaluateToolCall(toolName, toolArgs, ctx);
+}
+
 export async function executeBridgeFilesystemTool(toolName, toolArgs) {
   if (!BRIDGE_FILESYSTEM_TOOLS[toolName]) {
     throw new Error(`Unknown bridge filesystem tool: ${toolName}`);
   }
-  return executeMCPTool(toolName, toolArgs);
+  return executeBridgeTool(toolName, toolArgs, { source: 'filesystem-export' });
 }
 
 async function notifyProviderAuthFailure(providerName, reason) {
   await notifyProviderAuthRequired({
     providerName,
     reason,
-    callMCPTool: async (toolName, args) => {
-      const mcpClient = await loadMCPClient();
-      if (!mcpClient || typeof mcpClient.callMCPTool !== 'function') return undefined;
-      return mcpClient.callMCPTool(toolName, args);
-    },
   });
 }
 
@@ -2123,12 +2074,10 @@ async function main() {
     let consecutiveErrorIterations = 0;
     const MAX_CONSECUTIVE_ERRORS = 3;
 
-    // Tool-calling loop (no lock held — provider calls can take up to 120s)
-    // Note: MCP tool execution requires the CLI MCP client, which is typically
-    // unavailable when bridge runs as a subprocess. When unavailable, tool calls
-    // are reported in the response but not executed — the provider's text response
-    // is used as-is. This is sufficient for prompt-response hive workers.
-    const mcpAvailable = !!(await loadMCPClient());
+    // Tool-calling loop (no lock held — provider calls can take up to 120s).
+    // All structured provider tool calls execute through executeBridgeTool,
+    // backed by the bridge-owned registry above. There is intentionally no
+    // generic MCP fallback from provider-controlled responses.
 
     // Derive tasks dir for terminate-marker checks
     const bridgeTasksDir = join(
@@ -2260,23 +2209,6 @@ async function main() {
       });
 
       if (response.toolCalls && response.toolCalls.length > 0) {
-        if (!mcpAvailable) {
-          // MCP unavailable — log tool calls for diagnostics, use text response as-is
-          for (const toolCall of response.toolCalls) {
-            stderrLogger.warn(`Tool call requested but MCP unavailable: ${toolCall.function.name}`, {
-              args: (toolCall.function.arguments || '').slice(0, 200),
-            });
-          }
-          // Append tool call info to response content so caller knows what was requested
-          const toolSummary = response.toolCalls
-            .map((tc) => `[tool_call: ${tc.function.name}]`)
-            .join(', ');
-          if (!response.content) {
-            response.content = `Provider requested tools but MCP is unavailable in bridge subprocess: ${toolSummary}`;
-          }
-          break;
-        }
-
         for (const toolCall of response.toolCalls) {
           bridgeLog('info', `Tool call: ${toolCall.function.name}`, {
             agentId,
@@ -2295,7 +2227,7 @@ async function main() {
 
         const toolResults = await Promise.all(
           response.toolCalls.map((tc) =>
-            executeMCPTool(tc.function.name, tc.function.arguments)
+            executeBridgeTool(tc.function.name, tc.function.arguments, { agentId, source: 'response-loop' })
               .then((result) => ({ id: tc.id, name: tc.function.name, result }))
               .catch((err) => ({
                 id: tc.id,
