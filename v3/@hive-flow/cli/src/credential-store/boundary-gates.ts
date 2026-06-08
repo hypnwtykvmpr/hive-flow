@@ -18,8 +18,8 @@ export const CREDENTIAL_BOUNDARY_GATES: readonly CredentialBoundaryGate[] = [
   {
     id: 'strict-api-no-env-no-config-serialization',
     targetSlice: 'PR4',
-    status: 'green',
-    description: 'Strict API providers complete without key material in process.env, argv, config.env, logs, or result JSON.',
+    status: 'xfail',
+    description: 'Strict API providers have holder-owned client plumbing, but production holder bootstrap and secret seeding land in PR5 before this gate flips green.',
   },
 ] as const;
 

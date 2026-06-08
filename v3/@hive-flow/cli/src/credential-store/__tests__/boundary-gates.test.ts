@@ -23,15 +23,17 @@ function listFiles(root: string): string[] {
 }
 
 describe('credential boundary gate registry', () => {
-  it('keeps PR3 green and flips the PR4 strict API boundary gate green', () => {
+  it('keeps PR3 green and leaves the PR4 strict API bootstrap boundary xfail', () => {
     expect(getCredentialBoundaryGate('credential-use-not-know')).toMatchObject({
       targetSlice: 'PR3',
       status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')).toMatchObject({
       targetSlice: 'PR4',
-      status: 'green',
+      status: 'xfail',
     });
+    expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
+      .toMatch(/production holder bootstrap|PR5/i);
   });
 
   it('requires all xfail gates to name the slice that must flip them green', () => {
