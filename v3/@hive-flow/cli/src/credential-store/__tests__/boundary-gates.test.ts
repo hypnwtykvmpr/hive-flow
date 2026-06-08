@@ -33,7 +33,9 @@ describe('credential boundary gate registry', () => {
       status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
-      .toMatch(/production holder bootstrap|seeded|PR5/i);
+      .toMatch(/production holder bootstrap|seeded|env|argv|config|log|result/i);
+    expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
+      .not.toMatch(/sub-agent|provider-worker|role denial|access control/i);
   });
 
   it('requires all xfail gates to name the slice that must flip them green', () => {

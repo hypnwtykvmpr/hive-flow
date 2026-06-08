@@ -206,7 +206,6 @@ export class CredentialHolderService {
   readonly socketPath: string;
   private readonly uid: number;
   private readonly peerCredentialResolver: PeerCredentialResolver['lookup'];
-  private readonly peerRoleResolver: (peer: PeerCredential) => CredentialPeerRole | Promise<CredentialPeerRole>;
   private readonly providerInvoker: (input: ProviderUseHandlerInput) => Promise<unknown> | unknown;
   private readonly tokenIssuer: CapabilityTokenIssuer;
   private readonly secrets = new Map<string, Buffer>();
@@ -216,7 +215,6 @@ export class CredentialHolderService {
     this.socketPath = options.socketPath;
     this.uid = options.uid ?? process.getuid?.() ?? 0;
     this.peerCredentialResolver = options.peerCredentialResolver;
-    this.peerRoleResolver = options.peerRoleResolver ?? (() => 'coordinator');
     this.providerInvoker = options.providerInvoker ?? (() => {
       throw new Error('credential holder has no internal provider invoker configured');
     });
@@ -286,10 +284,6 @@ export class CredentialHolderService {
   private async requestUseGrant(command: CredentialHolderGrantCommand, socket: Socket): Promise<CapabilityTokenGrant> {
     const peer = await this.lookupPeer(socket);
     if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
-    const role = await this.peerRoleResolver(peer);
-    if (role === 'sub-agent' || role === 'provider-worker') {
-      throw new Error('sub-agent/provider-worker PIDs never receive reusable credential holder tokens');
-    }
     const provider = normalizeProviderKeyName(command.provider);
     if (!this.secrets.has(provider)) throw new Error(`credential holder has no secret for provider ${provider}`);
     return this.tokenIssuer.issue({
@@ -325,10 +319,6 @@ export class CredentialHolderService {
   private async invokeProviderCall(command: CredentialHolderProviderCallCommand, socket: Socket): Promise<unknown> {
     const peer = await this.lookupPeer(socket);
     if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
-    const role = await this.peerRoleResolver(peer);
-    if (role === 'sub-agent' || role === 'provider-worker') {
-      throw new Error('sub-agent/provider-worker PIDs cannot invoke holder-owned provider_call requests');
-    }
     const provider = normalizeProviderKeyName(command.provider);
     const secret = this.secrets.get(provider);
     if (!secret) throw new Error(`credential holder has no secret for provider ${provider}`);

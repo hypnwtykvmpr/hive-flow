@@ -19,7 +19,7 @@ export const CREDENTIAL_BOUNDARY_GATES: readonly CredentialBoundaryGate[] = [
     id: 'strict-api-no-env-no-config-serialization',
     targetSlice: 'PR5',
     status: 'green',
-    description: 'Strict API providers complete through a production holder bootstrap seeded from the credential store; raw keys stay out of env/config/log/result surfaces.',
+    description: 'Strict API providers complete through a production holder bootstrap seeded from the credential store; raw keys stay out of env, argv, config, log, and result surfaces.',
   },
 ] as const;
 

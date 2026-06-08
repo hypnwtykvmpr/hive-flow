@@ -119,6 +119,8 @@ describe('production credential holder runtime bootstrap', () => {
     const socketPath = makeSocketPath('seeded');
     const store = new MemoryCredentialStore();
     const rawKey = 'or-pr5-bootstrap-secret';
+    const originalOpenRouterKey = process.env.OPENROUTER_API_KEY;
+    process.env.OPENROUTER_API_KEY = 'ambient-host-openrouter-key';
     await store.storeSecret('openrouter', rawKey);
 
     const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
@@ -133,17 +135,17 @@ describe('production credential holder runtime bootstrap', () => {
       });
     }) as typeof fetch;
 
-    const runtime = await bootstrapProductionCredentialHolder({
-      projectRoot: root,
-      socketPath,
-      credentialStore: store,
-      providers: ['openrouter'],
-      fetchImpl,
-      peerCredentialResolver: async () => sameUserPeer(),
-      baseUrls: { openrouter: 'https://strict.test/v1' },
-    });
-
+    let runtime: Awaited<ReturnType<typeof bootstrapProductionCredentialHolder>> | undefined;
     try {
+      runtime = await bootstrapProductionCredentialHolder({
+        projectRoot: root,
+        socketPath,
+        credentialStore: store,
+        providers: ['openrouter'],
+        fetchImpl,
+        peerCredentialResolver: async () => sameUserPeer(),
+        baseUrls: { openrouter: 'https://strict.test/v1' },
+      });
       expect(runtime.seededProviders).toEqual(['openrouter']);
       const response = await sendCredentialHolderCommand(socketPath, {
         action: 'provider_call',
@@ -169,20 +171,26 @@ describe('production credential holder runtime bootstrap', () => {
       });
       const renderedResponse = JSON.stringify(response);
       const renderedFetchArgs = JSON.stringify(fetchImpl.mock.calls);
+      const renderedArgv = process.argv.join('\0');
       expect(renderedResponse).not.toContain(rawKey);
       expect(renderedResponse).not.toContain('OPENROUTER_API_KEY');
       expect(renderedFetchArgs).not.toContain('process.env');
-      expect(process.env.OPENROUTER_API_KEY).toBeUndefined();
+      expect(renderedFetchArgs).not.toContain('ambient-host-openrouter-key');
+      expect(renderedArgv).not.toContain(rawKey);
+      expect(process.env.OPENROUTER_API_KEY).toBe('ambient-host-openrouter-key');
     } finally {
-      await runtime.stop();
+      if (originalOpenRouterKey === undefined) delete process.env.OPENROUTER_API_KEY;
+      else process.env.OPENROUTER_API_KEY = originalOpenRouterKey;
+      await runtime?.stop();
     }
   });
 
-  it('resolves a same-UID registered sub-agent PID and denies provider_call', async () => {
+  it('allows a same-UID registered sub-agent PID to use holder-owned provider_call without raw key material', async () => {
     const root = makeRoot();
     const socketPath = makeSocketPath('subagent');
     const store = new MemoryCredentialStore();
-    await store.storeSecret('openrouter', 'or-denied-subagent-secret');
+    const rawKey = 'or-subagent-holder-secret';
+    await store.storeSecret('openrouter', rawKey);
     writeAgentStore(root, [{
       agentId: 'sub-agent-1',
       type: 'coder',
@@ -195,7 +203,15 @@ describe('production credential holder runtime bootstrap', () => {
       socketPath,
       credentialStore: store,
       providers: ['openrouter'],
-      fetchImpl: vi.fn() as unknown as typeof fetch,
+      fetchImpl: vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+        expect(init?.headers).toMatchObject({ Authorization: `Bearer ${rawKey}` });
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: 'subagent completion' }, finish_reason: 'stop' }],
+        }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }) as typeof fetch,
       peerCredentialResolver: async () => sameUserPeer(),
     });
 
@@ -208,15 +224,19 @@ describe('production credential holder runtime bootstrap', () => {
           action: 'complete',
           payload: {
             messages: [{ role: 'user', content: 'ping' }],
+            model: 'test-model',
             timeout: 1_000,
           },
         },
       });
 
       expect(response).toMatchObject({
-        ok: false,
+        ok: true,
+        response: {
+          content: 'subagent completion',
+        },
       });
-      expect(JSON.stringify(response)).toMatch(/sub-agent|provider-worker/i);
+      expect(JSON.stringify(response)).not.toContain(rawKey);
     } finally {
       await runtime.stop();
     }
@@ -224,7 +244,7 @@ describe('production credential holder runtime bootstrap', () => {
 });
 
 describe('Hive Flow peer role resolver', () => {
-  it('classifies arbitrary task-tracking PIDs as provider workers', () => {
+  it('classifies arbitrary task-tracking PIDs as advisory provider workers', () => {
     fc.assert(
       fc.asyncProperty(fc.integer({ min: 1, max: 2_000_000_000 }), async (pid) => {
         const root = makeRoot();

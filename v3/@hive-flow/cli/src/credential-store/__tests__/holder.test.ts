@@ -36,7 +36,9 @@ describe('credential USE-not-KNOW boundary gate', () => {
     });
     expect(CREDENTIAL_BOUNDARY_GATES.filter(gate => gate.status === 'xfail').map(gate => gate.id)).toEqual([]);
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
-      .toMatch(/production holder bootstrap|seeded|credential store/i);
+      .toMatch(/production holder bootstrap|seeded|credential store|argv/i);
+    expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
+      .not.toMatch(/sub-agent|provider-worker|role denial|access control/i);
   });
 });
 
@@ -139,7 +141,7 @@ describe('credential holder same-user USE grants', () => {
   });
 
   it.each(['sub-agent', 'provider-worker'] as const)(
-    'denies holder-owned provider_call commands from %s peers',
+    'allows holder-owned provider_call commands from same-user %s peers without issuing raw keys',
     async (role) => {
       let invoked = false;
       const holder = new CredentialHolderService({
@@ -149,7 +151,7 @@ describe('credential holder same-user USE grants', () => {
         peerRoleResolver: async () => role,
         providerInvoker: async () => {
           invoked = true;
-          return { content: 'must-not-run' };
+          return { content: 'holder-owned response' };
         },
       });
       await holder.start();
@@ -165,9 +167,9 @@ describe('credential holder same-user USE grants', () => {
         },
       });
 
-      expect(response.ok).toBe(false);
-      expect(response.error).toMatch(/sub-agent|provider-worker|provider_call/i);
-      expect(invoked).toBe(false);
+      expect(response).toEqual({ ok: true, response: { content: 'holder-owned response' } });
+      expect(JSON.stringify(response)).not.toContain('or-raw-secret');
+      expect(invoked).toBe(true);
       await holder.stop();
     },
   );
@@ -263,7 +265,7 @@ describe('credential holder same-user USE grants', () => {
     expect((holder as unknown as { useProviderGrant?: unknown }).useProviderGrant).toBeUndefined();
   });
 
-  it('derives sub-agent/provider-worker denial from peer PID registry instead of self-asserted role', async () => {
+  it('treats sub-agent/provider-worker role classification as advisory, not a USE security boundary', async () => {
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
       uid: 501,
@@ -278,8 +280,8 @@ describe('credential holder same-user USE grants', () => {
       taskId: 't',
       provider: 'openrouter',
     });
-    expect(response.ok).toBe(false);
-    expect(response.error).toMatch(/sub-agent|provider-worker|reusable/i);
+    expect(response.ok).toBe(true);
+    expect(JSON.stringify(response)).not.toContain('or-raw-secret');
     await holder.stop();
   });
 
