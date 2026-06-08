@@ -53,6 +53,21 @@ describe('peer credential resolver fail-closed behavior', () => {
     }]);
   });
 
+  it('fails closed without invoking forgeable PID lookup mode', async () => {
+    const calls: Array<{ file: string; args: readonly string[] }> = [];
+    const resolver = createPeerCredentialResolver({
+      platform: 'linux',
+      helperCommand: '/usr/local/bin/hive-flow-peer-cred-helper',
+      execFileSync: (file, args) => {
+        calls.push({ file, args });
+        return '{"pid":123,"uid":501,"gid":20,"startTime":"42"}';
+      },
+    });
+
+    await expect(resolver.lookup({ pid: process.pid })).rejects.toThrow(/socket fd|required/i);
+    expect(calls).toEqual([]);
+  });
+
   it('parses valid native helper JSON and rejects ambiguous output', () => {
     expect(parsePeerCredentialJson('{"pid":123,"uid":501,"gid":20,"startTime":"42"}')).toEqual({
       pid: 123,

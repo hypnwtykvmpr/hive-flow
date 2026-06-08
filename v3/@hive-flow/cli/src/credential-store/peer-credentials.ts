@@ -19,6 +19,7 @@ export interface PeerCredentialLookup {
   pid?: number;
   socket?: Socket;
   socketFd?: number;
+  namedPipeName?: string;
 }
 
 export interface PeerCredentialResolver {
@@ -78,19 +79,20 @@ export function createPeerCredentialResolver(options: PeerCredentialResolverOpti
       }
       const fd = target.socketFd ?? socketFd(target.socket);
       try {
-        if (fd !== undefined && platform !== 'win32') {
+        if (platform === 'win32') {
+          if (!target.namedPipeName) throw new Error('Windows peer credential lookup requires a named pipe server path');
+          return parsePeerCredentialJson(execFileSync(helperCommand, ['server-once', target.namedPipeName], {
+            encoding: 'utf8',
+            stdio: 'pipe',
+          }));
+        }
+        if (fd !== undefined) {
           return parsePeerCredentialJson(execFileSync(helperCommand, ['fd', '3'], {
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'pipe', fd],
           }));
         }
-        if (target.pid !== undefined) {
-          return parsePeerCredentialJson(execFileSync(helperCommand, ['lookup', String(target.pid)], {
-            encoding: 'utf8',
-            stdio: 'pipe',
-          }));
-        }
-        throw new Error('no socket fd or pid supplied');
+        throw new Error('socket fd is required for peer credential lookup');
       } catch (error) {
         throw new Error(`native peer credential helper failed closed: ${(error as Error).message}`);
       }

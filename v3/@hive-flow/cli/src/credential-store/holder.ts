@@ -1,14 +1,17 @@
 import { chmodSync, existsSync, lstatSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { createServer, type Server, type Socket } from 'node:net';
-import { randomBytes } from 'node:crypto';
+import { createConnection, createServer, type Server, type Socket } from 'node:net';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { normalizeProviderKeyName } from './credential-store.js';
 import type { PeerCredential, PeerCredentialResolver } from './peer-credentials.js';
+
+export type CredentialPeerRole = 'coordinator' | 'sub-agent' | 'provider-worker';
 
 export interface CapabilityTokenIssuerOptions {
   ttlMs?: number;
   now?: () => number;
   randomToken?: () => string;
+  holderSecret?: Uint8Array;
 }
 
 export interface CapabilityTokenRequest {
@@ -27,6 +30,7 @@ export interface CapabilityTokenGrant {
 }
 
 type StoredCapabilityToken = CapabilityTokenRequest & {
+  nonce: string;
   token: string;
   expiresAt: number;
   used: boolean;
@@ -36,23 +40,34 @@ export class CapabilityTokenIssuer {
   private readonly ttlMs: number;
   private readonly now: () => number;
   private readonly randomToken: () => string;
+  private readonly holderSecret: Buffer;
   private readonly tokens = new Map<string, StoredCapabilityToken>();
 
   constructor(options: CapabilityTokenIssuerOptions = {}) {
     this.ttlMs = options.ttlMs ?? 60_000;
     this.now = options.now ?? Date.now;
     this.randomToken = options.randomToken ?? (() => randomBytes(32).toString('base64url'));
+    this.holderSecret = Buffer.from(options.holderSecret ?? randomBytes(32));
   }
 
   issue(request: CapabilityTokenRequest): CapabilityTokenGrant {
+    this.sweepExpired();
     const provider = normalizeProviderKeyName(request.provider);
     const taskId = String(request.taskId || '').trim();
     if (!taskId) throw new Error('credential capability task id is required');
     if (!Number.isInteger(request.callerPid) || request.callerPid <= 0) throw new Error('credential capability caller PID is required');
     if (!request.callerStartTime) throw new Error('credential capability PID start-time is required');
-    const token = this.randomToken();
+    const nonce = this.randomToken();
+    const token = `${nonce}.${this.sign({
+      taskId,
+      provider,
+      callerPid: request.callerPid,
+      callerStartTime: request.callerStartTime,
+      nonce,
+    })}`;
     const stored: StoredCapabilityToken = {
       token,
+      nonce,
       taskId,
       provider,
       callerPid: request.callerPid,
@@ -79,6 +94,14 @@ export class CapabilityTokenIssuer {
     if (stored.provider !== normalizeProviderKeyName(request.provider)) throw new Error('credential capability provider mismatch');
     if (stored.callerPid !== request.callerPid) throw new Error('credential capability PID mismatch');
     if (stored.callerStartTime !== request.callerStartTime) throw new Error('credential capability PID start-time mismatch');
+    const expected = `${stored.nonce}.${this.sign({
+      taskId: stored.taskId,
+      provider: stored.provider,
+      callerPid: request.callerPid,
+      callerStartTime: request.callerStartTime,
+      nonce: stored.nonce,
+    })}`;
+    if (!constantTimeEqual(token, expected)) throw new Error('credential capability identity signature mismatch');
     stored.used = true;
     return {
       taskId: stored.taskId,
@@ -94,42 +117,87 @@ export class CapabilityTokenIssuer {
       if (stored.provider === normalized) this.tokens.delete(token);
     }
   }
+
+  private sign(input: CapabilityTokenRequest & { nonce: string }): string {
+    return createHmac('sha256', this.holderSecret)
+      .update(input.taskId)
+      .update('\0')
+      .update(input.provider)
+      .update('\0')
+      .update(String(input.callerPid))
+      .update('\0')
+      .update(input.callerStartTime)
+      .update('\0')
+      .update(input.nonce)
+      .digest('base64url');
+  }
+
+  private sweepExpired(): void {
+    const now = this.now();
+    for (const [token, stored] of this.tokens) {
+      if (stored.used || now > stored.expiresAt) this.tokens.delete(token);
+    }
+  }
 }
 
 export interface CredentialHolderServiceOptions {
   socketPath: string;
   uid?: number;
   peerCredentialResolver: PeerCredentialResolver['lookup'];
+  peerRoleResolver?: (peer: PeerCredential) => CredentialPeerRole | Promise<CredentialPeerRole>;
+  providerInvoker?: (input: ProviderUseHandlerInput) => Promise<unknown> | unknown;
   tokenTtlMs?: number;
   now?: () => number;
   randomToken?: () => string;
+  holderSecret?: Uint8Array;
 }
 
-export interface UseGrantRequest {
+export interface CredentialHolderGrantCommand {
+  action: 'grant';
   taskId: string;
   provider: string;
-  callerPid: number;
-  callerRole?: 'coordinator' | 'sub-agent' | 'provider-worker';
-  socket?: Socket;
 }
+
+export interface CredentialHolderRedeemCommand {
+  action: 'redeem';
+  token: string;
+  taskId: string;
+  provider: string;
+  request?: unknown;
+}
+
+export type CredentialHolderCommand = CredentialHolderGrantCommand | CredentialHolderRedeemCommand;
+
+export type CredentialHolderResponse = {
+  ok: true;
+  grant?: CapabilityTokenGrant;
+  response?: unknown;
+} | {
+  ok: false;
+  error: string;
+};
 
 export interface ProviderUseContext {
   taskId: string;
   provider: string;
-  callerPid: number;
-  callerStartTime: string;
+  peer: PeerCredential;
+  request?: unknown;
 }
 
 export interface ProviderUseHandlerInput {
   provider: string;
   taskId: string;
   secret: Buffer;
+  peer: PeerCredential;
+  request?: unknown;
 }
 
 export class CredentialHolderService {
-  private readonly socketPath: string;
+  readonly socketPath: string;
   private readonly uid: number;
   private readonly peerCredentialResolver: PeerCredentialResolver['lookup'];
+  private readonly peerRoleResolver: (peer: PeerCredential) => CredentialPeerRole | Promise<CredentialPeerRole>;
+  private readonly providerInvoker: (input: ProviderUseHandlerInput) => Promise<unknown> | unknown;
   private readonly tokenIssuer: CapabilityTokenIssuer;
   private readonly secrets = new Map<string, Buffer>();
   private server: Server | null = null;
@@ -138,10 +206,15 @@ export class CredentialHolderService {
     this.socketPath = options.socketPath;
     this.uid = options.uid ?? process.getuid?.() ?? 0;
     this.peerCredentialResolver = options.peerCredentialResolver;
+    this.peerRoleResolver = options.peerRoleResolver ?? (() => 'coordinator');
+    this.providerInvoker = options.providerInvoker ?? (() => {
+      throw new Error('credential holder has no internal provider invoker configured');
+    });
     this.tokenIssuer = new CapabilityTokenIssuer({
       ttlMs: options.tokenTtlMs,
       now: options.now,
       randomToken: options.randomToken,
+      holderSecret: options.holderSecret,
     });
   }
 
@@ -152,9 +225,7 @@ export class CredentialHolderService {
       const stat = lstatSync(this.socketPath);
       throw new Error(`credential holder socket squat refused: pre-existing path is ${stat.isSocket() ? 'a socket' : 'not a socket'}`);
     }
-    this.server = createServer(socket => {
-      socket.end('hive-flow credential holder\n');
-    });
+    this.server = createServer(socket => this.handleSocket(socket));
     await new Promise<void>((resolve, reject) => {
       const server = this.server!;
       const onError = (error: Error) => {
@@ -187,63 +258,195 @@ export class CredentialHolderService {
       const stat = lstatSync(this.socketPath);
       if (stat.isSocket()) unlinkSync(this.socketPath);
     }
+    this.zeroizeSecrets();
   }
 
   setProviderSecret(provider: string, secret: Uint8Array): void {
+    const normalized = normalizeProviderKeyName(provider);
+    this.zeroizeSecret(normalized);
     this.secrets.set(normalizeProviderKeyName(provider), Buffer.from(secret));
     this.tokenIssuer.invalidateProvider(provider);
   }
 
   deleteProviderSecret(provider: string): void {
-    this.secrets.delete(normalizeProviderKeyName(provider));
+    this.zeroizeSecret(normalizeProviderKeyName(provider));
     this.tokenIssuer.invalidateProvider(provider);
   }
 
-  async requestUseGrant(request: UseGrantRequest): Promise<CapabilityTokenGrant> {
-    if (request.callerRole === 'sub-agent' || request.callerRole === 'provider-worker') {
+  private async requestUseGrant(command: CredentialHolderGrantCommand, socket: Socket): Promise<CapabilityTokenGrant> {
+    const peer = await this.lookupPeer(socket);
+    if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
+    const role = await this.peerRoleResolver(peer);
+    if (role === 'sub-agent' || role === 'provider-worker') {
       throw new Error('sub-agent/provider-worker PIDs never receive reusable credential holder tokens');
     }
-    const peer = await this.lookupPeer(request);
-    if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
+    const provider = normalizeProviderKeyName(command.provider);
+    if (!this.secrets.has(provider)) throw new Error(`credential holder has no secret for provider ${provider}`);
     return this.tokenIssuer.issue({
-      taskId: request.taskId,
-      provider: request.provider,
+      taskId: command.taskId,
+      provider,
       callerPid: peer.pid,
       callerStartTime: peer.startTime,
     });
   }
 
-  async useProviderGrant<T>(
-    token: string,
-    context: ProviderUseContext,
-    handler: (input: ProviderUseHandlerInput) => Promise<T> | T,
-  ): Promise<T> {
-    const consumed = this.tokenIssuer.consume(token, context);
+  private async redeemUseGrant(command: CredentialHolderRedeemCommand, socket: Socket): Promise<unknown> {
+    const peer = await this.lookupPeer(socket);
+    const consumed = this.tokenIssuer.consume(command.token, {
+      taskId: command.taskId,
+      provider: command.provider,
+      callerPid: peer.pid,
+      callerStartTime: peer.startTime,
+    });
     const provider = normalizeProviderKeyName(consumed.provider);
     const secret = this.secrets.get(provider);
     if (!secret) throw new Error(`credential holder has no secret for provider ${provider}`);
-    const response = await handler({
+    const response = await this.providerInvoker({
       provider,
       taskId: consumed.taskId,
       secret: Buffer.from(secret),
+      peer,
+      request: command.request,
     });
-    const rendered = JSON.stringify(response);
-    const utf8 = secret.toString('utf8');
-    const base64 = secret.toString('base64');
-    if ((utf8 && rendered?.includes(utf8)) || rendered?.includes(base64)) {
-      throw new Error('credential holder refused to return raw key material in provider response');
-    }
+    assertResponseDoesNotContainSecret(response, secret);
     return response;
   }
 
-  private async lookupPeer(request: UseGrantRequest): Promise<PeerCredential> {
-    const peer = await this.peerCredentialResolver({ pid: request.callerPid, socket: request.socket });
+  private handleSocket(socket: Socket): void {
+    socket.setEncoding('utf8');
+    let buffer = '';
+    let handled = false;
+    socket.on('data', chunk => {
+      if (handled) return;
+      buffer += chunk;
+      if (!buffer.includes('\n')) return;
+      handled = true;
+      socket.pause();
+      void this.handleCommandLine(socket, buffer.slice(0, buffer.indexOf('\n')));
+    });
+    socket.on('error', () => undefined);
+  }
+
+  private async handleCommandLine(socket: Socket, line: string): Promise<void> {
+    const response = await this.dispatchSocketCommand(socket, line);
+    socket.end(`${JSON.stringify(response)}\n`);
+  }
+
+  private async dispatchSocketCommand(socket: Socket, line: string): Promise<CredentialHolderResponse> {
+    try {
+      const command = parseCredentialHolderCommand(line);
+      if (command.action === 'grant') return { ok: true, grant: await this.requestUseGrant(command, socket) };
+      return { ok: true, response: await this.redeemUseGrant(command, socket) };
+    } catch (error) {
+      return { ok: false, error: (error as Error).message };
+    }
+  }
+
+  private async lookupPeer(socket: Socket): Promise<PeerCredential> {
+    const peer = await this.peerCredentialResolver({ socket, socketFd: socketFd(socket) });
     if (!peer || !Number.isInteger(peer.pid) || !Number.isInteger(peer.uid) || !peer.startTime) {
       throw new Error('credential holder failed closed: ambiguous peer credential');
     }
-    if (peer.pid !== request.callerPid) throw new Error('credential holder failed closed: peer PID mismatch');
     return peer;
   }
+
+  private zeroizeSecret(provider: string): void {
+    const secret = this.secrets.get(provider);
+    if (secret) secret.fill(0);
+    this.secrets.delete(provider);
+  }
+
+  private zeroizeSecrets(): void {
+    for (const secret of this.secrets.values()) secret.fill(0);
+    this.secrets.clear();
+  }
+}
+
+export async function sendCredentialHolderCommand(
+  socketPath: string,
+  command: CredentialHolderCommand,
+): Promise<CredentialHolderResponse> {
+  assertHolderSocketIdentity(socketPath);
+  return new Promise((resolve, reject) => {
+    const socket = createConnection(socketPath);
+    let response = '';
+    socket.setEncoding('utf8');
+    socket.once('connect', () => {
+      socket.write(`${JSON.stringify(command)}\n`);
+    });
+    socket.on('data', chunk => {
+      response += chunk;
+    });
+    socket.once('error', reject);
+    socket.once('end', () => {
+      try {
+        resolve(JSON.parse(response.trim()) as CredentialHolderResponse);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+function assertHolderSocketIdentity(socketPath: string): void {
+  const stat = lstatSync(socketPath);
+  if (!stat.isSocket()) throw new Error('credential holder identity check failed: path is not a socket');
+  if (process.getuid && stat.uid !== process.getuid()) {
+    throw new Error('credential holder identity check failed: socket owner does not match current user');
+  }
+  if ((stat.mode & 0o077) !== 0) {
+    throw new Error('credential holder identity check failed: socket permissions must not grant group/other access');
+  }
+}
+
+function parseCredentialHolderCommand(line: string): CredentialHolderCommand {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line);
+  } catch (error) {
+    throw new Error(`credential holder command is malformed JSON: ${(error as Error).message}`);
+  }
+  if (!parsed || typeof parsed !== 'object') throw new Error('credential holder command must be an object');
+  const record = parsed as Record<string, unknown>;
+  const action = record.action;
+  const taskId = String(record.taskId || '').trim();
+  const provider = String(record.provider || '').trim();
+  if (!taskId) throw new Error('credential holder command taskId is required');
+  if (!provider) throw new Error('credential holder command provider is required');
+  if (action === 'grant') return { action, taskId, provider };
+  if (action === 'redeem') {
+    const token = String(record.token || '').trim();
+    if (!token) throw new Error('credential holder redeem token is required');
+    return { action, token, taskId, provider, request: record.request };
+  }
+  throw new Error(`credential holder command action is unsupported: ${String(action)}`);
+}
+
+function assertResponseDoesNotContainSecret(response: unknown, secret: Buffer): void {
+  const rendered = JSON.stringify(response);
+  if (!rendered) return;
+  const encodings = [
+    secret.toString('utf8'),
+    secret.toString('base64'),
+    secret.toString('base64url'),
+    secret.toString('hex'),
+    encodeURIComponent(secret.toString('utf8')),
+  ].filter(value => value.length > 0);
+  if (encodings.some(value => rendered.includes(value))) {
+    throw new Error('credential holder refused to return raw key material in provider response');
+  }
+}
+
+function constantTimeEqual(actual: string, expected: string): boolean {
+  const actualBuffer = Buffer.from(actual);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length) return false;
+  return timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function socketFd(socket: Socket): number | undefined {
+  const handle = (socket as unknown as { _handle?: { fd?: unknown } })._handle;
+  return typeof handle?.fd === 'number' && handle.fd >= 0 ? handle.fd : undefined;
 }
 
 export interface SameRuntimeRestartState {

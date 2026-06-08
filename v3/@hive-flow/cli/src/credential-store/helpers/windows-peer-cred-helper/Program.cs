@@ -12,37 +12,48 @@ internal static class Program
         if (args.Length > 0 && args[0] == "selftest")
         {
             var pipeName = $"hive-flow-peer-cred-{Environment.ProcessId}-{Guid.NewGuid():N}";
-            var currentSid = WindowsIdentity.GetCurrent().User
-                ?? throw new InvalidOperationException("current Windows user SID is unavailable");
-            var security = new PipeSecurity();
-            security.AddAccessRule(new PipeAccessRule(
-                currentSid,
-                PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
-                AccessControlType.Allow));
-            await using var server = NamedPipeServerStreamAcl.Create(
-                pipeName,
-                PipeDirection.InOut,
-                1,
-                PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous,
-                0,
-                0,
-                security);
+            var serverTask = InspectClientOnce(pipeName);
             await using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-            var connectTask = server.WaitForConnectionAsync();
             await client.ConnectAsync(5000);
-            await connectTask;
-            if (!GetNamedPipeClientProcessId(server.SafePipeHandle, out var pid))
-            {
-                throw new InvalidOperationException($"GetNamedPipeClientProcessId failed: {Marshal.GetLastWin32Error()}");
-            }
-            var sid = currentSid.Value;
-            Console.WriteLine($"{{\"platform\":\"win32\",\"pid\":{pid},\"uid\":0,\"sid\":\"{JsonEscape(sid)}\",\"startTime\":\"{pid}\"}}");
+            Console.WriteLine(await serverTask);
             return 0;
         }
 
-        Console.Error.WriteLine("usage: selftest");
+        if (args.Length == 2 && args[0] == "server-once")
+        {
+            Console.WriteLine(await InspectClientOnce(args[1]));
+            return 0;
+        }
+
+        Console.Error.WriteLine("usage: selftest | server-once <pipeName>");
         return 64;
+    }
+
+    private static async Task<string> InspectClientOnce(string pipeName)
+    {
+        var currentSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("current Windows user SID is unavailable");
+        var security = new PipeSecurity();
+        security.AddAccessRule(new PipeAccessRule(
+            currentSid,
+            PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+            AccessControlType.Allow));
+        await using var server = NamedPipeServerStreamAcl.Create(
+            pipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous,
+            0,
+            0,
+            security);
+        await server.WaitForConnectionAsync();
+        if (!GetNamedPipeClientProcessId(server.SafePipeHandle, out var pid))
+        {
+            throw new InvalidOperationException($"GetNamedPipeClientProcessId failed: {Marshal.GetLastWin32Error()}");
+        }
+        var sid = currentSid.Value;
+        return $"{{\"platform\":\"win32\",\"pid\":{pid},\"uid\":0,\"sid\":\"{JsonEscape(sid)}\",\"startTime\":\"{pid}\"}}";
     }
 
     private static string JsonEscape(string value)

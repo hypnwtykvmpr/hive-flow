@@ -5,9 +5,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   CapabilityTokenIssuer,
   CredentialHolderService,
+  sendCredentialHolderCommand,
   assertFullRestartRequiresUnlock,
   sameRuntimeRestartCanRecover,
 } from '../holder.js';
+import type { PeerCredential } from '../peer-credentials.js';
 import { CREDENTIAL_BOUNDARY_GATES, getCredentialBoundaryGate } from '../boundary-gates.js';
 
 let roots: string[] = [];
@@ -71,86 +73,161 @@ describe('credential holder socket lifecycle', () => {
     });
     await expect(holder.start()).rejects.toThrow(/pre-existing|socket squat|not a socket/i);
   });
+
+  it('client refuses to send commands to a non-socket holder path', async () => {
+    const socketPath = tempSocketPath();
+    mkdirSync(join(socketPath, '..'), { recursive: true });
+    writeFileSync(socketPath, 'attacker');
+
+    await expect(sendCredentialHolderCommand(socketPath, {
+      action: 'grant',
+      taskId: 'task-1',
+      provider: 'openrouter',
+    })).rejects.toThrow(/holder identity|not a socket/i);
+  });
 });
 
 describe('credential holder same-user USE grants', () => {
-  it('grants same-user USE without returning raw key material', async () => {
+  it('grants and redeems same-user USE over the socket without returning raw key material', async () => {
+    let resolverCall = 0;
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
       uid: 501,
-      peerCredentialResolver: async () => ({ pid: 42, uid: 501, startTime: 'pid-start-1' }),
+      peerCredentialResolver: async ({ socketFd }) => {
+        expect(socketFd).toBeGreaterThan(2);
+        resolverCall += 1;
+        return { pid: 42, uid: 501, startTime: 'pid-start-1' };
+      },
       now: () => 1_000,
       randomToken: () => 'cap-1',
+      holderSecret: Buffer.from('holder-secret'),
+      providerInvoker: async ({ secret }) => {
+        expect(secret).toEqual(Buffer.from('or-raw-secret'));
+        return { ok: true, body: 'provider response' };
+      },
     });
+    await holder.start();
     holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
-    const grant = await holder.requestUseGrant({
+    const grantResponse = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'grant',
       taskId: 'task-1',
       provider: 'openrouter',
-      callerPid: 42,
     });
-    expect(grant).toEqual({
+    expect(grantResponse.ok).toBe(true);
+    const grant = grantResponse.grant!;
+    expect(grant).toMatchObject({
       capability: 'provider-use',
       provider: 'openrouter',
       taskId: 'task-1',
-      token: 'cap-1',
       expiresAt: 61_000,
     });
+    expect(grant.token).toMatch(/^cap-1\./);
     expect(JSON.stringify(grant)).not.toContain('or-raw-secret');
 
-    const response = await holder.useProviderGrant(grant.token, {
+    const redeemResponse = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'redeem',
+      token: grant.token,
       taskId: 'task-1',
       provider: 'openrouter',
-      callerPid: 42,
-      callerStartTime: 'pid-start-1',
-    }, async ({ secret }) => {
-      expect(secret).toEqual(Buffer.from('or-raw-secret'));
-      return { ok: true, body: 'provider response' };
     });
-    expect(response).toEqual({ ok: true, body: 'provider response' });
-    expect(JSON.stringify(response)).not.toContain('or-raw-secret');
+    expect(redeemResponse).toEqual({ ok: true, response: { ok: true, body: 'provider response' } });
+    expect(JSON.stringify(redeemResponse)).not.toContain('or-raw-secret');
+    expect(resolverCall).toBe(2);
+    await holder.stop();
   });
 
-  it('refuses provider handler responses that contain raw key material', async () => {
+  it('rejects a stolen token redeemed over a different socket identity', async () => {
+    const identities: PeerCredential[] = [
+      { pid: 42, uid: 501, startTime: 'pid-start-1' },
+      { pid: 43, uid: 501, startTime: 'pid-start-2' },
+    ];
+    const holder = new CredentialHolderService({
+      socketPath: tempSocketPath(),
+      uid: 501,
+      peerCredentialResolver: async () => identities.shift()!,
+      now: () => 1_000,
+      randomToken: () => 'cap-stolen',
+      holderSecret: Buffer.from('holder-secret'),
+      providerInvoker: async () => ({ ok: true }),
+    });
+    await holder.start();
+    holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
+    const grantResponse = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'grant',
+      taskId: 'task-1',
+      provider: 'openrouter',
+    });
+    expect(grantResponse.ok).toBe(true);
+
+    const redeemResponse = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'redeem',
+      token: grantResponse.grant!.token,
+      taskId: 'task-1',
+      provider: 'openrouter',
+    });
+    expect(redeemResponse.ok).toBe(false);
+    expect(redeemResponse.error).toMatch(/identity|PID|start-time|signature/i);
+    await holder.stop();
+  });
+
+  it('does not expose a caller-supplied provider handler redeem path', () => {
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
       uid: 501,
       peerCredentialResolver: async () => ({ pid: 42, uid: 501, startTime: 'pid-start-1' }),
-      now: () => 1_000,
-      randomToken: () => 'cap-leak',
     });
-    holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
-    const grant = await holder.requestUseGrant({
-      taskId: 'task-1',
-      provider: 'openrouter',
-      callerPid: 42,
-    });
-
-    await expect(holder.useProviderGrant(grant.token, {
-      taskId: 'task-1',
-      provider: 'openrouter',
-      callerPid: 42,
-      callerStartTime: 'pid-start-1',
-    }, async () => ({ body: 'accidental leak: or-raw-secret' }))).rejects.toThrow(/raw key material/i);
+    expect((holder as unknown as { useProviderGrant?: unknown }).useProviderGrant).toBeUndefined();
   });
 
-  it('denies ambiguous, different-user, and provider-worker reusable token requests', async () => {
+  it('derives sub-agent/provider-worker denial from peer PID registry instead of self-asserted role', async () => {
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
       uid: 501,
-      peerCredentialResolver: async ({ pid }) => {
-        if (pid === 1) return null;
-        if (pid === 2) return { pid, uid: 999, startTime: 'foreign' };
-        return { pid, uid: 501, startTime: 'worker' };
-      },
+      peerCredentialResolver: async () => ({ pid: 77, uid: 501, startTime: 'sub-agent-start' }),
+      peerRoleResolver: async peer => peer.pid === 77 ? 'sub-agent' : 'coordinator',
     });
-    await expect(holder.requestUseGrant({ taskId: 't', provider: 'openrouter', callerPid: 1 })).rejects.toThrow(/ambiguous|peer credential/i);
-    await expect(holder.requestUseGrant({ taskId: 't', provider: 'openrouter', callerPid: 2 })).rejects.toThrow(/same-user|uid/i);
-    await expect(holder.requestUseGrant({
+    await holder.start();
+    holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
+
+    const response = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'grant',
       taskId: 't',
       provider: 'openrouter',
-      callerPid: 3,
-      callerRole: 'provider-worker',
-    })).rejects.toThrow(/reusable|provider-worker|sub-agent/i);
+    });
+    expect(response.ok).toBe(false);
+    expect(response.error).toMatch(/sub-agent|provider-worker|reusable/i);
+    await holder.stop();
+  });
+
+  it('denies ambiguous and different-user socket peers', async () => {
+    const responses: Array<PeerCredential | null> = [
+      null,
+      { pid: 2, uid: 999, startTime: 'foreign' },
+    ];
+    const holder = new CredentialHolderService({
+      socketPath: tempSocketPath(),
+      uid: 501,
+      peerCredentialResolver: async () => responses.shift() ?? null,
+    });
+    await holder.start();
+    holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
+
+    const ambiguous = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'grant',
+      taskId: 't',
+      provider: 'openrouter',
+    });
+    expect(ambiguous.ok).toBe(false);
+    expect(ambiguous.error).toMatch(/ambiguous|peer credential/i);
+
+    const foreign = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'grant',
+      taskId: 't',
+      provider: 'openrouter',
+    });
+    expect(foreign.ok).toBe(false);
+    expect(foreign.error).toMatch(/same-user|uid/i);
+    await holder.stop();
   });
 
   it('enforces single-use TTL and PID start-time binding', async () => {
