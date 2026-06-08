@@ -1084,26 +1084,58 @@ function readBridgeHmacKey() {
 }
 
 function readVerifiedEnforcementLevel(statePath, missingLevel = 0) {
+  return readVerifiedEnforcementState(statePath, missingLevel).level;
+}
+
+function normalizedRestrictedGroups(state, level) {
+  const groups = Array.isArray(state?.restrictedGroups)
+    ? state.restrictedGroups.filter((group) => typeof group === 'string')
+    : [];
+  if (level >= FAIL_CLOSED_ENFORCEMENT_LEVEL && groups.length === 0) {
+    return ['exec', 'write'];
+  }
+  return [...new Set(groups)];
+}
+
+function failClosedEnforcementState() {
+  return {
+    level: FAIL_CLOSED_ENFORCEMENT_LEVEL,
+    restrictedGroups: ['exec', 'write'],
+  };
+}
+
+function missingEnforcementState(missingLevel) {
+  return {
+    level: missingLevel,
+    restrictedGroups: missingLevel >= FAIL_CLOSED_ENFORCEMENT_LEVEL ? ['exec', 'write'] : [],
+  };
+}
+
+function readVerifiedEnforcementState(statePath, missingLevel = 0) {
   try {
-    if (!existsSync(statePath)) return missingLevel;
+    if (!existsSync(statePath)) return missingEnforcementState(missingLevel);
     const key = readBridgeHmacKey();
-    if (!key) return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+    if (!key) return failClosedEnforcementState();
     const envelope = JSON.parse(readFileSync(statePath, 'utf-8'));
     if (!envelope?.state || typeof envelope.hmac !== 'string') {
-      return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+      return failClosedEnforcementState();
     }
 
     const expected = createHmac('sha256', key).update(JSON.stringify(envelope.state)).digest('hex');
     const expectedBuf = Buffer.from(expected, 'hex');
     const actualBuf = Buffer.from(envelope.hmac, 'hex');
     if (expectedBuf.length !== actualBuf.length || !timingSafeEqual(expectedBuf, actualBuf)) {
-      return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+      return failClosedEnforcementState();
     }
 
     const level = Number(envelope.state.level);
-    return Number.isFinite(level) ? level : FAIL_CLOSED_ENFORCEMENT_LEVEL;
+    if (!Number.isFinite(level)) return failClosedEnforcementState();
+    return {
+      level,
+      restrictedGroups: normalizedRestrictedGroups(envelope.state, level),
+    };
   } catch {
-    return FAIL_CLOSED_ENFORCEMENT_LEVEL;
+    return failClosedEnforcementState();
   }
 }
 
@@ -1115,19 +1147,37 @@ function scopedStatePath(scopeType, scopeId) {
   return null;
 }
 
-function checkEnforcementLevel() {
-  const levels = [
-    readVerifiedEnforcementLevel(resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'state.json'), FAIL_CLOSED_ENFORCEMENT_LEVEL),
+function checkEnforcementState() {
+  const snapshots = [
+    readVerifiedEnforcementState(resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'state.json'), FAIL_CLOSED_ENFORCEMENT_LEVEL),
   ];
 
   const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
   const agentState = scopedStatePath('agent', agentId);
-  if (agentState) levels.push(readVerifiedEnforcementLevel(agentState, 0));
+  if (agentState) snapshots.push(readVerifiedEnforcementState(agentState, 0));
 
   const hiveState = scopedStatePath('hive', process.env.HIVE_FLOW_HIVE_ID || '');
-  if (hiveState) levels.push(readVerifiedEnforcementLevel(hiveState, 0));
+  if (hiveState) snapshots.push(readVerifiedEnforcementState(hiveState, 0));
 
-  return Math.max(...levels);
+  return {
+    level: Math.max(...snapshots.map((snapshot) => snapshot.level)),
+    restrictedGroups: [...new Set(snapshots.flatMap((snapshot) => snapshot.restrictedGroups))],
+  };
+}
+
+function checkEnforcementLevel() {
+  return checkEnforcementState().level;
+}
+
+function bridgeWriteBlockReason() {
+  const state = checkEnforcementState();
+  if (state.level >= FAIL_CLOSED_ENFORCEMENT_LEVEL) {
+    return 'Writes blocked at enforcement level RESTRICTED+';
+  }
+  if (state.restrictedGroups.includes('write')) {
+    return 'Writes blocked by restricted write group';
+  }
+  return null;
 }
 
 function casefoldPath(filePath) {
@@ -1296,8 +1346,9 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     if (isProtectedPath(safePath)) {
       throw new Error(`Write blocked: ${filePath} is a protected path`);
     }
-    if (checkEnforcementLevel() >= 2) {
-      throw new Error(`Writes blocked at enforcement level RESTRICTED+`);
+    const writeBlockReason = bridgeWriteBlockReason();
+    if (writeBlockReason) {
+      throw new Error(writeBlockReason);
     }
     mkdirSync(dirname(safePath), { recursive: true });
     writeFileSync(safePath, content, 'utf-8');
@@ -1308,8 +1359,9 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     if (isProtectedPath(safePath)) {
       throw new Error(`Write blocked: ${filePath} is a protected path`);
     }
-    if (checkEnforcementLevel() >= 2) {
-      throw new Error(`Writes blocked at enforcement level RESTRICTED+`);
+    const writeBlockReason = bridgeWriteBlockReason();
+    if (writeBlockReason) {
+      throw new Error(writeBlockReason);
     }
     const content = readFileSync(safePath, 'utf-8');
     if (old_string === '') {
