@@ -32,6 +32,8 @@ import { join, dirname, basename, isAbsolute, resolve, relative, sep } from 'pat
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { lookup as dnsLookup } from 'dns/promises';
+import { isIP } from 'net';
 import {
   patternIsRejected,
   fileGlobIsRejected,
@@ -1202,6 +1204,20 @@ function bridgeExecBlockReason() {
   return null;
 }
 
+function bridgeFetchBlockReason() {
+  const state = checkEnforcementState();
+  if (state.level >= FAIL_CLOSED_ENFORCEMENT_LEVEL) {
+    return 'Fetch blocked at enforcement level RESTRICTED+';
+  }
+  if (state.restrictedGroups.includes('fetch')) {
+    return 'Fetch blocked by restricted fetch group';
+  }
+  if (state.restrictedGroups.includes('exec')) {
+    return 'Fetch blocked by restricted exec group';
+  }
+  return null;
+}
+
 function casefoldPath(filePath) {
   return String(filePath || '').replace(/\\/g, '/').toLowerCase();
 }
@@ -1562,6 +1578,418 @@ async function runShellTool(rawArgs, ctx = {}) {
     truncated: Boolean(sandboxResult.stdoutTruncated || sandboxResult.stderrTruncated),
     sandboxBackend: sandboxResult.backend || null,
   };
+}
+
+const WEB_FETCH_DEFAULT_MAX_BYTES = 512 * 1024;
+const WEB_FETCH_MAX_BYTES = 2 * 1024 * 1024;
+const WEB_FETCH_DEFAULT_TIMEOUT_MS = 15_000;
+const WEB_FETCH_MAX_TIMEOUT_MS = 30_000;
+const WEB_FETCH_DEFAULT_MAX_REDIRECTS = 5;
+const WEB_FETCH_MAX_REDIRECTS = 10;
+
+function webResultBase() {
+  return {
+    finalUrl: null,
+    httpStatus: null,
+    contentType: '',
+    bytes: 0,
+    truncated: false,
+    redirectCount: 0,
+  };
+}
+
+function webDenied(denyReason, fields = {}) {
+  return {
+    status: 'denied',
+    ...webResultBase(),
+    ...fields,
+    denyReason,
+  };
+}
+
+function normalizeAllowlistHost(value) {
+  const host = String(value || '').trim().toLowerCase().replace(/\.$/, '');
+  try {
+    return new URL(`https://${host}`).hostname.toLowerCase().replace(/\.$/, '');
+  } catch {
+    return host;
+  }
+}
+
+function normalizeWebAllowlist(entries) {
+  const values = Array.isArray(entries)
+    ? entries
+    : String(process.env.HIVE_FLOW_PROVIDER_WEB_ALLOWLIST || '')
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  return values
+    .filter((entry) => typeof entry === 'string' && entry.trim())
+    .map((entry) => {
+      const value = entry.trim().toLowerCase().replace(/\.$/, '');
+      try {
+        const parsed = new URL(value);
+        return { kind: 'origin', value: parsed.origin.toLowerCase() };
+      } catch {
+        if (value.startsWith('*.')) {
+          return { kind: 'wildcard-host', value: normalizeAllowlistHost(value.slice(2)) };
+        }
+        return { kind: 'host', value: normalizeAllowlistHost(value) };
+      }
+    });
+}
+
+function normalizeWebOptions(rawOptions = {}) {
+  const options = rawOptions && typeof rawOptions === 'object' ? rawOptions : {};
+  return {
+    allowlist: normalizeWebAllowlist(options.allowlist),
+    allowInsecureTls: options.allowInsecureTls === true,
+    allowPrivateFixtureIPs: options.allowPrivateFixtureIPs === true,
+    forceDispatcherUnavailable: options.forceDispatcherUnavailable === true,
+    maxBytes: clampInteger(options.maxBytes, WEB_FETCH_DEFAULT_MAX_BYTES, WEB_FETCH_MAX_BYTES),
+    timeoutMs: clampInteger(options.timeoutMs, WEB_FETCH_DEFAULT_TIMEOUT_MS, WEB_FETCH_MAX_TIMEOUT_MS),
+    maxRedirects: clampInteger(options.maxRedirects, WEB_FETCH_DEFAULT_MAX_REDIRECTS, WEB_FETCH_MAX_REDIRECTS),
+    resolveHost: typeof options.resolveHost === 'function' ? options.resolveHost : null,
+  };
+}
+
+function stripTrailingDot(value) {
+  return String(value || '').toLowerCase().replace(/\.$/, '');
+}
+
+function stripIpv6Brackets(value) {
+  const text = String(value || '').trim();
+  return text.startsWith('[') && text.endsWith(']') ? text.slice(1, -1) : text;
+}
+
+function rawAuthority(rawUrl) {
+  const match = String(rawUrl || '').match(/^[a-z][a-z0-9+.-]*:\/\/([^/?#]*)/i);
+  if (!match) return '';
+  const authority = match[1].includes('@') ? match[1].slice(match[1].lastIndexOf('@') + 1) : match[1];
+  if (authority.startsWith('[')) {
+    const end = authority.indexOf(']');
+    return end === -1 ? authority : authority.slice(0, end + 1);
+  }
+  return authority.split(':')[0] || '';
+}
+
+function rawHostUsesOddIpv4Encoding(host) {
+  const value = stripIpv6Brackets(host).toLowerCase();
+  if (!value || !/[0-9]/.test(value)) return false;
+  const parts = value.split('.');
+  if (parts.some((part) => part === '')) return false;
+  if (!parts.every((part) => /^0x[0-9a-f]+$/i.test(part) || /^\d+$/.test(part))) return false;
+  if (parts.some((part) => part.startsWith('0x'))) return true;
+  if (parts.some((part) => /^0\d+/.test(part))) return true;
+  if (parts.length !== 4) return true;
+  return parts.some((part) => !/^\d{1,3}$/.test(part) || Number(part) > 255);
+}
+
+function allowlistMatches(url, allowlist) {
+  if (!allowlist.length) return false;
+  const hostname = stripTrailingDot(url.hostname);
+  const origin = url.origin.toLowerCase();
+  return allowlist.some((entry) => {
+    if (entry.kind === 'origin') return entry.value === origin;
+    if (entry.kind === 'host') return entry.value === hostname;
+    if (entry.kind === 'wildcard-host') {
+      return hostname === entry.value || hostname.endsWith(`.${entry.value}`);
+    }
+    return false;
+  });
+}
+
+function parseIPv4Parts(value) {
+  const text = String(value || '').trim();
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(text)) return null;
+  const parts = text.split('.').map((part) => Number(part));
+  return parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) ? parts : null;
+}
+
+function ipv4FromMappedIPv6(value) {
+  const text = stripIpv6Brackets(value).toLowerCase();
+  if (!text.startsWith('::ffff:')) return null;
+  const suffix = text.slice('::ffff:'.length);
+  const dotted = parseIPv4Parts(suffix);
+  if (dotted) return dotted;
+  const hextets = suffix.split(':').filter(Boolean);
+  if (hextets.length !== 2) return null;
+  const high = Number.parseInt(hextets[0], 16);
+  const low = Number.parseInt(hextets[1], 16);
+  if (!Number.isInteger(high) || !Number.isInteger(low) || high < 0 || high > 0xffff || low < 0 || low > 0xffff) {
+    return null;
+  }
+  return [(high >> 8) & 255, high & 255, (low >> 8) & 255, low & 255];
+}
+
+function ipv4IsBlocked(parts) {
+  const [a, b, c, d] = parts;
+  if (a === 0) return true; // unspecified/current network
+  if (a === 10) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  if (a === 127) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a >= 224) return true; // multicast/reserved/broadcast
+  if (a === 169 && b === 254 && c === 169 && d === 254) return true;
+  return false;
+}
+
+function ipv6IsBlocked(value) {
+  const text = stripIpv6Brackets(value).toLowerCase().split('%')[0];
+  const mapped = ipv4FromMappedIPv6(text);
+  if (mapped) return ipv4IsBlocked(mapped);
+  if (text === '::' || text === '0:0:0:0:0:0:0:0') return true;
+  if (text === '::1' || text === '0:0:0:0:0:0:0:1') return true;
+  const first = text.split(':').find((part) => part.length > 0) || '';
+  const firstValue = Number.parseInt(first, 16);
+  if (!Number.isInteger(firstValue)) return true;
+  if ((firstValue & 0xff00) === 0xff00) return true; // multicast
+  if ((firstValue & 0xfe00) === 0xfc00) return true; // ULA fc00::/7
+  if ((firstValue & 0xffc0) === 0xfe80) return true; // link-local fe80::/10
+  return false;
+}
+
+function ipIsBlocked(address) {
+  const normalized = stripIpv6Brackets(address);
+  const mapped = ipv4FromMappedIPv6(normalized);
+  if (mapped) return ipv4IsBlocked(mapped);
+  const ipType = isIP(normalized);
+  if (ipType === 4) return ipv4IsBlocked(parseIPv4Parts(normalized));
+  if (ipType === 6) return ipv6IsBlocked(normalized);
+  return true;
+}
+
+function normalizeIpForCompare(address) {
+  const mapped = ipv4FromMappedIPv6(address);
+  if (mapped) return mapped.join('.');
+  return stripIpv6Brackets(address).toLowerCase().split('%')[0];
+}
+
+function validateWebFetchUrl(rawUrl, options) {
+  if (typeof rawUrl !== 'string' || rawUrl.trim() === '') {
+    return { denyReason: 'invalid-url' };
+  }
+  const rawHost = rawAuthority(rawUrl);
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return { denyReason: 'invalid-url' };
+  }
+  if (url.protocol !== 'https:') return { denyReason: 'https-only' };
+  if (url.username || url.password) return { denyReason: 'embedded-credentials' };
+  if (rawHostUsesOddIpv4Encoding(rawHost)) return { denyReason: 'ipv4-odd-encoding', finalUrl: url.href };
+
+  const hostname = stripTrailingDot(stripIpv6Brackets(url.hostname));
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    return { denyReason: 'localhost-denied', finalUrl: url.href };
+  }
+
+  if (isIP(hostname) && ipIsBlocked(hostname)) {
+    return { denyReason: 'blocked-ip', finalUrl: url.href };
+  }
+
+  if (!allowlistMatches(url, options.allowlist)) {
+    return { denyReason: 'allowlist-denied', finalUrl: url.href };
+  }
+
+  return { url };
+}
+
+async function importUndiciDispatcher(options) {
+  if (options.forceDispatcherUnavailable) return null;
+  try {
+    const undici = await import('undici');
+    if (typeof undici.Agent !== 'function' || typeof undici.buildConnector !== 'function' || typeof undici.request !== 'function') {
+      return null;
+    }
+    return undici;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveWebHost(url, options) {
+  const hostname = stripTrailingDot(stripIpv6Brackets(url.hostname));
+  let records;
+  try {
+    if (options.resolveHost) {
+      records = await options.resolveHost(hostname, url);
+    } else {
+      records = await dnsLookup(hostname, { all: true, verbatim: true });
+    }
+  } catch {
+    return { denyReason: 'dns-resolution-failed' };
+  }
+  const normalized = (Array.isArray(records) ? records : [records])
+    .map((record) => ({
+      address: String(record?.address || ''),
+      family: Number(record?.family || isIP(String(record?.address || ''))),
+    }))
+    .filter((record) => record.address && (record.family === 4 || record.family === 6));
+
+  if (!normalized.length) return { denyReason: 'dns-resolution-empty' };
+
+  const safe = normalized.find((record) => options.allowPrivateFixtureIPs || !ipIsBlocked(record.address));
+  if (!safe) return { denyReason: 'blocked-ip' };
+  return { record: safe };
+}
+
+function buildResolvedDispatcher(undici, url, record, options) {
+  const baseConnect = undici.buildConnector({
+    rejectUnauthorized: !options.allowInsecureTls,
+    timeout: options.timeoutMs,
+  });
+  const expectedAddress = normalizeIpForCompare(record.address);
+  const originalHostname = stripTrailingDot(stripIpv6Brackets(url.hostname));
+  return new undici.Agent({
+    connect(connectOptions, callback) {
+      const resolvedConnectOptions = {
+        ...connectOptions,
+        hostname: record.address,
+        host: record.address,
+        servername: originalHostname,
+      };
+      return baseConnect(resolvedConnectOptions, (err, socket) => {
+        if (err || !socket) {
+          callback(err, socket);
+          return;
+        }
+        const remoteAddress = normalizeIpForCompare(socket.remoteAddress || '');
+        if (remoteAddress && remoteAddress !== expectedAddress) {
+          socket.destroy();
+          callback(new Error('resolved socket remote address mismatch'));
+          return;
+        }
+        callback(null, socket);
+      });
+    },
+  });
+}
+
+function headerValue(headers, name) {
+  const value = headers?.[name] ?? headers?.[name.toLowerCase()];
+  if (Array.isArray(value)) return value.join(', ');
+  return typeof value === 'string' ? value : '';
+}
+
+async function readResponseCapped(body, limit) {
+  let bytes = 0;
+  let truncated = false;
+  for await (const chunk of body) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    if (bytes + buffer.length > limit) {
+      bytes = limit;
+      truncated = true;
+      if (typeof body.destroy === 'function') body.destroy();
+      break;
+    }
+    bytes += buffer.length;
+  }
+  return { bytes, truncated };
+}
+
+async function fetchOneHop(undici, url, record, options) {
+  const dispatcher = buildResolvedDispatcher(undici, url, record, options);
+  try {
+    return await undici.request(url, {
+      method: 'GET',
+      dispatcher,
+      maxRedirections: 0,
+      headersTimeout: options.timeoutMs,
+      bodyTimeout: options.timeoutMs,
+      headers: {
+        accept: 'text/plain, text/markdown, application/json;q=0.9, */*;q=0.1',
+        'user-agent': 'hive-flow-provider-bridge/1.0',
+      },
+    });
+  } finally {
+    try { await dispatcher.close(); } catch { /* ignore close failures */ }
+  }
+}
+
+async function webFetchTool(rawArgs, ctx = {}) {
+  const fetchBlockReason = bridgeFetchBlockReason();
+  if (fetchBlockReason) {
+    return webDenied('restricted-fetch-or-exec');
+  }
+
+  const options = normalizeWebOptions(ctx.webOptions);
+  const undici = await importUndiciDispatcher(options);
+  if (!undici) return webDenied('dispatcher-unavailable');
+
+  let current = rawArgs?.url;
+  let redirectCount = 0;
+  for (;;) {
+    const validated = validateWebFetchUrl(current, options);
+    if (validated.denyReason) {
+      return webDenied(validated.denyReason, {
+        finalUrl: validated.finalUrl || null,
+        redirectCount,
+      });
+    }
+
+    const resolved = await resolveWebHost(validated.url, options);
+    if (resolved.denyReason) {
+      return webDenied(resolved.denyReason, {
+        finalUrl: validated.url.href,
+        redirectCount,
+      });
+    }
+
+    let response;
+    try {
+      response = await fetchOneHop(undici, validated.url, resolved.record, options);
+    } catch {
+      return webDenied('fetch-failed', {
+        finalUrl: validated.url.href,
+        redirectCount,
+      });
+    }
+
+    const statusCode = Number(response.statusCode || 0);
+    const location = headerValue(response.headers, 'location');
+    if (statusCode >= 300 && statusCode < 400 && location) {
+      try {
+        if (typeof response.body?.dump === 'function') await response.body.dump();
+      } catch { /* ignore body drain failures */ }
+      if (redirectCount >= options.maxRedirects) {
+        return webDenied('redirect-limit-exceeded', {
+          finalUrl: validated.url.href,
+          httpStatus: statusCode,
+          redirectCount,
+        });
+      }
+      redirectCount += 1;
+      try {
+        current = new URL(location, validated.url).href;
+      } catch {
+        return webDenied('invalid-redirect-location', {
+          finalUrl: validated.url.href,
+          httpStatus: statusCode,
+          redirectCount,
+        });
+      }
+      continue;
+    }
+
+    const readResult = await readResponseCapped(response.body, options.maxBytes);
+    return {
+      status: 'fetched',
+      finalUrl: validated.url.href,
+      httpStatus: statusCode,
+      contentType: headerValue(response.headers, 'content-type'),
+      bytes: readResult.bytes,
+      truncated: readResult.truncated,
+      redirectCount,
+    };
+  }
+}
+
+async function webSearchTool() {
+  return webDenied('web-search-unsupported');
 }
 
 // SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
@@ -1953,6 +2381,8 @@ const BRIDGE_FILESYSTEM_TOOLS = {
 const BRIDGE_TOOL_REGISTRY = {
   ...BRIDGE_FILESYSTEM_TOOLS,
   'run_shell': runShellTool,
+  'web_fetch': webFetchTool,
+  'web_search': webSearchTool,
 };
 
 function parseBridgeToolArgs(toolArgs) {
@@ -2413,6 +2843,36 @@ async function main() {
               },
               timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
             },
+            additionalProperties: false,
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'web_fetch',
+          description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Requires project allowlist; follows redirects manually; returns status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and denyReason on denial.',
+          parameters: {
+            type: 'object',
+            properties: {
+              url: { type: 'string', description: 'HTTPS URL to fetch. No embedded credentials. Host must pass the bridge allowlist and SSRF checks.' },
+            },
+            required: ['url'],
+            additionalProperties: false,
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'web_search',
+          description: 'Unsupported in provider bridge. Returns a clear web-search-unsupported denial; open web search is intentionally not available.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Search query. Currently denied by policy.' },
+            },
+            required: ['query'],
             additionalProperties: false,
           },
         },

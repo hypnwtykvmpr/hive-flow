@@ -242,10 +242,29 @@ function outsideRootDenied(root, path) {
   return resolved !== root && !resolved.startsWith(`${root}/`);
 }
 
-function oracleDenies({ opClass, toolArgs, effectiveState, policy, root }) {
-  if (opClass === 'unknown_or_mcp' || opClass === 'web_fetch') {
+function webFetchOracleDenies(toolArgs, effectiveState) {
+  if (effectiveState.level >= 2) return true;
+  if (effectiveState.restrictedGroups.includes('fetch')) return true;
+  if (effectiveState.restrictedGroups.includes('exec')) return true;
+
+  try {
+    const parsed = new URL(String(toolArgs.url || ''));
+    if (parsed.protocol !== 'https:') return true;
+    if (parsed.username || parsed.password) return true;
+    if (parsed.hostname === 'localhost' || parsed.hostname.endsWith('.localhost')) return true;
+  } catch {
     return true;
   }
+
+  return false;
+}
+
+function oracleDenies({ opClass, toolArgs, effectiveState, policy, root }) {
+  if (opClass === 'unknown_or_mcp') {
+    return true;
+  }
+
+  if (opClass === 'web_fetch') return webFetchOracleDenies(toolArgs, effectiveState);
 
   if (opClass === 'shell') {
     return effectiveState.level >= 2
@@ -302,6 +321,9 @@ async function bridgeDecision(bridge, opClass, toolName, args) {
   }
   if (process.env.HF_BRIDGE_PARITY_MUTANT === 'allow-shell-restricted' && opClass === 'shell') {
     return 'MUTANT_ALLOWED_SHELL';
+  }
+  if (process.env.HF_BRIDGE_PARITY_MUTANT === 'allow-web-restricted' && opClass === 'web_fetch') {
+    return 'MUTANT_ALLOWED_WEB';
   }
   return bridge.evaluateToolCall(toolName, args, {
     source: 'parity-property',
