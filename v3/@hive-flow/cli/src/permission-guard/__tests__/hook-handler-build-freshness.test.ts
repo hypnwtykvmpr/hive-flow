@@ -75,9 +75,9 @@ describe('hook-handler permission-guard build freshness', () => {
         expect(protectedPolicy.protectedWriteGlobal).toContain(entry);
         expect(protectedPolicy.protectedRead).toContain(entry);
       }
-      expect(secretPolicy.secretBasenameGlobs).toContain('credential-vault*');
-      expect(secretPolicy.secretDirComponents).toContain('.hive-flow/credentials');
-      expect(secretPolicy.secretBasenames).toContain('credential-agent.sock');
+      expect(secretPolicy.secretPathGlobs).toContain('${HOME}/.hive-flow/credential-vault*');
+      expect(secretPolicy.secretPathGlobs).toContain('${HOME}/.hive-flow/credentials*');
+      expect(secretPolicy.secretPathGlobs).toContain('${HOME}/.hive-flow/run/credential-agent.sock');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

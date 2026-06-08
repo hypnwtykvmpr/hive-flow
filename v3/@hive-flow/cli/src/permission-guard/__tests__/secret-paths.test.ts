@@ -34,8 +34,6 @@ describe('secret-path classifier', () => {
       'credentials',
       '.netrc',
       'service-account-123.json',
-      '~/.hive-flow/credential-vault.json.gcm',
-      '~/.hive-flow/run/credential-agent.sock',
       '.aws/credentials',
       '.terraform/terraform.tfstate',
     ]) {
@@ -80,6 +78,26 @@ describe('secret-path classifier', () => {
     }
   });
 
+  it('does not classify repo credential source and guard tests as runtime secrets', () => {
+    for (const target of [
+      'v3/@hive-flow/cli/src/credential-store/vault.ts',
+      'v3/@hive-flow/cli/src/credential-store/__tests__/vault.test.ts',
+      'v3/@hive-flow/cli/src/permission-guard/__tests__/credential-vault-guard.test.ts',
+    ]) {
+      expect(isSecretPath(target), target).toBe(false);
+    }
+  });
+
+  it('classifies home-anchored credential vault runtime paths as secrets', () => {
+    for (const target of [
+      '~/.hive-flow/credential-vault.json.gcm',
+      '~/.hive-flow/credentials/openrouter.json',
+      '~/.hive-flow/run/credential-agent.sock',
+    ]) {
+      expect(isSecretPath(target), target).toBe(true);
+    }
+  });
+
   it('normalizes C0 controls, unicode line separators, and backslashes as path separators', () => {
     for (const target of [
       '.ssh\nx/id_rsa',
@@ -106,9 +124,8 @@ describe('secret-path classifier', () => {
   it('falls back to the embedded default policy when json cannot be loaded', () => {
     const policy = loadSecretPolicy(join('/missing', 'secret-paths.policy.json'));
     expect(policy.secretDirComponents).toContain('.ssh');
-    expect(policy.secretDirComponents).toContain('.hive-flow/credentials');
     expect(policy.secretBasenameGlobs).toContain('.env.*');
-    expect(policy.secretBasenameGlobs).toContain('credential-vault*');
+    expect(policy.secretPathGlobs).toContain('${HOME}/.hive-flow/credential-vault*');
     expect(isSecretPath('x/.ssh/id_rsa', policy)).toBe(true);
     expect(isSecretPath('~/.hive-flow/credentials/openrouter.json', policy)).toBe(true);
   });

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { casefoldPath } from './protected-paths.js';
@@ -7,6 +8,7 @@ export interface SecretPathPolicy {
   secretDirComponents: string[];
   secretBasenames: string[];
   secretBasenameGlobs: string[];
+  secretPathGlobs: string[];
   secretExtensions: string[];
   allowExceptions: string[];
 }
@@ -29,7 +31,6 @@ export const DEFAULT_SECRET_POLICY: SecretPathPolicy = {
     'private-keys',
     '.private',
     '.age',
-    '.hive-flow/credentials',
   ],
   secretBasenames: [
     'id_rsa',
@@ -52,13 +53,16 @@ export const DEFAULT_SECRET_POLICY: SecretPathPolicy = {
     '.aws/credentials',
     '.terraform/terraform.tfstate',
     'terraform.tfvars',
-    'credential-agent.sock',
   ],
   secretBasenameGlobs: [
     '.env.*',
     '.env.*.local',
     'service-account*.json',
-    'credential-vault*',
+  ],
+  secretPathGlobs: [
+    '${HOME}/.hive-flow/credential-vault*',
+    '${HOME}/.hive-flow/credentials*',
+    '${HOME}/.hive-flow/run/credential-agent.sock',
   ],
   secretExtensions: [
     '.pem',
@@ -110,6 +114,7 @@ export function loadSecretPolicy(policyPath?: string): SecretPathPolicy {
         secretDirComponents: coerceStringArray(raw.secretDirComponents, DEFAULT_SECRET_POLICY.secretDirComponents),
         secretBasenames: coerceStringArray(raw.secretBasenames, DEFAULT_SECRET_POLICY.secretBasenames),
         secretBasenameGlobs: coerceStringArray(raw.secretBasenameGlobs, DEFAULT_SECRET_POLICY.secretBasenameGlobs),
+        secretPathGlobs: coerceStringArray(raw.secretPathGlobs, DEFAULT_SECRET_POLICY.secretPathGlobs),
         secretExtensions: coerceStringArray(raw.secretExtensions, DEFAULT_SECRET_POLICY.secretExtensions),
         allowExceptions: coerceStringArray(raw.allowExceptions, DEFAULT_SECRET_POLICY.allowExceptions),
       };
@@ -125,7 +130,10 @@ export function loadSecretPolicy(policyPath?: string): SecretPathPolicy {
 function normalizeSecretPath(filePath: string): string {
   // casefoldPath handles lowercasing and backslash separators. JA-1 additionally
   // treats C0 controls and Unicode line/paragraph separators as path separators.
-  return casefoldPath(filePath).replace(/[\u0000-\u001F\u2028\u2029]/g, '/');
+  const expanded = filePath
+    .replace(/\$\{HOME\}/g, homedir())
+    .replace(/^~(?=\/|\\|$)/, homedir());
+  return casefoldPath(expanded).replace(/[\u0000-\u001F\u2028\u2029]/g, '/');
 }
 
 function pathComponents(normalizedPath: string): string[] {
@@ -203,6 +211,10 @@ export function isSecretPath(filePath: string, policy = loadSecretPolicy()): boo
 
     for (const secretGlob of normalizedPolicyList(policy.secretBasenameGlobs)) {
       if (globMatches(basename, secretGlob)) return true;
+    }
+
+    for (const secretPathGlob of normalizedPolicyList(policy.secretPathGlobs)) {
+      if (globMatches(normalizedPath, secretPathGlob)) return true;
     }
 
     for (const extension of normalizedPolicyList(policy.secretExtensions)) {

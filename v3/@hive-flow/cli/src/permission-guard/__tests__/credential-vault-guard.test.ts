@@ -84,8 +84,19 @@ describe('credential vault secret path parity', () => {
     ]) {
       expect(isSecretPath(target), target).toBe(true);
     }
-    expect(secretPolicyJson.secretBasenameGlobs).toContain('credential-vault*');
-    expect(secretPolicyJson.secretDirComponents).toContain('.hive-flow/credentials');
+    expect(secretPolicyJson.secretPathGlobs).toContain('${HOME}/.hive-flow/credential-vault*');
+    expect(secretPolicyJson.secretPathGlobs).toContain('${HOME}/.hive-flow/credentials*');
+    expect(secretPolicyJson.secretPathGlobs).toContain('${HOME}/.hive-flow/run/credential-agent.sock');
+  });
+
+  it('does not classify repo credential source or guard test filenames as secret paths', () => {
+    for (const target of [
+      'v3/@hive-flow/cli/src/credential-store/vault.ts',
+      'v3/@hive-flow/cli/src/credential-store/__tests__/vault.test.ts',
+      'v3/@hive-flow/cli/src/permission-guard/__tests__/credential-vault-guard.test.ts',
+    ]) {
+      expect(isSecretPath(target), target).toBe(false);
+    }
   });
 });
 
@@ -110,9 +121,7 @@ describe('credential vault command denials', () => {
 
   it('keeps the planted bypass non-vacuous by allowing the same vault read with credential secret policy removed', () => {
     const stripped = loadSecretPolicy();
-    stripped.secretDirComponents = stripped.secretDirComponents.filter(entry => entry !== '.hive-flow/credentials');
-    stripped.secretBasenameGlobs = stripped.secretBasenameGlobs.filter(entry => entry !== 'credential-vault*');
-    stripped.secretBasenames = stripped.secretBasenames.filter(entry => entry !== 'credential-agent.sock');
+    stripped.secretPathGlobs = stripped.secretPathGlobs.filter(entry => !entry.includes('.hive-flow/credential'));
 
     expect(isSecretPath('~/.hive-flow/credential-vault.json.gcm', stripped)).toBe(false);
   });
