@@ -136,6 +136,40 @@ describe('credential holder same-user USE grants', () => {
     await holder.stop();
   });
 
+  it.each(['sub-agent', 'provider-worker'] as const)(
+    'denies holder-owned provider_call commands from %s peers',
+    async (role) => {
+      let invoked = false;
+      const holder = new CredentialHolderService({
+        socketPath: tempSocketPath(),
+        uid: 501,
+        peerCredentialResolver: async () => ({ pid: 42, uid: 501, startTime: `${role}-start` }),
+        peerRoleResolver: async () => role,
+        providerInvoker: async () => {
+          invoked = true;
+          return { content: 'must-not-run' };
+        },
+      });
+      await holder.start();
+      holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
+
+      const response = await sendCredentialHolderCommand(holder.socketPath, {
+        action: 'provider_call',
+        taskId: 'task-1',
+        provider: 'openrouter',
+        request: {
+          action: 'complete',
+          payload: { messages: [{ role: 'user', content: 'ping' }] },
+        },
+      });
+
+      expect(response.ok).toBe(false);
+      expect(response.error).toMatch(/sub-agent|provider-worker|provider_call/i);
+      expect(invoked).toBe(false);
+      await holder.stop();
+    },
+  );
+
   it('grants and redeems same-user USE over the socket without returning raw key material', async () => {
     let resolverCall = 0;
     const holder = new CredentialHolderService({

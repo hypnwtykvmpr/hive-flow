@@ -383,7 +383,6 @@ function createStrictHolderProvider(providerName, config, agentId) {
           payload: {
             ...request,
             timeout: request.timeout || config.timeout,
-            ...(config.apiUrl ? { apiUrl: config.apiUrl } : {}),
           },
         },
       });

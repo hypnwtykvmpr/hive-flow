@@ -325,6 +325,10 @@ export class CredentialHolderService {
   private async invokeProviderCall(command: CredentialHolderProviderCallCommand, socket: Socket): Promise<unknown> {
     const peer = await this.lookupPeer(socket);
     if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
+    const role = await this.peerRoleResolver(peer);
+    if (role === 'sub-agent' || role === 'provider-worker') {
+      throw new Error('sub-agent/provider-worker PIDs cannot invoke holder-owned provider_call requests');
+    }
     const provider = normalizeProviderKeyName(command.provider);
     const secret = this.secrets.get(provider);
     if (!secret) throw new Error(`credential holder has no secret for provider ${provider}`);

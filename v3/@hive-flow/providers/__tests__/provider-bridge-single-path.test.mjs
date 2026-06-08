@@ -234,10 +234,11 @@ async function startFixtureServer(toolName, toolArgs) {
   };
 }
 
-async function startCredentialHolderFixture() {
+async function startCredentialHolderFixture(holderOwnedApiUrl) {
   const holderRoot = mkdtempSync(join(tmpdir(), 'hf-holder-'));
   const socketPath = join(holderRoot, 'holder.sock');
   const commands = [];
+  const apiUrl = String(holderOwnedApiUrl || '').replace(/\/+$/, '');
   const server = createNetServer((socket) => {
     let buffer = '';
     socket.setEncoding('utf8');
@@ -248,7 +249,9 @@ async function startCredentialHolderFixture() {
         const command = JSON.parse(buffer.slice(0, buffer.indexOf('\n')));
         commands.push(command);
         const payload = command.request?.payload ?? {};
-        const apiUrl = String(payload.apiUrl || '').replace(/\/+$/, '');
+        if (Object.prototype.hasOwnProperty.call(payload, 'apiUrl')) {
+          throw new Error('holder fixture rejected caller-supplied apiUrl');
+        }
         const apiResponse = await fetch(`${apiUrl}/chat/completions`, {
           method: 'POST',
           headers: {
@@ -326,7 +329,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
   const key = writeKey(root);
   writeEnvelope(root, key, 0);
   const fixture = await startFixtureServer(toolName, toolArgs);
-  const holder = await startCredentialHolderFixture();
+  const holder = await startCredentialHolderFixture(fixture.baseUrl);
   const storeDir = makeStore(root, agentId);
   const tasksDir = join(root, '.hive-flow', 'tasks');
   mkdirSync(tasksDir, { recursive: true });

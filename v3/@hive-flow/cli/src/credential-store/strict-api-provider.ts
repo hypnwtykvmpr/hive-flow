@@ -42,7 +42,6 @@ interface StrictApiCompletionPayload {
     messages: Array<{ role: string; content: string }>;
     model?: string;
     timeout: number;
-    apiUrl?: string;
   };
 }
 
@@ -143,7 +142,7 @@ export function createStrictApiProviderInvoker(options: {
     const request = asStrictApiInvokeRequest(input.request);
     if (request.action !== 'complete') throw new Error(`unsupported strict API holder action: ${String(request.action)}`);
     const payload = asStrictCompletionPayload(request.payload);
-    const baseUrl = (payload.apiUrl || options.baseUrls?.[provider] || defaultStrictApiBaseUrl(provider)).replace(/\/+$/, '');
+    const baseUrl = (options.baseUrls?.[provider] || defaultStrictApiBaseUrl(provider)).replace(/\/+$/, '');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), payload.timeout);
     try {
@@ -226,6 +225,9 @@ function asStrictApiInvokeRequest(value: unknown): StrictApiInvokeRequest {
 function asStrictCompletionPayload(value: unknown): StrictApiCompletionPayload['payload'] {
   if (!value || typeof value !== 'object') throw new Error('strict API completion payload must be an object');
   const record = value as Record<string, unknown>;
+  if (Object.prototype.hasOwnProperty.call(record, 'apiUrl')) {
+    throw new Error('strict API completion payload cannot override apiUrl; endpoint is holder-owned');
+  }
   const messages = Array.isArray(record.messages) ? record.messages : [];
   if (messages.length === 0) throw new Error('strict API completion payload requires messages');
   const normalizedMessages = messages.map((message) => {
@@ -242,7 +244,6 @@ function asStrictCompletionPayload(value: unknown): StrictApiCompletionPayload['
     messages: normalizedMessages,
     model: typeof record.model === 'string' && record.model.trim() ? record.model.trim() : undefined,
     timeout,
-    apiUrl: typeof record.apiUrl === 'string' && record.apiUrl.trim() ? record.apiUrl.trim() : undefined,
   };
 }
 
