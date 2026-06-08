@@ -3,6 +3,7 @@ import fc from 'fast-check';
 
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
+  lstatSync: vi.fn(),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
@@ -40,7 +41,7 @@ vi.mock('@hive-flow/providers', () => ({
   }),
 }));
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { providerKeyPreflight } from '../mcp-tools/provider-key-preflight.js';
 import { agentTools } from '../mcp-tools/agent-tools.js';
@@ -91,6 +92,9 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
     if (path === EXPECTED_BRIDGE_PATH) return true;
     return false;
   });
+  vi.mocked(lstatSync).mockImplementation(() => {
+    throw new Error('not expected in this test');
+  });
 
   vi.mocked(readFileSync).mockImplementation(() => JSON.stringify(currentStore));
   vi.mocked(writeFileSync).mockImplementation((path: string, data: string) => {
@@ -138,63 +142,82 @@ describe('PH-B8 provider-key preflight', () => {
     else process.env.DEEPSEEK_API_KEY = originalDeepSeekKey;
   });
 
-  it('blocks openrouter when OPENROUTER_API_KEY is missing', () => {
-    const result = providerKeyPreflight('openrouter', {});
+  it('blocks strict OpenRouter when the credential holder is unavailable even if env has a key', () => {
+    const result = providerKeyPreflight('openrouter', { OPENROUTER_API_KEY: 'or-env-secret' }, {
+      holderStatus: { available: false, reason: 'socket missing' },
+    });
 
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/OPENROUTER_API_KEY/);
+    expect(result.reason).toMatch(/credential holder/i);
+    expect(result.reason).not.toContain('or-env-secret');
   });
 
-  it('lets deepseek degrade when DEEPSEEK_API_KEY is missing', () => {
-    const result = providerKeyPreflight('deepseek', {});
-
-    expect(result).toMatchObject({
-      ok: true,
-      degraded: true,
-    });
-    expect(result.warning).toMatch(/DEEPSEEK_API_KEY/);
-  });
-
-  it('allows openrouter when OPENROUTER_API_KEY is present', () => {
-    const result = providerKeyPreflight('openrouter', {
-      OPENROUTER_API_KEY: 'test-openrouter-key',
+  it('allows strict OpenRouter when the credential holder is available without env keys', () => {
+    const result = providerKeyPreflight('openrouter', {}, {
+      holderStatus: { available: true },
     });
 
     expect(result).toEqual({ ok: true });
   });
 
-  it('uses only the injected env object, not ambient process.env', () => {
-    process.env.OPENROUTER_API_KEY = 'ambient-openrouter-key';
-
-    const result = providerKeyPreflight('openrouter', {});
+  it('blocks strict DeepSeek when the credential holder is unavailable', () => {
+    const result = providerKeyPreflight('deepseek', { DEEPSEEK_API_KEY: 'sk-deepseek-secret' }, {
+      holderStatus: { available: false, reason: 'socket missing' },
+    });
 
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/OPENROUTER_API_KEY/);
+    expect(result.reason).toMatch(/credential holder/i);
+    expect(result.reason).not.toContain('sk-deepseek-secret');
   });
 
-  it('keeps openrouter preflight pure across arbitrary injected env objects', () => {
+  it('degraded-labels env-only CLI providers instead of pretending they are strict', () => {
+    const result = providerKeyPreflight('codex-cli', {});
+
+    expect(result).toMatchObject({
+      ok: true,
+      degraded: true,
+    });
+    expect(result.warning).toMatch(/env-only CLI provider/i);
+  });
+
+  it('uses only holder status for strict providers, not ambient process.env', () => {
+    process.env.OPENROUTER_API_KEY = 'ambient-openrouter-key';
+
+    const result = providerKeyPreflight('openrouter', {}, {
+      holderStatus: { available: false, reason: 'socket missing' },
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/credential holder/i);
+    expect(JSON.stringify(result)).not.toContain('ambient-openrouter-key');
+  });
+
+  it('keeps strict OpenRouter preflight pure across arbitrary injected env objects and holder states', () => {
     fc.assert(
       fc.property(
         fc.dictionary(
           fc.stringMatching(/^[A-Z_][A-Z0-9_]*$/),
           fc.oneof(fc.string(), fc.constant(undefined)),
         ),
-        (env) => {
+        fc.boolean(),
+        (env, holderAvailable) => {
           const before = { ...env };
 
-          const result = providerKeyPreflight('openrouter', env);
+          const result = providerKeyPreflight('openrouter', env, {
+            holderStatus: holderAvailable
+              ? { available: true }
+              : { available: false, reason: 'property-test unavailable' },
+          });
 
           expect(env).toEqual(before);
-          const hasKey = typeof env.OPENROUTER_API_KEY === 'string'
-            && env.OPENROUTER_API_KEY.trim().length > 0;
-          expect(result.ok).toBe(hasKey);
+          expect(result.ok).toBe(holderAvailable);
         },
       ),
       { numRuns: 100 },
     );
   });
 
-  it('fails fast at agent_spawn for openrouter without creating a persisted agent', async () => {
+  it('fails fast at agent_spawn for openrouter without creating a persisted agent when holder is unavailable', async () => {
     const { getPersistedStore } = setupStoreMocks(makeStore());
 
     const result = await agentSpawnTool.handler({
@@ -205,13 +228,13 @@ describe('PH-B8 provider-key preflight', () => {
 
     expect(result).toMatchObject({
       success: false,
-      error: expect.stringMatching(/OPENROUTER_API_KEY/),
+      error: expect.stringMatching(/credential holder/i),
     });
     expect(Object.keys(getPersistedStore().agents)).toHaveLength(0);
     expect(spawn).not.toHaveBeenCalled();
   });
 
-  it('fails fast at agent_task before spawning the provider bridge for a legacy openrouter agent without a key', async () => {
+  it('fails fast at agent_task before spawning the provider bridge for a legacy openrouter agent when holder is unavailable', async () => {
     const agent = makeAgent();
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
@@ -223,7 +246,7 @@ describe('PH-B8 provider-key preflight', () => {
     expect(result).toMatchObject({
       success: false,
       agentId: agent.agentId,
-      error: expect.stringMatching(/OPENROUTER_API_KEY/),
+      error: expect.stringMatching(/credential holder/i),
     });
     expect(spawn).not.toHaveBeenCalled();
 

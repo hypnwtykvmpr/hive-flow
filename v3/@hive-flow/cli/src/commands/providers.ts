@@ -8,6 +8,10 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { ProviderRegistry } from '@hive-flow/shared';
+import {
+  isStrictApiProvider,
+  probeCredentialHolderStatus,
+} from '../credential-store/strict-api-provider.js';
 
 /** Shared registry instance, lazily initialized on first use */
 let _registry: ProviderRegistry | undefined;
@@ -17,6 +21,10 @@ async function getRegistry(): Promise<ProviderRegistry> {
     await _registry.initialize(true);
   }
   return _registry;
+}
+
+function providerIdForStatus(metadata: { id?: unknown; type?: unknown; name?: unknown }): string {
+  return String(metadata.id || metadata.type || metadata.name || '').trim().toLowerCase();
 }
 
 // List subcommand
@@ -31,9 +39,10 @@ const listCommand: Command = {
     { command: 'hive-flow providers list', description: 'List all providers' },
     { command: 'hive-flow providers list -t anthropic', description: 'List Anthropic providers' },
   ],
-  action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const filterType = ctx.flags.type as string || 'all';
-    const registry = await getRegistry();
+	  action: async (ctx: CommandContext): Promise<CommandResult> => {
+	    const filterType = ctx.flags.type as string || 'all';
+	    const registry = await getRegistry();
+	    const holderStatus = probeCredentialHolderStatus();
 
     let providers = registry.getAll();
     if (filterType !== 'all') {
@@ -51,17 +60,22 @@ const listCommand: Command = {
         { key: 'models', header: 'Models', width: 30 },
         { key: 'status', header: 'Status', width: 12 },
       ],
-      data: providers.map(p => {
-        const hasKey = p.metadata.apiKeyEnvVar
-          ? !!process.env[p.metadata.apiKeyEnvVar]
-          : true;
-        return {
-          provider: p.metadata.name,
-          type: p.metadata.type,
-          models: p.metadata.models.slice(0, 3).join(', '),
-          status: hasKey ? output.success('Active') : output.dim('No key'),
-        };
-      }),
+	      data: providers.map(p => {
+	        const providerId = providerIdForStatus(p.metadata);
+	        const hasKey = isStrictApiProvider(providerId)
+	          ? holderStatus.available
+	          : p.metadata.apiKeyEnvVar
+	            ? !!process.env[p.metadata.apiKeyEnvVar]
+	            : true;
+	        return {
+	          provider: p.metadata.name,
+	          type: p.metadata.type,
+	          models: p.metadata.models.slice(0, 3).join(', '),
+	          status: hasKey
+	            ? output.success(isStrictApiProvider(providerId) ? 'Holder' : 'Active')
+	            : output.dim(isStrictApiProvider(providerId) ? 'Holder needed' : 'No key'),
+	        };
+	      }),
     });
 
     output.writeln();
@@ -128,10 +142,11 @@ const testCommand: Command = {
     { command: 'hive-flow providers test -p openai', description: 'Test OpenAI connection' },
     { command: 'hive-flow providers test --all', description: 'Test all providers' },
   ],
-  action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const providerId = ctx.flags.provider as string;
-    const testAll = ctx.flags.all as boolean;
-    const registry = await getRegistry();
+	  action: async (ctx: CommandContext): Promise<CommandResult> => {
+	    const providerId = ctx.flags.provider as string;
+	    const testAll = ctx.flags.all as boolean;
+	    const registry = await getRegistry();
+	    const holderStatus = probeCredentialHolderStatus();
 
     output.writeln();
     output.writeln(output.bold('Provider Connectivity Test'));
@@ -141,11 +156,20 @@ const testCommand: Command = {
       ? registry.getAllIds()
       : [providerId];
 
-    let healthy = 0;
-    for (const id of providerIds) {
-      const spinner = output.createSpinner({ text: `Testing ${id}...`, spinner: 'dots' });
-      spinner.start();
-      const result = await registry.checkHealth(id);
+	    let healthy = 0;
+	    for (const id of providerIds) {
+	      const spinner = output.createSpinner({ text: `Testing ${id}...`, spinner: 'dots' });
+	      spinner.start();
+	      if (isStrictApiProvider(id)) {
+	        if (holderStatus.available) {
+	          spinner.succeed(`${id}: credential holder available`);
+	          healthy++;
+	        } else {
+	          spinner.stop(output.warning(`${id}: holder needed — ${holderStatus.reason || 'credential holder unavailable'}`));
+	        }
+	        continue;
+	      }
+	      const result = await registry.checkHealth(id);
       if (result.status === 'healthy') {
         spinner.succeed(`${id}: ${result.status} (${result.latencyMs}ms)`);
         healthy++;

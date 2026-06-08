@@ -21,6 +21,7 @@ import {
 } from './scoreboard-instrumentation.js';
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
+import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -463,28 +464,18 @@ function isDeniedBridgeEnvKey(key: string): boolean {
     || key === 'HIVE_FLOW_PIPELINE_OVERRIDE';
 }
 
-function isProviderEnvKey(provider: AgentProvider, key: string): boolean {
-  const upper = key.toUpperCase();
-  switch (provider) {
-    case 'openrouter':
-      return upper.includes('OPENROUTER');
-    case 'deepseek':
-      return upper.includes('DEEPSEEK');
-    case 'gemini-cli':
-      return upper.includes('GEMINI')
-        || upper === 'GOOGLE_API_KEY'
-        || upper === 'GOOGLE_APPLICATION_CREDENTIALS';
-    case 'codex-cli':
-      return upper.includes('CODEX')
-        || upper.includes('OPENAI');
-    case 'cursor-cli':
-      return upper.includes('CURSOR');
-    case 'anthropic-cli':
-      return upper.includes('ANTHROPIC')
-        || upper.includes('CLAUDE');
-    default:
-      return false;
-  }
+function selectedProviderCredentialEnvKey(provider: AgentProvider): string | undefined {
+  if (!isEnvOnlyCliProvider(provider)) return undefined;
+  const candidates: Record<string, string[]> = {
+    'gemini-cli': ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_APPLICATION_CREDENTIALS'],
+    'codex-cli': ['OPENAI_API_KEY', 'CODEX_API_KEY'],
+    'cursor-cli': ['CURSOR_API_KEY', 'CURSOR_TOKEN'],
+    'anthropic-cli': ['ANTHROPIC_API_KEY', 'CLAUDE_API_KEY'],
+  };
+  return candidates[provider]?.find(key => {
+    const value = process.env[key];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
 }
 
 function buildProviderBridgeEnv(
@@ -497,9 +488,14 @@ function buildProviderBridgeEnv(
   for (const [key, value] of Object.entries(process.env)) {
     if (typeof value !== 'string') continue;
     if (isDeniedBridgeEnvKey(key)) continue;
-    if (BRIDGE_BASE_ENV_KEYS.has(key) || isProviderEnvKey(provider, key)) {
+    if (BRIDGE_BASE_ENV_KEYS.has(key)) {
       childEnv[key] = value;
     }
+  }
+
+  const selectedCredentialKey = selectedProviderCredentialEnvKey(provider);
+  if (selectedCredentialKey) {
+    childEnv[selectedCredentialKey] = process.env[selectedCredentialKey]!;
   }
 
   childEnv.AGENTIC_FLOW_AGENT_ID = agentId;

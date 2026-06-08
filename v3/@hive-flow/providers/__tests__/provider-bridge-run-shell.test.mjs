@@ -146,9 +146,9 @@ describe('provider bridge run_shell contract', () => {
     try {
       const result = decodeToolResult(await bridge.evaluateToolCall('run_shell', {
         argv: ['node', '--version'],
-      }));
+      }, { sandboxOptions: { debugDiagnostics: true } }));
 
-      expect(result).toMatchObject({
+      expect(result, JSON.stringify(result, null, 2)).toMatchObject({
         status: 'executed',
         exitCode: 0,
         timedOut: false,
@@ -327,9 +327,9 @@ describe('provider bridge run_shell contract', () => {
           inside,
           outside,
         ],
-      });
+      }, { sandboxOptions: { debugDiagnostics: true } });
 
-      expect(result.status).toBe('executed');
+      expect(result.status, JSON.stringify(result, null, 2)).toBe('executed');
       expect(result.stdout).toContain('outside blocked:');
       expect(existsSync(inside)).toBe(true);
       expect(existsSync(outside)).toBe(false);

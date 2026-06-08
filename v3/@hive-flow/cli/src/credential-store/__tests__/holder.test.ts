@@ -25,18 +25,16 @@ afterEach(async () => {
 });
 
 describe('credential USE-not-KNOW boundary gate', () => {
-  it('flips the PR3 gate green while PR4 strict API gate remains pending', () => {
+  it('keeps PR3 and PR4 credential boundary gates green', () => {
     expect(getCredentialBoundaryGate('credential-use-not-know')).toMatchObject({
       targetSlice: 'PR3',
       status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')).toMatchObject({
       targetSlice: 'PR4',
-      status: 'xfail',
+      status: 'green',
     });
-    expect(CREDENTIAL_BOUNDARY_GATES.filter(gate => gate.status === 'xfail').map(gate => gate.id)).toEqual([
-      'strict-api-no-env-no-config-serialization',
-    ]);
+    expect(CREDENTIAL_BOUNDARY_GATES.filter(gate => gate.status === 'xfail').map(gate => gate.id)).toEqual([]);
   });
 });
 
@@ -88,6 +86,56 @@ describe('credential holder socket lifecycle', () => {
 });
 
 describe('credential holder same-user USE grants', () => {
+  it('accepts holder-owned provider_call commands without issuing reusable tokens', async () => {
+    const invocations: unknown[] = [];
+    const holder = new CredentialHolderService({
+      socketPath: tempSocketPath(),
+      uid: 501,
+      peerCredentialResolver: async ({ socketFd }) => {
+        expect(socketFd).toBeGreaterThan(2);
+        return { pid: 42, uid: 501, startTime: 'pid-start-1' };
+      },
+      providerInvoker: async (input) => {
+        invocations.push({
+          provider: input.provider,
+          taskId: input.taskId,
+          peer: input.peer,
+          secret: input.secret.toString('utf8'),
+          request: input.request,
+        });
+        return { content: 'holder-owned response' };
+      },
+    });
+    await holder.start();
+    holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
+
+    const response = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'provider_call',
+      taskId: 'task-1',
+      provider: 'openrouter',
+      request: {
+        action: 'complete',
+        payload: { messages: [{ role: 'user', content: 'ping' }] },
+      },
+    });
+
+    expect(response).toEqual({ ok: true, response: { content: 'holder-owned response' } });
+    expect(JSON.stringify(response)).not.toContain('or-raw-secret');
+    expect(invocations).toEqual([
+      {
+        provider: 'openrouter',
+        taskId: 'task-1',
+        peer: { pid: 42, uid: 501, startTime: 'pid-start-1' },
+        secret: 'or-raw-secret',
+        request: {
+          action: 'complete',
+          payload: { messages: [{ role: 'user', content: 'ping' }] },
+        },
+      },
+    ]);
+    await holder.stop();
+  });
+
   it('grants and redeems same-user USE over the socket without returning raw key material', async () => {
     let resolverCall = 0;
     const holder = new CredentialHolderService({

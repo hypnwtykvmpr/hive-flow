@@ -3,7 +3,7 @@
  *
  * OpenAI-compatible HTTP provider for Alibaba Cloud's Qwen models via DashScope.
  * Base URL: dashscope-intl.aliyuncs.com/compatible-mode/v1
- * Auth: QWEN_API_KEY or DASHSCOPE_API_KEY environment variable. Graceful if missing.
+ * Auth: strict config.apiKey hydration. Graceful if missing.
  *
  * @module @hive-flow/providers/qwen-provider
  */
@@ -65,10 +65,10 @@ export class QwenProvider extends BaseProvider {
   constructor(options: BaseProviderOptions) { super(options); }
 
   protected async doInitialize(): Promise<void> {
-    const apiKey = this.config.apiKey || process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY;
+    const apiKey = this.config.apiKey;
     if (!apiKey) {
       this.logger.warn(
-        'Qwen API key not configured. Set config.apiKey, QWEN_API_KEY, or DASHSCOPE_API_KEY env var. ' +
+        'Qwen API key not configured. Set config.apiKey through the credential holder. ' +
         'Provider will report unhealthy until a key is provided.'
       );
     }
@@ -182,7 +182,7 @@ export class QwenProvider extends BaseProvider {
   protected async doHealthCheck(): Promise<HealthCheckResult> {
     if (!this.headers.Authorization) {
       return { healthy: false, error: 'Qwen API key not configured', timestamp: new Date(),
-        details: { hint: 'Set QWEN_API_KEY or DASHSCOPE_API_KEY env var' } };
+        details: { hint: 'Hydrate config.apiKey through the Hive Flow credential holder' } };
     }
     try {
       const response = await fetch(`${this.baseUrl}/models`, { headers: this.headers });
@@ -196,7 +196,7 @@ export class QwenProvider extends BaseProvider {
   private ensureApiKey(): void {
     if (!this.headers.Authorization) {
       throw new AuthenticationError(
-        'Qwen API key not configured. Set QWEN_API_KEY or DASHSCOPE_API_KEY env var.', 'qwen'
+        'Qwen API key not configured. Hydrate config.apiKey through the Hive Flow credential holder.', 'qwen'
       );
     }
   }

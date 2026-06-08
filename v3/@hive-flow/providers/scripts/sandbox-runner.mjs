@@ -358,7 +358,9 @@ function defaultCandidates(opts = {}) {
 }
 
 function candidatesForOrder(backendOrder, opts) {
-  const candidates = defaultCandidates(opts);
+  const candidates = Array.isArray(opts.__testCandidates)
+    ? opts.__testCandidates
+    : defaultCandidates(opts);
   if (backendOrder === undefined || backendOrder === null) return candidates;
   const names = Array.isArray(backendOrder) ? backendOrder : [backendOrder];
   return names.flatMap((name) => candidates.filter((candidate) => candidate.name === name));
@@ -562,21 +564,29 @@ async function findVerifiedBackend(opts) {
   const candidates = candidatesForOrder(opts.backendOrder, opts);
   const availability = candidates.map(availabilityRecord);
   const probeResults = [];
+  const probeFn = typeof opts.__testProbeCandidate === 'function'
+    ? opts.__testProbeCandidate
+    : probeCandidate;
+  const maxProbeAttempts = Math.max(1, Math.min(3, Number.parseInt(String(opts.probeAttempts ?? '3'), 10) || 1));
 
   for (const candidate of candidates) {
     if (!candidate.available) continue;
-    const probe = await probeCandidate(candidate, opts);
-    probeResults.push(probe);
-    if (probe.verified) {
-      return {
-        candidate,
-        diagnostics: {
-          reason: null,
-          verifiedBackend: candidate.name,
-          availability,
-          probes: probe,
-        },
-      };
+    for (let attempt = 1; attempt <= maxProbeAttempts; attempt += 1) {
+      const probe = await probeFn(candidate, opts);
+      probeResults.push({ attempt, ...probe });
+      if (probe.verified) {
+        return {
+          candidate,
+          diagnostics: {
+            reason: null,
+            verifiedBackend: candidate.name,
+            availability,
+            probes: probe,
+            probeAttempts: attempt,
+            probeHistory: probeResults,
+          },
+        };
+      }
     }
   }
 
@@ -587,9 +597,14 @@ async function findVerifiedBackend(opts) {
       verifiedBackend: null,
       availability,
       probes: probeResults,
+      probeAttempts: maxProbeAttempts,
     },
   };
 }
+
+export const __sandboxRunnerTestHooks = {
+  findVerifiedBackend,
+};
 
 export async function probeSandboxBackend(options = {}) {
   const projectRoot = assertProjectRoot(options.projectRoot || process.cwd());

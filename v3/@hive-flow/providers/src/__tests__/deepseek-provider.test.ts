@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DeepSeekProvider } from '../deepseek-provider.js';
 
 const noopLogger = {
@@ -17,6 +17,8 @@ describe('DeepSeekProvider', () => {
     } else {
       process.env.DEEPSEEK_API_KEY = originalApiKey;
     }
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('capabilities.maxContextLength is 1M for both models', () => {
@@ -80,5 +82,23 @@ describe('DeepSeekProvider', () => {
 
     expect(health.healthy).toBe(false);
     expect(health.error).toBe('DeepSeek API key not configured');
+  });
+
+  it('ignores ambient DEEPSEEK_API_KEY when strict config has no apiKey', async () => {
+    process.env.DEEPSEEK_API_KEY = 'sk-deepseek-secret-that-must-stay-out';
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ data: [] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })));
+
+    const provider = new DeepSeekProvider({
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash' },
+      logger: noopLogger,
+    });
+
+    await provider.initialize();
+
+    expect((provider as unknown as { headers?: Record<string, string> }).headers?.Authorization).toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

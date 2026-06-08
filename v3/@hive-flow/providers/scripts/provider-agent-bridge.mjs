@@ -27,13 +27,13 @@
  * @module @hive-flow/providers/scripts/provider-agent-bridge
  */
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, unlinkSync, readdirSync, openSync, readSync, closeSync, realpathSync, readlinkSync } from 'fs';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, lstatSync, unlinkSync, readdirSync, openSync, readSync, closeSync, realpathSync, readlinkSync } from 'fs';
 import { join, dirname, basename, isAbsolute, resolve, relative, sep } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { lookup as dnsLookup } from 'dns/promises';
-import { isIP } from 'net';
+import { createConnection, isIP } from 'net';
 import {
   patternIsRejected,
   fileGlobIsRejected,
@@ -226,6 +226,8 @@ const PROVIDER_TOKEN_LIMITS = {
   'openrouter':    { maxTokens: 128000,  maxEntries: 30 },
 };
 
+const STRICT_API_PROVIDERS = new Set(['openrouter', 'deepseek', 'openai', 'qwen']);
+
 // Model-specific overrides (when model is known at runtime)
 const MODEL_LIMITS = {
   // Anthropic
@@ -297,6 +299,99 @@ function maxEntriesForTokenWindow(maxTokens, modelName) {
   if (maxTokens > 500000) return 100;
   if (maxTokens >= 200000) return 50;
   return 30;
+}
+
+function defaultCredentialHolderSocketPath() {
+  const explicit = String(process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET || '').trim();
+  if (explicit) return explicit;
+  if (process.platform === 'win32') {
+    const user = String(process.env.USERNAME || process.env.USER || 'user').replace(/[^A-Za-z0-9._-]+/g, '-');
+    return `\\\\.\\pipe\\hive-flow-credential-holder-${user}`;
+  }
+  const runtimeDir = String(process.env.XDG_RUNTIME_DIR || '').trim()
+    || join(String(process.env.HOME || process.cwd()), '.hive-flow', 'run');
+  return join(runtimeDir, 'credential-holder.sock');
+}
+
+function assertCredentialHolderSocketIdentity(socketPath) {
+  if (process.platform === 'win32') {
+    if (!String(process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET || '').trim()) {
+      throw new Error('credential holder named pipe is not configured');
+    }
+    if (!socketPath.startsWith('\\\\.\\pipe\\')) {
+      throw new Error('credential holder named pipe path is invalid');
+    }
+    return;
+  }
+  const stat = lstatSync(socketPath);
+  if (!stat.isSocket()) throw new Error('credential holder identity check failed: path is not a socket');
+  if (process.getuid && stat.uid !== process.getuid()) {
+    throw new Error('credential holder identity check failed: socket owner does not match current user');
+  }
+  if ((stat.mode & 0o077) !== 0) {
+    throw new Error('credential holder identity check failed: socket permissions must not grant group/other access');
+  }
+}
+
+function sendCredentialHolderCommand(socketPath, command) {
+  assertCredentialHolderSocketIdentity(socketPath);
+  return new Promise((resolvePromise, reject) => {
+    const socket = createConnection(socketPath);
+    let response = '';
+    socket.setEncoding('utf8');
+    socket.once('connect', () => {
+      socket.write(`${JSON.stringify(command)}\n`);
+    });
+    socket.on('data', chunk => { response += chunk; });
+    socket.once('error', reject);
+    socket.once('end', () => {
+      try {
+        resolvePromise(JSON.parse(response.trim()));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+function normalizeHolderProviderResponse(response) {
+  const record = response && typeof response === 'object' ? response : {};
+  return {
+    content: typeof record.content === 'string' ? record.content : String(record.text || ''),
+    model: typeof record.model === 'string' ? record.model : undefined,
+    usage: record.usage && typeof record.usage === 'object' ? record.usage : undefined,
+    cost: record.cost,
+    toolCalls: Array.isArray(record.toolCalls) ? record.toolCalls : undefined,
+    finishReason: typeof record.finishReason === 'string' ? record.finishReason : undefined,
+    reasoningContent: typeof record.reasoningContent === 'string' ? record.reasoningContent : undefined,
+  };
+}
+
+function createStrictHolderProvider(providerName, config, agentId) {
+  const socketPath = defaultCredentialHolderSocketPath();
+  return {
+    async initialize() {
+      assertCredentialHolderSocketIdentity(socketPath);
+    },
+    async complete(request) {
+      const response = await sendCredentialHolderCommand(socketPath, {
+        action: 'provider_call',
+        taskId: `provider-bridge-${agentId}-${Date.now()}`,
+        provider: providerName,
+        request: {
+          action: 'complete',
+          payload: {
+            ...request,
+            timeout: request.timeout || config.timeout,
+            ...(config.apiUrl ? { apiUrl: config.apiUrl } : {}),
+          },
+        },
+      });
+      if (!response.ok) throw new Error(`credential holder provider_call failed: ${response.error || 'unknown error'}`);
+      return normalizeHolderProviderResponse(response.response);
+    },
+    destroy() {},
+  };
 }
 
 // Token estimation: ~4 chars per token (conservative for code/mixed content)
@@ -1593,10 +1688,14 @@ async function runShellTool(rawArgs, ctx = {}) {
   });
 
   if (sandboxResult.status === 'denied') {
-    return runShellDenied(
+    const denied = runShellDenied(
       sandboxResult.denyReason || RUN_SHELL_SANDBOX_UNAVAILABLE,
       sandboxResult.denyReason || RUN_SHELL_SANDBOX_UNAVAILABLE,
     );
+    if (sandboxOptions.debugDiagnostics) {
+      denied.sandboxDiagnostics = sandboxResult.diagnostics;
+    }
+    return denied;
   }
 
   return {
@@ -2672,11 +2771,13 @@ async function main() {
   };
 
   const ProviderClass = providerClasses[providerName];
-  if (!ProviderClass) {
+  if (!ProviderClass && !STRICT_API_PROVIDERS.has(providerName)) {
     throw new Error(`Unknown provider: ${providerName}. Supported: ${Object.keys(providerClasses).join(', ')}`);
   }
 
-  const provider = new ProviderClass({ config, logger: stderrLogger });
+  const provider = STRICT_API_PROVIDERS.has(providerName)
+    ? createStrictHolderProvider(providerName, config, agentId)
+    : new ProviderClass({ config, logger: stderrLogger });
 
   try {
     await provider.initialize();

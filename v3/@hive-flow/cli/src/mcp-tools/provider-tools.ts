@@ -7,6 +7,12 @@
 
 import type { MCPTool } from './types.js';
 import type { LLMMessage } from '@hive-flow/providers';
+import {
+  completeStrictApiProviderViaHolder,
+  isEnvOnlyCliProvider,
+  isStrictApiProvider,
+} from '../credential-store/strict-api-provider.js';
+import { redactCredentialMaterial } from '../credential-store/safe-serialization.js';
 
 // Lazy singleton for provider manager (WP-U-048)
 let providerManagerPromise: Promise<any> | null = null;
@@ -17,8 +23,21 @@ async function getOrCreateProviderManager(providerName: string) {
   // but reuse the import.
   const { createProviderManager } = await import('@hive-flow/providers');
   return createProviderManager({
-    providers: [{ provider: providerName as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter', model: 'auto' }],
+    providers: [{ provider: providerName as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter' | 'openai' | 'qwen', model: 'auto' }],
   });
+}
+
+function safeProviderError(err: unknown): Error & { code?: string; retryable?: boolean } {
+  const input = err as Error & { code?: string; retryable?: boolean };
+  const safe = redactCredentialMaterial({
+    message: input?.message || String(err),
+    code: input?.code,
+    retryable: input?.retryable,
+  }) as { message: string; code?: string; retryable?: boolean };
+  const error = new Error(safe.message) as Error & { code?: string; retryable?: boolean };
+  error.code = safe.code;
+  error.retryable = safe.retryable;
+  return error;
 }
 
 export const providerTools: MCPTool[] = [
@@ -31,7 +50,7 @@ export const providerTools: MCPTool[] = [
       properties: {
         provider: {
           type: 'string',
-          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'],
+          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter', 'openai', 'qwen'],
           description: 'Specific provider to check (all if omitted)',
         },
       },
@@ -95,7 +114,7 @@ export const providerTools: MCPTool[] = [
       properties: {
         provider: {
           type: 'string',
-          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'],
+          enum: ['gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter', 'openai', 'qwen'],
           description: 'Provider to use',
         },
         prompt: { type: 'string', description: 'Prompt text' },
@@ -112,10 +131,53 @@ export const providerTools: MCPTool[] = [
       }
 
       const start = Date.now();
-      const providerName = input.provider as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
-      const { createProviderManager, resolveProviderModel } = await import('@hive-flow/providers');
+      const providerName = input.provider as 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter' | 'openai' | 'qwen';
+      const { resolveProviderModel } = await import('@hive-flow/providers');
       const resolvedModel = resolveProviderModel(providerName, input.model as string | undefined);
 
+      const messages: LLMMessage[] = [];
+      if (input.systemPrompt) {
+        messages.push({ role: 'system', content: input.systemPrompt as string });
+      }
+      messages.push({ role: 'user', content: prompt });
+
+      const timeoutMs = typeof input.timeout === 'number' && input.timeout > 0
+        ? input.timeout
+        : 30000;
+
+      if (isStrictApiProvider(providerName)) {
+        try {
+          const result = await completeStrictApiProviderViaHolder({
+            provider: providerName,
+            resolvedModel,
+            prompt,
+            systemPrompt: input.systemPrompt as string | undefined,
+            timeoutMs,
+          });
+          return {
+            success: true,
+            provider: providerName,
+            text: result.content,
+            model: result.model,
+            resolvedModel,
+            usage: result.usage,
+            cost: result.cost,
+            credentialBoundary: 'holder',
+          };
+        } catch (err) {
+          const error = safeProviderError(err);
+          return {
+            success: false,
+            provider: providerName,
+            error: error.message,
+            code: error.code,
+            retryable: error.retryable,
+            credentialBoundary: 'holder',
+          };
+        }
+      }
+
+      const { createProviderManager } = await import('@hive-flow/providers');
       let manager: Awaited<ReturnType<typeof createProviderManager>> | null = null;
       try {
         manager = await createProviderManager({
@@ -126,15 +188,6 @@ export const providerTools: MCPTool[] = [
           return { success: false, provider: providerName, error: `Provider '${providerName}' failed to initialize.` };
         }
 
-        const messages: LLMMessage[] = [];
-        if (input.systemPrompt) {
-          messages.push({ role: 'system', content: input.systemPrompt as string });
-        }
-        messages.push({ role: 'user', content: prompt });
-
-        const timeoutMs = typeof input.timeout === 'number' && input.timeout > 0
-          ? input.timeout
-          : 30000;
         // Pass timeout via request object (supported in providers >=3.0.0-alpha.7)
         const request = { messages, model: resolvedModel } as Record<string, unknown>;
         request.timeout = timeoutMs;
@@ -147,6 +200,9 @@ export const providerTools: MCPTool[] = [
           resolvedModel,
           usage: result.usage,
           cost: result.cost,
+          ...(isEnvOnlyCliProvider(providerName)
+            ? { degraded: true, credentialBoundary: 'env-only-cli' }
+            : {}),
         };
 
         try {
@@ -194,13 +250,16 @@ export const providerTools: MCPTool[] = [
 
         return successResult;
       } catch (err) {
-        const error = err as Error & { code?: string; retryable?: boolean };
+        const error = safeProviderError(err);
         return {
           success: false,
           provider: providerName,
           error: error.message,
           code: error.code,
           retryable: error.retryable,
+          ...(isEnvOnlyCliProvider(providerName)
+            ? { degraded: true, credentialBoundary: 'env-only-cli' }
+            : {}),
         };
       } finally {
         if (manager) try { manager.destroy(); } catch { /* cleanup best-effort */ }

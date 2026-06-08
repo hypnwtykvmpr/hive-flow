@@ -35,6 +35,10 @@ import { statePathFor } from '../integrations/state.js';
 import { ADAPTERS, type AdapterId, claudeCodeStatuslineAdapter } from '../integrations/adapters/index.js';
 import { loadAdapter, isKnownTarget } from '../integrations/adapter-registry.js';
 import { diagnoseConnectors } from '../integrations/diagnose.js';
+import {
+  probeCredentialHolderStatus,
+  type CredentialHolderProbeStatus,
+} from '../credential-store/strict-api-provider.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 async function importConnectorAdapters(): Promise<void> {
@@ -118,15 +122,17 @@ function getObject(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-function hasOpenRouterConfigReference(projectRoot: string): boolean {
+function hasOpenRouterHolderConfigReference(projectRoot: string): boolean {
   const config = readProjectConfig(projectRoot);
   const values = getObject(config.values);
   const openrouter = getObject(values?.openrouter) ?? getObject(config.openrouter);
   if (!openrouter) return false;
-  return typeof openrouter.credentialSource === 'string'
-    || typeof openrouter.apiKeyEnv === 'string'
-    || typeof openrouter.credentialEnv === 'string'
-    || typeof openrouter.apiKey === 'string';
+  const source = typeof openrouter.credentialSource === 'string'
+    ? openrouter.credentialSource.trim().toLowerCase()
+    : '';
+  return source === 'holder:openrouter'
+    || source === 'credential-holder:openrouter'
+    || source === 'credential-holder';
 }
 
 export function inspectProviderSetup(opts: {
@@ -134,12 +140,14 @@ export function inspectProviderSetup(opts: {
   homeDir?: string;
   env?: NodeJS.ProcessEnv;
   versionRunner?: VersionRunner;
+  holderStatus?: CredentialHolderProbeStatus;
 }): ProviderSetupReport {
   const env = opts.env ?? process.env;
   const homeDir = opts.homeDir ?? homedir();
   const versionRunner = opts.versionRunner ?? defaultVersionRunner;
   const openrouterEnv = typeof env.OPENROUTER_API_KEY === 'string' && env.OPENROUTER_API_KEY.length > 0;
-  const openrouterConfig = hasOpenRouterConfigReference(opts.cwd);
+  const openrouterConfig = hasOpenRouterHolderConfigReference(opts.cwd);
+  const openrouterHolder = opts.holderStatus ?? probeCredentialHolderStatus(env);
   const geminiCli = versionRunner('gemini');
   const geminiOauth = existsSync(join(homeDir, '.gemini', 'oauth_creds.json'));
   const geminiApiKey = Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
@@ -149,14 +157,16 @@ export function inspectProviderSetup(opts: {
     providers: {
       openrouter: {
         provider: 'openrouter',
-        configured: openrouterEnv || openrouterConfig,
+        configured: openrouterHolder.available || openrouterConfig,
         checks: {
-          envPresent: openrouterEnv,
+          credentialHolderAvailable: openrouterHolder.available,
+          credentialHolderSocket: openrouterHolder.socketPath,
           configReferencePresent: openrouterConfig,
+          legacyEnvPresentIgnored: openrouterEnv,
         },
-        action: openrouterEnv || openrouterConfig
+        action: openrouterHolder.available || openrouterConfig
           ? undefined
-          : 'Set OPENROUTER_API_KEY in the hive-flow/MCP runtime env, then restart the daemon/MCP server.',
+          : 'Unlock/start the Hive Flow credential holder and store the OpenRouter key there; OPENROUTER_API_KEY is ignored for strict API providers.',
       },
       gemini: {
         provider: 'gemini-cli',
@@ -183,10 +193,11 @@ export function writeProviderCredentialReferences(projectRoot: string, report: P
   const config = readProjectConfig(projectRoot);
   const values = getObject(config.values) ?? {};
 
-  if (report.providers.openrouter.checks.envPresent) {
+  if (report.providers.openrouter.checks.credentialHolderAvailable
+    || report.providers.openrouter.checks.configReferencePresent) {
     values.openrouter = {
       ...(getObject(values.openrouter) ?? {}),
-      credentialSource: 'env:OPENROUTER_API_KEY',
+      credentialSource: 'holder:openrouter',
     };
   }
 

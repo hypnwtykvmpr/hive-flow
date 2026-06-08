@@ -16,6 +16,7 @@ import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 
 import {
+  __sandboxRunnerTestHooks,
   buildSandboxEnv,
   probeSandboxBackend,
   sandboxExec,
@@ -180,6 +181,38 @@ describe('provider sandbox runner', () => {
         availability: result.diagnostics.availability,
       },
     }).toEqual(readJson(failClosedGoldenPath));
+
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it('retries a transiently failed behavioral probe before declaring the sandbox unavailable', async () => {
+    const projectRoot = makeProjectRoot();
+    const calls = [];
+    const candidate = {
+      name: 'fake-transient',
+      available: true,
+      unavailableReason: null,
+    };
+
+    const selected = await __sandboxRunnerTestHooks.findVerifiedBackend({
+      projectRoot,
+      tempDir: join(projectRoot, '.sandbox-tmp'),
+      env: buildSandboxEnv({}, { projectRoot, tempDir: join(projectRoot, '.sandbox-tmp') }),
+      backendOrder: ['fake-transient'],
+      probeAttempts: 2,
+      __testCandidates: [candidate],
+      __testProbeCandidate: async (probeCandidate) => {
+        calls.push(probeCandidate.name);
+        return calls.length === 1
+          ? { verified: false, backend: probeCandidate.name, reason: 'probe-execution-failed' }
+          : { verified: true, backend: probeCandidate.name, reason: null, probes: { insideWriteAllowed: true } };
+      },
+    });
+
+    expect(selected.candidate).toBe(candidate);
+    expect(calls).toEqual(['fake-transient', 'fake-transient']);
+    expect(selected.diagnostics.verifiedBackend).toBe('fake-transient');
+    expect(selected.diagnostics.probeAttempts).toBe(2);
 
     rmSync(projectRoot, { recursive: true, force: true });
   });

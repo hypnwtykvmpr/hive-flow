@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { spawn, execFileSync } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
+import { createServer as createNetServer } from 'node:net';
 import {
   chmodSync,
   copyFileSync,
@@ -233,6 +234,71 @@ async function startFixtureServer(toolName, toolArgs) {
   };
 }
 
+async function startCredentialHolderFixture() {
+  const holderRoot = mkdtempSync(join(tmpdir(), 'hf-holder-'));
+  const socketPath = join(holderRoot, 'holder.sock');
+  const commands = [];
+  const server = createNetServer((socket) => {
+    let buffer = '';
+    socket.setEncoding('utf8');
+    socket.on('data', async (chunk) => {
+      buffer += chunk;
+      if (!buffer.includes('\n')) return;
+      try {
+        const command = JSON.parse(buffer.slice(0, buffer.indexOf('\n')));
+        commands.push(command);
+        const payload = command.request?.payload ?? {};
+        const apiUrl = String(payload.apiUrl || '').replace(/\/+$/, '');
+        const apiResponse = await fetch(`${apiUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer holder-fixture-key',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: payload.model,
+            messages: payload.messages,
+            tools: payload.tools,
+          }),
+        });
+        const data = await apiResponse.json();
+        const choice = data.choices?.[0] ?? {};
+        socket.end(`${JSON.stringify({
+          ok: true,
+          response: {
+            content: choice.message?.content ?? '',
+            model: data.model,
+            toolCalls: choice.message?.tool_calls,
+            finishReason: choice.finish_reason,
+            usage: data.usage ? {
+              promptTokens: data.usage.prompt_tokens,
+              completionTokens: data.usage.completion_tokens,
+              totalTokens: data.usage.total_tokens,
+            } : undefined,
+          },
+        })}\n`);
+      } catch (error) {
+        socket.end(`${JSON.stringify({ ok: false, error: error.message || String(error) })}\n`);
+      }
+    });
+  });
+  await new Promise((resolvePromise, reject) => {
+    server.once('error', reject);
+    server.listen(socketPath, resolvePromise);
+  });
+  chmodSync(socketPath, 0o600);
+  return {
+    socketPath,
+    commands,
+    close: async () => {
+      await new Promise((resolvePromise, reject) => {
+        server.close((err) => (err ? reject(err) : resolvePromise()));
+      });
+      rmSync(holderRoot, { recursive: true, force: true });
+    },
+  };
+}
+
 function makeStore(root, agentId) {
   const storeDir = join(root, '.hive-flow', 'agents');
   mkdirSync(storeDir, { recursive: true });
@@ -260,6 +326,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
   const key = writeKey(root);
   writeEnvelope(root, key, 0);
   const fixture = await startFixtureServer(toolName, toolArgs);
+  const holder = await startCredentialHolderFixture();
   const storeDir = makeStore(root, agentId);
   const tasksDir = join(root, '.hive-flow', 'tasks');
   mkdirSync(tasksDir, { recursive: true });
@@ -280,7 +347,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
     stdio: 'ignore',
     env: {
       ...childEnv(root, markerPath ? { HF_FAKE_MCP_MARKER: markerPath } : {}),
-      DEEPSEEK_API_KEY: 'test-deepseek-key',
+      HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET: holder.socketPath,
       DEEPSEEK_API_URL: fixture.baseUrl,
     },
   });
@@ -312,6 +379,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
     return { result, requests: fixture.requests, bridgeLog };
   } finally {
     await fixture.close();
+    await holder.close();
   }
 }
 

@@ -23,14 +23,14 @@ function listFiles(root: string): string[] {
 }
 
 describe('credential boundary gate registry', () => {
-  it('keeps PR3 green and pending PR4 boundary gates mechanically registered', () => {
+  it('keeps PR3 green and flips the PR4 strict API boundary gate green', () => {
     expect(getCredentialBoundaryGate('credential-use-not-know')).toMatchObject({
       targetSlice: 'PR3',
       status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')).toMatchObject({
       targetSlice: 'PR4',
-      status: 'xfail',
+      status: 'green',
     });
   });
 

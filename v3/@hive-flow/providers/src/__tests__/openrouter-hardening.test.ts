@@ -38,6 +38,29 @@ afterEach(() => {
 });
 
 describe('OpenRouter provider hardening with mocked fetch', () => {
+  it('ignores ambient OPENROUTER_API_KEY when strict config has no apiKey', async () => {
+    process.env.OPENROUTER_API_KEY = SECRET;
+    vi.stubGlobal('fetch', vi.fn(async (url: string | URL) => {
+      const u = typeof url === 'string' ? url : url.toString();
+      if (u.endsWith('/models')) {
+        return jsonResponse({ data: [{ id: 'xiaomi/mimo-v2.5-pro', context_length: 4096 }] });
+      }
+      throw new Error(`Unexpected URL: ${u}`);
+    }));
+
+    const provider = new OpenRouterProvider({
+      config: {
+        provider: 'openrouter',
+        model: 'xiaomi/mimo-v2.5-pro',
+        apiUrl: 'https://openrouter.test/v1',
+        timeout: 2_000,
+      },
+    });
+
+    await expect(provider.initialize()).rejects.toThrow(/config\.apiKey/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('completes without external network access', async () => {
     const seenAuth: string[] = [];
     vi.stubGlobal('fetch', vi.fn(async (url: string | URL, init?: RequestInit) => {

@@ -106,10 +106,10 @@ export class OpenRouterProvider extends BaseProvider {
   }
 
   protected async doInitialize(): Promise<void> {
-    const apiKey = this.config.apiKey || process.env.OPENROUTER_API_KEY;
+    const apiKey = this.config.apiKey;
     if (!apiKey) {
       throw new AuthenticationError(
-        'OpenRouter API key is required. Set config.apiKey or OPENROUTER_API_KEY env var.',
+        'OpenRouter API key is required in config.apiKey. Hive Flow strict mode must hydrate API keys through the credential holder, not process.env.',
         'openrouter',
       );
     }

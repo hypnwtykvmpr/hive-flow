@@ -166,7 +166,17 @@ export interface CredentialHolderRedeemCommand {
   request?: unknown;
 }
 
-export type CredentialHolderCommand = CredentialHolderGrantCommand | CredentialHolderRedeemCommand;
+export interface CredentialHolderProviderCallCommand {
+  action: 'provider_call';
+  taskId: string;
+  provider: string;
+  request?: unknown;
+}
+
+export type CredentialHolderCommand =
+  | CredentialHolderGrantCommand
+  | CredentialHolderRedeemCommand
+  | CredentialHolderProviderCallCommand;
 
 export type CredentialHolderResponse = {
   ok: true;
@@ -312,6 +322,23 @@ export class CredentialHolderService {
     return response;
   }
 
+  private async invokeProviderCall(command: CredentialHolderProviderCallCommand, socket: Socket): Promise<unknown> {
+    const peer = await this.lookupPeer(socket);
+    if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
+    const provider = normalizeProviderKeyName(command.provider);
+    const secret = this.secrets.get(provider);
+    if (!secret) throw new Error(`credential holder has no secret for provider ${provider}`);
+    const response = await this.providerInvoker({
+      provider,
+      taskId: command.taskId,
+      secret: Buffer.from(secret),
+      peer,
+      request: command.request,
+    });
+    assertResponseDoesNotContainSecret(response, secret);
+    return response;
+  }
+
   private handleSocket(socket: Socket): void {
     socket.setEncoding('utf8');
     let buffer = '';
@@ -336,6 +363,7 @@ export class CredentialHolderService {
     try {
       const command = parseCredentialHolderCommand(line);
       if (command.action === 'grant') return { ok: true, grant: await this.requestUseGrant(command, socket) };
+      if (command.action === 'provider_call') return { ok: true, response: await this.invokeProviderCall(command, socket) };
       return { ok: true, response: await this.redeemUseGrant(command, socket) };
     } catch (error) {
       return { ok: false, error: (error as Error).message };
@@ -414,6 +442,7 @@ function parseCredentialHolderCommand(line: string): CredentialHolderCommand {
   if (!taskId) throw new Error('credential holder command taskId is required');
   if (!provider) throw new Error('credential holder command provider is required');
   if (action === 'grant') return { action, taskId, provider };
+  if (action === 'provider_call') return { action, taskId, provider, request: record.request };
   if (action === 'redeem') {
     const token = String(record.token || '').trim();
     if (!token) throw new Error('credential holder redeem token is required');

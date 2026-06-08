@@ -2,7 +2,7 @@ import { existsSync as defaultExistsSync, readFileSync as defaultReadFileSync } 
 import { join } from 'path';
 
 export const OPENROUTER_AUTH_MESSAGE =
-  'OpenRouter credentials missing/invalid. Set OPENROUTER_API_KEY in the hive-flow/MCP runtime env, then restart the daemon/MCP server.';
+  'OpenRouter credentials missing/invalid. Unlock the Hive Flow credential holder and retry; strict API keys must not be injected through env/config.';
 
 export const GEMINI_AUTH_MESSAGE =
   'Gemini CLI requires sign-in. Run gemini in a terminal and complete Google OAuth (or set GEMINI_API_KEY/GOOGLE_API_KEY). Hive Flow reuses ~/.gemini/oauth_creds.json via HOME.';
@@ -59,14 +59,10 @@ export function readOpenRouterCredentialFromConfig({
   env = process.env,
   fs = { existsSync: defaultExistsSync, readFileSync: defaultReadFileSync },
 } = {}) {
-  const parsed = readJsonConfig(cwd, fs);
-  const openrouter = asObject(asObject(parsed?.values)?.openrouter) ?? asObject(parsed?.openrouter);
-  if (!openrouter) return undefined;
-
-  return stringValue(openrouter.apiKey)
-    ?? resolveCredentialSource(openrouter.credentialSource, env)
-    ?? resolveEnvReference(openrouter.apiKeyEnv, env)
-    ?? resolveEnvReference(openrouter.credentialEnv, env);
+  void cwd;
+  void env;
+  void fs;
+  return undefined;
 }
 
 export function buildProviderConfig({
@@ -92,18 +88,7 @@ export function buildProviderConfig({
   const apiUrl = resolveProviderApiUrl(providerName, env);
   if (apiUrl) config.apiUrl = apiUrl;
 
-  if (providerName === 'openrouter') {
-    const openRouterKey =
-      stringValue(env.OPENROUTER_API_KEY)
-      ?? readOpenRouterCredentialFromConfig({ cwd, env, fs });
-    if (openRouterKey) {
-      config.apiKey = openRouterKey;
-      config.env = {
-        ...(config.env ?? {}),
-        OPENROUTER_API_KEY: openRouterKey,
-      };
-    }
-  }
+  if (providerName === 'openrouter') void readOpenRouterCredentialFromConfig({ cwd, env, fs });
 
   return config;
 }

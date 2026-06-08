@@ -3,7 +3,7 @@
  *
  * OpenAI-compatible HTTP provider for DeepSeek's API (api.deepseek.com/v1).
  * Supports DeepSeek V4 Pro and DeepSeek V4 Flash.
- * Auth: DEEPSEEK_API_KEY environment variable. Graceful if missing.
+ * Auth: strict config.apiKey hydration. Graceful if missing.
  *
  * @module @hive-flow/providers/deepseek-provider
  */
@@ -61,10 +61,10 @@ export class DeepSeekProvider extends BaseProvider {
   constructor(options: BaseProviderOptions) { super(options); }
 
   protected async doInitialize(): Promise<void> {
-    const apiKey = this.config.apiKey || process.env.DEEPSEEK_API_KEY;
+    const apiKey = this.config.apiKey;
     if (!apiKey) {
       this.logger.warn(
-        'DeepSeek API key not configured. Set config.apiKey or DEEPSEEK_API_KEY env var. ' +
+        'DeepSeek API key not configured. Set config.apiKey through the credential holder. ' +
         'Provider will report unhealthy until a key is provided.'
       );
     }
@@ -176,7 +176,7 @@ export class DeepSeekProvider extends BaseProvider {
   protected async doHealthCheck(): Promise<HealthCheckResult> {
     if (!this.headers.Authorization) {
       return { healthy: false, error: 'DeepSeek API key not configured', timestamp: new Date(),
-        details: { hint: 'Set DEEPSEEK_API_KEY env var' } };
+        details: { hint: 'Hydrate config.apiKey through the Hive Flow credential holder' } };
     }
     try {
       const response = await fetch(`${this.baseUrl}/models`, { headers: this.headers });
@@ -190,7 +190,7 @@ export class DeepSeekProvider extends BaseProvider {
   private ensureApiKey(): void {
     if (!this.headers.Authorization) {
       throw new AuthenticationError(
-        'DeepSeek API key not configured. Set DEEPSEEK_API_KEY env var.', 'deepseek'
+        'DeepSeek API key not configured. Hydrate config.apiKey through the Hive Flow credential holder.', 'deepseek'
       );
     }
   }

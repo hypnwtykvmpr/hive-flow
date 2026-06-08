@@ -6,7 +6,7 @@ import {
 } from '../scripts/provider-auth-helpers.mjs';
 
 describe('provider auth helpers', () => {
-  it('maps OPENROUTER_API_KEY into OpenRouter config and child env', () => {
+  it('does not map OPENROUTER_API_KEY into strict OpenRouter config or child env', () => {
     const config = buildProviderConfig({
       providerName: 'openrouter',
       model: 'opus-model',
@@ -23,15 +23,16 @@ describe('provider auth helpers', () => {
       timeout: 9000,
       retryAttempts: 2,
       retryDelay: 1000,
-      apiKey: 'or-env-secret',
       env: {
         HIVE_FLOW_AGENT_TOKEN: 'spawn-token',
-        OPENROUTER_API_KEY: 'or-env-secret',
       },
     });
+    expect(config).not.toHaveProperty('apiKey');
+    expect(config.env ?? {}).not.toHaveProperty('OPENROUTER_API_KEY');
+    expect(JSON.stringify(config)).not.toContain('or-env-secret');
   });
 
-  it('uses env before config-file credential references', () => {
+  it('ignores config-file OpenRouter credential references in serialized provider config', () => {
     const config = buildProviderConfig({
       providerName: 'openrouter',
       model: undefined,
@@ -56,11 +57,13 @@ describe('provider auth helpers', () => {
     });
 
     expect(config.model).toBe('default-openrouter-model');
-    expect(config.apiKey).toBe('or-env-secret');
-    expect(config.env?.OPENROUTER_API_KEY).toBe('or-env-secret');
+    expect(config).not.toHaveProperty('apiKey');
+    expect(config.env ?? {}).not.toHaveProperty('OPENROUTER_API_KEY');
+    expect(JSON.stringify(config)).not.toContain('or-env-secret');
+    expect(JSON.stringify(config)).not.toContain('or-config-secret');
   });
 
-  it('uses a config-file env reference when OPENROUTER_API_KEY is absent', () => {
+  it('does not hydrate OpenRouter from config-file env references when OPENROUTER_API_KEY is absent', () => {
     const config = buildProviderConfig({
       providerName: 'openrouter',
       model: 'custom',
@@ -81,11 +84,12 @@ describe('provider auth helpers', () => {
       },
     });
 
-    expect(config.apiKey).toBe('or-config-secret');
-    expect(config.env?.OPENROUTER_API_KEY).toBe('or-config-secret');
+    expect(config).not.toHaveProperty('apiKey');
+    expect(config.env ?? {}).not.toHaveProperty('OPENROUTER_API_KEY');
+    expect(JSON.stringify(config)).not.toContain('or-config-secret');
   });
 
-  it('accepts bare env var names in apiKeyEnv config references', () => {
+  it('does not hydrate OpenRouter from bare apiKeyEnv references', () => {
     const config = buildProviderConfig({
       providerName: 'openrouter',
       model: 'custom',
@@ -106,8 +110,9 @@ describe('provider auth helpers', () => {
       },
     });
 
-    expect(config.apiKey).toBe('or-config-secret');
-    expect(config.env?.OPENROUTER_API_KEY).toBe('or-config-secret');
+    expect(config).not.toHaveProperty('apiKey');
+    expect(config.env ?? {}).not.toHaveProperty('OPENROUTER_API_KEY');
+    expect(JSON.stringify(config)).not.toContain('or-config-secret');
   });
 
   it('classifies provider auth failures without marking generic errors as auth', () => {
