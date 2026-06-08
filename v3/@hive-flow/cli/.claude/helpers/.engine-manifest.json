@@ -1,10 +1,10 @@
 {
-  "syncedAt": "2026-06-07T22:21:00.722Z",
+  "syncedAt": "2026-06-08T11:24:11.017Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
       "name": "enforcement.cjs",
-      "sha256": "13e89af66b4e1806a92197560ff0ced77019d8a97a846002eefa844f8783a951"
+      "sha256": "3ecd0a29db422860ca556a73bb42df8b1889e068c35c30879da047d4a7483cb7"
     },
     {
       "name": "role-enforcement.cjs",
@@ -32,11 +32,11 @@
     },
     {
       "name": "protected-paths.cjs",
-      "sha256": "69d465a7b310efff2d56985cf4a596d3f2a4e7145eff8721ed405a0c9fc1a56b"
+      "sha256": "a1aa95753336d4e3fdf2cc5b1b34b39ba99114a897b09d8587b35097199acff1"
     },
     {
       "name": "protected-paths.policy.json",
-      "sha256": "65a278ea60046af8c70c7057310acee7c21bfa2db6ba0fae8bb0669ec8632bdd"
+      "sha256": "c6fd21aed5830755ea9c00b757599f06ae733aa185028f315ff84df28c773b31"
     }
   ]
 }

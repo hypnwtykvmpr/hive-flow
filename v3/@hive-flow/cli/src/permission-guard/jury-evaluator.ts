@@ -44,7 +44,8 @@ const DEV_EXTENSIONS = new Set([
 // ---------------------------------------------------------------------------
 
 const EXFILTRATION = /\bcurl\b(?=[\s\S]*\b[Hh][Tt][Tt][Pp][Ss]?:\/\/)(?=[\s\S]*(?:(?:^|\s)-d(?:\b|\S+)|--data(?:-binary|-raw|-urlencode)?(?:\b|=)|(?:^|\s)-T(?:\b|\S+)|--upload-file(?:\b|=)|(?:^|\s)-F(?:\b|\S+)|--form(?:\b|=)|(?:^|\s)-X\s*POST\b))/;
-const CREDENTIAL_PATHS = /(?:~\/|\/home\/\w+\/|\/root\/)\.(?:ssh|aws|gnupg|config\/gcloud)|\/etc\/(?:shadow|passwd|sudoers)/;
+const CREDENTIAL_PATHS = /(?:~\/|\/Users\/[^/\s]+\/|\/home\/[^/\s]+\/|\/root\/)\.(?:ssh|aws|gnupg|config\/gcloud)|(?:~|\/Users\/[^/\s]+|\/home\/[^/\s]+|\/root)\/\.hive-flow\/(?:credential-vault[^\s]*|credentials(?:\/|\b)[^\s]*|run\/credential-agent\.sock)|\/etc\/(?:shadow|passwd|sudoers)|\/proc\/\d+\/environ/;
+const CREDENTIAL_EXPOSURE_COMMANDS = /\bprintenv\b(?=[\s\S]*(?:API[_-]?KEY|TOKEN|SECRET|CREDENTIAL|PASSWORD|OPENROUTER|ANTHROPIC|DEEPSEEK|CODEX|GEMINI|GOOGLE|CURSOR|QWEN|DASHSCOPE))|\bps\b(?=[\s\S]*(?:\beww\b|(?:^|\s)-E(?:\s|$)))|\bsecurity\s+find-generic-password\b(?=[\s\S]*(?:\s-w\b|--password\b))|\bsecret-tool\s+lookup\b|\bcmdkey\b|\b(?:powershell|pwsh)\b(?=[\s\S]*Get-StoredCredential)/i;
 const REVERSE_SHELL = /bash\s+-i\s+>&\s*\/dev\/tcp|nc\s+-e|python.*socket.*connect/;
 const SYSTEM_DESTROY = /\brm\s+-rf\s+\/\s*$|\bdd\s+if=\/dev\/zero\s+of=\/dev\/sd|\bmkfs\b|\bshred\b/;
 const FORK_BOMB = /:\(\)\s*\{\s*:\|:&\s*\}/;
@@ -121,7 +122,7 @@ export function evaluateSafety(ctx: JuryContext): EvalResult {
   if (EXFILTRATION.test(cmd)) {
     return { vote: 'deny', reason: 'Data exfiltration attempt', confidence: 0.95, riskLevel: 'critical' };
   }
-  if (CREDENTIAL_PATHS.test(cmd) || CREDENTIAL_PATHS.test(filePath)) {
+  if (CREDENTIAL_PATHS.test(cmd) || CREDENTIAL_PATHS.test(filePath) || CREDENTIAL_EXPOSURE_COMMANDS.test(cmd)) {
     return { vote: 'deny', reason: 'Credential file access', confidence: 0.9, riskLevel: 'critical' };
   }
   if (REVERSE_SHELL.test(cmd)) {

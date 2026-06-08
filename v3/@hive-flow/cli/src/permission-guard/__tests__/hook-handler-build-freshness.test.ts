@@ -9,6 +9,13 @@ const hookHandlerSource = join(repoRoot, '.claude', 'helpers', 'hook-handler.cjs
 const sessionIdSource = join(repoRoot, '.claude', 'helpers', 'session-id.cjs');
 const protectedPathsSource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
 const protectedPathsPolicySource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.policy.json');
+const secretPathsPolicySource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'secret-paths.policy.json');
+
+const credentialProtectedEntries = [
+  '${HOME}/.hive-flow/credential-vault*',
+  '${HOME}/.hive-flow/credentials*',
+  '${HOME}/.hive-flow/run/credential-agent.sock',
+];
 
 function makeHookProject(): string {
   const root = mkdtempSync(join(tmpdir(), 'hf-hook-freshness-'));
@@ -20,6 +27,7 @@ function makeHookProject(): string {
   copyFileSync(sessionIdSource, join(helperDir, 'session-id.cjs'));
   copyFileSync(protectedPathsSource, join(helperDir, 'protected-paths.cjs'));
   copyFileSync(protectedPathsPolicySource, join(helperDir, 'protected-paths.policy.json'));
+  copyFileSync(secretPathsPolicySource, join(helperDir, 'secret-paths.policy.json'));
   writeFileSync(join(helperDir, 'provider-tracker.cjs'), 'module.exports = { track() {} };\n', 'utf8');
   return root;
 }
@@ -56,6 +64,25 @@ function parseDecision(stdout: string): { hookSpecificOutput?: { permissionDecis
 }
 
 describe('hook-handler permission-guard build freshness', () => {
+  it('copies credential vault guard policy entries into relocated helper fixtures', () => {
+    const root = makeHookProject();
+    try {
+      const protectedPolicy = JSON.parse(readFileSync(join(root, '.claude', 'helpers', 'protected-paths.policy.json'), 'utf8'));
+      const secretPolicy = JSON.parse(readFileSync(join(root, '.claude', 'helpers', 'secret-paths.policy.json'), 'utf8'));
+
+      for (const entry of credentialProtectedEntries) {
+        expect(protectedPolicy.protectedWrite).toContain(entry);
+        expect(protectedPolicy.protectedWriteGlobal).toContain(entry);
+        expect(protectedPolicy.protectedRead).toContain(entry);
+      }
+      expect(secretPolicy.secretBasenameGlobs).toContain('credential-vault*');
+      expect(secretPolicy.secretDirComponents).toContain('.hive-flow/credentials');
+      expect(secretPolicy.secretBasenames).toContain('credential-agent.sock');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('keeps never-built permission guard fail-open', () => {
     const root = makeHookProject();
     try {

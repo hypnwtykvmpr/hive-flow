@@ -20,6 +20,9 @@ const DEFAULT_POLICY = {
     'v3/@hive-flow/cli/dist/src/mcp-tools/',
     '${HOME}/.hive-flow/permission-guard/',
     '${HOME}/.hive-flow/enforcement/bin/',
+    '${HOME}/.hive-flow/credential-vault*',
+    '${HOME}/.hive-flow/credentials*',
+    '${HOME}/.hive-flow/run/credential-agent.sock',
     'scripts/permission-guard-setup.mjs',
     'scripts/install-enforcement.mjs',
   ],
@@ -36,6 +39,9 @@ const DEFAULT_POLICY = {
     'v3/@hive-flow/cli/dist/src/permission-guard/',
     'v3/@hive-flow/cli/dist/src/mcp-tools/',
     '${HOME}/.hive-flow/enforcement/bin/',
+    '${HOME}/.hive-flow/credential-vault*',
+    '${HOME}/.hive-flow/credentials*',
+    '${HOME}/.hive-flow/run/credential-agent.sock',
     'scripts/permission-guard-setup.mjs',
     'scripts/install-enforcement.mjs',
   ],
@@ -44,6 +50,9 @@ const DEFAULT_POLICY = {
     '.env',
     '.claude/settings.json',
     '.claude/settings.local.json',
+    '${HOME}/.hive-flow/credential-vault*',
+    '${HOME}/.hive-flow/credentials*',
+    '${HOME}/.hive-flow/run/credential-agent.sock',
   ],
   hmacKeyPath: '.hive-flow/enforcement/.hmac-key',
   signedStateNames: [
@@ -190,7 +199,15 @@ function matchNormalized(target, pattern, entry) {
     const rel = path.relative(pattern, target);
     return rel === '' || (!rel.startsWith('..') && !rel.startsWith(path.sep));
   }
+  if (entry.includes('*')) {
+    return globPatternToRegExp(pattern).test(target);
+  }
   return target === pattern;
+}
+
+function globPatternToRegExp(pattern) {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped.replace(/\*/g, '.*')}$`);
 }
 
 function targetCandidates(filePath, projectRoot) {

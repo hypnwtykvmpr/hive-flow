@@ -90,6 +90,28 @@ describe('shared protected-path policy matcher', () => {
     }
   });
 
+  it('protects credential vault wildcard entries in both TS and CJS matchers', () => {
+    const root = tmpProject();
+    try {
+      for (const target of [
+        join(homedir(), '.hive-flow', 'credential-vault.json.gcm'),
+        join(homedir(), '.hive-flow', 'credential-vault.sqlite.gcm'),
+        join(homedir(), '.hive-flow', 'credentials', 'openrouter.json'),
+        join(homedir(), '.hive-flow', 'credentials-v2.json'),
+        join(homedir(), '.hive-flow', 'run', 'credential-agent.sock'),
+      ]) {
+        expect(isProtectedWritePath(target, root), target).toBe(true);
+        expect(cjsPolicy.isProtectedWritePath(target, root), target).toBe(true);
+        expect(isProtectedReadPath(target, root), target).toBe(true);
+        expect(cjsPolicy.isProtectedReadPath(target, root), target).toBe(true);
+        expect(getProtectedWriteScope(target, root), target).toBe('global');
+        expect(cjsPolicy.getProtectedWriteScope(target, root), target).toBe('global');
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('protects the relocation installer script itself', () => {
     const root = tmpProject();
     try {

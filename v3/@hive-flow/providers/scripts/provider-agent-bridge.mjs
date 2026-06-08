@@ -1474,6 +1474,36 @@ function denyUnsafeRunShellCommand(renderedCommand, argv) {
     return 'run_shell env launcher wrappers are not available';
   }
 
+  if (argv.some((entry) => /^\/proc\/(?:self|\d+)\/environ$/i.test(String(entry).replace(/\\/g, '/')))) {
+    return 'run_shell /proc/*/environ reads are not available';
+  }
+
+  if (executable === 'printenv') {
+    return 'run_shell printenv is not available because it can expose provider credentials';
+  }
+
+  if (executable === 'ps' && argv.slice(1).some((entry) => entry === 'eww' || entry === 'auxeww' || entry === '-E')) {
+    return 'run_shell ps environment output is not available';
+  }
+
+  if (executable === 'security' && argv[1] === 'find-generic-password' &&
+      argv.slice(2).some((entry) => entry === '-w' || entry === '--password')) {
+    return 'run_shell macOS keychain password output is not available';
+  }
+
+  if (executable === 'secret-tool' && argv[1] === 'lookup') {
+    return 'run_shell libsecret lookup output is not available';
+  }
+
+  if (executable === 'cmdkey') {
+    return 'run_shell Windows credential listing is not available';
+  }
+
+  if ((executable === 'powershell' || executable === 'pwsh') &&
+      argv.slice(1).some((entry) => /Get-StoredCredential/i.test(entry))) {
+    return 'run_shell Windows credential retrieval is not available';
+  }
+
   if (executable === 'git' && String(argv[1] || '').toLowerCase() === 'push') {
     return 'run_shell git push is not available to provider agents';
   }

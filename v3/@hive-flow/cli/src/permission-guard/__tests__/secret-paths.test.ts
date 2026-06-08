@@ -34,6 +34,8 @@ describe('secret-path classifier', () => {
       'credentials',
       '.netrc',
       'service-account-123.json',
+      '~/.hive-flow/credential-vault.json.gcm',
+      '~/.hive-flow/run/credential-agent.sock',
       '.aws/credentials',
       '.terraform/terraform.tfstate',
     ]) {
@@ -104,8 +106,11 @@ describe('secret-path classifier', () => {
   it('falls back to the embedded default policy when json cannot be loaded', () => {
     const policy = loadSecretPolicy(join('/missing', 'secret-paths.policy.json'));
     expect(policy.secretDirComponents).toContain('.ssh');
+    expect(policy.secretDirComponents).toContain('.hive-flow/credentials');
     expect(policy.secretBasenameGlobs).toContain('.env.*');
+    expect(policy.secretBasenameGlobs).toContain('credential-vault*');
     expect(isSecretPath('x/.ssh/id_rsa', policy)).toBe(true);
+    expect(isSecretPath('~/.hive-flow/credentials/openrouter.json', policy)).toBe(true);
   });
 
   it('keeps the policy file protected by the existing permission-guard source directory rule', () => {

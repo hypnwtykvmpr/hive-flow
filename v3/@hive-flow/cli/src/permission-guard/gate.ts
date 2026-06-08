@@ -998,6 +998,38 @@ function findEnvDumpSecret(tokens: string[]): string | null {
   return null;
 }
 
+function isProcEnvironPath(token: string): boolean {
+  return /^\/proc\/(?:self|\d+)\/environ$/i.test(token.replace(/\\/g, '/'));
+}
+
+function findCredentialExposurePrimitive(tokens: string[]): string | null {
+  const command = commandBasename(tokens[0] || '');
+
+  for (const token of tokens) {
+    if (isProcEnvironPath(token)) return token;
+  }
+
+  if (command === 'ps') {
+    for (const token of tokens.slice(1)) {
+      if (token === 'eww' || token === 'auxeww' || token === '-E') return 'ps environment';
+    }
+  }
+
+  if (command === 'security' && tokens[1] === 'find-generic-password') {
+    if (tokens.includes('-w') || tokens.includes('--password')) return 'security find-generic-password -w';
+  }
+
+  if (command === 'secret-tool' && tokens[1] === 'lookup') return 'secret-tool lookup';
+  if (command === 'cmdkey') return 'cmdkey credential listing';
+
+  if ((command === 'powershell' || command === 'pwsh') &&
+      tokens.some(token => /Get-StoredCredential/i.test(token))) {
+    return 'powershell Get-StoredCredential';
+  }
+
+  return null;
+}
+
 function findSecretPathArg(tokens: string[]): string | null {
   const command = commandBasename(tokens[0] || '');
   const grepLike = command === 'grep' || command === 'rg';
@@ -1026,6 +1058,7 @@ function findSecretPathArg(tokens: string[]): string | null {
       patternSkipped = true;
       continue;
     }
+    if (isProcEnvironPath(token)) return token;
     if (isSecretPath(token)) return token;
   }
 
@@ -1037,6 +1070,8 @@ function findSecretBashReadArg(cmd: string): string | null {
     for (const segment of splitShellCommands(cmd)) {
       const tokens = shellWords(stripCommand(segment));
       if (!tokens || tokens.length === 0) continue;
+      const credentialPrimitive = findCredentialExposurePrimitive(tokens);
+      if (credentialPrimitive) return credentialPrimitive;
       const envDump = findEnvDumpSecret(tokens);
       if (envDump) return envDump;
       if (isReadCommand(tokens[0])) {

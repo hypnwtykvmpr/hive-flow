@@ -2320,7 +2320,21 @@ function detectCircumvention(toolName, toolInput, state) {
     }
 
     // 2c2. Secret exposure prevention — block commands that would print/echo API key values
-    const SECRET_ENV_VARS = ['OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'DEEPSEEK_API_KEY', 'ANTHROPIC_API_KEY', 'HIVE_FLOW_AGENT_TOKEN', 'PINATA_JWT'];
+    const SECRET_ENV_VARS = [
+      'OPENROUTER_API_KEY',
+      'OPENAI_API_KEY',
+      'DEEPSEEK_API_KEY',
+      'ANTHROPIC_API_KEY',
+      'CODEX_API_KEY',
+      'GEMINI_API_KEY',
+      'GOOGLE_API_KEY',
+      'GOOGLE_APPLICATION_CREDENTIALS',
+      'CURSOR_API_KEY',
+      'QWEN_API_KEY',
+      'DASHSCOPE_API_KEY',
+      'HIVE_FLOW_AGENT_TOKEN',
+      'PINATA_JWT',
+    ];
     for (const secretVar of SECRET_ENV_VARS) {
       // Match: echo $VAR, echo ${VAR}, printf $VAR, cat with env, printenv VAR, env | grep VAR
       if (new RegExp(`(echo|printf|cat|print)\\b.*\\$\\{?${secretVar}\\}?`, 'i').test(command) ||
@@ -2330,6 +2344,24 @@ function detectCircumvention(toolName, toolInput, state) {
         return {
           circumvention: true,
           reason: `CIRCUMVENTION: Attempted to expose secret environment variable ${secretVar}`,
+          severity: 'normal',
+        };
+      }
+    }
+
+    const credentialExposureMatchers = [
+      [/\/proc\/(?:self|\d+)\/environ/i, '/proc/*/environ'],
+      [/\bps\b(?=[\s\S]*(?:\beww\b|(?:^|\s)-E(?:\s|$)))/i, 'ps process environment output'],
+      [/\bsecurity\s+find-generic-password\b(?=[\s\S]*(?:\s-w\b|--password\b))/i, 'macOS keychain password output'],
+      [/\bsecret-tool\s+lookup\b/i, 'libsecret credential lookup output'],
+      [/\bcmdkey\b/i, 'Windows credential manager listing'],
+      [/\b(?:powershell|pwsh)\b(?=[\s\S]*Get-StoredCredential)/i, 'Windows credential retrieval output'],
+    ];
+    for (const [pattern, label] of credentialExposureMatchers) {
+      if (pattern.test(command)) {
+        return {
+          circumvention: true,
+          reason: `CIRCUMVENTION: Attempted to expose credential material via ${label}`,
           severity: 'normal',
         };
       }

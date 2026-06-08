@@ -29,6 +29,7 @@ export const DEFAULT_SECRET_POLICY: SecretPathPolicy = {
     'private-keys',
     '.private',
     '.age',
+    '.hive-flow/credentials',
   ],
   secretBasenames: [
     'id_rsa',
@@ -51,11 +52,13 @@ export const DEFAULT_SECRET_POLICY: SecretPathPolicy = {
     '.aws/credentials',
     '.terraform/terraform.tfstate',
     'terraform.tfvars',
+    'credential-agent.sock',
   ],
   secretBasenameGlobs: [
     '.env.*',
     '.env.*.local',
     'service-account*.json',
+    'credential-vault*',
   ],
   secretExtensions: [
     '.pem',
