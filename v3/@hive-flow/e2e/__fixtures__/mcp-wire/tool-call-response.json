@@ -1,0 +1,9 @@
+{
+  "id": 3,
+  "jsonrpc": "2.0",
+  "result": {
+    "key": "ca1-wire",
+    "ok": true,
+    "storedValue": "golden-wire"
+  }
+}

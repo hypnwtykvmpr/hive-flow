@@ -1,0 +1,25 @@
+{
+  "name": "@hive-flow/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-package e2e tests for Hive Flow V3 built package surfaces",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:anti-mock": "vitest run __tests__/anti-mock-theater.test.ts"
+  },
+  "dependencies": {
+    "@hive-flow/mcp": "workspace:*",
+    "@hive-flow/memory": "workspace:*",
+    "@hive-flow/plugins": "workspace:*",
+    "@hive-flow/shared": "workspace:*",
+    "@hive-flow/swarm": "workspace:*",
+    "sql.js": "^1.14.1"
+  },
+  "devDependencies": {
+    "fast-check": "^4.8.0",
+    "vitest": "^4.0.16"
+  }
+}

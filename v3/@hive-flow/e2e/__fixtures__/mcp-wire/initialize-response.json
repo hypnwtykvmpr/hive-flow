@@ -1,0 +1,32 @@
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "capabilities": {
+      "logging": {
+        "level": "info"
+      },
+      "prompts": {
+        "listChanged": true
+      },
+      "resources": {
+        "listChanged": true,
+        "subscribe": true
+      },
+      "sampling": {},
+      "tools": {
+        "listChanged": true
+      }
+    },
+    "instructions": "Hive-Flow MCP Server V3 ready for tool execution",
+    "protocolVersion": {
+      "major": 2025,
+      "minor": 11,
+      "patch": 25
+    },
+    "serverInfo": {
+      "name": "Hive-Flow MCP Server V3",
+      "version": "3.0.0"
+    }
+  }
+}

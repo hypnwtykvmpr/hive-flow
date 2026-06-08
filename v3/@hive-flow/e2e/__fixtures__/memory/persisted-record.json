@@ -1,0 +1,20 @@
+{
+  "accessLevel": "team",
+  "content": "CA-1 proves the real memory package seam with a persisted record.",
+  "key": "ca1-foundation",
+  "metadata": {
+    "fixtureVersion": 1,
+    "seam": "memory"
+  },
+  "namespace": "ca1-e2e-memory",
+  "ownerId": "codex-e2e",
+  "references": [
+    "design-m5-freeze"
+  ],
+  "tags": [
+    "ca1",
+    "e2e"
+  ],
+  "type": "semantic",
+  "version": 1
+}
