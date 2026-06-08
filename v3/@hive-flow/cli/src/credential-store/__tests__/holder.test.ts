@@ -25,20 +25,18 @@ afterEach(async () => {
 });
 
 describe('credential USE-not-KNOW boundary gate', () => {
-  it('keeps PR3 green and leaves PR4 strict provider bootstrap xfail', () => {
+  it('keeps PR3 green and verifies PR5 strict provider bootstrap is green', () => {
     expect(getCredentialBoundaryGate('credential-use-not-know')).toMatchObject({
       targetSlice: 'PR3',
       status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')).toMatchObject({
-      targetSlice: 'PR4',
-      status: 'xfail',
+      targetSlice: 'PR5',
+      status: 'green',
     });
-    expect(CREDENTIAL_BOUNDARY_GATES.filter(gate => gate.status === 'xfail').map(gate => gate.id)).toEqual([
-      'strict-api-no-env-no-config-serialization',
-    ]);
+    expect(CREDENTIAL_BOUNDARY_GATES.filter(gate => gate.status === 'xfail').map(gate => gate.id)).toEqual([]);
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
-      .toMatch(/production holder bootstrap|PR5/i);
+      .toMatch(/production holder bootstrap|seeded|credential store/i);
   });
 });
 

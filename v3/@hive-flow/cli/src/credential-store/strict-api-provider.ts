@@ -1,8 +1,13 @@
 import { existsSync, lstatSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { CredentialHolderService, sendCredentialHolderCommand, type ProviderUseHandlerInput } from './holder.js';
-import { createPeerCredentialResolver } from './peer-credentials.js';
+import {
+  CredentialHolderService,
+  sendCredentialHolderCommand,
+  type CredentialHolderServiceOptions,
+  type ProviderUseHandlerInput,
+} from './holder.js';
+import { createPeerCredentialResolver, type PeerCredentialResolver } from './peer-credentials.js';
 import { redactCredentialMaterial } from './safe-serialization.js';
 
 export const STRICT_API_PROVIDERS = new Set(['openrouter', 'deepseek', 'openai', 'qwen']);
@@ -176,14 +181,21 @@ export function createStrictApiProviderInvoker(options: {
 export function createProductionCredentialHolderService(options: {
   socketPath?: string;
   peerHelperCommand?: string;
+  peerCredentialResolver?: PeerCredentialResolver['lookup'];
+  peerRoleResolver?: CredentialHolderServiceOptions['peerRoleResolver'];
   fetchImpl?: typeof fetch;
+  baseUrls?: Partial<Record<string, string>>;
 } = {}): CredentialHolderService {
   return new CredentialHolderService({
     socketPath: options.socketPath ?? defaultCredentialHolderSocketPath(),
-    peerCredentialResolver: createPeerCredentialResolver({
+    peerCredentialResolver: options.peerCredentialResolver ?? createPeerCredentialResolver({
       helperCommand: options.peerHelperCommand ?? process.env.HIVE_FLOW_PEER_CRED_HELPER,
     }).lookup,
-    providerInvoker: createStrictApiProviderInvoker({ fetchImpl: options.fetchImpl }),
+    peerRoleResolver: options.peerRoleResolver,
+    providerInvoker: createStrictApiProviderInvoker({
+      fetchImpl: options.fetchImpl,
+      baseUrls: options.baseUrls,
+    }),
   });
 }
 

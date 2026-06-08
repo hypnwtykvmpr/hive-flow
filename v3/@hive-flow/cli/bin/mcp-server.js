@@ -37,6 +37,7 @@ try {
 
 import { randomUUID } from 'crypto';
 import { listMCPTools, callMCPTool, hasTool } from '../dist/src/mcp-client.js';
+import { bootstrapProductionCredentialHolder } from '../dist/src/credential-store/holder-runtime.js';
 
 /**
  * JSON-RPC error codes (MCP / JSON-RPC 2.0 spec)
@@ -67,6 +68,42 @@ console.error(JSON.stringify({
   sessionId,
   version: VERSION,
 }));
+
+let credentialHolderRuntime = null;
+
+async function bootstrapCredentialHolder() {
+  try {
+    credentialHolderRuntime = await bootstrapProductionCredentialHolder({
+      projectRoot: process.cwd(),
+    });
+    console.error(JSON.stringify({
+      event: 'credential-holder-started',
+      seededProviders: credentialHolderRuntime.seededProviders,
+      socketPath: credentialHolderRuntime.socketPath,
+    }));
+  } catch (error) {
+    const message = `Credential holder bootstrap skipped: ${error instanceof Error ? error.message : String(error)}`;
+    if (process.env.HIVE_FLOW_CREDENTIAL_HOLDER_REQUIRED === '1') {
+      console.error(`[${new Date().toISOString()}] ERROR [hive-flow-mcp] ${message}`);
+      process.exit(1);
+    }
+    console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] ${message}`);
+  }
+}
+
+async function shutdown(signal) {
+  console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] ${signal}, shutting down...`);
+  if (credentialHolderRuntime) {
+    try {
+      await credentialHolderRuntime.stop();
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] credential holder stop failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  process.exit(0);
+}
+
+await bootstrapCredentialHolder();
 
 // Handle stdin messages
 let buffer = '';
@@ -104,21 +141,16 @@ process.stdin.on('data', async (chunk) => {
 });
 
 process.stdin.on('end', () => {
-  console.error(
-    `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) stdin closed, shutting down...`
-  );
-  process.exit(0);
+  void shutdown(`(${sessionId}) stdin closed`);
 });
 
 // Handle process termination
 process.on('SIGINT', () => {
-  console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] Received SIGINT`);
-  process.exit(0);
+  void shutdown('Received SIGINT');
 });
 
 process.on('SIGTERM', () => {
-  console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] Received SIGTERM`);
-  process.exit(0);
+  void shutdown('Received SIGTERM');
 });
 
 /**

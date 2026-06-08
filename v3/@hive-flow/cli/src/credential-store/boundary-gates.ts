@@ -1,5 +1,5 @@
 export type CredentialBoundaryGateStatus = 'xfail' | 'green';
-export type CredentialBoundaryGateSlice = 'PR3' | 'PR4';
+export type CredentialBoundaryGateSlice = 'PR3' | 'PR4' | 'PR5';
 
 export interface CredentialBoundaryGate {
   id: 'credential-use-not-know' | 'strict-api-no-env-no-config-serialization';
@@ -17,9 +17,9 @@ export const CREDENTIAL_BOUNDARY_GATES: readonly CredentialBoundaryGate[] = [
   },
   {
     id: 'strict-api-no-env-no-config-serialization',
-    targetSlice: 'PR4',
-    status: 'xfail',
-    description: 'Strict API providers have holder-owned client plumbing, but production holder bootstrap and secret seeding land in PR5 before this gate flips green.',
+    targetSlice: 'PR5',
+    status: 'green',
+    description: 'Strict API providers complete through a production holder bootstrap seeded from the credential store; raw keys stay out of env/config/log/result surfaces.',
   },
 ] as const;
 

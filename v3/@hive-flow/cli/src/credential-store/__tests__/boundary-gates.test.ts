@@ -23,22 +23,22 @@ function listFiles(root: string): string[] {
 }
 
 describe('credential boundary gate registry', () => {
-  it('keeps PR3 green and leaves the PR4 strict API bootstrap boundary xfail', () => {
+  it('keeps PR3 green and flips the PR5 strict API bootstrap boundary green', () => {
     expect(getCredentialBoundaryGate('credential-use-not-know')).toMatchObject({
       targetSlice: 'PR3',
       status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')).toMatchObject({
-      targetSlice: 'PR4',
-      status: 'xfail',
+      targetSlice: 'PR5',
+      status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
-      .toMatch(/production holder bootstrap|PR5/i);
+      .toMatch(/production holder bootstrap|seeded|PR5/i);
   });
 
   it('requires all xfail gates to name the slice that must flip them green', () => {
     for (const gate of CREDENTIAL_BOUNDARY_GATES.filter(entry => entry.status === 'xfail')) {
-      expect(gate.targetSlice).toMatch(/^PR[34]$/);
+      expect(gate.targetSlice).toMatch(/^PR[35]$/);
       expect(gate.description.trim()).not.toBe('');
     }
   });

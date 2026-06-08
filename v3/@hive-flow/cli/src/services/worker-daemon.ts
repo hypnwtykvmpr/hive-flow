@@ -22,6 +22,10 @@ import {
   type HeadlessWorkerType,
   type HeadlessExecutionResult,
 } from './headless-worker-executor.js';
+import {
+  bootstrapProductionCredentialHolder,
+  type ProductionCredentialHolderRuntime,
+} from '../credential-store/holder-runtime.js';
 
 // Worker types matching hooks-tools.ts
 export type WorkerType =
@@ -124,6 +128,7 @@ export class WorkerDaemon extends EventEmitter {
   // Headless execution support
   private headlessExecutor: HeadlessWorkerExecutor | null = null;
   private headlessAvailable: boolean = false;
+  private credentialHolderRuntime: ProductionCredentialHolderRuntime | null = null;
 
   constructor(projectRoot: string, config?: Partial<DaemonConfig>) {
     super();
@@ -327,6 +332,7 @@ export class WorkerDaemon extends EventEmitter {
 
     this.running = true;
     this.startedAt = new Date();
+    await this.startCredentialHolderRuntime();
     this.emit('started', { pid: process.pid, startedAt: this.startedAt });
 
     // Schedule all enabled workers
@@ -353,11 +359,37 @@ export class WorkerDaemon extends EventEmitter {
 
     // Clear all timers
     this.timerManager.clearAll();
+    await this.stopCredentialHolderRuntime();
 
     this.running = false;
     this.saveState();
     this.emit('stopped', { stoppedAt: new Date() });
     this.log('info', 'Daemon stopped');
+  }
+
+  private async startCredentialHolderRuntime(): Promise<void> {
+    if (this.credentialHolderRuntime) return;
+    try {
+      this.credentialHolderRuntime = await bootstrapProductionCredentialHolder({
+        projectRoot: this.projectRoot,
+      });
+      this.log('info', `Credential holder started with ${this.credentialHolderRuntime.seededProviders.length} seeded provider(s)`);
+    } catch (error) {
+      const message = `Credential holder bootstrap skipped: ${(error as Error).message}`;
+      if (process.env.HIVE_FLOW_CREDENTIAL_HOLDER_REQUIRED === '1') {
+        throw new Error(message);
+      }
+      this.log('warn', message);
+    }
+  }
+
+  private async stopCredentialHolderRuntime(): Promise<void> {
+    const runtime = this.credentialHolderRuntime;
+    this.credentialHolderRuntime = null;
+    if (!runtime) return;
+    await runtime.stop().catch((error) => {
+      this.log('warn', `Credential holder stop failed: ${(error as Error).message}`);
+    });
   }
 
   /**

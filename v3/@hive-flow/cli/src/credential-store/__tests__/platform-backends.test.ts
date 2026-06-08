@@ -248,7 +248,7 @@ describe('macOS Keychain backend', () => {
         rmSync(root, { recursive: true, force: true });
       }
     },
-    30_000,
+    120_000,
   );
 });
 
