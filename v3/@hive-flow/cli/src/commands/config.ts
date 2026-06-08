@@ -8,6 +8,12 @@ import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import {
+  inspectCredentialKeyStatus,
+  removeProviderCredential,
+  repairCredentialVault,
+  storeProviderCredential,
+} from '../credential-store/holder-runtime.js';
 
 // Init configuration
 const initCommand: Command = {
@@ -418,11 +424,114 @@ const importCommand: Command = {
   }
 };
 
+// Credential key management
+const keySetCommand: Command = {
+  name: 'set',
+  description: 'Store a provider key in the platform credential store and initialize the encrypted vault',
+  options: [
+    { name: 'provider', short: 'p', description: 'Provider name', type: 'string', required: true },
+    { name: 'value', short: 'v', description: 'Provider API key value', type: 'string' },
+    { name: 'degraded', description: 'Allow degraded backend setup for explicit test/CI lanes', type: 'boolean', default: false },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const provider = String(ctx.flags.provider || ctx.args[0] || '').trim();
+    const secret = typeof ctx.flags.value === 'string' && ctx.flags.value.length > 0
+      ? ctx.flags.value
+      : typeof ctx.args[1] === 'string'
+        ? ctx.args[1]
+        : '';
+    if (!provider || !secret) {
+      output.printError('Provider and key value are required');
+      return { success: false, exitCode: 1 };
+    }
+    const result = await storeProviderCredential({
+      provider,
+      secret,
+      allowDegraded: Boolean(ctx.flags.degraded),
+    });
+    output.printSuccess(`Stored credential for ${result.provider}`);
+    return { success: true, data: { provider: result.provider, stored: result.stored, vaultReady: result.vaultReady } };
+  },
+};
+
+const keyStatusCommand: Command = {
+  name: 'status',
+  description: 'Show non-secret provider key status',
+  options: [
+    { name: 'provider', short: 'p', description: 'Provider name', type: 'string' },
+    { name: 'json', description: 'Print JSON output', type: 'boolean', default: false },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const provider = String(ctx.flags.provider || ctx.args[0] || '').trim() || undefined;
+    const status = await inspectCredentialKeyStatus({ provider });
+    const backend = status.backend ?? { available: status.unlock === 'available' };
+    const data = {
+      provider: status.provider,
+      present: status.present,
+      drift: status.drift,
+      holderCache: status.holderCache,
+      unlock: status.unlock,
+      backend: {
+        available: backend.available,
+        degraded: backend.degraded,
+        locked: backend.locked,
+        reason: backend.reason,
+      },
+    };
+    if (ctx.flags.json || ctx.flags.format === 'json') output.printJson(data);
+    else output.printInfo(`${data.provider || 'credentials'}: ${data.present ? 'present' : 'missing'} (${data.unlock})`);
+    return { success: true, data };
+  },
+};
+
+const keyRepairCommand: Command = {
+  name: 'repair',
+  description: 'Create or repair the encrypted credential vault',
+  options: [
+    { name: 'degraded', description: 'Allow degraded backend setup for explicit test/CI lanes', type: 'boolean', default: false },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const result = await repairCredentialVault({ allowDegraded: Boolean(ctx.flags.degraded) });
+    output.printSuccess(result.vaultReady ? 'Credential vault ready' : 'Credential vault repair attempted');
+    return { success: true, data: { repaired: result.repaired, vaultReady: result.vaultReady } };
+  },
+};
+
+const keyRemoveCommand: Command = {
+  name: 'remove',
+  description: 'Remove a provider key from the platform credential store',
+  options: [
+    { name: 'provider', short: 'p', description: 'Provider name', type: 'string', required: true },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const provider = String(ctx.flags.provider || ctx.args[0] || '').trim();
+    if (!provider) {
+      output.printError('Provider is required');
+      return { success: false, exitCode: 1 };
+    }
+    const result = await removeProviderCredential({ provider });
+    output.printSuccess(`Removed credential for ${result.provider}`);
+    return { success: true, data: result };
+  },
+};
+
+const keyCommand: Command = {
+  name: 'key',
+  description: 'Manage provider keys in the Hive Flow credential store',
+  subcommands: [keySetCommand, keyStatusCommand, keyRepairCommand, keyRemoveCommand],
+  examples: [
+    { command: 'hive-flow config key set -p openrouter -v <key>', description: 'Store OpenRouter key' },
+    { command: 'hive-flow config key status -p openrouter --json', description: 'Check key status without printing values' },
+    { command: 'hive-flow config key repair', description: 'Create or repair encrypted vault metadata' },
+    { command: 'hive-flow config key remove -p openrouter', description: 'Remove OpenRouter key' },
+  ],
+};
+
 // Main config command
 export const configCommand: Command = {
   name: 'config',
   description: 'Configuration management',
-  subcommands: [initCommand, getCommand, setCommand, providersCommand, resetCommand, exportCommand, importCommand],
+  subcommands: [initCommand, getCommand, setCommand, providersCommand, keyCommand, resetCommand, exportCommand, importCommand],
   options: [],
   examples: [
     { command: 'hive-flow config init --v3', description: 'Initialize V3 config' },
@@ -441,6 +550,7 @@ export const configCommand: Command = {
       `${output.highlight('get')}        - Get configuration value`,
       `${output.highlight('set')}        - Set configuration value`,
       `${output.highlight('providers')}  - Manage AI providers`,
+      `${output.highlight('key')}        - Manage provider keys in the credential store`,
       `${output.highlight('reset')}      - Reset to defaults`,
       `${output.highlight('export')}     - Export configuration`,
       `${output.highlight('import')}     - Import configuration`

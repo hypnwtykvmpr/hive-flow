@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import { execSync, exec } from 'child_process';
 import { promisify } from 'util';
 import { isEnforcementEngineInstalled, type EnforcementMarkerOptions } from '../install/enforcement-marker.js';
+import { inspectCredentialKeyStatus } from '../credential-store/holder-runtime.js';
 
 // Promisified exec with proper shell and env inheritance for cross-platform support
 const execAsync = promisify(exec);
@@ -167,6 +168,43 @@ async function checkApiKeys(): Promise<HealthCheck> {
     return { name: 'API Keys', status: 'warn', message: `Found: ${found.join(', ')} (no Claude key)`, fix: 'export ANTHROPIC_API_KEY=your_key' };
   } else {
     return { name: 'API Keys', status: 'warn', message: 'No API keys found', fix: 'export ANTHROPIC_API_KEY=your_key' };
+  }
+}
+
+export async function checkCredentialStore(): Promise<HealthCheck> {
+  try {
+    const status = await inspectCredentialKeyStatus({ provider: 'openrouter' });
+    if (status.unlock === 'available') {
+      return {
+        name: 'Credential Store',
+        status: status.present ? 'pass' : 'warn',
+        message: status.present
+          ? `OpenRouter key present; holder cache ${status.holderCache ? 'reachable' : 'not reachable'}`
+          : 'Credential backend unlock available, but OpenRouter key is not stored',
+        fix: status.present ? undefined : 'hive-flow config key set -p openrouter -v <key>',
+      };
+    }
+    if (status.unlock === 'locked') {
+      return {
+        name: 'Credential Store',
+        status: 'warn',
+        message: 'Credential backend is locked',
+        fix: 'Unlock your OS credential store and rerun hive-flow doctor -c credentials',
+      };
+    }
+    return {
+      name: 'Credential Store',
+      status: 'warn',
+      message: `Credential backend unavailable${status.backend.reason ? `: ${status.backend.reason}` : ''}`,
+      fix: 'hive-flow setup credentials',
+    };
+  } catch (error) {
+    return {
+      name: 'Credential Store',
+      status: 'warn',
+      message: `Credential check failed: ${(error as Error).message}`,
+      fix: 'hive-flow setup credentials',
+    };
   }
 }
 
@@ -473,6 +511,7 @@ export const doctorCommand: Command = {
       checkDaemonStatus,
       checkMemoryDatabase,
       checkApiKeys,
+      checkCredentialStore,
       checkMcpServers,
       checkDiskSpace,
       checkBuildTools
@@ -489,6 +528,8 @@ export const doctorCommand: Command = {
       'daemon': checkDaemonStatus,
       'memory': checkMemoryDatabase,
       'api': checkApiKeys,
+      'credentials': checkCredentialStore,
+      'credential': checkCredentialStore,
       'git': checkGit,
       'mcp': checkMcpServers,
       'disk': checkDiskSpace,

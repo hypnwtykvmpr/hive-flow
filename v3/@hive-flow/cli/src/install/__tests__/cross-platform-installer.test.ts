@@ -148,5 +148,7 @@ describe('cross-platform enforcement installer', () => {
     expect(optionNames.has('engine-only')).toBe(true);
     expect(optionNames.has('hooks-only')).toBe(true);
     expect(optionNames.has('keypair-only')).toBe(true);
+    expect(optionNames.has('credentials')).toBe(true);
+    expect(optionNames.has('degraded')).toBe(true);
   });
 });

@@ -39,6 +39,7 @@ import {
   probeCredentialHolderStatus,
   type CredentialHolderProbeStatus,
 } from '../credential-store/strict-api-provider.js';
+import { initializeCredentialVault } from '../credential-store/holder-runtime.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 async function importConnectorAdapters(): Promise<void> {
@@ -488,13 +489,45 @@ const providersCommand: Command = {
   },
 };
 
+const credentialsCommand: Command = {
+  name: 'credentials',
+  description: 'Create the per-machine KEK and empty encrypted credential vault',
+  options: [
+    {
+      name: 'degraded',
+      description: 'Allow degraded backend setup for explicit test/CI lanes',
+      type: 'boolean',
+      default: false,
+    },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const result = await initializeCredentialVault({
+      allowDegraded: Boolean(ctx.flags.degraded),
+    });
+    const data = {
+      backend: {
+        available: result.backend.available,
+        degraded: result.backend.degraded,
+        locked: result.backend.locked,
+        reason: result.backend.reason,
+      },
+      vaultPath: result.vaultPath,
+      createdVault: result.createdVault,
+      decrypts: result.decrypts,
+    };
+    if (ctx.flags.format === 'json') output.printJson(data);
+    else output.printSuccess(result.createdVault ? 'Created credential vault' : 'Credential vault already ready');
+    return { success: true, data };
+  },
+};
+
 // Main setup command — also exposes the §7 agent-integration surface via
 // top-level flags (--auto, --dry-run, --verify, --uninstall, --detect).
 // Subcommands `global` and `permission-guard` retain their original behavior.
 export const setupCommand: Command = {
   name: 'setup',
   description: 'Environment setup and configuration (top-level flags trigger §7 agent-integration)',
-  subcommands: [globalCommand, providersCommand, permissionGuardCommand],
+  subcommands: [globalCommand, providersCommand, credentialsCommand, permissionGuardCommand],
   options: [
     { name: 'auto', description: 'Apply selected integrations to detected/specified agent CLIs', type: 'boolean', default: false },
     { name: 'dry-run', description: 'Plan-only — no file writes', type: 'boolean', default: false },
@@ -520,7 +553,7 @@ export const setupCommand: Command = {
       output.writeln();
       output.writeln(output.bold('Hive Flow Setup'));
       output.writeln(output.dim('Use one of: --auto, --dry-run, --verify, --uninstall, --detect'));
-      output.writeln(output.dim('Or a subcommand: global, permission-guard'));
+      output.writeln(output.dim('Or a subcommand: global, credentials, providers, permission-guard'));
       return { success: true };
     }
     const agentsRaw = (flags.agents as string | undefined) ?? 'detected';
@@ -550,6 +583,7 @@ export const setupCommand: Command = {
     { command: 'hive-flow setup --auto --features connector', description: 'Install connector wrappers for all detected CLIs' },
     { command: 'hive-flow setup providers', description: 'Check OpenRouter and Gemini provider credential setup' },
     { command: 'hive-flow setup providers --create-config', description: 'Write non-secret provider credential references' },
+    { command: 'hive-flow setup credentials', description: 'Create per-machine KEK and empty encrypted credential vault' },
     { command: 'hive-flow setup global', description: 'Create global ~/.hive-flow/ directory' },
     { command: 'hive-flow setup permission-guard setup', description: 'One-time Permission Guard keypair generation' },
   ],

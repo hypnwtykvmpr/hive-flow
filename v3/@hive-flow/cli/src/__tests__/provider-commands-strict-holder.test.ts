@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   healthCalls: [] as string[],
   holderStatus: vi.fn(() => ({ available: false, reason: 'missing holder' })),
+  completeStrictApiProviderViaHolder: vi.fn(async () => ({ content: 'ok' })),
 }));
 
 vi.mock('@hive-flow/shared', () => ({
@@ -56,6 +57,7 @@ vi.mock('../credential-store/strict-api-provider.js', async () => {
   return {
     ...actual,
     probeCredentialHolderStatus: mocks.holderStatus,
+    completeStrictApiProviderViaHolder: mocks.completeStrictApiProviderViaHolder,
   };
 });
 
@@ -82,6 +84,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.healthCalls.length = 0;
   mocks.holderStatus.mockReturnValue({ available: false, reason: 'missing holder' });
+  mocks.completeStrictApiProviderViaHolder.mockResolvedValue({ content: 'ok' });
   delete process.env.OPENROUTER_API_KEY;
   delete process.env.ANTHROPIC_API_KEY;
 });
@@ -117,5 +120,29 @@ describe('providers command strict API holder status', () => {
 
     expect(mocks.healthCalls).toEqual([]);
     expect(spinner.stop).toHaveBeenCalledWith(expect.stringContaining('holder needed'));
+  });
+
+  it('tests strict API providers by making a holder-routed completion probe when available', async () => {
+    mocks.holderStatus.mockReturnValue({ available: true, socketPath: '/tmp/hf-holder.sock' });
+    const spinner = {
+      start: vi.fn(),
+      succeed: vi.fn(),
+      fail: vi.fn(),
+      stop: vi.fn(),
+      setText: vi.fn(),
+    };
+    vi.spyOn(output, 'createSpinner').mockReturnValue(spinner);
+    vi.spyOn(output, 'writeln').mockImplementation(() => undefined);
+    vi.spyOn(output, 'printSuccess').mockImplementation(() => undefined);
+    vi.spyOn(output, 'printInfo').mockImplementation(() => undefined);
+
+    await subcommand('test').action!(ctx({ provider: 'openrouter' }));
+
+    expect(mocks.healthCalls).toEqual([]);
+    expect(mocks.completeStrictApiProviderViaHolder).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'openrouter',
+      prompt: expect.stringMatching(/health check/i),
+    }));
+    expect(spinner.succeed).toHaveBeenCalledWith(expect.stringContaining('completion succeeded'));
   });
 });

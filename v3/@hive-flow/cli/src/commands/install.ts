@@ -1,6 +1,7 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { installRelocatedEnforcement } from '../install/enforcement-installer.js';
+import { initializeCredentialVault } from '../credential-store/holder-runtime.js';
 
 export const installCommand: Command = {
   name: 'install',
@@ -11,6 +12,8 @@ export const installCommand: Command = {
     { name: 'engine-only', description: 'Copy only the relocated enforcement engine', type: 'boolean', default: false },
     { name: 'hooks-only', description: 'Write only Claude Code user hook settings', type: 'boolean', default: false },
     { name: 'keypair-only', description: 'Enroll only the Permission Guard override keypair', type: 'boolean', default: false },
+    { name: 'credentials', description: 'Create the per-machine KEK and empty credential vault', type: 'boolean', default: false },
+    { name: 'degraded', description: 'Allow degraded credential backend setup for explicit test/CI lanes', type: 'boolean', default: false },
     { name: 'project-root', description: 'Project root containing enforcement sources', type: 'string' },
     { name: 'home', description: 'Override target home directory', type: 'string' },
     { name: 'user-settings', description: 'Override Claude Code user settings path', type: 'string' },
@@ -43,7 +46,32 @@ export const installCommand: Command = {
       output.printSuccess(`Installed enforcement engine: ${result.binDir}`);
       output.printSuccess(`Updated user trigger: ${result.userSettingsPath}`);
       for (const message of result.messages) output.printInfo(message);
-      return { success: true, data: result };
+      let credentialSetup: Awaited<ReturnType<typeof initializeCredentialVault>> | undefined;
+      if (ctx.flags.credentials === true) {
+        credentialSetup = await initializeCredentialVault({
+          allowDegraded: Boolean(ctx.flags.degraded),
+        });
+        output.printSuccess(credentialSetup.createdVault ? 'Created credential vault' : 'Credential vault already ready');
+      }
+      return {
+        success: true,
+        data: {
+          ...result,
+          credentialSetup: credentialSetup
+            ? {
+              vaultPath: credentialSetup.vaultPath,
+              createdVault: credentialSetup.createdVault,
+              decrypts: credentialSetup.decrypts,
+              backend: {
+                available: credentialSetup.backend.available,
+                degraded: credentialSetup.backend.degraded,
+                locked: credentialSetup.backend.locked,
+                reason: credentialSetup.backend.reason,
+              },
+            }
+            : undefined,
+        },
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.printError(message);

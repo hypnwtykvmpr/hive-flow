@@ -9,9 +9,11 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { ProviderRegistry } from '@hive-flow/shared';
 import {
+  completeStrictApiProviderViaHolder,
   isStrictApiProvider,
   probeCredentialHolderStatus,
 } from '../credential-store/strict-api-provider.js';
+import { storeProviderCredential } from '../credential-store/holder-runtime.js';
 
 /** Shared registry instance, lazily initialized on first use */
 let _registry: ProviderRegistry | undefined;
@@ -115,18 +117,34 @@ const configureCommand: Command = {
 
     const spinner = output.createSpinner({ text: 'Updating configuration...', spinner: 'dots' });
     spinner.start();
-    await new Promise(r => setTimeout(r, 500));
+    let storedCredential: { provider: string; stored: boolean; vaultReady: boolean } | undefined;
+    if (hasKey) {
+      storedCredential = await storeProviderCredential({
+        provider,
+        secret: hasKey,
+      });
+    } else {
+      await new Promise(r => setTimeout(r, 500));
+    }
     spinner.succeed('Configuration updated');
 
     output.writeln();
     output.printBox([
       `Provider: ${provider}`,
-      `API Key: ${hasKey ? '••••••••' + (hasKey as string).slice(-4) : 'Not set'}`,
+      `API Key: ${hasKey ? 'Stored in credential vault' : 'Not set'}`,
       `Model: ${model || 'Default'}`,
-      `Status: Active`,
+      `Status: ${storedCredential?.vaultReady ? 'Credential vault ready' : 'Active'}`,
     ].join('\n'), 'Configuration');
 
-    return { success: true };
+    return {
+      success: true,
+      data: {
+        provider,
+        model: model || undefined,
+        credentialStored: Boolean(storedCredential?.stored),
+        credentialBoundary: hasKey ? 'credential-vault' : undefined,
+      },
+    };
   },
 };
 
@@ -162,8 +180,17 @@ const testCommand: Command = {
 	      spinner.start();
 	      if (isStrictApiProvider(id)) {
 	        if (holderStatus.available) {
-	          spinner.succeed(`${id}: credential holder available`);
-	          healthy++;
+	          try {
+	            await completeStrictApiProviderViaHolder({
+	              provider: id,
+	              prompt: 'Hive Flow provider health check. Reply with ok.',
+	              timeoutMs: 30_000,
+	            });
+	            spinner.succeed(`${id}: credential holder completion succeeded`);
+	            healthy++;
+	          } catch (error) {
+	            spinner.fail(`${id}: holder completion failed — ${(error as Error).message}`);
+	          }
 	        } else {
 	          spinner.stop(output.warning(`${id}: holder needed — ${holderStatus.reason || 'credential holder unavailable'}`));
 	        }
