@@ -12,7 +12,7 @@ export const CREDENTIAL_BOUNDARY_GATES: readonly CredentialBoundaryGate[] = [
   {
     id: 'credential-use-not-know',
     targetSlice: 'PR3',
-    status: 'xfail',
+    status: 'green',
     description: 'Same-user callers can request provider USE, but no caller can receive raw key material.',
   },
   {

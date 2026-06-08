@@ -23,10 +23,10 @@ function listFiles(root: string): string[] {
 }
 
 describe('credential boundary gate registry', () => {
-  it('keeps pending PR3 and PR4 boundary gates mechanically registered', () => {
+  it('keeps PR3 green and pending PR4 boundary gates mechanically registered', () => {
     expect(getCredentialBoundaryGate('credential-use-not-know')).toMatchObject({
       targetSlice: 'PR3',
-      status: 'xfail',
+      status: 'green',
     });
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')).toMatchObject({
       targetSlice: 'PR4',
