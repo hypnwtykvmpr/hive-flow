@@ -217,7 +217,7 @@ function toolForCase(opClass, pathKind, paths, id) {
     case 'fs_search':
       return { toolName: 'find_file', args: { path, pattern: `case-${id}.txt` } };
     case 'shell':
-      return { toolName: 'shell', args: { command: 'printf parity' } };
+      return { toolName: 'run_shell', args: { argv: ['node', '--version'] } };
     case 'web_fetch':
       return { toolName: 'web_fetch', args: { url: 'https://example.invalid/parity' } };
     case 'unknown_or_mcp':
@@ -243,8 +243,18 @@ function outsideRootDenied(root, path) {
 }
 
 function oracleDenies({ opClass, toolArgs, effectiveState, policy, root }) {
-  if (opClass === 'unknown_or_mcp' || opClass === 'shell' || opClass === 'web_fetch') {
+  if (opClass === 'unknown_or_mcp' || opClass === 'web_fetch') {
     return true;
+  }
+
+  if (opClass === 'shell') {
+    return effectiveState.level >= 2
+      || effectiveState.restrictedGroups.includes('exec')
+      || effectiveState.restrictedGroups.includes('write')
+      || toolArgs.command?.includes(';')
+      || toolArgs.command?.includes('|')
+      || toolArgs.command?.includes('>')
+      || toolArgs.command?.includes('<');
   }
 
   const targetPath = toolArgs.path;
@@ -267,7 +277,20 @@ function providerAllowed(result) {
   if (result && typeof result === 'object') {
     return result.status !== 'denied' && result.status !== 'error';
   }
-  return typeof result === 'string' && !result.startsWith('Error:');
+  if (typeof result !== 'string') return true;
+
+  const trimmed = result.trim();
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object' && typeof parsed.status === 'string') {
+        return parsed.status !== 'denied' && parsed.status !== 'error';
+      }
+    } catch {
+      // Fall through to legacy string classification below.
+    }
+  }
+  return !trimmed.startsWith('Error:');
 }
 
 async function bridgeDecision(bridge, opClass, toolName, args) {
@@ -277,7 +300,13 @@ async function bridgeDecision(bridge, opClass, toolName, args) {
   if (process.env.HF_BRIDGE_PARITY_MUTANT === 'allow-write-restricted' && opClass === 'fs_write') {
     return `MUTANT_ALLOWED_WRITE:${args.path}`;
   }
-  return bridge.evaluateToolCall(toolName, args, { source: 'parity-property' });
+  if (process.env.HF_BRIDGE_PARITY_MUTANT === 'allow-shell-restricted' && opClass === 'shell') {
+    return 'MUTANT_ALLOWED_SHELL';
+  }
+  return bridge.evaluateToolCall(toolName, args, {
+    source: 'parity-property',
+    ...(opClass === 'shell' ? { sandboxOptions: { backendOrder: [] } } : {}),
+  });
 }
 
 function restoreProcessListeners(event, preserved) {
@@ -406,7 +435,7 @@ describe('provider bridge enforcement parity property', () => {
     expect(providerAllowed(result)).toBe(false);
   });
 
-  it('keeps fs decisions unchanged after placeholder shell/web classes are evaluated', async () => {
+  it('keeps fs decisions unchanged after shell/web classes are evaluated', async () => {
     await fc.assert(
       fc.asyncProperty(
         envelopeCaseArb,

@@ -102,6 +102,7 @@ function makeInstallLayout({ fakeMcpClient = false } = {}) {
     'provider-agent-bridge.mjs',
     'bridge-grep-validators.mjs',
     'provider-auth-helpers.mjs',
+    'sandbox-runner.mjs',
   ]) {
     copyFileSync(resolve(providersRoot, 'scripts', scriptName), join(nodeScripts, scriptName));
   }
@@ -377,6 +378,10 @@ describe('provider bridge single tool execution path', () => {
       });
 
       expect(requests.length).toBeGreaterThanOrEqual(2);
+      const firstToolNames = (requests[0].tools ?? []).map((tool) => tool.function?.name);
+      expect(firstToolNames).toContain('run_shell');
+      expect(firstToolNames.filter((name) => name === 'run_shell')).toHaveLength(1);
+      expect(Buffer.byteLength(JSON.stringify(requests[0].tools), 'utf8')).toBeLessThan(10 * 1024);
       expect(result.success).toBe(true);
       expect(result.content).toContain('tool-result:detached built-in read');
       expect(bridgeLog).toContain('"message":"Bridge tool dispatch"');

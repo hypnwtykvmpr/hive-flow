@@ -43,6 +43,9 @@ import {
   isProviderAuthError,
   notifyProviderAuthRequired,
 } from './provider-auth-helpers.mjs';
+import {
+  sandboxExec,
+} from './sandbox-runner.mjs';
 
 async function importCliPermissionGuardDist(moduleName) {
   const modulePath = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName);
@@ -54,7 +57,6 @@ async function importCliPermissionGuardDist(moduleName) {
 
 const protectedPathPolicy = await importCliPermissionGuardDist('protected-paths.js');
 const permissionGuardGate = await importCliPermissionGuardDist('gate.js');
-void permissionGuardGate;
 
 // The bridge runs provider-controlled tool loops. Root override tokens are only
 // meaningful to the human's top-level session, never to detached providers.
@@ -202,6 +204,12 @@ const stderrLogger = {
 
 const DEFAULT_MAX_HISTORY_ENTRIES = 50;
 const DEFAULT_MAX_PROMPT_TOKENS = 128000; // 128K tokens safe default
+const RUN_SHELL_DEFAULT_TIMEOUT_MS = 30_000;
+const RUN_SHELL_MAX_TIMEOUT_MS = 120_000;
+const RUN_SHELL_DEFAULT_STDOUT_LIMIT_BYTES = 256 * 1024;
+const RUN_SHELL_DEFAULT_STDERR_LIMIT_BYTES = 128 * 1024;
+const RUN_SHELL_MAX_OUTPUT_LIMIT_BYTES = 1024 * 1024;
+const RUN_SHELL_SANDBOX_UNAVAILABLE = 'sandbox-unavailable:no-verified-backend';
 
 // Per-provider context token limits (tokens, not bytes)
 // Sources: deepseek=1M (DeepSeek-V4 unified window), gemini-3.1-pro=1M, sonnet=200K, opus=1M, gpt-5.5=400K, cursor=200K
@@ -1180,6 +1188,20 @@ function bridgeWriteBlockReason() {
   return null;
 }
 
+function bridgeExecBlockReason() {
+  const state = checkEnforcementState();
+  if (state.level >= FAIL_CLOSED_ENFORCEMENT_LEVEL) {
+    return 'Execution blocked at enforcement level RESTRICTED+';
+  }
+  if (state.restrictedGroups.includes('exec')) {
+    return 'Execution blocked by restricted exec group';
+  }
+  if (state.restrictedGroups.includes('write')) {
+    return 'Execution blocked by restricted write group';
+  }
+  return null;
+}
+
 function casefoldPath(filePath) {
   return String(filePath || '').replace(/\\/g, '/').toLowerCase();
 }
@@ -1249,6 +1271,297 @@ function protectedReadRgGlobs(searchPath = PROJECT_ROOT) {
     }
   }
   return [...globs];
+}
+
+function runShellDenied(denyReason, error = denyReason) {
+  return {
+    status: 'denied',
+    exitCode: null,
+    stdout: '',
+    stderr: '',
+    timedOut: false,
+    truncated: false,
+    sandboxBackend: null,
+    denyReason,
+    ...(error ? { error } : {}),
+  };
+}
+
+function clampInteger(value, fallback, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(Math.floor(parsed), max);
+}
+
+function shellQuoteArg(value) {
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(text)) return text;
+  return `'${text.replace(/'/g, `'\\''`)}'`;
+}
+
+function commandName(value) {
+  return basename(String(value || '')).toLowerCase();
+}
+
+function isEnvAssignmentToken(token) {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(String(token || ''));
+}
+
+function parseSimpleRunShellCommand(command) {
+  if (typeof command !== 'string' || command.trim() === '') {
+    throw new Error('run_shell requires a non-empty command or argv array');
+  }
+  const tokens = [];
+  let current = '';
+  let quote = null;
+  let escaped = false;
+
+  const pushCurrent = () => {
+    if (current.length > 0) {
+      tokens.push(current);
+      current = '';
+    }
+  };
+
+  for (let index = 0; index < command.length; index += 1) {
+    const ch = command[index];
+    const next = command[index + 1];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\' && quote !== "'") {
+      escaped = true;
+      continue;
+    }
+
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+
+    if (ch === '$' && next === '(') {
+      throw new Error('run_shell command substitution is not available');
+    }
+    if (ch === '`') {
+      throw new Error('run_shell backtick command substitution is not available');
+    }
+    if (ch === '\n' || ch === '\r') {
+      throw new Error('run_shell multiline commands are not available');
+    }
+    if (';&|<>'.includes(ch)) {
+      throw new Error('run_shell shell operators, redirects, pipes, and heredocs are not available');
+    }
+
+    if (/\s/.test(ch)) {
+      pushCurrent();
+      continue;
+    }
+
+    current += ch;
+  }
+
+  if (escaped || quote) {
+    throw new Error('run_shell command has unterminated quoting or escaping');
+  }
+  pushCurrent();
+
+  if (tokens.length === 0) {
+    throw new Error('run_shell command did not contain an executable');
+  }
+  if (isEnvAssignmentToken(tokens[0])) {
+    throw new Error('run_shell environment-prefix commands are not available');
+  }
+  return tokens;
+}
+
+function normalizeRunShellArgs(args) {
+  if (Array.isArray(args?.argv)) {
+    if (args.argv.length === 0) {
+      throw new Error('run_shell argv must not be empty');
+    }
+    const argv = args.argv.map((entry) => {
+      if (typeof entry !== 'string' && typeof entry !== 'number' && typeof entry !== 'boolean') {
+        throw new Error('run_shell argv entries must be primitive strings');
+      }
+      return String(entry);
+    });
+    if (argv.some((entry) => entry.length === 0)) {
+      throw new Error('run_shell argv entries must not be empty');
+    }
+    if (isEnvAssignmentToken(argv[0])) {
+      throw new Error('run_shell environment-prefix commands are not available');
+    }
+    return {
+      argv,
+      command: argv.map(shellQuoteArg).join(' '),
+      mode: 'argv',
+    };
+  }
+
+  if (typeof args?.command === 'string') {
+    if (args.command.trim() === '') {
+      throw new Error('run_shell requires a non-empty command or argv array');
+    }
+    return {
+      argv: null,
+      command: args.command.trim(),
+      mode: 'command',
+    };
+  }
+
+  throw new Error('run_shell requires either command or argv');
+}
+
+function denyUnsafeRunShellCommand(renderedCommand, argv) {
+  const executable = commandName(argv[0]);
+  if (!executable) return 'run_shell command has no executable';
+
+  const shellWrappers = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh']);
+  if (shellWrappers.has(executable)) {
+    return 'run_shell shell wrapper launchers are not available';
+  }
+
+  const launcherWrappers = new Set([
+    'codex',
+    'claude',
+    'cursor',
+    'gemini',
+    'qwen',
+    'opencode',
+    'tmux',
+    'zellij',
+    'screen',
+    'script',
+    'nohup',
+    'setsid',
+    'open',
+    'osascript',
+  ]);
+  if (launcherWrappers.has(executable)) {
+    return `run_shell launcher '${executable}' is not available to provider agents`;
+  }
+
+  if (executable === 'env') {
+    return 'run_shell env launcher wrappers are not available';
+  }
+
+  if (executable === 'git' && String(argv[1] || '').toLowerCase() === 'push') {
+    return 'run_shell git push is not available to provider agents';
+  }
+
+  if ((executable === 'node' || executable === 'python' || executable === 'python3') &&
+      argv.slice(1).some((entry) => entry === '-e' || entry === '--eval' || entry === '-c')) {
+    return 'run_shell inline code execution is not available';
+  }
+
+  if (/[;&|<>`]/.test(renderedCommand) || /\$\(/.test(renderedCommand)) {
+    return 'run_shell shell operators, redirects, pipes, heredocs, and command substitution are not available';
+  }
+
+  return null;
+}
+
+async function evaluateRunShellBashGate(renderedCommand) {
+  if (!permissionGuardGate?.evaluateHookInput) {
+    return {
+      allowed: false,
+      reason: 'permission-guard gate did not export evaluateHookInput',
+    };
+  }
+  try {
+    const decision = await permissionGuardGate.evaluateHookInput({
+      tool_name: 'Bash',
+      tool_input: { command: renderedCommand },
+      cwd: PROJECT_ROOT,
+      session_id: process.env.CLAUDE_SESSION_ID || 'provider-bridge-run-shell',
+    });
+    if (decision?.decision === 'allow') {
+      return { allowed: true, reason: decision.reason || '' };
+    }
+    return {
+      allowed: false,
+      reason: decision?.reason || 'permission-guard denied Bash command',
+    };
+  } catch (err) {
+    return {
+      allowed: false,
+      reason: `permission-guard gate error: ${err?.message || String(err)}`,
+    };
+  }
+}
+
+async function runShellTool(rawArgs, ctx = {}) {
+  let normalized;
+  try {
+    normalized = normalizeRunShellArgs(rawArgs);
+  } catch (err) {
+    return runShellDenied('invalid-run-shell-args', err.message || String(err));
+  }
+
+  const execBlockReason = bridgeExecBlockReason();
+  if (execBlockReason) {
+    return runShellDenied('restricted-exec-or-write', execBlockReason);
+  }
+
+  const gateDecision = await evaluateRunShellBashGate(normalized.command);
+  if (!gateDecision.allowed) {
+    return runShellDenied('bash-gate-denied', gateDecision.reason);
+  }
+
+  let argv = normalized.argv;
+  if (normalized.mode === 'command') {
+    try {
+      argv = parseSimpleRunShellCommand(normalized.command);
+    } catch (err) {
+      return runShellDenied('bash-gate-denied', err.message || String(err));
+    }
+  }
+
+  const unsafeReason = denyUnsafeRunShellCommand(normalized.command, argv);
+  if (unsafeReason) {
+    return runShellDenied('bash-gate-denied', unsafeReason);
+  }
+
+  const sandboxOptions = ctx.sandboxOptions && typeof ctx.sandboxOptions === 'object'
+    ? ctx.sandboxOptions
+    : {};
+  const sandboxResult = await sandboxExec(argv, {
+    ...sandboxOptions,
+    projectRoot: PROJECT_ROOT,
+    timeoutMs: clampInteger(rawArgs.timeoutMs, RUN_SHELL_DEFAULT_TIMEOUT_MS, RUN_SHELL_MAX_TIMEOUT_MS),
+    stdoutLimitBytes: clampInteger(rawArgs.stdoutLimitBytes, RUN_SHELL_DEFAULT_STDOUT_LIMIT_BYTES, RUN_SHELL_MAX_OUTPUT_LIMIT_BYTES),
+    stderrLimitBytes: clampInteger(rawArgs.stderrLimitBytes, RUN_SHELL_DEFAULT_STDERR_LIMIT_BYTES, RUN_SHELL_MAX_OUTPUT_LIMIT_BYTES),
+  });
+
+  if (sandboxResult.status === 'denied') {
+    return runShellDenied(
+      sandboxResult.denyReason || RUN_SHELL_SANDBOX_UNAVAILABLE,
+      sandboxResult.denyReason || RUN_SHELL_SANDBOX_UNAVAILABLE,
+    );
+  }
+
+  return {
+    status: 'executed',
+    exitCode: typeof sandboxResult.code === 'number' ? sandboxResult.code : null,
+    stdout: sandboxResult.stdout || '',
+    stderr: sandboxResult.stderr || '',
+    timedOut: sandboxResult.status === 'timeout',
+    truncated: Boolean(sandboxResult.stdoutTruncated || sandboxResult.stderrTruncated),
+    sandboxBackend: sandboxResult.backend || null,
+  };
 }
 
 // SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
@@ -1639,6 +1952,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
 
 const BRIDGE_TOOL_REGISTRY = {
   ...BRIDGE_FILESYSTEM_TOOLS,
+  'run_shell': runShellTool,
 };
 
 function parseBridgeToolArgs(toolArgs) {
@@ -2080,6 +2394,26 @@ async function main() {
               path: { type: 'string', description: 'Directory path to search. Defaults to current directory.' },
             },
             required: ['pattern'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'run_shell',
+          description: 'Run a simple command in a deny-by-default sandbox. Shell operators, redirects, pipes, env prefixes, launch wrappers, inline code, and network are denied.',
+          parameters: {
+            type: 'object',
+            properties: {
+              command: { type: 'string', description: 'Simple command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
+              argv: {
+                type: 'array',
+                description: 'Preferred direct argv form. Executed without shell=true after Bash-gate approval.',
+                items: { type: 'string' },
+              },
+              timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
+            },
+            additionalProperties: false,
           },
         },
       },
