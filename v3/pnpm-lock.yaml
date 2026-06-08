@@ -349,6 +349,10 @@ importers:
         version: 4.0.16(@types/node@20.19.27)(tsx@4.21.0)
 
   '@hive-flow/providers':
+    dependencies:
+      undici:
+        specifier: '>=7.26.0 <8'
+        version: 7.26.0
     devDependencies:
       '@hive-flow/testing':
         specifier: workspace:*
@@ -356,6 +360,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
+      fast-check:
+        specifier: ^4.8.0
+        version: 4.8.0
       tsx:
         specifier: ^4.19.0
         version: 4.21.0

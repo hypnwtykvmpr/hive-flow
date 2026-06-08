@@ -32,7 +32,6 @@ import { join, dirname, basename, isAbsolute, resolve, relative, sep } from 'pat
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { createRequire } from 'module';
 import {
   patternIsRejected,
   fileGlobIsRejected,
@@ -45,8 +44,17 @@ import {
   notifyProviderAuthRequired,
 } from './provider-auth-helpers.mjs';
 
-const require = createRequire(import.meta.url);
-const protectedPathPolicy = require('../../cli/src/permission-guard/protected-paths.cjs');
+async function importCliPermissionGuardDist(moduleName) {
+  const modulePath = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName);
+  if (!existsSync(modulePath)) {
+    throw new Error(`CLI permission-guard dist artifact missing: ${modulePath}`);
+  }
+  return import(pathToFileURL(modulePath).href);
+}
+
+const protectedPathPolicy = await importCliPermissionGuardDist('protected-paths.js');
+const permissionGuardGate = await importCliPermissionGuardDist('gate.js');
+void permissionGuardGate;
 
 // The bridge runs provider-controlled tool loops. Root override tokens are only
 // meaningful to the human's top-level session, never to detached providers.

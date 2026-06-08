@@ -15,7 +15,10 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "scripts/provider-agent-bridge.mjs",
+    "scripts/bridge-grep-validators.mjs",
+    "scripts/provider-auth-helpers.mjs"
   ],
   "scripts": {
     "build": "tsc",
@@ -45,10 +48,13 @@
   ],
   "author": "Hive Flow Team",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "undici": "^7.26.0"
+  },
   "devDependencies": {
     "@hive-flow/testing": "workspace:*",
     "dotenv": "^16.4.5",
+    "fast-check": "^4.8.0",
     "tsx": "^4.19.0",
     "vitest": "^4.0.16"
   },
