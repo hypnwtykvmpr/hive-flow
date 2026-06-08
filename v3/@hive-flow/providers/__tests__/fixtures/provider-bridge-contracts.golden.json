@@ -1,0 +1,95 @@
+{
+  "toolResults": {
+    "read_file": "golden read body\n",
+    "write_file": "File written: <project-root>/src/written.txt",
+    "list_directory": "readable.txt\nsearchable.txt\nwritten.txt",
+    "grep": "<project-root>/src/searchable.txt:1:needle golden",
+    "run_shell_sandbox_unavailable": {
+      "status": "denied",
+      "exitCode": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": false,
+      "truncated": false,
+      "sandboxBackend": null,
+      "denyReason": "sandbox-unavailable:no-verified-backend",
+      "error": "sandbox-unavailable:no-verified-backend"
+    },
+    "run_shell_inline_denied": {
+      "status": "denied",
+      "exitCode": null,
+      "stdout": "",
+      "stderr": "",
+      "timedOut": false,
+      "truncated": false,
+      "sandboxBackend": null,
+      "denyReason": "bash-gate-denied",
+      "error": "DENIED: Inline code execution is blocked because file effects cannot be verified reliably. Instead: use Read, Write, or Edit for files; write a script file in the project and run it normally for programs."
+    },
+    "web_fetch_allowlist_denied": {
+      "status": "denied",
+      "finalUrl": "https://example.invalid/provider-bridge-golden",
+      "httpStatus": null,
+      "contentType": "",
+      "bytes": 0,
+      "truncated": false,
+      "redirectCount": 0,
+      "denyReason": "allowlist-denied"
+    },
+    "web_search_unsupported": {
+      "status": "denied",
+      "finalUrl": null,
+      "httpStatus": null,
+      "contentType": "",
+      "bytes": 0,
+      "truncated": false,
+      "redirectCount": 0,
+      "denyReason": "web-search-unsupported"
+    },
+    "unknown_tool_denied": {
+      "status": "denied",
+      "denyReason": "unknown-tool",
+      "error": "Tool 'unknown_runtime_tool' is not in the provider bridge registry.",
+      "tool": "unknown_runtime_tool"
+    }
+  },
+  "responseLoopShapes": {
+    "assistant_tool_call": {
+      "role": "assistant",
+      "content": "",
+      "toolCalls": [
+        {
+          "id": "call_golden",
+          "type": "function",
+          "function": {
+            "name": "web_fetch",
+            "arguments": "{\"url\":\"https://example.invalid/provider-bridge-golden\"}"
+          }
+        }
+      ]
+    },
+    "tool_result_retry_message": {
+      "role": "tool",
+      "toolCallId": "call_golden",
+      "name": "web_fetch",
+      "content": "{\"status\":\"denied\",\"finalUrl\":\"https://example.invalid/provider-bridge-golden\",\"httpStatus\":null,\"contentType\":\"\",\"bytes\":0,\"truncated\":false,\"redirectCount\":0,\"denyReason\":\"allowlist-denied\"}"
+    },
+    "reroll_exhausted": {
+      "status": "error",
+      "code": "OPENROUTER_TIER_EXHAUSTED",
+      "retryable": false,
+      "message": "OpenRouter opus tier exhausted after timeout rerolls; attempted models: model-a, model-b"
+    },
+    "stuck_loop_break": {
+      "reason": "repeated-tool-call-fingerprint",
+      "window": 4,
+      "threshold": 3,
+      "fingerprint": "[{\"n\":\"unknown_runtime_tool\",\"a\":\"{\\\"unsafe\\\":true}\"}]"
+    }
+  },
+  "relativePaths": {
+    "readable": "src/readable.txt",
+    "searchable": "src/searchable.txt",
+    "written": "src/written.txt"
+  }
+}
