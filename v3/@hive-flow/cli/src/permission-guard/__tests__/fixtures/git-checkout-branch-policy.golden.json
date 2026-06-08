@@ -1,0 +1,34 @@
+{
+  "trustedRootBranchSwitches": [
+    "git checkout feat/self-compaction",
+    "git checkout main",
+    "git checkout release/2026-06-08",
+    "git checkout codex-provider-packaging"
+  ],
+  "pathRestores": [
+    "git checkout -- src/index.ts",
+    "git checkout HEAD -- .claude/helpers/enforcement.cjs",
+    "git checkout feat/self-compaction -- src/index.ts",
+    "git checkout -- ."
+  ],
+  "dangerousOrAmbiguous": [
+    "git checkout --detach HEAD",
+    "git checkout -f feat/self-compaction",
+    "git checkout --orphan scratch",
+    "git checkout -p",
+    "git checkout -b scratch",
+    "git checkout -B scratch",
+    "git checkout --track origin/main",
+    "git checkout main && git status --short",
+    "git status --short && git checkout main",
+    "env git checkout main && git status --short",
+    "GIT_WORK_TREE=/tmp git checkout main",
+    "git -C /tmp/repo checkout main",
+    "/usr/bin/git -C /tmp/repo checkout main",
+    "command git checkout main",
+    "env git checkout main",
+    "git checkout 05e5925",
+    "git checkout HEAD",
+    "git checkout @{-1}"
+  ]
+}

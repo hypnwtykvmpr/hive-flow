@@ -711,6 +711,148 @@ function shellWords(segment: string): string[] | null {
   return words;
 }
 
+function isTrustedRootPermissionSession(hookInput: Partial<HookInput>): boolean {
+  const sessionId = typeof hookInput.session_id === 'string' && hookInput.session_id.trim()
+    ? hookInput.session_id.trim()
+    : (process.env.CLAUDE_SESSION_ID || '').trim();
+  return Boolean(sessionId) && !hasSubagentIdentity(hookInput);
+}
+
+const GIT_CHECKOUT_BLOCKED_OPTIONS = new Set([
+  '-f',
+  '--force',
+  '-p',
+  '--patch',
+  '-m',
+  '--merge',
+  '--conflict',
+  '--detach',
+  '--orphan',
+  '--ours',
+  '--theirs',
+  '--ignore-skip-worktree-bits',
+  '--pathspec-from-file',
+  '--pathspec-file-nul',
+  '--recurse-submodules',
+  '--no-recurse-submodules',
+  '--overlay',
+  '--no-overlay',
+]);
+
+const GIT_OPTIONS_WITH_VALUES = new Set([
+  '-C',
+  '-c',
+  '--git-dir',
+  '--work-tree',
+  '--namespace',
+]);
+
+function isGitOptionWithInlineValue(token: string): boolean {
+  return (
+    token.startsWith('-c=') ||
+    token.startsWith('--git-dir=') ||
+    token.startsWith('--work-tree=') ||
+    token.startsWith('--namespace=')
+  );
+}
+
+function checkoutOptionName(token: string): string {
+  if (token.startsWith('--conflict=')) return '--conflict';
+  if (token.startsWith('--pathspec-from-file=')) return '--pathspec-from-file';
+  return token;
+}
+
+function isSafeBranchCheckoutTarget(target: string): boolean {
+  if (!target || target === '-' || target === 'HEAD' || target === '--') return false;
+  if (target.startsWith('-')) return false;
+  if (/^[0-9a-f]{7,40}$/i.test(target)) return false;
+  if (target.includes('..') || target.includes('@{')) return false;
+  if (target.includes('\\') || target.includes('//')) return false;
+  if (target.startsWith('/') || target.endsWith('/')) return false;
+  if (target.endsWith('.') || target.endsWith('.lock')) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(target);
+}
+
+function isTrustedRootBranchCheckout(command: string, hookInput: Partial<HookInput>): boolean {
+  if (!isTrustedRootPermissionSession(hookInput)) return false;
+
+  const segments = splitShellCommands(command);
+  if (segments.length !== 1) return false;
+
+  const segment = segments[0].trim();
+  const stripped = stripCommand(segment);
+  if (stripped !== segment) return false;
+
+  const tokens = shellWords(stripped);
+  if (!tokens || tokens.length !== 3) return false;
+  if (commandBasename(tokens[0] || '') !== 'git') return false;
+  if (tokens[1] !== 'checkout') return false;
+
+  const target = tokens[2];
+  if (target === undefined || target === '--') return false;
+  if (GIT_CHECKOUT_BLOCKED_OPTIONS.has(checkoutOptionName(target))) return false;
+  return isSafeBranchCheckoutTarget(target);
+}
+
+function isGitCheckoutSegment(segment: string): boolean {
+  const tokens = shellWords(stripCommand(segment));
+  if (!tokens || tokens.length < 2) return false;
+  let index = 0;
+  let executable = commandBasename(tokens[index] || '');
+
+  if (executable === 'command') {
+    index += 1;
+    while (tokens[index]?.startsWith('-')) index += 1;
+    executable = commandBasename(tokens[index] || '');
+  } else if (executable === 'env') {
+    index += 1;
+    while (index < tokens.length) {
+      const token = tokens[index];
+      if (isEnvAssignment(token)) {
+        index += 1;
+        continue;
+      }
+      if (token === '-i' || token === '--ignore-environment') {
+        index += 1;
+        continue;
+      }
+      if (token === '-u' || token === '--unset' || token === '--chdir' || token === '-C') {
+        index += 2;
+        continue;
+      }
+      if (token.startsWith('--unset=') || token.startsWith('--chdir=')) {
+        index += 1;
+        continue;
+      }
+      break;
+    }
+    executable = commandBasename(tokens[index] || '');
+  }
+
+  if (executable !== 'git') return false;
+
+  index += 1;
+  while (index < tokens.length && tokens[index].startsWith('-')) {
+    const token = tokens[index];
+    if (token === '--') return false;
+    if (GIT_OPTIONS_WITH_VALUES.has(token)) {
+      index += 2;
+      continue;
+    }
+    if (isGitOptionWithInlineValue(token)) {
+      index += 1;
+      continue;
+    }
+    return false;
+  }
+
+  return tokens[index] === 'checkout';
+}
+
+function isGitCheckoutInvocation(command: string): boolean {
+  return splitShellCommands(command).some(segment => isGitCheckoutSegment(segment));
+}
+
 const READ_COMMANDS = new Set([
   'cat',
   'head',
@@ -1425,8 +1567,31 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
       return { decision: 'deny', reason: denyFeedback };
     }
 
-    // 4) Dangerous-command patterns — auto-deny with actionable feedback
     const escalationPatterns = config.jury_escalation_bash_patterns || [];
+
+    // 4a) Trusted-root branch switches are policy-relevant but not
+    // violation-grade. Route the narrow branch-only shape through the inline
+    // jury while keeping path restore and dangerous checkout modes auto-denied.
+    if (isTrustedRootBranchCheckout(cmd, hookInput)) {
+      return await resolveJury({
+        config,
+        hookInput,
+        toolName,
+        inputSummary,
+        juryCtx: makeJuryContext(hookInput, policyRoot, String(hookInput.tool_input.file_path || hookInput.tool_input.filePath || '')),
+        logPrefix: 'trusted-root git checkout branch switch',
+        responsePrefix: 'Inline Jury',
+      });
+    }
+
+    if (isGitCheckoutInvocation(cmd)) {
+      const reason = checkBashPatterns('git checkout -- .', escalationPatterns)
+        || 'DENIED: git checkout is auto-denied — use `git switch` for branch changes, or inspect/stash changes before restoring paths.';
+      logDecision(config, toolName, inputSummary, 'deny', 'auto-deny', 'matched git checkout guard');
+      return { decision: 'deny', reason };
+    }
+
+    // 4) Dangerous-command patterns — auto-deny with actionable feedback
     const escalationFeedback = checkBashPatterns(cmd, escalationPatterns);
     if (escalationFeedback) {
       logDecision(config, toolName, inputSummary, 'deny', 'auto-deny', 'matched dangerous-command pattern');

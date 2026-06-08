@@ -659,6 +659,28 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
+  it('does not escalate trusted-root branch-only git checkout', () => {
+    const sessionId = 'trusted-root-checkout-session';
+    process.env.CLAUDE_SESSION_ID = sessionId;
+
+    const result = enf.processPreToolUse({
+      session_id: sessionId,
+      tool_name: 'Bash',
+      tool_input: {
+        command: 'git checkout feat/self-compaction',
+      },
+    });
+
+    expect(result.hookSpecificOutput?.permissionDecision ?? 'allow').toBe('allow');
+    expect(readScopedState('session', sessionId)).toMatchObject({
+      level: enf.LEVELS.NORMAL,
+      violations: 0,
+      restrictedGroups: [],
+    });
+    expect(readScopedState('project', enf.resolveScopeContext().projectId)).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
+  });
+
   it('blocks mutating work after compact until recovery is acknowledged', () => {
     const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
     mkdirSync(dirname(recoveryPath), { recursive: true });
