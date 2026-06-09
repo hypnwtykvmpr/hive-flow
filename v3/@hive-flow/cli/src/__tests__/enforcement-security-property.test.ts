@@ -823,6 +823,43 @@ describe('enforcement security property contracts', () => {
     }
   });
 
+  it('allows value-safe secret set-check expansions without allowing value expansion', () => {
+    const safeLiteral = fc.string({ minLength: 0, maxLength: 16 }).filter(value => !/[}$`\\$]/.test(value));
+    const secretVar = fc.constantFrom('OPENROUTER_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY');
+    const state = {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    };
+
+    fc.assert(
+      fc.property(secretVar, safeLiteral, (name, literal) => {
+        expect(enf.detectCircumvention(
+          'Bash',
+          { command: `echo "\${${name}:+${literal}}"` },
+          state,
+        ).circumvention).toBe(false);
+        expect(enf.detectCircumvention(
+          'Bash',
+          { command: `printf "%s\\n" "\${${name}+${literal}}"` },
+          state,
+        ).circumvention).toBe(false);
+      }),
+      { seed: 20_609, numRuns: PROPERTY_RUNS },
+    );
+
+    for (const command of [
+      'echo "${OPENROUTER_API_KEY:-}"',
+      'echo "${OPENROUTER_API_KEY:?missing}"',
+      'echo "${OPENROUTER_API_KEY:+$OPENROUTER_API_KEY}"',
+      'printf "%s\\n" "$OPENROUTER_API_KEY"',
+    ]) {
+      expect(enf.detectCircumvention('Bash', { command }, state).circumvention, command).toBe(true);
+    }
+  });
+
   it('escalates non-substrate global protected writes while leaving project protected workflows deny-only', () => {
     const globalProtectedTargets = [
       'v3/@hive-flow/cli/src/permission-guard/gate.ts',
@@ -983,7 +1020,7 @@ describe('enforcement security property contracts', () => {
       'Bash',
       { command: 'node ./random-script.js' },
       restricted,
-    ).denyOnly).toBeUndefined();
+    ).denyOnly).toBe(true);
 
     expect(enf.detectCircumvention(
       'Bash',
@@ -994,7 +1031,13 @@ describe('enforcement security property contracts', () => {
       'Bash',
       { command: 'node "$CLAUDE_PROJECT_DIR"/.claude/helpers/hook-handler.cjs permission-guard; node ./random-script.js' },
       restricted,
-    ).denyOnly).toBeUndefined();
+    ).denyOnly).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'timeout 25 .audit/scripts/hf-tmux-control.sh send-codex "handoff ready"' },
+      restricted,
+    ).circumvention).toBe(false);
 
     process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-script-agent';
     writeScopedState('agent', 'restricted-script-agent', {
@@ -1009,7 +1052,8 @@ describe('enforcement security property contracts', () => {
     });
 
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
-    expect(readScopedState('agent', 'restricted-script-agent')?.level).toBe(enf.LEVELS.HALTED);
+    expect(readScopedState('agent', 'restricted-script-agent')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readScopedState('agent', 'restricted-script-agent')?.violations).toBe(2);
   });
 
   it('allows verification-style script commands while write-restricted', () => {

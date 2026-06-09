@@ -65,6 +65,19 @@ internal static class Program
             {
                 throw new InvalidOperationException($"Windows Hello consent denied: {result}");
             }
+            return;
+        }
+
+        FailClosedIfBiometricUnavailable(availability);
+    }
+
+    private static void FailClosedIfBiometricUnavailable(UserConsentVerifierAvailability availability)
+    {
+        if (Console.IsInputRedirected)
+        {
+            throw new InvalidOperationException(
+                $"Windows Hello unavailable in non-interactive credential helper context: {availability}"
+            );
         }
     }
 

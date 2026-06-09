@@ -169,6 +169,9 @@ function commandAck(projectRoot, args) {
     type: 'hive-flow.compaction-recovery-ack',
     version: 1,
     sessionId,
+    compactBoundaryId: !invalidFlag ? sanitize(flag.compactBoundaryId || flag.compact_boundary_id || '', 200) : '',
+    compactBoundaryTimestamp: !invalidFlag ? sanitize(flag.compactBoundaryTimestamp || flag.compact_boundary_timestamp || '', 120) : '',
+    compactBoundaryTrigger: !invalidFlag ? sanitize(flag.compactBoundaryTrigger || flag.compact_boundary_trigger || '', 120) : '',
     acknowledgedAt: new Date().toISOString(),
     summary,
     evidence: {

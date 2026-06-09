@@ -14,14 +14,14 @@ import { describe, it, before, after, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   readFileSync, writeFileSync, existsSync, mkdirSync,
-  rmSync, copyFileSync, unlinkSync, mkdtempSync, symlinkSync,
+  rmSync, copyFileSync, cpSync, unlinkSync, mkdtempSync, symlinkSync,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -32,7 +32,12 @@ const SCRIPT = join(REPO_ROOT, '.claude/helpers/enforcement.cjs');
 const require = createRequire(import.meta.url);
 const { isProtectedPath } = require(SCRIPT);
 const ENF_DIR = join(REPO_ROOT, '.hive-flow', 'enforcement');
-const STATE_FILE = join(ENF_DIR, 'state.json');
+const GLOBAL_STATE_FILE = join(ENF_DIR, 'state.json');
+const PROJECT_SCOPE_ID = `project-${createHash('sha256')
+  .update(REPO_ROOT)
+  .digest('hex')
+  .slice(0, 16)}`;
+const STATE_FILE = join(ENF_DIR, 'projects', PROJECT_SCOPE_ID, 'state.json');
 const HMAC_KEY_FILE = join(ENF_DIR, '.hmac-key');
 const VIOLATIONS_FILE = join(ENF_DIR, 'violations.jsonl');
 const GATE_FILE = join(ENF_DIR, 'verification-gate.json');
@@ -40,6 +45,7 @@ const SWARM_DIR = join(REPO_ROOT, '.hive-flow', 'swarm');
 
 // Backup paths (kept inside ENF_DIR so cleanup is easy)
 const BACKUP_DIR = join(ENF_DIR, '.test-backup');
+const SCOPED_STATE_DIRS = ['agents', 'hives', 'sessions', 'projects'];
 
 // ---------------------------------------------------------------------------
 // Helpers — HMAC signing (mirrors enforcement.cjs logic)
@@ -83,19 +89,35 @@ function freshState(overrides = {}) {
 }
 
 function setState(stateObj) {
-  mkdirSync(ENF_DIR, { recursive: true });
+  mkdirSync(dirname(STATE_FILE), { recursive: true });
   const envelope = signState(stateObj);
   writeFileSync(STATE_FILE, JSON.stringify(envelope, null, 2));
 }
 
-function readState() {
-  if (!existsSync(STATE_FILE)) return null;
+function setGlobalState(stateObj) {
+  mkdirSync(dirname(GLOBAL_STATE_FILE), { recursive: true });
+  const envelope = signState(stateObj);
+  writeFileSync(GLOBAL_STATE_FILE, JSON.stringify(envelope, null, 2));
+}
+
+function readStateFile(filePath = STATE_FILE) {
+  if (!existsSync(filePath)) return null;
   try {
-    const raw = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
-    return raw.state || raw; // handle both envelope and legacy
+    const raw = JSON.parse(readFileSync(filePath, 'utf8'));
+    return raw.state || raw;
   } catch {
     return null;
   }
+}
+
+function readState() {
+  const states = [STATE_FILE, GLOBAL_STATE_FILE]
+    .map((filePath) => {
+      return readStateFile(filePath);
+    })
+    .filter(Boolean);
+  if (states.length === 0) return null;
+  return states.reduce((best, next) => ((next.level || 0) > (best.level || 0) ? next : best));
 }
 
 function readViolations() {
@@ -130,9 +152,15 @@ function makeTempSymlink(targetPath, name) {
 
 function backupState() {
   mkdirSync(BACKUP_DIR, { recursive: true });
-  for (const f of [STATE_FILE, VIOLATIONS_FILE, GATE_FILE, HMAC_KEY_FILE]) {
+  for (const f of [GLOBAL_STATE_FILE, VIOLATIONS_FILE, GATE_FILE, HMAC_KEY_FILE]) {
     if (existsSync(f)) {
       copyFileSync(f, join(BACKUP_DIR, f.split('/').pop()));
+    }
+  }
+  for (const name of SCOPED_STATE_DIRS) {
+    const source = join(ENF_DIR, name);
+    if (existsSync(source)) {
+      cpSync(source, join(BACKUP_DIR, name), { recursive: true });
     }
   }
 }
@@ -140,19 +168,30 @@ function backupState() {
 function restoreState() {
   for (const name of ['state.json', 'violations.jsonl', 'verification-gate.json', '.hmac-key']) {
     const backup = join(BACKUP_DIR, name);
-    const target = join(ENF_DIR, name);
+    const target = name === 'state.json' ? GLOBAL_STATE_FILE : join(ENF_DIR, name);
     if (existsSync(backup)) {
       copyFileSync(backup, target);
     } else if (existsSync(target)) {
       unlinkSync(target);
     }
   }
+  for (const name of SCOPED_STATE_DIRS) {
+    const backup = join(BACKUP_DIR, name);
+    const target = join(ENF_DIR, name);
+    rmSync(target, { recursive: true, force: true });
+    if (existsSync(backup)) {
+      cpSync(backup, target, { recursive: true });
+    }
+  }
   rmSync(BACKUP_DIR, { recursive: true, force: true });
 }
 
 function cleanStateFiles() {
-  for (const f of [STATE_FILE, VIOLATIONS_FILE, GATE_FILE]) {
+  for (const f of [GLOBAL_STATE_FILE, VIOLATIONS_FILE, GATE_FILE]) {
     if (existsSync(f)) unlinkSync(f);
+  }
+  for (const name of SCOPED_STATE_DIRS) {
+    rmSync(join(ENF_DIR, name), { recursive: true, force: true });
   }
 }
 
@@ -330,8 +369,8 @@ describe('enforcement system', () => {
 
     it('escalates NORMAL -> WARNED on normal-severity circumvention', () => {
       setState(freshState({ level: 0 }));
-      // eval() is obfuscation (normal severity)
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'eval("test")' } });
+      // Dynamic shell eval is obfuscation (normal severity).
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo true)'" } });
       const s = readState();
       assert.equal(s.level, 1, 'should be WARNED');
       assert.equal(s.violations, 1);
@@ -339,15 +378,14 @@ describe('enforcement system', () => {
 
     it('escalates WARNED -> RESTRICTED on second normal circumvention', () => {
       setState(freshState({ level: 1, violations: 1 }));
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'eval("test")' } });
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo true)'" } });
       const s = readState();
       assert.equal(s.level, 2, 'should be RESTRICTED');
     });
 
     it('escalates RESTRICTED -> HALTED on third normal circumvention', () => {
       setState(freshState({ level: 2, violations: 2, restrictedGroups: ['exec', 'write'] }));
-      // Write-restricted agent trying to run a script => normal severity
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'bash script.sh' } });
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo true)'" } });
       const s = readState();
       assert.equal(s.level, 3, 'should be HALTED');
     });
@@ -375,6 +413,7 @@ describe('enforcement system', () => {
 
     it('critical at RESTRICTED cascades to HALTED', () => {
       setState(freshState({ level: 2, violations: 2, restrictedGroups: ['exec', 'write'] }));
+      setGlobalState(freshState({ level: 2, violations: 2, restrictedGroups: ['exec', 'write'] }));
       runEnforcement({
         tool_name: 'Edit',
         tool_input: { file_path: join(REPO_ROOT, '.hive-flow/enforcement/state.json') },
@@ -393,19 +432,19 @@ describe('enforcement system', () => {
 
     it('tracks violation count accurately', () => {
       setState(freshState({ level: 0, violations: 0 }));
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'eval("a")' } });
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo a)'" } });
       let s = readState();
       assert.equal(s.violations, 1);
 
       // Run another circumvention
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'eval("b")' } });
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo b)'" } });
       s = readState();
       assert.equal(s.violations, 2);
     });
 
     it('records escalation history entries', () => {
       setState(freshState({ level: 0, violations: 0, history: [] }));
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'eval("test")' } });
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo true)'" } });
       const s = readState();
       assert.ok(s.history.length >= 1);
       assert.equal(s.history[0].from, 0);
@@ -419,14 +458,14 @@ describe('enforcement system', () => {
         ts: new Date().toISOString(), from: 0, to: 1, reason: `entry-${i}`, severity: 'normal',
       }));
       setState(freshState({ level: 1, violations: 55, history: bigHistory }));
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'eval("overflow")' } });
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo overflow)'" } });
       const s = readState();
       assert.ok(s.history.length <= 50, `history length ${s.history.length} should be <= 50`);
     });
 
     it('adds restricted groups on circumvention', () => {
       setState(freshState({ level: 0, violations: 0, restrictedGroups: [] }));
-      runEnforcement({ tool_name: 'Bash', tool_input: { command: 'eval("restrict-me")' } });
+      runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo restrict-me)'" } });
       const s = readState();
       assert.ok(s.restrictedGroups.includes('exec'), 'Bash circumvention should restrict exec');
       assert.ok(s.restrictedGroups.includes('write'), 'Bash circumvention should restrict write');
@@ -490,13 +529,13 @@ describe('enforcement system', () => {
       assert.ok(isDeny(r.json));
     });
 
-    it('blocks Write to .hive-flow/data/', () => {
+    it('allows Write to .hive-flow/data/ operational state', () => {
       setState(freshState());
       const r = runEnforcement({
         tool_name: 'Write',
         tool_input: { file_path: join(REPO_ROOT, '.hive-flow/data/memory.db') },
       });
-      assert.ok(isDeny(r.json));
+      assert.ok(isAllow(r.json));
     });
 
     // --- Bash redirects to protected paths ---
@@ -508,7 +547,7 @@ describe('enforcement system', () => {
         tool_input: { command: 'echo "{}" > .hive-flow/enforcement/state.json' },
       });
       assert.ok(isDeny(r.json));
-      assert.match(denyReason(r.json), /redirect/i);
+      assert.match(denyReason(r.json), /protected path|enforcement substrate/i);
     });
 
     it('blocks tee to .claude/ directory', () => {
@@ -668,7 +707,7 @@ describe('enforcement system', () => {
 
     it('blocks eval() calls', () => {
       setState(freshState());
-      const r = runEnforcement({ tool_name: 'Bash', tool_input: { command: 'node -e "eval(\'process.exit()\')"' } });
+      const r = runEnforcement({ tool_name: 'Bash', tool_input: { command: "bash -c 'eval $(echo true)'" } });
       assert.ok(isDeny(r.json));
       assert.match(denyReason(r.json), /[Oo]bfuscated/);
     });
@@ -717,6 +756,23 @@ describe('enforcement system', () => {
       assert.ok(isAllow(r.json), 'ANSI escapes should not be flagged');
     });
 
+    it('allows inert secret set-check output while blocking value expansion', () => {
+      setState(freshState());
+      const safe = runEnforcement({
+        tool_name: 'Bash',
+        tool_input: { command: 'echo "${OPENROUTER_API_KEY:+YES}"' },
+      });
+      assert.ok(isAllow(safe.json), '${VAR:+literal} should not expose the secret value');
+
+      setState(freshState());
+      const unsafe = runEnforcement({
+        tool_name: 'Bash',
+        tool_input: { command: 'echo "${OPENROUTER_API_KEY:-}"' },
+      });
+      assert.ok(isDeny(unsafe.json), '${VAR:-...} can expose the secret when set');
+      assert.match(denyReason(unsafe.json), /secret environment variable/i);
+    });
+
     // --- Script execution while write-restricted ---
 
     it('blocks bash script.sh when write-restricted', () => {
@@ -724,12 +780,24 @@ describe('enforcement system', () => {
       const r = runEnforcement({ tool_name: 'Bash', tool_input: { command: 'bash exploit.sh' } });
       assert.ok(isDeny(r.json));
       assert.match(denyReason(r.json), /write-restricted/i);
+      const s = readState();
+      assert.equal(s.level, 2, 'write-restricted script denial should not self-escalate');
+      assert.equal(s.violations, 2, 'write-restricted script denial should not count as a fresh escalation violation');
     });
 
     it('blocks node evil.mjs when write-restricted', () => {
       setState(freshState({ level: 2, violations: 2, restrictedGroups: ['write'] }));
       const r = runEnforcement({ tool_name: 'Bash', tool_input: { command: 'node exploit.mjs' } });
       assert.ok(isDeny(r.json));
+    });
+
+    it('allows the private tmux control helper while write-restricted', () => {
+      setState(freshState({ level: 2, violations: 2, restrictedGroups: ['write'] }));
+      const r = runEnforcement({
+        tool_name: 'Bash',
+        tool_input: { command: 'timeout 25 .audit/scripts/hf-tmux-control.sh send-codex "probe"' },
+      });
+      assert.ok(isAllow(r.json));
     });
 
     it('allows bash script.sh when NOT write-restricted', () => {
@@ -859,13 +927,13 @@ describe('enforcement system', () => {
 
       const r = runEnforcement({ tool_name: 'Read', tool_input: {} });
       // After detecting tamper, state should be at WARNED minimum
-      const s = readState();
+      const s = readStateFile(STATE_FILE);
       assert.ok(s.level >= 1, 'tampered state should be at least WARNED');
       assert.equal(s.integrityCompromised, true);
     });
 
     it('treats truncated HMAC as invalid state without fail-closed denial', () => {
-      mkdirSync(ENF_DIR, { recursive: true });
+      mkdirSync(dirname(STATE_FILE), { recursive: true });
       const envelope = signState(freshState({ level: 0, violations: 0 }));
       envelope.hmac = envelope.hmac.slice(0, -2);
       writeFileSync(STATE_FILE, JSON.stringify(envelope, null, 2));
@@ -873,14 +941,14 @@ describe('enforcement system', () => {
       const r = runEnforcement({ tool_name: 'Read', tool_input: {} });
       assert.ok(isAllow(r.json), 'truncated HMAC should not trigger internal error denial');
 
-      const s = readState();
+      const s = readStateFile(STATE_FILE);
       assert.ok(s.level >= 1, 'invalid HMAC state should be escalated to at least WARNED');
       assert.equal(s.integrityCompromised, true);
     });
 
     it('handles legacy (unsigned) state with migration', () => {
       // Write legacy format (plain state without HMAC envelope)
-      mkdirSync(ENF_DIR, { recursive: true });
+      mkdirSync(dirname(STATE_FILE), { recursive: true });
       const legacy = freshState({ level: 0, violations: 0 });
       writeFileSync(STATE_FILE, JSON.stringify(legacy, null, 2));
 
@@ -903,7 +971,7 @@ describe('enforcement system', () => {
     });
 
     it('rejects oversized state files (> 10KB)', () => {
-      mkdirSync(ENF_DIR, { recursive: true });
+      mkdirSync(dirname(STATE_FILE), { recursive: true });
       // Write a > 10KB file
       const bigState = { state: freshState(), hmac: 'a'.repeat(64) };
       bigState.state.history = Array.from({ length: 500 }, () => ({
@@ -1224,6 +1292,7 @@ describe('enforcement system', () => {
       const r = runResetCheck({ user_prompt: '/enforcement-reset' });
       assert.ok(r.json.hookSpecificOutput?.additionalContext, 'should have additionalContext inside hookSpecificOutput');
       assert.match(r.json.hookSpecificOutput.additionalContext, /Reset complete/);
+      assert.doesNotMatch(r.json.hookSpecificOutput.additionalContext, /state\.json/);
 
       // State should be back to NORMAL
       const s = readState();
@@ -1386,7 +1455,7 @@ describe('enforcement system', () => {
       setState(freshState());
       runEnforcement({
         tool_name: 'Bash',
-        tool_input: { command: 'eval("test")' },
+        tool_input: { command: "bash -c 'eval $(echo true)'" },
       });
       const s = readState();
       assert.ok(s.restrictedGroups.includes('exec'));

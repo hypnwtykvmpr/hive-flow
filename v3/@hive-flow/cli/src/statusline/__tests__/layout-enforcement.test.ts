@@ -38,6 +38,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { renderClaudeCodeStatusline } from '../claude-code-renderer.js';
+import { statuslinePaths } from '../paths.js';
 import type {
   ScoreboardSummary,
   StatuslineSnapshotV1,
@@ -238,6 +239,93 @@ function fullFixtureSnapshot(projectRoot: string): void {
   });
 }
 
+function writeJsonFixture(filePath: string, value: unknown): void {
+  mkdirSync(join(filePath, '..'), { recursive: true });
+  writeFileSync(filePath, JSON.stringify(value), { encoding: 'utf8', mode: 0o600 });
+}
+
+function materializedEightRowFixture(projectRoot: string): void {
+  const paths = statuslinePaths(projectRoot);
+  const observedAt = new Date().toISOString();
+
+  writeJsonFixture(paths.scoreboardCurrent, {
+    agentsByProvider: {
+      claude: { activeAgents: 7, idleAgents: 4, staleAgents: 0, models: { Opus: 7, Sonnet: 4 } },
+      codex: { activeAgents: 3, idleAgents: 0, staleAgents: 0 },
+    },
+    callsByProvider: {},
+    stale: false,
+    lastUpdatedAt: observedAt,
+  });
+
+  writeJsonFixture(join(projectRoot, '.hive-flow', 'agents', 'store.json'), {
+    version: '1.0',
+    agents: Object.fromEntries([
+      ...Array.from({ length: 7 }, (_, i) => [
+        `worker-${i + 1}`,
+        { agentId: `worker-${i + 1}`, agentType: 'worker', status: 'busy', provider: 'codex' },
+      ]),
+      ['queen-1', { agentId: 'queen-1', agentType: 'queen', status: 'busy', provider: 'claude' }],
+      ['queen-2', { agentId: 'queen-2', agentType: 'queen', status: 'idle', provider: 'claude' }],
+    ]),
+  });
+
+  writeJsonFixture(paths.memoryStats, {
+    embeddings: { count: 290, source: 'agentdb', observedAt },
+    memories: { count: 41_100, source: 'agentdb', observedAt },
+    dbSizeBytes: 340_000,
+    sourceDescription: 'agentdb',
+  });
+
+  writeJsonFixture(paths.testsCurrent, {
+    suite: {
+      version: 1,
+      eventId: 'golden-suite',
+      ts: observedAt,
+      repoRoot: projectRoot,
+      projectKey: '0123456789abcdef',
+      runner: 'vitest',
+      kind: 'suite',
+      passed: 142,
+      failed: 0,
+      skipped: 0,
+      total: 142,
+      producerKind: 'wrapper',
+      producerId: 'golden',
+    },
+  });
+
+  writeJsonFixture(paths.mcpHealth, {
+    version: 1,
+    observedAt,
+    probeVersion: 1,
+    source: 'setup-verify-json-rpc',
+    total: 7,
+    configured: 7,
+    runtimeUp: 5,
+    state: 'config-present',
+  });
+
+  writeJsonFixture(paths.attentionCurrent, {
+    unresolved: [
+      {
+        id: 'golden-attention',
+        ts: observedAt,
+        severity: 'critical',
+        source: 'gate',
+        message: 'permission required',
+        redacted: false,
+        ageSeconds: 3,
+      },
+    ],
+  });
+
+  writeJsonFixture(join(projectRoot, '.hive-flow', 'daemon-state.json'), {
+    running: true,
+    pid: 12345,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Suite
 // ---------------------------------------------------------------------------
@@ -274,10 +362,29 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
       '📊 Memory  Embeddings 290  │  Memories 41.1k  │  💾 333KB  │  🧪 Tests 142  │  🔌 MCP 5/7',
       '📌 attention  ! permission required',
       RULE,
-      '► daemon on · data fresh 0s',
+      '► ⛔ ENFORCEMENT OFF · daemon on · data fresh 0s',
     ].join('\n');
 
     expect(plain).toBe(golden);
+  });
+
+  it('GOLDEN materialized producers: memory/stats.json and mcp/health.json populate the 8-row box', async () => {
+    materializedEightRowFixture(fix.projectRoot);
+
+    const output = await renderClaudeCodeStatusline(canonicalStdin(), fix.projectRoot);
+    const plain = stripAnsi(output);
+    const lines = plain.split('\n');
+
+    expect(lines.length).toBe(8);
+    expect(lines[1]).toBe(RULE);
+    expect(lines[6]).toBe(RULE);
+    expect(lines[4]).toBe(
+      '📊 Memory  Embeddings 290  │  Memories 41.1k  │  💾 333KB  │  🧪 Tests 142  │  🔌 MCP 5/7',
+    );
+    expect(plain).toContain('🤖 Claude Opus 7 · Sonnet 4  │  Codex 3');
+    expect(plain).toContain('🪪 Swarm ◉ [ 7/50]  ♛2');
+    expect(plain).toContain('📌 attention  ! permission required');
+    expect(plain).toContain('► ⛔ ENFORCEMENT OFF · daemon on · data fresh 0s');
   });
 
   it('GOLDEN full fixture: palette/colour codes are pinned per element (design §4)', async () => {
@@ -312,23 +419,42 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     expect(output).not.toContain('\x1b[1;33m');
   });
 
-  it('GOLDEN minimal fixture (OMIT > FAKE): header-only project renders exactly one line', async () => {
+  it('GOLDEN minimal fixture (OMIT > FAKE): header-only project renders only header plus enforcement footer', async () => {
     // No `.hive-flow/` -> header-only mode. With no body rows there are NO
-    // separator rules and (no daemon signal) no footer — a lone header.
+    // separator rules. The persistent enforcement-installed signal still
+    // renders a loud footer when the relocated engine is missing.
     const output = await renderClaudeCodeStatusline(canonicalStdin(), fix.projectRoot);
     const plain = stripAnsi(output);
+    const lines = plain.split('\n');
     const goldenHeader =
       '▊ ' +
       plain.split('  │  ')[0].replace('▊ ', '') + // dynamic basename of the tmp dir
       '  │  Opus 4.8 1M  │  📖 45% ctx · 82000 in/14000 out';
-    expect(plain).toBe(goldenHeader);
-    expect(plain.split('\n').length).toBe(1);
+    expect(lines).toEqual([goldenHeader, '► ⛔ ENFORCEMENT OFF']);
     // No fabricated body rows / separators.
     expect(plain).not.toContain('🤖');
     expect(plain).not.toContain('🪪');
     expect(plain).not.toContain('📊');
     expect(plain).not.toContain('📌');
     expect(plain).not.toContain('─');
+  });
+
+  it('GOLDEN materialized producers absent (OMIT > FAKE): missing memory/MCP files do not fabricate cells', async () => {
+    mkdirSync(join(fix.projectRoot, '.hive-flow'), { recursive: true });
+
+    const output = await renderClaudeCodeStatusline(canonicalStdin(), fix.projectRoot);
+    const plain = stripAnsi(output);
+
+    expect(plain).not.toContain('📊');
+    expect(plain).not.toContain('Memory');
+    expect(plain).not.toContain('Embeddings');
+    expect(plain).not.toContain('Memories');
+    expect(plain).not.toContain('Tests');
+    expect(plain).not.toContain('MCP');
+    expect(plain).not.toContain('0/0');
+    expect(plain).not.toContain('Embeddings 0');
+    expect(plain).not.toContain('Memories 0');
+    expect(plain).not.toContain('Tests 0');
   });
 
   it('GOLDEN partial fixture (OMIT > FAKE): only populated rows appear, only one rule pair', async () => {
@@ -350,7 +476,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     expect(lines[1]).toBe(RULE);
     expect(lines[2]).toBe('🤖 Gemini 1');
     expect(lines[3]).toBe(RULE);
-    expect(lines[4]).toBe('► daemon on · data fresh 0s');
+    expect(lines[4]).toBe('► ⛔ ENFORCEMENT OFF · daemon on · data fresh 0s');
     // No swarm / memory / attention markers fabricated.
     expect(output).not.toContain('🪪');
     expect(output).not.toContain('📊');

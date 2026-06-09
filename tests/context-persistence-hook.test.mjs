@@ -33,7 +33,9 @@ const {
   consumeCompactSignalAdvisory,
   armCompactionRecoveryRequired,
   buildCompactionRecoveryInstructions,
+  buildSessionStartRecoveryContext,
   detectContextWindowTokens,
+  displayAutopilotPercentage,
   modelIdToWindowSize,
   MODEL_CONTEXT_WINDOWS,
   DEFAULT_CONTEXT_WINDOW_TOKENS,
@@ -345,6 +347,47 @@ describe('context window detection', () => {
 
     assert.equal(detectContextWindowTokens(), DEFAULT_CONTEXT_WINDOW_TOKENS);
     assert.equal(DEFAULT_CONTEXT_WINDOW_TOKENS, 200000);
+  });
+
+  it('should skip empty exact project usage and use a parent project model from claude config', () => {
+    const projectRoot = join(TMP_DIR, 'window-config-project');
+    mkdirSync(projectRoot, { recursive: true });
+    mkdirSync(TMP_HOME, { recursive: true });
+    writeFileSync(join(TMP_HOME, '.claude.json'), JSON.stringify({
+      projects: {
+        [projectRoot]: { lastModelUsage: {} },
+        [dirname(projectRoot)]: {
+          lastModelUsage: {
+            'claude-opus-4-8[1m]': {
+              lastUsedAt: '2026-06-06T19:00:00.000Z',
+            },
+          },
+        },
+      },
+    }));
+    const oldCwd = process.cwd();
+    setEnv({
+      HIVE_FLOW_CONTEXT_WINDOW: null,
+      CLAUDE_MODEL: null,
+      HOME: TMP_HOME,
+      USERPROFILE: TMP_HOME,
+    });
+    try {
+      process.chdir(projectRoot);
+      assert.equal(detectContextWindowTokens(), 1000000);
+    } finally {
+      process.chdir(oldCwd);
+    }
+  });
+
+  it('should recalculate stale status percentages against the current context window', () => {
+    const pct = displayAutopilotPercentage({
+      lastTokenEstimate: 258587,
+      lastPercentage: 1,
+      contextWindow: 200000,
+    }, 1000000);
+
+    assert.equal(pct.toFixed(6), '0.258587');
   });
 });
 
@@ -915,6 +958,104 @@ describe('compact advisory signal', () => {
     assert.match(instructions, /compaction-recovery\.cjs ack/);
   });
 
+  it('should not arm session-start recovery without compact-boundary evidence', () => {
+    const projectRoot = join(TMP_DIR, 'compact-session-start-no-boundary');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const flagPath = join(dataDir, 'compaction-recovery-required.json');
+
+    mkdirSync(dataDir, { recursive: true });
+    const context = buildSessionStartRecoveryContext(projectRoot, {
+      source: 'compact',
+      session_id: 'session-start-no-boundary',
+    });
+
+    assert.equal(context, '');
+    assert.equal(existsSync(flagPath), false);
+  });
+
+  it('should arm session-start recovery when transcript contains a real compact boundary', () => {
+    const projectRoot = join(TMP_DIR, 'compact-session-start-boundary');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const flagPath = join(dataDir, 'compaction-recovery-required.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, [
+      JSON.stringify({
+        type: 'system',
+        subtype: 'compact_boundary',
+        uuid: 'session-start-boundary-id',
+        timestamp: '2026-06-07T22:00:00.000Z',
+        compact_metadata: { pre_tokens: 444444, trigger: 'manual' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'post compact summary' }],
+          usage: { input_tokens: 2048 },
+        },
+      }),
+    ].join('\n') + '\n');
+
+    const context = buildSessionStartRecoveryContext(projectRoot, {
+      source: 'compact',
+      session_id: 'session-start-boundary',
+      transcript_path: transcriptPath,
+    });
+
+    assert.match(context, /POST-COMPACT RECOVERY REQUIRED/);
+    assert.equal(existsSync(flagPath), true);
+    const flag = JSON.parse(readFileSync(flagPath, 'utf8'));
+    assert.equal(flag.sessionId, 'session-start-boundary');
+    assert.equal(flag.compactBoundaryId, 'session-start-boundary-id');
+    assert.equal(flag.compactBoundaryTrigger, 'manual');
+  });
+
+  it('should not re-arm session-start recovery after a matching boundary ack', () => {
+    const projectRoot = join(TMP_DIR, 'compact-session-start-ack');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const flagPath = join(dataDir, 'compaction-recovery-required.json');
+    const ackPath = join(dataDir, 'compaction-recovery-ack.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, [
+      JSON.stringify({
+        type: 'system',
+        subtype: 'compact_boundary',
+        uuid: 'session-start-acked-boundary',
+        timestamp: '2026-06-07T22:10:00.000Z',
+        compact_metadata: { pre_tokens: 444444, trigger: 'manual' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'post compact summary' }],
+          usage: { input_tokens: 2048 },
+        },
+      }),
+    ].join('\n') + '\n');
+    writeFileSync(ackPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-ack',
+      version: 1,
+      sessionId: 'session-start-ack',
+      compactBoundaryId: 'session-start-acked-boundary',
+      acknowledgedAt: '2026-06-07T22:11:00.000Z',
+      summary: 'Recovered from the compact boundary and resumed.',
+    }));
+
+    const context = buildSessionStartRecoveryContext(projectRoot, {
+      source: 'compact',
+      session_id: 'session-start-ack',
+      transcript_path: transcriptPath,
+    });
+
+    assert.equal(context, '');
+    assert.equal(existsSync(flagPath), false);
+  });
+
   it('should surface a fresh compact advisory and remove the signal file', () => {
     const projectRoot = join(TMP_DIR, 'compact-signal-fresh');
     const dataDir = join(projectRoot, '.hive-flow', 'data');
@@ -1089,6 +1230,160 @@ describe('compact advisory signal', () => {
     assert.equal(flag.source, 'compact_boundary');
   });
 
+  it('should not re-arm recovery for an acknowledged compact boundary after autopilot state is reset', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-boundary-ack-idempotent');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    const recoveryPath = join(dataDir, 'compaction-recovery-required.json');
+    const ackPath = join(dataDir, 'compaction-recovery-ack.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, [
+      JSON.stringify({
+        type: 'system',
+        subtype: 'compact_boundary',
+        uuid: 'compact-boundary-once',
+        timestamp: '2026-06-06T19:00:00.000Z',
+        compact_metadata: { pre_tokens: 349957, trigger: 'manual' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'post compact summary' }],
+          usage: { input_tokens: 2048 },
+        },
+      }),
+    ].join('\n') + '\n');
+
+    await runAutopilot(
+      transcriptPath,
+      'boundary-ack-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath, projectRoot }
+    );
+
+    assert.equal(existsSync(recoveryPath), true);
+    rmSync(recoveryPath, { force: true });
+    writeFileSync(ackPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-ack',
+      version: 1,
+      sessionId: 'boundary-ack-session',
+      compactBoundaryId: 'compact-boundary-once',
+      acknowledgedAt: new Date().toISOString(),
+      summary: 'Recovered from the compact boundary and resumed the exact next step.',
+    }));
+    rmSync(statePath, { force: true });
+
+    const autopilot = await runAutopilot(
+      transcriptPath,
+      'boundary-ack-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath, projectRoot }
+    );
+
+    assert.equal(existsSync(recoveryPath), false);
+    assert.doesNotMatch(autopilot.additionalContext, /POST-COMPACT RECOVERY REQUIRED/);
+  });
+
+  it('should not re-arm for a pre-boundary-id ack written after the compact boundary', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-boundary-legacy-ack');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    const recoveryPath = join(dataDir, 'compaction-recovery-required.json');
+    const ackPath = join(dataDir, 'compaction-recovery-ack.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, [
+      JSON.stringify({
+        type: 'system',
+        subtype: 'compact_boundary',
+        uuid: 'legacy-boundary',
+        timestamp: '2026-06-06T18:24:20.114Z',
+        compact_metadata: { pre_tokens: 349957, trigger: 'manual' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'post compact summary' }],
+          usage: { input_tokens: 2048 },
+        },
+      }),
+    ].join('\n') + '\n');
+    writeFileSync(ackPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-ack',
+      version: 1,
+      sessionId: 'legacy-ack-session',
+      acknowledgedAt: '2026-06-06T19:34:24.149Z',
+      summary: 'Recovered from the compact boundary before boundary ids were stored.',
+    }));
+
+    const autopilot = await runAutopilot(
+      transcriptPath,
+      'legacy-ack-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath, projectRoot }
+    );
+
+    assert.equal(existsSync(recoveryPath), false);
+    assert.doesNotMatch(autopilot.additionalContext, /POST-COMPACT RECOVERY REQUIRED/);
+  });
+
+  it('should keep one active recovery nonce for repeated scans of the same compact boundary', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-boundary-active-idempotent');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    const recoveryPath = join(dataDir, 'compaction-recovery-required.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, [
+      JSON.stringify({
+        type: 'system',
+        subtype: 'compact_boundary',
+        uuid: 'compact-boundary-active',
+        timestamp: '2026-06-06T19:05:00.000Z',
+        compactMetadata: { preTokens: 776390, trigger: 'manual' },
+      }),
+      JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'post compact summary' }],
+          usage: { input_tokens: 2048 },
+        },
+      }),
+    ].join('\n') + '\n');
+
+    await runAutopilot(
+      transcriptPath,
+      'boundary-active-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath, projectRoot }
+    );
+    const firstFlag = JSON.parse(readFileSync(recoveryPath, 'utf8'));
+    rmSync(statePath, { force: true });
+
+    await runAutopilot(
+      transcriptPath,
+      'boundary-active-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath, projectRoot }
+    );
+    const secondFlag = JSON.parse(readFileSync(recoveryPath, 'utf8'));
+
+    assert.equal(secondFlag.recoveryNonce, firstFlag.recoveryNonce);
+    assert.equal(secondFlag.compactBoundaryId, 'compact-boundary-active');
+  });
+
   it('should not arm recovery for microcompaction or detached headless compact boundaries', async () => {
     for (const [name, compactMetadata] of [
       ['micro', { pre_tokens: 123456, trigger: 'compact_partial' }],
@@ -1128,6 +1423,39 @@ describe('compact advisory signal', () => {
       assert.equal(existsSync(recoveryPath), false, name);
       assert.doesNotMatch(autopilot.additionalContext, /POST-COMPACT RECOVERY REQUIRED/, name);
     }
+  });
+
+  it('should use an explicit per-run context window when reporting autopilot usage', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-autopilot-runtime-window');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(transcriptPath, JSON.stringify({
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'runtime context window sample' }],
+        usage: {
+          input_tokens: 258587,
+          cache_read_input_tokens: 0,
+          cache_creation_input_tokens: 0,
+        },
+      },
+    }) + '\n');
+
+    const autopilot = await runAutopilot(
+      transcriptPath,
+      'runtime-window-session',
+      { pruneStale: () => 0 },
+      'json',
+      { statePath, projectRoot, contextWindowTokens: 1000000 }
+    );
+
+    assert.equal(autopilot.percentage, 0.258587);
+    assert.match(autopilot.additionalContext, /~258\.6K\/1\.0M tokens/);
+    assert.doesNotMatch(autopilot.additionalContext, /Configured action threshold/);
   });
 });
 

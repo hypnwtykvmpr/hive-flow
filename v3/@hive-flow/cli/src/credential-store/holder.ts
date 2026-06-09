@@ -1,9 +1,11 @@
+import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, lstatSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createConnection, createServer, type Server, type Socket } from 'node:net';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { normalizeProviderKeyName } from './credential-store.js';
 import type { PeerCredential, PeerCredentialResolver } from './peer-credentials.js';
+import { redactCredentialMaterial } from './safe-serialization.js';
 
 export type CredentialPeerRole = 'coordinator' | 'sub-agent' | 'provider-worker';
 
@@ -152,6 +154,19 @@ export interface CredentialHolderServiceOptions {
   holderSecret?: Uint8Array;
 }
 
+export interface CredentialHolderProcessHardeningOptions {
+  platform?: NodeJS.Platform;
+  pid?: number;
+  setCoreDumpLimit?: () => void;
+  setLinuxDumpable?: () => void;
+}
+
+export interface CredentialHolderProcessHardeningStatus {
+  coreDumpDisabled: boolean;
+  dumpableDisabled: boolean;
+  errors?: string[];
+}
+
 export interface CredentialHolderGrantCommand {
   action: 'grant';
   taskId: string;
@@ -227,6 +242,7 @@ export class CredentialHolderService {
   }
 
   async start(): Promise<void> {
+    applyCredentialHolderProcessHardening();
     mkdirSync(dirname(this.socketPath), { recursive: true, mode: 0o700 });
     chmodSync(dirname(this.socketPath), 0o700);
     if (existsSync(this.socketPath)) {
@@ -305,15 +321,20 @@ export class CredentialHolderService {
     const provider = normalizeProviderKeyName(consumed.provider);
     const secret = this.secrets.get(provider);
     if (!secret) throw new Error(`credential holder has no secret for provider ${provider}`);
-    const response = await this.providerInvoker({
-      provider,
-      taskId: consumed.taskId,
-      secret: Buffer.from(secret),
-      peer,
-      request: command.request,
-    });
-    assertResponseDoesNotContainSecret(response, secret);
-    return response;
+    const requestSecret = Buffer.from(secret);
+    try {
+      const response = await this.providerInvoker({
+        provider,
+        taskId: consumed.taskId,
+        secret: requestSecret,
+        peer,
+        request: command.request,
+      });
+      assertResponseDoesNotContainSecret(response, secret);
+      return response;
+    } finally {
+      requestSecret.fill(0);
+    }
   }
 
   private async invokeProviderCall(command: CredentialHolderProviderCallCommand, socket: Socket): Promise<unknown> {
@@ -322,15 +343,20 @@ export class CredentialHolderService {
     const provider = normalizeProviderKeyName(command.provider);
     const secret = this.secrets.get(provider);
     if (!secret) throw new Error(`credential holder has no secret for provider ${provider}`);
-    const response = await this.providerInvoker({
-      provider,
-      taskId: command.taskId,
-      secret: Buffer.from(secret),
-      peer,
-      request: command.request,
-    });
-    assertResponseDoesNotContainSecret(response, secret);
-    return response;
+    const requestSecret = Buffer.from(secret);
+    try {
+      const response = await this.providerInvoker({
+        provider,
+        taskId: command.taskId,
+        secret: requestSecret,
+        peer,
+        request: command.request,
+      });
+      assertResponseDoesNotContainSecret(response, secret);
+      return response;
+    } finally {
+      requestSecret.fill(0);
+    }
   }
 
   private handleSocket(socket: Socket): void {
@@ -360,7 +386,7 @@ export class CredentialHolderService {
       if (command.action === 'provider_call') return { ok: true, response: await this.invokeProviderCall(command, socket) };
       return { ok: true, response: await this.redeemUseGrant(command, socket) };
     } catch (error) {
-      return { ok: false, error: (error as Error).message };
+      return { ok: false, error: String(redactCredentialMaterial((error as Error).message)) };
     }
   }
 
@@ -492,4 +518,46 @@ export function assertFullRestartRequiresUnlock(state: FullRestartState): void {
   if (!state.fullRuntimeRestart) return;
   if (!state.osUnlockFresh) throw new Error('full daemon/MCP runtime restart requires a fresh OS unlock');
   if (!state.backendAvailable) throw new Error('full daemon/MCP runtime restart fails closed when credential backend is unavailable');
+}
+
+export function applyCredentialHolderProcessHardening(
+  options: CredentialHolderProcessHardeningOptions = {},
+): CredentialHolderProcessHardeningStatus {
+  const platform = options.platform ?? process.platform;
+  const pid = options.pid ?? process.pid;
+  const errors: string[] = [];
+  let coreDumpDisabled = false;
+  let dumpableDisabled = platform !== 'linux';
+
+  try {
+    if (options.setCoreDumpLimit) {
+      options.setCoreDumpLimit();
+      coreDumpDisabled = true;
+    } else if (platform === 'linux') {
+      execFileSync('prlimit', ['--pid', String(pid), '--core=0:0'], { stdio: 'ignore' });
+      coreDumpDisabled = true;
+    }
+  } catch (error) {
+    errors.push(`core dump hardening unavailable: ${(error as Error).message}`);
+  }
+
+  if (platform === 'linux') {
+    try {
+      if (options.setLinuxDumpable) {
+        options.setLinuxDumpable();
+        dumpableDisabled = true;
+      } else {
+        errors.push('linux dumpable hardening requires a native in-process PR_SET_DUMPABLE hook');
+      }
+    } catch (error) {
+      dumpableDisabled = false;
+      errors.push(`linux dumpable hardening unavailable: ${(error as Error).message}`);
+    }
+  }
+
+  return {
+    coreDumpDisabled,
+    dumpableDisabled,
+    ...(errors.length ? { errors } : {}),
+  };
 }

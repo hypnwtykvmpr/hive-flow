@@ -16,6 +16,10 @@ export interface ReadSecretOptions {
   output?: NodeJS.WriteStream;
 }
 
+export interface ReadRequiredSecretOptions extends ReadSecretOptions {
+  purpose?: string;
+}
+
 function defaultConfirmMatcher(answer: string, confirmText?: string | RegExp): boolean {
   const trimmed = answer.trim();
   if (confirmText instanceof RegExp) return confirmText.test(trimmed);
@@ -98,4 +102,13 @@ export async function readSecret(prompt: string, options: ReadSecretOptions = {}
     };
     input.on('data', onData);
   });
+}
+
+export async function readRequiredSecret(prompt: string, options: ReadRequiredSecretOptions = {}): Promise<string> {
+  const value = await readSecret(prompt, options);
+  if (!value) {
+    const purpose = options.purpose || 'secret prompt';
+    throw new Error(`${purpose} refused empty secret in non-interactive or cancelled input`);
+  }
+  return value;
 }

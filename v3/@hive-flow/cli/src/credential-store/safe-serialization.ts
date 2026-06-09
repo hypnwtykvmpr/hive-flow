@@ -2,12 +2,14 @@ const REDACTED = '[REDACTED]';
 
 const SECRET_KEY_NAMES = /^(?:api[_-]?key|authorization|cookie|token|secret|password)$/i;
 const SECRET_VALUE_PATTERNS: RegExp[] = [
-  /\bor-[A-Za-z0-9._-]+/g,
-  /\bsk-[A-Za-z0-9._-]+/g,
+  /\bor-[A-Za-z0-9._-]{16,}/g,
   /\bsk-ant-[A-Za-z0-9._-]+/g,
+  /\bsk-[A-Za-z0-9._-]+/g,
   /\bBearer\s+[A-Za-z0-9._-]+/gi,
   /\bAIza[A-Za-z0-9._-]+/g,
   /\bCURSOR[A-Za-z0-9._-]*/g,
+  /(?<![A-Za-z0-9+/_-])[A-Fa-f0-9]{48,}(?![A-Za-z0-9+/_-])/g,
+  /(?<![A-Za-z0-9+/_-])(?:[A-Za-z0-9+/]{40,}={0,2}|[A-Za-z0-9_-]{40,})(?![A-Za-z0-9+/_-])/g,
 ];
 
 function redactString(value: string): string {

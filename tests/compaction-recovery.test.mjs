@@ -37,6 +37,9 @@ describe('compaction recovery helper', () => {
         sessionId: 'session-ack',
         recoveryNonce: 'abc123recovery',
         source: 'compact',
+        compactBoundaryId: 'boundary-helper-id',
+        compactBoundaryTimestamp: '2026-06-06T19:00:00.000Z',
+        compactBoundaryTrigger: 'manual',
         handoffPath,
         statePath,
         createdAt: new Date().toISOString(),
@@ -118,6 +121,9 @@ describe('compaction recovery helper', () => {
       const ack = JSON.parse(readFileSync(ackPath, 'utf8'));
       assert.equal(ack.type, 'hive-flow.compaction-recovery-ack');
       assert.equal(ack.sessionId, 'session-ack');
+      assert.equal(ack.compactBoundaryId, 'boundary-helper-id');
+      assert.equal(ack.compactBoundaryTimestamp, '2026-06-06T19:00:00.000Z');
+      assert.equal(ack.compactBoundaryTrigger, 'manual');
       assert.match(ack.summary, /durable handoff/);
       assert.equal(ack.evidence.nonceVerified, true);
       assert.equal(ack.evidence.handoffReviewed, true);

@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, unlinkSync, mkdirSync, existsSync } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
-import { readSecret } from '../install/portable-prompt.js';
+import { readRequiredSecret } from '../install/portable-prompt.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -233,8 +233,9 @@ class LinuxAuthProvider implements PlatformAuthProvider {
     if (!existsSync(PRIVKEY_ENC_PATH)) return null;
 
     try {
-      const password = await readSecret('Permission Guard keychain password: ');
-      if (!password) return null;
+      const password = await readRequiredSecret('Permission Guard keychain password: ', {
+        purpose: 'Permission Guard credential unlock',
+      });
 
       const stored = JSON.parse(readFileSync(PRIVKEY_ENC_PATH, 'utf8'));
       const salt = Buffer.from(stored.salt as string, 'base64');
@@ -285,8 +286,9 @@ class WindowsAuthProvider implements PlatformAuthProvider {
     if (!existsSync(PRIVKEY_ENC_PATH)) return null;
 
     try {
-      const password = await readSecret('Permission Guard keychain password: ');
-      if (!password) return null;
+      const password = await readRequiredSecret('Permission Guard keychain password: ', {
+        purpose: 'Permission Guard credential unlock',
+      });
 
       const stored = JSON.parse(readFileSync(PRIVKEY_ENC_PATH, 'utf8'));
       const salt = Buffer.from(stored.salt as string, 'base64');
@@ -355,13 +357,15 @@ export async function setupOverride(): Promise<void> {
   writeFileSync(PUBKEY_PATH, pubPem, { mode: 0o444 });
 
   // Prompt user for keychain password via /dev/tty
-  const password = await readSecret(
-    'Create a password for the Permission Guard credential store: '
-  );
-
-  if (!password) {
+  let password: string;
+  try {
+    password = await readRequiredSecret(
+      'Create a password for the Permission Guard credential store: ',
+      { purpose: 'Permission Guard credential setup' },
+    );
+  } catch (error) {
     unlinkSync(PUBKEY_PATH);
-    throw new Error('No password provided — setup aborted');
+    throw error;
   }
 
   // Store private key in platform-specific locked credential store

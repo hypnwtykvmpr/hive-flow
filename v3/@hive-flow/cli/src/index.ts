@@ -89,8 +89,15 @@ export class CLI {
         this.output.setVerbosity(process.env.DEBUG ? 'debug' : 'verbose');
       }
 
-      // Verbose mode: show parsed arguments
-      if (this.output.isVerbose()) {
+      const hookProtocolSubcommand = commandPath[0] === 'hooks' && (
+        commandPath[1] === 'modify-file'
+        || commandPath[1] === 'modify-bash'
+        || positional[0] === 'modify-file'
+        || positional[0] === 'modify-bash'
+      );
+
+      // Verbose mode: show parsed arguments. Hook protocol commands must keep stdout machine-only.
+      if (this.output.isVerbose() && !hookProtocolSubcommand) {
         this.output.printDebug(`Command: ${commandPath.join(' ') || '(none)'}`);
         this.output.printDebug(`Positional: [${positional.join(', ')}]`);
         this.output.printDebug(`Flags: ${JSON.stringify(Object.fromEntries(Object.entries(flags).filter(([k]) => k !== '_')))}`);
@@ -98,7 +105,7 @@ export class CLI {
       }
 
       // Run startup update check (non-blocking, silent on skip)
-      if (!flags.noUpdate && commandPath[0] !== 'update') {
+      if (!flags.noUpdate && commandPath[0] !== 'update' && !hookProtocolSubcommand) {
         this.checkForUpdatesOnStartup().catch(() => {/* silent */});
       }
 
@@ -220,21 +227,21 @@ export class CLI {
       const ctx: CommandContext = {
         args: subcommandArgs,
         flags,
-        config: await this.loadConfig(flags.config as string),
+        config: hookProtocolSubcommand ? undefined : await this.loadConfig(flags.config as string),
         cwd: process.cwd(),
         interactive: this.interactive && !flags.quiet
       };
 
       // Execute command
       if (targetCommand.action) {
-        if (this.output.isVerbose()) {
+        if (this.output.isVerbose() && !hookProtocolSubcommand) {
           this.output.printDebug(`Executing: ${targetCommand.name}`);
         }
 
         const startTime = Date.now();
         const result = await targetCommand.action(ctx);
 
-        if (this.output.isVerbose()) {
+        if (this.output.isVerbose() && !hookProtocolSubcommand) {
           this.output.printDebug(`Completed in ${Date.now() - startTime}ms`);
         }
 

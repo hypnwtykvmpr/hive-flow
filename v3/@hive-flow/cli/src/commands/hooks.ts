@@ -11,7 +11,9 @@ import { storeCommand } from './transfer-store.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import { loadAgenticFlow, loadAgenticFlowSubpath } from '@hive-flow/integration';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { evaluateSelfProtection } from '../permission-guard/self-protection.js';
 
 // Hook types
 const HOOK_TYPES = [
@@ -30,6 +32,295 @@ const AGENT_TYPES = [
   'swarm-specialist', 'performance-engineer', 'core-architect',
   'test-architect', 'coordinator', 'analyst', 'optimizer'
 ];
+
+type ModifyHookDecision = 'allow' | 'deny';
+
+interface ModifyHookPayload {
+  tool_name?: string;
+  toolName?: string;
+  tool_input?: Record<string, unknown>;
+  toolInput?: Record<string, unknown>;
+  file_path?: string;
+  filePath?: string;
+  notebook_path?: string;
+  notebookPath?: string;
+  path?: string;
+  command?: string;
+  [key: string]: unknown;
+}
+
+interface ModifyHookResponse {
+  tool_input: Record<string, unknown>;
+  decision: ModifyHookDecision;
+  reason: string;
+  hookSpecificOutput: {
+    hookEventName: 'PreToolUse';
+    permissionDecision: ModifyHookDecision;
+    permissionDecisionReason?: string;
+  };
+}
+
+interface ModifyHookOutcome {
+  response: ModifyHookResponse;
+  result: CommandResult;
+}
+
+interface ModifyHookPayloadRead {
+  payload: ModifyHookPayload | null;
+  parseError?: string;
+}
+
+function readModifyHookPayload(): ModifyHookPayloadRead {
+  if (process.env.HIVE_FLOW_MODIFY_HOOK_FORCE_THROW === '1') {
+    throw new Error('forced modify hook failure');
+  }
+  if (process.env.HIVE_FLOW_MODIFY_HOOK_FORCE_STDOUT === '1') {
+    process.stdout.write('stray modify hook stdout\n');
+  }
+
+  if (process.stdin.isTTY === true) return { payload: null };
+
+  let raw = '';
+  try {
+    raw = readFileSync(0, 'utf8').trim();
+  } catch {
+    return { payload: null };
+  }
+  if (!raw) return { payload: null };
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? { payload: parsed as ModifyHookPayload }
+      : { payload: null };
+  } catch (error) {
+    return {
+      payload: null,
+      parseError: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function getToolInput(payload: ModifyHookPayload | null): Record<string, unknown> {
+  const candidate = payload?.tool_input ?? payload?.toolInput;
+  return typeof candidate === 'object' && candidate !== null && !Array.isArray(candidate)
+    ? candidate as Record<string, unknown>
+    : {};
+}
+
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return '';
+}
+
+function extractHookFile(ctx: CommandContext, payload: ModifyHookPayload | null): string {
+  const toolInput = getToolInput(payload);
+  return firstString(
+    ctx.args[0],
+    ctx.flags.file,
+    ctx.flags.filePath,
+    ctx.flags.path,
+    ctx.flags.target,
+    toolInput.file_path,
+    toolInput.filePath,
+    toolInput.notebook_path,
+    toolInput.notebookPath,
+    toolInput.path,
+    payload?.file_path,
+    payload?.filePath,
+    payload?.notebook_path,
+    payload?.notebookPath,
+    payload?.path,
+  );
+}
+
+function extractHookCommand(ctx: CommandContext, payload: ModifyHookPayload | null): string {
+  const toolInput = getToolInput(payload);
+  return firstString(
+    ctx.args[0],
+    ctx.flags.command,
+    ctx.flags.cmd,
+    toolInput.command,
+    payload?.command,
+  );
+}
+
+function extractHookToolName(payload: ModifyHookPayload | null, fallback: string): string {
+  const toolName = firstString(payload?.tool_name, payload?.toolName);
+  return toolName || fallback;
+}
+
+function makeModifyHookResponse(
+  decision: ModifyHookDecision,
+  reason: string,
+  toolInput: Record<string, unknown>,
+): ModifyHookResponse {
+  const response: ModifyHookResponse = {
+    tool_input: toolInput,
+    decision,
+    reason,
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: decision,
+    },
+  };
+
+  if (decision === 'deny') {
+    response.hookSpecificOutput.permissionDecisionReason = reason;
+  }
+
+  return response;
+}
+
+function writeModifyHookResponse(response: ModifyHookResponse): void {
+  process.stdout.write(`${JSON.stringify(response)}\n`);
+}
+
+async function captureModifyHookStdout<T>(operation: () => Promise<T>): Promise<T> {
+  const originalWrite = process.stdout.write;
+  process.stdout.write = ((chunk: unknown, ...args: unknown[]) => {
+    void chunk;
+    void args;
+    return true;
+  }) as typeof process.stdout.write;
+  try {
+    return await operation();
+  } finally {
+    process.stdout.write = originalWrite;
+  }
+}
+
+function modifyHookOutcome(
+  decision: ModifyHookDecision,
+  reason: string,
+  toolInput: Record<string, unknown>,
+  data: Record<string, unknown> = { decision },
+): ModifyHookOutcome {
+  return {
+    response: makeModifyHookResponse(decision, reason, toolInput),
+    result: { success: true, data },
+  };
+}
+
+function isClearlyDestructiveCommand(command: string): boolean {
+  const normalized = command.replace(/\s+/g, ' ').trim();
+  return /\brm\s+-[^\n;|&]*r[^\n;|&]*f[^\n;|&]*(?:\s|$)/.test(normalized)
+    || /\brm\s+-[^\n;|&]*f[^\n;|&]*r[^\n;|&]*(?:\s|$)/.test(normalized)
+    || /\bgit\s+reset\s+--hard\b/.test(normalized)
+    || /\bgit\s+clean\s+-[^\n;|&]*[xdf][^\n;|&]*\b/.test(normalized)
+    || /\bchmod\s+-R\s+777\b/.test(normalized)
+    || /\bchown\s+-R\b/.test(normalized);
+}
+
+function projectRootForHook(ctx: CommandContext): string {
+  return firstString(process.env.HIVE_FLOW_PROJECT_ROOT, process.env.CLAUDE_PROJECT_DIR, ctx.cwd) || process.cwd();
+}
+
+async function evaluateModifyFileHook(ctx: CommandContext): Promise<ModifyHookOutcome> {
+  try {
+    const { payload, parseError } = readModifyHookPayload();
+    const toolInput = getToolInput(payload);
+    const filePath = extractHookFile(ctx, payload);
+    const toolName = extractHookToolName(payload, 'Write');
+    const root = projectRootForHook(ctx);
+
+    if (filePath) {
+      const evaluationInput = { ...toolInput };
+      if (toolName === 'NotebookEdit') evaluationInput.notebook_path = filePath;
+      else evaluationInput.file_path = filePath;
+      const protection = evaluateSelfProtection(toolName, evaluationInput, root);
+      if (protection?.blocked) {
+        return modifyHookOutcome('deny', protection.reason, toolInput, {
+          decision: 'deny',
+          reason: protection.reason,
+        });
+      }
+    }
+
+    if (parseError) {
+      return modifyHookOutcome(
+        'allow',
+        `Allowed because Hive Flow modify-file hook failed before identifying a protected target: ${parseError}`,
+        toolInput,
+        { decision: 'allow', failOpen: true },
+      );
+    }
+
+    return modifyHookOutcome(
+      'allow',
+      'Allowed by Hive Flow modify-file hook.',
+      toolInput,
+    );
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return modifyHookOutcome(
+      'allow',
+      `Allowed because Hive Flow modify-file hook failed before identifying a protected target: ${detail}`,
+      {},
+      { decision: 'allow', failOpen: true },
+    );
+  }
+}
+
+async function runModifyFileHook(ctx: CommandContext): Promise<CommandResult> {
+  const outcome = await captureModifyHookStdout(() => evaluateModifyFileHook(ctx));
+  writeModifyHookResponse(outcome.response);
+  return outcome.result;
+}
+
+async function evaluateModifyBashHook(ctx: CommandContext): Promise<ModifyHookOutcome> {
+  try {
+    const { payload, parseError } = readModifyHookPayload();
+    const toolInput = getToolInput(payload);
+    const command = extractHookCommand(ctx, payload);
+    const root = projectRootForHook(ctx);
+
+    if (command) {
+      const protection = evaluateSelfProtection('Bash', { ...toolInput, command }, root);
+      if (protection?.blocked) {
+        return modifyHookOutcome('deny', protection.reason, toolInput, {
+          decision: 'deny',
+          reason: protection.reason,
+        });
+      }
+
+      if (isClearlyDestructiveCommand(command)) {
+        const reason = 'DENIED: Destructive shell command requires human approval.';
+        return modifyHookOutcome('deny', reason, toolInput, { decision: 'deny', reason });
+      }
+    }
+
+    if (parseError) {
+      return modifyHookOutcome(
+        'allow',
+        `Allowed because Hive Flow modify-bash hook failed before identifying a protected command: ${parseError}`,
+        toolInput,
+        { decision: 'allow', failOpen: true },
+      );
+    }
+
+    return modifyHookOutcome(
+      'allow',
+      'Allowed by Hive Flow modify-bash hook.',
+      toolInput,
+    );
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return modifyHookOutcome(
+      'allow',
+      `Allowed because Hive Flow modify-bash hook failed before identifying a protected command: ${detail}`,
+      {},
+      { decision: 'allow', failOpen: true },
+    );
+  }
+}
+
+async function runModifyBashHook(ctx: CommandContext): Promise<CommandResult> {
+  const outcome = await captureModifyHookStdout(() => evaluateModifyBashHook(ctx));
+  writeModifyHookResponse(outcome.response);
+  return outcome.result;
+}
 
 // Pre-edit subcommand
 const preEditCommand: Command = {
@@ -3481,6 +3772,35 @@ const sessionStartCommand: Command = {
   }
 };
 
+const modifyFileCommand: Command = {
+  name: 'modify-file',
+  description: '(HOOK) PreToolUse file modification compatibility hook',
+  hidden: true,
+  options: [
+    { name: 'file', short: 'f', description: 'File path from hook input', type: 'string' },
+    { name: 'file-path', description: 'File path from hook input', type: 'string' },
+    { name: 'path', description: 'File path from hook input', type: 'string' },
+  ],
+  examples: [
+    { command: 'hive-flow hooks modify-file --file .agent-router/reports/result.md', description: 'Return hook JSON for a file write' },
+  ],
+  action: runModifyFileHook,
+};
+
+const modifyBashCommand: Command = {
+  name: 'modify-bash',
+  description: '(HOOK) PreToolUse bash modification compatibility hook',
+  hidden: true,
+  options: [
+    { name: 'command', short: 'c', description: 'Command from hook input', type: 'string' },
+    { name: 'cmd', description: 'Command from hook input', type: 'string' },
+  ],
+  examples: [
+    { command: 'hive-flow hooks modify-bash --command ".agent-router/agent-router.sh handoff-from cursor claude msg"', description: 'Return hook JSON for a shell command' },
+  ],
+  action: runModifyBashHook,
+};
+
 // Pre-bash alias for pre-command (v2 compat)
 const preBashCommand: Command = {
   name: 'pre-bash',
@@ -4153,6 +4473,8 @@ export const hooksCommand: Command = {
     // Backward-compatible aliases for v2
     routeTaskCommand,
     sessionStartCommand,
+    modifyFileCommand,
+    modifyBashCommand,
     preBashCommand,
     postBashCommand,
     // Agent Teams integration

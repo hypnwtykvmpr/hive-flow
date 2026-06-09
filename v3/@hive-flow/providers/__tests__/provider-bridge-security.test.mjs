@@ -48,4 +48,16 @@ describe('provider-agent bridge security wiring', () => {
     expect(bridgeSource).toContain('delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN');
     expect(bridgeSource).toContain('delete process.env.HIVE_FLOW_DEV_OVERRIDE');
   });
+
+  it('routes bridge logs and result JSON through the credential redactor', () => {
+    expect(bridgeSource).toContain('function redactBridgeCredentialMaterial');
+    expect(bridgeSource).toContain('function safeBridgeJsonStringify');
+    expect(bridgeSource).toContain('appendFileSync(getBridgeLogPath(), safeBridgeJsonStringify(entry) +');
+    expect(bridgeSource).toContain('writeFileSync(tmpResult, safeBridgeJsonStringify(errorResponse, 2) +');
+    expect(bridgeSource).toContain('process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) +');
+    expect(bridgeSource).toContain("return typeof result === 'string' ? redactBridgeString(result) : safeBridgeJsonStringify(result)");
+    expect(bridgeSource).toContain("const rawContent = typeof tr.result === 'string' ? redactBridgeString(tr.result) : safeBridgeJsonStringify(tr.result)");
+    expect(bridgeSource).not.toContain('JSON.stringify(errorResponse, null, 2) +');
+    expect(bridgeSource).not.toContain("return typeof result === 'string' ? result : JSON.stringify(result)");
+  });
 });

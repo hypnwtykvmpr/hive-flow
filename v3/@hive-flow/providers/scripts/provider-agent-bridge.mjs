@@ -65,6 +65,57 @@ const permissionGuardGate = await importCliPermissionGuardDist('gate.js');
 delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
 delete process.env.HIVE_FLOW_DEV_OVERRIDE;
 
+const BRIDGE_REDACTED = '[REDACTED]';
+const BRIDGE_SECRET_KEY_NAMES = /^(?:api[_-]?key|authorization|cookie|token|secret|password)$/i;
+const BRIDGE_SECRET_ENV_KEY = /(?:API_KEY|TOKEN|SECRET|CREDENTIAL|PASSWORD|CURSOR|QWEN|DASHSCOPE)/i;
+const BRIDGE_SECRET_VALUE_PATTERNS = [
+  /\bor-[A-Za-z0-9._-]{16,}/g,
+  /\bsk-ant-[A-Za-z0-9._-]+/g,
+  /\bsk-[A-Za-z0-9._-]+/g,
+  /\bBearer\s+[A-Za-z0-9._-]+/gi,
+  /\bAIza[A-Za-z0-9._-]+/g,
+  /\bCURSOR[A-Za-z0-9._-]*/g,
+  /(?<![A-Za-z0-9+/_-])[A-Fa-f0-9]{48,}(?![A-Za-z0-9+/_-])/g,
+  /(?<![A-Za-z0-9+/_-])(?:[A-Za-z0-9+/]{40,}={0,2}|[A-Za-z0-9_-]{40,})(?![A-Za-z0-9+/_-])/g,
+];
+
+function redactBridgeString(value) {
+  let rendered = String(value);
+  for (const pattern of BRIDGE_SECRET_VALUE_PATTERNS) {
+    rendered = rendered.replace(pattern, BRIDGE_REDACTED);
+  }
+  return rendered;
+}
+
+function redactBridgeCredentialMaterial(value) {
+  if (typeof value === 'string') return redactBridgeString(value);
+  if (Array.isArray(value)) return value.map(entry => redactBridgeCredentialMaterial(entry));
+  if (!value || typeof value !== 'object') return value;
+
+  const result = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (BRIDGE_SECRET_KEY_NAMES.test(key)) {
+      result[key] = BRIDGE_REDACTED;
+      continue;
+    }
+    if (key === 'env' && entry && typeof entry === 'object') {
+      result[key] = Object.fromEntries(
+        Object.entries(entry).map(([envKey, envValue]) => [
+          envKey,
+          BRIDGE_SECRET_ENV_KEY.test(envKey) ? BRIDGE_REDACTED : redactBridgeCredentialMaterial(envValue),
+        ]),
+      );
+      continue;
+    }
+    result[key] = redactBridgeCredentialMaterial(entry);
+  }
+  return result;
+}
+
+function safeBridgeJsonStringify(value, space) {
+  return JSON.stringify(redactBridgeCredentialMaterial(value), null, space);
+}
+
 // Module-level limits — set once in main() after provider/model are resolved.
 // Used by BRIDGE_FILESYSTEM_TOOLS handlers for context-aware size caps.
 let currentBridgeLimits = null;
@@ -106,14 +157,14 @@ process.on('SIGTERM', () => {
   if (resultFile) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
-      writeFileSync(tmpResult, JSON.stringify(errorResponse, null, 2) + '\n');
+      writeFileSync(tmpResult, safeBridgeJsonStringify(errorResponse, 2) + '\n');
       renameSync(tmpResult, resultFile);
     } catch {
       // File write failed — fall back to stdout
-      process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+      process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
     }
   } else {
-    process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+    process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
   }
 
   // Reset agent status to idle (best-effort, synchronous)
@@ -170,7 +221,7 @@ function bridgeLog(level, message, meta) {
       message,
       ...(meta ? { meta } : {}),
     };
-    appendFileSync(getBridgeLogPath(), JSON.stringify(entry) + '\n', 'utf8');
+    appendFileSync(getBridgeLogPath(), safeBridgeJsonStringify(entry) + '\n', 'utf8');
   } catch { /* logging must never break the bridge */ }
 }
 
@@ -196,10 +247,10 @@ function classifyError(err) {
 // ===== Stderr Logger (prevents provider logs from corrupting stdout JSON) =====
 
 const stderrLogger = {
-  info:  (msg, meta) => process.stderr.write(`[INFO] ${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
-  warn:  (msg, meta) => process.stderr.write(`[WARN] ${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
-  error: (msg, err)  => process.stderr.write(`[ERROR] ${msg} ${err || ''}\n`),
-  debug: (msg, meta) => process.stderr.write(`[DEBUG] ${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
+  info:  (msg, meta) => process.stderr.write(`[INFO] ${redactBridgeString(msg)} ${meta ? safeBridgeJsonStringify(meta) : ''}\n`),
+  warn:  (msg, meta) => process.stderr.write(`[WARN] ${redactBridgeString(msg)} ${meta ? safeBridgeJsonStringify(meta) : ''}\n`),
+  error: (msg, err)  => process.stderr.write(`[ERROR] ${redactBridgeString(msg)} ${redactBridgeCredentialMaterial(err || '')}\n`),
+  debug: (msg, meta) => process.stderr.write(`[DEBUG] ${redactBridgeString(msg)} ${meta ? safeBridgeJsonStringify(meta) : ''}\n`),
 };
 
 // ===== Constants =====
@@ -2502,7 +2553,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     }
     
     const results = findFiles(basePath, pattern);
-    return JSON.stringify(results);
+    return safeBridgeJsonStringify(results);
   },
 };
 
@@ -2566,12 +2617,12 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
 
   try {
     const result = await handler(parseBridgeToolArgs(toolArgs), ctx);
-    return typeof result === 'string' ? result : JSON.stringify(result);
+    return typeof result === 'string' ? redactBridgeString(result) : safeBridgeJsonStringify(result);
   } catch (err) {
     stderrLogger.error(`Tool execution failed: ${toolName}`, err.message || err);
     return {
       status: 'error',
-      error: err.message || String(err),
+      error: redactBridgeString(err.message || String(err)),
       tool: toolName,
     };
   }
@@ -3079,7 +3130,7 @@ async function main() {
           };
           try {
             const tmpResult = resultFile + `.tmp.${process.pid}`;
-            writeFileSync(tmpResult, JSON.stringify(termResult, null, 2) + '\n');
+            writeFileSync(tmpResult, safeBridgeJsonStringify(termResult, 2) + '\n');
             renameSync(tmpResult, resultFile);
           } catch (writeErr) {
             bridgeLog('error', 'Failed to write termination result file', { agentId, error: writeErr.message });
@@ -3215,7 +3266,7 @@ async function main() {
 
         const toolLimits = dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel);
         for (const tr of toolResults) {
-          const rawContent = typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result);
+          const rawContent = typeof tr.result === 'string' ? redactBridgeString(tr.result) : safeBridgeJsonStringify(tr.result);
           const truncatedContent = truncateToolResult(rawContent, tr.name, toolLimits);
           const wasTruncated = truncatedContent !== rawContent;
           if (wasTruncated) {
@@ -3412,10 +3463,10 @@ async function main() {
   // Output result as JSON
   if (resultFile) {
     const tmpResult = resultFile + `.tmp.${process.pid}`;
-    writeFileSync(tmpResult, JSON.stringify(result, null, 2) + '\n');
+    writeFileSync(tmpResult, safeBridgeJsonStringify(result, 2) + '\n');
     renameSync(tmpResult, resultFile);
   } else {
-    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    process.stdout.write(safeBridgeJsonStringify(result, 2) + '\n');
   }
 
   // Emit worker-completed event to activity.jsonl for hive observability
@@ -3503,14 +3554,14 @@ async function handleMainError(err) {
   if (resultFile) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
-      writeFileSync(tmpResult, JSON.stringify(errorResponse, null, 2) + '\n');
+      writeFileSync(tmpResult, safeBridgeJsonStringify(errorResponse, 2) + '\n');
       renameSync(tmpResult, resultFile);
     } catch {
       // File write failed — fall back to stdout
-      process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+      process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
     }
   } else {
-    process.stdout.write(JSON.stringify(errorResponse, null, 2) + '\n');
+    process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
   }
 
   // Cleanup: delete task file (best-effort)

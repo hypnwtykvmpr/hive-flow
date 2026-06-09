@@ -74,11 +74,24 @@ const AUTOPILOT_STATE_PATH = join(DATA_DIR, 'autopilot-state.json');
 // Approximate tokens per character (Claude averages ~3.5 chars per token)
 const CHARS_PER_TOKEN = 3.5;
 
-function detectContextWindowTokens() {
+function positiveInteger(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+}
+
+function detectContextWindowTokens(input = null) {
   const override = parseInt(process.env.HIVE_FLOW_CONTEXT_WINDOW || '', 10);
   if (Number.isFinite(override) && override > 0) {
     return override;
   }
+  const inputWindow = positiveInteger(input?.context_window?.context_window_size);
+  if (inputWindow > 0) return inputWindow;
+  const inputModel = input?.model?.display_name
+    || input?.model?.model_id
+    || input?.model?.id
+    || input?.model?.name
+    || '';
+  if (inputModel) return modelIdToWindowSize(inputModel);
   if (process.env.CLAUDE_MODEL) {
     return modelIdToWindowSize(process.env.CLAUDE_MODEL);
   }
@@ -89,23 +102,13 @@ function detectContextWindowTokens() {
       const claudeConfig = JSON.parse(readFileSync(claudeConfigPath, 'utf-8'));
       if (claudeConfig?.projects) {
         const cwd = process.cwd();
-        for (const [projectPath, projectConfig] of Object.entries(claudeConfig.projects)) {
-          if (cwd === projectPath || cwd.startsWith(projectPath + '/')) {
-            const usage = projectConfig.lastModelUsage;
-            if (usage) {
-              let modelId = '';
-              let latest = 0;
-              for (const id of Object.keys(usage)) {
-                const ts = usage[id]?.lastUsedAt ? new Date(usage[id].lastUsedAt).getTime() : 0;
-                if (ts > latest) { latest = ts; modelId = id; }
-              }
-              if (!modelId) {
-                const ids = Object.keys(usage);
-                modelId = ids[ids.length - 1] || '';
-              }
-              return modelIdToWindowSize(modelId);
-            }
-            break;
+        const matches = Object.entries(claudeConfig.projects)
+          .filter(([projectPath]) => cwd === projectPath || cwd.startsWith(projectPath + '/'))
+          .sort(([a], [b]) => b.length - a.length);
+        for (const [, projectConfig] of matches) {
+          const modelId = latestModelIdFromUsage(projectConfig?.lastModelUsage);
+          if (modelId) {
+            return modelIdToWindowSize(modelId);
           }
         }
       }
@@ -114,10 +117,27 @@ function detectContextWindowTokens() {
   return DEFAULT_CONTEXT_WINDOW_TOKENS;
 }
 
+function latestModelIdFromUsage(usage) {
+  if (!usage || typeof usage !== 'object') return '';
+  let modelId = '';
+  let latest = 0;
+  const ids = Object.keys(usage);
+  for (const id of ids) {
+    const ts = usage[id]?.lastUsedAt ? new Date(usage[id].lastUsedAt).getTime() : 0;
+    if (Number.isFinite(ts) && ts > latest) {
+      latest = ts;
+      modelId = id;
+    }
+  }
+  return modelId || ids[ids.length - 1] || '';
+}
+
 function modelIdToWindowSize(modelId) {
   if (!modelId) return DEFAULT_CONTEXT_WINDOW_TOKENS;
   const id = modelId.toLowerCase().trim();
-  if (id.includes('[1m]')) return ONE_MILLION_CONTEXT_WINDOW_TOKENS;
+  if (id.includes('[1m]') || /(^|[^a-z0-9])1m([^a-z0-9]|$)/.test(id)) {
+    return ONE_MILLION_CONTEXT_WINDOW_TOKENS;
+  }
   for (const [pattern, windowSize] of MODEL_CONTEXT_WINDOWS.entries()) {
     if (id.includes(pattern)) return windowSize;
   }
@@ -1468,6 +1488,7 @@ function estimateContextTokens(transcriptPath) {
   let turns = 0;
   let lastPreTokens = 0;
   let compactBoundaryCount = 0;
+  let latestCompactBoundary = null;
   let totalChars = 0;
 
   for (let i = 0; i < lines.length; i++) {
@@ -1476,7 +1497,10 @@ function estimateContextTokens(transcriptPath) {
 
       // Check for compact_boundary
       if (parsed.type === 'system' && parsed.subtype === 'compact_boundary') {
-        if (isRecoveryEligibleCompactBoundary(parsed)) compactBoundaryCount++;
+        if (isRecoveryEligibleCompactBoundary(parsed)) {
+          compactBoundaryCount++;
+          latestCompactBoundary = compactBoundaryIdentity(parsed);
+        }
         lastPreTokens = parsed.compactMetadata?.preTokens
           || parsed.compact_metadata?.pre_tokens || 0;
         // Reset after compaction — new context starts here
@@ -1537,6 +1561,8 @@ function estimateContextTokens(transcriptPath) {
       method: 'api-usage',
       lastPreTokens,
       compactBoundaryCount,
+      latestCompactBoundary,
+      latestCompactBoundaryId: latestCompactBoundary?.id || '',
       breakdown: {
         input: lastInputTokens,
         cacheRead: lastCacheRead,
@@ -1555,10 +1581,12 @@ function estimateContextTokens(transcriptPath) {
       method: 'post-compact-char-estimate',
       lastPreTokens,
       compactBoundaryCount,
+      latestCompactBoundary,
+      latestCompactBoundaryId: latestCompactBoundary?.id || '',
     };
   }
 
-  return { tokens: estimatedTokens, turns, method: 'char-estimate', compactBoundaryCount };
+  return { tokens: estimatedTokens, turns, method: 'char-estimate', compactBoundaryCount, latestCompactBoundary, latestCompactBoundaryId: latestCompactBoundary?.id || '' };
 }
 
 /**
@@ -1649,6 +1677,16 @@ function formatTokens(n) {
   return String(n);
 }
 
+function displayAutopilotPercentage(state = {}, contextWindowTokens = CONTEXT_WINDOW_TOKENS) {
+  const tokens = positiveInteger(state.lastTokenEstimate);
+  const windowSize = positiveInteger(contextWindowTokens);
+  if (tokens > 0 && windowSize > 0) {
+    return Math.min(tokens / windowSize, 1.0);
+  }
+  const pct = Number(state.lastPercentage || 0);
+  return Number.isFinite(pct) && pct > 0 ? Math.min(pct, 1.0) : 0;
+}
+
 /**
  * Context Autopilot: run on every UserPromptSubmit.
  * Returns { additionalContext, shouldBlock } for the hook output.
@@ -1656,6 +1694,9 @@ function formatTokens(n) {
 async function runAutopilot(transcriptPath, sessionId, backend, backendType, options = {}) {
   const statePath = options.statePath || AUTOPILOT_STATE_PATH;
   const state = loadAutopilotState(statePath);
+  const projectRoot = options.projectRoot || PROJECT_ROOT;
+  const contextWindowTokens = positiveInteger(options.contextWindowTokens)
+    || detectContextWindowTokens(options.hookInput || options.input || null);
 
   // Reset state if session changed
   if (state.sessionId !== sessionId) {
@@ -1666,11 +1707,20 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
     state.warningIssued = false;
     state.history = [];
     state.lastRecoveryCompactBoundaryCount = 0;
+    state.lastRecoveryCompactBoundaryId = '';
   }
 
   // Estimate current context usage
-  const { tokens, turns, method, lastPreTokens, compactBoundaryCount = 0 } = estimateContextTokens(transcriptPath);
-  const percentage = Math.min(tokens / CONTEXT_WINDOW_TOKENS, 1.0);
+  const {
+    tokens,
+    turns,
+    method,
+    lastPreTokens,
+    compactBoundaryCount = 0,
+    latestCompactBoundary = null,
+    latestCompactBoundaryId = '',
+  } = estimateContextTokens(transcriptPath);
+  const percentage = Math.min(tokens / contextWindowTokens, 1.0);
 
   // Track history (keep last 50 data points)
   state.history.push({ ts: Date.now(), tokens, pct: percentage, turns });
@@ -1679,18 +1729,30 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
   state.lastTokenEstimate = tokens;
   state.lastPercentage = percentage;
   state.lastCheck = Date.now();
-  state.contextWindow = CONTEXT_WINDOW_TOKENS;
-  state.detectedModel = process.env.CLAUDE_MODEL || 'unknown';
+  state.contextWindow = contextWindowTokens;
+  state.detectedModel = options.hookInput?.model?.display_name
+    || options.hookInput?.model?.model_id
+    || process.env.CLAUDE_MODEL
+    || 'unknown';
 
   let optimizationMessage = '';
 
-  if (compactBoundaryCount > 0 && state.lastRecoveryCompactBoundaryCount !== compactBoundaryCount) {
+  if (latestCompactBoundaryId && state.lastRecoveryCompactBoundaryId !== latestCompactBoundaryId) {
     try {
-      const recovery = armCompactionRecoveryRequired(options.projectRoot || PROJECT_ROOT, {
-        sessionId,
-        source: 'compact_boundary',
-      });
-      optimizationMessage += `\n${buildCompactionRecoveryInstructions(recovery)}`;
+      const existingRecovery = readCompactionRecoveryFlag(projectRoot);
+      if (sameCompactBoundary(existingRecovery, latestCompactBoundaryId)) {
+        optimizationMessage += `\n${buildCompactionRecoveryInstructions(existingRecovery)}`;
+      } else if (!isCompactBoundaryAlreadyAcknowledged(projectRoot, latestCompactBoundaryId, latestCompactBoundary, sessionId)) {
+        const recovery = armCompactionRecoveryRequired(projectRoot, {
+          sessionId,
+          source: 'compact_boundary',
+          compactBoundaryId: latestCompactBoundaryId,
+          compactBoundaryTimestamp: latestCompactBoundary?.timestamp || '',
+          compactBoundaryTrigger: latestCompactBoundary?.trigger || '',
+        });
+        optimizationMessage += `\n${buildCompactionRecoveryInstructions(recovery)}`;
+      }
+      state.lastRecoveryCompactBoundaryId = latestCompactBoundaryId;
       state.lastRecoveryCompactBoundaryCount = compactBoundaryCount;
     } catch {
       optimizationMessage += '\n[POST-COMPACT RECOVERY REQUIRED] A compact_boundary was observed, but Hive Flow could not persist the recovery flag. Read .hive-flow/data/compaction-handoff.md, run git status --short --branch, state the objective and next step, then ask the human to inspect the recovery hook.';
@@ -1721,7 +1783,7 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
 
     const turnsLeft = Math.max(0, Math.ceil((1.0 - percentage) / 0.03));
     optimizationMessage += [
-      ` | Configured action threshold reached: ${(percentage * 100).toFixed(0)}% of the configured ${formatTokens(CONTEXT_WINDOW_TOKENS)} heuristic window.`,
+      ` | Configured action threshold reached: ${(percentage * 100).toFixed(0)}% of the configured ${formatTokens(contextWindowTokens)} heuristic window.`,
       `This is not a model hard limit.`,
       `Estimated runway at current growth: ~${turnsLeft} turns.`,
       `Archived turns available: ${turns}.`,
@@ -1729,7 +1791,7 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
     ].join(' ');
   }
 
-  const report = buildAutopilotReport(percentage, tokens, CONTEXT_WINDOW_TOKENS, turns, state);
+  const report = buildAutopilotReport(percentage, tokens, contextWindowTokens, turns, state);
   saveAutopilotState(state, statePath);
 
   return {
@@ -1862,6 +1924,34 @@ function compactBoundaryMetadata(parsed) {
   };
 }
 
+function compactBoundaryIdentity(parsed) {
+  const meta = compactBoundaryMetadata(parsed);
+  const timestamp = parsed?.timestamp || meta.timestamp || meta.createdAt || '';
+  const preTokens = meta.preTokens || meta.pre_tokens || meta.preCompactTokens || meta.pre_compact_tokens || 0;
+  const trigger = meta.trigger || parsed?.trigger || parsed?.source || '';
+  const source = meta.source || parsed?.source || '';
+  const explicitId = parsed?.uuid || parsed?.id || meta.uuid || meta.id || meta.boundaryId || meta.boundary_id || '';
+  const id = explicitId
+    ? sanitizeRecoveryValue(explicitId, 200)
+    : `sha256:${createHash('sha256')
+      .update(JSON.stringify({
+        timestamp,
+        preTokens,
+        trigger,
+        source,
+        durationMs: meta.durationMs || meta.duration_ms || 0,
+      }))
+      .digest('hex')
+      .slice(0, 24)}`;
+  return {
+    id,
+    timestamp: sanitizeRecoveryValue(timestamp, 80),
+    preTokens,
+    trigger: sanitizeRecoveryValue(trigger, 80),
+    source: sanitizeRecoveryValue(source, 80),
+  };
+}
+
 function isRecoveryEligibleCompactBoundary(parsed) {
   if (!parsed || parsed.type !== 'system' || parsed.subtype !== 'compact_boundary') return false;
   const meta = compactBoundaryMetadata(parsed);
@@ -1882,12 +1972,58 @@ function compactionRecoveryPath(projectRoot = PROJECT_ROOT) {
   return join(projectRoot, '.hive-flow', 'data', 'compaction-recovery-required.json');
 }
 
+function compactionRecoveryAckPath(projectRoot = PROJECT_ROOT) {
+  return join(projectRoot, '.hive-flow', 'data', 'compaction-recovery-ack.json');
+}
+
 function sanitizeRecoveryValue(value, max = 200) {
   return String(value || '')
     .replace(/[\x00-\x1f\x7f]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, max);
+}
+
+function readJsonFileIfPresent(filePath) {
+  try {
+    if (!existsSync(filePath)) return null;
+    return JSON.parse(readFileSync(filePath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function readCompactionRecoveryFlag(projectRoot = PROJECT_ROOT) {
+  const flag = readJsonFileIfPresent(compactionRecoveryPath(projectRoot));
+  return flag && flag.type === 'hive-flow.compaction-recovery-required' ? flag : null;
+}
+
+function sameCompactBoundary(record, compactBoundaryId) {
+  if (!record || !compactBoundaryId) return false;
+  return sanitizeRecoveryValue(record.compactBoundaryId || record.compact_boundary_id || record.evidence?.compactBoundaryId || '', 200) === compactBoundaryId;
+}
+
+function timestampMs(value) {
+  const ms = Date.parse(String(value || ''));
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function legacyAckCoversCompactBoundary(ack, compactBoundary = null, sessionId = '') {
+  const ackSessionId = sanitizeRecoveryValue(ack?.sessionId || ack?.session_id || '', 120);
+  const currentSessionId = sanitizeRecoveryValue(sessionId, 120);
+  if (currentSessionId && ackSessionId && ackSessionId !== currentSessionId) return false;
+
+  const ackTime = timestampMs(ack?.acknowledgedAt || ack?.acknowledged_at);
+  const boundaryTime = timestampMs(compactBoundary?.timestamp);
+  return ackTime > 0 && boundaryTime > 0 && ackTime >= boundaryTime;
+}
+
+function isCompactBoundaryAlreadyAcknowledged(projectRoot = PROJECT_ROOT, compactBoundaryId = '', compactBoundary = null, sessionId = '') {
+  if (!compactBoundaryId) return false;
+  const ack = readJsonFileIfPresent(compactionRecoveryAckPath(projectRoot));
+  if (!ack || ack.type !== 'hive-flow.compaction-recovery-ack') return false;
+  return sameCompactBoundary(ack, compactBoundaryId)
+    || legacyAckCoversCompactBoundary(ack, compactBoundary, sessionId);
 }
 
 function shellSafeSession(sessionId) {
@@ -1905,6 +2041,9 @@ function armCompactionRecoveryRequired(projectRoot = PROJECT_ROOT, details = {})
     version: 1,
     sessionId: sanitizeRecoveryValue(details.sessionId || details.session_id || process.env.CLAUDE_SESSION_ID || '', 120),
     source: sanitizeRecoveryValue(details.source || 'compact', 40) || 'compact',
+    compactBoundaryId: sanitizeRecoveryValue(details.compactBoundaryId || details.compact_boundary_id || '', 200),
+    compactBoundaryTimestamp: sanitizeRecoveryValue(details.compactBoundaryTimestamp || details.compact_boundary_timestamp || '', 80),
+    compactBoundaryTrigger: sanitizeRecoveryValue(details.compactBoundaryTrigger || details.compact_boundary_trigger || '', 80),
     recoveryNonce: randomBytes(12).toString('hex'),
     createdAt: new Date().toISOString(),
     handoffPath,
@@ -1946,6 +2085,39 @@ function buildCompactionRecoveryInstructions(flag = {}) {
     `5. Then acknowledge recovery with: node .claude/helpers/compaction-recovery.cjs ack --session ${sessionArg} --nonce ${nonceArg} ${handoffFlag} ${stateFlag} --git-status-reviewed --objective "${objective}" --next-step "${nextStep}" --summary "<what you recovered>"`,
     'Until that ack succeeds, Hive Flow will deny mutating tools and allow only recovery/read-only commands.',
   ].join('\n');
+}
+
+function buildSessionStartRecoveryContext(projectRoot = PROJECT_ROOT, input = {}) {
+  if (input?.source !== 'compact') return '';
+
+  const existingRecovery = readCompactionRecoveryFlag(projectRoot);
+  if (existingRecovery) return buildCompactionRecoveryInstructions(existingRecovery);
+
+  const transcriptPath = input.transcript_path || input.transcriptPath || '';
+  if (!transcriptPath || !existsSync(transcriptPath)) return '';
+
+  const {
+    latestCompactBoundary = null,
+    latestCompactBoundaryId = '',
+  } = estimateContextTokens(transcriptPath);
+  if (!latestCompactBoundaryId) return '';
+  if (isCompactBoundaryAlreadyAcknowledged(
+    projectRoot,
+    latestCompactBoundaryId,
+    latestCompactBoundary,
+    input.session_id || input.sessionId || ''
+  )) {
+    return '';
+  }
+
+  const recovery = armCompactionRecoveryRequired(projectRoot, {
+    sessionId: input.session_id || input.sessionId || '',
+    source: input.source,
+    compactBoundaryId: latestCompactBoundaryId,
+    compactBoundaryTimestamp: latestCompactBoundary?.timestamp || '',
+    compactBoundaryTrigger: latestCompactBoundary?.trigger || '',
+  });
+  return buildCompactionRecoveryInstructions(recovery);
 }
 
 // ============================================================================
@@ -2085,14 +2257,7 @@ async function doSessionStart() {
   const sessionId = input.session_id;
   if (!sessionId) return;
 
-  let recoveryContext = '';
-  if (input.source === 'compact') {
-    const recovery = armCompactionRecoveryRequired(PROJECT_ROOT, {
-      sessionId,
-      source: input.source,
-    });
-    recoveryContext = buildCompactionRecoveryInstructions(recovery);
-  }
+  const recoveryContext = buildSessionStartRecoveryContext(PROJECT_ROOT, input);
 
   const { backend, type } = await resolveBackend();
 
@@ -2181,7 +2346,9 @@ async function doUserPromptSubmit() {
   let autopilotMsg = '';
   if (AUTOPILOT_ENABLED && transcriptPath) {
     try {
-      const autopilot = await runAutopilot(transcriptPath, sessionId, backend, type);
+      const autopilot = await runAutopilot(transcriptPath, sessionId, backend, type, {
+        hookInput: input,
+      });
       autopilotMsg = autopilot.additionalContext;
 
       // NOTE: Do NOT write to stderr — Claude Code treats any stderr as hook error
@@ -2271,7 +2438,7 @@ async function doStatus() {
 
   const apState = loadAutopilotState();
   if (apState.sessionId) {
-    const pct = apState.lastPercentage || 0;
+    const pct = displayAutopilotPercentage(apState, CONTEXT_WINDOW_TOKENS);
     const bar = buildProgressBar(pct);
     console.log(`  Current:     ${bar} ${(pct * 100).toFixed(1)}% (~${formatTokens(apState.lastTokenEstimate)} tokens)`);
     console.log(`  Prune cycles: ${apState.pruneCount}`);
@@ -2334,10 +2501,12 @@ export {
   runAutopilot,
   buildProgressBar,
   formatTokens,
+  displayAutopilotPercentage,
   buildAutopilotReport,
   consumeCompactSignalAdvisory,
   armCompactionRecoveryRequired,
   buildCompactionRecoveryInstructions,
+  buildSessionStartRecoveryContext,
   compactionRecoveryPath,
   detectContextWindowTokens,
   modelIdToWindowSize,

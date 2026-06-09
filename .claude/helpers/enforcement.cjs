@@ -1330,6 +1330,10 @@ function commandBasename(command) {
   return normalized.split('/').pop() || normalized;
 }
 
+function escapeRegExpLiteral(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 const LAUNCHER_VALUE_FLAGS = new Map([
   ['exec', new Set(['-a'])],
   ['nice', new Set(['-n', '--adjustment'])],
@@ -2336,11 +2340,12 @@ function detectCircumvention(toolName, toolInput, state) {
       'PINATA_JWT',
     ];
     for (const secretVar of SECRET_ENV_VARS) {
+      const exposureCommand = stripValueSafeSecretSetExpansions(command, secretVar);
       // Match: echo $VAR, echo ${VAR}, printf $VAR, cat with env, printenv VAR, env | grep VAR
-      if (new RegExp(`(echo|printf|cat|print)\\b.*\\$\\{?${secretVar}\\}?`, 'i').test(command) ||
-          new RegExp(`printenv\\s+${secretVar}`, 'i').test(command) ||
-          new RegExp(`\\benv\\b.*\\|.*grep.*${secretVar}`, 'i').test(command) ||
-          new RegExp(`\\$${secretVar}.*[:0-9]`, 'i').test(command)) { // ${VAR:0:N} substring
+      if (new RegExp(`(echo|printf|cat|print)\\b.*\\$\\{?${secretVar}\\}?`, 'i').test(exposureCommand) ||
+          new RegExp(`printenv\\s+${secretVar}`, 'i').test(exposureCommand) ||
+          new RegExp(`\\benv\\b.*\\|.*grep.*${secretVar}`, 'i').test(exposureCommand) ||
+          new RegExp(`\\$${secretVar}.*[:0-9]`, 'i').test(exposureCommand)) { // ${VAR:0:N} substring
         return {
           circumvention: true,
           reason: `CIRCUMVENTION: Attempted to expose secret environment variable ${secretVar}`,
@@ -2436,6 +2441,7 @@ function detectCircumvention(toolName, toolInput, state) {
         }
         return {
           circumvention: true,
+          denyOnly: true,
           reason: 'Script execution is blocked while write-restricted because its file effects cannot be verified. Instead: run verification commands such as node --check/node --test, or use Read/Write/Edit with human-approved protected-path changes.',
           severity: 'normal',
         };
@@ -2510,6 +2516,10 @@ function isAllowedRestrictedScriptExecution(command) {
     const base = commandBasename(execution.command);
     const args = execution.args || [];
 
+    if (isAllowedOperationalCoordinationScriptExecution(execution)) {
+      return true;
+    }
+
     if (base === 'node') {
       return args.includes('--check') || args.includes('--test') || isCompactNowExecution(execution);
     }
@@ -2530,6 +2540,20 @@ function isAllowedRestrictedScriptExecution(command) {
   });
 }
 
+function isAllowedOperationalCoordinationScriptExecution(execution) {
+  const words = [execution?.command || '', ...(execution?.args || [])];
+  for (const word of words) {
+    if (commandBasename(word) !== 'hf-tmux-control.sh') continue;
+    const normalized = normalizeShellWord(String(word || ''))
+      .replace(/\$CLAUDE_PROJECT_DIR|\$\{CLAUDE_PROJECT_DIR\}/g, PROJECT_DIR);
+    const resolved = path.resolve(PROJECT_DIR, normalized);
+    if (resolved === path.join(PROJECT_DIR, '.audit', 'scripts', 'hf-tmux-control.sh')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function isScriptExecution(execution) {
   const base = commandBasename(execution?.command || '');
   if (/^(?:bash|sh|zsh|dash|ksh)$/.test(base)) {
@@ -2543,6 +2567,17 @@ function isScriptExecution(execution) {
 
 function findRestrictedScriptExecution(command) {
   return collectShellCommandExecutions(command).find(isScriptExecution) || null;
+}
+
+function stripValueSafeSecretSetExpansions(command, secretVar) {
+  const name = escapeRegExpLiteral(secretVar);
+  // Only + forms are value-safe for echo/printf: they expand to the literal
+  // word when set, never the secret value. The literal must be inert; payloads
+  // containing nested expansion or command substitution stay blocked.
+  const inertWord = '[^}$`\\\\]*';
+  return String(command || '')
+    .replace(new RegExp('\\$\\{' + name + ':\\+' + inertWord + '\\}', 'g'), '__HIVE_FLOW_SECRET_SET__')
+    .replace(new RegExp('\\$\\{' + name + '\\+' + inertWord + '\\}', 'g'), '__HIVE_FLOW_SECRET_SET__');
 }
 
 /**

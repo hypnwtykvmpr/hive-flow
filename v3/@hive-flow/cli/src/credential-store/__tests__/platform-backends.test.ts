@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import fc from 'fast-check';
@@ -208,6 +208,17 @@ describe('Windows Credential Manager backend', () => {
     });
     await expect(backend.retrieveSecret('openrouter')).rejects.toThrow(/degraded|unavailable|helper/i);
   });
+
+  it('helper fails closed for redirected non-interactive use when Windows Hello is unavailable', () => {
+    const source = readFileSync(
+      resolve(__dirname, '..', 'helpers', 'windows-credential-helper', 'Program.cs'),
+      'utf8',
+    );
+
+    expect(source).toContain('FailClosedIfBiometricUnavailable');
+    expect(source).toContain('Console.IsInputRedirected');
+    expect(source).toMatch(/UserConsentVerifierAvailability\.Available/);
+  });
 });
 
 describe('macOS Keychain backend', () => {
@@ -234,6 +245,16 @@ describe('macOS Keychain backend', () => {
     expect(argv).not.toContain(secret.toString('utf8'));
     expect(argv).not.toContain(base64(secret));
     expect(helperInputs.join('\n')).toContain(base64(secret));
+  });
+
+  it('helper protects credential access with SecAccessControl and LAContext', () => {
+    const source = readFileSync(resolve(__dirname, '..', 'helpers', 'macos-keychain.swift'), 'utf8');
+
+    expect(source).toContain('import LocalAuthentication');
+    expect(source).toContain('SecAccessControlCreateWithFlags');
+    expect(source).toContain('kSecAttrAccessControl');
+    expect(source).toContain('LAContext');
+    expect(source).toContain('kSecUseAuthenticationContext');
   });
 
   it.skipIf(

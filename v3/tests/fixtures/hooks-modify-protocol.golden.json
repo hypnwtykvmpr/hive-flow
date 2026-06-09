@@ -1,0 +1,237 @@
+{
+  "schema": 1,
+  "description": "Golden hook protocol cases for legacy modify-file/modify-bash compatibility. Each case must emit exactly one parseable JSON line on stdout.",
+  "cases": [
+    {
+      "name": "agent-router-report-flag",
+      "hook": "modify-file",
+      "args": ["--file", ".agent-router/reports/2026-06-09-cursor-router-bughunt.md"],
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-file hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "agent-router-report-short-flag",
+      "hook": "modify-file",
+      "args": ["-f", ".agent-router/reports/short-flag.md"],
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-file hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "agent-router-report-verbose-no-noise",
+      "hook": "modify-file",
+      "globalArgs": ["--no-update", "--verbose"],
+      "args": ["--file", ".agent-router/reports/verbose.md"],
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-file hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "agent-router-report-invalid-config-no-noise",
+      "hook": "modify-file",
+      "globalArgs": ["--verbose", "--config", "missing-invalid-config.json"],
+      "args": ["--file", ".agent-router/reports/config-noise.md"],
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-file hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "agent-router-report-stdin",
+      "hook": "modify-file",
+      "stdin": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": ".agent-router/reports/handoff-result.md",
+          "content": "private router result"
+        }
+      },
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-file hook",
+      "expectedToolInputFile": ".agent-router/reports/handoff-result.md",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "protected-settings-file",
+      "hook": "modify-file",
+      "args": ["--file", ".claude/settings.json"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Permission Guard security system",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "protected-helper-file",
+      "hook": "modify-file",
+      "args": ["--file", ".claude/helpers/hook-handler.cjs"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Permission Guard security system",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "protected-enforcement-state-file",
+      "hook": "modify-file",
+      "args": ["--file", ".hive-flow/enforcement/state.json"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Permission Guard security system",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "protected-git-exclude-file",
+      "hook": "modify-file",
+      "args": ["--file", ".git/info/exclude"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Permission Guard security system",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "protected-notebookedit-stdin",
+      "hook": "modify-file",
+      "stdin": {
+        "tool_name": "NotebookEdit",
+        "tool_input": {
+          "notebook_path": ".claude/settings.json"
+        }
+      },
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Permission Guard security system",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "agent-router-handoff-command",
+      "hook": "modify-bash",
+      "args": ["--command", ".agent-router/agent-router.sh handoff-from cursor claude \"handoff ready\""],
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-bash hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "agent-router-handoff-short-flag",
+      "hook": "modify-bash",
+      "args": ["-c", ".agent-router/agent-router.sh handoff-from cursor claude \"handoff ready\""],
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-bash hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "agent-router-handoff-stdin",
+      "hook": "modify-bash",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ".agent-router/agent-router.sh handoff-from cursor claude \"handoff ready\""
+        }
+      },
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-bash hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "forced-stdout-suppressed",
+      "hook": "modify-bash",
+      "env": {
+        "HIVE_FLOW_MODIFY_HOOK_FORCE_STDOUT": "1"
+      },
+      "args": ["--command", ".agent-router/agent-router.sh handoff-from cursor claude \"handoff ready\""],
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-bash hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "protected-settings-shell-write",
+      "hook": "modify-bash",
+      "args": ["--command", "printf x > .claude/settings.json"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Permission Guard security system",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "destructive-rm-rf",
+      "hook": "modify-bash",
+      "args": ["--command", "rm -rf dist"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Destructive shell command",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "destructive-git-reset-hard",
+      "hook": "modify-bash",
+      "args": ["--command", "git reset --hard"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Destructive shell command",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "destructive-git-clean-xdf",
+      "hook": "modify-bash",
+      "args": ["--command", "git clean -xdf"],
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Destructive shell command",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "malformed-scalar-stdin-fails-open",
+      "hook": "modify-file",
+      "stdinRaw": "\"scalar\"",
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-file hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "malformed-array-stdin-fails-open",
+      "hook": "modify-bash",
+      "stdinRaw": "[]",
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Allowed by Hive Flow modify-bash hook",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "malformed-stdin-explicit-protected-file-denies",
+      "hook": "modify-file",
+      "args": ["--file", ".claude/settings.json"],
+      "stdinRaw": "{not-json",
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Permission Guard security system",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "malformed-stdin-explicit-destructive-command-denies",
+      "hook": "modify-bash",
+      "args": ["--command", "rm -rf dist"],
+      "stdinRaw": "{not-json",
+      "expectedDecision": "deny",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "Destructive shell command",
+      "expectedStderrIncludes": ""
+    },
+    {
+      "name": "malformed-stdin-fails-open",
+      "hook": "modify-file",
+      "stdinRaw": "{not-json",
+      "expectedDecision": "allow",
+      "expectedStatus": 0,
+      "expectedReasonIncludes": "failed before identifying a protected target",
+      "expectedStderrIncludes": ""
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path, { dirname, join } from 'node:path';
-import { portableConfirm } from '../portable-prompt.js';
+import { portableConfirm, readRequiredSecret } from '../portable-prompt.js';
 import {
   ENGINE_TARGET_FILES,
   buildRelocatedCommand,
@@ -100,6 +100,14 @@ describe('cross-platform enforcement installer', () => {
       ttyAvailable: true,
       ask: async () => 'yes',
     })).resolves.toBe(true);
+  });
+
+  it('fails closed instead of accepting an empty non-TTY secret', async () => {
+    await expect(readRequiredSecret('Credential unlock: ', {
+      input: { isTTY: false } as NodeJS.ReadStream,
+      output: { write: () => true } as unknown as NodeJS.WriteStream,
+      purpose: 'credential vault unlock',
+    })).rejects.toThrow(/credential vault unlock|non-interactive|empty secret/i);
   });
 
   it('performs engine-only then hooks-only install with the complete 9-file relocated set', async () => {

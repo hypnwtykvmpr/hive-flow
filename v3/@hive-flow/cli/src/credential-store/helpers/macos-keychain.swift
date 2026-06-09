@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import Security
 
 struct HelperInput: Decodable {
@@ -80,7 +81,7 @@ struct HiveFlowMacOSKeychainHelper {
 
         var item = base
         item[kSecValueData as String] = data
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        item[kSecAttrAccessControl as String] = try accessControl()
         try check(SecItemAdd(item as CFDictionary, nil), "store item")
     }
 
@@ -88,6 +89,8 @@ struct HiveFlowMacOSKeychainHelper {
         var q = query(service: service, account: account)
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
+        q[kSecUseAuthenticationContext as String] = authenticationContext()
+        q[kSecUseOperationPrompt as String] = "Hive Flow credential access"
         var result: CFTypeRef?
         let status = SecItemCopyMatching(q as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
@@ -107,6 +110,26 @@ struct HiveFlowMacOSKeychainHelper {
             let message = SecCopyErrorMessageString(status, nil) as String? ?? "OSStatus \(status)"
             throw HelperError.keychain("\(action) failed: \(message)")
         }
+    }
+
+    private static func authenticationContext() -> LAContext {
+        let context = LAContext()
+        context.localizedReason = "Hive Flow credential access"
+        return context
+    }
+
+    private static func accessControl() throws -> SecAccessControl {
+        var error: Unmanaged<CFError>?
+        guard let access = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            .userPresence,
+            &error
+        ) else {
+            let message = error?.takeRetainedValue().localizedDescription ?? "unknown access-control error"
+            throw HelperError.keychain("create SecAccessControl failed: \(message)")
+        }
+        return access
     }
 }
 

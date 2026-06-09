@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  applyCredentialHolderProcessHardening,
   CapabilityTokenIssuer,
   CredentialHolderService,
   sendCredentialHolderCommand,
@@ -137,6 +138,37 @@ describe('credential holder same-user USE grants', () => {
         },
       },
     ]);
+    await holder.stop();
+  });
+
+  it('zeroizes the per-request secret buffer after holder-owned provider calls', async () => {
+    let handedSecret: Buffer | undefined;
+    const holder = new CredentialHolderService({
+      socketPath: tempSocketPath(),
+      uid: 501,
+      peerCredentialResolver: async () => ({ pid: 42, uid: 501, startTime: 'pid-start-1' }),
+      providerInvoker: async (input) => {
+        handedSecret = input.secret;
+        expect(handedSecret.toString('utf8')).toBe('or-raw-secret');
+        return { content: 'holder-owned response' };
+      },
+    });
+    await holder.start();
+    holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));
+
+    const response = await sendCredentialHolderCommand(holder.socketPath, {
+      action: 'provider_call',
+      taskId: 'task-1',
+      provider: 'openrouter',
+      request: {
+        action: 'complete',
+        payload: { messages: [{ role: 'user', content: 'ping' }] },
+      },
+    });
+
+    expect(response).toEqual({ ok: true, response: { content: 'holder-owned response' } });
+    expect(handedSecret).toBeInstanceOf(Buffer);
+    expect([...handedSecret!]).toEqual(Array.from({ length: handedSecret!.byteLength }, () => 0));
     await holder.stop();
   });
 
@@ -375,5 +407,32 @@ describe('credential holder restart semantics', () => {
     expect(() => assertFullRestartRequiresUnlock({ fullRuntimeRestart: true, osUnlockFresh: false, backendAvailable: true })).toThrow(/fresh OS unlock/i);
     expect(() => assertFullRestartRequiresUnlock({ fullRuntimeRestart: true, osUnlockFresh: true, backendAvailable: false })).toThrow(/backend/i);
     expect(() => assertFullRestartRequiresUnlock({ fullRuntimeRestart: true, osUnlockFresh: true, backendAvailable: true })).not.toThrow();
+  });
+});
+
+describe('credential holder process hardening', () => {
+  it('disables core dumps and Linux dumpability through injectable host hooks', () => {
+    const calls: string[] = [];
+
+    expect(applyCredentialHolderProcessHardening({
+      platform: 'linux',
+      setCoreDumpLimit: () => calls.push('rlimit-core-0'),
+      setLinuxDumpable: () => calls.push('pr-set-dumpable-0'),
+    })).toEqual({
+      coreDumpDisabled: true,
+      dumpableDisabled: true,
+    });
+    expect(calls).toEqual(['rlimit-core-0', 'pr-set-dumpable-0']);
+  });
+
+  it('reports Linux dumpable hardening as unavailable without an in-process native hook', () => {
+    const status = applyCredentialHolderProcessHardening({
+      platform: 'linux',
+      setCoreDumpLimit: () => undefined,
+    });
+
+    expect(status.coreDumpDisabled).toBe(true);
+    expect(status.dumpableDisabled).toBe(false);
+    expect(status.errors?.join('\n')).toMatch(/PR_SET_DUMPABLE|native/i);
   });
 });
