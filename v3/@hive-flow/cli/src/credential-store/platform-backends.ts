@@ -227,12 +227,17 @@ export class LinuxSecretServiceCredentialStore extends BaseCredentialStore {
       return unavailable('Secret Service requires an active D-Bus session');
     }
     try {
-      // secret-tool has no --version flag; --help is the GOption-standard presence probe
-      // (exit 0 when the binary is runnable, no Secret Service side effects).
+      // secret-tool exposes no exit-0 probe flag (both --version and --help print usage and exit
+      // non-zero), so this call is expected to throw even when the binary is present.
       run(this.execFileSync, 'secret-tool', ['--help'], { stdio: 'pipe', env: this.env });
       return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
     } catch (error) {
-      return unavailable(`secret-tool unavailable: ${(error as Error).message}`);
+      // A spawn ENOENT means secret-tool is genuinely absent. Any other failure means the binary is
+      // present and ran; real Secret Service reachability is exercised by the store/lookup path.
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return unavailable(`secret-tool unavailable: ${(error as Error).message}`);
+      }
+      return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
     }
   }
 
