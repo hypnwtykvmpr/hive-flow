@@ -88,6 +88,29 @@ describe('credential holder socket lifecycle', () => {
       provider: 'openrouter',
     })).rejects.toThrow(/holder identity|not a socket/i);
   });
+
+  it('keeps the POSIX identity gate for a backslash-pipe-spelled path on non-win32 (skip is platform-gated)', async () => {
+    if (process.platform === 'win32') return; // on a real Windows host the named-pipe skip is correct
+    const cwd = process.cwd();
+    const root = mkdtempSync(join(tmpdir(), 'hf-pipe-spell-'));
+    roots.push(root);
+    process.chdir(root);
+    try {
+      // On POSIX, backslashes are ordinary filename characters: this string starts with \\.\pipe\
+      // but is a relative Unix-socket filename, not a Windows named pipe. The client must still run
+      // the lstat/owner/mode gate and reject it — a path spelling alone must not bypass identity
+      // verification (regression for the platform-gated assertHolderSocketIdentity skip).
+      const pipeSpelledPath = '\\\\.\\pipe\\hive-flow-credential-holder-spoof';
+      writeFileSync(pipeSpelledPath, 'attacker');
+      await expect(sendCredentialHolderCommand(pipeSpelledPath, {
+        action: 'grant',
+        taskId: 'task-1',
+        provider: 'openrouter',
+      })).rejects.toThrow(/holder identity|not a socket/i);
+    } finally {
+      process.chdir(cwd);
+    }
+  });
 });
 
 describe('credential holder same-user USE grants', () => {

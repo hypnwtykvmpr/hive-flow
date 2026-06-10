@@ -144,6 +144,12 @@ export class CapabilityTokenIssuer {
 
 export interface CredentialHolderServiceOptions {
   socketPath: string;
+  /**
+   * Host platform. Defaults to process.platform. On 'win32' the holder binds a named pipe
+   * (\\.\pipe\...) instead of a Unix-domain socket and skips POSIX directory/socket permissions,
+   * which do not exist for pipe kernel objects.
+   */
+  platform?: NodeJS.Platform;
   uid?: number;
   peerCredentialResolver: PeerCredentialResolver['lookup'];
   peerRoleResolver?: (peer: PeerCredential) => CredentialPeerRole | Promise<CredentialPeerRole>;
@@ -219,6 +225,7 @@ export interface ProviderUseHandlerInput {
 
 export class CredentialHolderService {
   readonly socketPath: string;
+  private readonly platform: NodeJS.Platform;
   private readonly uid: number;
   private readonly peerCredentialResolver: PeerCredentialResolver['lookup'];
   private readonly providerInvoker: (input: ProviderUseHandlerInput) => Promise<unknown> | unknown;
@@ -228,6 +235,7 @@ export class CredentialHolderService {
 
   constructor(options: CredentialHolderServiceOptions) {
     this.socketPath = options.socketPath;
+    this.platform = options.platform ?? process.platform;
     this.uid = options.uid ?? process.getuid?.() ?? 0;
     this.peerCredentialResolver = options.peerCredentialResolver;
     this.providerInvoker = options.providerInvoker ?? (() => {
@@ -243,6 +251,10 @@ export class CredentialHolderService {
 
   async start(): Promise<void> {
     applyCredentialHolderProcessHardening();
+    if (this.platform === 'win32') {
+      await this.startWindowsNamedPipe();
+      return;
+    }
     mkdirSync(dirname(this.socketPath), { recursive: true, mode: 0o700 });
     chmodSync(dirname(this.socketPath), 0o700);
     if (existsSync(this.socketPath)) {
@@ -250,24 +262,36 @@ export class CredentialHolderService {
       throw new Error(`credential holder socket squat refused: pre-existing path is ${stat.isSocket() ? 'a socket' : 'not a socket'}`);
     }
     this.server = createServer(socket => this.handleSocket(socket));
-    await new Promise<void>((resolve, reject) => {
-      const server = this.server!;
-      const onError = (error: Error) => {
-        server.off('listening', onListening);
-        reject(error);
-      };
-      const onListening = () => {
-        server.off('error', onError);
-        resolve();
-      };
-      server.once('error', onError);
-      server.once('listening', onListening);
-      server.listen(this.socketPath);
-    });
+    await awaitServerListening(this.server, this.socketPath);
     chmodSync(this.socketPath, 0o600);
     const stat = statSync(this.socketPath);
     if (!stat.isSocket()) throw new Error('credential holder path is not a socket after bind');
     if ((stat.mode & 0o777) !== 0o600) throw new Error('credential holder socket permissions must be 0600');
+  }
+
+  /**
+   * Windows named-pipe bind — SECURITY, NEEDS-REAL-WINDOWS-VALIDATION. Fails closed BEFORE binding.
+   *
+   * A Windows named pipe's trust anchor is the security descriptor (DACL) applied ATOMICALLY at
+   * creation via CreateNamedPipe(SECURITY_ATTRIBUTES) to restrict the pipe to the current-user SID,
+   * plus a per-connection GetNamedPipeClientProcessId peer check — the equivalent of the POSIX 0600
+   * socket + same-uid gate. Node's net.Server.listen creates the pipe with libuv's default security
+   * descriptor and exposes no way to supply SECURITY_ATTRIBUTES or FILE_FLAG_FIRST_PIPE_INSTANCE.
+   * Because the descriptor must be set at creation (an unhardened pipe cannot be "hardened after"),
+   * we refuse to bind at all until a native helper creates the hardened pipe and a real Windows host
+   * validates it. On that host, replace this throw with the native hardened-pipe bind +
+   * GetNamedPipeClientProcessId wiring; the path/peer plumbing (lookupPeer namedPipeName, stop
+   * no-unlink, client identity skip) is already in place around it.
+   */
+  private async startWindowsNamedPipe(): Promise<void> {
+    if (!isWindowsNamedPipePath(this.socketPath)) {
+      throw new Error(`credential holder on win32 requires a \\\\.\\pipe\\ named pipe path, got: ${this.socketPath}`);
+    }
+    throw new Error(
+      'credential holder Windows named-pipe hardening is not implemented or validated on a real '
+      + 'Windows host (NEEDS-REAL-WINDOWS-VALIDATION): refusing to bind an unhardened pipe; a native '
+      + 'helper must create the pipe with a current-user-only DACL',
+    );
   }
 
   async stop(): Promise<void> {
@@ -278,7 +302,9 @@ export class CredentialHolderService {
         server.close(error => error ? reject(error) : resolve());
       }).catch(() => undefined);
     }
-    if (existsSync(this.socketPath)) {
+    // Unix-domain sockets leave a filesystem entry that must be unlinked. A Windows named pipe is
+    // released by the OS when the server handle closes, so there is nothing to unlink on win32.
+    if (this.platform !== 'win32' && existsSync(this.socketPath)) {
       const stat = lstatSync(this.socketPath);
       if (stat.isSocket()) unlinkSync(this.socketPath);
     }
@@ -391,7 +417,13 @@ export class CredentialHolderService {
   }
 
   private async lookupPeer(socket: Socket): Promise<PeerCredential> {
-    const peer = await this.peerCredentialResolver({ socket, socketFd: socketFd(socket) });
+    const peer = await this.peerCredentialResolver({
+      socket,
+      socketFd: socketFd(socket),
+      // On Windows the peer-credential helper authenticates the connected client through the named
+      // pipe itself (GetNamedPipeClientProcessId), so it needs the pipe path rather than a fd.
+      ...(this.platform === 'win32' ? { namedPipeName: this.socketPath } : {}),
+    });
     if (!peer || !Number.isInteger(peer.pid) || !Number.isInteger(peer.uid) || !peer.startTime) {
       throw new Error('credential holder failed closed: ambiguous peer credential');
     }
@@ -437,6 +469,18 @@ export async function sendCredentialHolderCommand(
 }
 
 function assertHolderSocketIdentity(socketPath: string): void {
+  // The POSIX owner/mode gate is skipped ONLY on a real Windows host. The skip must be
+  // platform-gated, not path-spelling-gated: on POSIX, backslashes are ordinary filename
+  // characters, so a path that merely starts with \\.\pipe\ is a relative Unix-socket filename and
+  // MUST still pass the lstat/owner/mode identity check. Gating on process.platform prevents a path
+  // spelling alone from bypassing the gate.
+  if (process.platform === 'win32' && isWindowsNamedPipePath(socketPath)) {
+    // SECURITY — NEEDS-REAL-WINDOWS-VALIDATION. A Windows named pipe has no filesystem owner or
+    // mode bits to stat; the client authenticates the server by inspecting the pipe's DACL / server
+    // SID via a native call Node does not expose. Until that native check exists and is validated
+    // on a real Windows host, the POSIX owner/permission gate below cannot run for pipe paths.
+    return;
+  }
   const stat = lstatSync(socketPath);
   if (!stat.isSocket()) throw new Error('credential holder identity check failed: path is not a socket');
   if (process.getuid && stat.uid !== process.getuid()) {
@@ -445,6 +489,26 @@ function assertHolderSocketIdentity(socketPath: string): void {
   if ((stat.mode & 0o077) !== 0) {
     throw new Error('credential holder identity check failed: socket permissions must not grant group/other access');
   }
+}
+
+function isWindowsNamedPipePath(socketPath: string): boolean {
+  return socketPath.startsWith('\\\\.\\pipe\\');
+}
+
+function awaitServerListening(server: Server, path: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const onError = (error: Error) => {
+      server.off('listening', onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      server.off('error', onError);
+      resolve();
+    };
+    server.once('error', onError);
+    server.once('listening', onListening);
+    server.listen(path);
+  });
 }
 
 function parseCredentialHolderCommand(line: string): CredentialHolderCommand {
