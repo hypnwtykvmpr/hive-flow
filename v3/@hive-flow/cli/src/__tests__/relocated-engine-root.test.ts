@@ -71,10 +71,12 @@ describe('relocated enforcement engine root resolution', () => {
     }
   });
 
-  it('loads role-enforcement.cjs from a relocated bin while resolving roles under HIVE_FLOW_PROJECT_ROOT', () => {
+  it('loads role-enforcement.cjs from a relocated bin while resolving roles under HIVE_FLOW_HOME', () => {
     const { root, bin } = makeProject();
+    const hiveHome = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-relocated-role-home-')));
     try {
       process.env.HIVE_FLOW_PROJECT_ROOT = root;
+      process.env.HIVE_FLOW_HOME = hiveHome;
       delete process.env.CLAUDE_PROJECT_DIR;
 
       const roleEnforcement = requireFresh(join(bin, 'role-enforcement.cjs')) as {
@@ -82,11 +84,12 @@ describe('relocated enforcement engine root resolution', () => {
       };
 
       expect(roleEnforcement.getRoleFilePath('agent-a')).toBe(
-        join(root, '.hive-flow', 'enforcement', 'agents', 'agent-a', 'role.json'),
+        join(hiveHome, 'enforcement', 'agents', 'agent-a', 'role.json'),
       );
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(bin, { recursive: true, force: true });
+      rmSync(hiveHome, { recursive: true, force: true });
     }
   });
 });

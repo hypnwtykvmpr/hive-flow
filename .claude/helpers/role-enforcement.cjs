@@ -15,14 +15,16 @@
  *     every idle/spawning worker has at least one worker-tasked audit entry (use queen_task_worker).
  *   - Fail-open: errors allow (except internal hook errors path for other roles).
  *
- * Role state: .hive-flow/enforcement/agents/<sanitized-id>/role.json
- * HMAC-signed using same key as enforcement.cjs (.hive-flow/enforcement/.hmac-key)
+ * Role state: <HIVE_FLOW_HOME or ~/.hive-flow>/enforcement/agents/<sanitized-id>/role.json
+ * (legacy project-local .hive-flow/enforcement is retained as a read-only migration fallback).
+ * HMAC-signed using the same global key as enforcement.cjs (<home>/enforcement/.hmac-key).
  *
  * Output format: Claude Code PreToolUse protocol
  *   { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow'|'deny', ... } }
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const crypto = require('crypto');
 
 function loadProtectedPathPolicyModule() {
@@ -53,8 +55,21 @@ const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
   cwd: path.resolve(__dirname, '..', '..'),
   fallbackRoot: process.cwd(),
 });
-const ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
+// Control-plane enforcement identity is global (CLI-neutral), mirroring enforcement.cjs: the
+// primary store is ~/.hive-flow/enforcement (or $HIVE_FLOW_HOME), with the legacy project-local
+// dir kept ONLY as a read-only migration fallback. This keeps role/HMAC identity consistent
+// across working directories (global operation). Data-plane state (hive records, agent store)
+// stays project-local — see loadQueenHive / verifySpawnToken.
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
+const ENFORCEMENT_DIR = path.join(HIVE_HOME, 'enforcement');
+const LEGACY_ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
+const LEGACY_HMAC_KEY_FILE = path.join(LEGACY_ENFORCEMENT_DIR, '.hmac-key');
 // ============================================================================
 // Identity Text Constants
 // ============================================================================
@@ -148,19 +163,34 @@ const QUEEN_WORK_TOOLS = new Set([...WORK_TOOLS, 'WebFetch', ...MCP_FS_WRITE_TOO
 // ============================================================================
 
 function getHmacKey() {
-  try {
-    if (fs.existsSync(HMAC_KEY_FILE)) {
-      return fs.readFileSync(HMAC_KEY_FILE, 'utf8').trim();
+  for (const keyFile of [HMAC_KEY_FILE, LEGACY_HMAC_KEY_FILE]) {
+    try {
+      if (fs.existsSync(keyFile)) {
+        const key = fs.readFileSync(keyFile, 'utf8').trim();
+        if (key) return key;
+      }
+    } catch {
+      // Try the next location.
     }
-  } catch {
-    // Key file doesn't exist or unreadable
   }
   return null;
 }
 
 function getOrCreateHmacKey() {
   const existing = getHmacKey();
-  if (existing) return existing;
+  if (existing) {
+    // If found only in the legacy project-local store, migrate its value up to the global store
+    // so future reads (and enforcement.cjs) converge on the same secret.
+    try {
+      if (!fs.existsSync(HMAC_KEY_FILE)) {
+        fs.mkdirSync(ENFORCEMENT_DIR, { recursive: true });
+        fs.writeFileSync(HMAC_KEY_FILE, existing, { mode: 0o600 });
+      }
+    } catch {
+      // Best-effort migration; the legacy key still verifies via getHmacKey fallback.
+    }
+    return existing;
+  }
   try {
     fs.mkdirSync(ENFORCEMENT_DIR, { recursive: true });
     const key = crypto.randomBytes(32).toString('hex');
@@ -234,28 +264,40 @@ function isRootSessionForDevOverride(input = null) {
 }
 
 function getRoleFilePath(agentId) {
+  // Primary (global) role path — used for writes.
   const id = sanitizeId(agentId);
   if (!id) return null;
   return path.join(ENFORCEMENT_DIR, 'agents', id, 'role.json');
 }
 
+function getLegacyRoleFilePath(agentId) {
+  // Legacy project-local role path — read-only migration fallback.
+  const id = sanitizeId(agentId);
+  if (!id) return null;
+  return path.join(LEGACY_ENFORCEMENT_DIR, 'agents', id, 'role.json');
+}
+
+function roleFileReadCandidates(agentId) {
+  return [getRoleFilePath(agentId), getLegacyRoleFilePath(agentId)].filter(Boolean);
+}
+
 function loadRole(agentId) {
-  const roleFile = getRoleFilePath(agentId);
-  if (!roleFile) return null;
-
-  try {
-    if (!fs.existsSync(roleFile)) return null;
-    const stats = fs.statSync(roleFile);
-    if (stats.size > 10240) return null; // 10KB sanity limit
-    const raw = JSON.parse(fs.readFileSync(roleFile, 'utf8'));
-
-    // C3: Role file uses HMAC envelope { state: {...}, hmac: "..." }
-    if (!verifyRoleHmac(raw)) return null; // Tampered — ignore
-
-    return raw.state;
-  } catch {
-    return null;
+  // Read global-primary first, then the legacy project-local store (migration fallback).
+  // HMAC-invalid (tampered) envelopes are skipped, never trusted — so a tampered global file
+  // falls through to a valid legacy role rather than bypassing enforcement.
+  for (const roleFile of roleFileReadCandidates(agentId)) {
+    try {
+      if (!fs.existsSync(roleFile)) continue;
+      const stats = fs.statSync(roleFile);
+      if (stats.size > 10240) continue; // 10KB sanity limit
+      const raw = JSON.parse(fs.readFileSync(roleFile, 'utf8'));
+      if (!verifyRoleHmac(raw)) continue; // Tampered — try the next candidate
+      return raw.state;
+    } catch {
+      // Try the next candidate.
+    }
   }
+  return null;
 }
 
 // ============================================================================
@@ -644,14 +686,12 @@ if (require.main === module) {
     const agentId = getAgentId(input);
     if (agentId) {
       try {
-        const roleFile = getRoleFilePath(agentId);
-        if (roleFile && fs.existsSync(roleFile)) {
+        for (const roleFile of roleFileReadCandidates(agentId)) {
+          if (!roleFile || !fs.existsSync(roleFile)) continue;
           const raw = JSON.parse(fs.readFileSync(roleFile, 'utf8'));
-          if (!verifyRoleHmac(raw)) {
-            roleType = null; // HMAC failed — fail-open for all
-          } else {
-            roleType = raw?.state?.type || null;
-          }
+          if (!verifyRoleHmac(raw)) { roleType = null; continue; } // tampered — try next
+          roleType = raw?.state?.type || null;
+          if (roleType) break;
         }
       } catch {
         // Can't determine role — default fail-open

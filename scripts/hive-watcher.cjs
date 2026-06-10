@@ -25,6 +25,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execFileSync } = require('child_process');
 const { appendPendingWithAck } = require('../.claude/helpers/dedup-marker.cjs');
 const { resolveSessionId, sanitizeSessionId } = require('../.claude/helpers/session-id.cjs');
@@ -38,6 +39,15 @@ const POLL_INTERVAL_MS = 15_000;       // 15s between polls
 const PROGRESS_INTERVAL_MS = 30 * 60_000; // 30min between tmux progress pings
 const STALE_THRESHOLD = 3;              // 3 consecutive unchanged polls = stale
 const MAX_RUNTIME_MS = 12 * 60 * 60_000; // 12h hard safety cap (prevent zombie)
+
+// Control-plane audit log is global (mirrors enforcement.cjs / hive-enforcement.cjs). hive-audit.jsonl
+// is WRITTEN to the global Hive home; data-plane watcher progress/done files stay project-local.
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
 
 function loadProtectedPathPolicyModule() {
   const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
@@ -460,8 +470,9 @@ function appendPendingCompletion(paths, hiveId, status, summary, ownerSessionId 
 
 function appendAuditLog(paths, entry) {
   try {
-    fs.mkdirSync(path.join(paths.hiveFlowDir, 'enforcement'), { recursive: true });
-    const auditPath = path.join(paths.hiveFlowDir, 'enforcement', 'hive-audit.jsonl');
+    const auditDir = path.join(HIVE_HOME, 'enforcement');
+    fs.mkdirSync(auditDir, { recursive: true });
+    const auditPath = path.join(auditDir, 'hive-audit.jsonl');
     const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n';
     fs.appendFileSync(auditPath, line);
   } catch { /* best-effort */ }

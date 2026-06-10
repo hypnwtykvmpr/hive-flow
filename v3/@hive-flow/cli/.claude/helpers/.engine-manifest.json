@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-06-09T08:23:17.970Z",
+  "syncedAt": "2026-06-10T13:49:58.155Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -8,7 +8,7 @@
     },
     {
       "name": "role-enforcement.cjs",
-      "sha256": "182dbd79c58ff9b5efd6e6e9e03fc7d71e0747f1083fa941dc656b61fd14bd6b"
+      "sha256": "0fbe21e38bfb9eacf6cf130cfe0ab2811337dd6ac14ca5da4c9ad117ffaf4eb7"
     },
     {
       "name": "hive-composition-gate.cjs",
@@ -16,7 +16,7 @@
     },
     {
       "name": "hook-handler.cjs",
-      "sha256": "a9871f3fcb2fef6ae3a47a2d611a540ac0849570eaf545767c4abf81f5fbc2c1"
+      "sha256": "ba5d3bbb2f4e2afaca4cf65ea3de2ee8da26e047ad5e2d0bb75c5e0136db717f"
     },
     {
       "name": "settings-reconciler.cjs",

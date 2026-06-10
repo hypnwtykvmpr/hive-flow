@@ -4,11 +4,21 @@
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { pathToFileURL } = require('url');
 
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
 const ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
+const GLOBAL_ENFORCEMENT_DIR = path.join(HIVE_HOME, 'enforcement');
+const GLOBAL_STATE_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'global', 'state.json');
+const GLOBAL_HMAC_KEY_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, '.hmac-key');
 
 function hasActiveHives() {
   if (!fs.existsSync(HIVES_DIR)) return false;
@@ -51,35 +61,31 @@ function hasActiveEnforcer() {
 function readEnforcementLevel() {
   const crypto = require('crypto');
   try {
-    const stateFile = path.join(ENFORCEMENT_DIR, 'state.json');
+    const stateFile = firstExistingPath([
+      GLOBAL_STATE_FILE,
+      path.join(ENFORCEMENT_DIR, 'state.json'),
+    ]);
     if (!fs.existsSync(stateFile)) return 0;
     const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
 
     // SEC-005: HMAC verification before trusting enforcement level.
     // Fail-closed: return HALTED (3) on verification failure or missing key.
-    const hmacKeyFile = path.join(ENFORCEMENT_DIR, '.hmac-key');
+    const hmacKeyFiles = [
+      GLOBAL_HMAC_KEY_FILE,
+      path.join(ENFORCEMENT_DIR, '.hmac-key'),
+    ];
 
     if (raw?.state !== undefined && typeof raw.hmac === 'string') {
       // enforcement.cjs envelope: { state, hmac }
-      let key;
-      try { key = fs.readFileSync(hmacKeyFile, 'utf8').trim(); } catch { return 3; }
-      if (!key) return 3;
-      const expected = crypto.createHmac('sha256', key).update(JSON.stringify(raw.state)).digest('hex');
-      const expectedBuf = Buffer.from(expected, 'hex');
       const actualBuf = Buffer.from(raw.hmac, 'hex');
-      if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) return 3;
+      if (!verifyWithAnyKey(crypto, hmacKeyFiles, raw.state, actualBuf)) return 3;
       return typeof raw.state.level === 'number' ? raw.state.level : 0;
     }
 
     if (raw?.payload !== undefined && typeof raw.signature === 'string') {
       // workflow-enforcer.ts envelope: { payload, signature }
-      let key;
-      try { key = fs.readFileSync(hmacKeyFile, 'utf8').trim(); } catch { return 3; }
-      if (!key) return 3;
-      const expected = crypto.createHmac('sha256', key).update(JSON.stringify(raw.payload)).digest('hex');
-      const expectedBuf = Buffer.from(expected, 'hex');
       const actualBuf = Buffer.from(raw.signature, 'hex');
-      if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) return 3;
+      if (!verifyWithAnyKey(crypto, hmacKeyFiles, raw.payload, actualBuf)) return 3;
       return typeof raw.payload.level === 'number' ? raw.payload.level : 0;
     }
 
@@ -87,6 +93,23 @@ function readEnforcementLevel() {
     return 3;
   } catch { /* ignore */ }
   return 3; // Fail-closed on any error
+}
+
+function firstExistingPath(paths) {
+  return paths.find(p => fs.existsSync(p)) || paths[0];
+}
+
+function verifyWithAnyKey(crypto, hmacKeyFiles, payload, actualBuf) {
+  for (const hmacKeyFile of hmacKeyFiles) {
+    if (!fs.existsSync(hmacKeyFile)) continue;
+    let key;
+    try { key = fs.readFileSync(hmacKeyFile, 'utf8').trim(); } catch { continue; }
+    if (!key) continue;
+    const expected = crypto.createHmac('sha256', key).update(JSON.stringify(payload)).digest('hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    if (expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf)) return true;
+  }
+  return false;
 }
 
 async function main() {
@@ -154,4 +177,10 @@ async function main() {
   }
 }
 
-main().catch(() => console.log('{}'));
+if (require.main === module) {
+  main().catch(() => console.log('{}'));
+}
+
+module.exports = {
+  readEnforcementLevel,
+};

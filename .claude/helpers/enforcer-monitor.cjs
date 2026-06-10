@@ -7,10 +7,21 @@
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
-const ACTIVITY = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', 'enforcer-activity.jsonl');
-const REPORTS = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', 'enforcer-reports.jsonl');
+// Control-plane enforcer telemetry is global (mirrors enforcement.cjs / role-enforcement.cjs).
+// Reports are WRITTEN global; activity is READ from global first AND the legacy project-local store,
+// merged, so no in-flight telemetry is lost during migration (the 1h window ages legacy out).
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
+const ACTIVITY = path.join(HIVE_HOME, 'enforcement', 'enforcer-activity.jsonl');
+const LEGACY_ACTIVITY = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', 'enforcer-activity.jsonl');
+const REPORTS = path.join(HIVE_HOME, 'enforcement', 'enforcer-reports.jsonl');
 
 function readStdin() {
   try {
@@ -60,7 +71,9 @@ function main() {
   } catch { /* ignore */ }
 
   const cutoff = Date.now() - hours * 3600000;
-  const rows = loadRecentLines(ACTIVITY, cutoff);
+  // Merge global + legacy recent activity so migration loses no in-flight telemetry. Each event is
+  // written to exactly one location per deploy, so there is no double-counting.
+  const rows = [...loadRecentLines(ACTIVITY, cutoff), ...loadRecentLines(LEGACY_ACTIVITY, cutoff)];
   const MIN_SAMPLES = 3;
   const byQueen = {};
   for (const r of rows) {

@@ -5,11 +5,21 @@
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const { getRoleFilePath } = require('./role-enforcement.cjs');
 
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
-const DEST = path.join(PROJECT_DIR, '.hive-flow', 'enforcement', 'enforcer-activity.jsonl');
+// Control-plane telemetry is global (mirrors enforcement.cjs / role-enforcement.cjs). Activity is
+// WRITTEN to the global enforcement home; the monitor reads global-first with a legacy fallback
+// during migration. Role peek uses role-enforcement's getRoleFilePath, already global post-slice-1.
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
+const DEST = path.join(HIVE_HOME, 'enforcement', 'enforcer-activity.jsonl');
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /** Fast role peek — no HMAC verify (hook speed). */

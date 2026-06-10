@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const crypto = require('crypto');
 
 // Forbidden patterns — asking for already-granted permission
@@ -89,29 +90,51 @@ function getRunningTaskCount(projectDir) {
   return 0;
 }
 
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+
+function firstExistingPath(paths) {
+  return paths.find(p => fs.existsSync(p)) || paths[0];
+}
+
+function verifyEnvelopeWithAnyKey(envelope, hmacKeyPaths) {
+  const stateData = envelope?.state;
+  if (!stateData || typeof envelope?.hmac !== 'string') return false;
+  const sigBuf = Buffer.from(envelope.hmac, 'hex');
+  for (const hmacKeyPath of hmacKeyPaths) {
+    if (!fs.existsSync(hmacKeyPath)) continue;
+    const hmacKey = fs.readFileSync(hmacKeyPath, 'utf8').trim();
+    if (!hmacKey) continue;
+    const expectedHmac = crypto.createHmac('sha256', hmacKey).update(JSON.stringify(stateData)).digest('hex');
+    const expBuf = Buffer.from(expectedHmac, 'hex');
+    if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) return true;
+  }
+  return false;
+}
+
 function isPlanActive(projectDir) {
   // Guard only activates when enforcement state is authorized (plan in effect).
   // This mirrors the anti-re-request hook in hook-handler.cjs — when no active
   // plan exists, we don't intercept normal conversation / genuine new requests.
   try {
-    const statePath = path.join(projectDir, '.hive-flow', 'enforcement', 'state.json');
+    const globalEnforcementDir = path.join(resolveHiveHome(), 'enforcement');
+    const legacyEnforcementDir = path.join(projectDir, '.hive-flow', 'enforcement');
+    const statePath = firstExistingPath([
+      path.join(globalEnforcementDir, 'global', 'state.json'),
+      path.join(legacyEnforcementDir, 'state.json'),
+    ]);
     if (!fs.existsSync(statePath)) return false;
     const raw = fs.readFileSync(statePath, 'utf8');
     const envelope = JSON.parse(raw);
     // Validate HMAC before trusting state
-    const hmacKeyPath = path.join(projectDir, '.hive-flow', 'enforcement', '.hmac-key');
-    if (fs.existsSync(hmacKeyPath)) {
-      const hmacKey = fs.readFileSync(hmacKeyPath, 'utf8').trim();
-      // BUG-07: Read {state,hmac} envelope format (matching enforcement.cjs), not {payload,signature}
-      const stateData = envelope.state;
-      const expectedHmac = crypto.createHmac('sha256', hmacKey).update(JSON.stringify(stateData)).digest('hex');
-      const sigBuf = Buffer.from(envelope.hmac || '', 'hex');
-      const expBuf = Buffer.from(expectedHmac, 'hex');
-      if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return false;
-      return stateData?.authorized === true;
-    }
-    // No HMAC key — conservative: treat as not authorized
-    return false;
+    if (!verifyEnvelopeWithAnyKey(envelope, [
+      path.join(globalEnforcementDir, '.hmac-key'),
+      path.join(legacyEnforcementDir, '.hmac-key'),
+    ])) return false;
+    return envelope.state?.authorized === true;
   } catch {
     return false;
   }

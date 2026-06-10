@@ -29,6 +29,12 @@ const CONFIG = {
 };
 
 const CWD = process.cwd();
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
 /** Resolved from repo root — same layout as context-persistence-hook.mjs (`PROJECT_ROOT/.hive-flow/data`). */
 const AUTOPILOT_STATE_PATH = path.join(__dirname, '..', '..', '.hive-flow', 'data', 'autopilot-state.json');
 
@@ -829,19 +835,29 @@ function getProjectScopeId() {
 }
 
 function getEnforcementStateFiles() {
-  const enforcementDir = path.join(CWD, '.hive-flow', 'enforcement');
+  const globalEnforcementDir = path.join(HIVE_HOME, 'enforcement');
+  const legacyEnforcementDir = path.join(CWD, '.hive-flow', 'enforcement');
   const stdin = getStdinData();
   const sessionId = sanitizeScopeId(stdin?.session_id || stdin?.sessionId || process.env.CLAUDE_SESSION_ID);
   const agentId = sanitizeScopeId(process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID);
   const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID);
   const files = [
-    path.join(enforcementDir, 'state.json'),
-    path.join(enforcementDir, 'projects', getProjectScopeId(), 'state.json'),
+    path.join(globalEnforcementDir, 'global', 'state.json'),
+    path.join(globalEnforcementDir, 'projects', getProjectScopeId(), 'state.json'),
   ];
-  if (sessionId) files.push(path.join(enforcementDir, 'sessions', sessionId, 'state.json'));
-  if (agentId) files.push(path.join(enforcementDir, 'agents', agentId, 'state.json'));
-  if (hiveId) files.push(path.join(enforcementDir, 'hives', hiveId, 'state.json'));
-  return files;
+  if (sessionId) files.push(path.join(globalEnforcementDir, 'sessions', sessionId, 'state.json'));
+  if (agentId) files.push(path.join(globalEnforcementDir, 'agents', agentId, 'state.json'));
+  if (hiveId) files.push(path.join(globalEnforcementDir, 'hives', hiveId, 'state.json'));
+
+  files.push(
+    path.join(legacyEnforcementDir, 'state.json'),
+    path.join(legacyEnforcementDir, 'projects', getProjectScopeId(), 'state.json'),
+  );
+  if (sessionId) files.push(path.join(legacyEnforcementDir, 'sessions', sessionId, 'state.json'));
+  if (agentId) files.push(path.join(legacyEnforcementDir, 'agents', agentId, 'state.json'));
+  if (hiveId) files.push(path.join(legacyEnforcementDir, 'hives', hiveId, 'state.json'));
+
+  return [...new Set(files)];
 }
 
 function getEnforcementLevel() {

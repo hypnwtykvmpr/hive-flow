@@ -1679,19 +1679,31 @@ const handlers = {
       }
 
       if (currentState === 'waiting-for-hive' && elapsed >= FIVE_MIN) {
-        const activityPath = path.join(projectDir, '.hive-flow', 'enforcement', 'hive-audit.jsonl');
+        // hive-audit.jsonl is control-plane: the writers (hive-watcher.cjs, hive-enforcement.cjs) append
+        // to the global Hive home. Read global-first AND the legacy project-local store, merged, so a
+        // 'watcher-hive-complete' wake signal is never missed during migration.
+        const os = require('os');
+        const configuredHome = String(process.env.HIVE_FLOW_HOME || '').trim();
+        const hiveHome = (configuredHome && path.isAbsolute(configuredHome))
+          ? path.resolve(configuredHome)
+          : path.join(os.homedir(), '.hive-flow');
+        const auditCandidates = [
+          path.join(hiveHome, 'enforcement', 'hive-audit.jsonl'),
+          path.join(projectDir, '.hive-flow', 'enforcement', 'hive-audit.jsonl'),
+        ];
+        const waitingHiveId = (stateData.description || '').replace('Hive dispatched: ', '');
         let completions = [];
-        if (fs.existsSync(activityPath)) {
+        for (const activityPath of auditCandidates) {
+          if (!fs.existsSync(activityPath)) continue;
           try {
             const lines = fs.readFileSync(activityPath, 'utf8').split('\n').filter(Boolean).slice(-50);
-            const waitingHiveId = (stateData.description || '').replace('Hive dispatched: ', '');
-            completions = lines.filter(l => {
+            for (const l of lines) {
               try {
                 const entry = JSON.parse(l);
-                if (entry.event !== 'watcher-hive-complete') return false;
-                return !waitingHiveId || entry.hiveId === waitingHiveId;
-              } catch { return false; }
-            });
+                if (entry.event !== 'watcher-hive-complete') continue;
+                if (!waitingHiveId || entry.hiveId === waitingHiveId) completions.push(entry);
+              } catch { /* skip malformed line */ }
+            }
           } catch { /* non-fatal */ }
         }
         const description = `${completions.length} hive(s) completed.`;

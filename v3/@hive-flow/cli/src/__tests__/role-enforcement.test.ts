@@ -45,6 +45,9 @@ const ROLE_TEST_PROJECT_DIR = mkdtempSync(
   require('path').join(tmpdir(), 'hive-flow-role-enforcement-cjs-')
 );
 const ROLE_TEST_PROJECT_REAL_DIR = realpathSync(ROLE_TEST_PROJECT_DIR);
+const ROLE_TEST_HOME_DIR = realpathSync(mkdtempSync(
+  require('path').join(tmpdir(), 'hive-flow-role-enforcement-home-')
+));
 const ROLE_ENFORCEMENT_PATH = require('path').join(
   ROLE_TEST_PROJECT_REAL_DIR, '.claude', 'helpers', 'role-enforcement.cjs'
 );
@@ -94,13 +97,16 @@ function issueRootOverrideToken(): void {
 describe('Role Enforcement System', () => {
   afterAll(() => {
     rmSync(ROLE_TEST_PROJECT_DIR, { recursive: true, force: true });
+    rmSync(ROLE_TEST_HOME_DIR, { recursive: true, force: true });
   });
 
   beforeEach(() => {
     vi.resetModules();
+    process.env.HIVE_FLOW_HOME = ROLE_TEST_HOME_DIR;
     // Fresh require each time to avoid stale module state
-    roleEnf = require(ROLE_ENFORCEMENT_PATH);
     rmSync(require('path').join(ROLE_TEST_PROJECT_REAL_DIR, '.hive-flow'), { recursive: true, force: true });
+    rmSync(require('path').join(ROLE_TEST_HOME_DIR, 'enforcement'), { recursive: true, force: true });
+    roleEnf = require(ROLE_ENFORCEMENT_PATH);
   });
 
   afterEach(() => {
@@ -108,6 +114,7 @@ describe('Role Enforcement System', () => {
     delete process.env.CLAUDE_SESSION_ID;
     delete process.env.CLAUDE_AGENT_ID;
     delete process.env.CLAUDE_PARENT_AGENT_ID;
+    delete process.env.HIVE_FLOW_HOME;
     delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
   });
 

@@ -18,6 +18,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { randomUUID } = require('crypto');
 const { fork, spawn } = require('child_process');
 
@@ -54,8 +55,22 @@ const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
 });
 const HIVE_FLOW_DIR = path.join(PROJECT_DIR, '.hive-flow');
 const HIVES_DIR = path.join(HIVE_FLOW_DIR, 'hives');
+// ENFORCEMENT_DIR stays project-local for legacy fallback and hive data-plane files.
+// State/HMAC reads below use global-first + this legacy fallback.
 const ENFORCEMENT_DIR = path.join(HIVE_FLOW_DIR, 'enforcement');
-const AUDIT_FILE = path.join(ENFORCEMENT_DIR, 'hive-audit.jsonl');
+// Control-plane audit log is global (mirrors enforcement.cjs / role-enforcement.cjs / enforcer telemetry).
+// hive-audit.jsonl is WRITTEN to the global Hive home; its sole reader (hook-handler wake-timer) reads
+// global-first with a legacy fallback during migration.
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
+const GLOBAL_ENFORCEMENT_DIR = path.join(HIVE_HOME, 'enforcement');
+const GLOBAL_STATE_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'global', 'state.json');
+const GLOBAL_HMAC_KEY_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, '.hmac-key');
+const AUDIT_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'hive-audit.jsonl');
 
 const MIN_WORKERS = 5; // 5 workers + 1 queen = 6 total
 const LOCK_TIMEOUT_MS = 10000; // 10s
@@ -91,7 +106,10 @@ const WORKER_ROLES = ['coder', 'reviewer', 'tester', 'researcher'];
  */
 function readEnforcementLevel() {
   try {
-    const stateFile = path.join(ENFORCEMENT_DIR, 'state.json');
+    const stateFile = firstExistingPath([
+      GLOBAL_STATE_FILE,
+      path.join(ENFORCEMENT_DIR, 'state.json'),
+    ]);
     if (!fs.existsSync(stateFile)) return 0; // No state file = fresh install
     const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
     // BUG-08: Reject unsigned state — missing hmac/signature → HALTED (fail-closed)
@@ -118,18 +136,26 @@ function readEnforcementLevel() {
 function verifyEnforcementHmac(stateObj, hmacHex) {
   try {
     const crypto = require('crypto');
-    const hmacKeyFile = path.join(ENFORCEMENT_DIR, '.hmac-key');
-    if (!fs.existsSync(hmacKeyFile)) return false;
-    const key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
-    if (!key) return false;
-    const expected = crypto.createHmac('sha256', key).update(JSON.stringify(stateObj)).digest('hex');
-    const expectedBuf = Buffer.from(expected, 'hex');
     const actualBuf = Buffer.from(hmacHex, 'hex');
-    if (expectedBuf.length !== actualBuf.length) return false;
-    return crypto.timingSafeEqual(expectedBuf, actualBuf);
+    for (const hmacKeyFile of [
+      GLOBAL_HMAC_KEY_FILE,
+      path.join(ENFORCEMENT_DIR, '.hmac-key'),
+    ]) {
+      if (!fs.existsSync(hmacKeyFile)) continue;
+      const key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
+      if (!key) continue;
+      const expected = crypto.createHmac('sha256', key).update(JSON.stringify(stateObj)).digest('hex');
+      const expectedBuf = Buffer.from(expected, 'hex');
+      if (expectedBuf.length === actualBuf.length && crypto.timingSafeEqual(expectedBuf, actualBuf)) return true;
+    }
+    return false;
   } catch {
     return false;
   }
+}
+
+function firstExistingPath(paths) {
+  return paths.find(p => fs.existsSync(p)) || paths[0];
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +362,7 @@ function rotateJSONL(filePath) {
 
 function appendAuditLog(entry) {
   try {
-    fs.mkdirSync(ENFORCEMENT_DIR, { recursive: true });
+    fs.mkdirSync(path.dirname(AUDIT_FILE), { recursive: true });
     rotateJSONL(AUDIT_FILE);
     const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n';
     fs.appendFileSync(AUDIT_FILE, line);

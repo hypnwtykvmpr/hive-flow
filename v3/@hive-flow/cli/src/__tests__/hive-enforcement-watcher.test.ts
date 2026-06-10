@@ -91,7 +91,7 @@ function writeHiveRecord(
   );
 }
 
-function invokeHook(root: string, hiveId: string): string {
+function invokeHook(root: string, hiveId: string, hiveHome: string): string {
   const payload = {
     hook_event_name: 'PostToolUse',
     tool_name: 'mcp__hive-flow__queen_mission_assign',
@@ -99,14 +99,15 @@ function invokeHook(root: string, hiveId: string): string {
   };
   return execFileSync(process.execPath, [join(root, '.claude', 'helpers', 'hive-enforcement.cjs')], {
     cwd: root,
+    env: { ...process.env, HIVE_FLOW_HOME: hiveHome },
     input: JSON.stringify(payload),
     encoding: 'utf8',
     timeout: 5000,
   });
 }
 
-function readAuditEvents(root: string): string[] {
-  const auditPath = join(root, '.hive-flow', 'enforcement', 'hive-audit.jsonl');
+function readAuditEvents(hiveHome: string): string[] {
+  const auditPath = join(hiveHome, 'enforcement', 'hive-audit.jsonl');
   if (!existsSync(auditPath)) return [];
   return readFileSync(auditPath, 'utf8')
     .trim()
@@ -119,11 +120,12 @@ describe('hive enforcement watcher launch', () => {
   it('launches the completion watcher before the fully staffed early return', () => {
     const root = makeTempProject();
     try {
+      const hiveHome = join(root, 'global-home');
       const hiveId = 'hive-ready';
       installHookAndWatcher(root);
       writeHiveRecord(root, hiveId, 5, { ownerSessionId: 'owner-session', ownerTmuxPane: '%55' });
 
-      expect(invokeHook(root, hiveId)).toBe('{}');
+      expect(invokeHook(root, hiveId, hiveHome)).toBe('{}');
 
       const spawnedPath = join(root, '.hive-flow', 'data', 'watcher-spawned.json');
       expect(waitForFile(spawnedPath)).toBe(true);
@@ -131,7 +133,8 @@ describe('hive enforcement watcher launch', () => {
       expect(spawned.args).toEqual([hiveId, '--project-dir', root, '--sessionId', 'owner-session', '--tmux-pane', '%55']);
       expect(spawned.cwd).toBe(root);
       expect(spawned.projectDirEnv).toBe(root);
-      expect(readAuditEvents(root)).toEqual(['watcher-launched', 'hive-enforcement-ok']);
+      expect(readAuditEvents(hiveHome)).toEqual(['watcher-launched', 'hive-enforcement-ok']);
+      expect(existsSync(join(root, '.hive-flow', 'enforcement', 'hive-audit.jsonl'))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -140,6 +143,7 @@ describe('hive enforcement watcher launch', () => {
   it('does not launch a duplicate watcher when a fresh heartbeat exists', () => {
     const root = makeTempProject();
     try {
+      const hiveHome = join(root, 'global-home');
       const hiveId = 'hive-ready';
       installHookAndWatcher(root);
       writeHiveRecord(root, hiveId, 5);
@@ -151,10 +155,11 @@ describe('hive enforcement watcher launch', () => {
         'utf8',
       );
 
-      expect(invokeHook(root, hiveId)).toBe('{}');
+      expect(invokeHook(root, hiveId, hiveHome)).toBe('{}');
 
       expect(waitForFile(join(dataDir, 'watcher-spawned.json'), 250)).toBe(false);
-      expect(readAuditEvents(root)).toEqual(['hive-enforcement-ok']);
+      expect(readAuditEvents(hiveHome)).toEqual(['hive-enforcement-ok']);
+      expect(existsSync(join(root, '.hive-flow', 'enforcement', 'hive-audit.jsonl'))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

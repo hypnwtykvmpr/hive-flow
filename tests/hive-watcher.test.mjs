@@ -299,32 +299,46 @@ describe('hive-watcher regressions', () => {
 
   it('honors stop control files by writing stopped progress and logging the stop', () => {
     const projectDir = makeProjectDir();
-    tempDirs.push(projectDir);
+    const home = makeProjectDir();
+    tempDirs.push(projectDir, home);
+    const origHome = process.env.HIVE_FLOW_HOME;
+    process.env.HIVE_FLOW_HOME = home;
 
-    const mod = loadWatcherModule();
-    const paths = mod.getPaths(projectDir);
+    try {
+      const mod = loadWatcherModule();
+      const paths = mod.getPaths(projectDir);
 
-    assert.equal(typeof mod.handleStopRequest, 'function');
+      assert.equal(typeof mod.handleStopRequest, 'function');
 
-    mkdirSync(paths.dataDir, { recursive: true });
-    writeFileSync(paths.stopFile('demo/hive'), '');
+      mkdirSync(paths.dataDir, { recursive: true });
+      writeFileSync(paths.stopFile('demo/hive'), '');
 
-    const stopped = mod.handleStopRequest(paths, 'demo/hive', {
-      completedCount: 1,
-      failedCount: 0,
-      runningCount: 0,
-      idleCount: 0,
-      terminatedCount: 0,
-    });
+      const stopped = mod.handleStopRequest(paths, 'demo/hive', {
+        completedCount: 1,
+        failedCount: 0,
+        runningCount: 0,
+        idleCount: 0,
+        terminatedCount: 0,
+      });
 
-    assert.equal(stopped, true);
+      assert.equal(stopped, true);
 
-    const progress = JSON.parse(readFileSync(join(paths.dataDir, 'watcher-demo_hive.json'), 'utf8'));
-    assert.equal(progress.status, 'stopped');
+      const progress = JSON.parse(readFileSync(join(paths.dataDir, 'watcher-demo_hive.json'), 'utf8'));
+      assert.equal(progress.status, 'stopped');
 
-    const auditPath = join(paths.hiveFlowDir, 'enforcement', 'hive-audit.jsonl');
-    const audit = readFileSync(auditPath, 'utf8');
-    assert.match(audit, /watcher-stop-requested/);
+      // Slice 3: hive-audit.jsonl is control-plane, written to the global Hive home, not project-local.
+      const auditPath = join(home, 'enforcement', 'hive-audit.jsonl');
+      const audit = readFileSync(auditPath, 'utf8');
+      assert.match(audit, /watcher-stop-requested/);
+      assert.equal(
+        existsSync(join(paths.hiveFlowDir, 'enforcement', 'hive-audit.jsonl')),
+        false,
+        'stop audit must not be written to project-local enforcement',
+      );
+    } finally {
+      if (origHome !== undefined) process.env.HIVE_FLOW_HOME = origHome;
+      else delete process.env.HIVE_FLOW_HOME;
+    }
   });
 
   it('uses the requested non-mutating and stale-reset source changes', () => {
