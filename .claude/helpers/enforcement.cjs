@@ -68,6 +68,7 @@ const ENFORCEMENT_DIR = path.join(HIVE_HOME, 'enforcement');
 const LEGACY_ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
 const STATE_FILE = path.join(ENFORCEMENT_DIR, 'global', 'state.json');
 const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'global', 'violations.jsonl');
+const DENIAL_LEDGER_FILE = path.join(ENFORCEMENT_DIR, 'global', 'denial-ledger.json');
 const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.json');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
 const LEGACY_HMAC_KEY_FILE = path.join(LEGACY_ENFORCEMENT_DIR, '.hmac-key');
@@ -81,6 +82,11 @@ const MAX_HISTORY = 50;
 const HUNG_THRESHOLD = 5;
 const GATE_MAX_AGE_MS = 3600000; // 1 hour
 const MAX_CONSECUTIVE_READ_ERRORS = 3; // 12.11: DoS mitigation
+const DENIAL_LEDGER_WINDOW_MS = 30 * 60 * 1000;
+const MAX_DENIAL_LEDGER_ENTRIES = 200;
+// The shared 10KB state cap is too small for a signed 200-entry ledger.
+// Keep HMAC verification, but give the bounded ledger its own read cap.
+const DENIAL_LEDGER_MAX_SIZE_BYTES = 256 * 1024;
 
 // ============================================================================
 // Escalation Levels
@@ -257,12 +263,12 @@ function getScopedStateFile(scopeType, scopeId) {
   return STATE_FILE;
 }
 
-function readJson(filePath) {
+function readJson(filePath, maxBytes = MAX_STATE_SIZE) {
   try {
     if (!fs.existsSync(filePath)) return null;
     // 12.12: File size check — prevent I/O flooding
     const stats = fs.statSync(filePath);
-    if (stats.size > MAX_STATE_SIZE) return null;
+    if (stats.size > maxBytes) return null;
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch {
     return null;
@@ -280,6 +286,96 @@ function writeJsonAtomic(filePath, data) {
     try { fs.unlinkSync(tmpPath); } catch {}
     return false;
   }
+}
+
+function freshDenialLedger() {
+  return {
+    version: 1,
+    entries: {},
+  };
+}
+
+function loadDenialLedger() {
+  const raw = readJson(DENIAL_LEDGER_FILE, DENIAL_LEDGER_MAX_SIZE_BYTES);
+  if (!raw) return freshDenialLedger();
+  const { valid, state } = verifyState(raw);
+  if (!valid || !state || state.version !== 1 || !state.entries || typeof state.entries !== 'object') {
+    appendViolation({
+      type: 'denial-ledger-integrity-failure',
+      reason: 'denial-ledger.json HMAC verification failed or had invalid shape; rebuilding empty ledger',
+    });
+    return freshDenialLedger();
+  }
+  return state;
+}
+
+function saveDenialLedger(ledger) {
+  ensureDir(path.dirname(DENIAL_LEDGER_FILE));
+  return writeJsonAtomic(DENIAL_LEDGER_FILE, signState(ledger));
+}
+
+function denialLedgerActorKey(ctx) {
+  if (ctx?.agentId) return `agent:${ctx.agentId}`;
+  if (ctx?.sid) return `session:${ctx.sid}`;
+  if (ctx?.hiveId) return `hive:${ctx.hiveId}`;
+  return `project:${ctx?.projectId || getProjectScopeId()}`;
+}
+
+function normalizeDenialTarget(target) {
+  return casefoldPath(resolveFilePath(target || ''));
+}
+
+function pruneDenialLedger(ledger, nowMs) {
+  const entries = ledger.entries && typeof ledger.entries === 'object' ? ledger.entries : {};
+  const freshEntries = {};
+  for (const [key, entry] of Object.entries(entries)) {
+    const lastTs = Number(entry?.lastTs);
+    if (!Number.isFinite(lastTs) || nowMs - lastTs > DENIAL_LEDGER_WINDOW_MS) continue;
+    const channels = Array.isArray(entry.channels)
+      ? [...new Set(entry.channels.filter(channel => channel === 'write' || channel === 'bash'))]
+      : [];
+    if (channels.length === 0) continue;
+    freshEntries[key] = {
+      actor: String(entry.actor || key.split('\0')[0] || ''),
+      target: String(entry.target || key.split('\0')[1] || ''),
+      channels,
+      firstTs: Number.isFinite(Number(entry.firstTs)) ? Number(entry.firstTs) : lastTs,
+      lastTs,
+    };
+  }
+
+  const capped = Object.entries(freshEntries)
+    .sort((a, b) => Number(b[1].lastTs) - Number(a[1].lastTs))
+    .slice(0, MAX_DENIAL_LEDGER_ENTRIES);
+  return { version: 1, entries: Object.fromEntries(capped) };
+}
+
+function evaluateProtectedMutationDenial(ctx, target, channel, nowMs = Date.now()) {
+  const actor = denialLedgerActorKey(ctx);
+  const normalizedTarget = normalizeDenialTarget(target);
+  const normalizedChannel = channel === 'bash' ? 'bash' : 'write';
+  const key = `${actor}\0${normalizedTarget}`;
+  const ledger = pruneDenialLedger(loadDenialLedger(), nowMs);
+  const existing = ledger.entries[key] || null;
+  const existingChannels = Array.isArray(existing?.channels) ? existing.channels : [];
+  const crossChannel = existingChannels.some(recorded => recorded !== normalizedChannel);
+  const channels = [...new Set([...existingChannels, normalizedChannel])];
+  ledger.entries[key] = {
+    actor,
+    target: normalizedTarget,
+    channels,
+    firstTs: existing?.firstTs || nowMs,
+    lastTs: nowMs,
+  };
+  saveDenialLedger(ledger);
+  return {
+    escalate: crossChannel,
+    actor,
+    target: normalizedTarget,
+    channel: normalizedChannel,
+    previousChannels: existingChannels,
+    channels,
+  };
 }
 
 function freshState() {
@@ -772,10 +868,9 @@ function isEnforcementSubstratePath(filePath) {
   return /^\.claude\/helpers\/.*\.(?:cjs|mjs)$/i.test(casefoldPath(relative));
 }
 
-function protectedMutationDecision(filePath, action = 'write to protected path') {
+function protectedMutationDecision(filePath, action = 'write to protected path', channel = 'write') {
   const substrate = isEnforcementSubstratePath(filePath);
   const globalProtected = isGlobalProtectedPath(filePath);
-  const escalates = substrate || globalProtected;
   const guidance = substrate
     ? 'This targets the enforcement substrate and requires direct human/Codex control-plane approval.'
     : globalProtected
@@ -783,9 +878,13 @@ function protectedMutationDecision(filePath, action = 'write to protected path')
     : 'Use the gated project workflow for this file or ask the human to approve the protected-path change.';
   return {
     circumvention: true,
-    denyOnly: !escalates,
+    protectedMutation: true,
+    target: resolveFilePath(filePath),
+    channel: channel === 'bash' ? 'bash' : 'write',
     reason: `CIRCUMVENTION: Attempted ${action}: ${filePath}. ${guidance}`,
-    severity: escalates ? 'critical' : 'normal',
+    severity: 'normal',
+    substrate,
+    globalProtected,
     substrateAttack: substrate,
     protectedEnforcementAttack: substrate,
     systemic: substrate,
@@ -2252,7 +2351,7 @@ function detectCircumvention(toolName, toolInput, state) {
   if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'mcp__filesystem__write_file', 'mcp__filesystem__edit_file', 'mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file', 'mcp__filesystem__delete_file'].includes(toolName)) {
     const filePath = toolInput?.file_path || toolInput?.notebook_path || toolInput?.path || getMcpDestinationPath(toolInput);
     if (filePath && isProtectedPath(filePath)) {
-      return protectedMutationDecision(filePath);
+      return protectedMutationDecision(filePath, 'write to protected path', 'write');
     }
   }
 
@@ -2283,7 +2382,7 @@ function detectCircumvention(toolName, toolInput, state) {
   if (['mcp__filesystem__move_file', 'mcp__filesystem__rename_file', 'mcp__filesystem__copy_file'].includes(toolName)) {
     const sourcePath = toolInput?.source || '';
     if (sourcePath && isProtectedPath(sourcePath)) {
-      return protectedMutationDecision(sourcePath, 'to mutate file FROM protected path via MCP filesystem');
+      return protectedMutationDecision(sourcePath, 'to mutate file FROM protected path via MCP filesystem', 'write');
     }
   }
 
@@ -2291,7 +2390,7 @@ function detectCircumvention(toolName, toolInput, state) {
   if (toolName === 'mcp__filesystem__create_directory') {
     const dirPath = toolInput?.path || '';
     if (dirPath && isProtectedPath(dirPath)) {
-      return protectedMutationDecision(dirPath, 'directory creation in protected path via MCP filesystem');
+      return protectedMutationDecision(dirPath, 'directory creation in protected path via MCP filesystem', 'write');
     }
   }
 
@@ -2325,7 +2424,7 @@ function detectCircumvention(toolName, toolInput, state) {
     // 2a. Bash redirects to protected paths (12.2: CRITICAL)
     const protectedMutationTarget = findProtectedBashMutationTarget(command);
     if (protectedMutationTarget) {
-      return protectedMutationDecision(protectedMutationTarget, 'Bash mutation of protected path');
+      return protectedMutationDecision(protectedMutationTarget, 'Bash mutation of protected path', 'bash');
     }
 
     // 2b. Git operations targeting protected paths (N3)
@@ -2392,6 +2491,7 @@ function detectCircumvention(toolName, toolInput, state) {
           new RegExp(`\\$${secretVar}.*[:0-9]`, 'i').test(exposureCommand)) { // ${VAR:0:N} substring
         return {
           circumvention: true,
+          denyOnly: true,
           reason: `CIRCUMVENTION: Attempted to expose secret environment variable ${secretVar}`,
           severity: 'normal',
         };
@@ -2410,6 +2510,7 @@ function detectCircumvention(toolName, toolInput, state) {
       if (pattern.test(command)) {
         return {
           circumvention: true,
+          denyOnly: true,
           reason: `CIRCUMVENTION: Attempted to expose credential material via ${label}`,
           severity: 'normal',
         };
@@ -2936,6 +3037,32 @@ function processPreToolUse(input) {
         projectId: ctx.projectId,
         timestamp: new Date().toISOString(),
       });
+    } else if (circ.protectedMutation) {
+      const verdict = evaluateProtectedMutationDenial(ctx, circ.target, circ.channel, Date.now());
+      if (verdict.escalate) {
+        const escalation = escalateScoped(ctx, {
+          ...circ,
+          reason: `${circ.reason} Cross-channel repeat on ${verdict.target} (${verdict.previousChannels.join(',')} -> ${verdict.channel}) detected.`,
+          severity: 'critical',
+          restrictionGroups: getRestrictionGroups(toolName),
+        });
+        const hangCheck = updateActivityTracking(escalation.state, true);
+        saveScopedState(escalation.scopeType, escalation.scopeId, escalation.state);
+
+        const reason = `${circ.reason} Cross-channel repeat on ${verdict.target} (${verdict.previousChannels.join(',')} -> ${verdict.channel}) detected. Escalated ${escalationScopeLabel(escalation.scopeType, escalation.scopeId)} to level ${escalation.state.level}.${hangCheck.hung ? ' ' + hangCheck.message : ''}`;
+        return makeDeny(reason);
+      }
+      appendViolation({
+        type: 'deny-only-tier1',
+        reason: circ.reason,
+        tool: toolName,
+        projectId: ctx.projectId,
+        actor: verdict.actor,
+        target: verdict.target,
+        channel: verdict.channel,
+        timestamp: new Date().toISOString(),
+      });
+      return makeDeny(circ.reason);
     } else if (circ.denyOnly) {
       appendViolation({
         type: 'deny-only',
@@ -3514,7 +3641,9 @@ module.exports = {
   getAgentId,
   getHookAgentId,
   getStateFile,
+  getDenialLedgerFile: () => DENIAL_LEDGER_FILE,
   getScopedStateFile,
+  evaluateProtectedMutationDenial,
   getProjectScopeId,
   resolveScopeContext,
   loadEffectiveState,

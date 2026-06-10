@@ -76,6 +76,17 @@ function readScopedState(scopeType: string, scopeId: string): Record<string, unk
   }
 }
 
+function denialLedgerPath(): string {
+  return join(enforcementStateRoot(), 'global', 'denial-ledger.json');
+}
+
+function readDenialLedgerState(): Record<string, unknown> {
+  const envelope = JSON.parse(readFileSync(denialLedgerPath(), 'utf8'));
+  const verified = enf.verifyState(envelope);
+  expect(verified.valid).toBe(true);
+  return verified.state as Record<string, unknown>;
+}
+
 function writeScopedState(scopeType: string, scopeId: string, state: Record<string, unknown>): void {
   const file = scopeType === 'global' ? statePath() : scopedStatePath(scopeType, scopeId);
   mkdirSync(dirname(file), { recursive: true });
@@ -613,28 +624,117 @@ describe('enforcement security property contracts', () => {
     expect(effective.effective.state.level).toBe(enf.LEVELS.RESTRICTED);
   });
 
-  it('keeps root-session substrate violations globally escalated', () => {
-    for (const [name, input] of [
-      ['substrate write', { tool_name: 'Write', tool_input: { file_path: '.claude/helpers/enforcement.cjs' } }],
-    ]) {
-      clearAgentEnv();
-      resetModule();
-      resetEnforcementStoresForTest();
-      process.env.CLAUDE_SESSION_ID = 'global-preserved-session';
+  it('denies first protected substrate mutations without escalating and records the ledger', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'tier1-agent';
 
-      const result = enf.processPreToolUse(input);
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/helpers/role-enforcement.cjs' },
+    });
 
-      expect(result.hookSpecificOutput.permissionDecision, name).toBe('deny');
-      expect(readScopedState('global', 'global')?.level, name).toBe(enf.LEVELS.RESTRICTED);
-      expect(readScopedState('session', 'global-preserved-session'), name).toBeNull();
-      expect(readScopedState('project', enf.resolveScopeContext().projectId), name).toBeNull();
-    }
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+    expect(result.hookSpecificOutput.permissionDecisionReason).not.toContain('Escalated');
+    expect(readScopedState('agent', 'tier1-agent')).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
+
+    const ledger = readDenialLedgerState();
+    const entries = Object.values(ledger.entries as Record<string, { channels: string[]; target: string }>);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].channels).toEqual(['write']);
+    expect(entries[0].target).toContain('/.claude/helpers/role-enforcement.cjs');
+  });
+
+  it('escalates protected mutations only after a cross-channel repeat on the same actor and target', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'tier2-agent';
+
+    const first = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/helpers/role-enforcement.cjs' },
+    });
+    expect(first.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('global', 'global')).toBeNull();
+
+    const second = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'printf x >> .claude/helpers/role-enforcement.cjs' },
+    });
+
+    expect(second.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(second.hookSpecificOutput.permissionDecisionReason).toContain('Cross-channel repeat');
+    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('does not escalate same-channel protected mutation repeats', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'same-channel-agent';
+
+    const first = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/helpers/role-enforcement.cjs' },
+    });
+    const second = enf.processPreToolUse({
+      tool_name: 'Edit',
+      tool_input: { file_path: '.claude/helpers/role-enforcement.cjs' },
+    });
+
+    expect(first.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(second.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(second.hookSpecificOutput.permissionDecisionReason).not.toContain('Escalated');
+    expect(readScopedState('agent', 'same-channel-agent')).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
+
+    const ledger = readDenialLedgerState();
+    const entries = Object.values(ledger.entries as Record<string, { channels: string[] }>);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].channels).toEqual(['write']);
+  });
+
+  it('uses a stable session fallback for protected-mutation ledger keys when agent id is absent', () => {
+    process.env.CLAUDE_SESSION_ID = 'ledger-session-fallback';
+
+    const first = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/helpers/role-enforcement.cjs' },
+    });
+    expect(first.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(readScopedState('global', 'global')).toBeNull();
+
+    const ledger = readDenialLedgerState();
+    expect(Object.keys(ledger.entries as Record<string, unknown>)[0]).toContain('session:ledger-session-fallback');
+
+    const second = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'printf x >> .claude/helpers/role-enforcement.cjs' },
+    });
+
+    expect(second.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(second.hookSpecificOutput.permissionDecisionReason).toContain('Cross-channel repeat');
+    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+  });
+
+  it('denies secret exposure without escalating any scope', () => {
+    const projectId = enf.resolveScopeContext().projectId;
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'echo "$OPENAI_API_KEY"' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('secret environment variable');
+    expect(result.hookSpecificOutput.permissionDecisionReason).not.toContain('Escalated');
+    expect(readScopedState('project', projectId)).toBeNull();
+    expect(readScopedState('global', 'global')).toBeNull();
   });
 
   it('still escalates coordinator enforcement-file attacks globally', () => {
-    const result = enf.processPreToolUse({
+    enf.processPreToolUse({
       tool_name: 'Write',
       tool_input: { file_path: '.claude/helpers/enforcement.cjs' },
+    });
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'printf x >> .claude/helpers/enforcement.cjs' },
     });
 
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
@@ -645,9 +745,13 @@ describe('enforcement security property contracts', () => {
   it('keeps substrate attacks global even for trusted subagents', () => {
     process.env.AGENTIC_FLOW_AGENT_ID = 'agent-b';
 
-    const result = enf.processPreToolUse({
+    enf.processPreToolUse({
       tool_name: 'Write',
       tool_input: { file_path: '.claude/helpers/enforcement.cjs' },
+    });
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'printf x >> .claude/helpers/enforcement.cjs' },
     });
 
     expect(result.hookSpecificOutput.hookEventName).toBe('PreToolUse');
@@ -904,7 +1008,6 @@ describe('enforcement security property contracts', () => {
     for (const command of [
       'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node v3/@hive-flow/cli/bin/cli.js status',
       'export CLAUDE_PROJECT_DIR=/tmp/spoofed',
-      'echo $OPENAI_API_KEY',
       'rm -rf /',
     ]) {
       clearAgentEnv();
@@ -960,7 +1063,7 @@ describe('enforcement security property contracts', () => {
     }
   });
 
-  it('escalates non-substrate global protected writes while leaving project protected workflows deny-only', () => {
+  it('denies first non-substrate global protected writes and escalates only on cross-channel repeat', () => {
     const globalProtectedTargets = [
       'v3/@hive-flow/cli/src/permission-guard/gate.ts',
       'v3/@hive-flow/cli/dist/src/mcp-tools/index.js',
@@ -981,9 +1084,29 @@ describe('enforcement security property contracts', () => {
       });
 
       expect(result.hookSpecificOutput.permissionDecision, filePath).toBe('deny');
-      expect(readScopedState('agent', agentId)?.level, filePath).toBe(enf.LEVELS.RESTRICTED);
+      expect(result.hookSpecificOutput.permissionDecisionReason, filePath).not.toContain('Escalated');
+      expect(readScopedState('agent', agentId), filePath).toBeNull();
       expect(readScopedState('global', 'global'), filePath).toBeNull();
     }
+
+    clearAgentEnv();
+    resetModule();
+    resetEnforcementStoresForTest();
+    process.env.AGENTIC_FLOW_AGENT_ID = 'global-protected-repeat-agent';
+
+    enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: 'v3/@hive-flow/cli/src/permission-guard/gate.ts' },
+    });
+    const repeat = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: 'printf x >> v3/@hive-flow/cli/src/permission-guard/gate.ts' },
+    });
+
+    expect(repeat.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(repeat.hookSpecificOutput.permissionDecisionReason).toContain('Cross-channel repeat');
+    expect(readScopedState('agent', 'global-protected-repeat-agent')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readScopedState('global', 'global')).toBeNull();
 
     clearAgentEnv();
     resetModule();
@@ -1753,6 +1876,19 @@ describe('enforcement security property contracts', () => {
     expect(enf.isObfuscated("bash -c 'eval $(echo echo hi)'")).toBe(true);
   });
 
+  it('does not treat unicode grep literals as obfuscation', () => {
+    const cross = String.fromCharCode(0x2716);
+    const command = `rg -n '${cross}|Escalated|permissionDecisionReason' .claude/helpers/enforcement.cjs`;
+
+    expect(enf.detectCircumvention('Bash', { command }, {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    }).circumvention).toBe(false);
+  });
+
   it('tokenizes command positions without treating quoted mentions as invocations', () => {
     const tokens = enf.shellTokens("grep 'reset-enforcement' v3/docs/design && bash -c 'node --eval \"console.log(1)\"'");
     expect(tokens).toContainEqual(expect.objectContaining({ text: 'grep', quoted: false }));
@@ -1980,5 +2116,85 @@ describe('enforcement security property contracts', () => {
       { command: "sed -i 's/permission-guard/noop/g' .claude/settings.json && echo ok" },
       state,
     ).circumvention).toBe(true);
+  });
+
+  it('isolates the denial ledger per actor (one actor cannot escalate another)', () => {
+    const first = enf.evaluateProtectedMutationDenial(
+      { agentId: 'ledger-actor-a' },
+      '.claude/helpers/role-enforcement.cjs',
+      'write',
+      1_000,
+    );
+    expect(first.escalate).toBe(false);
+
+    // A DIFFERENT actor writing the same target via a different channel must NOT be a
+    // cross-channel repeat — the ledger is keyed per (actor,target), so one agent's denial
+    // cannot escalate another (prevents cross-actor escalation DoS).
+    const other = enf.evaluateProtectedMutationDenial(
+      { agentId: 'ledger-actor-b' },
+      '.claude/helpers/role-enforcement.cjs',
+      'bash',
+      2_000,
+    );
+    expect(other.escalate).toBe(false);
+  });
+
+  it('prunes denial-ledger entries older than the 30-minute window', () => {
+    const stale = { agentId: 'ledger-window-stale' };
+    enf.evaluateProtectedMutationDenial(stale, '.claude/helpers/role-enforcement.cjs', 'write', 1_000);
+    const afterWindow = enf.evaluateProtectedMutationDenial(
+      stale,
+      '.claude/helpers/role-enforcement.cjs',
+      'bash',
+      1_000 + 31 * 60 * 1_000,
+    );
+    // The prior 'write' aged out of the 30-minute window → not a cross-channel repeat.
+    expect(afterWindow.escalate).toBe(false);
+
+    const fresh = { agentId: 'ledger-window-fresh' };
+    enf.evaluateProtectedMutationDenial(fresh, '.claude/helpers/role-enforcement.cjs', 'write', 1_000);
+    const withinWindow = enf.evaluateProtectedMutationDenial(
+      fresh,
+      '.claude/helpers/role-enforcement.cjs',
+      'bash',
+      1_000 + 10 * 60 * 1_000,
+    );
+    // Within the window → genuine cross-channel repeat escalates.
+    expect(withinWindow.escalate).toBe(true);
+  });
+
+  it('normalizes equivalent relative denial targets to the same ledger key', () => {
+    const ctx = { agentId: 'ledger-normalize' };
+    enf.evaluateProtectedMutationDenial(ctx, '.claude/helpers/role-enforcement.cjs', 'write', 1_000);
+    const variant = enf.evaluateProtectedMutationDenial(
+      ctx,
+      './.claude/helpers/role-enforcement.cjs',
+      'bash',
+      2_000,
+    );
+    // './x' and 'x' normalize to the same target → recognized as a cross-channel repeat.
+    expect(variant.escalate).toBe(true);
+  });
+
+  it('preserves cross-channel ledger memory after the file grows past the legacy 10KB read cap', () => {
+    const ctx = { agentId: 'ledger-bigfile-actor' };
+    const target = '.claude/helpers/role-enforcement.cjs';
+    // Record a first-channel ('write') denial for our actor+target.
+    enf.evaluateProtectedMutationDenial(ctx, target, 'write', 1_000);
+    // Grow the signed ledger well past the shared 10KB readJson cap with other actors' entries.
+    // A signed ~60-entry ledger far exceeds 10KB; the legacy cap silently rebuilt it empty,
+    // dropping the original 'write' and breaking Tier-2 cross-channel memory under churn.
+    for (let i = 0; i < 60; i++) {
+      enf.evaluateProtectedMutationDenial(
+        { agentId: `ledger-filler-${i}` },
+        `.claude/helpers/filler-${i}.cjs`,
+        'write',
+        1_100 + i,
+      );
+    }
+    // A cross-channel ('bash') repeat for the ORIGINAL actor+target must STILL escalate — the
+    // ledger must not have silently reset and forgotten the original 'write'.
+    const repeat = enf.evaluateProtectedMutationDenial(ctx, target, 'bash', 5_000);
+    expect(repeat.escalate).toBe(true);
   });
 });
