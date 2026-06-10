@@ -175,6 +175,19 @@ describe('dev override self-red-team probes', () => {
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
   });
 
+  it('does not reveal override mechanics in protected-path denials', () => {
+    delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.json' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).not.toContain('permission-guard-setup.mjs');
+    expect(result.hookSpecificOutput.permissionDecisionReason).not.toContain('override');
+  });
+
   it('does not accept legacy root tokens without version and keyId claims', () => {
     process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createLegacyRootOverrideToken();
 
@@ -193,6 +206,19 @@ describe('dev override self-red-team probes', () => {
     const result = enf.processPreToolUse({
       tool_name: 'Write',
       tool_input: { file_path: '.claude/settings.json' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('protected path');
+  });
+
+  it('does not let a subagent wield inherited env and config dev-override tokens', () => {
+    process.env.AGENTIC_FLOW_AGENT_ID = 'subagent-with-leaked-token';
+    writeRootOverrideTokenToConfig();
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.git/info/exclude' },
     });
 
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');

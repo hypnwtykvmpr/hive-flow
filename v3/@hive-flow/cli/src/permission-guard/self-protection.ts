@@ -232,7 +232,7 @@ export function isProtectedPath(filePath: string, cwd: string): ProtectionResult
   if (match) {
     return {
       blocked: true,
-      reason: `DENIED: This file is part of the Permission Guard security system and cannot be modified by agents. Request human assistance if changes are needed. To grant a temporary override, run: node scripts/permission-guard-setup.mjs override`,
+      reason: `DENIED: This file is part of the Permission Guard security system and cannot be modified by agents. Route this change through the human/coordinator for approval.`,
       protectedPath: match.absolutePath,
     };
   }

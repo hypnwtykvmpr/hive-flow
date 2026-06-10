@@ -43,6 +43,15 @@ describe('isProtectedPath', () => {
     expect(result.reason).toContain('Permission Guard');
   });
 
+  it('redirects protected-path denials without revealing override mechanics', () => {
+    const result = isProtectedPath(`${CWD}/.claude/settings.json`, CWD);
+
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('human/coordinator');
+    expect(result.reason).not.toContain('permission-guard-setup.mjs');
+    expect(result.reason).not.toContain('override');
+  });
+
   it('blocks writes to .claude/settings.local.json', () => {
     const result = isProtectedPath(`${CWD}/.claude/settings.local.json`, CWD);
     expect(result.blocked).toBe(true);
