@@ -1,7 +1,7 @@
 import { describe, expect, it, afterAll, beforeEach } from 'vitest';
 import fc from 'fast-check';
 import { createRequire } from 'node:module';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,7 @@ import { checkMCPEnforcement, ToolRisk as McpToolRisk } from '../mcp-tools/mcp-e
 const PROPERTY_RUNS = propertyRunsFromEnv(100);
 
 const require = createRequire(import.meta.url);
+const fsForLockSpy = require('node:fs') as typeof import('node:fs');
 const here = dirname(fileURLToPath(import.meta.url));
 const source = resolve(here, '../../../../../.claude/helpers/enforcement.cjs');
 const settingsSource = resolve(here, '../../../../../.claude/settings.json');
@@ -78,6 +79,19 @@ function readScopedState(scopeType: string, scopeId: string): Record<string, unk
 
 function denialLedgerPath(): string {
   return join(enforcementStateRoot(), 'global', 'denial-ledger.json');
+}
+
+function denialLedgerLockPath(): string {
+  return join(enforcementStateRoot(), 'global', 'denial-ledger.lock');
+}
+
+function readViolationRows(): Array<Record<string, unknown>> {
+  const file = join(enforcementStateRoot(), 'global', 'violations.jsonl');
+  if (!existsSync(file)) return [];
+  return readFileSync(file, 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(line => JSON.parse(line) as Record<string, unknown>);
 }
 
 function readDenialLedgerState(): Record<string, unknown> {
@@ -2196,5 +2210,99 @@ describe('enforcement security property contracts', () => {
     // ledger must not have silently reset and forgotten the original 'write'.
     const repeat = enf.evaluateProtectedMutationDenial(ctx, target, 'bash', 5_000);
     expect(repeat.escalate).toBe(true);
+  });
+
+  it('keeps sequential write-to-bash denial ledger escalation and channel union intact', () => {
+    const ctx = { agentId: 'ledger-locked-sequential' };
+    const target = '.claude/helpers/hook-handler.cjs';
+
+    const first = enf.evaluateProtectedMutationDenial(ctx, target, 'write', 1_000);
+    const second = enf.evaluateProtectedMutationDenial(ctx, target, 'bash', 2_000);
+
+    expect(first.escalate).toBe(false);
+    expect(second.escalate).toBe(true);
+    expect(second.channels).toEqual(['write', 'bash']);
+
+    const ledger = readDenialLedgerState();
+    const entries = Object.values(ledger.entries as Record<string, { channels: string[] }>);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].channels).toEqual(['write', 'bash']);
+  });
+
+  it('serializes denial ledger read-modify-write through an exclusive lock file', () => {
+    const openedLocks: string[] = [];
+    const unlinkedLocks: string[] = [];
+    const originalOpenSync = fsForLockSpy.openSync;
+    const originalUnlinkSync = fsForLockSpy.unlinkSync;
+
+    (fsForLockSpy as any).openSync = (file: string, flags: string, ...rest: unknown[]) => {
+      if (String(file).endsWith('denial-ledger.lock') && flags === 'wx') {
+        openedLocks.push(String(file));
+      }
+      return (originalOpenSync as any).call(fsForLockSpy, file, flags, ...rest);
+    };
+    (fsForLockSpy as any).unlinkSync = (file: string, ...rest: unknown[]) => {
+      if (String(file).endsWith('denial-ledger.lock')) {
+        unlinkedLocks.push(String(file));
+      }
+      return (originalUnlinkSync as any).call(fsForLockSpy, file, ...rest);
+    };
+
+    try {
+      const result = enf.evaluateProtectedMutationDenial(
+        { agentId: 'ledger-lock-observed' },
+        '.claude/helpers/hook-handler.cjs',
+        'write',
+        1_000,
+      );
+
+      expect(result.escalate).toBe(false);
+      expect(openedLocks).toContain(denialLedgerLockPath());
+      expect(unlinkedLocks).toContain(denialLedgerLockPath());
+      expect(existsSync(denialLedgerLockPath())).toBe(false);
+    } finally {
+      (fsForLockSpy as any).openSync = originalOpenSync;
+      (fsForLockSpy as any).unlinkSync = originalUnlinkSync;
+    }
+  });
+
+  it('breaks stale denial ledger locks before updating the ledger', () => {
+    const lockPath = denialLedgerLockPath();
+    mkdirSync(dirname(lockPath), { recursive: true });
+    writeFileSync(lockPath, 'stale');
+    utimesSync(lockPath, new Date(0), new Date(0));
+
+    const result = enf.evaluateProtectedMutationDenial(
+      { agentId: 'ledger-stale-lock' },
+      '.claude/helpers/hook-handler.cjs',
+      'write',
+      1_000,
+    );
+
+    expect(result.escalate).toBe(false);
+    expect(existsSync(lockPath)).toBe(false);
+    const ledger = readDenialLedgerState();
+    const entries = Object.values(ledger.entries as Record<string, { actor: string }>);
+    expect(entries.some(entry => entry.actor === 'agent:ledger-stale-lock')).toBe(true);
+  });
+
+  it('times out on fresh held denial ledger locks without throwing or losing ledger memory', () => {
+    const ctx = { agentId: 'ledger-held-lock' };
+    const target = '.claude/helpers/hook-handler.cjs';
+    enf.evaluateProtectedMutationDenial(ctx, target, 'write', 1_000);
+
+    const lockPath = denialLedgerLockPath();
+    mkdirSync(dirname(lockPath), { recursive: true });
+    writeFileSync(lockPath, 'held');
+
+    const result = enf.evaluateProtectedMutationDenial(ctx, target, 'bash', 2_000);
+
+    expect(result.escalate).toBe(true);
+    expect(result.channels).toEqual(['write', 'bash']);
+    const ledger = readDenialLedgerState();
+    const entries = Object.values(ledger.entries as Record<string, { channels: string[] }>);
+    expect(entries.some(entry => entry.channels.includes('write') && entry.channels.includes('bash'))).toBe(true);
+    expect(readViolationRows().some(row => row.type === 'denial-ledger-lock-timeout')).toBe(true);
+    expect(existsSync(lockPath)).toBe(true);
   });
 });

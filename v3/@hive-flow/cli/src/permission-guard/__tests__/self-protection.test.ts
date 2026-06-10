@@ -92,6 +92,18 @@ describe('isProtectedPath', () => {
     expect(result.blocked).toBe(true);
   });
 
+  it('blocks writes to global enforcement control-plane state in home directory', () => {
+    for (const target of [
+      `${HOME}/.hive-flow/enforcement/global/state.json`,
+      `${HOME}/.hive-flow/enforcement/global/denial-ledger.json`,
+      `${HOME}/.hive-flow/enforcement/pipeline-state.json`,
+      `${HOME}/.hive-flow/enforcement/.hmac-key`,
+    ]) {
+      const result = isProtectedPath(target, CWD);
+      expect(result.blocked, target).toBe(true);
+    }
+  });
+
   it('allows writes to normal project files', () => {
     const result = isProtectedPath(`${CWD}/src/index.ts`, CWD);
     expect(result.blocked).toBe(false);
@@ -446,6 +458,23 @@ describe('checkBashSelfProtection', () => {
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
   });
+
+  it('blocks rm and mv targeting global enforcement control-plane state', () => {
+    for (const target of [
+      `${HOME}/.hive-flow/enforcement/global/state.json`,
+      `${HOME}/.hive-flow/enforcement/global/denial-ledger.json`,
+      `${HOME}/.hive-flow/enforcement/pipeline-state.json`,
+      `${HOME}/.hive-flow/enforcement/.hmac-key`,
+    ]) {
+      const rmResult = checkBashSelfProtection(`rm ${target}`, CWD);
+      expect(rmResult, `rm ${target}`).not.toBeNull();
+      expect(rmResult!.blocked, `rm ${target}`).toBe(true);
+
+      const mvResult = checkBashSelfProtection(`mv /tmp/evil ${target}`, CWD);
+      expect(mvResult, `mv ${target}`).not.toBeNull();
+      expect(mvResult!.blocked, `mv ${target}`).toBe(true);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -485,6 +514,23 @@ describe('evaluateSelfProtection', () => {
     );
     expect(result).not.toBeNull();
     expect(result!.blocked).toBe(true);
+  });
+
+  it('blocks Write and Bash mutations targeting global enforcement control-plane state', () => {
+    for (const target of [
+      `${HOME}/.hive-flow/enforcement/global/state.json`,
+      `${HOME}/.hive-flow/enforcement/global/denial-ledger.json`,
+      `${HOME}/.hive-flow/enforcement/pipeline-state.json`,
+      `${HOME}/.hive-flow/enforcement/.hmac-key`,
+    ]) {
+      const writeResult = evaluateSelfProtection('Write', { file_path: target }, CWD);
+      expect(writeResult, `Write ${target}`).not.toBeNull();
+      expect(writeResult!.blocked, `Write ${target}`).toBe(true);
+
+      const rmResult = evaluateSelfProtection('Bash', { command: `rm ${target}` }, CWD);
+      expect(rmResult, `rm ${target}`).not.toBeNull();
+      expect(rmResult!.blocked, `rm ${target}`).toBe(true);
+    }
   });
 
   it('allows Write to non-protected file', () => {

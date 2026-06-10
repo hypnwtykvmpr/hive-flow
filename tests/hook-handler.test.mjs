@@ -1,7 +1,8 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { createHmac } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -22,8 +23,8 @@ function makeTempDir() {
  * Run the hook-handler as a subprocess with a given command and optional env overrides.
  * stdin is left empty unless stdinData is provided.
  */
-function runHandler(command, { cwd, env = {}, stdinData = '' } = {}) {
-  const result = spawnSync(process.execPath, [SCRIPT, ...(command ? [command] : [])], {
+function runHandler(command, { cwd, env = {}, stdinData = '', script = SCRIPT } = {}) {
+  const result = spawnSync(process.execPath, [script, ...(command ? [command] : [])], {
     cwd: cwd || REPO_ROOT,
     input: stdinData,
     encoding: 'utf8',
@@ -43,6 +44,24 @@ function runHandler(command, { cwd, env = {}, stdinData = '' } = {}) {
     stdout: result.stdout || '',
     stderr: result.stderr || '',
   };
+}
+
+function installIsolatedHookHelpers(root) {
+  const helpersDir = join(root, '.claude', 'helpers');
+  mkdirSync(helpersDir, { recursive: true });
+  for (const file of [
+    'hook-handler.cjs',
+    'role-enforcement.cjs',
+    'enforcement.cjs',
+    'session-id.cjs',
+  ]) {
+    copyFileSync(join(REPO_ROOT, '.claude', 'helpers', file), join(helpersDir, file));
+  }
+  copyFileSync(
+    join(REPO_ROOT, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    join(helpersDir, 'protected-paths.cjs'),
+  );
+  return join(helpersDir, 'hook-handler.cjs');
 }
 
 function parseHookOutput(stdout) {
@@ -91,6 +110,51 @@ describe('hook-handler.cjs', () => {
       assert.equal(res.status, 0, `Unknown command should exit 0, stderr: ${res.stderr}`);
       // No output for unknown commands (avoids non-JSON hook errors)
       assert.equal(res.stdout.trim(), '', 'Unknown command should produce no stdout');
+    });
+  });
+
+  // =========================================================================
+  // 2b. set-role — global enforcement key after migration
+  // =========================================================================
+  describe('set-role', () => {
+    it('writes a signed role using the global enforcement key when no project-local key exists', () => {
+      const hiveHome = join(tmpDir, 'global-hive-home');
+      const agentId = 'set-role-global-queen';
+      const script = installIsolatedHookHelpers(tmpDir);
+      const res = runHandler('set-role', {
+        cwd: tmpDir,
+        script,
+        env: {
+          HIVE_FLOW_HOME: hiveHome,
+          AGENTIC_FLOW_AGENT_ID: agentId,
+        },
+        stdinData: JSON.stringify({ user_prompt: '/set-role queen' }),
+      });
+
+      assert.equal(res.status, 0, `set-role should exit 0, stderr: ${res.stderr}`);
+      const output = parseHookOutput(res.stdout);
+      assert.match(
+        output.additionalContext || '',
+        /Agent role set to 'queen'/,
+        'set-role should report role activation',
+      );
+
+      const projectLocalKey = join(tmpDir, '.hive-flow', 'enforcement', '.hmac-key');
+      assert.equal(existsSync(projectLocalKey), false, 'test must not create or require a project-local key');
+
+      const globalKeyFile = join(hiveHome, 'enforcement', '.hmac-key');
+      const roleFile = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
+      assert.ok(existsSync(globalKeyFile), 'set-role should create/read the global enforcement key');
+      assert.ok(existsSync(roleFile), 'set-role should write role.json under global enforcement home');
+
+      const envelope = JSON.parse(readFileSync(roleFile, 'utf8'));
+      assert.equal(envelope.state.type, 'queen');
+      assert.equal(envelope.state.assignedBy, 'human');
+      const key = readFileSync(globalKeyFile, 'utf8').trim();
+      const expected = createHmac('sha256', key)
+        .update(JSON.stringify(envelope.state))
+        .digest('hex');
+      assert.equal(envelope.hmac, expected, 'role.json must be signed with the global key');
     });
   });
 

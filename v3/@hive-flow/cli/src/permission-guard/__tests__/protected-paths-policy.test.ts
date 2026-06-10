@@ -90,6 +90,27 @@ describe('shared protected-path policy matcher', () => {
     }
   });
 
+  it('protects relocated user-level enforcement state, ledger, pipeline, and key paths', () => {
+    const root = tmpProject();
+    try {
+      for (const target of [
+        join(homedir(), '.hive-flow', 'enforcement', 'global', 'state.json'),
+        join(homedir(), '.hive-flow', 'enforcement', 'global', 'denial-ledger.json'),
+        join(homedir(), '.hive-flow', 'enforcement', 'pipeline-state.json'),
+        join(homedir(), '.hive-flow', 'enforcement', '.hmac-key'),
+      ]) {
+        expect(isProtectedWritePath(target, root), target).toBe(true);
+        expect(cjsPolicy.isProtectedWritePath(target, root), target).toBe(true);
+        expect(getProtectedWriteScope(target, root), target).toBe('global');
+        expect(cjsPolicy.getProtectedWriteScope(target, root), target).toBe('global');
+        expect(isProtectedReadPath(target, root), target).toBe(true);
+        expect(cjsPolicy.isProtectedReadPath(target, root), target).toBe(true);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('protects credential vault wildcard entries in both TS and CJS matchers', () => {
     const root = tmpProject();
     try {
@@ -155,6 +176,8 @@ describe('shared protected-path policy matcher', () => {
     const root = tmpProject();
     try {
       expect(isDevOverrideFloorPath(join(root, '.hive-flow', 'enforcement', 'dev-override.conf'), root)).toBe(true);
+      expect(isDevOverrideFloorPath(join(homedir(), '.hive-flow', 'enforcement', 'dev-override.conf'), root)).toBe(true);
+      expect(isDevOverrideFloorPath(join(homedir(), '.hive-flow', 'enforcement', 'global', 'state.json'), root)).toBe(true);
       expect(isDevOverrideFloorPath(join(root, '.claude', 'helpers', 'enforcement.cjs'), root)).toBe(true);
       expect(isDevOverrideFloorPath(join(root, '.git', 'info', 'exclude'), root)).toBe(false);
     } finally {

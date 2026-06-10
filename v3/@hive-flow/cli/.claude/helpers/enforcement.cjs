@@ -69,6 +69,7 @@ const LEGACY_ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement
 const STATE_FILE = path.join(ENFORCEMENT_DIR, 'global', 'state.json');
 const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'global', 'violations.jsonl');
 const DENIAL_LEDGER_FILE = path.join(ENFORCEMENT_DIR, 'global', 'denial-ledger.json');
+const DENIAL_LEDGER_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'global', 'denial-ledger.lock');
 const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.json');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
 const LEGACY_HMAC_KEY_FILE = path.join(LEGACY_ENFORCEMENT_DIR, '.hmac-key');
@@ -87,6 +88,9 @@ const MAX_DENIAL_LEDGER_ENTRIES = 200;
 // The shared 10KB state cap is too small for a signed 200-entry ledger.
 // Keep HMAC verification, but give the bounded ledger its own read cap.
 const DENIAL_LEDGER_MAX_SIZE_BYTES = 256 * 1024;
+const DENIAL_LEDGER_LOCK_RETRY_MS = 10;
+const DENIAL_LEDGER_LOCK_ATTEMPTS = 100;
+const DENIAL_LEDGER_LOCK_STALE_MS = 5000;
 
 // ============================================================================
 // Escalation Levels
@@ -314,6 +318,48 @@ function saveDenialLedger(ledger) {
   return writeJsonAtomic(DENIAL_LEDGER_FILE, signState(ledger));
 }
 
+function sleepSync(ms) {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  } catch {
+    const until = Date.now() + ms;
+    while (Date.now() < until) {}
+  }
+}
+
+function breakStaleDenialLedgerLock(lockPath) {
+  try {
+    const stat = fs.statSync(lockPath);
+    if (Date.now() - Number(stat.mtimeMs) <= DENIAL_LEDGER_LOCK_STALE_MS) return false;
+    fs.unlinkSync(lockPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function acquireDenialLedgerLock() {
+  ensureDir(path.dirname(DENIAL_LEDGER_LOCK_FILE));
+  for (let attempt = 0; attempt < DENIAL_LEDGER_LOCK_ATTEMPTS; attempt++) {
+    try {
+      const fd = fs.openSync(DENIAL_LEDGER_LOCK_FILE, 'wx');
+      return { fd, locked: true, timedOut: false };
+    } catch (err) {
+      if (err?.code !== 'EEXIST') {
+        return { fd: null, locked: false, timedOut: true, error: err };
+      }
+      if (breakStaleDenialLedgerLock(DENIAL_LEDGER_LOCK_FILE)) continue;
+      sleepSync(DENIAL_LEDGER_LOCK_RETRY_MS);
+    }
+  }
+  return { fd: null, locked: false, timedOut: true };
+}
+
+function releaseDenialLedgerLock(fd) {
+  try { if (fd !== null && fd !== undefined) fs.closeSync(fd); } catch {}
+  try { fs.unlinkSync(DENIAL_LEDGER_LOCK_FILE); } catch {}
+}
+
 function denialLedgerActorKey(ctx) {
   if (ctx?.agentId) return `agent:${ctx.agentId}`;
   if (ctx?.sid) return `session:${ctx.sid}`;
@@ -355,27 +401,48 @@ function evaluateProtectedMutationDenial(ctx, target, channel, nowMs = Date.now(
   const normalizedTarget = normalizeDenialTarget(target);
   const normalizedChannel = channel === 'bash' ? 'bash' : 'write';
   const key = `${actor}\0${normalizedTarget}`;
-  const ledger = pruneDenialLedger(loadDenialLedger(), nowMs);
-  const existing = ledger.entries[key] || null;
-  const existingChannels = Array.isArray(existing?.channels) ? existing.channels : [];
-  const crossChannel = existingChannels.some(recorded => recorded !== normalizedChannel);
-  const channels = [...new Set([...existingChannels, normalizedChannel])];
-  ledger.entries[key] = {
-    actor,
-    target: normalizedTarget,
-    channels,
-    firstTs: existing?.firstTs || nowMs,
-    lastTs: nowMs,
+
+  const updateLedger = () => {
+    const ledger = pruneDenialLedger(loadDenialLedger(), nowMs);
+    const existing = ledger.entries[key] || null;
+    const existingChannels = Array.isArray(existing?.channels) ? existing.channels : [];
+    const crossChannel = existingChannels.some(recorded => recorded !== normalizedChannel);
+    const channels = [...new Set([...existingChannels, normalizedChannel])];
+    ledger.entries[key] = {
+      actor,
+      target: normalizedTarget,
+      channels,
+      firstTs: existing?.firstTs || nowMs,
+      lastTs: nowMs,
+    };
+    saveDenialLedger(ledger);
+    return {
+      escalate: crossChannel,
+      actor,
+      target: normalizedTarget,
+      channel: normalizedChannel,
+      previousChannels: existingChannels,
+      channels,
+    };
   };
-  saveDenialLedger(ledger);
-  return {
-    escalate: crossChannel,
+
+  const lock = acquireDenialLedgerLock();
+  if (lock.locked) {
+    try {
+      return updateLedger();
+    } finally {
+      releaseDenialLedgerLock(lock.fd);
+    }
+  }
+
+  appendViolation({
+    type: 'denial-ledger-lock-timeout',
     actor,
     target: normalizedTarget,
     channel: normalizedChannel,
-    previousChannels: existingChannels,
-    channels,
-  };
+    reason: 'Timed out acquiring denial ledger lock; proceeding with unlocked best-effort update',
+  });
+  return updateLedger();
 }
 
 function freshState() {

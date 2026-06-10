@@ -82,6 +82,7 @@ const PROTECTED_PATH_TEMPLATES: string[] = [
 
   // Guard runtime config — weakening patterns or disabling features
   '${HOME}/.hive-flow/permission-guard/',
+  '${HOME}/.hive-flow/enforcement/',
   '${HOME}/.hive-flow/enforcement/bin/',
 
   // Enforcement state/signing store — never agent-writable.

@@ -878,19 +878,9 @@ const handlers = {
       const sanitized = roleEnf.sanitizeId(agentId);
       if (!sanitized) { console.log(JSON.stringify({})); return; }
 
-      // Read HMAC key (same as enforcement.cjs)
-      const hmacKeyFile = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', '.hmac-key');
-      let key;
-      try {
-        key = fs.readFileSync(hmacKeyFile, 'utf8').trim();
-      } catch {
-        // No HMAC key — enforcement.cjs hasn't run yet, can't sign
-        console.log(JSON.stringify({}));
-        return;
-      }
-
-      const roleDir = path.join(__dirname, '..', '..', '.hive-flow', 'enforcement', 'agents', sanitized);
-      if (!fs.existsSync(roleDir)) fs.mkdirSync(roleDir, { recursive: true });
+      const enforcementMod = require(path.join(__dirname, 'enforcement.cjs'));
+      const key = enforcementMod.getOrCreateHmacKey();
+      if (!key) { console.log(JSON.stringify({})); return; }
 
       const roleState = {
         type: roleType,
