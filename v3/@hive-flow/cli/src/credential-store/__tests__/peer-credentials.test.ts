@@ -4,6 +4,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  HELPER_BINARIES,
+  installedHelperPath,
+} from '../helper-paths.js';
+import {
   createPeerCredentialResolver,
   parsePeerCredentialJson,
 } from '../peer-credentials.js';
@@ -124,7 +128,7 @@ describe('native peer credential helpers', () => {
   it.skipIf(process.platform !== 'win32' || process.env.HIVE_FLOW_RUN_NATIVE_WINDOWS_PEER_CRED_TESTS !== '1')(
     'runs the Windows named-pipe GetNamedPipeClientProcessId self-test helper in CI',
     () => {
-      const helper = process.env.HIVE_FLOW_WINDOWS_PEER_CRED_HELPER || 'hive-flow-windows-peer-cred-helper';
+      const helper = installedHelperPath(HELPER_BINARIES.winPeerCred) ?? HELPER_BINARIES.winPeerCred;
       const result = JSON.parse(execFileSync(helper, ['selftest'], { encoding: 'utf8' }));
       expect(result.platform).toBe('win32');
       expect(result.pid).toBeGreaterThan(0);

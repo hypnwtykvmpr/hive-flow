@@ -29,6 +29,17 @@ const runtimeMocks = vi.hoisted(() => ({
   })),
 }));
 
+vi.mock('fs', async () => {
+  const actual = await vi.importActual<typeof import('fs')>('fs');
+  return {
+    ...actual,
+    readFileSync: vi.fn((path: Parameters<typeof actual.readFileSync>[0], ...args: unknown[]) => {
+      if (path === 0) return '';
+      return actual.readFileSync(path, ...(args as []));
+    }),
+  };
+});
+
 vi.mock('../credential-store/holder-runtime.js', async () => {
   const actual = await vi.importActual<typeof import('../credential-store/holder-runtime.js')>(
     '../credential-store/holder-runtime.js',
@@ -43,7 +54,20 @@ vi.mock('../credential-store/holder-runtime.js', async () => {
   };
 });
 
+vi.mock('../install/native-helper-installer.js', () => ({
+  buildAndInstallNativeHelpers: vi.fn(async () => [
+    { helper: 'hive-flow-macos-keychain-helper', status: 'installed' },
+    { helper: 'hive-flow-peer-cred-helper', status: 'installed' },
+  ]),
+  ensureHelperBinOnPath: vi.fn(() => ({
+    helper: 'PATH',
+    status: 'skipped',
+    reason: 'test harness',
+  })),
+}));
+
 vi.mock('@hive-flow/shared', () => ({
+  loadConfig: vi.fn(async () => ({})),
   ProviderRegistry: class {
     async initialize() {
       return undefined;
@@ -59,6 +83,7 @@ vi.mock('@hive-flow/shared', () => ({
   },
 }));
 
+import { CLI } from '../index.js';
 import { configCommand } from '../commands/config.js';
 import { doctorCommand } from '../commands/doctor.js';
 import { providersCommand } from '../commands/providers.js';
@@ -104,6 +129,38 @@ beforeEach(() => {
 });
 
 describe('credential CLI surfaces', () => {
+  it('real CLI parser accepts required provider when config key set uses -p with empty stdin', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: string | number | null) => {
+      throw new Error(`process.exit:${String(code)}`);
+    }) as never);
+    const cli = new CLI({ interactive: false });
+
+    try {
+      await expect(
+        cli.run(['config', 'key', 'set', '-p', 'zzdiag', '--stdin', '--no-update']),
+      ).rejects.toThrow('process.exit:1');
+
+      expect(output.printError).toHaveBeenCalledWith('Provider and key value are required');
+      expect(output.printError).not.toHaveBeenCalledWith(expect.stringMatching(/Required option missing: --provider/));
+      expect(runtimeMocks.storeProviderCredential).not.toHaveBeenCalled();
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+
+  it('real CLI parser reaches config key set action when required provider uses -p with a value', async () => {
+    const cli = new CLI({ interactive: false });
+
+    await cli.run(['config', 'key', 'set', '-p', 'zzdiag', '--value', 'or-cli-secret', '--degraded', '--no-update']);
+
+    expect(runtimeMocks.storeProviderCredential).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'zzdiag',
+      secret: 'or-cli-secret',
+      allowDegraded: true,
+    }));
+    expect(output.printError).not.toHaveBeenCalledWith(expect.stringMatching(/Required option missing: --provider/));
+  });
+
   it('config key set stores provider material through the credential runtime', async () => {
     const result = await nested(configCommand, 'key', 'set').action!(
       ctx({ provider: 'OpenRouter', value: 'or-cli-secret' }),

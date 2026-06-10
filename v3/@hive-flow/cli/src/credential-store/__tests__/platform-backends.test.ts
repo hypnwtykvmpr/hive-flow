@@ -6,6 +6,10 @@ import fc from 'fast-check';
 import { afterEach, describe, expect, it } from 'vitest';
 import { generateKek } from '../kek.js';
 import {
+  HELPER_BINARIES,
+  installedHelperPath,
+} from '../helper-paths.js';
+import {
   MacOSKeychainCredentialStore,
   LinuxSecretServiceCredentialStore,
   WindowsCredentialManagerCredentialStore,
@@ -355,7 +359,7 @@ describe('native Linux and Windows backend lanes', () => {
   it.skipIf(process.platform !== 'win32' || process.env.HIVE_FLOW_RUN_NATIVE_WINDOWS_CREDENTIAL_TESTS !== '1')(
     'round-trips against native Windows Credential Manager through the helper',
     async () => {
-      const helperCommand = process.env.HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER || 'hive-flow-windows-credential-helper';
+      const helperCommand = installedHelperPath(HELPER_BINARIES.winCredential) ?? HELPER_BINARIES.winCredential;
       const backend = new WindowsCredentialManagerCredentialStore({ platform: 'win32', helperCommand });
       assertCredentialBackendReady(await backend.status());
       const provider = `native-windows-${process.pid}`;

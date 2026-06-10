@@ -14,6 +14,12 @@ import { execSync, exec } from 'child_process';
 import { promisify } from 'util';
 import { isEnforcementEngineInstalled, type EnforcementMarkerOptions } from '../install/enforcement-marker.js';
 import { inspectCredentialKeyStatus } from '../credential-store/holder-runtime.js';
+import { helperBinDir } from '../credential-store/helper-paths.js';
+import {
+  buildAndInstallNativeHelpers,
+  ensureHelperBinOnPath,
+  verifyInstalledHelpers,
+} from '../install/native-helper-installer.js';
 
 // Promisified exec with proper shell and env inheritance for cross-platform support
 const execAsync = promisify(exec);
@@ -204,6 +210,33 @@ export async function checkCredentialStore(): Promise<HealthCheck> {
       status: 'warn',
       message: `Credential check failed: ${(error as Error).message}`,
       fix: 'hive-flow setup credentials',
+    };
+  }
+}
+
+export async function checkCredentialHelpers(): Promise<HealthCheck> {
+  try {
+    const results = await verifyInstalledHelpers(helperBinDir());
+    const unhealthy = results.filter(result => result.status !== 'installed' && result.status !== 'skipped');
+    if (unhealthy.length === 0) {
+      return {
+        name: 'Credential Helpers',
+        status: 'pass',
+        message: results.map(result => `${result.helper}:${result.status}`).join(', '),
+      };
+    }
+    return {
+      name: 'Credential Helpers',
+      status: 'warn',
+      message: unhealthy.map(result => `${result.helper}:${result.status}${result.reason ? ` (${result.reason})` : ''}`).join('; '),
+      fix: 'hive-flow doctor -c credential-helpers --fix',
+    };
+  } catch (error) {
+    return {
+      name: 'Credential Helpers',
+      status: 'warn',
+      message: `Credential helper check failed: ${(error as Error).message}`,
+      fix: 'hive-flow doctor -c credential-helpers --fix',
     };
   }
 }
@@ -511,6 +544,7 @@ export const doctorCommand: Command = {
       checkDaemonStatus,
       checkMemoryDatabase,
       checkApiKeys,
+      checkCredentialHelpers,
       checkCredentialStore,
       checkMcpServers,
       checkDiskSpace,
@@ -530,6 +564,8 @@ export const doctorCommand: Command = {
       'api': checkApiKeys,
       'credentials': checkCredentialStore,
       'credential': checkCredentialStore,
+      'credential-helpers': checkCredentialHelpers,
+      'helpers': checkCredentialHelpers,
       'git': checkGit,
       'mcp': checkMcpServers,
       'disk': checkDiskSpace,
@@ -576,6 +612,28 @@ export const doctorCommand: Command = {
     } catch (error) {
       spinner.stop();
       output.writeln(output.error('Failed to run health checks'));
+    }
+
+    if (showFix && (!component || component === 'credential-helpers' || component === 'helpers')) {
+      const helperResult = results.find(result => result.name === 'Credential Helpers');
+      if (helperResult && helperResult.status !== 'pass') {
+        output.writeln();
+        output.writeln(output.bold('Repairing credential helpers...'));
+        const helperResults = await buildAndInstallNativeHelpers({
+          projectRoot: ctx.cwd,
+          force: true,
+        });
+        const helperPath = ensureHelperBinOnPath();
+        for (const helper of helperResults) {
+          output.writeln(`  ${helper.helper}: ${helper.status}${helper.remediation ? ` — ${helper.remediation}` : ''}`);
+        }
+        output.writeln(`  ${helperPath.helper}: ${helperPath.status}${helperPath.reason ? ` — ${helperPath.reason}` : ''}`);
+        const repaired = await checkCredentialHelpers();
+        const idx = results.findIndex(result => result.name === 'Credential Helpers');
+        if (idx >= 0) results[idx] = repaired;
+        else results.push(repaired);
+        output.writeln(formatCheck(repaired));
+      }
     }
 
     // Auto-install missing dependencies if requested

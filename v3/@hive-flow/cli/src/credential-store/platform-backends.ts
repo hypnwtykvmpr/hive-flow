@@ -5,6 +5,10 @@ import type { CredentialStoreProvider, CredentialStoreStatus } from './credentia
 import { normalizeProviderKeyName } from './credential-store.js';
 import type { KekProvider, SealedKek } from './kek.js';
 import { assertValidKek } from './kek.js';
+import {
+  HELPER_BINARIES,
+  installedHelperPath,
+} from './helper-paths.js';
 
 type ExecOptions = {
   input?: Uint8Array | string;
@@ -151,7 +155,9 @@ export class MacOSKeychainCredentialStore extends BaseCredentialStore {
   constructor(options: PlatformCredentialStoreOptions = {}) {
     super(options);
     this.accountName = options.accountName ?? this.env.USER ?? 'user';
-    this.helperCommand = options.helperCommand ?? this.env.HIVE_FLOW_MACOS_CREDENTIAL_HELPER ?? 'hive-flow-macos-keychain-helper';
+    this.helperCommand = options.helperCommand
+      ?? installedHelperPath(HELPER_BINARIES.macosKeychain)
+      ?? HELPER_BINARIES.macosKeychain;
   }
 
   async status(provider?: string): Promise<CredentialStoreStatus> {
@@ -272,7 +278,9 @@ export class WindowsCredentialManagerCredentialStore extends BaseCredentialStore
 
   constructor(options: PlatformCredentialStoreOptions = {}) {
     super(options);
-    this.helperCommand = options.helperCommand ?? this.env.HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER ?? 'hive-flow-windows-credential-helper';
+    this.helperCommand = options.helperCommand
+      ?? installedHelperPath(HELPER_BINARIES.winCredential)
+      ?? HELPER_BINARIES.winCredential;
   }
 
   async status(provider?: string): Promise<CredentialStoreStatus> {

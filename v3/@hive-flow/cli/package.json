@@ -72,7 +72,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc && node ../../../scripts/sync-engine-anchor.mjs",
+    "build:helpers-src": "node scripts/copy-helper-sources.mjs",
+    "build": "tsc && npm run build:helpers-src && node ../../../scripts/sync-engine-anchor.mjs",
     "sync:engine": "node ../../../scripts/sync-engine-anchor.mjs",
     "test": "vitest run",
     "test:debrand-assert-zero": "vitest run src/init/__tests__/debrand-generator-output.test.ts src/init/__tests__/perf-claims-grep-zero.test.ts src/init/__tests__/dropped-integration-grep-zero.test.ts src/init/__tests__/debrand-static-grep-zero.test.ts src/init/__tests__/debrand-ru-suspect-classification.test.ts",

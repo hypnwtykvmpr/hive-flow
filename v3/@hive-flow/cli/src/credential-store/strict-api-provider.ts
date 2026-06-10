@@ -189,7 +189,7 @@ export function createProductionCredentialHolderService(options: {
   return new CredentialHolderService({
     socketPath: options.socketPath ?? defaultCredentialHolderSocketPath(),
     peerCredentialResolver: options.peerCredentialResolver ?? createPeerCredentialResolver({
-      helperCommand: options.peerHelperCommand ?? process.env.HIVE_FLOW_PEER_CRED_HELPER,
+      helperCommand: options.peerHelperCommand,
     }).lookup,
     peerRoleResolver: options.peerRoleResolver,
     providerInvoker: createStrictApiProviderInvoker({

@@ -128,10 +128,6 @@ export class CommandParser {
       raw: [...args]
     };
 
-    // Build flag configuration from global options
-    const aliases = this.buildAliases();
-    const booleanFlags = this.getBooleanFlags();
-
     let i = 0;
     let parsingFlags = true;
 
@@ -147,6 +143,9 @@ export class CommandParser {
 
       // Handle flags
       if (parsingFlags && arg.startsWith('-')) {
+        const targetCommand = this.getCommandForPath(result.command);
+        const aliases = this.buildAliases(targetCommand);
+        const booleanFlags = this.getBooleanFlags(targetCommand);
         const parseResult = this.parseFlag(args, i, aliases, booleanFlags);
 
         // Apply to result flags
@@ -288,7 +287,16 @@ export class CommandParser {
     return key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   }
 
-  private buildAliases(): Record<string, string> {
+  private getCommandForPath(commandPath: string[]): Command | undefined {
+    if (commandPath.length === 0) return undefined;
+    let command = this.commands.get(commandPath[0]);
+    for (const name of commandPath.slice(1)) {
+      command = command?.subcommands?.find(sub => sub.name === name || sub.aliases?.includes(name));
+    }
+    return command;
+  }
+
+  private buildAliases(command?: Command): Record<string, string> {
     const aliases: Record<string, string> = {};
 
     for (const opt of this.globalOptions) {
@@ -297,25 +305,10 @@ export class CommandParser {
       }
     }
 
-    // Add aliases from all commands and subcommands
-    for (const cmd of this.commands.values()) {
-      if (cmd.options) {
-        for (const opt of cmd.options) {
-          if (opt.short) {
-            aliases[opt.short] = opt.name;
-          }
-        }
-      }
-      // Also include subcommands' options
-      if (cmd.subcommands) {
-        for (const sub of cmd.subcommands) {
-          if (sub.options) {
-            for (const opt of sub.options) {
-              if (opt.short) {
-                aliases[opt.short] = opt.name;
-              }
-            }
-          }
+    if (command?.options) {
+      for (const opt of command.options) {
+        if (opt.short) {
+          aliases[opt.short] = opt.name;
         }
       }
     }
@@ -323,7 +316,7 @@ export class CommandParser {
     return { ...aliases, ...this.options.aliases };
   }
 
-  private getBooleanFlags(): Set<string> {
+  private getBooleanFlags(command?: Command): Set<string> {
     const flags = new Set<string>();
 
     for (const opt of this.globalOptions) {
@@ -332,25 +325,10 @@ export class CommandParser {
       }
     }
 
-    // Add boolean flags from all commands and subcommands
-    for (const cmd of this.commands.values()) {
-      if (cmd.options) {
-        for (const opt of cmd.options) {
-          if (opt.type === 'boolean') {
-            flags.add(this.normalizeKey(opt.name));
-          }
-        }
-      }
-      // Also include subcommands' boolean flags
-      if (cmd.subcommands) {
-        for (const sub of cmd.subcommands) {
-          if (sub.options) {
-            for (const opt of sub.options) {
-              if (opt.type === 'boolean') {
-                flags.add(this.normalizeKey(opt.name));
-              }
-            }
-          }
+    if (command?.options) {
+      for (const opt of command.options) {
+        if (opt.type === 'boolean') {
+          flags.add(this.normalizeKey(opt.name));
         }
       }
     }
@@ -362,6 +340,16 @@ export class CommandParser {
     }
 
     return flags;
+  }
+
+  private getFlagValue(flags: ParsedFlags, opt: CommandOption): string | boolean | number | string[] | undefined {
+    const key = this.normalizeKey(opt.name);
+    if (flags[key] !== undefined) return flags[key];
+    if (opt.short) {
+      const shortKey = this.normalizeKey(opt.short);
+      if (flags[shortKey] !== undefined) return flags[shortKey];
+    }
+    return undefined;
   }
 
   private applyDefaults(flags: ParsedFlags): void {
@@ -395,22 +383,27 @@ export class CommandParser {
     // Check required flags
     for (const opt of allOptions) {
       const key = this.normalizeKey(opt.name);
+      const value = this.getFlagValue(flags, opt);
 
-      if (opt.required && (flags[key] === undefined || flags[key] === '')) {
+      if (value !== undefined && flags[key] === undefined) {
+        flags[key] = value;
+      }
+
+      if (opt.required && (value === undefined || value === '')) {
         errors.push(`Required option missing: --${opt.name}`);
       }
 
       // Check choices
-      if (opt.choices && flags[key] !== undefined) {
-        const value = String(flags[key]);
-        if (!opt.choices.includes(value)) {
-          errors.push(`Invalid value for --${opt.name}: ${value}. Must be one of: ${opt.choices.join(', ')}`);
+      if (opt.choices && value !== undefined) {
+        const renderedValue = String(value);
+        if (!opt.choices.includes(renderedValue)) {
+          errors.push(`Invalid value for --${opt.name}: ${renderedValue}. Must be one of: ${opt.choices.join(', ')}`);
         }
       }
 
       // Run custom validator
-      if (opt.validate && flags[key] !== undefined) {
-        const result = opt.validate(flags[key]);
+      if (opt.validate && value !== undefined) {
+        const result = opt.validate(value);
         if (result !== true) {
           errors.push(typeof result === 'string' ? result : `Invalid value for --${opt.name}`);
         }
@@ -419,7 +412,10 @@ export class CommandParser {
 
     // Check for unknown flags if not allowed
     if (!this.options.allowUnknownFlags) {
-      const knownFlags = new Set(allOptions.map(opt => this.normalizeKey(opt.name)));
+      const knownFlags = new Set(allOptions.flatMap(opt => [
+        this.normalizeKey(opt.name),
+        ...(opt.short ? [this.normalizeKey(opt.short)] : []),
+      ]));
       knownFlags.add('_'); // Positional args
 
       for (const key of Object.keys(flags)) {

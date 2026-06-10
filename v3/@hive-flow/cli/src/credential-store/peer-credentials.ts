@@ -1,5 +1,9 @@
 import { execFileSync as nodeExecFileSync } from 'node:child_process';
 import type { Socket } from 'node:net';
+import {
+  HELPER_BINARIES,
+  installedHelperPath,
+} from './helper-paths.js';
 
 type ExecOptions = {
   encoding?: BufferEncoding;
@@ -69,7 +73,8 @@ function socketFd(socket: Socket | undefined): number | undefined {
 
 export function createPeerCredentialResolver(options: PeerCredentialResolverOptions = {}): PeerCredentialResolver {
   const platform = options.platform ?? process.platform;
-  const helperCommand = options.helperCommand ?? 'hive-flow-peer-cred-helper';
+  const defaultHelper = platform === 'win32' ? HELPER_BINARIES.winPeerCred : HELPER_BINARIES.peerCred;
+  const helperCommand = options.helperCommand ?? installedHelperPath(defaultHelper) ?? defaultHelper;
   const execFileSync = options.execFileSync ?? ((file, args, execOptions = {}) => nodeExecFileSync(file, [...args], execOptions as Parameters<typeof nodeExecFileSync>[2]));
 
   return {
