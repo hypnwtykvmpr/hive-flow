@@ -51,8 +51,6 @@
     "zod": "^3.22.4"
   },
   "optionalDependencies": {
-    "@hive-flow/codex": "^3.0.0-alpha.8",
-    "@hive-flow/plugin-gastown-bridge": "^0.1.3",
     "@ruvector/attention": "^0.1.3",
     "@ruvector/core": "^0.1.30",
     "@ruvector/router": "^0.1.27",
