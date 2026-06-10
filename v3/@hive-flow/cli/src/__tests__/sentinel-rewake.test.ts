@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { propertyRunsFromEnv } from './property-runs.js';
+import { sessionKeyFor } from '@hive-flow/shared';
 
 const PROPERTY_RUNS = propertyRunsFromEnv(200);
 
@@ -265,6 +266,54 @@ describe('sentinel agent task rewake', () => {
       expect(existsSync(join(dataDir, 'hive-hive-timeout-dedupe.acked'))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('mirrors hive rewake completion into the global wake session queue', () => {
+    const root = makeTempProject();
+    const home = makeTempProject();
+    try {
+      const sessionId = 'rewake-session-a';
+      const payload = JSON.stringify({
+        session_id: sessionId,
+        client_kind: 'claude-code',
+        tool_response: {
+          hiveId: 'hive-global-rewake',
+          allWorkersSettled: true,
+          completedCount: 1,
+          failedCount: 0,
+        },
+      });
+      const env = {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: root,
+        HIVE_FLOW_HOME: home,
+        HIVE_FLOW_REWAKE_MAX_WAIT_MS: '1',
+        HIVE_FLOW_REWAKE_POLL_MS: '1',
+      };
+
+      const completed = spawnSync(process.execPath, [hiveRewakeScript], {
+        input: payload,
+        env,
+        encoding: 'utf8',
+      });
+
+      expect(completed.status).toBe(2);
+      expect(completed.stderr).toContain('[HIVE COMPLETE: hive-global-rewake]');
+
+      const localPending = join(root, '.hive-flow', 'data', 'pending-notifications.jsonl');
+      const globalPending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor({ session_id: sessionId, client_kind: 'claude-code' }, {}),
+        'pending-notifications.jsonl',
+      );
+      expect(readFileSync(localPending, 'utf8')).toContain('hive-global-rewake');
+      expect(readFileSync(globalPending, 'utf8')).toContain('hive-global-rewake');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
     }
   });
 

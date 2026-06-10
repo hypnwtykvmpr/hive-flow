@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { wakeSessionPaths } = require('./wake-paths.cjs');
 
 function projectDir() {
   return process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -28,6 +29,14 @@ function emptyOutput() {
 
 function pendingFile(projectRoot) {
   return path.join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl');
+}
+
+function pendingFiles(projectRoot, sessionInput = null, env = process.env) {
+  const files = [];
+  const wake = wakeSessionPaths(sessionInput, env);
+  if (wake) files.push(wake.pendingFile);
+  files.push(pendingFile(projectRoot));
+  return files;
 }
 
 function collectDrainFiles(file) {
@@ -86,9 +95,11 @@ function supersedesCheckDue(existingKind, nextKind) {
   );
 }
 
-function drainNotifications(projectRoot = projectDir()) {
-  const file = pendingFile(projectRoot);
-  const drainFiles = collectDrainFiles(file);
+function drainNotifications(projectRoot = projectDir(), sessionInput = null) {
+  const drainFiles = [];
+  for (const file of pendingFiles(projectRoot, sessionInput, process.env)) {
+    drainFiles.push(...collectDrainFiles(file));
+  }
   if (drainFiles.length === 0) return emptyOutput();
 
   const lines = [];
@@ -135,6 +146,7 @@ module.exports = {
   projectDir,
   emptyOutput,
   pendingFile,
+  pendingFiles,
   collectDrainFiles,
   parseSummariesFromLines,
   supersedesCheckDue,

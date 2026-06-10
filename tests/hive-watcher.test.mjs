@@ -45,6 +45,7 @@ module.exports = {
   cleanupProgressFile,
   appendAuditLog,
   writeDoneMarker: typeof writeDoneMarker === 'function' ? writeDoneMarker : undefined,
+  appendPendingCompletion: typeof appendPendingCompletion === 'function' ? appendPendingCompletion : undefined,
   handleStopRequest: typeof handleStopRequest === 'function' ? handleStopRequest : undefined,
 };
 `,
@@ -254,6 +255,46 @@ describe('hive-watcher regressions', () => {
     assert.match(done.summary, /completed=2 failed=1/);
     assert.ok(done.completedAt);
     assert.equal(readdirSync(paths.dataDir).some(name => name.includes('.tmp.')), false);
+  });
+
+  it('mirrors completion wakeups into one global wake directory per owner session', () => {
+    const projectDir = makeProjectDir();
+    const home = makeProjectDir();
+    tempDirs.push(projectDir, home);
+    const origHome = process.env.HIVE_FLOW_HOME;
+    process.env.HIVE_FLOW_HOME = home;
+
+    try {
+      const mod = loadWatcherModule();
+      const pathsA = mod.getPaths(projectDir, 'claude-session-a');
+      const pathsB = mod.getPaths(projectDir, 'claude-session-b');
+
+      assert.equal(typeof mod.writeDoneMarker, 'function');
+      assert.equal(typeof mod.appendPendingCompletion, 'function');
+      assert.equal(typeof pathsA.wakeHiveDoneFile, 'function');
+      assert.notEqual(pathsA.wakeSessionDir, pathsB.wakeSessionDir);
+
+      const status = {
+        completedCount: 2,
+        failedCount: 0,
+        terminatedCount: 0,
+        idleCount: 0,
+      };
+
+      mod.writeDoneMarker(pathsA, 'demo/hive', status, 'claude-session-a');
+      mod.appendPendingCompletion(pathsA, 'demo/hive', status, 'completed=2 failed=0', 'claude-session-a');
+
+      assert.equal(existsSync(join(pathsA.dataDir, 'hive-demo_hive.done')), true);
+      assert.equal(existsSync(pathsA.wakeHiveDoneFile('demo/hive')), true);
+      assert.equal(existsSync(pathsA.wakePendingFile), true);
+      assert.match(readFileSync(pathsA.wakePendingFile, 'utf8'), /"ownerSessionId":"claude-session-a"/);
+
+      assert.equal(existsSync(pathsB.wakeSessionDir), false);
+      assert.equal(existsSync(pathsB.wakePendingFile), false);
+    } finally {
+      if (origHome !== undefined) process.env.HIVE_FLOW_HOME = origHome;
+      else delete process.env.HIVE_FLOW_HOME;
+    }
   });
 
   it('honors stop control files by writing stopped progress and logging the stop', () => {

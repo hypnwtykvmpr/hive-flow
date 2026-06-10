@@ -28,6 +28,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { appendPendingWithAck } = require('../.claude/helpers/dedup-marker.cjs');
 const { resolveSessionId, sanitizeSessionId } = require('../.claude/helpers/session-id.cjs');
+const { wakeSessionPaths } = require('../.claude/helpers/wake-paths.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -117,10 +118,26 @@ function parseArgs(argv = process.argv.slice(2), env = process.env) {
 // Path helpers
 // ---------------------------------------------------------------------------
 
-function getPaths(projectDir) {
+function decorateWakePaths(paths, ownerSessionId) {
+  const wake = wakeSessionPaths(
+    ownerSessionId ? { session_id: ownerSessionId } : null,
+    process.env,
+  );
+  if (!wake) return paths;
+  return {
+    ...paths,
+    wakeSessionKey: wake.sessionKey,
+    wakeSessionDir: wake.sessionDir,
+    wakePendingFile: wake.pendingFile,
+    wakeHiveDoneFile: wake.hiveDoneFile,
+    wakeTaskDoneFile: wake.taskDoneFile,
+  };
+}
+
+function getPaths(projectDir, ownerSessionId = null) {
   const hiveFlowDir = path.join(projectDir, '.hive-flow');
   const dataDir = path.join(hiveFlowDir, 'data');
-  return {
+  return decorateWakePaths({
     hiveFlowDir,
     hivesDir: path.join(hiveFlowDir, 'hives'),
     tasksDir: path.join(hiveFlowDir, 'tasks'),
@@ -129,7 +146,7 @@ function getPaths(projectDir) {
     tmuxPaneDir: path.join(dataDir, 'panes'),
     tmuxPaneFile: path.join(dataDir, 'tmux-pane.txt'),
     stopFile: (hiveId) => path.join(dataDir, 'watcher-' + sanitizeHiveId(hiveId) + '.stop'),
-  };
+  }, ownerSessionId);
 }
 
 // ---------------------------------------------------------------------------
@@ -393,6 +410,15 @@ function writeDoneMarker(paths, hiveId, status, ownerSessionId = null) {
     const tmpPath = donePath + '.tmp.' + process.pid;
     fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
     fs.renameSync(tmpPath, donePath);
+
+    const wakePaths = paths.wakeHiveDoneFile ? paths : decorateWakePaths(paths, ownerSessionId || status.ownerSessionId || null);
+    if (wakePaths.wakeHiveDoneFile) {
+      const wakeDonePath = wakePaths.wakeHiveDoneFile(hiveId);
+      fs.mkdirSync(path.dirname(wakeDonePath), { recursive: true });
+      const wakeTmpPath = wakeDonePath + '.tmp.' + process.pid;
+      fs.writeFileSync(wakeTmpPath, JSON.stringify(data, null, 2), 'utf8');
+      fs.renameSync(wakeTmpPath, wakeDonePath);
+    }
   } catch { /* best-effort */ }
 }
 
@@ -417,6 +443,14 @@ function appendPendingCompletion(paths, hiveId, status, summary, ownerSessionId 
       source: 'hive-watcher',
       ownerSessionId: ownerSessionId || status.ownerSessionId || null,
     });
+
+    const wakePaths = paths.wakePendingFile ? paths : decorateWakePaths(paths, ownerSessionId || status.ownerSessionId || null);
+    if (wakePaths.wakeSessionDir) {
+      appendPendingWithAck(wakePaths.wakeSessionDir, sanitized, line, {
+        source: 'hive-watcher:global-wake',
+        ownerSessionId: ownerSessionId || status.ownerSessionId || null,
+      });
+    }
   } catch { /* best-effort */ }
 }
 
@@ -465,7 +499,7 @@ async function main() {
     process.exit(1);
   }
 
-  const paths = getPaths(config.projectDir);
+  const paths = getPaths(config.projectDir, config.sessionId);
   const hiveId = config.hiveId;
   const startedAt = Date.now();
 

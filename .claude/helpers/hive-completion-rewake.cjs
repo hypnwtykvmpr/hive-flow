@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { isAlreadyAcked, appendPendingWithAck } = require('./dedup-marker.cjs');
+const { wakeSessionPaths } = require('./wake-paths.cjs');
 
 const DEFAULT_MAX_WAIT_MS = 30 * 60 * 1000;
 const DEFAULT_POLL_MS = 1500;
@@ -36,6 +37,18 @@ function readStdin() {
     return fs.readFileSync(0, 'utf8');
   } catch {
     return '';
+  }
+}
+
+function extractSessionInput(raw) {
+  try {
+    const obj = JSON.parse(raw || '{}');
+    return {
+      session_id: obj?.session_id || obj?.sessionId || obj?.transcript_path || obj?.transcriptPath,
+      client_kind: obj?.client_kind || obj?.clientKind || 'claude-code',
+    };
+  } catch {
+    return { client_kind: 'claude-code' };
   }
 }
 
@@ -202,6 +215,16 @@ function appendPendingOnce(dataDir, sanitizedHiveId, line) {
   return appendPendingWithAck(dataDir, sanitizedHiveId, line, { source: 'hive-completion-rewake' });
 }
 
+function appendPendingOnceEverywhere(dataDirs, sanitizedHiveId, line) {
+  let wrote = false;
+  for (const dataDir of dataDirs.filter(Boolean)) {
+    if (appendPendingWithAck(dataDir, sanitizedHiveId, line, { source: 'hive-completion-rewake' })) {
+      wrote = true;
+    }
+  }
+  return wrote;
+}
+
 function appendPending(dataDir, line) {
   try {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -224,6 +247,12 @@ function clearTimeoutCheck(dataDir, sanitizedHiveId) {
     fs.unlinkSync(timeoutCheckPath(dataDir, sanitizedHiveId));
   } catch {
     /* absent or already removed */
+  }
+}
+
+function clearTimeoutChecks(dataDirs, sanitizedHiveId) {
+  for (const dataDir of dataDirs.filter(Boolean)) {
+    clearTimeoutCheck(dataDir, sanitizedHiveId);
   }
 }
 
@@ -268,6 +297,14 @@ function appendTimeoutCheckOnce(dataDir, sanitizedHiveId, line) {
   }
 }
 
+function appendTimeoutCheckOnceEverywhere(dataDirs, sanitizedHiveId, line) {
+  let wrote = false;
+  for (const dataDir of dataDirs.filter(Boolean)) {
+    if (appendTimeoutCheckOnce(dataDir, sanitizedHiveId, line)) wrote = true;
+  }
+  return wrote;
+}
+
 async function main() {
   const raw = readStdin();
   const hiveId = extractHiveId(raw);
@@ -276,23 +313,27 @@ async function main() {
 
   const dir = projectDir();
   const dataDir = path.join(dir, '.hive-flow', 'data');
+  const wake = wakeSessionPaths(extractSessionInput(raw), process.env);
+  const globalDataDir = wake?.sessionDir || null;
+  const dataDirs = globalDataDir ? [dataDir, globalDataDir] : [dataDir];
   const donePath = path.join(dataDir, `hive-${sanitized}.done`);
+  const globalDonePath = wake?.hiveDoneFile ? wake.hiveDoneFile(hiveId) : null;
 
   try {
-    if (isAlreadyAcked(dataDir, sanitized)) process.exit(0);
+    if (dataDirs.every((candidate) => isAlreadyAcked(candidate, sanitized))) process.exit(0);
   } catch {
     process.exit(0);
   }
 
   if (isHivePollWorkersPayload(raw)) {
-    clearTimeoutCheck(dataDir, sanitized);
+    clearTimeoutChecks(dataDirs, sanitized);
   }
 
   const immediateCompletion = extractCompletion(raw);
   if (immediateCompletion) {
     const summary = summarizeStatus(immediateCompletion, hiveId);
-    const won = appendPendingOnce(
-      dataDir,
+    const won = appendPendingOnceEverywhere(
+      dataDirs,
       sanitized,
       JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary }),
     );
@@ -305,14 +346,14 @@ async function main() {
   while (Date.now() < deadline) {
     let done = false;
     try {
-      done = fs.existsSync(donePath);
+      done = fs.existsSync(donePath) || (globalDonePath ? fs.existsSync(globalDonePath) : false);
     } catch {
       done = false;
     }
     if (done) {
-      const summary = summarizeDone(donePath, hiveId);
-      const won = appendPendingOnce(
-        dataDir,
+      const summary = summarizeDone(fs.existsSync(donePath) ? donePath : globalDonePath, hiveId);
+      const won = appendPendingOnceEverywhere(
+        dataDirs,
         sanitized,
         JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary }),
       );
@@ -322,8 +363,8 @@ async function main() {
     }
     const recordSummary = summarizeHiveRecord(dir, sanitized, hiveId);
     if (recordSummary) {
-      const won = appendPendingOnce(
-        dataDir,
+      const won = appendPendingOnceEverywhere(
+        dataDirs,
         sanitized,
         JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary: recordSummary }),
       );
@@ -335,8 +376,8 @@ async function main() {
   }
 
   const summary = timeoutSummary(hiveId);
-  const won = appendTimeoutCheckOnce(
-    dataDir,
+  const won = appendTimeoutCheckOnceEverywhere(
+    dataDirs,
     sanitized,
     JSON.stringify({ kind: 'hive-check', hiveId, ts: new Date().toISOString(), summary }),
   );
@@ -353,6 +394,7 @@ module.exports = {
   positiveIntFromEnv,
   projectDir,
   extractHiveId,
+  extractSessionInput,
   extractCompletion,
   extractHiveIdFromText,
   sanitizeHiveId,
@@ -360,11 +402,14 @@ module.exports = {
   summarizeStatus,
   summarizeHiveRecord,
   appendPendingOnce,
+  appendPendingOnceEverywhere,
   appendPending,
   timeoutSummary,
   timeoutCheckPath,
   clearTimeoutCheck,
+  clearTimeoutChecks,
   isHivePollWorkersPayload,
   appendTimeoutCheckOnce,
+  appendTimeoutCheckOnceEverywhere,
   main,
 };
