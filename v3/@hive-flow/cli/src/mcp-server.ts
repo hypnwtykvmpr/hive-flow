@@ -97,7 +97,7 @@ const DEFAULT_OPTIONS: Required<MCPServerOptions> = {
   timeout: 30000,
 };
 
-export type MCPClientKind = 'claude' | 'codex' | 'unknown';
+export type MCPClientKind = 'claude' | 'codex' | 'gemini' | 'cursor' | 'unknown';
 
 type HiveStatusNotificationInput = Pick<HiveRecord, 'hiveId' | 'queenId' | 'status' | 'updatedAt' | 'completedAt' | 'error'>;
 
@@ -112,8 +112,20 @@ function readNestedString(value: unknown, keys: readonly string[]): string | und
   return typeof current === 'string' ? current : undefined;
 }
 
+function normalizeClientKind(value: string | undefined): MCPClientKind {
+  if (!value) return 'unknown';
+  const normalized = value.toLowerCase().trim();
+  if (normalized === 'claude' || normalized === 'claude-code') return 'claude';
+  if (normalized === 'codex' || normalized === 'codex-cli') return 'codex';
+  if (normalized === 'gemini' || normalized === 'gemini-cli') return 'gemini';
+  if (normalized === 'cursor' || normalized === 'cursor-cli' || normalized === 'cursor-agent') return 'cursor';
+  return 'unknown';
+}
+
 function classifyClientText(text: string): MCPClientKind {
   const normalized = text.toLowerCase();
+  if (normalized.includes('cursor-agent') || normalized.includes('cursor-cli') || normalized.includes('cursor')) return 'cursor';
+  if (normalized.includes('gemini-cli') || normalized.includes('gemini')) return 'gemini';
   if (normalized.includes('codex')) return 'codex';
   if (normalized.includes('claude')) return 'claude';
   return 'unknown';
@@ -134,9 +146,17 @@ export function classifyMCPClient(
   const clientInfoKind = classifyClientText(clientInfoText);
   if (clientInfoKind !== 'unknown') return clientInfoKind;
 
+  const explicitKind = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
+  if (explicitKind !== 'unknown') return explicitKind;
+
   const envText = [
     env.CODEX_HOME ? `CODEX_HOME ${env.CODEX_HOME}` : undefined,
     env.CODEX_SANDBOX ? `CODEX_SANDBOX ${env.CODEX_SANDBOX}` : undefined,
+    env.GEMINI_API_KEY ? 'GEMINI_API_KEY configured' : undefined,
+    env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY configured gemini' : undefined,
+    env.GEMINI_HOME ? `GEMINI_HOME ${env.GEMINI_HOME}` : undefined,
+    env.CURSOR_API_KEY ? 'CURSOR_API_KEY configured' : undefined,
+    env.CURSOR_HOME ? `CURSOR_HOME ${env.CURSOR_HOME}` : undefined,
     env.CLAUDE_PROJECT_DIR ? `CLAUDE_PROJECT_DIR ${env.CLAUDE_PROJECT_DIR}` : undefined,
     env.CLAUDECODE ? `CLAUDECODE ${env.CLAUDECODE}` : undefined,
     env.CLAUDE_CODE ? `CLAUDE_CODE ${env.CLAUDE_CODE}` : undefined,
@@ -156,7 +176,11 @@ export function buildHiveStatusNotification(
     ? 'Codex should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
     : clientKind === 'claude'
       ? 'Claude may also receive an asyncRewake hook; call hive_poll_workers or queen_collect_results to review.'
-      : 'Call hive_poll_workers or queen_collect_results to review.';
+      : clientKind === 'gemini'
+        ? 'Gemini should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
+        : clientKind === 'cursor'
+          ? 'Cursor should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
+          : 'Call hive_poll_workers or queen_collect_results to review.';
 
   return {
     jsonrpc: '2.0' as const,

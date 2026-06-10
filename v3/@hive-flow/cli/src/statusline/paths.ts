@@ -24,6 +24,8 @@
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 
+import { resolveHiveHome } from '@hive-flow/shared';
+
 // ---------------------------------------------------------------------------
 // Project-scoped paths
 // ---------------------------------------------------------------------------
@@ -107,6 +109,49 @@ export function statuslinePaths(projectRoot: string): StatuslinePaths {
     lastRender: join(hf, 'state', 'last-render.txt'),
     refreshRequest: join(hf, 'state', 'refresh.request'),
     spoolRoot: join(hf, 'spool'),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Global Hive Flow statusline index paths
+// ---------------------------------------------------------------------------
+
+export interface GlobalStatuslinePaths {
+  /** Absolute root: `${HIVE_FLOW_HOME}/statusline`. */
+  root: string;
+  /** Absolute project index root. */
+  projectRoot: string;
+  /** Absolute session index root. */
+  sessionRoot: string;
+  /** Global indexed materialized cache for one project/session pair. */
+  cache: string;
+}
+
+function flatPathSegment(value: string, fallback: string): string {
+  const cleaned = value.trim().replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '');
+  return cleaned.length > 0 && cleaned !== '.' && cleaned !== '..' ? cleaned : fallback;
+}
+
+/**
+ * Compute the global statusline index paths. This is distinct from
+ * `statuslineUserCachePaths()` because the index is durable Hive Flow state
+ * under `HIVE_FLOW_HOME`, not a renderer-local debounce/cache directory.
+ */
+export function globalStatuslinePaths(
+  projectKey: string,
+  sessionKey: string,
+  env: NodeJS.ProcessEnv = process.env,
+): GlobalStatuslinePaths {
+  const root = join(resolveHiveHome(env).home, 'statusline');
+  const projectSegment = flatPathSegment(projectKey, 'unknown-project');
+  const sessionSegment = flatPathSegment(sessionKey, 'unknown-session');
+  const projectRoot = join(root, 'projects', projectSegment);
+  const sessionRoot = join(projectRoot, 'sessions', sessionSegment);
+  return Object.freeze({
+    root,
+    projectRoot,
+    sessionRoot,
+    cache: join(sessionRoot, 'state', 'cache.json'),
   });
 }
 

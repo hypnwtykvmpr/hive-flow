@@ -15,6 +15,7 @@ const policyJsonSource = resolve(here, '../permission-guard/protected-paths.poli
 const previousEnv = {
   HIVE_FLOW_PROJECT_ROOT: process.env.HIVE_FLOW_PROJECT_ROOT,
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+  HIVE_FLOW_HOME: process.env.HIVE_FLOW_HOME,
 };
 
 function restoreEnv(): void {
@@ -48,22 +49,25 @@ describe('relocated enforcement engine root resolution', () => {
     restoreEnv();
   });
 
-  it('loads enforcement.cjs from a relocated bin while resolving state under CLAUDE_PROJECT_DIR', () => {
+  it('loads enforcement.cjs from a relocated bin while resolving global state under HIVE_FLOW_HOME', () => {
     const { root, bin } = makeProject();
+    const hiveHome = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-relocated-root-home-')));
     try {
       delete process.env.HIVE_FLOW_PROJECT_ROOT;
       process.env.CLAUDE_PROJECT_DIR = root;
+      process.env.HIVE_FLOW_HOME = hiveHome;
 
       const enforcement = requireFresh(join(bin, 'enforcement.cjs')) as {
         getStateFile(): string;
         getProjectScopeId(): string;
       };
 
-      expect(enforcement.getStateFile()).toBe(join(root, '.hive-flow', 'enforcement', 'state.json'));
+      expect(enforcement.getStateFile()).toBe(join(hiveHome, 'enforcement', 'global', 'state.json'));
       expect(enforcement.getProjectScopeId()).toMatch(/^project-[a-f0-9]{16}$/);
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(bin, { recursive: true, force: true });
+      rmSync(hiveHome, { recursive: true, force: true });
     }
   });
 

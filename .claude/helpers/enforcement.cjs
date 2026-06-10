@@ -26,6 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
 
 function loadProtectedPathPolicyModule() {
   const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
@@ -57,11 +58,19 @@ const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
   cwd: path.resolve(__dirname, '..', '..'),
   fallbackRoot: process.cwd(),
 });
-const ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
-const STATE_FILE = path.join(ENFORCEMENT_DIR, 'state.json');
-const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'violations.jsonl');
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
+const ENFORCEMENT_DIR = path.join(HIVE_HOME, 'enforcement');
+const LEGACY_ENFORCEMENT_DIR = path.join(PROJECT_DIR, '.hive-flow', 'enforcement');
+const STATE_FILE = path.join(ENFORCEMENT_DIR, 'global', 'state.json');
+const VIOLATIONS_FILE = path.join(ENFORCEMENT_DIR, 'global', 'violations.jsonl');
 const VERIFICATION_GATE_FILE = path.join(ENFORCEMENT_DIR, 'verification-gate.json');
 const HMAC_KEY_FILE = path.join(ENFORCEMENT_DIR, '.hmac-key');
+const LEGACY_HMAC_KEY_FILE = path.join(LEGACY_ENFORCEMENT_DIR, '.hmac-key');
 const SETTINGS_PRESETS_FILE = path.join(ENFORCEMENT_DIR, 'settings-presets.json');
 const SETTINGS_PRESET_VERSION = 2;
 const COMPACTION_LOCK_FILE = path.join(ENFORCEMENT_DIR, 'compaction-lock.json');
@@ -130,9 +139,21 @@ function getOrCreateHmacKey() {
   } catch {
     // Fall through to create new key
   }
+  try {
+    if (fs.existsSync(LEGACY_HMAC_KEY_FILE)) {
+      const legacyKey = fs.readFileSync(LEGACY_HMAC_KEY_FILE, 'utf8').trim();
+      if (legacyKey) {
+        ensureDir(path.dirname(HMAC_KEY_FILE));
+        try { fs.writeFileSync(HMAC_KEY_FILE, legacyKey, { mode: 0o600 }); } catch {}
+        return legacyKey;
+      }
+    }
+  } catch {
+    // Fall through to create new key
+  }
   const key = crypto.randomBytes(32).toString('hex');
   try {
-    ensureDir();
+    ensureDir(path.dirname(HMAC_KEY_FILE));
     fs.writeFileSync(HMAC_KEY_FILE, key, { mode: 0o600 });
   } catch {
     // If we can't write the key file, use ephemeral key (will re-create next time)
@@ -212,6 +233,18 @@ function getStateFile(agentId) {
   return path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'state.json');
 }
 
+function getLegacyScopedStateFile(scopeType, scopeId) {
+  if (scopeType === 'global') return path.join(LEGACY_ENFORCEMENT_DIR, 'state.json');
+  const fallback = scopeType === 'project' ? getProjectScopeId() : '';
+  const sanitized = sanitizeScopeId(scopeId, fallback);
+  if (!sanitized) return path.join(LEGACY_ENFORCEMENT_DIR, 'state.json');
+  if (scopeType === 'agent') return path.join(LEGACY_ENFORCEMENT_DIR, 'agents', sanitized, 'state.json');
+  if (scopeType === 'hive') return path.join(LEGACY_ENFORCEMENT_DIR, 'hives', sanitized, 'state.json');
+  if (scopeType === 'session') return path.join(LEGACY_ENFORCEMENT_DIR, 'sessions', sanitized, 'state.json');
+  if (scopeType === 'project') return path.join(LEGACY_ENFORCEMENT_DIR, 'projects', sanitized, 'state.json');
+  return path.join(LEGACY_ENFORCEMENT_DIR, 'state.json');
+}
+
 function getScopedStateFile(scopeType, scopeId) {
   if (scopeType === 'global') return STATE_FILE;
   const fallback = scopeType === 'project' ? getProjectScopeId() : '';
@@ -265,10 +298,12 @@ function freshState() {
 function getScopedState(scopeType = 'global', scopeId = null) {
   const stateFile = getScopedStateFile(scopeType, scopeId);
   ensureDir(path.dirname(stateFile));
-  if (!fs.existsSync(stateFile)) {
+  const legacyStateFile = getLegacyScopedStateFile(scopeType, scopeId);
+  const readFile = fs.existsSync(stateFile) ? stateFile : (fs.existsSync(legacyStateFile) ? legacyStateFile : stateFile);
+  if (!fs.existsSync(readFile)) {
     return { state: freshState(), scopeType, scopeId, tampered: false };
   }
-  const raw = readJson(stateFile);
+  const raw = readJson(readFile);
 
   if (raw === null) {
     _readErrorCount++;
@@ -438,8 +473,10 @@ function loadRoleForAgent(agentId) {
   if (!safeAgentId) return null;
   try {
     const roleFile = path.join(ENFORCEMENT_DIR, 'agents', safeAgentId, 'role.json');
-    if (!fs.existsSync(roleFile)) return null;
-    const raw = readJson(roleFile);
+    const legacyRoleFile = path.join(LEGACY_ENFORCEMENT_DIR, 'agents', safeAgentId, 'role.json');
+    const readFile = fs.existsSync(roleFile) ? roleFile : legacyRoleFile;
+    if (!fs.existsSync(readFile)) return null;
+    const raw = readJson(readFile);
     if (!raw) return null;
     const { valid, state } = verifyState(raw);
     return valid && state ? state : null;
@@ -601,7 +638,13 @@ function chooseEscalationScope(ctx, violation) {
     return { scopeType: 'agent', scopeId: ctx.agentId };
   }
   if (violation.systemic) {
-    return { scopeType: 'global', scopeId: 'global' };
+    if (isTrustedRootSession(ctx)) {
+      return { scopeType: 'session', scopeId: ctx.sid };
+    }
+    if (ctx.hiveId) {
+      return { scopeType: 'hive', scopeId: ctx.hiveId };
+    }
+    return { scopeType: 'project', scopeId: ctx.projectId };
   }
   if (isTrustedRootSession(ctx)) {
     return { scopeType: 'session', scopeId: ctx.sid };
@@ -750,7 +793,10 @@ function protectedMutationDecision(filePath, action = 'write to protected path')
 }
 
 function isEnforcementHmacKeyPath(filePath) {
-  return protectedPathPolicy.isHmacKeyPath(filePath, PROJECT_DIR);
+  const resolved = casefoldPath(resolveFilePath(filePath));
+  const hiveKey = casefoldPath(HMAC_KEY_FILE);
+  const legacyKey = casefoldPath(LEGACY_HMAC_KEY_FILE);
+  return resolved === hiveKey || resolved === legacyKey || protectedPathPolicy.isHmacKeyPath(filePath, PROJECT_DIR);
 }
 
 function isInProjectPath(filePath) {
@@ -2311,8 +2357,6 @@ function detectCircumvention(toolName, toolInput, state) {
           circumvention: true,
           reason: `CIRCUMVENTION: Gate-bypass environment variable targeting enforcement (${envAttempt.name})`,
           severity: 'critical',
-          substrateAttack: true,
-          protectedEnforcementAttack: true,
           systemic: true,
         };
       }
@@ -3055,23 +3099,25 @@ function resetEnforcement(scope = {}) {
     }
   } catch {}
   // Clear per-agent state files
-  for (const scopeDirName of ['agents', 'hives', 'projects', 'sessions']) {
-    try {
-      const scopeDir = path.join(ENFORCEMENT_DIR, scopeDirName);
-      if (fs.existsSync(scopeDir)) {
-        const scopeDirs = fs.readdirSync(scopeDir);
-        for (const scopeId of scopeDirs) {
-          try {
-            const scopedStateFile = path.join(scopeDir, scopeId, 'state.json');
-            if (fs.existsSync(scopedStateFile)) fs.unlinkSync(scopedStateFile);
-            if (scopeDirName === 'agents') {
-              const roleFile = path.join(scopeDir, scopeId, 'role.json');
-              if (fs.existsSync(roleFile)) fs.unlinkSync(roleFile);
-            }
-          } catch {}
+  for (const baseDir of [ENFORCEMENT_DIR, LEGACY_ENFORCEMENT_DIR]) {
+    for (const scopeDirName of ['agents', 'hives', 'projects', 'sessions']) {
+      try {
+        const scopeDir = path.join(baseDir, scopeDirName);
+        if (fs.existsSync(scopeDir)) {
+          const scopeDirs = fs.readdirSync(scopeDir);
+          for (const scopeId of scopeDirs) {
+            try {
+              const scopedStateFile = path.join(scopeDir, scopeId, 'state.json');
+              if (fs.existsSync(scopedStateFile)) fs.unlinkSync(scopedStateFile);
+              if (scopeDirName === 'agents') {
+                const roleFile = path.join(scopeDir, scopeId, 'role.json');
+                if (fs.existsSync(roleFile)) fs.unlinkSync(roleFile);
+              }
+            } catch {}
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
   }
   const state = {
     level: LEVELS.NORMAL,
@@ -3108,13 +3154,22 @@ function parseResetScope(prompt) {
 function clearAgentRole(agentId) {
   const sanitized = sanitizeScopeId(agentId);
   if (!sanitized) return false;
+  let cleared = false;
   try {
     const roleFile = path.join(ENFORCEMENT_DIR, 'agents', sanitized, 'role.json');
-    if (fs.existsSync(roleFile)) fs.unlinkSync(roleFile);
-    return true;
-  } catch {
-    return false;
-  }
+    if (fs.existsSync(roleFile)) {
+      fs.unlinkSync(roleFile);
+      cleared = true;
+    }
+  } catch {}
+  try {
+    const legacyRoleFile = path.join(LEGACY_ENFORCEMENT_DIR, 'agents', sanitized, 'role.json');
+    if (fs.existsSync(legacyRoleFile)) {
+      fs.unlinkSync(legacyRoleFile);
+      cleared = true;
+    }
+  } catch {}
+  return cleared;
 }
 
 /**
@@ -3189,11 +3244,14 @@ function processResetCheck(input) {
         : resetScope.project
           ? `project/${getProjectScopeId()}`
           : resetScope.scope || 'all';
+    const childScopeMessage = resetScope.scope === 'all'
+      ? 'Child scopes: cleared.'
+      : 'Child scopes: unchanged; use explicit --agent/--hive/--session/--project/--global or --scope all if child scopes also need reset.';
     return {
       hookSpecificOutput: {
         hookEventName: 'UserPromptSubmit',
         permissionDecision: 'allow',
-        additionalContext: `[ENFORCEMENT] Reset complete for ${scopeLabel}. Enforcement level: NORMAL.`,
+        additionalContext: `[ENFORCEMENT] Reset complete for ${scopeLabel}. Enforcement level: NORMAL. ${childScopeMessage}`,
       },
     };
   }

@@ -33,8 +33,10 @@
 import { lstat, open } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 
+import { sessionKeyFor } from '@hive-flow/shared';
+
 import { loadStatuslineConfig, type StatuslineConfig } from './config.js';
-import { statuslinePaths } from './paths.js';
+import { globalStatuslinePaths, statuslinePaths } from './paths.js';
 import {
   atomicWriteJson,
   readJsonFile,
@@ -428,6 +430,10 @@ export async function refreshStatuslineSnapshot(
   // Step 7: atomic write. `atomicWriteJson` is the same primitive used by
   // every other materialized current.json — write-to-temp + fsync + rename.
   await atomicWriteJson(paths.cache, snapshot);
+  await atomicWriteJson(
+    globalStatuslinePaths(scope.projectKey, sessionKeyFor(opts.stdinData, process.env)).cache,
+    snapshot,
+  ).catch(() => undefined);
 
   // Step 8: refresh marker. Touch the marker so the next caller within the
   // debounce window observes a recent mtime. We delegate to the Wave 2

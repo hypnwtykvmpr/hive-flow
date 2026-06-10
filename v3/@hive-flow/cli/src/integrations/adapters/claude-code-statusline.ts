@@ -31,6 +31,9 @@ const JSON_PATH: JSONPath = ['statusLine'];
 const JSON_PATH_LABEL = 'statusLine';
 
 function filePathFor(ctx: AdapterCtx): string {
+  if (ctx.scope === 'user' && ctx.userSettingsPath) {
+    return ctx.userSettingsPath;
+  }
   return ctx.scope === 'user'
     ? join(ctx.homeDir, '.claude', 'settings.json')
     : join(ctx.projectRoot, '.claude', 'settings.json');
@@ -55,6 +58,44 @@ function readExistingStatusLine(source: string): unknown {
   const root = parse(source, [], { allowTrailingComma: true }) as unknown;
   if (root === null || typeof root !== 'object') return undefined;
   return (root as Record<string, unknown>).statusLine;
+}
+
+function commandFromStatusLine(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim() !== '') return value;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const command = (value as Record<string, unknown>).command;
+    if (typeof command === 'string' && command.trim() !== '') return command;
+  }
+  return undefined;
+}
+
+function isManagedStatuslineCommand(command: string, launcherPath: string | undefined): boolean {
+  return !!launcherPath && command.includes(launcherPath);
+}
+
+export async function previousStatusLineCommandForLauncher(ctx: AdapterCtx): Promise<string | undefined> {
+  const filePath = filePathFor(ctx);
+  const stateId = entryId({
+    agent: 'claude-code',
+    kind: 'statusline',
+    scope: ctx.scope,
+    targetPath: filePath,
+    jsonPath: JSON_PATH_LABEL,
+  });
+  const state = await readState(ctx.statePath);
+  const record = state.entries[stateId];
+  const fromRecord = commandFromStatusLine(record?.previousValue);
+  if (fromRecord && !isManagedStatuslineCommand(fromRecord, ctx.statuslineLauncherPath)) {
+    return fromRecord;
+  }
+
+  const existingText = await readTextIfExists(filePath);
+  if (existingText === null || parseErrors(existingText).length > 0) return undefined;
+  const fromSettings = commandFromStatusLine(readExistingStatusLine(existingText));
+  if (!fromSettings || isManagedStatuslineCommand(fromSettings, ctx.statuslineLauncherPath)) {
+    return undefined;
+  }
+  return fromSettings;
 }
 
 function parseErrors(source: string): ParseError[] {

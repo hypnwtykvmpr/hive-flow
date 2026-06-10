@@ -35,8 +35,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
+import { sessionKeyFor } from '@hive-flow/shared';
+
 import { refreshStatuslineSnapshot } from '../refresher.js';
-import { statuslinePaths } from '../paths.js';
+import { globalStatuslinePaths, statuslinePaths } from '../paths.js';
 import { clearProjectScopeCache } from '../project-scope.js';
 import type {
   ProviderCallEventV1,
@@ -781,6 +783,43 @@ describe('refreshStatuslineSnapshot', () => {
     await refreshStatuslineSnapshot({ projectRoot: root, now: FIXED_NOW });
 
     expect(existsSync(paths.refreshRequest)).toBe(true);
+  });
+
+  it('mirrors the refreshed snapshot into the global project/session cache', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'hf-refresher-global-home-'));
+    const origHome = process.env.HIVE_FLOW_HOME;
+    const stdinData = {
+      session_id: 'refresh-session-a',
+      client_kind: 'claude-code',
+      workspace: { current_dir: root, project_dir: root },
+    };
+    process.env.HIVE_FLOW_HOME = home;
+    try {
+      populateAllLedgers(root);
+      const snapshot = await refreshStatuslineSnapshot({
+        projectRoot: root,
+        stdinData,
+        now: FIXED_NOW,
+        force: true,
+      });
+      const globalPaths = globalStatuslinePaths(
+        snapshot.projectKey,
+        sessionKeyFor(stdinData, {}),
+        { HIVE_FLOW_HOME: home } as NodeJS.ProcessEnv,
+      );
+
+      expect(existsSync(statuslinePaths(root).cache)).toBe(true);
+      expect(existsSync(globalPaths.cache)).toBe(true);
+      const mirrored = JSON.parse(readFileSync(globalPaths.cache, 'utf8')) as StatuslineSnapshotV1;
+      expect(mirrored.projectRoot).toBe(snapshot.projectRoot);
+      expect(mirrored.projectKey).toBe(snapshot.projectKey);
+      expect(mirrored.generatedAt).toBe(snapshot.generatedAt);
+      expect(mirrored.swarm).toEqual(snapshot.swarm);
+    } finally {
+      if (origHome !== undefined) process.env.HIVE_FLOW_HOME = origHome;
+      else delete process.env.HIVE_FLOW_HOME;
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 
   // -------------------------------------------------------------------------

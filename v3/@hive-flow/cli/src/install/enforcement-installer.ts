@@ -2,6 +2,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFil
 import { chmod } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path, { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { portableConfirm } from './portable-prompt.js';
 import { setupOverride } from '../permission-guard/biometric-override.js';
 
@@ -134,6 +135,43 @@ function hasHookCommand(group: HookGroup, command: string): boolean {
   return Boolean(group?.hooks?.some((hook) => hook?.type === 'command' && hook.command === command));
 }
 
+function isDeadModifyHookCommand(command: string): boolean {
+  return /\bhive-flow\s+hooks\s+modify-(?:bash|file)\b/.test(command) ||
+    /\bcli\.js\s+hooks\s+modify-(?:bash|file)\b/.test(command);
+}
+
+function isSessionEndCommand(command: string): boolean {
+  return /\bhooks\s+session-end\b/.test(command) ||
+    /\bhook-handler\.cjs\s+session-end\b/.test(command);
+}
+
+function isSettingsReconcilerCommand(command: string): boolean {
+  return command.includes('settings-reconciler.cjs');
+}
+
+function removeHookCommands(
+  groups: HookGroup[],
+  predicate: (command: string) => boolean,
+): { groups: HookGroup[]; removed: HookCommand[] } {
+  const removed: HookCommand[] = [];
+  const nextGroups: HookGroup[] = [];
+  for (const group of groups) {
+    const keptHooks: HookCommand[] = [];
+    for (const hook of group.hooks || []) {
+      const command = typeof hook.command === 'string' ? hook.command : '';
+      if (command && predicate(command)) {
+        removed.push(hook);
+      } else {
+        keptHooks.push(hook);
+      }
+    }
+    if (keptHooks.length > 0) {
+      nextGroups.push({ ...group, hooks: keptHooks });
+    }
+  }
+  return { groups: nextGroups, removed };
+}
+
 function ensureCommandInFirstGroup(hooks: Record<string, HookGroup[]>, event: string, hook: HookCommand): void {
   const groups = Array.isArray(hooks[event]) ? hooks[event] : [];
   if (groups.some((group) => hasHookCommand(group, hook.command))) {
@@ -150,6 +188,24 @@ function ensureCommandInFirstGroup(hooks: Record<string, HookGroup[]>, event: st
   hooks[event] = [first, ...rest];
 }
 
+function ensureHooksInFirstGroup(hooks: Record<string, HookGroup[]>, event: string, hookList: HookCommand[]): void {
+  for (const hook of hookList) {
+    ensureCommandInFirstGroup(hooks, event, hook);
+  }
+}
+
+function cleanupGlobalHookCruft(hooks: Record<string, HookGroup[]>): void {
+  for (const event of Object.keys(hooks)) {
+    const groups = Array.isArray(hooks[event]) ? hooks[event] : [];
+    hooks[event] = removeHookCommands(groups, isDeadModifyHookCommand).groups;
+  }
+
+  const stopGroups = Array.isArray(hooks.Stop) ? hooks.Stop : [];
+  const stopCleanup = removeHookCommands(stopGroups, isSessionEndCommand);
+  hooks.Stop = stopCleanup.groups;
+  ensureHooksInFirstGroup(hooks, 'SessionEnd', stopCleanup.removed);
+}
+
 export function mergeUserSettings(settings: unknown, options: InstallerSettingsOptions = {}): Record<string, any> {
   const next: Record<string, any> = settings && typeof settings === 'object' && !Array.isArray(settings)
     ? structuredClone(settings)
@@ -158,6 +214,8 @@ export function mergeUserSettings(settings: unknown, options: InstallerSettingsO
   next.hooks = next.hooks && typeof next.hooks === 'object' && !Array.isArray(next.hooks)
     ? next.hooks
     : {};
+
+  cleanupGlobalHookCruft(next.hooks);
 
   const existingPre = Array.isArray(next.hooks.PreToolUse) ? next.hooks.PreToolUse : [];
   next.hooks.PreToolUse = [
@@ -168,11 +226,19 @@ export function mergeUserSettings(settings: unknown, options: InstallerSettingsO
   const reconciler = settingsReconcilerHook(options);
   const postMatcher = 'Write|Edit|MultiEdit|mcp__filesystem__write_file|mcp__filesystem__edit_file';
   const postGroups = Array.isArray(next.hooks.PostToolUse) ? next.hooks.PostToolUse : [];
-  if (!postGroups.some((group: HookGroup) => hasHookCommand(group, reconciler.command))) {
-    next.hooks.PostToolUse = [{ matcher: postMatcher, hooks: [reconciler] }, ...postGroups];
-  } else {
-    next.hooks.PostToolUse = postGroups;
-  }
+  next.hooks.PostToolUse = [
+    { matcher: postMatcher, hooks: [reconciler] },
+    ...removeHookCommands(postGroups, isSettingsReconcilerCommand).groups,
+  ];
+
+  next.hooks.SessionStart = removeHookCommands(
+    Array.isArray(next.hooks.SessionStart) ? next.hooks.SessionStart : [],
+    isSettingsReconcilerCommand,
+  ).groups;
+  next.hooks.Stop = removeHookCommands(
+    Array.isArray(next.hooks.Stop) ? next.hooks.Stop : [],
+    isSettingsReconcilerCommand,
+  ).groups;
   ensureCommandInFirstGroup(next.hooks, 'SessionStart', reconciler);
   ensureCommandInFirstGroup(next.hooks, 'Stop', reconciler);
   return next;
@@ -193,13 +259,92 @@ function writeJsonAtomic(filePath: string, data: unknown): void {
   renameSync(tmp, filePath);
 }
 
+function backupTimestamp(): string {
+  return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+function writeJsonAtomicIfChanged(filePath: string, data: unknown): void {
+  const nextContent = `${JSON.stringify(data, null, 2)}\n`;
+  let previousContent: string | null = null;
+  try {
+    previousContent = readFileSync(filePath, 'utf8');
+  } catch {
+    previousContent = null;
+  }
+  if (previousContent === nextContent) return;
+  if (previousContent !== null) {
+    writeFileSync(`${filePath}.hive-flow-backup-${backupTimestamp()}`, previousContent, { mode: 0o600 });
+  }
+  writeJsonAtomic(filePath, data);
+}
+
+function moduleDir(): string {
+  return dirname(fileURLToPath(import.meta.url));
+}
+
+function walkAncestorDirs(start: string): string[] {
+  const dirs: string[] = [];
+  let current = resolve(start);
+  for (let i = 0; i < 12; i++) {
+    dirs.push(current);
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return dirs;
+}
+
+function sourceCandidates(projectRoot: string, sourceRel: string): string[] {
+  const baseName = path.basename(sourceRel);
+  const candidates = [join(projectRoot, sourceRel)];
+  if (sourceRel.startsWith('v3/@hive-flow/cli/src/permission-guard/')) {
+    candidates.push(
+      join(projectRoot, 'src', 'permission-guard', baseName),
+      join(projectRoot, 'dist', 'src', 'permission-guard', baseName),
+      join(projectRoot, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', baseName),
+    );
+  }
+  if (sourceRel.startsWith('.claude/helpers/')) {
+    candidates.push(join(projectRoot, '.claude', 'helpers', baseName));
+  }
+  return [...new Set(candidates.map((candidate) => resolve(candidate)))];
+}
+
+function resolveEngineSourcePath(projectRoot: string, sourceRel: string): string | null {
+  for (const candidate of sourceCandidates(projectRoot, sourceRel)) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function hasEngineSources(projectRoot: string): boolean {
+  return ENGINE_SOURCE_FILES.every(([sourceRel]) => resolveEngineSourcePath(projectRoot, sourceRel));
+}
+
+export function resolveEngineSourceRoot(candidateRoot?: string): string {
+  const candidates = [
+    candidateRoot,
+    process.env.HIVE_FLOW_PROJECT_ROOT,
+    process.env.CLAUDE_PROJECT_DIR,
+    process.cwd(),
+    ...walkAncestorDirs(moduleDir()),
+  ].filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0);
+
+  for (const candidate of candidates) {
+    const root = resolve(candidate);
+    if (hasEngineSources(root)) return root;
+  }
+
+  throw new Error('Missing enforcement engine sources: could not resolve Hive Flow package/project root');
+}
+
 export async function copyEngineFiles(projectRoot: string, binDir: string, options: CopyEngineOptions = {}): Promise<void> {
   const platform = options.platform || process.platform;
   const chmodFile = options.chmodFile || chmod;
   mkdirSync(binDir, { recursive: true });
   for (const [sourceRel, targetName] of ENGINE_SOURCE_FILES) {
-    const source = join(projectRoot, sourceRel);
-    if (!existsSync(source)) throw new Error(`Missing engine source: ${sourceRel}`);
+    const source = resolveEngineSourcePath(projectRoot, sourceRel);
+    if (!source) throw new Error(`Missing engine source: ${sourceRel}`);
     const target = join(binDir, targetName);
     copyFileSync(source, target);
     if (platform !== 'win32') {
@@ -216,7 +361,7 @@ export async function copyEngineFiles(projectRoot: string, binDir: string, optio
 }
 
 export async function installRelocatedEnforcement(options: InstallRelocatedOptions = {}) {
-  const projectRoot = resolve(options.projectRoot || process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || process.cwd());
+  const projectRoot = resolveEngineSourceRoot(options.projectRoot);
   const homeDir = resolve(options.homeDir || homedir());
   const binDir = resolve(options.binDir || resolveEnforcementBinDir(homeDir));
   const userSettingsPath = resolve(options.userSettingsPath || join(homeDir, '.claude', 'settings.json'));
@@ -240,7 +385,7 @@ export async function installRelocatedEnforcement(options: InstallRelocatedOptio
   }
   if (shouldWriteHooks) {
     const merged = mergeUserSettings(readJson(userSettingsPath), { homeDir, timeout: options.timeout });
-    writeJsonAtomic(userSettingsPath, merged);
+    writeJsonAtomicIfChanged(userSettingsPath, merged);
   }
 
   const messages: string[] = [];

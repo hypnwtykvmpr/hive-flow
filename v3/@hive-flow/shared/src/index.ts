@@ -269,4 +269,16 @@ export * from './workflow/index.js';
 // =============================================================================
 export { clamp, sigmoid, softmax, cosineSimilarity } from './utils/math-utils.js';
 export { TimerManager } from './utils/timer-manager.js';
+export {
+  resolveHiveHome,
+  resolveLegacyClaudeHiveHome,
+  projectKeyFor,
+  sessionKeyFor,
+} from './utils/resolve-hive-home.js';
+export type {
+  HiveHomeResolution,
+  HiveHomeSource,
+  ResolveHiveHomeOptions,
+  SessionKeyInput,
+} from './utils/resolve-hive-home.js';
 export { sanitizePathId } from './sanitize.js';

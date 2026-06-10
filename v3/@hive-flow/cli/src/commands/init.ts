@@ -8,6 +8,7 @@ import { output } from '../output.js';
 import { confirm, select, multiSelect, input } from '../prompt.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { homedir } from 'os';
 import {
   executeInit,
   executeUpgrade,
@@ -17,6 +18,56 @@ import {
   FULL_INIT_OPTIONS,
   type InitOptions,
 } from '../init/index.js';
+import { installRelocatedEnforcement } from '../install/enforcement-installer.js';
+import {
+  resolveLauncherPath,
+  resolveStatuslineLauncherPath,
+  resolveStatuslineRuntimeEntrypoint,
+  writeStableStatuslineLauncher,
+} from '../integrations/launcher.js';
+import { statePathFor } from '../integrations/state.js';
+import { claudeCodeStatuslineAdapter } from '../integrations/adapters/claude-code-statusline.js';
+import { previousStatusLineCommandForLauncher } from '../integrations/adapters/claude-code-statusline.js';
+
+async function installGlobalClaudeStatusLine(options: {
+  projectRoot: string;
+  homeDir: string;
+  userSettingsPath: string;
+}) {
+  const scope = 'user' as const;
+  const launcherPath = resolveLauncherPath(scope, options.homeDir, options.projectRoot);
+  const statuslineLauncherPath = resolveStatuslineLauncherPath(scope, options.homeDir, options.projectRoot);
+  const statePath = statePathFor(scope, options.homeDir, options.projectRoot);
+  const ctx = {
+    projectRoot: options.projectRoot,
+    homeDir: options.homeDir,
+    scope,
+    launcherPath,
+    statuslineLauncherPath,
+    userSettingsPath: options.userSettingsPath,
+    dryRun: false,
+    forceAdopt: true,
+    createConfig: true,
+    statePath,
+  };
+  const statuslineEntrypoint = resolveStatuslineRuntimeEntrypoint(options.projectRoot);
+  const previousCommand = await previousStatusLineCommandForLauncher(ctx);
+  await writeStableStatuslineLauncher(statuslineLauncherPath, statuslineEntrypoint, { previousCommand });
+  const result = await claudeCodeStatuslineAdapter.apply(ctx);
+  return {
+    ...result,
+    statuslineLauncherPath,
+    previousCommandCaptured: previousCommand !== undefined,
+  };
+}
+
+function optionalStringFlag(ctx: CommandContext, ...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = ctx.flags[name];
+    if (typeof value === 'string') return value;
+  }
+  return undefined;
+}
 
 // Codex initialization action
 async function initCodexAction(
@@ -180,7 +231,50 @@ const initAction = async (ctx: CommandContext): Promise<CommandResult> => {
   const onlyClaude = ctx.flags['only-claude'] as boolean;
   const codexMode = ctx.flags.codex as boolean;
   const dualMode = ctx.flags.dual as boolean;
+  const globalMode = ctx.flags.global === true;
+  const claudeCodeMode = ctx.flags['claude-code'] === true || ctx.flags.claudeCode === true;
   const cwd = ctx.cwd;
+
+  if (globalMode || claudeCodeMode) {
+    if (!globalMode || !claudeCodeMode) {
+      output.printError('Use both --global and --claude-code to install the global Claude Code adapter.');
+      return { success: false, exitCode: 1 };
+    }
+
+    output.writeln();
+    output.writeln(output.bold('Installing Hive Flow global Claude Code adapter'));
+    output.writeln();
+
+    try {
+      const projectRoot = optionalStringFlag(ctx, 'project-root', 'projectRoot');
+      const userSettingsPath = optionalStringFlag(ctx, 'user-settings', 'userSettings');
+      const result = await installRelocatedEnforcement({
+        projectRoot,
+        homeDir: ctx.flags.home as string | undefined,
+        userSettingsPath,
+        yes: ctx.flags.yes === true,
+      });
+      const homeDir = path.resolve((ctx.flags.home as string | undefined) || homedir());
+      const statusline = await installGlobalClaudeStatusLine({
+        projectRoot: result.projectRoot,
+        homeDir,
+        userSettingsPath: result.userSettingsPath,
+      });
+
+      output.printSuccess(`Installed enforcement engine: ${result.binDir}`);
+      output.printSuccess(`Updated user trigger: ${result.userSettingsPath}`);
+      output.printSuccess(`Installed global statusline launcher: ${statusline.statuslineLauncherPath}`);
+      for (const message of result.messages) output.printInfo(message);
+      if (statusline.message) output.printInfo(statusline.message);
+      const data = { ...result, statusline };
+      if (ctx.flags.format === 'json') output.printJson(data);
+      return { success: true, data };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      output.printError(message);
+      return { success: false, message, exitCode: 1 };
+    }
+  }
 
   // If codex mode, use the Codex initializer
   if (codexMode || dualMode) {
@@ -1070,9 +1164,44 @@ export const initCommand: Command = {
       type: 'boolean',
       default: false,
     },
+    {
+      name: 'global',
+      description: 'Install user-level global Claude Code hooks instead of project-local files',
+      type: 'boolean',
+      default: false,
+    },
+    {
+      name: 'claude-code',
+      description: 'Target the Claude Code global adapter when used with --global',
+      type: 'boolean',
+      default: false,
+    },
+    {
+      name: 'yes',
+      short: 'y',
+      description: 'Approve non-interactive global install prompts',
+      type: 'boolean',
+      default: false,
+    },
+    {
+      name: 'home',
+      description: 'Override target home directory for global adapter install',
+      type: 'string',
+    },
+    {
+      name: 'user-settings',
+      description: 'Override Claude Code user settings path for global adapter install',
+      type: 'string',
+    },
+    {
+      name: 'project-root',
+      description: 'Override package/project root containing enforcement sources',
+      type: 'string',
+    },
   ],
   examples: [
     { command: 'hive-flow init', description: 'Initialize with default configuration' },
+    { command: 'hive-flow init --global --claude-code', description: 'Install user-level universal Claude Code gates' },
     { command: 'hive-flow init --start-all', description: 'Initialize and start daemon, memory, swarm' },
     { command: 'hive-flow init --start-daemon', description: 'Initialize and start daemon only' },
     { command: 'hive-flow init --minimal', description: 'Initialize with minimal configuration' },

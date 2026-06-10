@@ -58,6 +58,26 @@ describe('renderPosixWrapper', () => {
     expect(script).toContain("HIVE_FLOW_HOSTCLI='codex'");
   });
 
+  it('exports client kind for shared-core MCP/statusline routing', () => {
+    const script = renderPosixWrapper(baseOpts);
+    expect(script).toContain("HIVE_FLOW_CLIENT_KIND='codex'");
+    expect(script).toContain('export HIVE_FLOW_CLIENT_KIND');
+  });
+
+  it('exports explicit project root when rendered for a project-scoped wrapper', () => {
+    const script = renderPosixWrapper({
+      ...baseOpts,
+      projectRoot: '/Users/test/work/project-one',
+    });
+    expect(script).toContain("HIVE_FLOW_PROJECT_ROOT='/Users/test/work/project-one'");
+    expect(script).toContain('export HIVE_FLOW_PROJECT_ROOT');
+  });
+
+  it('omits explicit project root when rendered for a user-scoped wrapper', () => {
+    const script = renderPosixWrapper(baseOpts);
+    expect(script).not.toContain('HIVE_FLOW_PROJECT_ROOT=');
+  });
+
   it('uses `set -uo pipefail` and NOT `set -e`', () => {
     const script = renderPosixWrapper(baseOpts);
     expect(script).toContain('set -uo pipefail');
@@ -405,6 +425,20 @@ describe('renderWindowsWrapper', () => {
     expect(script).toMatch(
       /node "C:\\Users\\dev\\hive-flow\\bin\\cli\.js" statusline wrapper-host "codex" --heartbeat-default \d+ -- "C:\\Program Files\\Codex\\codex\.exe" %\*/,
     );
+  });
+
+  it('sets client kind and optional project root before wrapper-host dispatch', () => {
+    const script = renderWindowsWrapper({
+      ...baseOpts,
+      projectRoot: 'C:\\Users\\test\\project-one',
+    });
+    expect(script).toContain('SET "HIVE_FLOW_CLIENT_KIND=codex"');
+    expect(script).toContain('SET "HIVE_FLOW_PROJECT_ROOT=C:\\Users\\test\\project-one"');
+  });
+
+  it('omits explicit project root from user-scoped Windows wrappers', () => {
+    const script = renderWindowsWrapper(baseOpts);
+    expect(script).not.toContain('HIVE_FLOW_PROJECT_ROOT=');
   });
 
   it('quotes paths with spaces using CMD double-quote convention', () => {

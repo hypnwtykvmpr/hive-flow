@@ -13,7 +13,15 @@ import fc from 'fast-check';
 
 // Mock @hive-flow/shared before any imports
 vi.mock('@hive-flow/shared', () => ({
+  resolveHiveHome: () => ({
+    home: '/tmp/hive-flow',
+    source: 'default',
+    legacyHome: '/tmp/.claude/hive-flow',
+    legacyExists: false,
+    readFallbacks: [],
+  }),
   resolveProjectRoot: () => '/project',
+  sessionKeyFor: () => 's_mock',
 }));
 
 import { evaluate, evaluateHookInput, resetConfigCache } from '../gate.js';

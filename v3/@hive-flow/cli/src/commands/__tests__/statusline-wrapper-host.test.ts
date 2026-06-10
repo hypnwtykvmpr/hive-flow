@@ -19,6 +19,7 @@
 
 import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,6 +36,14 @@ import {
   type SessionRecorder,
 } from '../statusline.js';
 import type { SessionEventV1 } from '../../statusline/types.js';
+
+function expectedSessionKey(clientKind: string, sessionId: string): string {
+  return `s_${createHash('sha256').update(`${clientKind}\0${sessionId}`).digest('hex').slice(0, 32)}`;
+}
+
+function expectedProjectKey(root: string): string {
+  return createHash('sha256').update(root).digest('hex');
+}
 
 // ---------------------------------------------------------------------------
 // Test doubles
@@ -411,6 +420,35 @@ describe('runWrapperHost — happy path', () => {
     // Interval was created and cleared.
     expect(interval.captured).toHaveLength(1);
     expect(interval.captured[0]?.cleared).toBe(true);
+  });
+
+  it('uses explicit project root and shared session key instead of launch cwd', async () => {
+    const explicitProjectRoot = '/Users/test/work/project-one';
+    const launchCwd = '/private/tmp/outside-project';
+    const env = {
+      HIVE_FLOW_PROJECT_ROOT: explicitProjectRoot,
+      HIVE_FLOW_SESSION_ID: 'interactive-session-1',
+      HIVE_FLOW_CLIENT_KIND: 'codex',
+    };
+    const { deps, spawn, recorder } = buildDeps({
+      argv: ['codex', '--', '/opt/codex/bin/codex'],
+      env,
+    });
+    const scopedDeps: RunWrapperHostDeps = {
+      ...deps,
+      cwd: launchCwd,
+    };
+
+    const promise = runWrapperHost(scopedDeps);
+    await flushMicrotasks(5);
+    spawn.child.emitExit(0);
+    await promise;
+
+    const startEvent = recorder.events.find((e) => e.event === 'session-start');
+    expect(startEvent).toBeDefined();
+    expect(startEvent?.repoRoot).toBe(explicitProjectRoot);
+    expect(startEvent?.projectKey).toBe(expectedProjectKey(explicitProjectRoot));
+    expect(startEvent?.sessionId).toBe(expectedSessionKey('codex', 'interactive-session-1'));
   });
 
   it('child exit 42 → wrapper exit 42; session-end carries exitCode 42', async () => {

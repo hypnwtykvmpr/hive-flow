@@ -62,9 +62,9 @@ describe('integration-marker: markerPath()', () => {
     expect(p).toBe(join(projectRoot, '.hive-flow', 'integrations', 'claude-code.json'));
   });
 
-  it('returns ${HIVE_FLOW_HOME}/.hive-flow/integrations/${target}.json for user scope', () => {
+  it('returns ${HIVE_FLOW_HOME}/integrations/${target}.json for user scope', () => {
     const p = markerPath({ projectRoot, target: 'codex', scope: 'user' });
-    expect(p).toBe(join(userHome, '.hive-flow', 'integrations', 'codex.json'));
+    expect(p).toBe(join(userHome, 'integrations', 'codex.json'));
   });
 
   it('throws on an unknown target', () => {
@@ -137,7 +137,7 @@ describe('integration-marker: writeMarker() + readMarker() round-trip', () => {
       tier: 'wrapper-mode',
       scope: 'user',
     });
-    const expected = join(userHome, '.hive-flow', 'integrations', 'qwen.json');
+    const expected = join(userHome, 'integrations', 'qwen.json');
     // Direct stat: we must not have written outside the override.
     expect(statSync(expected).isFile()).toBe(true);
   });
@@ -330,10 +330,9 @@ describe('integration-marker: writeMarker() symlink rejection', () => {
     rmSync(offTreeDir, { recursive: true, force: true });
   });
 
-  it('refuses to write a user-scope marker through a symlinked .hive-flow/integrations parent', async () => {
-    mkdirSync(join(userHome, '.hive-flow'), { recursive: true });
+  it('refuses to write a user-scope marker through a symlinked integrations parent', async () => {
     const offTreeDir = mkdtempSync(join(tmpdir(), 'hf-off-tree-user-'));
-    symlinkSync(offTreeDir, join(userHome, '.hive-flow', 'integrations'));
+    symlinkSync(offTreeDir, join(userHome, 'integrations'));
     await expect(
       writeMarker({
         projectRoot,
@@ -504,13 +503,14 @@ describe('integration-marker: removeMarker()', () => {
     rmSync(outsideDir, { recursive: true, force: true });
   });
 
-  it('removeMarker rejects symlinked .hive-flow parent (user scope) and preserves outside file', async () => {
+  it('removeMarker rejects symlinked HIVE_FLOW_HOME root (user scope) and preserves outside file', async () => {
     const outside = mkdtempSync(join(tmpdir(), 'hf-rm-outside-user-'));
     const outsideIntegrations = join(outside, 'integrations');
     mkdirSync(outsideIntegrations, { recursive: true });
     const outsideMarker = join(outsideIntegrations, 'codex.json');
     writeFileSync(outsideMarker, '{"victim":true}');
-    symlinkSync(outside, join(userHome, '.hive-flow'));
+    rmSync(userHome, { recursive: true, force: true });
+    symlinkSync(outside, userHome);
     await expect(
       removeMarker({ projectRoot, target: 'codex', scope: 'user' }),
     ).resolves.toBeUndefined();
@@ -519,12 +519,11 @@ describe('integration-marker: removeMarker()', () => {
     rmSync(outside, { recursive: true, force: true });
   });
 
-  it('removeMarker rejects symlinked .hive-flow/integrations parent (user scope) and preserves outside file', async () => {
-    mkdirSync(join(userHome, '.hive-flow'), { recursive: true });
+  it('removeMarker rejects symlinked integrations parent (user scope) and preserves outside file', async () => {
     const outside = mkdtempSync(join(tmpdir(), 'hf-rm-outside-user-int-'));
     const outsideMarker = join(outside, 'codex.json');
     writeFileSync(outsideMarker, '{"victim":true}');
-    symlinkSync(outside, join(userHome, '.hive-flow', 'integrations'));
+    symlinkSync(outside, join(userHome, 'integrations'));
     await expect(
       removeMarker({ projectRoot, target: 'codex', scope: 'user' }),
     ).resolves.toBeUndefined();
@@ -534,7 +533,7 @@ describe('integration-marker: removeMarker()', () => {
   });
 
   it('removeMarker rejects symlinked marker leaf (user scope) and preserves outside file', async () => {
-    const parent = join(userHome, '.hive-flow', 'integrations');
+    const parent = join(userHome, 'integrations');
     mkdirSync(parent, { recursive: true });
     const outsideDir = mkdtempSync(join(tmpdir(), 'hf-rm-outside-user-leaf-'));
     const outsideMarker = join(outsideDir, 'real-marker.json');

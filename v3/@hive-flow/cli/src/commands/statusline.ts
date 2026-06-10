@@ -21,6 +21,8 @@
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { isAbsolute, resolve } from 'node:path';
+import { projectKeyFor, sessionKeyFor } from '@hive-flow/shared';
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { readStatuslineStdin, renderClaudeCodeStatuslineWithMeta } from '../statusline/claude-code-renderer.js';
@@ -214,6 +216,26 @@ interface SessionContext {
   readonly pid: number;
 }
 
+function firstNonEmptyString(...values: readonly unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return undefined;
+}
+
+function firstAbsolutePath(...values: readonly unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed.length === 0) continue;
+    if (!isAbsolute(trimmed) && !/^[A-Za-z]:[\\/]/.test(trimmed)) continue;
+    return resolve(trimmed);
+  }
+  return undefined;
+}
+
 function makeSessionEvent(
   ctx: SessionContext,
   kind: SessionEventKind,
@@ -325,11 +347,26 @@ export async function runWrapperHost(deps: RunWrapperHostDeps): Promise<RunWrapp
   const heartbeatMs = heartbeatSeconds * 1000;
 
   // 3. Build session context.
+  const projectRoot = firstAbsolutePath(
+    deps.env.HIVE_FLOW_PROJECT_ROOT,
+    deps.env.CLAUDE_PROJECT_DIR,
+  ) ?? resolve(deps.cwd);
+  const rawSessionId = firstNonEmptyString(
+    deps.env.HIVE_FLOW_SESSION_ID,
+    deps.env.CLAUDE_SESSION_ID,
+    deps.env.CODEX_SESSION_ID,
+    deps.env.TMUX_PANE,
+    `pid:${deps.pid}`,
+  );
+  const sessionId = sessionKeyFor({
+    sessionId: rawSessionId,
+    clientKind: parsed.hostCli,
+  }, deps.env);
   const ctx: SessionContext = {
     hostCli: parsed.hostCli,
-    sessionId: randomUUID(),
-    repoRoot: deps.cwd,
-    projectKey: deps.cwd,
+    sessionId,
+    repoRoot: projectRoot,
+    projectKey: projectKeyFor(projectRoot),
     producerId: `wrapper-host:${parsed.hostCli}:${deps.pid}`,
     pid: deps.pid,
   };

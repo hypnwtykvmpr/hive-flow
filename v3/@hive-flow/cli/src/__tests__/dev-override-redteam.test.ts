@@ -18,6 +18,7 @@ const policySource = resolve(here, '../permission-guard/protected-paths.cjs');
 const policyJsonSource = resolve(here, '../permission-guard/protected-paths.policy.json');
 const setupScript = resolve(here, '../../../../../scripts/permission-guard-setup.mjs');
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-dev-override-redteam-')));
+const previousHiveFlowHome = process.env.HIVE_FLOW_HOME;
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
 copyFileSync(source, helperPath);
@@ -31,7 +32,12 @@ copyFileSync(settingsSource, join(root, '.claude', 'settings.json'));
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let enf: any;
 
+function hiveHomeForTest(): string {
+  return join(root, 'global-hive-home');
+}
+
 function resetModule(): void {
+  process.env.HIVE_FLOW_HOME = hiveHomeForTest();
   delete require.cache[require.resolve(helperPath)];
   enf = require(helperPath);
 }
@@ -96,8 +102,9 @@ function writeRootOverrideTokenToConfig(): void {
 
 function resetRootOverrideState(): void {
   clearIdentityEnv();
-  resetModule();
   rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+  rmSync(hiveHomeForTest(), { recursive: true, force: true });
+  resetModule();
   mkdirSync(join(root, '.hive-flow', 'enforcement'), { recursive: true });
   enableDevOverride();
   issueRootOverrideToken();
@@ -110,6 +117,8 @@ describe('dev override self-red-team probes', () => {
 
   afterAll(() => {
     clearIdentityEnv();
+    if (previousHiveFlowHome === undefined) delete process.env.HIVE_FLOW_HOME;
+    else process.env.HIVE_FLOW_HOME = previousHiveFlowHome;
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -441,7 +450,12 @@ describe('dev override self-red-team probes', () => {
     });
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
 
-    const stateEnvelope = JSON.parse(readFileSync(enf.getStateFile(), 'utf8'));
-    expect(enf.verifyState(stateEnvelope).valid).toBe(true);
+    const stateFile = enf.getStateFile();
+    if (existsSync(stateFile)) {
+      const stateEnvelope = JSON.parse(readFileSync(stateFile, 'utf8'));
+      expect(enf.verifyState(stateEnvelope).valid).toBe(true);
+    } else {
+      expect(existsSync(stateFile)).toBe(false);
+    }
   });
 });

@@ -54,6 +54,13 @@ async function askReadline(question: string, source: 'tty' | 'stdin'): Promise<s
   });
 }
 
+function isTtyUnavailableError(error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code || '')
+    : '';
+  return ['ENXIO', 'ENODEV', 'ENOTTY', 'EIO'].includes(code);
+}
+
 export async function portableConfirm(question: string, options: PortableConfirmOptions = {}): Promise<boolean> {
   if (options.yes === true) return true;
 
@@ -63,7 +70,12 @@ export async function portableConfirm(question: string, options: PortableConfirm
   const ask = options.ask || askReadline;
 
   if (platform !== 'win32' && ttyAvailable) {
-    return defaultConfirmMatcher(await ask(question, 'tty'), options.confirmText);
+    try {
+      return defaultConfirmMatcher(await ask(question, 'tty'), options.confirmText);
+    } catch (error) {
+      if (!isTtyUnavailableError(error)) throw error;
+      if (!stdinIsTTY) return false;
+    }
   }
 
   if (stdinIsTTY) {

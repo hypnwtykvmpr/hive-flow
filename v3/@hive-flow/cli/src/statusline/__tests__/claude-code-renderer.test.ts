@@ -20,9 +20,11 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { performance } from 'node:perf_hooks';
+
+import { sessionKeyFor } from '@hive-flow/shared';
 
 import {
   renderClaudeCodeStatusline,
@@ -30,6 +32,7 @@ import {
   readStatuslineStdin,
   resolveActiveCwd,
 } from '../claude-code-renderer.js';
+import { resolveProjectScope } from '../project-scope.js';
 import type { StatuslineSnapshotV1 } from '../types.js';
 // last-render helpers are dynamically imported in individual tests so test
 // runs don't pay the import cost up front. Direct named imports are not used
@@ -279,6 +282,69 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
     const plain = stripAnsi(output);
     expect(plain).toMatch(/Sessions\s+2/);
+  });
+
+  it('snapshot mode falls back to the global project/session cache from a non-project cwd', async () => {
+    const launchCwd = mkdtempSync(join(tmpdir(), 'hf-render-launch-'));
+    try {
+      const scope = resolveProjectScope({ cwd: fix.projectRoot });
+      const sessionId = 'claude-global-session-a';
+      const sessionKey = sessionKeyFor({ session_id: sessionId, client_kind: 'claude-code' }, {});
+      const cachePath = join(
+        fix.home,
+        'statusline',
+        'projects',
+        scope.projectKey,
+        'sessions',
+        sessionKey,
+        'state',
+        'cache.json',
+      );
+      mkdirSync(dirname(cachePath), { recursive: true });
+
+      const snapshot: StatuslineSnapshotV1 = {
+        version: 1,
+        projectRoot: fix.projectRoot,
+        repoIdentity: scope.repoIdentity,
+        displayName: 'global-index-project',
+        projectKey: scope.projectKey,
+        generatedAt: new Date().toISOString(),
+        sources: {},
+        scoreboard: {
+          agentsByProvider: { codex: { activeAgents: 2, idleAgents: 0, staleAgents: 0 } },
+          callsByProvider: {},
+          stale: false,
+        },
+        swarm: {
+          activeAgents: 3,
+          idleAgents: 0,
+          queuedAgents: 0,
+          maxAgents: 50,
+          activeQueens: 0,
+          executingQueens: 0,
+        },
+      };
+      writeFileSync(cachePath, JSON.stringify(snapshot), 'utf8');
+
+      const origCwd = process.cwd();
+      process.chdir(launchCwd);
+      try {
+        const output = await renderClaudeCodeStatusline(stdinPayload({
+          session_id: sessionId,
+          client_kind: 'claude-code',
+          workspace: { current_dir: fix.projectRoot, project_dir: fix.projectRoot },
+        }));
+        const plain = stripAnsi(output);
+        expect(plain).toContain('global-index-project');
+        expect(plain).toContain('Codex 2');
+        expect(plain).toContain('Swarm');
+        expect(plain).toMatch(/\[\s*3\/50\]/);
+      } finally {
+        process.chdir(origCwd);
+      }
+    } finally {
+      rmSync(launchCwd, { recursive: true, force: true });
+    }
   });
 
   // -------------------------------------------------------------------------

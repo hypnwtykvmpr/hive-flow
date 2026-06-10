@@ -1,6 +1,10 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { installRelocatedEnforcement } from '../install/enforcement-installer.js';
+import {
+  buildAndInstallNativeHelpers,
+  ensureHelperBinOnPath,
+} from '../install/native-helper-installer.js';
 import { initializeCredentialVault } from '../credential-store/holder-runtime.js';
 
 export const installCommand: Command = {
@@ -47,7 +51,19 @@ export const installCommand: Command = {
       output.printSuccess(`Updated user trigger: ${result.userSettingsPath}`);
       for (const message of result.messages) output.printInfo(message);
       let credentialSetup: Awaited<ReturnType<typeof initializeCredentialVault>> | undefined;
+      let nativeHelpers: Awaited<ReturnType<typeof buildAndInstallNativeHelpers>> | undefined;
+      let helperPath: ReturnType<typeof ensureHelperBinOnPath> | undefined;
       if (ctx.flags.credentials === true) {
+        nativeHelpers = await buildAndInstallNativeHelpers({
+          projectRoot: (ctx.flags['project-root'] as string | undefined) ?? ctx.cwd,
+        });
+        helperPath = ensureHelperBinOnPath({
+          homeDir: ctx.flags.home as string | undefined,
+        });
+        for (const helper of nativeHelpers) {
+          output.printInfo(`helper ${helper.helper}: ${helper.status}${helper.remediation ? ` — ${helper.remediation}` : ''}`);
+        }
+        output.printInfo(`helper ${helperPath.helper}: ${helperPath.status}${helperPath.reason ? ` — ${helperPath.reason}` : ''}`);
         credentialSetup = await initializeCredentialVault({
           allowDegraded: Boolean(ctx.flags.degraded),
         });
@@ -70,6 +86,8 @@ export const installCommand: Command = {
               },
             }
             : undefined,
+          nativeHelpers,
+          helperPath,
         },
       };
     } catch (error) {

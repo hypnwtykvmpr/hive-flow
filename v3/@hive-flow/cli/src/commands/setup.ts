@@ -33,6 +33,7 @@ import {
 } from '../integrations/launcher.js';
 import { statePathFor } from '../integrations/state.js';
 import { ADAPTERS, type AdapterId, claudeCodeStatuslineAdapter } from '../integrations/adapters/index.js';
+import { previousStatusLineCommandForLauncher } from '../integrations/adapters/claude-code-statusline.js';
 import { loadAdapter, isKnownTarget } from '../integrations/adapter-registry.js';
 import { diagnoseConnectors } from '../integrations/diagnose.js';
 import {
@@ -40,6 +41,10 @@ import {
   type CredentialHolderProbeStatus,
 } from '../credential-store/strict-api-provider.js';
 import { initializeCredentialVault } from '../credential-store/holder-runtime.js';
+import {
+  buildAndInstallNativeHelpers,
+  ensureHelperBinOnPath,
+} from '../install/native-helper-installer.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 
 async function importConnectorAdapters(): Promise<void> {
@@ -501,6 +506,10 @@ const credentialsCommand: Command = {
     },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const nativeHelpers = await buildAndInstallNativeHelpers({
+      projectRoot: ctx.cwd,
+    });
+    const helperPath = ensureHelperBinOnPath();
     const result = await initializeCredentialVault({
       allowDegraded: Boolean(ctx.flags.degraded),
     });
@@ -514,9 +523,17 @@ const credentialsCommand: Command = {
       vaultPath: result.vaultPath,
       createdVault: result.createdVault,
       decrypts: result.decrypts,
+      nativeHelpers,
+      helperPath,
     };
     if (ctx.flags.format === 'json') output.printJson(data);
-    else output.printSuccess(result.createdVault ? 'Created credential vault' : 'Credential vault already ready');
+    else {
+      for (const helper of nativeHelpers) {
+        output.printInfo(`helper ${helper.helper}: ${helper.status}${helper.remediation ? ` — ${helper.remediation}` : ''}`);
+      }
+      output.printInfo(`helper ${helperPath.helper}: ${helperPath.status}${helperPath.reason ? ` — ${helperPath.reason}` : ''}`);
+      output.printSuccess(result.createdVault ? 'Created credential vault' : 'Credential vault already ready');
+    }
     return { success: true, data };
   },
 };
@@ -760,7 +777,18 @@ async function runMutating(opts: any) {
     }
     if (!opts.dryRun && opts.action !== 'uninstall' && features.has('statusline')) {
       const statuslineEntrypoint = resolveStatuslineRuntimeEntrypoint(projectRoot);
-      await writeStableStatuslineLauncher(statuslineLauncherPath, statuslineEntrypoint);
+      const previousCommand = await previousStatusLineCommandForLauncher({
+        projectRoot,
+        homeDir,
+        scope: opts.scope,
+        launcherPath,
+        statuslineLauncherPath,
+        dryRun: opts.dryRun,
+        createConfig: opts.createConfig,
+        forceAdopt: opts.forceAdopt,
+        statePath,
+      });
+      await writeStableStatuslineLauncher(statuslineLauncherPath, statuslineEntrypoint, { previousCommand });
     }
 
     const chosen = chooseAgents(opts.agents);

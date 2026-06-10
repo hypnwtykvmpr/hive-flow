@@ -15,10 +15,10 @@
 //     atomicWrite + chmod 0o600) handle path safety because everything under
 //     `.hive-flow/` is already symlink-walked by `writeJsonFile`/`readJsonFile`
 //     from `../statusline/storage.ts`.
-//   - user scope:    ${HIVE_FLOW_HOME ?? ~}/.hive-flow/integrations/${target}.json
+//   - user scope:    ${resolveHiveHome().home}/integrations/${target}.json
 //     Wave 8.4 guarded user-cache primitives (`writeUserCacheJson` /
 //     `readUserCacheJson` / `ensureSafeUserCacheDir`) walk every segment of
-//     `${baseDir}/.hive-flow/integrations/` to reject symlinked parents during
+//     `${baseDir}/integrations/` to reject symlinked parents during
 //     creation and during read.
 //
 // Binding constraints (Phase 5 + Phase 10 + Phase 16):
@@ -30,8 +30,8 @@
 //     on read (returns `undefined`).
 //   - `removeMarker` is idempotent: removing an absent marker is a no-op.
 
-import { homedir } from 'node:os';
-import { isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, join } from 'node:path';
+import { resolveHiveHome } from '@hive-flow/shared';
 import {
   readJsonFile,
   readUserCacheJson,
@@ -104,20 +104,12 @@ export interface MarkerLocator {
 const MARKER_FILE_MODE = 0o600;
 
 /**
- * Resolve the user-home base used for `scope: 'user'` markers. Honours
- * `HIVE_FLOW_HOME` (test/CI override) when it is set to a non-empty absolute
- * path; otherwise falls back to `homedir()`.
- *
- * Mirrors the canonical resolver in `statusline/last-render.ts` so the user
- * cache root for markers and the user cache root for the statusline last-
- * render mirror agree on the trusted-root base.
+ * Resolve the CLI-neutral Hive Flow home used for `scope: 'user'` markers.
+ * New writes belong under this directory directly; do not append a second
+ * `.hive-flow` segment when `HIVE_FLOW_HOME` is already the home.
  */
-function resolveUserHomeBase(env: NodeJS.ProcessEnv = process.env): string {
-  const override = env.HIVE_FLOW_HOME;
-  if (typeof override === 'string' && override.length > 0 && isAbsolute(override)) {
-    return resolve(override);
-  }
-  return resolve(homedir());
+function resolveUserHiveHome(env: NodeJS.ProcessEnv = process.env): string {
+  return resolveHiveHome(env).home;
 }
 
 /**
@@ -145,8 +137,10 @@ export function markerPath(opts: MarkerLocator): string {
   if (!isAbsolute(opts.projectRoot)) {
     throw new TypeError(`markerPath: projectRoot must be absolute (got: ${opts.projectRoot})`);
   }
-  const base = opts.scope === 'project' ? opts.projectRoot : resolveUserHomeBase();
-  return join(base, '.hive-flow', 'integrations', `${opts.target}.json`);
+  const base = opts.scope === 'project' ? opts.projectRoot : resolveUserHiveHome();
+  return opts.scope === 'project'
+    ? join(base, '.hive-flow', 'integrations', `${opts.target}.json`)
+    : join(base, 'integrations', `${opts.target}.json`);
 }
 
 /**
@@ -154,7 +148,7 @@ export function markerPath(opts: MarkerLocator): string {
  * project-scope guarded primitive when scope=project (writes flow through
  * `assertSafeStatuslineStoragePath` which walks every `.hive-flow/` segment),
  * and the user-cache guarded primitive when scope=user (walks every segment
- * from `${HIVE_FLOW_HOME ?? ~}` to the leaf).
+ * from `resolveHiveHome().home` to the leaf).
  *
  * Both paths use atomic write (tmp + rename), fsync defaulted to true, and
  * chmod 0o600 after rename.
@@ -198,9 +192,9 @@ export async function writeMarker(opts: WriteMarkerOpts): Promise<void> {
   }
   // User-scope: writeUserCacheJson walks every segment from baseDir to leaf
   // and atomically writes with the requested mode. `baseDir` is the trusted
-  // root (`${HIVE_FLOW_HOME ?? ~}`), so `${baseDir}/.hive-flow/integrations/`
-  // is walked by the helper.
-  const baseDir = resolveUserHomeBase();
+  // root (`resolveHiveHome().home`), so `${baseDir}/integrations/` is walked
+  // by the helper.
+  const baseDir = resolveUserHiveHome();
   await writeUserCacheJson(path, baseDir, marker, { mode: MARKER_FILE_MODE, fsync: true });
 }
 
@@ -225,7 +219,7 @@ export async function readMarker(opts: MarkerLocator): Promise<IntegrationMarker
   if (opts.scope === 'project') {
     raw = await readJsonFile(path);
   } else {
-    const baseDir = resolveUserHomeBase();
+    const baseDir = resolveUserHiveHome();
     raw = await readUserCacheJson(path, baseDir);
   }
   if (raw === undefined) return undefined;
@@ -265,7 +259,7 @@ export async function removeMarker(opts: MarkerLocator): Promise<void> {
     await safeUnlinkInHiveFlow(path);
     return;
   }
-  const baseDir = resolveUserHomeBase();
+  const baseDir = resolveUserHiveHome();
   await safeUnlinkInUserCache(path, baseDir);
 }
 

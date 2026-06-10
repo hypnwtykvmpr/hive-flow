@@ -9,7 +9,7 @@
  * Ported from Python permission_gate.py.
  */
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, statSync, renameSync, unlinkSync } from 'node:fs';
+import { writeFileSync, appendFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
 import { basename, dirname, resolve, relative, join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -28,10 +28,14 @@ import { deepInspect } from './deep-inspect.js';
 import { evaluateInlineJury } from './jury-evaluator.js';
 import { tryConsumeLLMJuryBudget } from './llm-jury-budget.js';
 import { classifyCommand } from './risk-classifier.js';
-import { mergeWithDefaults } from './default-config.js';
 import { evaluateSelfProtection } from './self-protection.js';
-import { findProtectedReadPath, resolveProjectRoot as resolveProtectedProjectRoot } from './protected-paths.js';
+import {
+  findProtectedReadPath,
+  resolveProjectRoot as resolveProtectedProjectRoot,
+  resolveRealPathForPolicy,
+} from './protected-paths.js';
 import { isSecretPath } from './secret-paths.js';
+import { loadLayeredPermissionConfig, resetPermissionResolverCache } from './permission-resolver.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -57,8 +61,6 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 const HOME = homedir();
-const CONFIG_DIR = join(HOME, '.hive-flow', 'permission-guard');
-const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
 const CONTEXT_DIR = join(HOME, '.claude', 'hooks', 'escalation_context');
 const VERDICT_FILE = join(CONTEXT_DIR, 'last_verdict.json');
 const VERDICT_STALENESS = 120.0; // seconds
@@ -70,38 +72,18 @@ const SANITIZE_MAX_LENGTH = 500;
 
 export const PERMISSION_GUARD_BUILD_STAMP = 'm2-c1-2026-06-04';
 
-// ---------------------------------------------------------------------------
-// Config cache (mtime-based)
-// ---------------------------------------------------------------------------
-
-let configCache: PermissionConfig | null = null;
-let configMtime = 0;
-let configCachePath = '';
-
-export function loadConfig(overridePath?: string): Partial<PermissionConfig> {
-  const cfgPath = overridePath || CONFIG_PATH;
-
-  try {
-    const currentMtime = statSync(cfgPath).mtimeMs;
-    if (configCache !== null && cfgPath === configCachePath && currentMtime === configMtime) {
-      return configCache;
-    }
-
-    const data = mergeWithDefaults(JSON.parse(readFileSync(cfgPath, 'utf-8')));
-    configCache = data;
-    configMtime = currentMtime;
-    configCachePath = cfgPath;
-    return data;
-  } catch {
-    return mergeWithDefaults({});
-  }
+export function loadConfig(overridePath?: string, hookInput?: Partial<HookInput>): PermissionConfig {
+  return loadLayeredPermissionConfig({
+    globalConfigPath: overridePath,
+    cwd: hookInput?.cwd,
+    sessionInput: hookInput,
+    env: process.env,
+  });
 }
 
 /** Reset config cache (for testing). */
 export function resetConfigCache(): void {
-  configCache = null;
-  configMtime = 0;
-  configCachePath = '';
+  resetPermissionResolverCache();
 }
 
 // ---------------------------------------------------------------------------
@@ -1202,9 +1184,10 @@ export function hasChainedDestructive(cmd: string): boolean {
 export function isPathAllowed(filePath: string, allowedPaths: string[], cwd: string, projectRoot: string = cwd): boolean {
   if (!filePath) return false;
 
-  let target: string;
+  let targets: string[];
   try {
-    target = resolve(projectRoot, filePath);
+    const lexicalTarget = resolve(projectRoot, filePath);
+    targets = [...new Set([lexicalTarget, resolveRealPathForPolicy(filePath, projectRoot)])];
   } catch {
     return false;
   }
@@ -1212,18 +1195,27 @@ export function isPathAllowed(filePath: string, allowedPaths: string[], cwd: str
   for (const pattern of allowedPaths) {
     const resolved = resolvePathVar(pattern, cwd, projectRoot);
     try {
-      const allowedDir = resolve(resolved);
-      // Check if target is within or equal to the allowed directory
-      const rel = relative(allowedDir, target);
-      // target is within allowedDir if the relative path doesn't escape upward
-      if (!rel.startsWith('..') && !rel.startsWith('/')) {
-        return true;
+      const allowedDirs = [...new Set([resolve(resolved), resolveRealPathForPolicy(resolved, projectRoot)])];
+      for (const allowedDir of allowedDirs) {
+        for (const target of targets) {
+          // Check if target is within or equal to the allowed directory.
+          const rel = relative(allowedDir, target);
+          // target is within allowedDir if the relative path doesn't escape upward.
+          if (rel === '' || (!rel.startsWith('..') && !rel.startsWith('/'))) {
+            return true;
+          }
+        }
       }
     } catch {
       continue;
     }
   }
   return false;
+}
+
+function effectiveAllowedWritePaths(configuredAllowedPaths: string[]): string[] {
+  const baseline = ['${PROJECT_ROOT}', '${CWD}', '${HOME}/.claude/'];
+  return [...new Set([...baseline, ...configuredAllowedPaths])];
 }
 
 // ---------------------------------------------------------------------------
@@ -1539,10 +1531,7 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
   // -- Write/Edit path check --
   if (toolName === 'Write' || toolName === 'Edit') {
     const filePath = (toolInput.file_path as string) || '';
-    const configuredAllowedPaths = config.allowed_write_paths || [];
-    const allowedPaths = configuredAllowedPaths.length > 0
-      ? configuredAllowedPaths
-      : ['${PROJECT_ROOT}', '${CWD}', '${HOME}/.claude/'];
+    const allowedPaths = effectiveAllowedWritePaths(config.allowed_write_paths || []);
     if (isPathAllowed(filePath, allowedPaths, cwd, policyRoot)) {
       logDecision(config, toolName, inputSummary, 'allow', 'deterministic', 'within allowed write path');
       return { decision: 'allow' };
@@ -1743,7 +1732,7 @@ function checkForbiddenSafeguard(
  * Reads a HookInput and returns a GateResult.
  */
 export async function evaluateHookInput(input: HookInput): Promise<GateResult> {
-  const config = loadConfig();
+  const config = loadConfig(undefined, input);
   const result = await evaluate(input, config);
 
   // Post-verdict forbidden safeguard for Bash commands

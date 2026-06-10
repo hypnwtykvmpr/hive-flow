@@ -467,6 +467,7 @@ const ENFORCEMENT_POLICY_JSON_SOURCE_PATH = nodePath.resolve(
 const ENFORCEMENT_CJS_TEST_ROOT = realFs.mkdtempSync(
   nodePath.join(nodeOs.tmpdir(), 'hive-flow-enforcement-cjs-')
 );
+const ENFORCEMENT_CJS_HIVE_HOME = nodePath.join(ENFORCEMENT_CJS_TEST_ROOT, 'hive-home');
 const ENFORCEMENT_CJS_PATH = nodePath.join(
   ENFORCEMENT_CJS_TEST_ROOT, '.claude', 'helpers', 'enforcement.cjs'
 );
@@ -482,10 +483,10 @@ realFs.copyFileSync(
   nodePath.join(nodePath.dirname(ENFORCEMENT_POLICY_TEST_PATH), 'protected-paths.policy.json'),
 );
 
-// The enforcement dir as the module will use it (from __dirname)
-const ENF_DIR = nodePath.resolve(
-  nodePath.dirname(ENFORCEMENT_CJS_PATH), '..', '..', '.hive-flow', 'enforcement'
-);
+const PREVIOUS_HIVE_FLOW_HOME = process.env.HIVE_FLOW_HOME;
+
+// The enforcement dir as the module will use it after globalizing HIVE_FLOW_HOME.
+const ENF_DIR = nodePath.join(ENFORCEMENT_CJS_HIVE_HOME, 'enforcement');
 const PIPELINE_STATE_PATH = nodePath.join(ENF_DIR, 'pipeline-state.json');
 const HMAC_KEY_PATH = nodePath.join(ENF_DIR, '.hmac-key');
 
@@ -504,6 +505,7 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
 
   beforeEach(() => {
     vi.resetModules();
+    process.env.HIVE_FLOW_HOME = ENFORCEMENT_CJS_HIVE_HOME;
     // Require fresh module each time
     enf = require(ENFORCEMENT_CJS_PATH);
     // Clean state from previous tests
@@ -515,6 +517,8 @@ describe('enforcement.cjs Pipeline Functions (direct require)', () => {
   });
 
   afterAll(() => {
+    if (PREVIOUS_HIVE_FLOW_HOME === undefined) delete process.env.HIVE_FLOW_HOME;
+    else process.env.HIVE_FLOW_HOME = PREVIOUS_HIVE_FLOW_HOME;
     realFs.rmSync(ENFORCEMENT_CJS_TEST_ROOT, { recursive: true, force: true });
   });
 

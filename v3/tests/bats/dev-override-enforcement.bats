@@ -5,6 +5,7 @@ setup() {
   PROJECT_DIR="$(mktemp -d)"
   SCRIPT="$PROJECT_DIR/.claude/helpers/enforcement.cjs"
   mkdir -p "$PROJECT_DIR/.claude/helpers" "$PROJECT_DIR/.hive-flow/enforcement"
+  export HIVE_FLOW_HOME="$PROJECT_DIR/global-hive-home"
   cp "$REPO_ROOT/.claude/helpers/enforcement.cjs" "$SCRIPT"
   mkdir -p "$PROJECT_DIR/v3/@hive-flow/cli/src/permission-guard"
   cp "$REPO_ROOT/v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs" "$PROJECT_DIR/v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs"
@@ -27,6 +28,7 @@ teardown() {
   unset HIVE_FLOW_DEV_OVERRIDE_TOKEN
   unset HIVE_FLOW_PROJECT_ROOT
   unset CLAUDE_PROJECT_DIR
+  unset HIVE_FLOW_HOME
 }
 
 enable_dev_override() {

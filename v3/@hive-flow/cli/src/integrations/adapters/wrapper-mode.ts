@@ -3,10 +3,11 @@
 // Wave 11B + 11B.5 — Shared factory for wrapper-mode connector adapters.
 
 import { execFileSync } from 'node:child_process';
-import { openSync, readSync, closeSync, readFileSync } from 'node:fs';
+import { openSync, readSync, closeSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { homedir, platform } from 'node:os';
+import { platform } from 'node:os';
 import { lstat, open as fsOpen } from 'node:fs/promises';
+import { resolveHiveHome } from '@hive-flow/shared';
 import type { HostCli } from '../../statusline/types.js';
 import type {
   AdapterTarget,
@@ -83,9 +84,7 @@ function resolveHostBin(
 
 function wrapperDir(ctx: AdapterCtx): string {
   if (ctx.scope === 'user') {
-    const hfHome = process.env.HIVE_FLOW_HOME;
-    const base = hfHome && hfHome.length > 0 ? resolve(hfHome) : resolve(homedir());
-    return join(base, '.hive-flow', 'bin');
+    return join(resolveHiveHome().home, 'bin');
   }
   return join(ctx.projectRoot, '.hive-flow', 'bin');
 }
@@ -95,8 +94,7 @@ function wrapperFileName(hostBin: string): string {
 }
 
 function userCacheBase(): string {
-  const hfHome = process.env.HIVE_FLOW_HOME;
-  return hfHome && hfHome.length > 0 ? resolve(hfHome) : resolve(homedir());
+  return resolveHiveHome().home;
 }
 
 export function createWrapperModeAdapter(config: WrapperModeConfig): ConnectorAdapter {
@@ -148,6 +146,7 @@ export function createWrapperModeAdapter(config: WrapperModeConfig): ConnectorAd
         hiveFlowCli: ctx.cliBin,
         destPath,
         baseDir,
+        ...(ctx.scope === 'project' ? { projectRoot: ctx.projectRoot } : {}),
       });
 
       await writeMarker({

@@ -16,7 +16,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock @hive-flow/shared before any imports that depend on it
 vi.mock('@hive-flow/shared', () => ({
+  resolveHiveHome: () => ({
+    home: '/tmp/hive-flow',
+    source: 'default',
+    legacyHome: '/tmp/.claude/hive-flow',
+    legacyExists: false,
+    readFallbacks: [],
+  }),
   resolveProjectRoot: () => '/project',
+  sessionKeyFor: () => 's_mock',
 }));
 
 import { DEFAULT_PERMISSION_CONFIG, mergeWithDefaults } from '../default-config.js';

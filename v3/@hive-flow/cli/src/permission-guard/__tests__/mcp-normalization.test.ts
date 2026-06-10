@@ -169,6 +169,36 @@ describe('filesystem read tools sensitive-path guard', () => {
 // ---------------------------------------------------------------------------
 
 describe('Write/Edit project-root resolution', () => {
+  it('allows in-project writes even when configured write grants are non-empty and omit project root', async () => {
+    const previousProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT;
+    process.env.HIVE_FLOW_PROJECT_ROOT = '/real/project';
+
+    try {
+      const result = await evaluate(
+        {
+          tool_name: 'Write',
+          tool_input: {
+            file_path: '/real/project/v3/docs/design/global-hive-flow-plan.md',
+            content: '# plan\n',
+          },
+          cwd: '/launcher/hive-flow',
+        },
+        {
+          ...ALLOW_ALL_CONFIG,
+          allowed_write_paths: ['${HOME}/.claude/'],
+        },
+      );
+
+      expect(result.decision).toBe('allow');
+    } finally {
+      if (previousProjectRoot === undefined) {
+        delete process.env.HIVE_FLOW_PROJECT_ROOT;
+      } else {
+        process.env.HIVE_FLOW_PROJECT_ROOT = previousProjectRoot;
+      }
+    }
+  });
+
   it('allows writes under HIVE_FLOW_PROJECT_ROOT when cwd is a launcher repo', async () => {
     const previousProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT;
     process.env.HIVE_FLOW_PROJECT_ROOT = '/real/project';

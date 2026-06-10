@@ -19,6 +19,7 @@ const settingsSource = resolve(here, '../../../../../.claude/settings.json');
 const policySource = resolve(here, '../permission-guard/protected-paths.cjs');
 const policyJsonSource = resolve(here, '../permission-guard/protected-paths.policy.json');
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-enforcement-security-')));
+const previousHiveFlowHome = process.env.HIVE_FLOW_HOME;
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
 copyFileSync(source, helperPath);
@@ -41,12 +42,29 @@ function statePath(): string {
   return enf.getStateFile();
 }
 
+function hiveHomeForTest(): string {
+  return join(root, 'global-hive-home');
+}
+
+function legacyProjectEnforcementPath(...parts: string[]): string {
+  return join(root, '.hive-flow', 'enforcement', ...parts);
+}
+
+function resetEnforcementStoresForTest(): void {
+  rmSync(legacyProjectEnforcementPath(), { recursive: true, force: true });
+  rmSync(hiveHomeForTest(), { recursive: true, force: true });
+}
+
+function enforcementStateRoot(): string {
+  return join(process.env.HIVE_FLOW_HOME || join(root, '.hive-flow'), 'enforcement');
+}
+
 function scopedStatePath(scopeType: string, scopeId: string): string {
-  return join(root, '.hive-flow', 'enforcement', `${scopeType}s`, scopeId, 'state.json');
+  return join(enforcementStateRoot(), `${scopeType}s`, scopeId, 'state.json');
 }
 
 function rolePath(agentId: string): string {
-  return join(root, '.hive-flow', 'enforcement', 'agents', agentId, 'role.json');
+  return join(enforcementStateRoot(), 'agents', agentId, 'role.json');
 }
 
 function readScopedState(scopeType: string, scopeId: string): Record<string, unknown> | null {
@@ -142,7 +160,7 @@ const SETTINGS_BASELINE_ALLOW = ['mcp__hive-flow__*'];
 type SettingsMutation = 'valid' | 'drop-preset' | 'disable-all' | 'allow-widen' | 'bare-governance-allow' | 'junk';
 
 function writeSignedSettingsPresets(): void {
-  const presetsPath = join(root, '.hive-flow', 'enforcement', 'settings-presets.json');
+  const presetsPath = join(hiveHomeForTest(), 'enforcement', 'settings-presets.json');
   mkdirSync(dirname(presetsPath), { recursive: true });
   writeFileSync(presetsPath, JSON.stringify(enf.signState({
     version: 2,
@@ -181,7 +199,7 @@ function settingsContent(mutation: SettingsMutation): string {
 function prepareSignedOverrideSettings(filePath = '.claude/settings.json'): void {
   clearAgentEnv();
   resetModule();
-  rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+  resetEnforcementStoresForTest();
   enableDevOverride();
   issueRootOverrideToken();
   writeSignedSettingsPresets();
@@ -211,14 +229,17 @@ function baseRootOverrideClaims(nowMs = Date.now()): Record<string, unknown> {
 describe('enforcement security property contracts', () => {
   beforeEach(() => {
     clearAgentEnv();
+    process.env.HIVE_FLOW_HOME = hiveHomeForTest();
     resetModule();
-    rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+    resetEnforcementStoresForTest();
     rmSync(join(root, '.hive-flow', 'data', 'compaction-recovery-required.json'), { force: true });
     rmSync(join(root, '.hive-flow', 'data', 'compaction-recovery-ack.json'), { force: true });
     mkdirSync(dirname(statePath()), { recursive: true });
   });
 
   afterAll(() => {
+    if (previousHiveFlowHome === undefined) delete process.env.HIVE_FLOW_HOME;
+    else process.env.HIVE_FLOW_HOME = previousHiveFlowHome;
     rmSync(root, { recursive: true, force: true });
   });
 
@@ -230,7 +251,7 @@ describe('enforcement security property contracts', () => {
         fc.array(fc.string({ maxLength: 24 }), { maxLength: 5 }),
         (level, violations, restrictedGroups) => {
           resetModule();
-          rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+          resetEnforcementStoresForTest();
           mkdirSync(dirname(statePath()), { recursive: true });
           const state = {
             level,
@@ -362,6 +383,8 @@ describe('enforcement security property contracts', () => {
   it('does not classify normal hive data writes as protected path circumvention', () => {
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'data', 'watcher-hive.json'))).toBe(false);
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'data', 'hive.done'))).toBe(false);
+    expect(enf.isProtectedPath(join(hiveHomeForTest(), 'projects', 'project-a', 'data', 'watcher-hive.json'))).toBe(false);
+    expect(enf.isProtectedPath(join(hiveHomeForTest(), 'sessions', 'session-a', 'scratch.json'))).toBe(false);
     expect(enf.isGlobalProtectedPath(join(root, '.claude', 'helpers', 'enforcement.cjs'))).toBe(true);
   });
 
@@ -427,7 +450,7 @@ describe('enforcement security property contracts', () => {
 
   it('blocks agent_task_async at RESTRICTED with agent_task parity', () => {
     resetModule();
-    rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+    resetEnforcementStoresForTest();
     writeScopedState('global', 'global', {
       level: enf.LEVELS.RESTRICTED,
       violations: 0,
@@ -476,6 +499,56 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
+  it('writes new enforcement state under HIVE_FLOW_HOME and leaves project-local state as legacy-only', () => {
+    process.env.CLAUDE_SESSION_ID = 'global-home-session';
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: "bash -c 'eval $(echo echo hi)'" },
+    });
+
+    const sessionStateFile = enf.getScopedStateFile('session', 'global-home-session');
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(sessionStateFile).toBe(join(hiveHomeForTest(), 'enforcement', 'sessions', 'global-home-session', 'state.json'));
+    expect(existsSync(sessionStateFile)).toBe(true);
+    expect(existsSync(legacyProjectEnforcementPath('sessions', 'global-home-session', 'state.json'))).toBe(false);
+    expect(existsSync(legacyProjectEnforcementPath('state.json'))).toBe(false);
+  });
+
+  it('loads project-local scoped state only as a legacy fallback during migration', () => {
+    const sessionId = 'legacy-session-state';
+    const legacyStateFile = legacyProjectEnforcementPath('sessions', sessionId, 'state.json');
+    mkdirSync(dirname(legacyStateFile), { recursive: true });
+    writeFileSync(legacyStateFile, JSON.stringify(enf.signState({
+      level: enf.LEVELS.RESTRICTED,
+      violations: 2,
+      consecutiveDenials: 1,
+      restrictedGroups: ['write'],
+      history: [],
+      resetAt: null,
+      integrityCompromised: false,
+    })));
+    process.env.CLAUDE_SESSION_ID = sessionId;
+
+    const ctx = enf.resolveScopeContext();
+    const effective = enf.loadEffectiveState(ctx).effective;
+    const newStateFile = enf.getScopedStateFile('session', sessionId);
+
+    expect(effective.scopeType).toBe('session');
+    expect(effective.scopeId).toBe(sessionId);
+    expect(effective.state.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(existsSync(newStateFile)).toBe(false);
+
+    enf.saveScopedState('session', sessionId, {
+      ...effective.state,
+      violations: 3,
+    });
+
+    expect(readScopedState('session', sessionId)?.violations).toBe(3);
+    expect(existsSync(newStateFile)).toBe(true);
+    expect(existsSync(legacyStateFile)).toBe(true);
+  });
+
   it('does not let one root session ordinary violation restrict a co-resident root session', () => {
     process.env.CLAUDE_SESSION_ID = 'session-a';
 
@@ -494,6 +567,30 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('session', 'session-b')).toBeNull();
     expect(readScopedState('project', enf.resolveScopeContext().projectId)).toBeNull();
     expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('scopes root-session systemic but non-substrate trips to the current session instead of global halt', () => {
+    for (const [index, command] of [
+      'export HIVE_FLOW_ENFORCEMENT_DISABLED=1',
+      'HIVE_FLOW_PIPELINE_OVERRIDE=1 node .claude/helpers/hook-handler.cjs permission-guard',
+      'CF_WF_7D=1 pnpm --dir v3 --filter @hive-flow/cli test:enforcement',
+    ].entries()) {
+      const sessionId = `session-gate-bypass-${index}`;
+      clearAgentEnv();
+      process.env.HIVE_FLOW_HOME = hiveHomeForTest();
+      process.env.CLAUDE_SESSION_ID = sessionId;
+      resetModule();
+      resetEnforcementStoresForTest();
+
+      const result = enf.processPreToolUse({
+        tool_name: 'Bash',
+        tool_input: { command },
+      });
+
+      expect(result.hookSpecificOutput.permissionDecision, command).toBe('deny');
+      expect(readScopedState('session', sessionId)?.level, command).toBe(enf.LEVELS.RESTRICTED);
+      expect(readScopedState('global', 'global'), command).toBeNull();
+    }
   });
 
   it('includes session scope in effective state MAX for the owning root session', () => {
@@ -516,14 +613,13 @@ describe('enforcement security property contracts', () => {
     expect(effective.effective.state.level).toBe(enf.LEVELS.RESTRICTED);
   });
 
-  it('keeps root-session substrate and systemic violations globally escalated', () => {
+  it('keeps root-session substrate violations globally escalated', () => {
     for (const [name, input] of [
       ['substrate write', { tool_name: 'Write', tool_input: { file_path: '.claude/helpers/enforcement.cjs' } }],
-      ['systemic inline bypass env', { tool_name: 'Bash', tool_input: { command: 'export HIVE_FLOW_ENFORCEMENT_DISABLED=1' } }],
     ]) {
       clearAgentEnv();
       resetModule();
-      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      resetEnforcementStoresForTest();
       process.env.CLAUDE_SESSION_ID = 'global-preserved-session';
 
       const result = enf.processPreToolUse(input);
@@ -568,7 +664,7 @@ describe('enforcement security property contracts', () => {
     ]) {
       clearAgentEnv();
       resetModule();
-      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      resetEnforcementStoresForTest();
       const projectId = enf.resolveScopeContext().projectId;
 
       const result = enf.processPreToolUse({
@@ -591,7 +687,7 @@ describe('enforcement security property contracts', () => {
     ]) {
       clearAgentEnv();
       resetModule();
-      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      resetEnforcementStoresForTest();
 
       const toolInput = toolName === 'mcp__filesystem__read_multiple_files'
         ? { paths: ['src/index.ts', filePath] }
@@ -606,15 +702,18 @@ describe('enforcement security property contracts', () => {
     }
   });
 
-  it('keeps coordinator gate-bypass environment variables globally escalated in any form', () => {
-    for (const command of [
+  it('keeps coordinator gate-bypass environment variables scoped to the session in any form', () => {
+    for (const [index, command] of [
       'export HIVE_FLOW_ENFORCEMENT_DISABLED=1',
       'HIVE_FLOW_PIPELINE_OVERRIDE=1 node .claude/helpers/hook-handler.cjs permission-guard',
       'CF_WF_7D=1 pnpm --dir v3 --filter @hive-flow/cli test:enforcement',
-    ]) {
+    ].entries()) {
+      const sessionId = `gate-bypass-session-${index}`;
       clearAgentEnv();
+      process.env.HIVE_FLOW_HOME = hiveHomeForTest();
+      process.env.CLAUDE_SESSION_ID = sessionId;
       resetModule();
-      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      resetEnforcementStoresForTest();
 
       const result = enf.processPreToolUse({
         tool_name: 'Bash',
@@ -622,7 +721,8 @@ describe('enforcement security property contracts', () => {
       });
 
       expect(result.hookSpecificOutput.permissionDecision, command).toBe('deny');
-      expect(readScopedState('global', 'global')?.level, command).toBe(enf.LEVELS.RESTRICTED);
+      expect(readScopedState('session', sessionId)?.level, command).toBe(enf.LEVELS.RESTRICTED);
+      expect(readScopedState('global', 'global'), command).toBeNull();
     }
   });
 
@@ -809,7 +909,7 @@ describe('enforcement security property contracts', () => {
     ]) {
       clearAgentEnv();
       resetModule();
-      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      resetEnforcementStoresForTest();
       const projectId = enf.resolveScopeContext().projectId;
 
       const result = enf.processPreToolUse({
@@ -871,7 +971,7 @@ describe('enforcement security property contracts', () => {
     for (const [index, filePath] of globalProtectedTargets.entries()) {
       clearAgentEnv();
       resetModule();
-      rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+      resetEnforcementStoresForTest();
       const agentId = `global-protected-agent-${index}`;
       process.env.AGENTIC_FLOW_AGENT_ID = agentId;
 
@@ -887,7 +987,7 @@ describe('enforcement security property contracts', () => {
 
     clearAgentEnv();
     resetModule();
-    rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+    resetEnforcementStoresForTest();
     process.env.AGENTIC_FLOW_AGENT_ID = 'project-workflow-agent';
 
     const workflowResult = enf.processPreToolUse({
@@ -1239,7 +1339,7 @@ describe('enforcement security property contracts', () => {
       fc.property(target, mutation, (filePath, mutationKind) => {
         clearAgentEnv();
         resetModule();
-        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        resetEnforcementStoresForTest();
         enableDevOverride();
         issueRootOverrideToken();
         writeSignedSettingsPresets();
@@ -1258,6 +1358,22 @@ describe('enforcement security property contracts', () => {
       }),
       { seed: 20_641, numRuns: PROPERTY_RUNS },
     );
+  });
+
+  it('logs signed root dev-override use when the carve-out allows a guarded settings write', () => {
+    prepareSignedOverrideSettings('.claude/settings.json');
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Write',
+      tool_input: { file_path: '.claude/settings.json', content: settingsContent('valid') },
+    });
+
+    expect(result).toEqual({});
+    const violations = readFileSync(join(enforcementStateRoot(), 'global', 'violations.jsonl'), 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(violations.some((row) => row.type === 'dev-override-used')).toBe(true);
   });
 
   it('content-guards Edit projected settings including missing old_string', () => {
@@ -1370,7 +1486,7 @@ describe('enforcement security property contracts', () => {
       fc.property(invalidCase, (kind) => {
         clearAgentEnv();
         resetModule();
-        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        resetEnforcementStoresForTest();
         enableDevOverride();
 
         const claims = baseRootOverrideClaims(nowMs);
@@ -1418,7 +1534,7 @@ describe('enforcement security property contracts', () => {
       fc.property(envField, hookField, (envName, hookName) => {
         clearAgentEnv();
         resetModule();
-        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        resetEnforcementStoresForTest();
         enableDevOverride();
         issueRootOverrideToken();
         if (envName) process.env[envName] = `${envName.toLowerCase()}-worker`;
@@ -1452,7 +1568,7 @@ describe('enforcement security property contracts', () => {
       fc.property(writeCase, (candidate) => {
         clearAgentEnv();
         resetModule();
-        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        resetEnforcementStoresForTest();
         writeScopedState('global', 'global', {
           level: enf.LEVELS.RESTRICTED,
           violations: 2,
@@ -1486,7 +1602,7 @@ describe('enforcement security property contracts', () => {
       fc.property(agentIdArb, (agentId) => {
         clearAgentEnv();
         resetModule();
-        rmSync(join(root, '.hive-flow', 'enforcement'), { recursive: true, force: true });
+        resetEnforcementStoresForTest();
         process.env.AGENTIC_FLOW_AGENT_ID = agentId;
         const scopedAgentId = enf.getAgentId({});
 
@@ -1553,7 +1669,12 @@ describe('enforcement security property contracts', () => {
       'Bash',
       { command: 'HIVE_FLOW_ENFORCEMENT_DISABLED=1 node .claude/helpers/hook-handler.cjs permission-guard' },
       state,
-    )).toMatchObject({ circumvention: true, substrateAttack: true, protectedEnforcementAttack: true, systemic: true });
+    )).toMatchObject({ circumvention: true, systemic: true });
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'HIVE_FLOW_ENFORCEMENT_DISABLED=1 node .claude/helpers/hook-handler.cjs permission-guard' },
+      state,
+    )).not.toMatchObject({ substrateAttack: true, protectedEnforcementAttack: true });
   });
 
   it('default reset clears global, scoped state, and per-agent role files', () => {
@@ -1596,6 +1717,35 @@ describe('enforcement security property contracts', () => {
     expect(enf.parseResetScope('/reset-enforcement --agent=worker-b')).toEqual({ scope: 'agent', agentId: 'worker-b' });
     expect(enf.parseResetScope('/reset-enforcement --scope session --session claude-123')).toEqual({ scope: 'session', sessionId: 'claude-123' });
     expect(enf.parseResetScope('/reset-enforcement --project')).toEqual({ scope: 'project', project: true });
+  });
+
+  it('scoped reset output states child scopes are not implicitly reset', () => {
+    process.env.CLAUDE_SESSION_ID = 'reset-session';
+    writeScopedState('session', 'reset-session', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 2,
+      restrictedGroups: ['write'],
+    });
+    writeScopedState('agent', 'agent-child', {
+      level: enf.LEVELS.RESTRICTED,
+      violations: 2,
+      restrictedGroups: ['write'],
+    });
+    const timestamp = String(Date.now());
+    const signature = createHmac('sha256', enf.getOrCreateHmacKey())
+      .update(`enforcement-reset:${timestamp}`)
+      .digest('hex');
+
+    const result = enf.processResetCheck({
+      user_prompt: '/reset-enforcement --session reset-session',
+      _hmac_timestamp: timestamp,
+      _hmac_signature: signature,
+    });
+
+    expect(result.hookSpecificOutput.additionalContext).toContain('Reset complete for session/reset-session');
+    expect(result.hookSpecificOutput.additionalContext).toContain('Child scopes');
+    expect(readScopedState('session', 'reset-session')?.level).toBe(enf.LEVELS.NORMAL);
+    expect(readScopedState('agent', 'agent-child')?.level).toBe(enf.LEVELS.RESTRICTED);
   });
 
   it('does not flag inert eval text but still blocks shell eval execution', () => {

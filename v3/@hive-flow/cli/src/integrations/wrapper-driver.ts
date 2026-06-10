@@ -88,6 +88,11 @@ export interface WrapperRenderOptions {
   /** Absolute path to the hive-flow CLI entrypoint (a node script). */
   readonly hiveFlowCli: string;
   /**
+   * Optional absolute project root for project-scoped wrappers. User-scoped
+   * wrappers deliberately omit this so they can operate from any project.
+   */
+  readonly projectRoot?: string;
+  /**
    * Optional process env snapshot. Currently only used to look up
    * `HIVE_FLOW_HEARTBEAT_SECONDS` at *render* time so deterministic tests can
    * pin the default — runtime parsing inside the script still re-reads the
@@ -229,6 +234,10 @@ function validateRenderOpts(opts: WrapperRenderOptions): void {
   }
   assertNoControlBytes('realCliBin', opts.realCliBin);
   assertNoControlBytes('hiveFlowCli', opts.hiveFlowCli);
+  if (opts.projectRoot !== undefined) {
+    assertNonEmptyString('projectRoot', opts.projectRoot);
+    assertNoControlBytes('projectRoot', opts.projectRoot);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -293,12 +302,16 @@ export function renderPosixWrapper(opts: WrapperRenderOptions): string {
   validateRenderOpts(opts);
   assertAbsolutePosix('realCliBin', opts.realCliBin);
   assertAbsolutePosix('hiveFlowCli', opts.hiveFlowCli);
+  if (opts.projectRoot !== undefined) {
+    assertAbsolutePosix('projectRoot', opts.projectRoot);
+  }
 
   const heartbeatDefault = resolveHeartbeatDefault(opts.env);
   const killGraceDefault = parseKillGraceSeconds(opts.env);
   const realCli = shellQuote(opts.realCliBin);
   const hiveFlow = shellQuote(opts.hiveFlowCli);
   const hostCli = shellQuote(opts.hostCli);
+  const projectRoot = opts.projectRoot === undefined ? undefined : shellQuote(opts.projectRoot);
   const heartbeatStr = String(heartbeatDefault);
   const killGraceStr = String(killGraceDefault);
 
@@ -318,9 +331,13 @@ export function renderPosixWrapper(opts: WrapperRenderOptions): string {
     'set -uo pipefail',
     '',
     `HIVE_FLOW_HOSTCLI=${hostCli}`,
+    `HIVE_FLOW_CLIENT_KIND=${hostCli}`,
+    ...(projectRoot === undefined ? [] : [`HIVE_FLOW_PROJECT_ROOT=${projectRoot}`]),
     `HIVE_FLOW_BIN=${hiveFlow}`,
     `HIVE_FLOW_REAL_CLI=${realCli}`,
     `HIVE_FLOW_PID=$$`,
+    'export HIVE_FLOW_CLIENT_KIND',
+    ...(projectRoot === undefined ? [] : ['export HIVE_FLOW_PROJECT_ROOT']),
     '',
     '# Wave 7.5 round-5: validate heartbeat env. Reject NaN, zero, negative,',
     '# and non-integer values so an attacker-controlled env cannot force a',
@@ -491,14 +508,18 @@ export function renderWindowsWrapper(opts: WrapperRenderOptions): string {
   // a Windows path is `C:\...`. We DO require non-empty + no control bytes
   // (already checked by `validateRenderOpts`), and we additionally reject
   // `%` in the path because CMD would expand it.
-  if (opts.realCliBin.includes('%') || opts.hiveFlowCli.includes('%')) {
-    throw new Error('Windows wrapper: realCliBin / hiveFlowCli must not contain "%"');
+  if (opts.realCliBin.includes('%') || opts.hiveFlowCli.includes('%') || opts.projectRoot?.includes('%')) {
+    throw new Error('Windows wrapper: realCliBin / hiveFlowCli / projectRoot must not contain "%"');
+  }
+  if (opts.projectRoot?.includes('"')) {
+    throw new Error('Windows wrapper: projectRoot must not contain double quotes');
   }
 
   const heartbeatDefault = resolveHeartbeatDefault(opts.env);
   const realCli = cmdQuote(opts.realCliBin);
   const hiveFlow = cmdQuote(opts.hiveFlowCli);
   const hostCli = cmdQuote(opts.hostCli);
+  const projectRoot = opts.projectRoot === undefined ? undefined : opts.projectRoot;
   const heartbeatStr = String(heartbeatDefault);
 
   // The Node entrypoint reads HIVE_FLOW_HEARTBEAT_SECONDS from the
@@ -515,6 +536,8 @@ export function renderWindowsWrapper(opts: WrapperRenderOptions): string {
     `REM Host CLI: ${opts.hostCli}`,
     `REM Regenerate with: hive-flow setup --auto`,
     'SETLOCAL',
+    `SET "HIVE_FLOW_CLIENT_KIND=${opts.hostCli}"`,
+    ...(projectRoot === undefined ? [] : [`SET "HIVE_FLOW_PROJECT_ROOT=${projectRoot}"`]),
     '',
     'REM Wave 7.5 round-5: heartbeat is validated inside the Node entrypoint',
     'REM via Number.isFinite + >= 1 floor. The CLI flag below is the default',

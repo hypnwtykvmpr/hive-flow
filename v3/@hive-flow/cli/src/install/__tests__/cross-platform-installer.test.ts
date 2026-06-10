@@ -102,6 +102,37 @@ describe('cross-platform enforcement installer', () => {
     })).resolves.toBe(true);
   });
 
+  it('falls back when /dev/tty exists but cannot be opened', async () => {
+    const err = Object.assign(new Error('device not configured'), { code: 'ENXIO' });
+    const sources: string[] = [];
+
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      platform: 'linux',
+      ttyAvailable: true,
+      stdinIsTTY: false,
+      ask: async (_question, source) => {
+        sources.push(source);
+        throw err;
+      },
+    })).resolves.toBe(false);
+    expect(sources).toEqual(['tty']);
+
+    const fallbackSources: string[] = [];
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      platform: 'linux',
+      ttyAvailable: true,
+      stdinIsTTY: true,
+      ask: async (_question, source) => {
+        fallbackSources.push(source);
+        if (source === 'tty') throw err;
+        return 'yes';
+      },
+    })).resolves.toBe(true);
+    expect(fallbackSources).toEqual(['tty', 'stdin']);
+  });
+
   it('fails closed instead of accepting an empty non-TTY secret', async () => {
     await expect(readRequiredSecret('Credential unlock: ', {
       input: { isTTY: false } as NodeJS.ReadStream,
@@ -145,6 +176,71 @@ describe('cross-platform enforcement installer', () => {
       rmSync(projectRoot, { recursive: true, force: true });
       rmSync(homeDir, { recursive: true, force: true });
     }
+  });
+
+  it('cleans stale global hook cruft while preserving unrelated user settings', () => {
+    const homeDir = join(tmpdir(), 'hf-p2-cleanup-home');
+    const staleSessionEnd = 'node /old/hive-flow/cli.js hooks session-end --generate-summary';
+    const keepStop = 'node /user/keep-stop-hook.cjs';
+    const reconciler = buildRelocatedCommand('settings-reconciler.cjs', { homeDir });
+    const settings = mergeUserSettings({
+      disableAllHooks: true,
+      permissions: {
+        allow: ['Bash(echo ok)'],
+        deny: ['Read(./.env)'],
+      },
+      env: { KEEP_ME: '1' },
+      hooks: {
+        PreToolUse: [
+          {
+            matcher: 'Bash',
+            hooks: [{ type: 'command', command: 'hive-flow hooks modify-bash --command "$CMD"' }],
+          },
+          {
+            matcher: 'Write',
+            hooks: [{ type: 'command', command: 'hive-flow hooks modify-file --file "$FILE"' }],
+          },
+          {
+            matcher: 'Read',
+            hooks: [{ type: 'command', command: 'node /user/custom-read-hook.cjs' }],
+          },
+        ],
+        PostToolUse: [
+          { matcher: 'Write', hooks: [{ type: 'command', command: reconciler }] },
+          { matcher: 'Edit', hooks: [{ type: 'command', command: reconciler }] },
+          { matcher: 'Write', hooks: [{ type: 'command', command: 'node /user/post-edit.cjs' }] },
+        ],
+        Stop: [
+          {
+            hooks: [
+              { type: 'command', command: staleSessionEnd },
+              { type: 'command', command: keepStop },
+            ],
+          },
+        ],
+      },
+    }, { homeDir });
+
+    const commands = allHookCommands(settings);
+    expect(settings.disableAllHooks).toBeUndefined();
+    expect(settings.permissions).toEqual({
+      allow: ['Bash(echo ok)'],
+      deny: ['Read(./.env)'],
+    });
+    expect(settings.env).toEqual({ KEEP_ME: '1' });
+    expect(commands.some((command) => /modify-(?:bash|file)/.test(command))).toBe(false);
+    expect((settings.hooks.Stop || []).flatMap((group: { hooks?: Array<{ command?: string }> }) =>
+      (group.hooks || []).map((hook) => hook.command || '')
+    )).toEqual(expect.arrayContaining([keepStop, reconciler]));
+    expect((settings.hooks.Stop || []).flatMap((group: { hooks?: Array<{ command?: string }> }) =>
+      (group.hooks || []).map((hook) => hook.command || '')
+    )).not.toContain(staleSessionEnd);
+    expect((settings.hooks.SessionEnd || []).flatMap((group: { hooks?: Array<{ command?: string }> }) =>
+      (group.hooks || []).map((hook) => hook.command || '')
+    )).toContain(staleSessionEnd);
+    expect(commands.filter((command) => command === reconciler)).toHaveLength(3);
+    expect(commands).toContain('node /user/custom-read-hook.cjs');
+    expect(commands).toContain('node /user/post-edit.cjs');
   });
 
   it('exposes the global install command with engine-only and hooks-only flags', () => {

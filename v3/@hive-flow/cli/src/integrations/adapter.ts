@@ -16,6 +16,9 @@ export interface AdapterCtx {
    *  statusline feature is requested). Required by the Claude Code statusline
    *  adapter; ignored by MCP adapters. */
   statuslineLauncherPath?: string;
+  /** Optional override for Claude Code user settings. Used by global init tests
+   *  and by operators who point the adapter at a non-default settings file. */
+  userSettingsPath?: string;
   dryRun: boolean;
   forceAdopt: boolean;
   createConfig: boolean;

@@ -56,6 +56,8 @@
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import { sessionKeyFor } from '@hive-flow/shared';
+
 import { resolveSessionId } from '../mcp-tools/session-id.js';
 import { parseStatuslineConfig, type StatuslineConfig } from './config.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
@@ -66,7 +68,7 @@ import {
 import { detectColorDepth, makePalette, type PaletteCodes } from './palette.js';
 import { resolveProjectScope, type ProjectScope } from './project-scope.js';
 import { readJsonFile } from './storage.js';
-import { statuslinePaths } from './paths.js';
+import { globalStatuslinePaths, statuslinePaths } from './paths.js';
 import { resolveModelDisplay } from './model-display.js';
 import {
   normalizeAgentStatus,
@@ -352,6 +354,10 @@ function resolveStatuslineSessionId(stdin: Record<string, unknown> | undefined):
   return resolveSessionId(stdin ?? null, process.env) ?? undefined;
 }
 
+function resolveStatuslineSessionKey(stdin: Record<string, unknown> | undefined): string {
+  return sessionKeyFor(stdin ?? {}, process.env);
+}
+
 // ---------------------------------------------------------------------------
 // Mode resolution
 // ---------------------------------------------------------------------------
@@ -375,6 +381,7 @@ async function resolveModeForRender(
   deadlineMs: number,
 ): Promise<ResolvedRenderSnapshot> {
   const paths = statuslinePaths(scope.projectRoot);
+  const globalPaths = globalStatuslinePaths(scope.projectKey, resolveStatuslineSessionKey(stdin));
   const hiveFlowExists = existsSync(paths.root);
 
   // Try the snapshot path first when cache.json is present.
@@ -397,7 +404,24 @@ async function resolveModeForRender(
     return { snapshot: cached, mode: 'header-only' };
   }
 
-  // No cache. If `.hive-flow/` is absent, header-only.
+  // No project-local cache. Fall back to the global project/session index so
+  // statusline invocations launched from outside the checkout still populate
+  // from the daemon's durable Hive Flow state.
+  const globalCached = await tryReadSnapshot(globalPaths.cache).catch(() => undefined);
+  if (globalCached !== undefined) {
+    if (isSnapshotFreshEnough(globalCached, snapshotMaxAgeMs)) {
+      return { snapshot: globalCached, mode: 'snapshot' };
+    }
+    if (hiveFlowExists) {
+      const inline = await tryInlineCollect(scope, deadlineMs);
+      if (inline !== undefined) {
+        return { snapshot: mergeSnapshots(globalCached, inline), mode: 'inline-collector' };
+      }
+    }
+    return { snapshot: globalCached, mode: 'header-only' };
+  }
+
+  // No cache anywhere. If `.hive-flow/` is absent, header-only.
   if (!hiveFlowExists) {
     // Suppress unused-stdin warnings — we deliberately let the header pull
     // model/context from stdin downstream.
