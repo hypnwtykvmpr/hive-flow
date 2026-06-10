@@ -4,8 +4,12 @@
  * Continuously ranks shadow copy entries using a 4-factor composite score.
  * Operates in three phases based on context window usage:
  *   - tracking (<70%): build/refresh ranking index
- *   - warning (70-85%): summarize low-ranked, prepare cull plan
- *   - critical (85%+): finalize cull plan for hook consumption
+ *   - warning (70%+): summarize low-ranked, prepare cull plan
+ *   - critical (85%+ storage-prune threshold): finalize cull plan for hook consumption
+ *
+ * Human compaction policy is separate: 80%+ is historically redlined and 95%+
+ * is the hard redline. This worker optimizes storage/context materialization;
+ * it does not decide when Claude should compact.
  *
  * @module v3/cli/services/context-reranker
  */

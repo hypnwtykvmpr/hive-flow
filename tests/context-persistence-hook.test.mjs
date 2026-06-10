@@ -1187,8 +1187,115 @@ describe('compact advisory signal', () => {
     );
 
     assert.ok(autopilot.percentage >= 0.85);
-    assert.match(autopilot.additionalContext, /Configured action threshold/);
+    assert.match(autopilot.additionalContext, /Configured storage-prune threshold/);
     assert.equal(existsSync(signalPath), false);
+  });
+
+  it('should emit threshold guidance that matches the human compaction policy', async () => {
+    const cases = [
+      {
+        name: 'below-warning',
+        pct: 0.62,
+        matches: [],
+        rejects: [/Compaction is permissible when context is at or above 50%/i, /hard redline/i],
+      },
+      {
+        name: 'warning',
+        pct: 0.72,
+        matches: [/70%\+ warning zone/i, /Compaction is permissible when context is at or above 50%/],
+        rejects: [],
+      },
+      {
+        name: 'historical-redline',
+        pct: 0.82,
+        matches: [/80%\+ historically redlined/i, /do not treat this as fine/i],
+        rejects: [],
+      },
+      {
+        name: 'hard-redline',
+        pct: 0.96,
+        matches: [/95%\+ hard redline/i, /violates the human's rules/i, /compact before forced compaction/i],
+        rejects: [],
+      },
+    ];
+
+    for (const testCase of cases) {
+      const projectRoot = join(TMP_DIR, `compact-autopilot-threshold-${testCase.name}`);
+      const dataDir = join(projectRoot, '.hive-flow', 'data');
+      const statePath = join(dataDir, 'autopilot-state.json');
+      const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+      mkdirSync(dataDir, { recursive: true });
+      writeFileSync(transcriptPath, JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: `${testCase.name} usage sample` }],
+          usage: {
+            input_tokens: Math.ceil(CONTEXT_WINDOW_TOKENS * testCase.pct),
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+          },
+        },
+      }) + '\n');
+
+      const autopilot = await runAutopilot(
+        transcriptPath,
+        `threshold-session-${testCase.name}`,
+        { pruneStale: () => 0 },
+        'json',
+        { statePath, projectRoot }
+      );
+
+      for (const pattern of testCase.matches) {
+        assert.match(autopilot.additionalContext, pattern, testCase.name);
+      }
+      for (const pattern of testCase.rejects) {
+        assert.doesNotMatch(autopilot.additionalContext, pattern, testCase.name);
+      }
+    }
+  });
+
+  it('should re-emit compaction guidance when the session crosses stronger threshold bands', async () => {
+    const projectRoot = join(TMP_DIR, 'compact-autopilot-threshold-band-upgrades');
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    const transcriptPath = join(projectRoot, 'transcript.jsonl');
+
+    mkdirSync(dataDir, { recursive: true });
+
+    const runAt = async (pct) => {
+      writeFileSync(transcriptPath, JSON.stringify({
+        type: 'assistant',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: `usage ${pct}` }],
+          usage: {
+            input_tokens: Math.ceil(CONTEXT_WINDOW_TOKENS * pct),
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+          },
+        },
+      }) + '\n');
+
+      return runAutopilot(
+        transcriptPath,
+        'threshold-band-session',
+        { pruneStale: () => 0 },
+        'json',
+        { statePath, projectRoot }
+      );
+    };
+
+    const warning = await runAt(0.72);
+    assert.match(warning.additionalContext, /70%\+ warning zone/i);
+    assert.doesNotMatch(warning.additionalContext, /80%\+ historically redlined/i);
+
+    const historical = await runAt(0.82);
+    assert.match(historical.additionalContext, /80%\+ historically redlined/i);
+
+    const hard = await runAt(0.96);
+    assert.match(hard.additionalContext, /95%\+ hard redline/i);
   });
 
   it('should arm post-compact recovery when autopilot observes a compact boundary', async () => {
@@ -1455,7 +1562,7 @@ describe('compact advisory signal', () => {
 
     assert.equal(autopilot.percentage, 0.258587);
     assert.match(autopilot.additionalContext, /~258\.6K\/1\.0M tokens/);
-    assert.doesNotMatch(autopilot.additionalContext, /Configured action threshold/);
+    assert.doesNotMatch(autopilot.additionalContext, /Configured storage-prune threshold/);
   });
 });
 

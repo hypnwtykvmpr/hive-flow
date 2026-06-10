@@ -3,9 +3,9 @@
  * Aggressive Micro-Compaction Preload
  *
  * Claude Code's micro-compaction (Vd function) only prunes old tool results
- * when context is above the warning threshold (~80%) and only if it can save
- * at least 20K tokens. These hardcoded thresholds mean context can grow large
- * before any pruning happens.
+ * when context is above its internal warning threshold and only if it can save
+ * at least 20K tokens. These hardcoded thresholds mean context can grow before
+ * any pruning happens.
  *
  * This script patches the environment to make micro-compaction more aggressive
  * by lowering the threshold at which it activates. It works by setting
@@ -21,16 +21,17 @@
  *   4. This runs on EVERY query — it IS automatic pruning
  *
  * The problem: Ny5=40000 and qy5=20000 are hardcoded. We can't change them.
- * The solution: Set CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50 so the warning/error
- * thresholds drop, which makes micro-compaction activate much earlier.
+ * The solution: lower the warning/error thresholds for micro-pruning. This is
+ * background hygiene only; it does not replace the human compaction policy:
+ * 70%+ warning, 80%+ historically redlined, 95%+ hard redline.
  */
 
 // This file is sourced by settings.json hooks to document the strategy.
 // The actual configuration is in settings.json env vars:
-//   CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50  → lowers all thresholds
+//   CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50  → lowers internal micro-pruning thresholds
 //   autoCompactEnabled=true             → enables the auto-compact fallback
 
 console.log('[AggressiveMicrocompact] Strategy: CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50');
 console.log('[AggressiveMicrocompact] Micro-compact activates when tokens > warning threshold');
 console.log('[AggressiveMicrocompact] Warning threshold = maxTokens - 20K (relative to override)');
-console.log('[AggressiveMicrocompact] Effect: pruning starts at ~45% instead of ~80%');
+console.log('[AggressiveMicrocompact] Effect: background pruning starts earlier; still honor 70/80/95 compaction guidance');

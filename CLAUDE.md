@@ -132,13 +132,18 @@ Automated watcher system that monitors hive worker progress without polling.
 - **Session recovery**: `hook-handler.cjs session-restore` detects stale watcher configs (heartbeat > 10 min) and logs recovery messages
 - **Hooks**: `hive-sentinel-notify.cjs` (TeammateIdle + Stop), `sentinel-recovery.cjs` (SessionStart)
 
-## Context Management (Automatic)
+## Context Management and Compaction Recovery
 
-- **Do NOT suggest /clear or clearing context to the user** — the autopilot manages context automatically
-- **Do NOT attempt to invoke /compact programmatically** — no API exists; auto-compaction handles it
-- **Auto-compaction** is configured via `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=85` in settings.json env — compaction fires at ~85% of the model's context window (850K on 1M, 170K on 200K)
-- **Context persistence hooks** save and restore state across compactions — no manual intervention needed
-- If context is growing large, continue working normally — the system handles compaction transparently
+- Do not suggest `/clear`; preserve state through compact/recovery.
+- Never queue, relay, or ask another agent or the human to send `/compact`; use self-compaction at a clean boundary when needed.
+- Treat context thresholds as active operating guidance:
+  - **70%+**: warning zone. Start looking for a clean compaction boundary.
+  - **80%+**: historically redlined. Do not treat this as fine; continue only while actively approaching a better boundary.
+  - **95%+**: hard redline. Going past this violates the human's rules; compact before forced compaction.
+- Prefer an ideal boundary over panic compaction, but never wait for 100%/forced compaction.
+- Ask another agent or the human to compact only if self-compaction is unavailable in the current terminal/session framework.
+- Microcompaction is normal background behavior and does not require recovery.
+- After manual/auto/reactive compaction, recover before mutation: run `node .claude/helpers/compaction-recovery.cjs status`, inspect durable handoff/state plus live git status/diff, then clear with the helper's `ack` command.
 
 ## Project Architecture
 

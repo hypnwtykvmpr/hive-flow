@@ -69,6 +69,8 @@ const AUTOPILOT_ENABLED = process.env.HIVE_FLOW_CONTEXT_AUTOPILOT !== 'false'; /
 const CONTEXT_WINDOW_TOKENS = detectContextWindowTokens();
 const AUTOPILOT_WARN_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_WARN || '0.70');
 const AUTOPILOT_PRUNE_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_PRUNE || '0.85');
+const HUMAN_CONTEXT_HISTORICAL_REDLINE_PCT = 0.80;
+const HUMAN_CONTEXT_HARD_REDLINE_PCT = 0.95;
 const AUTOPILOT_STATE_PATH = join(DATA_DIR, 'autopilot-state.json');
 
 // Approximate tokens per character (Claude averages ~3.5 chars per token)
@@ -1687,6 +1689,33 @@ function displayAutopilotPercentage(state = {}, contextWindowTokens = CONTEXT_WI
   return Number.isFinite(pct) && pct > 0 ? Math.min(pct, 1.0) : 0;
 }
 
+function compactionGuidanceBand(percentage) {
+  if (percentage >= HUMAN_CONTEXT_HARD_REDLINE_PCT) return 'hard-redline';
+  if (percentage >= HUMAN_CONTEXT_HISTORICAL_REDLINE_PCT) return 'historical-redline';
+  if (percentage >= AUTOPILOT_WARN_PCT) return 'warning';
+  return 'ok';
+}
+
+function buildHumanCompactionGuidance(percentage) {
+  const pct = (percentage * 100).toFixed(0);
+  const lines = [
+    ` | Context at ${pct}%.`,
+    `70%+ warning zone: start looking for a clean compaction boundary.`,
+    `Compaction is permissible when context is at or above 50%, but choose an ideal boundary rather than panic-compacting.`,
+  ];
+
+  if (percentage >= HUMAN_CONTEXT_HISTORICAL_REDLINE_PCT) {
+    lines.push(`80%+ historically redlined: do not treat this as fine; continue only while actively approaching a better boundary.`);
+  }
+
+  if (percentage >= HUMAN_CONTEXT_HARD_REDLINE_PCT) {
+    lines.push(`95%+ hard redline: going past this violates the human's rules; compact before forced compaction.`);
+  }
+
+  lines.push(`Self-compact in the current terminal/session framework when possible; ask another agent or the human only if self-compaction is unavailable.`);
+  return lines.join(' ');
+}
+
 /**
  * Context Autopilot: run on every UserPromptSubmit.
  * Returns { additionalContext, shouldBlock } for the hook output.
@@ -1708,6 +1737,7 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
     state.history = [];
     state.lastRecoveryCompactBoundaryCount = 0;
     state.lastRecoveryCompactBoundaryId = '';
+    state.lastCompactionGuidanceBand = '';
   }
 
   // Estimate current context usage
@@ -1759,15 +1789,16 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
     }
   }
 
-  // Phase 1: Warning zone (70-85%) — advise concise responses
-  if (percentage >= AUTOPILOT_WARN_PCT && percentage < AUTOPILOT_PRUNE_PCT) {
-    if (!state.warningIssued) {
-      state.warningIssued = true;
-      optimizationMessage = ` | Context at ${(percentage * 100).toFixed(0)}%. Keep responses concise to extend session.`;
-    }
+  const guidanceBand = compactionGuidanceBand(percentage);
+
+  // Human compaction policy: warn at 70%, strengthen at 80%, hard-stop at 95%.
+  if (guidanceBand !== 'ok' && state.lastCompactionGuidanceBand !== guidanceBand) {
+    state.warningIssued = true;
+    state.lastCompactionGuidanceBand = guidanceBand;
+    optimizationMessage += buildHumanCompactionGuidance(percentage);
   }
 
-  // Phase 2: Critical zone (85%+) — session rotation needed
+  // Storage optimization threshold (default 85%) — not a compaction hard limit.
   if (percentage >= AUTOPILOT_PRUNE_PCT) {
     state.pruneCount++;
 
@@ -1783,11 +1814,11 @@ async function runAutopilot(transcriptPath, sessionId, backend, backendType, opt
 
     const turnsLeft = Math.max(0, Math.ceil((1.0 - percentage) / 0.03));
     optimizationMessage += [
-      ` | Configured action threshold reached: ${(percentage * 100).toFixed(0)}% of the configured ${formatTokens(contextWindowTokens)} heuristic window.`,
+      ` | Configured storage-prune threshold reached: ${(percentage * 100).toFixed(0)}% of the configured ${formatTokens(contextWindowTokens)} heuristic window.`,
       `This is not a model hard limit.`,
       `Estimated runway at current growth: ~${turnsLeft} turns.`,
       `Archived turns available: ${turns}.`,
-      `If continuity is at risk, run compact-now or /compact with a preservation prompt; do not assume an automatic compaction will fire.`,
+      `Do not wait for 100% or forced compaction; if an ideal boundary is available, self-compact with a preservation prompt.`,
     ].join(' ');
   }
 
@@ -2433,7 +2464,9 @@ async function doStatus() {
   console.log(`  Enabled:     ${AUTOPILOT_ENABLED}`);
   console.log(`  Window:      ${formatTokens(CONTEXT_WINDOW_TOKENS)} tokens`);
   console.log(`  Warn at:     ${(AUTOPILOT_WARN_PCT * 100).toFixed(0)}%`);
+  console.log(`  Historical:  ${(HUMAN_CONTEXT_HISTORICAL_REDLINE_PCT * 100).toFixed(0)}% (plan clean compaction boundary)`);
   console.log(`  Prune at:    ${(AUTOPILOT_PRUNE_PCT * 100).toFixed(0)}%`);
+  console.log(`  Hard line:   ${(HUMAN_CONTEXT_HARD_REDLINE_PCT * 100).toFixed(0)}% (compact before forced compaction)`);
   console.log(`  Compaction:  LOSSLESS (archive before, restore after)`);
 
   const apState = loadAutopilotState();

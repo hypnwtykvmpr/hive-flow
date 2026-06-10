@@ -102,9 +102,13 @@ export class ContextOffloader {
       `[${e.id}] role=${e.role} tokens=${e.tokenEstimate} score=${e.currentScore.toFixed(3)} tools=[${e.toolNames.join(',')}] files=[${e.filePaths.join(',')}]\n  "${e.content.slice(0, 200)}..."`
     ).join('\n');
 
+    const phaseGuidance = request.currentPhase === 'critical'
+      ? '85%+ storage-prune threshold; 80%+ is historically redlined for compaction planning, and 95%+ is the hard redline'
+      : '70%+ warning zone; begin preserving clean compaction boundaries while optimizing context';
+
     return `You are a context window optimization agent. Analyze these conversation entries and re-rank by importance.
 
-Phase: ${request.currentPhase} (context is ${request.currentPhase === 'critical' ? '85%+' : '70-85%'} full)
+Phase: ${request.currentPhase} (${phaseGuidance})
 Total tokens: ${request.totalTokens}
 Entries: ${request.entries.length}
 
