@@ -227,7 +227,9 @@ export class LinuxSecretServiceCredentialStore extends BaseCredentialStore {
       return unavailable('Secret Service requires an active D-Bus session');
     }
     try {
-      run(this.execFileSync, 'secret-tool', ['--version'], { stdio: 'pipe', env: this.env });
+      // secret-tool has no --version flag; --help is the GOption-standard presence probe
+      // (exit 0 when the binary is runnable, no Secret Service side effects).
+      run(this.execFileSync, 'secret-tool', ['--help'], { stdio: 'pipe', env: this.env });
       return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
     } catch (error) {
       return unavailable(`secret-tool unavailable: ${(error as Error).message}`);

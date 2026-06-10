@@ -1,3 +1,6 @@
+/* _GNU_SOURCE exposes struct ucred / SO_PEERCRED on Linux (glibc); must precede includes.
+   Harmless on macOS, which uses the __APPLE__ getpeereid/LOCAL_PEERPID path below. */
+#define _GNU_SOURCE
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -45,7 +45,7 @@ function makeSecretToolRunner() {
   const runner: Runner = (file, args, options = {}) => {
     calls.push({ file, args: [...args], input: options.input });
     if (file !== 'secret-tool') throw new Error(`unexpected command ${file}`);
-    if (args[0] === '--version') return Buffer.from('secret-tool 0.21.4\n');
+    if (args[0] === '--help') return Buffer.from('Usage:\n  secret-tool store --label=LABEL ATTR VALUE\n');
     if (args[0] === 'store') {
       items.set(keyFromArgs(args), String(options.input ?? '').trim());
       return Buffer.from('');
