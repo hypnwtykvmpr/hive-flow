@@ -102,10 +102,24 @@ const CLASSIFIED_SUSPECTS: ReadonlyMap<string, ClassifiedSuspect> = new Map([
     },
   ],
   [
-    'v3/@hive-flow/memory/src/agentdb-backend.ts:content:suspect legacy ru-prefixed token',
+    'v3/plugins/teammate-plugin/package.json:content:suspect legacy ru-prefixed token',
     {
-      classification: 'compatibility-alias',
-      reason: 'Accepts legacy vectorBackend value and normalizes new hivector input for AgentDB.',
+      classification: 'migration-deferred',
+      reason: 'Declares the external @ruvnet/bmssp WASM dependency; third-party optional package scope, not the dropped project brand.',
+    },
+  ],
+  [
+    'v3/plugins/teammate-plugin/src/semantic-router.ts:content:suspect legacy ru-prefixed token',
+    {
+      classification: 'migration-deferred',
+      reason: 'Dynamically imports the external @ruvnet/bmssp WASM package for neural routing.',
+    },
+  ],
+  [
+    'v3/plugins/teammate-plugin/src/topology-optimizer.ts:content:suspect legacy ru-prefixed token',
+    {
+      classification: 'migration-deferred',
+      reason: 'Dynamically imports the external @ruvnet/bmssp WASM package for topology optimization.',
     },
   ],
 ]);

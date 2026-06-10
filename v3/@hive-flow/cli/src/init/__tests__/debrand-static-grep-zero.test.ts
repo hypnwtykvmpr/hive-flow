@@ -29,6 +29,18 @@ const CLASSIFIED_STATIC_EXCEPTIONS: ReadonlyMap<string, string> = new Map([
     'v3/@hive-flow/cli/src/commands/doctor.ts:content:npm install guidance',
     'Doctor --install performs the requested Claude Code install action; ordinary guidance was rewritten.',
   ],
+  [
+    'v3/plugins/teammate-plugin/package.json:content:old public org',
+    'Declares the external @ruvnet/bmssp WASM dependency; the @ruvnet npm scope is a third-party package name, not the dropped project brand.',
+  ],
+  [
+    'v3/plugins/teammate-plugin/src/semantic-router.ts:content:old public org',
+    'Dynamically imports the external @ruvnet/bmssp WASM package for neural routing; third-party scope, not the dropped project brand.',
+  ],
+  [
+    'v3/plugins/teammate-plugin/src/topology-optimizer.ts:content:old public org',
+    'Dynamically imports the external @ruvnet/bmssp WASM package for graph optimization; third-party scope, not the dropped project brand.',
+  ],
 ]);
 
 describe('DB-5 static prohibited debrand sweep', () => {
@@ -205,6 +217,7 @@ function isAllowedRuntimeUrl(rawUrl: string): boolean {
     host === 'us-central1-hive-flow.cloudfunctions.net' ||
     host === 'accounts.google.com' ||
     host === 'oauth2.googleapis.com' ||
+    host === 'dotnet.microsoft.com' ||
     (host === 'github.com' && parsed.pathname.startsWith('/login/oauth/'))
   );
 }

@@ -438,10 +438,6 @@ console.log(status);
 - Increase `backgroundIntervalMs`
 - Call `forceLearning()` manually
 
-## References
-
-- [V3 Neural Module](../README.md)
-
 ## License
 
 SONA integration follows the same license as the V3 neural module.
