@@ -1,6 +1,6 @@
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   applyCredentialHolderProcessHardening,
@@ -40,6 +40,21 @@ describe('credential USE-not-KNOW boundary gate', () => {
       .toMatch(/production holder bootstrap|seeded|credential store|argv/i);
     expect(getCredentialBoundaryGate('strict-api-no-env-no-config-serialization')?.description)
       .not.toMatch(/sub-agent|provider-worker|role denial|access control/i);
+  });
+});
+
+describe('credential holder option surface', () => {
+  it('does not expose dead peerRoleResolver plumbing on holder surfaces', () => {
+    const credentialStoreRoot = resolve(__dirname, '..');
+    const surfaces = [
+      join(credentialStoreRoot, 'holder.ts'),
+      join(credentialStoreRoot, 'holder-runtime.ts'),
+      join(credentialStoreRoot, 'strict-api-provider.ts'),
+    ];
+
+    const hits = surfaces.filter((file) => readFileSync(file, 'utf8').includes('peerRoleResolver'));
+
+    expect(hits).toEqual([]);
   });
 });
 
@@ -196,14 +211,13 @@ describe('credential holder same-user USE grants', () => {
   });
 
   it.each(['sub-agent', 'provider-worker'] as const)(
-    'allows holder-owned provider_call commands from same-user %s peers without issuing raw keys',
+    'allows holder-owned provider_call commands from same-user %s-shaped peers without issuing raw keys',
     async (role) => {
       let invoked = false;
       const holder = new CredentialHolderService({
         socketPath: tempSocketPath(),
         uid: 501,
         peerCredentialResolver: async () => ({ pid: 42, uid: 501, startTime: `${role}-start` }),
-        peerRoleResolver: async () => role,
         providerInvoker: async () => {
           invoked = true;
           return { content: 'holder-owned response' };
@@ -320,12 +334,11 @@ describe('credential holder same-user USE grants', () => {
     expect((holder as unknown as { useProviderGrant?: unknown }).useProviderGrant).toBeUndefined();
   });
 
-  it('treats sub-agent/provider-worker role classification as advisory, not a USE security boundary', async () => {
+  it('does not require advisory role metadata for same-user USE grants', async () => {
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
       uid: 501,
       peerCredentialResolver: async () => ({ pid: 77, uid: 501, startTime: 'sub-agent-start' }),
-      peerRoleResolver: async peer => peer.pid === 77 ? 'sub-agent' : 'coordinator',
     });
     await holder.start();
     holder.setProviderSecret('openrouter', Buffer.from('or-raw-secret'));

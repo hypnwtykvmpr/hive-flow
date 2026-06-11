@@ -24,6 +24,10 @@ var os = require('os');
 
 var npmDir = path.join(os.homedir(), '.npm');
 
+function isHiveFlowCacheIndexEntry(content) {
+  return String(content || '').indexOf('hive-flow') !== -1;
+}
+
 // 1. Clean stale rename artifacts from npx cache (fixes ENOTEMPTY)
 try {
   var npxRoot = path.join(npmDir, '_npx');
@@ -54,7 +58,7 @@ try {
 } catch (e) { /* non-fatal */ }
 
 // 2. Remove corrupted integrity entries from _cacache (fixes ECOMPROMISED)
-//    Scans index-v5 hash buckets for entries referencing hive-flow or hive-flow
+//    Scans index-v5 hash buckets for entries referencing hive-flow
 //    packages and removes them so npm re-fetches with correct integrity.
 try {
   var cacheIndex = path.join(npmDir, '_cacache', 'index-v5');
@@ -78,7 +82,7 @@ try {
                 var filePath = path.join(subPath, files[fi]);
                 try {
                   var content = fs.readFileSync(filePath, 'utf-8');
-                  if (content.indexOf('hive-flow') !== -1 || content.indexOf('hive-flow') !== -1) {
+                  if (isHiveFlowCacheIndexEntry(content)) {
                     fs.unlinkSync(filePath);
                   }
                 } catch (e2) { /* skip unreadable */ }
@@ -87,7 +91,7 @@ try {
               // File at second level
               try {
                 var content2 = fs.readFileSync(subPath, 'utf-8');
-                if (content2.indexOf('hive-flow') !== -1 || content2.indexOf('hive-flow') !== -1) {
+                if (isHiveFlowCacheIndexEntry(content2)) {
                   fs.unlinkSync(subPath);
                 }
               } catch (e2) { /* skip unreadable */ }

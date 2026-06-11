@@ -1,12 +1,10 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import fc from 'fast-check';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sendCredentialHolderCommand } from '../holder.js';
 import {
   bootstrapProductionCredentialHolder,
-  createHiveFlowPeerRoleResolver,
   initializeCredentialVault,
 } from '../holder-runtime.js';
 import type { CredentialStoreProvider } from '../credential-store.js';
@@ -78,15 +76,6 @@ function sameUserPeer(pid = process.pid): PeerCredential {
     uid: typeof process.getuid === 'function' ? process.getuid() : 0,
     startTime: `test-peer-${pid}`,
   };
-}
-
-function writeAgentStore(root: string, records: unknown[]): void {
-  const dir = join(root, '.hive-flow', 'agents');
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'store.json'), JSON.stringify({
-    agents: records,
-    updatedAt: new Date().toISOString(),
-  }, null, 2), 'utf8');
 }
 
 afterEach(() => {
@@ -209,18 +198,12 @@ describe('production credential holder runtime bootstrap', () => {
     }
   });
 
-  it('allows a same-UID registered sub-agent PID to use holder-owned provider_call without raw key material', async () => {
+  it('allows a same-UID peer to use holder-owned provider_call without raw key material', async () => {
     const root = makeRoot();
     const socketPath = makeSocketPath('subagent');
     const store = new MemoryCredentialStore();
     const rawKey = 'or-subagent-holder-secret';
     await store.storeSecret('openrouter', rawKey);
-    writeAgentStore(root, [{
-      agentId: 'sub-agent-1',
-      type: 'coder',
-      status: 'busy',
-      pid: process.pid,
-    }]);
 
     const runtime = await bootstrapProductionCredentialHolder({
       projectRoot: root,
@@ -264,28 +247,5 @@ describe('production credential holder runtime bootstrap', () => {
     } finally {
       await runtime.stop();
     }
-  });
-});
-
-describe('Hive Flow peer role resolver', () => {
-  it('classifies arbitrary task-tracking PIDs as advisory provider workers', () => {
-    fc.assert(
-      fc.asyncProperty(fc.integer({ min: 1, max: 2_000_000_000 }), async (pid) => {
-        const root = makeRoot();
-        const tasksDir = join(root, '.hive-flow', 'tasks');
-        mkdirSync(tasksDir, { recursive: true });
-        writeFileSync(join(tasksDir, 'task-1.json'), JSON.stringify({
-          taskId: 'task-1',
-          agentId: 'agent-1',
-          status: 'running',
-          provider: 'openrouter',
-          pid,
-        }), 'utf8');
-
-        const resolver = createHiveFlowPeerRoleResolver({ projectRoot: root });
-        await expect(resolver({ ...sameUserPeer(pid), pid })).resolves.toBe('provider-worker');
-      }),
-      { numRuns: 25 },
-    );
   });
 });

@@ -7,8 +7,6 @@ import { normalizeProviderKeyName } from './credential-store.js';
 import type { PeerCredential, PeerCredentialResolver } from './peer-credentials.js';
 import { redactCredentialMaterial } from './safe-serialization.js';
 
-export type CredentialPeerRole = 'coordinator' | 'sub-agent' | 'provider-worker';
-
 export interface CapabilityTokenIssuerOptions {
   ttlMs?: number;
   now?: () => number;
@@ -152,7 +150,6 @@ export interface CredentialHolderServiceOptions {
   platform?: NodeJS.Platform;
   uid?: number;
   peerCredentialResolver: PeerCredentialResolver['lookup'];
-  peerRoleResolver?: (peer: PeerCredential) => CredentialPeerRole | Promise<CredentialPeerRole>;
   providerInvoker?: (input: ProviderUseHandlerInput) => Promise<unknown> | unknown;
   tokenTtlMs?: number;
   now?: () => number;

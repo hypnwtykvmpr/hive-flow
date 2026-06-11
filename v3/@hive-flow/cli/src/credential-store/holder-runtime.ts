@@ -1,11 +1,10 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type { CredentialStoreProvider } from './credential-store.js';
 import { normalizeProviderKeyName } from './credential-store.js';
-import type { CredentialPeerRole } from './holder.js';
 import type { KekProvider, RandomBytes } from './kek.js';
 import { generateKek } from './kek.js';
-import type { PeerCredential, PeerCredentialResolver } from './peer-credentials.js';
+import type { PeerCredentialResolver } from './peer-credentials.js';
 import {
   DEFAULT_CREDENTIAL_VAULT_PATH,
   assertCredentialBackendReady,
@@ -26,10 +25,6 @@ import {
 } from './vault.js';
 
 export const DEFAULT_HOLDER_BOOTSTRAP_PROVIDERS = [...STRICT_API_PROVIDERS].sort();
-
-export interface HiveFlowPeerRoleResolverOptions {
-  projectRoot: string;
-}
 
 export interface InitializeCredentialVaultOptions {
   credentialStore?: CredentialStoreProvider & KekProvider;
@@ -87,7 +82,6 @@ export interface BootstrapProductionCredentialHolderOptions {
   allowDegraded?: boolean;
   peerHelperCommand?: string;
   peerCredentialResolver?: PeerCredentialResolver['lookup'];
-  peerRoleResolver?: (peer: PeerCredential) => CredentialPeerRole | Promise<CredentialPeerRole>;
   fetchImpl?: typeof fetch;
   baseUrls?: Partial<Record<string, string>>;
 }
@@ -98,26 +92,6 @@ export interface ProductionCredentialHolderRuntime {
   seededProviders: string[];
   backendStatus: Awaited<ReturnType<CredentialStoreProvider['status']>>;
   stop(): Promise<void>;
-}
-
-interface TaskTrackingRecord {
-  pid?: unknown;
-  status?: unknown;
-}
-
-interface AgentStoreShape {
-  agents?: unknown;
-}
-
-export function createHiveFlowPeerRoleResolver(
-  options: HiveFlowPeerRoleResolverOptions,
-): (peer: PeerCredential) => Promise<CredentialPeerRole> {
-  const projectRoot = options.projectRoot;
-  return async (peer: PeerCredential): Promise<CredentialPeerRole> => {
-    if (isProviderWorkerPid(projectRoot, peer.pid)) return 'provider-worker';
-    if (isSubAgentPid(projectRoot, peer.pid)) return 'sub-agent';
-    return 'coordinator';
-  };
 }
 
 export async function initializeCredentialVault(
@@ -227,7 +201,6 @@ export async function bootstrapProductionCredentialHolder(
     socketPath: options.socketPath,
     peerHelperCommand: options.peerHelperCommand,
     peerCredentialResolver: options.peerCredentialResolver,
-    peerRoleResolver: options.peerRoleResolver ?? createHiveFlowPeerRoleResolver({ projectRoot: options.projectRoot }),
     fetchImpl: options.fetchImpl,
     baseUrls: options.baseUrls,
   });
@@ -302,57 +275,6 @@ async function backendNameFor(credentialStore: CredentialStoreProvider & KekProv
   const name = (credentialStore as { backendName?: unknown }).backendName;
   if (typeof name === 'string' && name.trim()) return name;
   return 'credential-store';
-}
-
-function readJsonFile(path: string): unknown {
-  try {
-    if (!existsSync(path)) return undefined;
-    return JSON.parse(readFileSync(path, 'utf8')) as unknown;
-  } catch {
-    return undefined;
-  }
-}
-
-function isProviderWorkerPid(projectRoot: string, pid: number): boolean {
-  const tasksDir = join(projectRoot, '.hive-flow', 'tasks');
-  if (!existsSync(tasksDir)) return false;
-  let entries: string[];
-  try {
-    entries = readdirSync(tasksDir).filter(entry => entry.endsWith('.json') && !entry.endsWith('.result.json'));
-  } catch {
-    return false;
-  }
-  for (const entry of entries) {
-    const record = readJsonFile(join(tasksDir, entry)) as TaskTrackingRecord | undefined;
-    if (!record || Number(record.pid) !== pid) continue;
-    const status = String(record.status || '').toLowerCase();
-    if (!['complete', 'completed', 'failed', 'cancelled', 'terminated'].includes(status)) return true;
-  }
-  return false;
-}
-
-function isSubAgentPid(projectRoot: string, pid: number): boolean {
-  const store = readJsonFile(join(projectRoot, '.hive-flow', 'agents', 'store.json')) as AgentStoreShape | undefined;
-  const agents = store?.agents;
-  const records = Array.isArray(agents)
-    ? agents
-    : agents && typeof agents === 'object'
-      ? Object.values(agents)
-      : [];
-  return records.some((record) => {
-    if (!record || typeof record !== 'object') return false;
-    const agent = record as Record<string, unknown>;
-    const candidatePid = Number(agent.pid ?? agent.processId ?? getNestedPid(agent.tracking) ?? getNestedPid(agent.config));
-    if (candidatePid !== pid) return false;
-    const status = String(agent.status || '').toLowerCase();
-    return status !== 'terminated';
-  });
-}
-
-function getNestedPid(value: unknown): unknown {
-  return value && typeof value === 'object'
-    ? (value as Record<string, unknown>).pid
-    : undefined;
 }
 
 function hasKekProvider(value: CredentialStoreProvider & Partial<KekProvider>): value is CredentialStoreProvider & KekProvider {

@@ -61,6 +61,10 @@ export function repairNpxCache() {
  * Remove corrupted _cacache integrity entries for hive-flow/hive-flow packages.
  * Fixes ECOMPROMISED by clearing stale integrity hashes so npm re-fetches.
  */
+export function isHiveFlowCacheIndexEntry(content) {
+  return String(content || '').includes('hive-flow');
+}
+
 export function repairCacheIntegrity() {
   const indexDir = join(homedir(), '.npm', '_cacache', 'index-v5');
   if (!existsSync(indexDir)) return 0;
@@ -76,7 +80,7 @@ export function repairCacheIntegrity() {
             walk(fp);
           } else {
             const content = readFileSync(fp, 'utf-8');
-            if (content.includes('hive-flow') || content.includes('hive-flow')) {
+            if (isHiveFlowCacheIndexEntry(content)) {
               unlinkSync(fp);
               cleaned++;
             }

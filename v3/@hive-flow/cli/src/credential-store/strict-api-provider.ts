@@ -189,7 +189,6 @@ export function createProductionCredentialHolderService(options: {
   socketPath?: string;
   peerHelperCommand?: string;
   peerCredentialResolver?: PeerCredentialResolver['lookup'];
-  peerRoleResolver?: CredentialHolderServiceOptions['peerRoleResolver'];
   fetchImpl?: typeof fetch;
   baseUrls?: Partial<Record<string, string>>;
 } = {}): CredentialHolderService {
@@ -198,7 +197,6 @@ export function createProductionCredentialHolderService(options: {
     peerCredentialResolver: options.peerCredentialResolver ?? createPeerCredentialResolver({
       helperCommand: options.peerHelperCommand,
     }).lookup,
-    peerRoleResolver: options.peerRoleResolver,
     providerInvoker: createStrictApiProviderInvoker({
       fetchImpl: options.fetchImpl,
       baseUrls: options.baseUrls,

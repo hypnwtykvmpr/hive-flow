@@ -72,6 +72,22 @@ describe('DB-5 static prohibited debrand sweep', () => {
     expect(malformedUrls, '[DB-5 docs] repair or remove malformed single-slash URLs').toEqual([]);
   });
 
+  it('does not ship neural docs with DELETE_ names or empty tmp json placeholders', () => {
+    const forbidden = trackedFilesForShippedSurfaces()
+      .filter((file) => existsSync(resolve(REPO_ROOT, file)))
+      .filter((file) =>
+        /^v3\/@hive-flow\/neural\/(?:DELETE_README\.md|docs\/DELETE_.*\.md|(?:src\/)?tmp\.json)$/.test(file),
+      );
+    const missingRenames = [
+      'v3/@hive-flow/neural/README.md',
+      'v3/@hive-flow/neural/docs/SONA_INTEGRATION.md',
+      'v3/@hive-flow/neural/docs/SONA_QUICKSTART.md',
+    ].filter((file) => !existsSync(resolve(REPO_ROOT, file)));
+
+    expect(forbidden).toEqual([]);
+    expect(missingRenames).toEqual([]);
+  });
+
   it('ships valid JSON for generated Claude settings templates', () => {
     const parseFailures = collectGeneratedSettingsJsonParseFailures();
 
