@@ -63,13 +63,6 @@ function fireHiveCompleteHook(context: Record<string, unknown>): void {
   void dispatcher.dispatch('hive-complete', context).catch(() => {});
 }
 
-function resolveOwnerTmuxPane(input: Record<string, unknown>, env: NodeJS.ProcessEnv = process.env): string | null {
-  const raw = input.ownerTmuxPane ?? input.tmuxPane ?? env.TMUX_PANE;
-  if (typeof raw !== 'string' || !raw.trim()) return null;
-  const trimmed = raw.trim().replace(/[\r\n\t]/g, '');
-  return trimmed.slice(0, 128) || null;
-}
-
 async function fireHiveTerminatedHook(context: Record<string, unknown>): Promise<void> {
   try {
     const { getWorkflowHookDispatcher: getDispatcher } = await import('./workflow-executor.js');
@@ -207,8 +200,8 @@ const missionAssignTool: MCPTool = {
       stalenessTimeout: { type: 'number', description: 'Timeout in ms before hive is considered stale (default: 3600000)' },
       session_id: { type: 'string', description: 'Optional launching session id for multi-session ownership routing' },
       sessionId: { type: 'string', description: 'Optional launching session id fallback for multi-session ownership routing' },
-      ownerTmuxPane: { type: 'string', description: 'Optional launching tmux pane snapshot for multi-session wake routing' },
-      tmuxPane: { type: 'string', description: 'Optional launching tmux pane fallback for multi-session wake routing' },
+      ownerTmuxPane: { type: 'string', description: 'Deprecated legacy pane field; accepted for compatibility and ignored' },
+      tmuxPane: { type: 'string', description: 'Deprecated legacy pane field; accepted for compatibility and ignored' },
       workers: {
         type: 'array',
         items: {
@@ -237,7 +230,6 @@ const missionAssignTool: MCPTool = {
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
     const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
     const ownerSessionId = resolveSessionId(input as Record<string, unknown>, process.env);
-    const ownerTmuxPane = resolveOwnerTmuxPane(input as Record<string, unknown>, process.env);
 
     // (1) Hard minimum of 5 workers
     if (maxWorkers < 5) {
@@ -291,7 +283,6 @@ const missionAssignTool: MCPTool = {
       const record = loadHive(hive.hiveId);
       if (!record) throw new Error('Hive record disappeared after creation');
       record.ownerSessionId = ownerSessionId;
-      record.ownerTmuxPane = ownerTmuxPane;
       record.mission = mission;
       record.status = 'active';
       appendHiveAudit(record, {

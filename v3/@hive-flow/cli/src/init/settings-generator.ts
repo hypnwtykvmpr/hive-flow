@@ -198,7 +198,7 @@ export function generateSettings(options: InitOptions): object {
     },
     agentTeams: {
       enabled: true,
-      teammateMode: 'auto', // 'auto' | 'in-process' | 'tmux'
+      teammateMode: 'auto', // 'auto' | 'in-process'
       taskListEnabled: true,
       mailboxEnabled: true,
       coordination: {

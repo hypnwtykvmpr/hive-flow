@@ -451,6 +451,25 @@ describe('runWrapperHost — happy path', () => {
     expect(startEvent?.sessionId).toBe(expectedSessionKey('codex', 'interactive-session-1'));
   });
 
+  it('does not derive wrapper session identity from TMUX_PANE', async () => {
+    const env = {
+      TMUX_PANE: '%7',
+    };
+    const { deps, spawn, recorder } = buildDeps({
+      argv: ['codex', '--', '/opt/codex/bin/codex'],
+      env,
+    });
+
+    const promise = runWrapperHost(deps);
+    await flushMicrotasks(5);
+    spawn.child.emitExit(0);
+    await promise;
+
+    const startEvent = recorder.events.find((e) => e.event === 'session-start');
+    expect(startEvent).toBeDefined();
+    expect(startEvent?.sessionId).toBe(expectedSessionKey('codex', 'pid:12345'));
+  });
+
   it('child exit 42 → wrapper exit 42; session-end carries exitCode 42', async () => {
     const { deps, spawn, recorder } = buildDeps({
       argv: ['gemini', '--', '/bin/gemini'],

@@ -42,8 +42,7 @@ function sessionValue(input, env = process.env) {
     fromInput.value ||
     stringValue(env.HIVE_FLOW_SESSION_ID) ||
     stringValue(env.CLAUDE_SESSION_ID) ||
-    stringValue(env.CODEX_SESSION_ID) ||
-    stringValue(env.TMUX_PANE)
+    stringValue(env.CODEX_SESSION_ID)
   );
 }
 

@@ -126,7 +126,6 @@ export function sessionKeyFor(
     stringValue(env.HIVE_FLOW_SESSION_ID) ??
     stringValue(env.CLAUDE_SESSION_ID) ??
     stringValue(env.CODEX_SESSION_ID) ??
-    stringValue(env.TMUX_PANE) ??
     `pid:${process.pid}`;
   const clientKind =
     fromInput.clientKind ??

@@ -64,7 +64,6 @@ const originalEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
   AGENTIC_FLOW_SESSION_ID: process.env.AGENTIC_FLOW_SESSION_ID,
-  TMUX_PANE: process.env.TMUX_PANE,
 };
 
 let root = '';
@@ -154,7 +153,6 @@ beforeEach(() => {
   process.env.CLAUDE_PROJECT_DIR = root;
   process.env.CLAUDE_SESSION_ID = 'env-session';
   process.env.AGENTIC_FLOW_SESSION_ID = 'provider-session';
-  process.env.TMUX_PANE = '%42';
   resetAgentStore();
   setWorkflowHookDispatcher(null);
 });
@@ -212,18 +210,20 @@ describe('R-sid multi-session enabler', () => {
     }
   });
 
-  it('stamps ownerSessionId and ownerTmuxPane on hive.json during queen_mission_assign', async () => {
+  it('stamps ownerSessionId and ignores deprecated pane inputs during queen_mission_assign', async () => {
     const result = await getQueenTool('queen_mission_assign').handler({
       queenId: 'queen-1',
       scope: 'R-sid mission',
       description: 'Verify owner session stamping',
       session_id: 'payload-session',
+      ownerTmuxPane: '%42',
+      tmuxPane: '%43',
     }) as Record<string, unknown>;
 
     expect(result.success).toBe(true);
     const hive = loadHive(String(result.hiveId));
     expect(hive?.ownerSessionId).toBe('payload-session');
-    expect(hive?.ownerTmuxPane).toBe('%42');
+    expect(hive).not.toHaveProperty('ownerTmuxPane');
   });
 
   it('threads watcher --sessionId into parsed config and completion payloads while preserving null fallback', () => {

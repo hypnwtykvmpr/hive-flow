@@ -355,7 +355,6 @@ export async function runWrapperHost(deps: RunWrapperHostDeps): Promise<RunWrapp
     deps.env.HIVE_FLOW_SESSION_ID,
     deps.env.CLAUDE_SESSION_ID,
     deps.env.CODEX_SESSION_ID,
-    deps.env.TMUX_PANE,
     `pid:${deps.pid}`,
   );
   const sessionId = sessionKeyFor({
