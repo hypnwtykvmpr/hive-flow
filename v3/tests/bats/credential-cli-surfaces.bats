@@ -20,3 +20,13 @@ setup() {
   [[ "$output" == *"configure - Configure provider settings and API keys"* ]]
   [[ "$output" == *"test      - Test provider connectivity"* ]]
 }
+
+@test "config key set preserves blank no-op and vault enrollment consent-count contracts" {
+  run pnpm --dir "$REPO_ROOT/v3" --filter @hive-flow/cli exec vitest run \
+    src/__tests__/credential-cli-surfaces.test.ts \
+    src/credential-store/__tests__/holder-runtime.test.ts
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"credential-cli-surfaces.test.ts"* ]]
+  [[ "$output" == *"holder-runtime.test.ts"* ]]
+}

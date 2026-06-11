@@ -51,7 +51,8 @@ export interface StoreProviderCredentialOptions {
 
 export interface CredentialKeyStatusOptions {
   provider?: string;
-  credentialStore?: CredentialStoreProvider;
+  credentialStore?: CredentialStoreProvider & Partial<KekProvider>;
+  vaultPath?: string;
 }
 
 export interface CredentialKeyStatus {
@@ -71,13 +72,16 @@ export interface RepairCredentialVaultOptions {
 
 export interface RemoveProviderCredentialOptions {
   provider: string;
-  credentialStore?: CredentialStoreProvider;
+  credentialStore?: CredentialStoreProvider & Partial<KekProvider>;
+  vaultPath?: string;
+  allowDegraded?: boolean;
 }
 
 export interface BootstrapProductionCredentialHolderOptions {
   projectRoot: string;
   socketPath?: string;
-  credentialStore?: CredentialStoreProvider;
+  credentialStore?: CredentialStoreProvider & Partial<KekProvider>;
+  vaultPath?: string;
   providers?: readonly string[];
   allowDegraded?: boolean;
   peerHelperCommand?: string;
@@ -94,36 +98,35 @@ export interface ProductionCredentialHolderRuntime {
   stop(): Promise<void>;
 }
 
+interface CredentialVaultDocument {
+  version: number;
+  createdAt: string;
+  updatedAt?: string;
+  providers: Record<string, string>;
+  sealedKek: Parameters<KekProvider['unsealKek']>[0];
+}
+
+interface LoadedCredentialVault {
+  backend: Awaited<ReturnType<CredentialStoreProvider['status']>>;
+  document: CredentialVaultDocument;
+  kek: Buffer;
+  createdVault: boolean;
+}
+
 export async function initializeCredentialVault(
   options: InitializeCredentialVaultOptions = {},
 ): Promise<CredentialVaultBootstrapStatus> {
   const credentialStore = options.credentialStore ?? createPlatformCredentialStore();
   const vaultPath = options.vaultPath ?? DEFAULT_CREDENTIAL_VAULT_PATH;
-  const backend = await credentialStore.status();
-  assertCredentialBackendReady(backend, { allowDegraded: options.allowDegraded });
-
-  if (!existsSync(vaultPath)) {
-    mkdirSync(dirname(vaultPath), { recursive: true, mode: 0o700 });
-    const kek = generateKek(options.randomBytes);
-    try {
-      const sealedKek = await credentialStore.sealKek(kek);
-      const emptyVault = {
-        version: 1,
-        createdAt: (options.now ?? (() => new Date()))().toISOString(),
-        providers: {},
-        sealedKek,
-      };
-      writeVaultAtomic(vaultPath, encryptVault(JSON.stringify(emptyVault), kek, { randomBytes: options.randomBytes }));
-      return { backend, vaultPath, createdVault: true, decrypts: true };
-    } finally {
-      kek.fill(0);
-    }
-  }
-
-  const envelope = readVaultEnvelope(vaultPath);
-  const decrypted = await decryptExistingVault(credentialStore, envelope);
-  decrypted.fill(0);
-  return { backend, vaultPath, createdVault: false, decrypts: true };
+  const loaded = await loadOrCreateCredentialVault({
+    credentialStore,
+    vaultPath,
+    allowDegraded: options.allowDegraded,
+    randomBytes: options.randomBytes,
+    now: options.now,
+  });
+  loaded.kek.fill(0);
+  return { backend: loaded.backend, vaultPath, createdVault: loaded.createdVault, decrypts: true };
 }
 
 export async function storeProviderCredential(
@@ -132,15 +135,22 @@ export async function storeProviderCredential(
   const provider = normalizeProviderKeyName(options.provider);
   const credentialStore = options.credentialStore ?? createPlatformCredentialStore();
   if (hasKekProvider(credentialStore)) {
-    await initializeCredentialVault({
+    const loaded = await loadOrCreateCredentialVault({
       credentialStore,
       vaultPath: options.vaultPath,
       allowDegraded: options.allowDegraded,
     });
+    try {
+      loaded.document.providers[provider] = encodeVaultProviderSecret(options.secret);
+      loaded.document.updatedAt = new Date().toISOString();
+      writeCredentialVaultDocument(options.vaultPath ?? DEFAULT_CREDENTIAL_VAULT_PATH, loaded.document, loaded.kek);
+    } finally {
+      loaded.kek.fill(0);
+    }
   } else {
     assertCredentialBackendReady(await credentialStore.status(provider), { allowDegraded: options.allowDegraded });
+    await credentialStore.storeSecret(provider, options.secret);
   }
-  await credentialStore.storeSecret(provider, options.secret);
   return { provider, stored: true, vaultReady: true };
 }
 
@@ -153,11 +163,20 @@ export async function inspectCredentialKeyStatus(
   let present = false;
   if (provider && backend.available && !backend.degraded) {
     try {
-      const secret = await credentialStore.retrieveSecret(provider);
-      if (secret) {
-        present = true;
-        Buffer.from(secret).fill(0);
-        if (secret instanceof Buffer) secret.fill(0);
+      if (hasKekProvider(credentialStore)) {
+        const loaded = await loadExistingCredentialVault(credentialStore, options.vaultPath ?? DEFAULT_CREDENTIAL_VAULT_PATH);
+        try {
+          present = Object.hasOwn(loaded.document.providers, provider);
+        } finally {
+          loaded.kek.fill(0);
+        }
+      } else {
+        const secret = await credentialStore.retrieveSecret(provider);
+        if (secret) {
+          present = true;
+          Buffer.from(secret).fill(0);
+          if (secret instanceof Buffer) secret.fill(0);
+        }
       }
     } catch {
       present = false;
@@ -186,7 +205,21 @@ export async function removeProviderCredential(
 ): Promise<{ provider: string; removed: boolean }> {
   const provider = normalizeProviderKeyName(options.provider);
   const credentialStore = options.credentialStore ?? createPlatformCredentialStore();
-  await credentialStore.deleteSecret(provider);
+  if (hasKekProvider(credentialStore)) {
+    const vaultPath = options.vaultPath ?? DEFAULT_CREDENTIAL_VAULT_PATH;
+    if (existsSync(vaultPath)) {
+      const loaded = await loadExistingCredentialVault(credentialStore, vaultPath);
+      try {
+        delete loaded.document.providers[provider];
+        loaded.document.updatedAt = new Date().toISOString();
+        writeCredentialVaultDocument(vaultPath, loaded.document, loaded.kek);
+      } finally {
+        loaded.kek.fill(0);
+      }
+    }
+  } else {
+    await credentialStore.deleteSecret(provider);
+  }
   return { provider, removed: true };
 }
 
@@ -208,15 +241,11 @@ export async function bootstrapProductionCredentialHolder(
   const seededProviders: string[] = [];
   const pendingSecrets: Array<{ provider: string; secret: Buffer }> = [];
   try {
-    for (const provider of options.providers ?? DEFAULT_HOLDER_BOOTSTRAP_PROVIDERS) {
-      const normalized = normalizeProviderKeyName(provider);
-      if (!STRICT_API_PROVIDERS.has(normalized)) continue;
-      const secret = await credentialStore.retrieveSecret(normalized);
-      if (!secret) continue;
-      const secretBuffer = Buffer.from(secret);
-      pendingSecrets.push({ provider: normalized, secret: secretBuffer });
-      if (secret instanceof Buffer) secret.fill(0);
-    }
+    pendingSecrets.push(...await collectVaultedProviderSecrets({
+      credentialStore,
+      vaultPath: options.vaultPath ?? DEFAULT_CREDENTIAL_VAULT_PATH,
+      providers: options.providers ?? DEFAULT_HOLDER_BOOTSTRAP_PROVIDERS,
+    }));
     await holder.start();
     for (const { provider, secret } of pendingSecrets) {
       holder.setProviderSecret(provider, secret);
@@ -238,26 +267,140 @@ export async function bootstrapProductionCredentialHolder(
   };
 }
 
-async function decryptExistingVault(
-  credentialStore: CredentialStoreProvider & KekProvider,
-  envelope: VaultEnvelope,
-): Promise<Buffer> {
-  const sealedReference = decryptVault(envelope, await unsealExistingKekReference(credentialStore, envelope));
-  let parsed: { sealedKek?: unknown };
-  try {
-    parsed = JSON.parse(sealedReference.toString('utf8')) as { sealedKek?: unknown };
-  } finally {
-    sealedReference.fill(0);
+async function loadOrCreateCredentialVault(options: {
+  credentialStore: CredentialStoreProvider & KekProvider;
+  vaultPath?: string;
+  allowDegraded?: boolean;
+  randomBytes?: RandomBytes;
+  now?: () => Date;
+}): Promise<LoadedCredentialVault> {
+  const vaultPath = options.vaultPath ?? DEFAULT_CREDENTIAL_VAULT_PATH;
+  const backend = await options.credentialStore.status();
+  assertCredentialBackendReady(backend, { allowDegraded: options.allowDegraded });
+
+  if (existsSync(vaultPath)) {
+    const loaded = await loadExistingCredentialVault(options.credentialStore, vaultPath);
+    return { ...loaded, backend };
   }
+
+  mkdirSync(dirname(vaultPath), { recursive: true, mode: 0o700 });
+  const kek = generateKek(options.randomBytes);
+  try {
+    const sealedKek = await options.credentialStore.sealKek(kek);
+    const document: CredentialVaultDocument = {
+      version: 1,
+      createdAt: (options.now ?? (() => new Date()))().toISOString(),
+      providers: {},
+      sealedKek,
+    };
+    writeCredentialVaultDocument(vaultPath, document, kek, options.randomBytes);
+    return { backend, document, kek: Buffer.from(kek), createdVault: true };
+  } finally {
+    kek.fill(0);
+  }
+}
+
+async function loadExistingCredentialVault(
+  credentialStore: CredentialStoreProvider & KekProvider,
+  vaultPath: string,
+): Promise<Omit<LoadedCredentialVault, 'backend'>> {
+  const envelope = readVaultEnvelope(vaultPath);
+  const kek = await unsealExistingKekReference(credentialStore, envelope);
+  try {
+    const decrypted = decryptVault(envelope, kek);
+    try {
+      return {
+        document: parseCredentialVaultDocument(decrypted),
+        kek,
+        createdVault: false,
+      };
+    } finally {
+      decrypted.fill(0);
+    }
+  } catch (error) {
+    kek.fill(0);
+    throw error;
+  }
+}
+
+function parseCredentialVaultDocument(decrypted: Buffer): CredentialVaultDocument {
+  const parsed = JSON.parse(decrypted.toString('utf8')) as Partial<CredentialVaultDocument>;
   if (!parsed.sealedKek || typeof parsed.sealedKek !== 'object') {
     throw new Error('credential vault does not contain a sealed KEK reference');
   }
-  const kek = await credentialStore.unsealKek(parsed.sealedKek as Parameters<KekProvider['unsealKek']>[0]);
-  try {
-    return decryptVault(envelope, kek);
-  } finally {
-    Buffer.from(kek).fill(0);
+  if (!parsed.providers || typeof parsed.providers !== 'object' || Array.isArray(parsed.providers)) {
+    throw new Error('credential vault provider map is malformed');
   }
+  return {
+    version: parsed.version ?? 1,
+    createdAt: parsed.createdAt ?? new Date(0).toISOString(),
+    updatedAt: parsed.updatedAt,
+    providers: Object.fromEntries(
+      Object.entries(parsed.providers)
+        .map(([provider, encoded]) => [normalizeProviderKeyName(provider), String(encoded)]),
+    ),
+    sealedKek: parsed.sealedKek,
+  };
+}
+
+function writeCredentialVaultDocument(
+  vaultPath: string,
+  document: CredentialVaultDocument,
+  kek: Uint8Array,
+  randomBytes?: RandomBytes,
+): void {
+  writeVaultAtomic(vaultPath, encryptVault(JSON.stringify(document), kek, { randomBytes }));
+}
+
+function encodeVaultProviderSecret(secret: Uint8Array | string): string {
+  return Buffer.from(typeof secret === 'string' ? secret : Buffer.from(secret)).toString('base64');
+}
+
+function decodeVaultProviderSecret(encoded: string): Buffer {
+  return Buffer.from(encoded, 'base64');
+}
+
+async function collectVaultedProviderSecrets(options: {
+  credentialStore: CredentialStoreProvider & Partial<KekProvider>;
+  vaultPath: string;
+  providers: readonly string[];
+}): Promise<Array<{ provider: string; secret: Buffer }>> {
+  if (!hasKekProvider(options.credentialStore)) {
+    return collectLegacyProviderSecrets(options.credentialStore, options.providers);
+  }
+  if (!existsSync(options.vaultPath)) return [];
+
+  const loaded = await loadExistingCredentialVault(options.credentialStore, options.vaultPath);
+  try {
+    const pendingSecrets: Array<{ provider: string; secret: Buffer }> = [];
+    for (const provider of options.providers) {
+      const normalized = normalizeProviderKeyName(provider);
+      if (!STRICT_API_PROVIDERS.has(normalized)) continue;
+      const encoded = loaded.document.providers[normalized];
+      if (!encoded) continue;
+      pendingSecrets.push({ provider: normalized, secret: decodeVaultProviderSecret(encoded) });
+    }
+    return pendingSecrets;
+  } finally {
+    loaded.kek.fill(0);
+  }
+}
+
+async function collectLegacyProviderSecrets(
+  credentialStore: CredentialStoreProvider,
+  providers: readonly string[],
+): Promise<Array<{ provider: string; secret: Buffer }>> {
+  const pendingSecrets: Array<{ provider: string; secret: Buffer }> = [];
+  for (const provider of providers) {
+    const normalized = normalizeProviderKeyName(provider);
+    if (!STRICT_API_PROVIDERS.has(normalized)) continue;
+    const secret = await credentialStore.retrieveSecret(normalized);
+    if (!secret) continue;
+    const secretBuffer = Buffer.from(secret);
+    pendingSecrets.push({ provider: normalized, secret: secretBuffer });
+    if (secret instanceof Buffer) secret.fill(0);
+  }
+  return pendingSecrets;
 }
 
 async function unsealExistingKekReference(

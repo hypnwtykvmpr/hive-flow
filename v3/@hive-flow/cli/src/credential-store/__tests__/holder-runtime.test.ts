@@ -1,18 +1,24 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import fc from 'fast-check';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sendCredentialHolderCommand } from '../holder.js';
 import {
   bootstrapProductionCredentialHolder,
   initializeCredentialVault,
+  inspectCredentialKeyStatus,
+  removeProviderCredential,
+  storeProviderCredential,
 } from '../holder-runtime.js';
+import { decryptVault, readVaultEnvelope } from '../vault.js';
 import type { CredentialStoreProvider } from '../credential-store.js';
 import type { SealedKek } from '../kek.js';
 import type { PeerCredential } from '../peer-credentials.js';
 
 class MemoryCredentialStore implements CredentialStoreProvider {
   readonly secrets = new Map<string, Buffer>();
+  readonly consentOps: string[] = [];
   readonly backendName = 'memory-test-store';
   unsealCalls = 0;
 
@@ -21,15 +27,18 @@ class MemoryCredentialStore implements CredentialStoreProvider {
   }
 
   async storeSecret(provider: string, secret: Uint8Array | string): Promise<void> {
+    this.consentOps.push(`store:${provider.toLowerCase()}`);
     this.secrets.set(provider.toLowerCase(), Buffer.from(secret));
   }
 
   async retrieveSecret(provider: string): Promise<Uint8Array | null> {
+    this.consentOps.push(`retrieve:${provider.toLowerCase()}`);
     const secret = this.secrets.get(provider.toLowerCase());
     return secret ? Buffer.from(secret) : null;
   }
 
   async deleteSecret(provider: string): Promise<void> {
+    this.consentOps.push(`delete:${provider.toLowerCase()}`);
     this.secrets.delete(provider.toLowerCase());
   }
 
@@ -54,6 +63,10 @@ class MemoryCredentialStore implements CredentialStoreProvider {
     if (!kek) throw new Error('missing kek');
     return kek;
   }
+
+  resetConsentOps(): void {
+    this.consentOps.splice(0);
+  }
 }
 
 const roots: string[] = [];
@@ -76,6 +89,37 @@ function sameUserPeer(pid = process.pid): PeerCredential {
     uid: typeof process.getuid === 'function' ? process.getuid() : 0,
     startTime: `test-peer-${pid}`,
   };
+}
+
+function helperSequenceGolden(): Record<'freshEnroll' | 'updateExistingVault' | 'bootstrapSeedAll', string[]> {
+  return JSON.parse(readFileSync(
+    join(__dirname, 'fixtures', 'credential-enrollment-helper-sequences.golden.json'),
+    'utf8',
+  )) as Record<'freshEnroll' | 'updateExistingVault' | 'bootstrapSeedAll', string[]>;
+}
+
+async function enrollInVault(
+  store: MemoryCredentialStore,
+  vaultPath: string,
+  provider: string,
+  secret: Uint8Array | string,
+): Promise<void> {
+  await storeProviderCredential({ credentialStore: store, vaultPath, provider, secret });
+}
+
+function readVaultProvidersForTest(vaultPath: string, store: MemoryCredentialStore): Record<string, string> {
+  const kek = store.secrets.get('vault-kek');
+  if (!kek) throw new Error('missing test KEK');
+  const decrypted = decryptVault(readVaultEnvelope(vaultPath), kek);
+  try {
+    const parsed = JSON.parse(decrypted.toString('utf8')) as { providers?: Record<string, string> };
+    return Object.fromEntries(
+      Object.entries(parsed.providers ?? {})
+        .map(([provider, encoded]) => [provider, Buffer.from(String(encoded), 'base64').toString('utf8')]),
+    );
+  } finally {
+    decrypted.fill(0);
+  }
 }
 
 afterEach(() => {
@@ -127,14 +171,104 @@ describe('production credential holder runtime bootstrap', () => {
     expect(store.unsealCalls).toBe(0);
   });
 
+  it('stores a first provider in the encrypted vault with only one consent-bearing KEK store', async () => {
+    const root = makeRoot();
+    const store = new MemoryCredentialStore();
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
+
+    await storeProviderCredential({
+      credentialStore: store,
+      vaultPath,
+      provider: 'OpenRouter',
+      secret: 'or-first-secret',
+    });
+
+    expect(store.consentOps).toEqual(helperSequenceGolden().freshEnroll);
+    expect(store.secrets.has('openrouter')).toBe(false);
+    expect(readVaultProvidersForTest(vaultPath, store)).toEqual({ openrouter: 'or-first-secret' });
+  });
+
+  it('updates an existing provider in the encrypted vault with one KEK unseal and no provider keychain write', async () => {
+    const root = makeRoot();
+    const store = new MemoryCredentialStore();
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
+    await enrollInVault(store, vaultPath, 'openrouter', 'or-initial-secret');
+    store.resetConsentOps();
+
+    await storeProviderCredential({
+      credentialStore: store,
+      vaultPath,
+      provider: 'openrouter',
+      secret: 'or-updated-secret',
+    });
+
+    expect(store.consentOps).toEqual(helperSequenceGolden().updateExistingVault);
+    expect(store.secrets.has('openrouter')).toBe(false);
+    expect(readVaultProvidersForTest(vaultPath, store)).toEqual({ openrouter: 'or-updated-secret' });
+  });
+
+  it('reports provider presence and removes providers from the encrypted vault without touching provider keychain items', async () => {
+    const root = makeRoot();
+    const store = new MemoryCredentialStore();
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
+    await enrollInVault(store, vaultPath, 'openrouter', 'or-secret');
+    await enrollInVault(store, vaultPath, 'deepseek', 'ds-secret');
+    store.resetConsentOps();
+
+    await expect(inspectCredentialKeyStatus({ credentialStore: store, provider: 'openrouter', vaultPath }))
+      .resolves.toMatchObject({ provider: 'openrouter', present: true });
+    expect(store.consentOps).toEqual(helperSequenceGolden().updateExistingVault);
+
+    store.resetConsentOps();
+    await removeProviderCredential({ credentialStore: store, provider: 'openrouter', vaultPath });
+
+    expect(store.consentOps).toEqual(helperSequenceGolden().updateExistingVault);
+    expect(store.secrets.has('openrouter')).toBe(false);
+    expect(readVaultProvidersForTest(vaultPath, store)).toEqual({ deepseek: 'ds-secret' });
+  });
+
+  it('preserves all other vaulted providers when one provider is enrolled or updated', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.dictionary(
+          fc.constantFrom('openrouter', 'deepseek', 'openai', 'qwen', 'anthropic'),
+          fc.string({ minLength: 1, maxLength: 24 }),
+          { minKeys: 1, maxKeys: 5 },
+        ),
+        fc.string({ minLength: 1, maxLength: 24 }),
+        async (existingProviders, replacementSecret) => {
+          const root = makeRoot();
+          const store = new MemoryCredentialStore();
+          const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
+          for (const [provider, secret] of Object.entries(existingProviders)) {
+            await enrollInVault(store, vaultPath, provider, secret);
+          }
+          const target = Object.keys(existingProviders)[0];
+          store.resetConsentOps();
+
+          await enrollInVault(store, vaultPath, target, replacementSecret);
+
+          expect(store.consentOps).toEqual(helperSequenceGolden().updateExistingVault);
+          expect(readVaultProvidersForTest(vaultPath, store)).toEqual({
+            ...existingProviders,
+            [target]: replacementSecret,
+          });
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+
   it('starts a seeded holder and completes a strict provider call without leaking raw keys', async () => {
     const root = makeRoot();
     const socketPath = makeSocketPath('seeded');
     const store = new MemoryCredentialStore();
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
     const rawKey = 'or-pr5-bootstrap-secret';
     const originalOpenRouterKey = process.env.OPENROUTER_API_KEY;
     process.env.OPENROUTER_API_KEY = 'ambient-host-openrouter-key';
-    await store.storeSecret('openrouter', rawKey);
+    await enrollInVault(store, vaultPath, 'openrouter', rawKey);
+    store.resetConsentOps();
 
     const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
       expect(init?.headers).toMatchObject({ Authorization: `Bearer ${rawKey}` });
@@ -154,12 +288,14 @@ describe('production credential holder runtime bootstrap', () => {
         projectRoot: root,
         socketPath,
         credentialStore: store,
+        vaultPath,
         providers: ['openrouter'],
         fetchImpl,
         peerCredentialResolver: async () => sameUserPeer(),
         baseUrls: { openrouter: 'https://strict.test/v1' },
       });
       expect(runtime.seededProviders).toEqual(['openrouter']);
+      expect(store.consentOps).toEqual(helperSequenceGolden().bootstrapSeedAll);
       const response = await sendCredentialHolderCommand(socketPath, {
         action: 'provider_call',
         taskId: 'strict-pr5-e2e',
@@ -202,14 +338,17 @@ describe('production credential holder runtime bootstrap', () => {
     const root = makeRoot();
     const socketPath = makeSocketPath('seed-all');
     const store = new MemoryCredentialStore();
-    await store.storeSecret('openrouter', 'or-seed-all-secret');
-    await store.storeSecret('deepseek', 'ds-seed-all-secret');
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
+    await enrollInVault(store, vaultPath, 'openrouter', 'or-seed-all-secret');
+    await enrollInVault(store, vaultPath, 'deepseek', 'ds-seed-all-secret');
+    store.resetConsentOps();
     const seenAuth = new Map<string, string>();
 
     const runtime = await bootstrapProductionCredentialHolder({
       projectRoot: root,
       socketPath,
       credentialStore: store,
+      vaultPath,
       fetchImpl: vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
         const renderedUrl = String(url);
         const provider = renderedUrl.includes('deepseek') ? 'deepseek' : 'openrouter';
@@ -226,6 +365,7 @@ describe('production credential holder runtime bootstrap', () => {
 
     try {
       expect(runtime.seededProviders).toEqual(expect.arrayContaining(['deepseek', 'openrouter']));
+      expect(store.consentOps).toEqual(helperSequenceGolden().bootstrapSeedAll);
 
       const deepseek = await sendCredentialHolderCommand(socketPath, {
         action: 'provider_call',
@@ -267,12 +407,14 @@ describe('production credential holder runtime bootstrap', () => {
     const root = makeRoot();
     const socketPath = makeSocketPath('seed-before-bind');
     const store = new MemoryCredentialStore();
-    await store.storeSecret('deepseek', 'ds-delayed-secret');
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
+    await enrollInVault(store, vaultPath, 'deepseek', 'ds-delayed-secret');
+    store.resetConsentOps();
     let releaseRetrieve!: () => void;
     const originalRetrieve = store.retrieveSecret.bind(store);
     const retrieveStarted = new Promise<void>((resolveStarted) => {
       store.retrieveSecret = async (provider: string): Promise<Uint8Array | null> => {
-        if (provider.toLowerCase() === 'deepseek') {
+        if (provider.toLowerCase() === 'vault-kek') {
           resolveStarted();
           await new Promise<void>((resolve) => {
             releaseRetrieve = resolve;
@@ -286,6 +428,7 @@ describe('production credential holder runtime bootstrap', () => {
       projectRoot: root,
       socketPath,
       credentialStore: store,
+      vaultPath,
       fetchImpl: vi.fn(async () => new Response(JSON.stringify({
         choices: [{ message: { content: 'seeded' }, finish_reason: 'stop' }],
       }), {
@@ -311,13 +454,16 @@ describe('production credential holder runtime bootstrap', () => {
     const root = makeRoot();
     const socketPath = makeSocketPath('subagent');
     const store = new MemoryCredentialStore();
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
     const rawKey = 'or-subagent-holder-secret';
-    await store.storeSecret('openrouter', rawKey);
+    await enrollInVault(store, vaultPath, 'openrouter', rawKey);
+    store.resetConsentOps();
 
     const runtime = await bootstrapProductionCredentialHolder({
       projectRoot: root,
       socketPath,
       credentialStore: store,
+      vaultPath,
       providers: ['openrouter'],
       fetchImpl: vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
         expect(init?.headers).toMatchObject({ Authorization: `Bearer ${rawKey}` });
