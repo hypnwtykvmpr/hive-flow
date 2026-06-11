@@ -290,14 +290,18 @@ describe('macOS Keychain backend', () => {
     expect(helperInputs.join('\n')).toContain(base64(secret));
   });
 
-  it('helper protects credential access with SecAccessControl and LAContext', () => {
+  it('helper protects credential access with explicit LAContext consent and file-keychain items', () => {
     const source = readFileSync(resolve(__dirname, '..', 'helpers', 'macos-keychain.swift'), 'utf8');
 
     expect(source).toContain('import LocalAuthentication');
-    expect(source).toContain('SecAccessControlCreateWithFlags');
-    expect(source).toContain('kSecAttrAccessControl');
     expect(source).toContain('LAContext');
-    expect(source).toContain('kSecUseAuthenticationContext');
+    expect(source).toContain('canEvaluatePolicy(.deviceOwnerAuthentication');
+    expect(source).toContain('evaluatePolicy(.deviceOwnerAuthentication');
+    expect(source).toContain('kSecAttrAccessibleWhenUnlockedThisDeviceOnly');
+    expect(source).not.toContain('SecAccessControlCreateWithFlags');
+    expect(source).not.toContain('kSecAttrAccessControl');
+    expect(source).not.toContain('kSecUseAuthenticationContext');
+    expect(source).not.toContain('kSecUseDataProtectionKeychain');
   });
 
   it.skipIf(

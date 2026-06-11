@@ -1,4 +1,5 @@
 import Foundation
+import Dispatch
 import LocalAuthentication
 import Security
 
@@ -73,6 +74,7 @@ struct HiveFlowMacOSKeychainHelper {
     }
 
     private static func store(service: String, account: String, data: Data) throws {
+        try authorize(operation: "store", service: service, account: account)
         let base = query(service: service, account: account)
         let deleteStatus = SecItemDelete(base as CFDictionary)
         if deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound {
@@ -81,16 +83,15 @@ struct HiveFlowMacOSKeychainHelper {
 
         var item = base
         item[kSecValueData as String] = data
-        item[kSecAttrAccessControl as String] = try accessControl()
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         try check(SecItemAdd(item as CFDictionary, nil), "store item")
     }
 
     private static func retrieve(service: String, account: String) throws -> Data? {
+        try authorize(operation: "retrieve", service: service, account: account)
         var q = query(service: service, account: account)
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
-        q[kSecUseAuthenticationContext as String] = authenticationContext()
-        q[kSecUseOperationPrompt as String] = "Hive Flow credential access"
         var result: CFTypeRef?
         let status = SecItemCopyMatching(q as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
@@ -99,6 +100,7 @@ struct HiveFlowMacOSKeychainHelper {
     }
 
     private static func delete(service: String, account: String) throws {
+        try authorize(operation: "delete", service: service, account: account)
         let status = SecItemDelete(query(service: service, account: account) as CFDictionary)
         if status != errSecSuccess && status != errSecItemNotFound {
             try check(status, "delete item")
@@ -112,24 +114,36 @@ struct HiveFlowMacOSKeychainHelper {
         }
     }
 
-    private static func authenticationContext() -> LAContext {
+    private static func authenticationContext(operation: String, service: String, account: String) -> LAContext {
         let context = LAContext()
-        context.localizedReason = "Hive Flow credential access"
+        context.localizedReason = "Hive Flow needs your approval to \(operation) a credential for \(service) (\(account))."
+        context.localizedFallbackTitle = "Use Password"
         return context
     }
 
-    private static func accessControl() throws -> SecAccessControl {
-        var error: Unmanaged<CFError>?
-        guard let access = SecAccessControlCreateWithFlags(
-            nil,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-            .userPresence,
-            &error
-        ) else {
-            let message = error?.takeRetainedValue().localizedDescription ?? "unknown access-control error"
-            throw HelperError.keychain("create SecAccessControl failed: \(message)")
+    private static func authorize(operation: String, service: String, account: String) throws {
+        let context = authenticationContext(operation: operation, service: service, account: account)
+        var availabilityError: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &availabilityError) else {
+            let message = availabilityError?.localizedDescription ?? "device-owner authentication unavailable"
+            throw HelperError.keychain("authentication unavailable: \(message)")
         }
-        return access
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var allowed = false
+        var failure: String?
+        context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: context.localizedReason) { success, error in
+            allowed = success
+            failure = error?.localizedDescription
+            semaphore.signal()
+        }
+
+        if semaphore.wait(timeout: .now() + .seconds(120)) == .timedOut {
+            throw HelperError.keychain("authentication timed out")
+        }
+        guard allowed else {
+            throw HelperError.keychain("authentication failed: \(failure ?? "not authorized")")
+        }
     }
 }
 

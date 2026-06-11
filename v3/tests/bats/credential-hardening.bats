@@ -8,11 +8,15 @@ setup() {
   mac_helper="$REPO_ROOT/v3/@hive-flow/cli/src/credential-store/helpers/macos-keychain.swift"
   win_helper="$REPO_ROOT/v3/@hive-flow/cli/src/credential-store/helpers/windows-credential-helper/Program.cs"
 
-  run grep -E "LocalAuthentication|SecAccessControlCreateWithFlags|kSecUseAuthenticationContext" "$mac_helper"
+  run grep -E "LocalAuthentication|canEvaluatePolicy\\(\\.deviceOwnerAuthentication|evaluatePolicy\\(\\.deviceOwnerAuthentication|kSecAttrAccessibleWhenUnlockedThisDeviceOnly" "$mac_helper"
   [ "$status" -eq 0 ]
   [[ "$output" == *"LocalAuthentication"* ]]
-  [[ "$output" == *"SecAccessControlCreateWithFlags"* ]]
-  [[ "$output" == *"kSecUseAuthenticationContext"* ]]
+  [[ "$output" == *"canEvaluatePolicy(.deviceOwnerAuthentication"* ]]
+  [[ "$output" == *"evaluatePolicy(.deviceOwnerAuthentication"* ]]
+  [[ "$output" == *"kSecAttrAccessibleWhenUnlockedThisDeviceOnly"* ]]
+
+  run grep -E "SecAccessControlCreateWithFlags|kSecAttrAccessControl|kSecUseAuthenticationContext|kSecUseDataProtectionKeychain" "$mac_helper"
+  [ "$status" -eq 1 ]
 
   run grep -E "FailClosedIfBiometricUnavailable|Console.IsInputRedirected|UserConsentVerifierAvailability\\.Available" "$win_helper"
   [ "$status" -eq 0 ]
