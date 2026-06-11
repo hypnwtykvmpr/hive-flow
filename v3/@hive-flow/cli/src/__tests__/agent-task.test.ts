@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock node:fs — controls existsSync, readFileSync, writeFileSync, mkdirSync, renameSync
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
+  lstatSync: vi.fn(),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
@@ -47,7 +48,7 @@ vi.mock('@hive-flow/providers', () => ({
   }),
 }));
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { agentTools } from '../mcp-tools/agent-tools.js';
 
@@ -104,7 +105,19 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
   (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
     if (typeof p === 'string' && p.endsWith('store.json')) return true;
     if (p === EXPECTED_BRIDGE_PATH) return true;
+    if (p === '/tmp/hive-flow-test-holder.sock') return true;
     return false;
+  });
+
+  (lstatSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+    if (p === '/tmp/hive-flow-test-holder.sock') {
+      return {
+        isSocket: () => true,
+        uid: process.getuid?.() ?? 501,
+        mode: 0o600,
+      };
+    }
+    throw new Error('unexpected lstatSync path');
   });
 
   (readFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
@@ -180,8 +193,8 @@ describe('agent_spawn handler model normalization', () => {
   });
 
   it('uses an OpenRouter direct model input for resolvedModel instead of routing it away', async () => {
-    const originalOpenRouterKey = process.env.OPENROUTER_API_KEY;
-    process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+    const originalHolderSocket = process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET;
+    process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET = '/tmp/hive-flow-test-holder.sock';
     const { getPersistedStore } = setupStoreMocks(makeStore());
 
     try {
@@ -199,8 +212,8 @@ describe('agent_spawn handler model normalization', () => {
       expect(persisted.resolvedModel).toBe('xiaomi/mimo-v2.5-pro');
       expect(persisted.model).toBe('inherit');
     } finally {
-      if (originalOpenRouterKey === undefined) delete process.env.OPENROUTER_API_KEY;
-      else process.env.OPENROUTER_API_KEY = originalOpenRouterKey;
+      if (originalHolderSocket === undefined) delete process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET;
+      else process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET = originalHolderSocket;
     }
   });
 

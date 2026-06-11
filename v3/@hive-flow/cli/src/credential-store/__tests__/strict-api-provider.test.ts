@@ -40,6 +40,123 @@ describe('credential holder socket path resolution', () => {
 });
 
 describe('strict API provider holder invoker', () => {
+  it('forwards OpenAI-compatible tools, tool_choice, and tool-result messages without exposing holder-owned secrets', async () => {
+    let observedBody: Record<string, unknown> | undefined;
+    const fetchImpl = vi.fn(async (_url, init) => {
+      observedBody = JSON.parse(String(init?.body || '{}'));
+      return new Response(JSON.stringify({
+        model: 'deepseek-v4-pro',
+        choices: [{
+          message: {
+            content: '',
+            tool_calls: [{
+              id: 'call_read_version',
+              type: 'function',
+              function: {
+                name: 'read_file',
+                arguments: JSON.stringify({ path: 'package.json' }),
+              },
+            }],
+          },
+          finish_reason: 'tool_calls',
+        }],
+        usage: { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 },
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+    const invoker = createStrictApiProviderInvoker({ fetchImpl });
+
+    const result = await invoker({
+      provider: 'deepseek',
+      taskId: 'task-tools',
+      secret: Buffer.from('ds-holder-secret-material'),
+      peer: { pid: 42, uid: 501, startTime: 'peer-start' },
+      request: {
+        action: 'complete',
+        payload: {
+          messages: [
+            { role: 'system', content: 'Use tools.' },
+            { role: 'user', content: 'Read package.json.' },
+            {
+              role: 'assistant',
+              content: '',
+              toolCalls: [{
+                id: 'call_existing',
+                type: 'function',
+                function: {
+                  name: 'read_file',
+                  arguments: JSON.stringify({ path: 'package.json' }),
+                },
+              }],
+            },
+            {
+              role: 'tool',
+              toolCallId: 'call_existing',
+              name: 'read_file',
+              content: '{"version":"1.0.0"}',
+            },
+          ],
+          tools: [{
+            type: 'function',
+            function: {
+              name: 'read_file',
+              description: 'Read a jailed project file.',
+              parameters: {
+                type: 'object',
+                properties: { path: { type: 'string' } },
+                required: ['path'],
+              },
+            },
+          }],
+          toolChoice: 'auto',
+          timeout: 1_000,
+        },
+      },
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(observedBody).toMatchObject({
+      model: 'deepseek-v4-pro',
+      tool_choice: 'auto',
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'read_file',
+        },
+      }],
+    });
+    expect(observedBody?.messages).toEqual([
+      { role: 'system', content: 'Use tools.' },
+      { role: 'user', content: 'Read package.json.' },
+      {
+        role: 'assistant',
+        content: '',
+        tool_calls: [{
+          id: 'call_existing',
+          type: 'function',
+          function: {
+            name: 'read_file',
+            arguments: JSON.stringify({ path: 'package.json' }),
+          },
+        }],
+      },
+      {
+        role: 'tool',
+        content: '{"version":"1.0.0"}',
+        tool_call_id: 'call_existing',
+        name: 'read_file',
+      },
+    ]);
+    expect(JSON.stringify(observedBody)).not.toContain('ds-holder-secret-material');
+    expect(result.toolCalls?.[0]).toMatchObject({
+      id: 'call_read_version',
+      function: { name: 'read_file' },
+    });
+    expect(result.finishReason).toBe('tool_calls');
+  });
+
   it('rejects caller-supplied apiUrl before any bearer key can egress', async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,

@@ -301,6 +301,65 @@ describe('provider bridge run_shell contract', () => {
     }
   });
 
+  it('run_command executes jailed read-only commands and denies protected reads', async () => {
+    const { root, bridge } = await makeBridge(0);
+    try {
+      const readable = join(root, 'src', 'readonly.txt');
+      writeFileSync(readable, 'read-only command body\n', 'utf8');
+      const protectedDir = join(root, '.hive-flow', 'enforcement', 'global');
+      mkdirSync(protectedDir, { recursive: true });
+      const protectedState = join(protectedDir, 'state.json');
+      writeFileSync(protectedState, '{"secret":true}\n', 'utf8');
+
+      const readResult = decodeToolResult(await bridge.evaluateToolCall('run_command', {
+        argv: ['cat', readable],
+      }));
+      expect(readResult).toMatchObject({
+        status: 'executed',
+        exitCode: 0,
+        stderr: '',
+        timedOut: false,
+      });
+      expect(readResult.stdout).toBe('read-only command body\n');
+
+      const protectedResult = decodeToolResult(await bridge.evaluateToolCall('run_command', {
+        argv: ['cat', protectedState],
+      }));
+      expect(protectedResult).toMatchObject({
+        status: 'denied',
+        denyReason: 'read-only-command-denied',
+      });
+      expect(protectedResult.error).toMatch(/protected read path/i);
+      expect(protectedResult.error).not.toContain('{"secret":true}');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('property-denies non-allowlisted run_command executables without falling back to run_shell', async () => {
+    const { root, bridge } = await makeBridge(0);
+    const allowed = new Set(['git', 'pwd', 'ls', 'cat', 'head', 'tail', 'wc']);
+    try {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.stringMatching(/^[a-z][a-z0-9_-]{0,12}$/),
+          async (executable) => {
+            fc.pre(!allowed.has(executable));
+            const result = decodeToolResult(await bridge.evaluateToolCall('run_command', {
+              argv: [executable, '--version'],
+            }));
+            expect(result.status).toBe('denied');
+            expect(result.denyReason).toBe('read-only-command-denied');
+            expect(result.error).toContain(`executable '${executable}'`);
+          },
+        ),
+        { numRuns: 60, seed: 170170 },
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('contains command execution inside the sandbox', () => {
     const root = makeProjectRoot('hf-run-shell-containment-');
     const outside = join(tmpdir(), `hf-run-shell-outside-${process.pid}-${Date.now()}.txt`);

@@ -25,6 +25,8 @@ export interface CompleteStrictApiProviderInput {
   resolvedModel?: string;
   prompt: string;
   systemPrompt?: string;
+  tools?: unknown[];
+  toolChoice?: unknown;
   timeoutMs: number;
 }
 
@@ -45,8 +47,11 @@ export interface StrictApiProviderCompletion {
 interface StrictApiCompletionPayload {
   action: 'complete';
   payload: {
-    messages: Array<{ role: string; content: string }>;
+    messages: Array<Record<string, unknown>>;
     model?: string;
+    tools?: unknown[];
+    toolChoice?: unknown;
+    tool_choice?: unknown;
     timeout: number;
   };
 }
@@ -132,6 +137,8 @@ export async function completeStrictApiProviderViaHolder(
       payload: {
         messages,
         model: input.resolvedModel,
+        ...(input.tools ? { tools: input.tools } : {}),
+        ...(input.toolChoice !== undefined ? { toolChoice: input.toolChoice } : {}),
         timeout: input.timeoutMs,
       },
     } satisfies StrictApiCompletionPayload,
@@ -159,16 +166,19 @@ export function createStrictApiProviderInvoker(options: {
     const timer = setTimeout(() => controller.abort(), payload.timeout);
     try {
       const secret = input.secret.toString('utf8');
+      const body: Record<string, unknown> = {
+        model: payload.model || defaultStrictApiModel(provider),
+        messages: payload.messages,
+      };
+      if (payload.tools?.length) body.tools = payload.tools;
+      if (payload.tool_choice !== undefined) body.tool_choice = payload.tool_choice;
       const response = await fetchImpl(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${secret}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: payload.model || defaultStrictApiModel(provider),
-          messages: payload.messages,
-        }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
       clearTimeout(timer);
@@ -251,15 +261,50 @@ function asStrictCompletionPayload(value: unknown): StrictApiCompletionPayload['
     if (!message || typeof message !== 'object') throw new Error('strict API message must be an object');
     const m = message as Record<string, unknown>;
     const role = typeof m.role === 'string' ? m.role : 'user';
-    const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? '');
-    return { role, content };
+    const content = typeof m.content === 'string'
+      ? m.content
+      : m.content === null
+        ? null
+        : JSON.stringify(m.content ?? '');
+    const normalized: Record<string, unknown> = { role, content };
+    const toolCalls = Array.isArray(m.tool_calls)
+      ? m.tool_calls
+      : Array.isArray(m.toolCalls)
+        ? m.toolCalls
+        : undefined;
+    if (toolCalls) normalized.tool_calls = toolCalls;
+    const toolCallId = typeof m.tool_call_id === 'string'
+      ? m.tool_call_id
+      : typeof m.toolCallId === 'string'
+        ? m.toolCallId
+        : undefined;
+    if (toolCallId) normalized.tool_call_id = toolCallId;
+    if (typeof m.name === 'string' && m.name.trim()) normalized.name = m.name.trim();
+    return normalized;
   });
+  let tools: unknown[] | undefined;
+  if (Object.prototype.hasOwnProperty.call(record, 'tools')) {
+    if (!Array.isArray(record.tools)) throw new Error('strict API completion payload tools must be an array');
+    tools = record.tools;
+  }
+  const toolChoice = Object.prototype.hasOwnProperty.call(record, 'tool_choice')
+    ? record.tool_choice
+    : record.toolChoice;
+  if (
+    toolChoice !== undefined &&
+    typeof toolChoice !== 'string' &&
+    !(toolChoice && typeof toolChoice === 'object')
+  ) {
+    throw new Error('strict API completion payload tool_choice must be a string or object');
+  }
   const timeout = typeof record.timeout === 'number' && Number.isFinite(record.timeout) && record.timeout > 0
     ? record.timeout
     : 30000;
   return {
     messages: normalizedMessages,
     model: typeof record.model === 'string' && record.model.trim() ? record.model.trim() : undefined,
+    ...(tools?.length ? { tools } : {}),
+    ...(toolChoice !== undefined ? { tool_choice: toolChoice } : {}),
     timeout,
   };
 }

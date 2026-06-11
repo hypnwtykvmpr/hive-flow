@@ -23,6 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const providersRoot = resolve(here, '..');
 const cliRoot = resolve(here, '../../cli');
+const sharedRoot = resolve(here, '../../shared');
 const providersDistPath = resolve(providersRoot, 'dist');
 const cliPermissionGuardDistPath = resolve(cliRoot, 'dist/src/permission-guard');
 
@@ -93,6 +94,7 @@ function makeInstallLayout({ fakeMcpClient = false } = {}) {
   const scopeDir = join(installRoot, 'node_modules', '@hive-flow');
   const nodeProviders = join(scopeDir, 'providers');
   const nodeCli = join(scopeDir, 'cli');
+  const nodeShared = join(scopeDir, 'shared');
   const nodeScripts = join(nodeProviders, 'scripts');
 
   mkdirSync(nodeScripts, { recursive: true });
@@ -108,6 +110,7 @@ function makeInstallLayout({ fakeMcpClient = false } = {}) {
     copyFileSync(resolve(providersRoot, 'scripts', scriptName), join(nodeScripts, scriptName));
   }
   safeSymlinkDir(providersDistPath, join(nodeProviders, 'dist'));
+  safeSymlinkDir(sharedRoot, nodeShared);
   cpSync(cliPermissionGuardDistPath, join(nodeCli, 'dist', 'src', 'permission-guard'), { recursive: true });
   copyFileSync(
     resolve(cliRoot, 'dist/src/install/portable-prompt.js'),
@@ -161,7 +164,7 @@ function runBridgeTool({ bridgePath, root, toolName, toolArgs, markerPath }) {
   return JSON.parse(raw);
 }
 
-async function startFixtureServer(toolName, toolArgs) {
+async function startFixtureServer(toolName, toolArgs, options = {}) {
   const requests = [];
   const server = createServer((req, res) => {
     let raw = '';
@@ -184,6 +187,19 @@ async function startFixtureServer(toolName, toolArgs) {
       const toolMessage = [...(body.messages ?? [])].reverse().find((msg) => msg.role === 'tool');
 
       res.writeHead(200, { 'content-type': 'application/json' });
+      if (options.noToolCalls) {
+        res.end(JSON.stringify({
+          id: 'single-path-ungrounded',
+          choices: [{
+            message: {
+              content: 'The exact version is probably 0.0.0.',
+            },
+            finish_reason: 'stop',
+          }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }));
+        return;
+      }
       if (!toolMessage) {
         res.end(JSON.stringify({
           id: 'single-path-tool-call',
@@ -262,6 +278,7 @@ async function startCredentialHolderFixture(holderOwnedApiUrl) {
             model: payload.model,
             messages: payload.messages,
             tools: payload.tools,
+            tool_choice: payload.toolChoice ?? payload.tool_choice,
           }),
         });
         const data = await apiResponse.json();
@@ -335,7 +352,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
   mkdirSync(tasksDir, { recursive: true });
   const taskFile = join(tasksDir, 'single-path.task');
   const resultFile = join(tasksDir, 'single-path.result.json');
-  writeFileSync(taskFile, 'Drive the scripted tool call.', 'utf8');
+  writeFileSync(taskFile, 'Call read_file on a local workspace file through the scripted bridge tool call.', 'utf8');
 
   const child = spawn(process.execPath, [
     bridgePath,
@@ -450,15 +467,26 @@ describe('provider bridge single tool execution path', () => {
 
       expect(requests.length).toBeGreaterThanOrEqual(2);
       const firstToolNames = (requests[0].tools ?? []).map((tool) => tool.function?.name);
-      expect(firstToolNames).toContain('run_shell');
-      expect(firstToolNames).toContain('web_fetch');
-      expect(firstToolNames).toContain('web_search');
-      expect(firstToolNames.filter((name) => name === 'run_shell')).toHaveLength(1);
-      expect(firstToolNames.filter((name) => name === 'web_fetch')).toHaveLength(1);
-      expect(firstToolNames.filter((name) => name === 'web_search')).toHaveLength(1);
+      expect(firstToolNames).toEqual([
+        'read_file',
+        'list_directory',
+        'grep',
+        'find_file',
+        'run_command',
+      ]);
+      expect(firstToolNames).not.toContain('write_file');
+      expect(firstToolNames).not.toContain('edit_file');
+      expect(firstToolNames).not.toContain('run_shell');
+      expect(firstToolNames).not.toContain('web_fetch');
+      expect(firstToolNames).not.toContain('web_search');
+      expect(requests[0].tool_choice).toBe('required');
       expect(Buffer.byteLength(JSON.stringify(requests[0].tools), 'utf8')).toBeLessThan(10 * 1024);
       expect(result.success).toBe(true);
       expect(result.content).toContain('tool-result:detached built-in read');
+      expect(result.toolUse).toMatchObject({
+        iterations: 2,
+        tools: ['read_file'],
+      });
       expect(bridgeLog).toContain('"message":"Bridge tool dispatch"');
       expect(bridgeLog).toContain('"tool":"read_file"');
     } finally {
@@ -514,6 +542,70 @@ describe('provider bridge single tool execution path', () => {
       expect(result.content).toContain('"tool":"mcp__filesystem__read_file"');
       expect(result.content).not.toContain('alias must not read this through MCP');
       expect(existsSync(layout.fakeMarker)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('fails closed when a strict provider answers a local file task without using a tool', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-strict-ungrounded-');
+    const agentId = 'strict-ungrounded-agent';
+    try {
+      const key = writeKey(root);
+      writeEnvelope(root, key, 0);
+      const fixture = await startFixtureServer('read_file', { path: 'package.json' }, { noToolCalls: true });
+      const holder = await startCredentialHolderFixture(fixture.baseUrl);
+      const storeDir = makeStore(root, agentId);
+      const tasksDir = join(root, '.hive-flow', 'tasks');
+      mkdirSync(tasksDir, { recursive: true });
+      const taskFile = join(tasksDir, 'strict-ungrounded.task');
+      const resultFile = join(tasksDir, 'strict-ungrounded.result.json');
+      writeFileSync(taskFile, 'Read package.json and return the exact version.', 'utf8');
+
+      const child = spawn(process.execPath, [
+        layout.bridgePath,
+        '--agent-id', agentId,
+        '--task-file', taskFile,
+        '--result-file', resultFile,
+        '--store-dir', storeDir,
+        '--timeout', '10000',
+      ], {
+        cwd: root,
+        detached: true,
+        stdio: 'ignore',
+        env: {
+          ...childEnv(root),
+          HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET: holder.socketPath,
+          DEEPSEEK_API_URL: fixture.baseUrl,
+        },
+      });
+
+      await new Promise((resolvePromise, reject) => {
+        const timeout = setTimeout(() => {
+          child.kill('SIGTERM');
+          reject(new Error('provider bridge fixture timed out'));
+        }, 20000);
+        child.once('error', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+        child.once('exit', () => {
+          clearTimeout(timeout);
+          resolvePromise();
+        });
+      });
+
+      const result = JSON.parse(readFileSync(resultFile, 'utf8'));
+      expect(result).toMatchObject({
+        success: false,
+        code: 'UNGROUNDED_TOOL_TASK',
+      });
+      expect(result.error).toMatch(/did not use bridge tools/i);
+      expect(result.error).not.toMatch(/holder-fixture-key|secret/i);
+      await holder.close();
+      await fixture.close();
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(layout.installRoot, { recursive: true, force: true });

@@ -1759,6 +1759,158 @@ async function runShellTool(rawArgs, ctx = {}) {
   };
 }
 
+const RUN_COMMAND_DEFAULT_TIMEOUT_MS = 10_000;
+const RUN_COMMAND_OUTPUT_LIMIT_BYTES = 32 * 1024;
+
+function runCommandDenied(denyReason, error = denyReason) {
+  return {
+    status: 'denied',
+    exitCode: null,
+    stdout: '',
+    stderr: '',
+    timedOut: false,
+    truncated: false,
+    denyReason,
+    error,
+  };
+}
+
+function normalizeRunCommandArgs(rawArgs) {
+  try {
+    return normalizeRunShellArgs(rawArgs);
+  } catch (err) {
+    throw new Error(String(err?.message || err).replaceAll('run_shell', 'run_command'));
+  }
+}
+
+function looksLikeRunCommandPathArg(value) {
+  const text = String(value || '');
+  if (!text || text.startsWith('-')) return false;
+  if (/^\d+$/.test(text)) return false;
+  if (/^[+~]?\d+[kKmMgG]?$/.test(text)) return false;
+  return true;
+}
+
+function assertRunCommandPathArgs(argv, startIndex = 1) {
+  for (const arg of argv.slice(startIndex)) {
+    if (!looksLikeRunCommandPathArg(arg)) continue;
+    const safePath = validateFilePath(arg);
+    assertReadableByBridge(safePath, 'run_command');
+  }
+}
+
+function denyUnsafeReadOnlyCommand(argv) {
+  const executable = commandName(argv[0]);
+  if (!executable) return 'run_command command has no executable';
+
+  if (executable === 'git') {
+    const firstSubcommandIndex = argv.findIndex((entry, index) => index > 0 && !String(entry).startsWith('-'));
+    const subcommand = firstSubcommandIndex === -1 ? '' : String(argv[firstSubcommandIndex]).toLowerCase();
+    const allowedGitSubcommands = new Set([
+      'status',
+      'diff',
+      'log',
+      'show',
+      'rev-parse',
+      'ls-files',
+      'describe',
+      'cat-file',
+    ]);
+    if (!allowedGitSubcommands.has(subcommand)) {
+      return `run_command git subcommand '${subcommand || '<missing>'}' is not in the read-only allowlist`;
+    }
+    for (const arg of argv.slice(1)) {
+      const text = String(arg);
+      if (
+        text === '-c' ||
+        text.startsWith('-c=') ||
+        text.startsWith('--exec-path') ||
+        text.startsWith('--upload-pack') ||
+        text.startsWith('--receive-pack') ||
+        text.startsWith('--output') ||
+        text === '--no-index'
+      ) {
+        return `run_command git option '${text}' is not available`;
+      }
+    }
+    return null;
+  }
+
+  if (executable === 'pwd') {
+    return argv.length === 1 ? null : 'run_command pwd does not accept arguments';
+  }
+
+  if (executable === 'tail' && argv.slice(1).some((arg) => arg === '-f' || arg === '--follow' || String(arg).startsWith('--follow='))) {
+    return 'run_command tail follow mode is not available';
+  }
+
+  const pathReadExecutables = new Set(['cat', 'head', 'tail', 'wc', 'ls']);
+  if (pathReadExecutables.has(executable)) {
+    assertRunCommandPathArgs(argv, 1);
+    return null;
+  }
+
+  return `run_command executable '${executable}' is not in the read-only allowlist`;
+}
+
+async function runCommandTool(rawArgs) {
+  let normalized;
+  try {
+    normalized = normalizeRunCommandArgs(rawArgs);
+  } catch (err) {
+    return runCommandDenied('invalid-run-command-args', err.message || String(err));
+  }
+
+  let argv = normalized.argv;
+  if (normalized.mode === 'command') {
+    try {
+      argv = parseSimpleRunShellCommand(normalized.command);
+    } catch (err) {
+      return runCommandDenied('read-only-command-denied', String(err?.message || err).replaceAll('run_shell', 'run_command'));
+    }
+  }
+
+  let unsafeReason;
+  try {
+    unsafeReason = denyUnsafeReadOnlyCommand(argv);
+  } catch (err) {
+    return runCommandDenied('read-only-command-denied', err.message || String(err));
+  }
+  if (unsafeReason) return runCommandDenied('read-only-command-denied', unsafeReason);
+
+  try {
+    const output = execFileSync(argv[0], argv.slice(1), {
+      cwd: PROJECT_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: clampInteger(rawArgs?.timeoutMs, RUN_COMMAND_DEFAULT_TIMEOUT_MS, RUN_COMMAND_DEFAULT_TIMEOUT_MS),
+      maxBuffer: RUN_COMMAND_OUTPUT_LIMIT_BYTES * 2,
+    });
+    const truncated = Buffer.byteLength(output, 'utf8') > RUN_COMMAND_OUTPUT_LIMIT_BYTES;
+    return {
+      status: 'executed',
+      exitCode: 0,
+      stdout: truncated ? output.slice(0, RUN_COMMAND_OUTPUT_LIMIT_BYTES) : output,
+      stderr: '',
+      timedOut: false,
+      truncated,
+    };
+  } catch (err) {
+    const stdout = typeof err.stdout === 'string' ? err.stdout : '';
+    const stderr = typeof err.stderr === 'string' ? err.stderr : '';
+    return {
+      status: 'executed',
+      exitCode: typeof err.status === 'number' ? err.status : null,
+      stdout: stdout.slice(0, RUN_COMMAND_OUTPUT_LIMIT_BYTES),
+      stderr: stderr.slice(0, RUN_COMMAND_OUTPUT_LIMIT_BYTES),
+      timedOut: Boolean(err.killed || err.signal === 'SIGTERM' || /timed out/i.test(err.message || '')),
+      truncated:
+        Buffer.byteLength(stdout, 'utf8') > RUN_COMMAND_OUTPUT_LIMIT_BYTES ||
+        Buffer.byteLength(stderr, 'utf8') > RUN_COMMAND_OUTPUT_LIMIT_BYTES,
+    };
+  }
+}
+
 const WEB_FETCH_DEFAULT_MAX_BYTES = 512 * 1024;
 const WEB_FETCH_MAX_BYTES = 2 * 1024 * 1024;
 const WEB_FETCH_DEFAULT_TIMEOUT_MS = 15_000;
@@ -2560,6 +2712,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
 const BRIDGE_TOOL_REGISTRY = {
   ...BRIDGE_FILESYSTEM_TOOLS,
   'run_shell': runShellTool,
+  'run_command': runCommandTool,
   'web_fetch': webFetchTool,
   'web_search': webSearchTool,
 };
@@ -2779,6 +2932,23 @@ function trackProviderUsage(providerName, usage, startTime) {
   } catch (e) {
     process.stderr.write(`[bridge] Provider usage tracking failed: ${e.message}\n`);
   }
+}
+
+function taskRequiresBridgeToolGrounding(task) {
+  const text = String(task || '').toLowerCase();
+  const asksToInspect = /\b(read|inspect|open|list|grep|search|find|check|verify|call)\b/.test(text) ||
+    /read_file|list_directory|run_command/.test(text);
+  const namesLocalSurface = /\b(file|directory|folder|workspace|repo|repository|path|contents?)\b/.test(text) ||
+    /package\.json|tsconfig|readme|git status|exact version/.test(text);
+  return asksToInspect && namesLocalSurface;
+}
+
+function ungroundedToolTaskError(providerName) {
+  const error = new Error(
+    `Strict API provider '${providerName}' answered a local workspace task but did not use bridge tools; refusing ungrounded result.`
+  );
+  error.code = 'UNGROUNDED_TOOL_TASK';
+  return error;
 }
 
 // ===== Main =====
@@ -3060,15 +3230,48 @@ async function main() {
       },
     ];
 
+    const runCommandToolDefinition = {
+      type: 'function',
+      function: {
+        name: 'run_command',
+        description: 'Run a read-only allowlisted command in the project. Allowed: git status/diff/log/show/rev-parse/ls-files/describe/cat-file, pwd, ls, cat, head, tail, wc. No shell, writes, env exposure, launchers, pipes, or redirects.',
+        parameters: {
+          type: 'object',
+          properties: {
+            command: { type: 'string', description: 'Simple read-only command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
+            argv: {
+              type: 'array',
+              description: 'Preferred direct argv form. Executed without shell=true after the read-only allowlist and project path jail pass.',
+              items: { type: 'string' },
+            },
+            timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
+          },
+          additionalProperties: false,
+        },
+      },
+    };
+
+    const strictApiReadOnlyToolNames = new Set(['read_file', 'list_directory', 'grep', 'find_file']);
+    const strictApiReadOnlyTools = [
+      ...builtInFilesystemTools.filter((tool) => strictApiReadOnlyToolNames.has(tool.function.name)),
+      runCommandToolDefinition,
+    ];
+
     // Bash-native providers (codex-cli, cursor-cli) have built-in shell execution.
     // They run commands directly and do NOT need structured tool definitions.
     // Sending XML tool schemas to these providers causes them to attempt
     // bash-based tool invocations that don't match the bridge's expectations.
     const BASH_NATIVE_PROVIDERS = new Set(['codex-cli', 'cursor-cli']);
     const isBashNative = BASH_NATIVE_PROVIDERS.has(providerName);
+    const isStrictApi = STRICT_API_PROVIDERS.has(providerName);
 
     if (!isBashNative) {
-      if (agent.config?.tools && Array.isArray(agent.config.tools)) {
+      if (isStrictApi) {
+        request.tools = strictApiReadOnlyTools;
+        if (taskRequiresBridgeToolGrounding(task)) {
+          request.toolChoice = 'required';
+        }
+      } else if (agent.config?.tools && Array.isArray(agent.config.tools)) {
         // Merge: built-in filesystem tools first, then agent-specific tools (deduplicated by name)
         const agentToolNames = new Set(agent.config.tools.map((t) => t?.function?.name));
         const deduped = builtInFilesystemTools.filter((t) => !agentToolNames.has(t.function.name));
@@ -3091,8 +3294,9 @@ async function main() {
 
     let response;
     let iterations = 0;
-    const MAX_TOOL_ITERATIONS = 50;
+    const MAX_TOOL_ITERATIONS = 25;
     const providerStartTime = Date.now();
+    const executedTools = [];
 
     // Stuck detection state
     const STUCK_WINDOW = 4;
@@ -3254,7 +3458,11 @@ async function main() {
 
         const toolResults = await Promise.all(
           response.toolCalls.map((tc) =>
-            executeBridgeTool(tc.function.name, tc.function.arguments, { agentId, source: 'response-loop' })
+            executeBridgeTool(tc.function.name, tc.function.arguments, {
+              agentId,
+              source: 'response-loop',
+              recordExecution: (toolName) => executedTools.push(toolName),
+            })
               .then((result) => ({ id: tc.id, name: tc.function.name, result }))
               .catch((err) => ({
                 id: tc.id,
@@ -3388,6 +3596,19 @@ async function main() {
       }
     }
 
+    const toolUse = {
+      iterations,
+      tools: [...executedTools],
+    };
+
+    if (
+      STRICT_API_PROVIDERS.has(providerName) &&
+      executedTools.length === 0 &&
+      taskRequiresBridgeToolGrounding(task)
+    ) {
+      throw ungroundedToolTaskError(providerName);
+    }
+
     trackProviderUsage(providerName, response.usage, providerStartTime);
 
     // Build state updates (computed outside lock, applied inside lock)
@@ -3421,6 +3642,7 @@ async function main() {
       model: response.model || request.model,
       usage: response.usage,
       cost: response.cost,
+      toolUse,
       completedAt: new Date().toISOString(),
     };
 
@@ -3443,6 +3665,7 @@ async function main() {
       model: response.model,
       usage: response.usage,
       cost: response.cost,
+      toolUse,
       historyLength: history.length,
       taskCount: agent.taskCount,
     };

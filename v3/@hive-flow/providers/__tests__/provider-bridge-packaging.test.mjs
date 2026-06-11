@@ -18,6 +18,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const providersRoot = resolve(here, '..');
 const cliRoot = resolve(here, '../../cli');
+const sharedRoot = resolve(here, '../../shared');
 const bridgePath = resolve(providersRoot, 'scripts/provider-agent-bridge.mjs');
 const cliPermissionGuardDistPath = resolve(cliRoot, 'dist/src/permission-guard');
 
@@ -85,12 +86,14 @@ function makePackedInstallLayout() {
   const scopeDir = join(installRoot, 'node_modules', '@hive-flow');
   const nodeProviders = join(scopeDir, 'providers');
   const nodeCli = join(scopeDir, 'cli');
+  const nodeShared = join(scopeDir, 'shared');
   mkdirSync(scopeDir, { recursive: true });
   mkdirSync(nodeProviders, { recursive: true });
   mkdirSync(join(nodeCli, 'dist', 'src'), { recursive: true });
   mkdirSync(join(nodeCli, 'dist', 'src', 'install'), { recursive: true });
 
   copyPackedProviderFiles(nodeProviders, providerPackFileList());
+  symlinkSync(sharedRoot, nodeShared, 'dir');
   cpSync(cliPermissionGuardDistPath, join(nodeCli, 'dist', 'src', 'permission-guard'), { recursive: true });
   copyFileSync(
     resolve(cliRoot, 'dist/src/install/portable-prompt.js'),
