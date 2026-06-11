@@ -61,7 +61,7 @@ import { sessionKeyFor } from '@hive-flow/shared';
 import { resolveSessionId } from '../mcp-tools/session-id.js';
 import { parseStatuslineConfig, type StatuslineConfig } from './config.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
-import { collectEnforcementInstalled } from './enforcement-installed.js';
+import { collectEnforcementStatus, type EnforcementLiveStatus } from './enforcement-installed.js';
 import {
   type LastRenderMode,
 } from './last-render.js';
@@ -258,6 +258,7 @@ async function renderInternal(
   const startTime = Date.now();
   const deadlineMs = startTime + renderBudgetMs;
   const resolved = await resolveModeForRender(scope, stdin, snapshotMaxAgeMs, deadlineMs);
+  const enforcementStatus = await collectEnforcementStatus(scope.projectRoot);
 
   // 6) Render rows per locked visual design — composed into a MULTI-ROW box
   // (rows joined by `\n`, with full-width `─` separator rules between the
@@ -268,6 +269,7 @@ async function renderInternal(
     palette,
     scope,
     stdin,
+    enforcementStatus,
   });
 
   // 7) Return meta for the COMMAND WRAPPER to persist the last-render mirror.
@@ -555,6 +557,7 @@ interface ComposeContext {
   readonly palette: PaletteCodes;
   readonly scope: ProjectScope;
   readonly stdin: Record<string, unknown> | undefined;
+  readonly enforcementStatus: EnforcementLiveStatus;
 }
 
 /**
@@ -1086,7 +1089,19 @@ function renderFooter(ctx: ComposeContext): string | undefined {
   const snapshot = ctx.snapshot;
   const p = ctx.palette;
   const tokens: string[] = [];
-  if (!collectEnforcementInstalled()) {
+  if (ctx.enforcementStatus.active) {
+    const level = ctx.enforcementStatus.level;
+    const color = level === 0
+      ? p.safe
+      : level === 1
+        ? p.warn
+        : level === 2
+          ? p.fail
+          : level === 3
+            ? p.critical
+            : p.warn;
+    tokens.push(`${color}ENFORCEMENT ON (${ctx.enforcementStatus.levelName ?? 'UNKNOWN'})${p.reset}`);
+  } else {
     tokens.push(`${p.fail}⛔ ENFORCEMENT OFF${p.reset}`);
   }
   // Daemon state — header-only mode omits this since we have no signal.
