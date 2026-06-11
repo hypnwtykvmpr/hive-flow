@@ -1,0 +1,14 @@
+{
+  "hiveFlowRepo": {
+    "mustContain": ["▊ hive-flow", "Codex 2", "daemon on", "Tests 12", "MCP 1/2"],
+    "mustNotContain": ["TypeError", "ReferenceError", "Cannot "]
+  },
+  "nonHiveRepo": {
+    "mustContain": ["▊ other-repo", "Opus 4.8"],
+    "mustNotContain": ["Memory", "Tests", "MCP", "TypeError", "ReferenceError", "Cannot "]
+  },
+  "noRepo": {
+    "mustContain": ["▊ loose-dir", "Fable 5"],
+    "mustNotContain": ["Memory", "Tests", "MCP", "TypeError", "ReferenceError", "Cannot "]
+  }
+}

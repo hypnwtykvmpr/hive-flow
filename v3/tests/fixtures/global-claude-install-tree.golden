@@ -1,0 +1,13 @@
+home/.claude/settings.json
+home/.hive-flow/enforcement/bin/.version
+home/.hive-flow/enforcement/bin/enforcement.cjs
+home/.hive-flow/enforcement/bin/hive-composition-gate.cjs
+home/.hive-flow/enforcement/bin/hook-handler.cjs
+home/.hive-flow/enforcement/bin/protected-paths.cjs
+home/.hive-flow/enforcement/bin/protected-paths.policy.json
+home/.hive-flow/enforcement/bin/provider-tracker.cjs
+home/.hive-flow/enforcement/bin/role-enforcement.cjs
+home/.hive-flow/enforcement/bin/session-id.cjs
+home/.hive-flow/enforcement/bin/settings-reconciler.cjs
+home/.hive-flow/bin/claude-code-statusline
+home/.hive-flow/integrations/state.json
