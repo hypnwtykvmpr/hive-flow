@@ -96,7 +96,31 @@ const branchSegment = fc
 const branchName = fc
   .array(branchSegment, { minLength: 1, maxLength: 4 })
   .map(segments => segments.join('/'))
-  .filter(name => /^[A-Za-z0-9]/.test(name) && !name.includes('//') && !name.includes('@{'));
+  .filter(isGitBranchRefnameCandidate);
+
+function isGitBranchRefnameCandidate(name: string): boolean {
+  return (
+    name.length > 0 &&
+    name !== 'HEAD' &&
+    !/^[0-9a-f]{7,40}$/i.test(name) &&
+    /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(name) &&
+    !name.startsWith('-') &&
+    !name.startsWith('.') &&
+    !name.endsWith('.') &&
+    !name.endsWith('.lock') &&
+    !name.includes('..') &&
+    !name.includes('@{') &&
+    !name.includes('//') &&
+    name.split('/').every(segment => (
+      segment.length > 0 &&
+      segment !== '.' &&
+      segment !== '..' &&
+      !segment.startsWith('.') &&
+      !segment.endsWith('.') &&
+      !segment.endsWith('.lock')
+    ))
+  );
+}
 
 const checkoutWrapper = fc.constantFrom(
   'command git checkout',
@@ -137,6 +161,19 @@ describe('trusted-root git checkout branch policy', () => {
 
     expect(run.result.decision).toBe('deny');
     expect(lastLayer(run)).toBe('auto-deny');
+  });
+
+  it('keeps invalid double-dot refnames auto-denied', async () => {
+    const run = await evaluateWithLog(bashInput('git checkout a..a'));
+
+    expect(run.result.decision).toBe('deny');
+    expect(lastLayer(run)).toBe('auto-deny');
+  });
+
+  it('generator emits only git branch refname candidates', () => {
+    const generated = fc.sample(branchName, { seed: 1, numRuns: 200 });
+
+    expect(generated.filter(name => !isGitBranchRefnameCandidate(name))).toEqual([]);
   });
 
   it('property: branch-only checkout by trusted root is never a policy auto-deny', async () => {
