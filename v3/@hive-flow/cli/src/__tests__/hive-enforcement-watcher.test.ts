@@ -130,7 +130,8 @@ describe('hive enforcement watcher launch', () => {
       const spawnedPath = join(root, '.hive-flow', 'data', 'watcher-spawned.json');
       expect(waitForFile(spawnedPath)).toBe(true);
       const spawned = JSON.parse(readFileSync(spawnedPath, 'utf8'));
-      expect(spawned.args).toEqual([hiveId, '--project-dir', root, '--sessionId', 'owner-session', '--tmux-pane', '%55']);
+      expect(spawned.args).toEqual([hiveId, '--project-dir', root, '--sessionId', 'owner-session']);
+      expect(spawned.args).not.toContain('--tmux-pane');
       expect(spawned.cwd).toBe(root);
       expect(spawned.projectDirEnv).toBe(root);
       expect(readAuditEvents(hiveHome)).toEqual(['watcher-launched', 'hive-enforcement-ok']);

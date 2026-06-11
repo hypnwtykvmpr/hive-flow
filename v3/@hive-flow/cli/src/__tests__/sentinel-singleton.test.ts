@@ -68,9 +68,8 @@ describe('sentinel watcher singleton spawn guard', () => {
       repoRoot,
       '--sessionId',
       'owner-session',
-      '--tmux-pane',
-      '%3',
     ]);
+    expect(spawn.mock.calls[0][1]).not.toContain('--tmux-pane');
     expect(spawn.mock.calls[0][2]).toMatchObject({
       detached: true,
       stdio: 'ignore',

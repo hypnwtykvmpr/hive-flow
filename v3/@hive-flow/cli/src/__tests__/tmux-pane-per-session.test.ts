@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,8 +31,6 @@ function loadWatcherModule() {
     `${source}
 module.exports = {
   getPaths,
-  resolveTmuxPane,
-  tmuxSendKeys,
 };
 `,
     context,
@@ -40,17 +38,9 @@ module.exports = {
   );
 
   return module.exports as {
-    getPaths: (projectDir: string) => {
+    getPaths: (projectDir: string) => Record<string, string | ((hiveId: string) => string) | undefined> & {
       dataDir: string;
-      tmuxPaneFile: string;
-      tmuxPaneDir?: string;
     };
-    resolveTmuxPane: (
-      explicitPane: string | null,
-      paths: { tmuxPaneFile: string; tmuxPaneDir?: string },
-      sessionId?: string | null,
-    ) => string | null;
-    tmuxSendKeys: (tmuxBin: string, pane: string, message: string) => boolean;
   };
 }
 
@@ -58,75 +48,32 @@ function makeProject(): string {
   return mkdtempSync(join(tmpdir(), 'hive-flow-pane-registry-'));
 }
 
-describe('R1 per-session tmux pane registry', () => {
-  it('resolves owner session pane before the legacy last-writer pane', () => {
+describe('legacy tmux pane registry is not used by the watcher', () => {
+  it('omits tmux pane paths and execution helpers from the watcher runtime module', () => {
     const project = makeProject();
     try {
       const watcher = loadWatcherModule();
       const paths = watcher.getPaths(project);
-      mkdirSync(join(paths.dataDir, 'panes'), { recursive: true });
-      writeFileSync(join(paths.dataDir, 'panes', 'sidA.txt'), '%1', 'utf8');
-      writeFileSync(join(paths.dataDir, 'panes', 'sidB.txt'), '%2', 'utf8');
-      writeFileSync(paths.tmuxPaneFile, '%2', 'utf8');
 
-      expect(watcher.resolveTmuxPane(null, paths, 'sidA')).toBe('%1');
+      expect(paths.tmuxPaneFile).toBeUndefined();
+      expect(paths.tmuxPaneDir).toBeUndefined();
+      expect('resolveTmuxPane' in watcher).toBe(false);
+      expect('tmuxSendKeys' in watcher).toBe(false);
     } finally {
       rmSync(project, { recursive: true, force: true });
     }
   });
 
-  it('sends wake messages to the owner session pane rather than the last writer', () => {
-    const project = makeProject();
-    try {
-      const watcher = loadWatcherModule();
-      const paths = watcher.getPaths(project);
-      mkdirSync(join(paths.dataDir, 'panes'), { recursive: true });
-      writeFileSync(join(paths.dataDir, 'panes', 'sidA.txt'), '%1', 'utf8');
-      writeFileSync(join(paths.dataDir, 'panes', 'sidB.txt'), '%2', 'utf8');
-      writeFileSync(paths.tmuxPaneFile, '%2', 'utf8');
-
-      const fakeTmux = join(project, 'fake-tmux.sh');
-      const argsPath = join(project, 'tmux-args.txt');
-      writeFileSync(fakeTmux, `#!/bin/sh\nprintf '%s\\n' "$@" > "${argsPath}"\n`, 'utf8');
-      chmodSync(fakeTmux, 0o755);
-
-      const pane = watcher.resolveTmuxPane(null, paths, 'sidA');
-      expect(pane).toBe('%1');
-      expect(watcher.tmuxSendKeys(fakeTmux, pane!, '[HIVE COMPLETE: hive-owned] done')).toBe(true);
-      expect(readFileSync(argsPath, 'utf8')).toContain('-t\n%1\n');
-    } finally {
-      rmSync(project, { recursive: true, force: true });
-    }
-  });
-
-  it('keeps explicit snapshot and legacy fallback priority', () => {
-    const project = makeProject();
-    try {
-      const watcher = loadWatcherModule();
-      const paths = watcher.getPaths(project);
-      mkdirSync(join(paths.dataDir, 'panes'), { recursive: true });
-      writeFileSync(join(paths.dataDir, 'panes', 'sidA.txt'), '%1', 'utf8');
-      writeFileSync(paths.tmuxPaneFile, '%legacy', 'utf8');
-
-      expect(watcher.resolveTmuxPane('%snapshot', paths, 'sidA')).toBe('%snapshot');
-      expect(watcher.resolveTmuxPane(null, paths, null)).toBe('%legacy');
-      expect(watcher.resolveTmuxPane(null, paths, 'missing-session')).toBe('%legacy');
-    } finally {
-      rmSync(project, { recursive: true, force: true });
-    }
-  });
-
-  it('committed SessionStart pane capture writes both per-session and legacy pane files', () => {
+  it('committed SessionStart hooks do not capture or persist tmux panes', () => {
     const settings = JSON.parse(readFileSync(settingsPath, 'utf8')) as {
       hooks?: { SessionStart?: Array<{ hooks?: Array<{ command?: string }> }> };
     };
     const commands = (settings.hooks?.SessionStart || [])
       .flatMap(group => group.hooks || [])
       .map(hook => hook.command || '');
-    const paneCommand = commands.find(command => command.includes('tmux-pane.txt'));
 
-    expect(paneCommand).toContain('/panes/');
-    expect(paneCommand).toContain('CLAUDE_SESSION_ID');
-    expect(paneCommand).toContain('tmux-pane.txt');
+    expect(commands.some(command => command.includes('tmux-pane.txt'))).toBe(false);
+    expect(commands.some(command => command.includes('display-message'))).toBe(false);
+    expect(commands.some(command => command.includes('TMUX_PANE'))).toBe(false);
   });
 });

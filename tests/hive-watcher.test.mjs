@@ -38,6 +38,7 @@ function loadWatcherModule() {
   vm.runInNewContext(
     `${source}
 module.exports = {
+  parseArgs,
   getPaths,
   sanitizeHiveId,
   pollWorkers,
@@ -46,7 +47,10 @@ module.exports = {
   appendAuditLog,
   writeDoneMarker: typeof writeDoneMarker === 'function' ? writeDoneMarker : undefined,
   appendPendingCompletion: typeof appendPendingCompletion === 'function' ? appendPendingCompletion : undefined,
+  appendPendingTerminal: typeof appendPendingTerminal === 'function' ? appendPendingTerminal : undefined,
   handleStopRequest: typeof handleStopRequest === 'function' ? handleStopRequest : undefined,
+  shouldNotifyStaleTransition: typeof shouldNotifyStaleTransition === 'function' ? shouldNotifyStaleTransition : undefined,
+  noteWorkerProgressTransition: typeof noteWorkerProgressTransition === 'function' ? noteWorkerProgressTransition : undefined,
 };
 `,
     context,
@@ -341,7 +345,76 @@ describe('hive-watcher regressions', () => {
     }
   });
 
-  it('uses the requested non-mutating and stale-reset source changes', () => {
+  it('notifies stale hives once per state transition and suppresses ambient idle-settled states', () => {
+    const mod = loadWatcherModule();
+    assert.equal(typeof mod.shouldNotifyStaleTransition, 'function');
+    assert.equal(typeof mod.noteWorkerProgressTransition, 'function');
+
+    const transitionState = {};
+    const staleRunningState = {
+      runningCount: 1,
+      completedCount: 0,
+      failedCount: 4,
+      idleCount: 0,
+      terminatedCount: 0,
+      workerCount: 5,
+    };
+
+    const notifications = [];
+    for (let i = 0; i < 6; i++) {
+      if (mod.shouldNotifyStaleTransition(transitionState, staleRunningState, 3 + i)) {
+        notifications.push(i);
+      }
+    }
+    assert.deepEqual(notifications, [0]);
+
+    mod.noteWorkerProgressTransition(transitionState);
+    assert.equal(
+      mod.shouldNotifyStaleTransition(transitionState, {
+        ...staleRunningState,
+        runningCount: 0,
+        completedCount: 1,
+      }, 3),
+      false,
+      'settled/failed hives with no running workers are ambient statusline state, not wake-worthy stale work',
+    );
+
+    assert.equal(
+      mod.shouldNotifyStaleTransition(transitionState, {
+        ...staleRunningState,
+        completedCount: 1,
+        failedCount: 3,
+      }, 3),
+      true,
+      'a changed running stale state should wake once',
+    );
+    assert.equal(
+      mod.shouldNotifyStaleTransition(transitionState, {
+        ...staleRunningState,
+        completedCount: 1,
+        failedCount: 3,
+      }, 4),
+      false,
+      'unchanged stale state should not wake again on the next cycle',
+    );
+  });
+
+  it('accepts legacy tmux pane arguments without any watcher tmux execution path', () => {
+    const mod = loadWatcherModule();
+    const parsed = mod.parseArgs(['demo/hive', '--tmux-pane', '%9'], {});
+
+    assert.equal(parsed.hiveId, 'demo/hive');
+    assert.equal(parsed.tmuxPane, '%9');
+
+    const source = readFileSync(SCRIPT, 'utf8');
+    assert.doesNotMatch(source, /function tmuxSendKeys/);
+    assert.doesNotMatch(source, /function findTmux/);
+    assert.doesNotMatch(source, /function resolveTmuxPane/);
+    assert.doesNotMatch(source, /execFileSync/);
+    assert.doesNotMatch(source, /send-keys/);
+  });
+
+  it('uses the requested non-mutating and stale-transition source changes', () => {
     const source = readFileSync(SCRIPT, 'utf8');
 
     assert.match(source, /const sorted = tasks\.slice\(\)\.sort\(/);
@@ -349,9 +422,9 @@ describe('hive-watcher regressions', () => {
     assert.match(source, /const allComplete = runningCount === 0 && !startupWindowOpen;/);
     assert.doesNotMatch(source, /const allComplete = taskedCount > 0 && runningCount === 0 && idleCount === 0;/);
     assert.doesNotMatch(source, /if \(latest\.tracking\.pid\) \{/);
-    assert.match(
-      source,
-      /Reset stale counter[\s\S]*prevCompletedCount = status\.completedCount;[\s\S]*prevFailedCount = status\.failedCount;/
-    );
+    assert.match(source, /function shouldNotifyStaleTransition/);
+    assert.match(source, /staleTransitionSignature\(status\)/);
+    assert.match(source, /lastStaleSignature/);
+    assert.doesNotMatch(source, /Reset stale counter/);
   });
 });

@@ -81,6 +81,7 @@ interface Fixture {
   origNoColor?: string;
   origForce?: string;
   origActive?: string;
+  origTerm?: string;
   projectKey?: string;
 }
 
@@ -91,6 +92,7 @@ function makeFixture(): Fixture {
   const origNoColor = process.env.NO_COLOR;
   const origForce = process.env.FORCE_COLOR;
   const origActive = process.env.HIVE_FLOW_STATUSLINE_ACTIVE;
+  const origTerm = process.env.TERM;
   process.env.HIVE_FLOW_HOME = home;
   // Default to 256-color rendering so palette codes appear in tests. Tests
   // that need NO_COLOR / 16-color flip the env explicitly.
@@ -104,6 +106,7 @@ function makeFixture(): Fixture {
     ...(origNoColor !== undefined ? { origNoColor } : {}),
     ...(origForce !== undefined ? { origForce } : {}),
     ...(origActive !== undefined ? { origActive } : {}),
+    ...(origTerm !== undefined ? { origTerm } : {}),
   };
 }
 
@@ -126,6 +129,8 @@ function cleanupFixture(fix: Fixture): void {
   else delete process.env.FORCE_COLOR;
   if (fix.origActive !== undefined) process.env.HIVE_FLOW_STATUSLINE_ACTIVE = fix.origActive;
   else delete process.env.HIVE_FLOW_STATUSLINE_ACTIVE;
+  if (fix.origTerm !== undefined) process.env.TERM = fix.origTerm;
+  else delete process.env.TERM;
 }
 
 /**
@@ -799,6 +804,35 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(plain).toContain('OpenRouter 3'); // 2 active + 1 idle = 3.
     expect(plain).not.toContain('grok 2');
     expect(plain).not.toContain('minimax 1');
+  });
+
+  it('colors provider agent counts green only for active agents and orange for idle-only spawned agents', async () => {
+    writeSnapshot(fix.projectRoot, {
+      scoreboard: {
+        agentsByProvider: {
+          codex: {
+            activeAgents: 1,
+            idleAgents: 2,
+            staleAgents: 0,
+          },
+          openrouter: {
+            activeAgents: 0,
+            idleAgents: 3,
+            staleAgents: 0,
+          },
+        },
+        callsByProvider: {},
+        stale: false,
+      },
+      daemon: { running: true, health: 'healthy', observedAt: new Date().toISOString() },
+    });
+
+    const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
+    const plain = stripAnsi(output);
+    expect(plain).toContain('Codex 3');
+    expect(plain).toContain('OpenRouter 3');
+    expect(output).toMatch(/Codex\x1b\[0m \x1b\[1;32m3\x1b\[0m/);
+    expect(output).toMatch(/OpenRouter\x1b\[0m \x1b\[38;5;208m3\x1b\[0m/);
   });
 
   // -------------------------------------------------------------------------

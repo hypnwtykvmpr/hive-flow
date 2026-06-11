@@ -528,19 +528,8 @@ function ensureHiveWatcherLaunched(toolName, sanitizedId) {
     const ownerSessionId = typeof hiveRecord?.ownerSessionId === 'string' && hiveRecord.ownerSessionId.trim()
       ? hiveRecord.ownerSessionId.trim()
       : '';
-    let tmuxPane = typeof hiveRecord?.ownerTmuxPane === 'string' && hiveRecord.ownerTmuxPane.trim()
-      ? hiveRecord.ownerTmuxPane.trim()
-      : '';
-    try {
-      if (!tmuxPane) {
-        const tmuxFile = path.join(HIVE_FLOW_DIR, 'data', 'tmux-pane.txt');
-        if (fs.existsSync(tmuxFile)) tmuxPane = fs.readFileSync(tmuxFile, 'utf8').trim();
-      }
-    } catch { /* no tmux */ }
-
     const args = [watcherScript, sanitizedId, '--project-dir', PROJECT_DIR];
     if (ownerSessionId) args.push('--sessionId', ownerSessionId);
-    if (tmuxPane) args.push('--tmux-pane', tmuxPane);
 
     const child = spawn(process.execPath, args, {
       detached: true,
@@ -555,7 +544,7 @@ function ensureHiveWatcherLaunched(toolName, sanitizedId) {
       hiveId: sanitizedId,
       pid: child.pid || null,
       ownerSessionId: ownerSessionId || null,
-      tmuxPane: tmuxPane || null,
+      notificationMode: 'durable-files',
     });
   } catch (err) {
     appendAuditLog({

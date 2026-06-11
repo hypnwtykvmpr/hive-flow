@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
  * Hive Sentinel Watcher — Detached background process that monitors hive
- * worker completion and wakes the advocate when done.
+ * worker completion and writes durable completion signals when done.
  *
  * Spawned by hive-enforcement.cjs PostToolUse hook after queen_mission_assign.
  * Runs fully detached (stdio: 'ignore', detached: true, unref'd).
  *
  * Mechanisms:
- *   1. tmux send-keys — writes to advocate pty stdin when in tmux
- *   2. Pending notification drain — writes the next-prompt fallback queue
- *   3. Progress file — writes .hive-flow/data/watcher-{hiveId}.json every cycle
+ *   1. Pending notification drain — writes the next-prompt fallback queue
+ *   2. Progress file — writes .hive-flow/data/watcher-{hiveId}.json every cycle
+ *   3. Done markers — writes .hive-flow/data/hive-{hiveId}.done on completion
  *
  * Stale detection: If no worker transitions (completed/failed count) change
  * across 3 consecutive cycles (each cycle = POLL_INTERVAL_MS), the hive is
@@ -17,6 +17,7 @@
  *
  * Usage:
  *   node scripts/hive-watcher.cjs <hiveId> [--tmux-pane <pane>] [--project-dir <dir>]
+ *   --tmux-pane is accepted for legacy launcher compatibility and ignored.
  *
  * @module scripts/hive-watcher
  */
@@ -26,9 +27,8 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execFileSync } = require('child_process');
 const { appendPendingWithAck } = require('../.claude/helpers/dedup-marker.cjs');
-const { resolveSessionId, sanitizeSessionId } = require('../.claude/helpers/session-id.cjs');
+const { resolveSessionId } = require('../.claude/helpers/session-id.cjs');
 const { wakeSessionPaths } = require('../.claude/helpers/wake-paths.cjs');
 
 // ---------------------------------------------------------------------------
@@ -36,7 +36,6 @@ const { wakeSessionPaths } = require('../.claude/helpers/wake-paths.cjs');
 // ---------------------------------------------------------------------------
 
 const POLL_INTERVAL_MS = 15_000;       // 15s between polls
-const PROGRESS_INTERVAL_MS = 30 * 60_000; // 30min between tmux progress pings
 const STALE_THRESHOLD = 3;              // 3 consecutive unchanged polls = stale
 const MAX_RUNTIME_MS = 12 * 60 * 60_000; // 12h hard safety cap (prevent zombie)
 
@@ -153,8 +152,6 @@ function getPaths(projectDir, ownerSessionId = null) {
     tasksDir: path.join(hiveFlowDir, 'tasks'),
     dataDir,
     logsDir: path.join(hiveFlowDir, 'logs'),
-    tmuxPaneDir: path.join(dataDir, 'panes'),
-    tmuxPaneFile: path.join(dataDir, 'tmux-pane.txt'),
     stopFile: (hiveId) => path.join(dataDir, 'watcher-' + sanitizeHiveId(hiveId) + '.stop'),
   }, ownerSessionId);
 }
@@ -298,72 +295,7 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
     allComplete,
     workerCount: hive.workers.length,
     ownerSessionId: hive.ownerSessionId || null,
-    ownerTmuxPane: hive.ownerTmuxPane || null,
   };
-}
-
-// ---------------------------------------------------------------------------
-// tmux send-keys — wakes the advocate's Claude Code session
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve the tmux pane to target. Priority:
- *   1. Explicit --tmux-pane argument
- *   2. Persisted .hive-flow/data/panes/<sessionId>.txt
- *   3. Persisted .hive-flow/data/tmux-pane.txt (legacy SessionStart fallback)
- *   4. null (tmux not available)
- */
-function resolveTmuxPane(explicitPane, paths, sessionId = null) {
-  if (explicitPane) return explicitPane;
-  const sanitizedSessionId = sanitizeSessionId(sessionId);
-  if (sanitizedSessionId && paths.tmuxPaneDir) {
-    try {
-      const sessionPaneFile = path.join(paths.tmuxPaneDir, `${sanitizedSessionId}.txt`);
-      if (fs.existsSync(sessionPaneFile)) {
-        const pane = fs.readFileSync(sessionPaneFile, 'utf8').trim();
-        if (pane) return pane;
-      }
-    } catch { /* ignore */ }
-  }
-  try {
-    if (fs.existsSync(paths.tmuxPaneFile)) {
-      const pane = fs.readFileSync(paths.tmuxPaneFile, 'utf8').trim();
-      if (pane) return pane;
-    }
-  } catch { /* ignore */ }
-  return null;
-}
-
-/**
- * Find the tmux binary. Returns path or null.
- */
-function findTmux() {
-  const candidates = ['/usr/local/bin/tmux', '/opt/homebrew/bin/tmux', '/usr/bin/tmux'];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
-  // Try PATH
-  try {
-    const result = execFileSync('which', ['tmux'], { encoding: 'utf8', timeout: 3000 }).trim();
-    if (result && fs.existsSync(result)) return result;
-  } catch { /* not found */ }
-  return null;
-}
-
-/**
- * Send a message to the advocate's tmux pane.
- * Uses execFileSync with argument arrays (no shell interpolation).
- */
-function tmuxSendKeys(tmuxBin, pane, message) {
-  try {
-    execFileSync(tmuxBin, ['send-keys', '-t', pane, message, 'Enter'], {
-      stdio: 'ignore',
-      timeout: 5000,
-    });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -464,6 +396,40 @@ function appendPendingCompletion(paths, hiveId, status, summary, ownerSessionId 
   } catch { /* best-effort */ }
 }
 
+function appendPendingTerminal(paths, hiveId, status, summary, ownerSessionId = null) {
+  try {
+    const sanitized = sanitizeHiveId(hiveId);
+    if (!sanitized) return;
+    fs.mkdirSync(paths.dataDir, { recursive: true });
+
+    const line = JSON.stringify({
+      kind: 'hive-terminal',
+      hiveId,
+      ts: new Date().toISOString(),
+      summary,
+      runningCount: status?.runningCount || 0,
+      completedCount: status?.completedCount || 0,
+      failedCount: status?.failedCount || 0,
+      idleCount: status?.idleCount || 0,
+      terminatedCount: status?.terminatedCount || 0,
+      ownerSessionId,
+    });
+
+    appendPendingWithAck(paths.dataDir, `${sanitized}-terminal`, line, {
+      source: 'hive-watcher',
+      ownerSessionId,
+    });
+
+    const wakePaths = paths.wakePendingFile ? paths : decorateWakePaths(paths, ownerSessionId);
+    if (wakePaths.wakeSessionDir) {
+      appendPendingWithAck(wakePaths.wakeSessionDir, `${sanitized}-terminal`, line, {
+        source: 'hive-watcher:global-wake',
+        ownerSessionId,
+      });
+    }
+  } catch { /* best-effort */ }
+}
+
 // ---------------------------------------------------------------------------
 // Audit log (mirrors hive-enforcement.cjs pattern)
 // ---------------------------------------------------------------------------
@@ -498,6 +464,40 @@ function handleStopRequest(paths, hiveId, status) {
   }
 }
 
+function finiteCount(value) {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function staleTransitionSignature(status) {
+  const runningCount = finiteCount(status?.runningCount);
+  if (runningCount <= 0) return null;
+  return [
+    runningCount,
+    finiteCount(status?.completedCount),
+    finiteCount(status?.failedCount),
+    finiteCount(status?.idleCount),
+    finiteCount(status?.terminatedCount),
+    finiteCount(status?.workerCount),
+  ].join(':');
+}
+
+function noteWorkerProgressTransition(transitionState) {
+  if (!transitionState || typeof transitionState !== 'object') return;
+  transitionState.lastStaleSignature = null;
+}
+
+function shouldNotifyStaleTransition(transitionState, status, unchangedCycles, threshold = STALE_THRESHOLD) {
+  if (unchangedCycles < threshold) return false;
+  const signature = staleTransitionSignature(status);
+  if (signature === null) {
+    noteWorkerProgressTransition(transitionState);
+    return false;
+  }
+  if (transitionState.lastStaleSignature === signature) return false;
+  transitionState.lastStaleSignature = signature;
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Main watcher loop
 // ---------------------------------------------------------------------------
@@ -514,25 +514,19 @@ async function main() {
   const hiveId = config.hiveId;
   const startedAt = Date.now();
 
-  // Resolve tmux
-  const tmuxBin = findTmux();
-  const tmuxPane = resolveTmuxPane(config.tmuxPane, paths, config.sessionId);
-  const hasTmux = !!(tmuxBin && tmuxPane);
-
   appendAuditLog(paths, {
     event: 'watcher-started',
     hiveId,
     pid: process.pid,
     ownerSessionId: config.sessionId || 'none',
-    tmuxPane: tmuxPane || 'none',
-    hasTmux,
+    notificationMode: 'durable-files',
   });
 
   // Track stale detection state
   let prevCompletedCount = -1;
   let prevFailedCount = -1;
   let unchangedCycles = 0;
-  let lastProgressPing = Date.now(); // timestamp of last tmux progress update
+  const staleTransitionState = {};
 
   // Cleanup on exit
   let cleaned = false;
@@ -565,10 +559,13 @@ async function main() {
         pid: process.pid,
         runtimeMs: Date.now() - startedAt,
       });
-      if (hasTmux) {
-        tmuxSendKeys(tmuxBin, tmuxPane,
-          `[HIVE TIMEOUT: ${hiveId}] Watcher reached ${MAX_RUNTIME_MS / 3600000}h safety cap. Check hive_status manually.`);
-      }
+      appendPendingTerminal(
+        paths,
+        hiveId,
+        pollWorkers(paths.hivesDir, paths.tasksDir, hiveId),
+        `[HIVE TIMEOUT: ${hiveId}] Watcher reached ${MAX_RUNTIME_MS / 3600000}h safety cap. Check hive_status manually.`,
+        config.sessionId || null,
+      );
       break;
     }
 
@@ -618,12 +615,6 @@ async function main() {
       writeDoneMarker(paths, hiveId, status, ownerSessionId);
       appendPendingCompletion(paths, hiveId, status, summary, ownerSessionId);
 
-      // Wake advocate via tmux
-      if (hasTmux) {
-        tmuxSendKeys(tmuxBin, tmuxPane,
-          `[HIVE COMPLETE: ${hiveId}] All workers finished. ${summary}. Run hive_poll_workers or queen_collect_results to review.`);
-      }
-
       break;
     }
 
@@ -634,9 +625,10 @@ async function main() {
       unchangedCycles = 0;
       prevCompletedCount = status.completedCount;
       prevFailedCount = status.failedCount;
+      noteWorkerProgressTransition(staleTransitionState);
     }
 
-    if (unchangedCycles >= STALE_THRESHOLD) {
+    if (shouldNotifyStaleTransition(staleTransitionState, status, unchangedCycles)) {
       appendAuditLog(paths, {
         event: 'watcher-hive-stale',
         hiveId,
@@ -646,25 +638,6 @@ async function main() {
         completedCount: status.completedCount,
         failedCount: status.failedCount,
       });
-
-      // Wake advocate with stale warning
-      if (hasTmux) {
-        tmuxSendKeys(tmuxBin, tmuxPane,
-          `[HIVE STALE: ${hiveId}] No progress for ${unchangedCycles} cycles (${unchangedCycles * POLL_INTERVAL_MS / 1000}s). ${status.runningCount} workers still running. Check hive_poll_workers.`);
-      }
-
-      // Reset stale counter — allow continued monitoring (don't exit on stale, just notify)
-      unchangedCycles = 0;
-      prevCompletedCount = status.completedCount;
-      prevFailedCount = status.failedCount;
-    }
-
-    // ---- Progress ping (every 30 min via tmux) ----
-    const now = Date.now();
-    if (hasTmux && (now - lastProgressPing) >= PROGRESS_INTERVAL_MS) {
-      tmuxSendKeys(tmuxBin, tmuxPane,
-        `[HIVE PROGRESS: ${hiveId}] running=${status.runningCount} completed=${status.completedCount} failed=${status.failedCount} idle=${status.idleCount}`);
-      lastProgressPing = now;
     }
 
     // Sleep until next poll

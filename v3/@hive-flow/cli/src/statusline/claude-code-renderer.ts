@@ -848,6 +848,7 @@ function renderScoreboard(snapshot: StatuslineSnapshotV1, p: PaletteCodes): stri
     if (count <= 0) continue;
     const label = SCOREBOARD_PROVIDER_LABEL[provider];
     const color = providerColor(provider, p);
+    const countColor = providerCountColor(presence, p);
     // Per-model breakdown rules:
     //   - Claude: always model-split when models present (visual design).
     //   - OpenRouter: model-split ONLY when `openRouterBreakdown === 'model'`;
@@ -860,11 +861,11 @@ function renderScoreboard(snapshot: StatuslineSnapshotV1, p: PaletteCodes): stri
     if (wantsBreakdown && models && Object.keys(models).length > 0) {
       const modelParts = Object.entries(models)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([name, n]) => `${name} ${p.number}${n}${p.reset}`);
+        .map(([name, n]) => `${name} ${countColor}${n}${p.reset}`);
       tokens.push(`${color}${label}${p.reset} ${modelParts.join(` ${p.gray}·${p.reset} `)}`);
       continue;
     }
-    tokens.push(`${color}${label}${p.reset} ${p.number}${count}${p.reset}`);
+    tokens.push(`${color}${label}${p.reset} ${countColor}${count}${p.reset}`);
   }
   if (tokens.length === 0) return undefined;
   return `🤖 ${tokens.join(`  ${p.separator}│${p.reset}  `)}`;
@@ -885,6 +886,15 @@ function providerColor(provider: ScoreProvider, p: PaletteCodes): string {
   if (provider === 'qwen') return p.qwen;
   if (provider === 'opencode') return p.opencode;
   return p.gray;
+}
+
+function providerCountColor(
+  presence: ScoreboardSummary['agentsByProvider'][ScoreProvider] | undefined,
+  p: PaletteCodes,
+): string {
+  if ((presence?.activeAgents ?? 0) > 0) return p.active;
+  if ((presence?.idleAgents ?? 0) > 0) return p.warn;
+  return p.number;
 }
 
 // ---------------------------------------------------------------------------
