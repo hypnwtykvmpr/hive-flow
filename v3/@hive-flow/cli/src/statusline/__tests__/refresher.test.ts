@@ -15,7 +15,7 @@
 //   8. ADR-051 missing both: context omitted, not invented.
 //   9. Atomic write: cache.json never half-written (temp+rename via storage).
 //  10. Symlinked cache rejected via Wave 2.5A guard.
-//  11. Promise.all parallelism: refresh time ~= max(collector times).
+//  11. Promise.all parallelism: every collector starts before any is released.
 //  12. Snapshot version + identity stamped from `resolveProjectScope`.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -654,14 +654,30 @@ describe('refreshStatuslineSnapshot', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 11. Promise.all parallelism (smoke test via mock delays)
+  // 11. Promise.all parallelism (structural proof via collector latches)
   // -------------------------------------------------------------------------
 
-  it('runs collectors in parallel via Promise.all (refresh time ~= max collector time)', async () => {
-    // We can't easily inject delays into the real collectors. Instead, use
-    // vitest's module mocking to wrap each collector with a controlled delay,
-    // then measure the total refresh time.
-    const COLLECTOR_DELAY_MS = 50;
+  it('starts every collector before releasing any collector result', async () => {
+    const expectedCollectors = ['scoreboard', 'sessions', 'tests', 'attention', 'swarm', 'git'];
+    const startedCollectors: string[] = [];
+    let resolveFirstStart!: () => void;
+    const firstStarted = new Promise<void>((resolve) => {
+      resolveFirstStart = resolve;
+    });
+    let releaseCollectors!: () => void;
+    const release = new Promise<void>((resolve) => {
+      releaseCollectors = resolve;
+    });
+
+    async function waitAtCollectorLatch<T>(
+      collector: string,
+      actualCollect: () => Promise<T>,
+    ): Promise<T> {
+      startedCollectors.push(collector);
+      resolveFirstStart();
+      await release;
+      return actualCollect();
+    }
 
     vi.resetModules();
     vi.doMock('../collectors/sessions.js', async () => {
@@ -671,8 +687,7 @@ describe('refreshStatuslineSnapshot', () => {
       return {
         ...actual,
         collectSessions: async (opts: Parameters<typeof actual.collectSessions>[0]) => {
-          await new Promise<void>((r) => setTimeout(r, COLLECTOR_DELAY_MS));
-          return actual.collectSessions(opts);
+          return waitAtCollectorLatch('sessions', () => actual.collectSessions(opts));
         },
       };
     });
@@ -683,8 +698,7 @@ describe('refreshStatuslineSnapshot', () => {
       return {
         ...actual,
         collectScoreboard: async (opts: Parameters<typeof actual.collectScoreboard>[0]) => {
-          await new Promise<void>((r) => setTimeout(r, COLLECTOR_DELAY_MS));
-          return actual.collectScoreboard(opts);
+          return waitAtCollectorLatch('scoreboard', () => actual.collectScoreboard(opts));
         },
       };
     });
@@ -695,8 +709,7 @@ describe('refreshStatuslineSnapshot', () => {
       return {
         ...actual,
         collectTests: async (opts: Parameters<typeof actual.collectTests>[0]) => {
-          await new Promise<void>((r) => setTimeout(r, COLLECTOR_DELAY_MS));
-          return actual.collectTests(opts);
+          return waitAtCollectorLatch('tests', () => actual.collectTests(opts));
         },
       };
     });
@@ -707,8 +720,7 @@ describe('refreshStatuslineSnapshot', () => {
       return {
         ...actual,
         collectAttention: async (opts: Parameters<typeof actual.collectAttention>[0]) => {
-          await new Promise<void>((r) => setTimeout(r, COLLECTOR_DELAY_MS));
-          return actual.collectAttention(opts);
+          return waitAtCollectorLatch('attention', () => actual.collectAttention(opts));
         },
       };
     });
@@ -719,32 +731,46 @@ describe('refreshStatuslineSnapshot', () => {
       return {
         ...actual,
         collectSwarm: async (opts: Parameters<typeof actual.collectSwarm>[0]) => {
-          await new Promise<void>((r) => setTimeout(r, COLLECTOR_DELAY_MS));
-          return actual.collectSwarm(opts);
+          return waitAtCollectorLatch('swarm', () => actual.collectSwarm(opts));
+        },
+      };
+    });
+    vi.doMock('../inline-collectors.js', async () => {
+      const actual = await vi.importActual<typeof import('../inline-collectors.js')>(
+        '../inline-collectors.js',
+      );
+      return {
+        ...actual,
+        collectInlineSnapshot: async (opts: Parameters<typeof actual.collectInlineSnapshot>[0]) => {
+          return waitAtCollectorLatch('git', () => actual.collectInlineSnapshot(opts));
         },
       };
     });
 
-    const mod = await import('../refresher.js');
-    populateAllLedgers(root);
+    try {
+      const mod = await import('../refresher.js');
+      populateAllLedgers(root);
 
-    const t0 = Date.now();
-    await mod.refreshStatuslineSnapshot({
-      projectRoot: root,
-      now: FIXED_NOW,
-    });
-    const elapsedMs = Date.now() - t0;
+      const refresh = mod.refreshStatuslineSnapshot({
+        projectRoot: root,
+        now: FIXED_NOW,
+      });
+      await firstStarted;
 
-    // Sequential would be 5 * 50 = 250ms minimum. Parallel should be ~50ms
-    // plus refresher overhead. Allow generous slack for slow CI.
-    expect(elapsedMs).toBeLessThan(200);
+      expect(new Set(startedCollectors)).toEqual(new Set(expectedCollectors));
 
-    vi.resetModules();
-    vi.doUnmock('../collectors/sessions.js');
-    vi.doUnmock('../collectors/scoreboard.js');
-    vi.doUnmock('../collectors/tests.js');
-    vi.doUnmock('../collectors/attention.js');
-    vi.doUnmock('../collectors/swarm.js');
+      releaseCollectors();
+      await refresh;
+    } finally {
+      releaseCollectors();
+      vi.resetModules();
+      vi.doUnmock('../collectors/sessions.js');
+      vi.doUnmock('../collectors/scoreboard.js');
+      vi.doUnmock('../collectors/tests.js');
+      vi.doUnmock('../collectors/attention.js');
+      vi.doUnmock('../collectors/swarm.js');
+      vi.doUnmock('../inline-collectors.js');
+    }
   });
 
   // -------------------------------------------------------------------------
