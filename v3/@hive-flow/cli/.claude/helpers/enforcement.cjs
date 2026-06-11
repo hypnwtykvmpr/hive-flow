@@ -85,6 +85,7 @@ const GATE_MAX_AGE_MS = 3600000; // 1 hour
 const MAX_CONSECUTIVE_READ_ERRORS = 3; // 12.11: DoS mitigation
 const DENIAL_LEDGER_WINDOW_MS = 30 * 60 * 1000;
 const MAX_DENIAL_LEDGER_ENTRIES = 200;
+const MAX_DENIAL_LEDGER_ENTRIES_PER_ACTOR = 32;
 // The shared 10KB state cap is too small for a signed 200-entry ledger.
 // Keep HMAC verification, but give the bounded ledger its own read cap.
 const DENIAL_LEDGER_MAX_SIZE_BYTES = 256 * 1024;
@@ -387,10 +388,26 @@ function pruneDenialLedger(ledger, nowMs) {
       channels,
       firstTs: Number.isFinite(Number(entry.firstTs)) ? Number(entry.firstTs) : lastTs,
       lastTs,
+      ...(entry.escalated === true ? { escalated: true } : {}),
     };
   }
 
-  const capped = Object.entries(freshEntries)
+  const perActorBuckets = new Map();
+  for (const [key, entry] of Object.entries(freshEntries)) {
+    const actor = String(entry.actor || key.split('\0')[0] || '');
+    const bucket = perActorBuckets.get(actor) || [];
+    bucket.push([key, entry]);
+    perActorBuckets.set(actor, bucket);
+  }
+  const actorCapped = [];
+  for (const bucket of perActorBuckets.values()) {
+    bucket
+      .sort((a, b) => Number(b[1].lastTs) - Number(a[1].lastTs))
+      .slice(0, MAX_DENIAL_LEDGER_ENTRIES_PER_ACTOR)
+      .forEach(entry => actorCapped.push(entry));
+  }
+
+  const capped = actorCapped
     .sort((a, b) => Number(b[1].lastTs) - Number(a[1].lastTs))
     .slice(0, MAX_DENIAL_LEDGER_ENTRIES);
   return { version: 1, entries: Object.fromEntries(capped) };
@@ -407,6 +424,8 @@ function evaluateProtectedMutationDenial(ctx, target, channel, nowMs = Date.now(
     const existing = ledger.entries[key] || null;
     const existingChannels = Array.isArray(existing?.channels) ? existing.channels : [];
     const crossChannel = existingChannels.some(recorded => recorded !== normalizedChannel);
+    const alreadyEscalated = existing?.escalated === true;
+    const escalated = alreadyEscalated || crossChannel;
     const channels = [...new Set([...existingChannels, normalizedChannel])];
     ledger.entries[key] = {
       actor,
@@ -414,10 +433,14 @@ function evaluateProtectedMutationDenial(ctx, target, channel, nowMs = Date.now(
       channels,
       firstTs: existing?.firstTs || nowMs,
       lastTs: nowMs,
+      // Idempotency: a Tier-2 cross-channel repeat escalates once per
+      // actor+target ledger entry. A distinct target, aged-out entry, or
+      // human reset that clears the ledger starts a fresh offense.
+      ...(escalated ? { escalated: true } : {}),
     };
-    saveDenialLedger(ledger);
+    saveDenialLedger(pruneDenialLedger(ledger, nowMs));
     return {
-      escalate: crossChannel,
+      escalate: crossChannel && !alreadyEscalated,
       actor,
       target: normalizedTarget,
       channel: normalizedChannel,

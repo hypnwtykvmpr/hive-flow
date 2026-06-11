@@ -2229,6 +2229,52 @@ describe('enforcement security property contracts', () => {
     expect(entries[0].channels).toEqual(['write', 'bash']);
   });
 
+  it('caps denial ledger entries per actor with oldest eviction while preserving under-cap escalation', () => {
+    const ctx = { agentId: 'ledger-cap-actor' };
+    const target = (i: number) => `.claude/helpers/cap-${String(i).padStart(2, '0')}.cjs`;
+
+    for (let i = 0; i < 32; i++) {
+      const result = enf.evaluateProtectedMutationDenial(ctx, target(i), 'write', 1_000 + i);
+      expect(result.escalate).toBe(false);
+    }
+
+    const underCapRepeat = enf.evaluateProtectedMutationDenial(ctx, target(0), 'bash', 2_000);
+    expect(underCapRepeat.escalate).toBe(true);
+
+    enf.evaluateProtectedMutationDenial(ctx, target(32), 'write', 3_000);
+
+    const ledger = readDenialLedgerState();
+    const entries = Object.values(ledger.entries as Record<string, { actor: string; target: string }>)
+      .filter(entry => entry.actor === 'agent:ledger-cap-actor');
+    expect(entries).toHaveLength(32);
+    expect(entries.some(entry => entry.target.endsWith(join('.claude', 'helpers', 'cap-00.cjs')))).toBe(true);
+    expect(entries.some(entry => entry.target.endsWith(join('.claude', 'helpers', 'cap-01.cjs')))).toBe(false);
+    expect(entries.some(entry => entry.target.endsWith(join('.claude', 'helpers', 'cap-32.cjs')))).toBe(true);
+  });
+
+  it('makes denial ledger re-escalation idempotent for the same offense while distinct targets still escalate', () => {
+    const ctx = { agentId: 'ledger-idempotent-actor' };
+    const firstTarget = '.claude/helpers/hook-handler.cjs';
+    const secondTarget = '.claude/helpers/role-enforcement.cjs';
+
+    expect(enf.evaluateProtectedMutationDenial(ctx, firstTarget, 'write', 1_000).escalate).toBe(false);
+    expect(enf.evaluateProtectedMutationDenial(ctx, firstTarget, 'bash', 2_000).escalate).toBe(true);
+    expect(enf.evaluateProtectedMutationDenial(ctx, firstTarget, 'bash', 3_000).escalate).toBe(false);
+    expect(enf.evaluateProtectedMutationDenial(ctx, firstTarget, 'write', 4_000).escalate).toBe(false);
+
+    expect(enf.evaluateProtectedMutationDenial(ctx, secondTarget, 'write', 5_000).escalate).toBe(false);
+    expect(enf.evaluateProtectedMutationDenial(ctx, secondTarget, 'bash', 6_000).escalate).toBe(true);
+
+    const ledger = readDenialLedgerState();
+    const first = Object.values(ledger.entries as Record<string, { target: string; escalated?: boolean }>)
+      .find(entry => entry.target.endsWith(join('.claude', 'helpers', 'hook-handler.cjs')));
+    expect(first?.escalated).toBe(true);
+
+    rmSync(denialLedgerPath(), { force: true });
+    expect(enf.evaluateProtectedMutationDenial(ctx, firstTarget, 'write', 7_000).escalate).toBe(false);
+    expect(enf.evaluateProtectedMutationDenial(ctx, firstTarget, 'bash', 8_000).escalate).toBe(true);
+  });
+
   it('serializes denial ledger read-modify-write through an exclusive lock file', () => {
     const openedLocks: string[] = [];
     const unlinkedLocks: string[] = [];
