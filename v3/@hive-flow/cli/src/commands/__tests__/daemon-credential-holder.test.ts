@@ -89,6 +89,8 @@ describe('daemon credential holder lifecycle helpers', () => {
 });
 
 describe('daemon MCP stdio server lifecycle helpers', () => {
+  const hiveFlowMcpCommand = () => `node ${process.cwd()}/bin/mcp-server.js`;
+
   it('reaps legacy MCP server processes that have no live heartbeat registry record', async () => {
     const killCalls: Array<{ pid: number; signal: NodeJS.Signals }> = [];
     let alive = true;
@@ -98,7 +100,8 @@ describe('daemon MCP stdio server lifecycle helpers', () => {
           pid: 9001,
           ppid: 100,
           stat: 'S',
-          command: 'node /repo/v3/@hive-flow/cli/bin/mcp-server.js',
+          elapsedSeconds: 300,
+          command: hiveFlowMcpCommand(),
         },
       ]),
       readRegistryRecord: vi.fn(() => null),
@@ -134,7 +137,8 @@ describe('daemon MCP stdio server lifecycle helpers', () => {
           pid: 9002,
           ppid: 100,
           stat: 'S',
-          command: 'node /repo/v3/@hive-flow/cli/bin/mcp-server.js',
+          elapsedSeconds: 300,
+          command: hiveFlowMcpCommand(),
         },
       ]),
       readRegistryRecord: vi.fn(() => ({
@@ -143,7 +147,7 @@ describe('daemon MCP stdio server lifecycle helpers', () => {
         sessionId: 'active-mcp',
         startedAt: '2026-06-11T11:59:00.000Z',
         lastHeartbeatAt: '2026-06-11T11:59:40.000Z',
-        command: 'node /repo/v3/@hive-flow/cli/bin/mcp-server.js',
+        command: hiveFlowMcpCommand(),
       })),
       removeRegistryRecord: vi.fn(),
       isProcessRunning: vi.fn(() => true),
@@ -164,6 +168,136 @@ describe('daemon MCP stdio server lifecycle helpers', () => {
       reaped: false,
       reason: 'MCP server heartbeat is fresh',
     });
+    expect(deps.killProcess).not.toHaveBeenCalled();
+    expect(deps.removeRegistryRecord).not.toHaveBeenCalled();
+  });
+
+  it('does not reap a foreign bin/mcp-server.js process outside hive-flow', async () => {
+    const deps: McpServerReapDeps = {
+      listProcesses: vi.fn(async () => [
+        {
+          pid: 9003,
+          ppid: 100,
+          stat: 'S',
+          elapsedSeconds: 300,
+          command: 'node /other/project/bin/mcp-server.js',
+        },
+      ]),
+      readRegistryRecord: vi.fn(() => null),
+      removeRegistryRecord: vi.fn(),
+      isProcessRunning: vi.fn(() => true),
+      killProcess: vi.fn(),
+      sleep: vi.fn(async () => undefined),
+    };
+
+    const result = await reapStaleMcpServers({
+      protectedPids: [process.pid],
+      nowMs: Date.parse('2026-06-11T12:00:00.000Z'),
+      deps,
+    });
+
+    expect(result).toMatchObject({ checked: 0, reaped: 0, skipped: 0 });
+    expect(deps.readRegistryRecord).not.toHaveBeenCalled();
+    expect(deps.killProcess).not.toHaveBeenCalled();
+    expect(deps.removeRegistryRecord).not.toHaveBeenCalled();
+  });
+
+  it('does not reap a different project install of @hive-flow/cli/bin/mcp-server.js', async () => {
+    const deps: McpServerReapDeps = {
+      listProcesses: vi.fn(async () => [
+        {
+          pid: 9006,
+          ppid: 100,
+          stat: 'S',
+          elapsedSeconds: 300,
+          command: 'node /other/project/node_modules/@hive-flow/cli/bin/mcp-server.js',
+        },
+      ]),
+      readRegistryRecord: vi.fn(() => null),
+      removeRegistryRecord: vi.fn(),
+      isProcessRunning: vi.fn(() => true),
+      killProcess: vi.fn(),
+      sleep: vi.fn(async () => undefined),
+    };
+
+    const result = await reapStaleMcpServers({
+      protectedPids: [process.pid],
+      nowMs: Date.parse('2026-06-11T12:00:00.000Z'),
+      deps,
+    });
+
+    expect(result).toMatchObject({ checked: 0, reaped: 0, skipped: 0 });
+    expect(deps.readRegistryRecord).not.toHaveBeenCalled();
+    expect(deps.killProcess).not.toHaveBeenCalled();
+    expect(deps.removeRegistryRecord).not.toHaveBeenCalled();
+  });
+
+  it('does not reap a strict hive-flow MCP server while it is inside startup grace', async () => {
+    const deps: McpServerReapDeps = {
+      listProcesses: vi.fn(async () => [
+        {
+          pid: 9004,
+          ppid: 100,
+          stat: 'S',
+          elapsedSeconds: 5,
+          command: hiveFlowMcpCommand(),
+        },
+      ]),
+      readRegistryRecord: vi.fn(() => null),
+      removeRegistryRecord: vi.fn(),
+      isProcessRunning: vi.fn(() => true),
+      killProcess: vi.fn(),
+      sleep: vi.fn(async () => undefined),
+    };
+
+    const result = await reapStaleMcpServers({
+      protectedPids: [process.pid],
+      nowMs: Date.parse('2026-06-11T12:00:00.000Z'),
+      startupGraceMs: 20_000,
+      deps,
+    });
+
+    expect(result).toMatchObject({ checked: 1, reaped: 0, skipped: 1 });
+    expect(result.records[0]).toMatchObject({
+      pid: 9004,
+      reaped: false,
+      reason: 'MCP server is inside startup grace',
+    });
+    expect(deps.killProcess).not.toHaveBeenCalled();
+    expect(deps.removeRegistryRecord).not.toHaveBeenCalled();
+  });
+
+  it('does not reap a protected strict hive-flow MCP server even without a heartbeat', async () => {
+    const deps: McpServerReapDeps = {
+      listProcesses: vi.fn(async () => [
+        {
+          pid: 9005,
+          ppid: 100,
+          stat: 'S',
+          elapsedSeconds: 300,
+          command: hiveFlowMcpCommand(),
+        },
+      ]),
+      readRegistryRecord: vi.fn(() => null),
+      removeRegistryRecord: vi.fn(),
+      isProcessRunning: vi.fn(() => true),
+      killProcess: vi.fn(),
+      sleep: vi.fn(async () => undefined),
+    };
+
+    const result = await reapStaleMcpServers({
+      protectedPids: [9005],
+      nowMs: Date.parse('2026-06-11T12:00:00.000Z'),
+      deps,
+    });
+
+    expect(result).toMatchObject({ checked: 1, reaped: 0, skipped: 1 });
+    expect(result.records[0]).toMatchObject({
+      pid: 9005,
+      reaped: false,
+      reason: 'MCP server pid is protected',
+    });
+    expect(deps.readRegistryRecord).not.toHaveBeenCalled();
     expect(deps.killProcess).not.toHaveBeenCalled();
     expect(deps.removeRegistryRecord).not.toHaveBeenCalled();
   });

@@ -489,6 +489,7 @@ export interface McpServerProcessInfo {
   pid: number;
   ppid: number;
   stat: string;
+  elapsedSeconds?: number;
   command: string;
 }
 
@@ -515,6 +516,7 @@ export interface McpServerReapDeps {
 }
 
 const DEFAULT_MCP_SERVER_STALE_MS = 2 * 60_000;
+const DEFAULT_MCP_SERVER_STARTUP_GRACE_MS = 20_000;
 
 const defaultMcpServerReapDeps: McpServerReapDeps = {
   listProcesses: listMcpServerProcesses,
@@ -529,12 +531,14 @@ export async function reapStaleMcpServers(options: {
   protectedPids?: readonly number[];
   nowMs?: number;
   staleMs?: number;
+  startupGraceMs?: number;
   deps?: McpServerReapDeps;
 } = {}): Promise<McpServerReapSummary> {
   const deps = options.deps ?? defaultMcpServerReapDeps;
   const protectedPids = new Set((options.protectedPids ?? []).filter(pid => Number.isInteger(pid) && pid > 0));
   const nowMs = options.nowMs ?? Date.now();
   const staleMs = options.staleMs ?? DEFAULT_MCP_SERVER_STALE_MS;
+  const startupGraceMs = options.startupGraceMs ?? DEFAULT_MCP_SERVER_STARTUP_GRACE_MS;
   const candidates = (await deps.listProcesses()).filter(proc => isMcpServerCommand(proc.command));
   const records: McpServerReapRecord[] = [];
 
@@ -545,6 +549,11 @@ export async function reapStaleMcpServers(options: {
     }
 
     const record = deps.readRegistryRecord(proc.pid);
+    if (!record && isInsideMcpServerStartupGrace(proc, startupGraceMs)) {
+      records.push({ pid: proc.pid, reaped: false, reason: 'MCP server is inside startup grace' });
+      continue;
+    }
+
     if (record) {
       const heartbeatMs = Date.parse(record.lastHeartbeatAt);
       if (Number.isFinite(heartbeatMs) && nowMs - heartbeatMs <= staleMs) {
@@ -578,39 +587,91 @@ export async function reapStaleMcpServers(options: {
 }
 
 function isMcpServerCommand(command: string): boolean {
-  return /\bnode(?:\s+\S+)*\s+.+(?:^|[\s/])v3\/@hive-flow\/cli\/bin\/mcp-server\.js\b/.test(command)
-    || /\bnode(?:\s+\S+)*\s+.+(?:^|[\s/])bin\/mcp-server\.js\b/.test(command);
+  return extractMcpServerCommandPaths(command).some(isCurrentHiveFlowMcpServerPath);
+}
+
+function extractMcpServerCommandPaths(command: string): string[] {
+  return [...command.matchAll(/(?:^|\s)(["']?)(\/[^\s"']*mcp-server\.js)\1(?=\s|$)/g)]
+    .map(match => match[2])
+    .filter(Boolean);
+}
+
+function isCurrentHiveFlowMcpServerPath(candidatePath: string): boolean {
+  if (!isAbsolute(candidatePath)) return false;
+  const resolvedCandidate = resolve(candidatePath);
+  return getCurrentHiveFlowMcpServerPaths().some(allowedPath => resolvedCandidate === allowedPath);
+}
+
+function getCurrentHiveFlowMcpServerPaths(): string[] {
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  return [
+    // Runtime path: dist/src/commands/daemon.js -> package root/bin/mcp-server.js
+    resolve(moduleDir, '..', '..', '..', 'bin', 'mcp-server.js'),
+    // Test/source path: src/commands/daemon.ts -> package root/bin/mcp-server.js
+    resolve(moduleDir, '..', '..', 'bin', 'mcp-server.js'),
+  ];
+}
+
+function isInsideMcpServerStartupGrace(proc: McpServerProcessInfo, startupGraceMs: number): boolean {
+  if (!Number.isFinite(proc.elapsedSeconds)) return false;
+  return Number(proc.elapsedSeconds) * 1000 <= startupGraceMs;
 }
 
 async function listMcpServerProcesses(): Promise<McpServerProcessInfo[]> {
   if (process.platform === 'win32') return [];
   return new Promise((resolveList) => {
-    execFile('/bin/ps', ['-axo', 'pid=,ppid=,stat=,command='], { maxBuffer: 1024 * 1024 }, (error, stdout) => {
+    execFile('/bin/ps', ['-axo', 'pid=,ppid=,stat=,etime=,command='], { maxBuffer: 1024 * 1024 }, (error, stdout) => {
       if (error) {
-        resolveList([]);
+        execFile('/bin/ps', ['-axo', 'pid=,ppid=,stat=,command='], { maxBuffer: 1024 * 1024 }, (fallbackError, fallbackStdout) => {
+          resolveList(fallbackError ? [] : parseProcessTable(fallbackStdout, false));
+        });
         return;
       }
-      resolveList(parseProcessTable(stdout));
+      resolveList(parseProcessTable(stdout, true));
     });
   });
 }
 
-function parseProcessTable(outputText: string): McpServerProcessInfo[] {
+function parseProcessTable(outputText: string, includesElapsed: boolean): McpServerProcessInfo[] {
   return outputText
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean)
     .map((line): McpServerProcessInfo | null => {
-      const match = line.match(/^(\d+)\s+(\d+)\s+(\S+)\s+(.+)$/);
+      const match = includesElapsed
+        ? line.match(/^(\d+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(.+)$/)
+        : line.match(/^(\d+)\s+(\d+)\s+(\S+)\s+(.+)$/);
       if (!match) return null;
       return {
         pid: Number(match[1]),
         ppid: Number(match[2]),
         stat: match[3],
-        command: match[4],
+        elapsedSeconds: includesElapsed ? parsePsElapsedSeconds(match[4]) : undefined,
+        command: includesElapsed ? match[5] : match[4],
       };
     })
     .filter((proc): proc is McpServerProcessInfo => proc !== null);
+}
+
+function parsePsElapsedSeconds(rawElapsed: string): number | undefined {
+  if (/^\d+$/.test(rawElapsed)) return Number(rawElapsed);
+
+  const [dayPart, timePart] = rawElapsed.includes('-')
+    ? rawElapsed.split('-', 2)
+    : ['0', rawElapsed];
+  const days = Number(dayPart);
+  const parts = timePart.split(':').map(part => Number(part));
+  if (!Number.isFinite(days) || parts.some(part => !Number.isFinite(part))) return undefined;
+
+  if (parts.length === 3) {
+    const [hours, minutes, seconds] = parts;
+    return days * 86_400 + hours * 3_600 + minutes * 60 + seconds;
+  }
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts;
+    return days * 86_400 + minutes * 60 + seconds;
+  }
+  return undefined;
 }
 
 function unlinkSocketIfSafe(socketPath: string): void {
