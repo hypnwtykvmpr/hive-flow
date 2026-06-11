@@ -295,6 +295,8 @@ describe('macOS Keychain backend', () => {
 
     expect(source).toContain('import LocalAuthentication');
     expect(source).toContain('LAContext');
+    expect(source).toContain('touchIDAuthenticationAllowableReuseDuration');
+    expect(source).toContain('LATouchIDAuthenticationMaximumAllowableReuseDuration');
     expect(source).toContain('canEvaluatePolicy(.deviceOwnerAuthentication');
     expect(source).toContain('evaluatePolicy(.deviceOwnerAuthentication');
     expect(source).toContain('kSecAttrAccessibleWhenUnlockedThisDeviceOnly');

@@ -12,6 +12,11 @@ import { dirname, join, resolve, isAbsolute } from 'path';
 import * as fs from 'fs';
 import { pingCredentialHolder, type CredentialHolderLiveness } from '../credential-store/holder.js';
 import { defaultCredentialHolderSocketPath } from '../credential-store/strict-api-provider.js';
+import {
+  readMcpServerRegistryRecord,
+  removeMcpServerRegistryRecord,
+  type McpServerRegistryRecord,
+} from '../mcp-server/lifecycle.js';
 
 // Start daemon subcommand
 const startCommand: Command = {
@@ -40,6 +45,9 @@ const startCommand: Command = {
     // Check if background daemon already running (skip if we ARE the daemon process)
     if (!isDaemonProcess) {
       const bgPid = getBackgroundDaemonPid(projectRoot);
+      await reapStaleMcpServers({
+        protectedPids: [process.pid, ...(bgPid ? [bgPid] : [])],
+      });
       if (bgPid && isProcessRunning(bgPid)) {
         if (!quiet) {
           output.printWarning(`Daemon already running in background (PID: ${bgPid})`);
@@ -274,6 +282,9 @@ const stopCommand: Command = {
 
         // Also kill any background daemon by PID
         const killed = await killBackgroundDaemon(projectRoot);
+        await reapStaleMcpServers({
+          protectedPids: [process.pid],
+        });
         await reapCredentialHolderAtSocket(defaultCredentialHolderSocketPath(), {
           protectedPids: [process.pid],
         });
@@ -282,6 +293,9 @@ const stopCommand: Command = {
       } else {
         await stopDaemon();
         await killBackgroundDaemon(projectRoot);
+        await reapStaleMcpServers({
+          protectedPids: [process.pid],
+        });
         await reapCredentialHolderAtSocket(defaultCredentialHolderSocketPath(), {
           protectedPids: [process.pid],
         });
@@ -469,6 +483,134 @@ export async function reapCredentialHolderAtSocket(
     socketPath,
     reason: 'orphan credential holder reaped',
   };
+}
+
+export interface McpServerProcessInfo {
+  pid: number;
+  ppid: number;
+  stat: string;
+  command: string;
+}
+
+export interface McpServerReapRecord {
+  pid: number;
+  reaped: boolean;
+  reason: string;
+}
+
+export interface McpServerReapSummary {
+  checked: number;
+  reaped: number;
+  skipped: number;
+  records: McpServerReapRecord[];
+}
+
+export interface McpServerReapDeps {
+  listProcesses: () => Promise<McpServerProcessInfo[]>;
+  readRegistryRecord: (pid: number) => McpServerRegistryRecord | null;
+  removeRegistryRecord: (pid: number) => void;
+  isProcessRunning: (pid: number) => boolean;
+  killProcess: (pid: number, signal: NodeJS.Signals) => void;
+  sleep: (ms: number) => Promise<void>;
+}
+
+const DEFAULT_MCP_SERVER_STALE_MS = 2 * 60_000;
+
+const defaultMcpServerReapDeps: McpServerReapDeps = {
+  listProcesses: listMcpServerProcesses,
+  readRegistryRecord: (pid) => readMcpServerRegistryRecord(pid),
+  removeRegistryRecord: (pid) => removeMcpServerRegistryRecord(pid),
+  isProcessRunning,
+  killProcess: (pid, signal) => process.kill(pid, signal),
+  sleep: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+};
+
+export async function reapStaleMcpServers(options: {
+  protectedPids?: readonly number[];
+  nowMs?: number;
+  staleMs?: number;
+  deps?: McpServerReapDeps;
+} = {}): Promise<McpServerReapSummary> {
+  const deps = options.deps ?? defaultMcpServerReapDeps;
+  const protectedPids = new Set((options.protectedPids ?? []).filter(pid => Number.isInteger(pid) && pid > 0));
+  const nowMs = options.nowMs ?? Date.now();
+  const staleMs = options.staleMs ?? DEFAULT_MCP_SERVER_STALE_MS;
+  const candidates = (await deps.listProcesses()).filter(proc => isMcpServerCommand(proc.command));
+  const records: McpServerReapRecord[] = [];
+
+  for (const proc of candidates) {
+    if (protectedPids.has(proc.pid)) {
+      records.push({ pid: proc.pid, reaped: false, reason: 'MCP server pid is protected' });
+      continue;
+    }
+
+    const record = deps.readRegistryRecord(proc.pid);
+    if (record) {
+      const heartbeatMs = Date.parse(record.lastHeartbeatAt);
+      if (Number.isFinite(heartbeatMs) && nowMs - heartbeatMs <= staleMs) {
+        records.push({ pid: proc.pid, reaped: false, reason: 'MCP server heartbeat is fresh' });
+        continue;
+      }
+    }
+
+    if (!deps.isProcessRunning(proc.pid)) {
+      deps.removeRegistryRecord(proc.pid);
+      records.push({ pid: proc.pid, reaped: false, reason: 'MCP server pid is no longer running' });
+      continue;
+    }
+
+    deps.killProcess(proc.pid, 'SIGTERM');
+    await deps.sleep(1000);
+    if (deps.isProcessRunning(proc.pid)) {
+      deps.killProcess(proc.pid, 'SIGKILL');
+      await deps.sleep(100);
+    }
+    deps.removeRegistryRecord(proc.pid);
+    records.push({ pid: proc.pid, reaped: true, reason: 'stale MCP server reaped' });
+  }
+
+  return {
+    checked: candidates.length,
+    reaped: records.filter(record => record.reaped).length,
+    skipped: records.filter(record => !record.reaped).length,
+    records,
+  };
+}
+
+function isMcpServerCommand(command: string): boolean {
+  return /\bnode(?:\s+\S+)*\s+.+(?:^|[\s/])v3\/@hive-flow\/cli\/bin\/mcp-server\.js\b/.test(command)
+    || /\bnode(?:\s+\S+)*\s+.+(?:^|[\s/])bin\/mcp-server\.js\b/.test(command);
+}
+
+async function listMcpServerProcesses(): Promise<McpServerProcessInfo[]> {
+  if (process.platform === 'win32') return [];
+  return new Promise((resolveList) => {
+    execFile('/bin/ps', ['-axo', 'pid=,ppid=,stat=,command='], { maxBuffer: 1024 * 1024 }, (error, stdout) => {
+      if (error) {
+        resolveList([]);
+        return;
+      }
+      resolveList(parseProcessTable(stdout));
+    });
+  });
+}
+
+function parseProcessTable(outputText: string): McpServerProcessInfo[] {
+  return outputText
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map((line): McpServerProcessInfo | null => {
+      const match = line.match(/^(\d+)\s+(\d+)\s+(\S+)\s+(.+)$/);
+      if (!match) return null;
+      return {
+        pid: Number(match[1]),
+        ppid: Number(match[2]),
+        stat: match[3],
+        command: match[4],
+      };
+    })
+    .filter((proc): proc is McpServerProcessInfo => proc !== null);
 }
 
 function unlinkSocketIfSafe(socketPath: string): void {

@@ -20,6 +20,7 @@ import {
   type MCPServerStatus,
 } from '../mcp-server.js';
 import { listMCPTools, callMCPTool, hasTool, getToolMetadata } from '../mcp-client.js';
+import { reapStaleMcpServers } from './daemon.js';
 
 // MCP tools categories
 const TOOL_CATEGORIES = [
@@ -768,6 +769,18 @@ const restartCommand: Command = {
   }
 };
 
+// Reap stale stdio MCP server processes
+const reapCommand: Command = {
+  name: 'reap',
+  description: 'Reap stale stdio MCP server processes left behind by dead clients',
+  options: [],
+  action: async (): Promise<CommandResult> => {
+    const result = await reapStaleMcpServers({ protectedPids: [process.pid] });
+    output.printSuccess(`MCP reap checked ${result.checked} process(es), reaped ${result.reaped}, skipped ${result.skipped}`);
+    return { success: true, data: result };
+  },
+};
+
 // Main MCP command
 export const mcpCommand: Command = {
   name: 'mcp',
@@ -778,6 +791,7 @@ export const mcpCommand: Command = {
     statusCommand,
     healthCommand,
     restartCommand,
+    reapCommand,
     toolsCommand,
     toggleCommand,
     execCommand,
@@ -789,6 +803,7 @@ export const mcpCommand: Command = {
     { command: 'hive-flow mcp start -t http -p 8080', description: 'Start HTTP server on port 8080' },
     { command: 'hive-flow mcp status', description: 'Show server status' },
     { command: 'hive-flow mcp tools', description: 'List tools' },
+    { command: 'hive-flow mcp reap', description: 'Reap stale stdio MCP server processes' },
     { command: 'hive-flow mcp stop', description: 'Stop the server' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
@@ -804,6 +819,7 @@ export const mcpCommand: Command = {
       `${output.highlight('status')}   - Show server status`,
       `${output.highlight('health')}   - Check server health`,
       `${output.highlight('restart')}  - Restart MCP server`,
+      `${output.highlight('reap')}     - Reap stale stdio MCP processes`,
       `${output.highlight('tools')}    - List available tools`,
       `${output.highlight('toggle')}   - Enable/disable tools`,
       `${output.highlight('exec')}     - Execute a tool`,

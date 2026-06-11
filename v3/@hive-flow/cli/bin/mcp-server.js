@@ -38,6 +38,12 @@ try {
 import { randomUUID } from 'crypto';
 import { listMCPTools, callMCPTool, hasTool } from '../dist/src/mcp-client.js';
 import { bootstrapProductionCredentialHolder } from '../dist/src/credential-store/holder-runtime.js';
+import { probeCredentialHolderStatus } from '../dist/src/credential-store/strict-api-provider.js';
+import {
+  decideCredentialHolderStartup,
+  installStdioClientLifecycle,
+  registerMcpServerProcess,
+} from '../dist/src/mcp-server/lifecycle.js';
 
 /**
  * JSON-RPC error codes (MCP / JSON-RPC 2.0 spec)
@@ -70,9 +76,32 @@ console.error(JSON.stringify({
 }));
 
 let credentialHolderRuntime = null;
+let shuttingDown = false;
+let mcpRegistration = null;
+let uninstallStdioLifecycle = null;
+
+try {
+  mcpRegistration = registerMcpServerProcess({ sessionId });
+} catch (error) {
+  console.error(`[${new Date().toISOString()}] WARN [hive-flow-mcp] MCP heartbeat registration skipped: ${error instanceof Error ? error.message : String(error)}`);
+}
 
 async function bootstrapCredentialHolder() {
   try {
+    const holderStatus = await probeCredentialHolderStatus();
+    const decision = decideCredentialHolderStartup(holderStatus, process.env);
+    if (decision.mode === 'client') {
+      console.error(JSON.stringify({
+        event: holderStatus.available ? 'credential-holder-client' : 'credential-holder-client-degraded',
+        pid: decision.pid,
+        reason: decision.reason,
+        socketPath: decision.socketPath,
+      }));
+      return;
+    }
+    if (decision.mode === 'required-missing') {
+      throw new Error(decision.reason);
+    }
     credentialHolderRuntime = await bootstrapProductionCredentialHolder({
       projectRoot: process.cwd(),
     });
@@ -92,7 +121,15 @@ async function bootstrapCredentialHolder() {
 }
 
 async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
   console.error(`[${new Date().toISOString()}] INFO [hive-flow-mcp] ${signal}, shutting down...`);
+  try {
+    uninstallStdioLifecycle?.();
+  } catch {}
+  try {
+    mcpRegistration?.stop();
+  } catch {}
   if (credentialHolderRuntime) {
     try {
       await credentialHolderRuntime.stop();
@@ -109,6 +146,7 @@ await bootstrapCredentialHolder();
 let buffer = '';
 
 process.stdin.setEncoding('utf8');
+uninstallStdioLifecycle = installStdioClientLifecycle(process.stdin, shutdown, { sessionId });
 process.stdin.on('data', async (chunk) => {
   buffer += chunk;
 
@@ -138,10 +176,6 @@ process.stdin.on('data', async (chunk) => {
       }
     }
   }
-});
-
-process.stdin.on('end', () => {
-  void shutdown(`(${sessionId}) stdin closed`);
 });
 
 // Handle process termination

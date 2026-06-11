@@ -9,6 +9,8 @@ struct HelperInput: Decodable {
 
 @main
 struct HiveFlowMacOSKeychainHelper {
+    private static let authenticationReuseDuration = min(15.0, LATouchIDAuthenticationMaximumAllowableReuseDuration)
+
     static func main() {
         do {
             try run()
@@ -118,6 +120,7 @@ struct HiveFlowMacOSKeychainHelper {
         let context = LAContext()
         context.localizedReason = "Hive Flow needs your approval to \(operation) a credential for \(service) (\(account))."
         context.localizedFallbackTitle = "Use Password"
+        context.touchIDAuthenticationAllowableReuseDuration = authenticationReuseDuration
         return context
     }
 
