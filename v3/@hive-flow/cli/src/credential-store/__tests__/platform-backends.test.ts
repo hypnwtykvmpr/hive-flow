@@ -114,6 +114,45 @@ describe('credential platform backend selection and degraded install gate', () =
     expect(createPlatformCredentialStore({ platform: 'win32' })).toBeInstanceOf(WindowsCredentialManagerCredentialStore);
   });
 
+  it('credential backend status exposes only probed backend readiness fields', () => {
+    const source = readFileSync(resolve(__dirname, '..', 'credential-store.ts'), 'utf8');
+    const statusBody = source.match(/export interface CredentialStoreStatus \{([\s\S]*?)\n\}/)?.[1] ?? '';
+
+    expect(statusBody).not.toMatch(/\blocked\b/);
+    expect(statusBody).not.toMatch(/\bprovider\b/);
+  });
+
+  it('does not echo provider-specific state from backend availability probes', async () => {
+    const { runner: linuxRunner } = makeSecretToolRunner();
+    const linux = new LinuxSecretServiceCredentialStore({
+      platform: 'linux',
+      env: { DBUS_SESSION_BUS_ADDRESS: 'unix:path=/tmp/fake-bus' },
+      execFileSync: linuxRunner,
+    });
+    const { runner: windowsRunner } = makeWindowsRunner();
+    const windows = new WindowsCredentialManagerCredentialStore({
+      platform: 'win32',
+      helperCommand: 'hive-flow-windows-credential-helper',
+      execFileSync: windowsRunner,
+    });
+    const { runner: macRunner } = makeMacOSHelperRunner();
+    const macos = new MacOSKeychainCredentialStore({
+      platform: 'darwin',
+      helperCommand: 'hive-flow-macos-keychain-helper',
+      execFileSync: macRunner,
+    });
+
+    for (const status of [
+      await linux.status('OpenRouter'),
+      await windows.status('OpenRouter'),
+      await macos.status('OpenRouter'),
+    ]) {
+      expect(status).toEqual({ available: true });
+      expect(status).not.toHaveProperty('provider');
+      expect(status).not.toHaveProperty('locked');
+    }
+  });
+
   it('fails closed for unavailable or degraded backends unless degraded mode is explicit', () => {
     expect(() => assertCredentialBackendReady({ available: false, degraded: true, reason: 'no dbus' })).toThrow(/degraded|unavailable/i);
     expect(() => assertCredentialBackendReady({ available: false, degraded: true, reason: 'no dbus' }, { allowDegraded: true })).not.toThrow();

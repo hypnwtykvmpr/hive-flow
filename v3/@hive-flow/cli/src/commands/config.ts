@@ -482,7 +482,6 @@ const keyStatusCommand: Command = {
       backend: {
         available: backend.available,
         degraded: backend.degraded,
-        locked: backend.locked,
         reason: backend.reason,
       },
     };

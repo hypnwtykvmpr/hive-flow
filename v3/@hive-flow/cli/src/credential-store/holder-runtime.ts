@@ -17,6 +17,7 @@ import {
   STRICT_API_PROVIDERS,
 } from './strict-api-provider.js';
 import {
+  assertSupportedVaultKekVersion,
   decryptVault,
   encryptVault,
   readVaultEnvelope,
@@ -63,7 +64,7 @@ export interface CredentialKeyStatus {
   present: boolean;
   drift: boolean;
   holderCache: boolean;
-  unlock: 'available' | 'locked' | 'unavailable';
+  unlock: 'available' | 'unavailable';
   backend: Awaited<ReturnType<CredentialStoreProvider['status']>>;
 }
 
@@ -176,7 +177,7 @@ export async function inspectCredentialKeyStatus(
   const provider = options.provider ? normalizeProviderKeyName(options.provider) : undefined;
   const backend = await credentialStore.status(provider);
   let present = false;
-  if (provider && backend.available && !backend.degraded && !backend.locked) {
+  if (provider && backend.available && !backend.degraded) {
     try {
       const secret = await credentialStore.retrieveSecret(provider);
       if (secret) {
@@ -194,7 +195,7 @@ export async function inspectCredentialKeyStatus(
     present,
     drift: false,
     holderCache: holderStatus.available,
-    unlock: backend.locked ? 'locked' : backend.available && !backend.degraded ? 'available' : 'unavailable',
+    unlock: backend.available && !backend.degraded ? 'available' : 'unavailable',
     backend,
   };
 }
@@ -288,6 +289,7 @@ async function unsealExistingKekReference(
   credentialStore: CredentialStoreProvider & KekProvider,
   envelope: VaultEnvelope,
 ): Promise<Buffer> {
+  assertSupportedVaultKekVersion(envelope.aad?.kekVersion);
   const bootstrapKek = await credentialStore.unsealKek({
     version: envelope.aad.kekVersion,
     backend: await backendNameFor(credentialStore),
@@ -299,8 +301,7 @@ async function unsealExistingKekReference(
 async function backendNameFor(credentialStore: CredentialStoreProvider & KekProvider): Promise<string> {
   const name = (credentialStore as { backendName?: unknown }).backendName;
   if (typeof name === 'string' && name.trim()) return name;
-  const status = await credentialStore.status();
-  return status.provider ? String(status.provider) : 'credential-store';
+  return 'credential-store';
 }
 
 function readJsonFile(path: string): unknown {

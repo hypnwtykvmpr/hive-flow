@@ -1,8 +1,6 @@
 export interface CredentialStoreStatus {
   available: boolean;
   degraded?: boolean;
-  locked?: boolean;
-  provider?: string;
   reason?: string;
 }
 

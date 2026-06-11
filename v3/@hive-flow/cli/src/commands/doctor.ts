@@ -190,14 +190,6 @@ export async function checkCredentialStore(): Promise<HealthCheck> {
         fix: status.present ? undefined : 'printf "%s\\n" "$OPENROUTER_API_KEY" | hive-flow config key set -p openrouter --stdin',
       };
     }
-    if (status.unlock === 'locked') {
-      return {
-        name: 'Credential Store',
-        status: 'warn',
-        message: 'Credential backend is locked',
-        fix: 'Unlock your OS credential store and rerun hive-flow doctor -c credentials',
-      };
-    }
     return {
       name: 'Credential Store',
       status: 'warn',

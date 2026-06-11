@@ -517,7 +517,6 @@ const credentialsCommand: Command = {
       backend: {
         available: result.backend.available,
         degraded: result.backend.degraded,
-        locked: result.backend.locked,
         reason: result.backend.reason,
       },
       vaultPath: result.vaultPath,

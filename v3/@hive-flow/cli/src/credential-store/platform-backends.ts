@@ -160,11 +160,11 @@ export class MacOSKeychainCredentialStore extends BaseCredentialStore {
       ?? HELPER_BINARIES.macosKeychain;
   }
 
-  async status(provider?: string): Promise<CredentialStoreStatus> {
+  async status(_provider?: string): Promise<CredentialStoreStatus> {
     if (this.platform !== 'darwin') return unavailable('macOS Keychain backend requires darwin');
     try {
       run(this.execFileSync, this.helperCommand, ['status'], { stdio: 'pipe', env: this.env });
-      return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
+      return { available: true };
     } catch (error) {
       return unavailable(`macOS keychain helper unavailable: ${(error as Error).message}`);
     }
@@ -221,7 +221,7 @@ export class LinuxSecretServiceCredentialStore extends BaseCredentialStore {
     super(options);
   }
 
-  async status(provider?: string): Promise<CredentialStoreStatus> {
+  async status(_provider?: string): Promise<CredentialStoreStatus> {
     if (this.platform !== 'linux') return unavailable('Secret Service backend requires linux');
     if (!this.env.DBUS_SESSION_BUS_ADDRESS) {
       return unavailable('Secret Service requires an active D-Bus session');
@@ -230,14 +230,14 @@ export class LinuxSecretServiceCredentialStore extends BaseCredentialStore {
       // secret-tool exposes no exit-0 probe flag (both --version and --help print usage and exit
       // non-zero), so this call is expected to throw even when the binary is present.
       run(this.execFileSync, 'secret-tool', ['--help'], { stdio: 'pipe', env: this.env });
-      return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
+      return { available: true };
     } catch (error) {
       // A spawn ENOENT means secret-tool is genuinely absent. Any other failure means the binary is
       // present and ran; real Secret Service reachability is exercised by the store/lookup path.
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return unavailable(`secret-tool unavailable: ${(error as Error).message}`);
       }
-      return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
+      return { available: true };
     }
   }
 
@@ -290,11 +290,11 @@ export class WindowsCredentialManagerCredentialStore extends BaseCredentialStore
       ?? HELPER_BINARIES.winCredential;
   }
 
-  async status(provider?: string): Promise<CredentialStoreStatus> {
+  async status(_provider?: string): Promise<CredentialStoreStatus> {
     if (this.platform !== 'win32') return unavailable('Windows Credential Manager backend requires win32');
     try {
       run(this.execFileSync, this.helperCommand, ['status'], { stdio: 'pipe', env: this.env });
-      return { available: true, provider: provider ? normalizeProviderKeyName(provider) : undefined };
+      return { available: true };
     } catch (error) {
       return unavailable(`Windows credential helper unavailable: ${(error as Error).message}`);
     }

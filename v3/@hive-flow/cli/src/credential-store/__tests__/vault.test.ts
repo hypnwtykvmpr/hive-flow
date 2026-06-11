@@ -20,14 +20,14 @@ describe('credential vault crypto', () => {
 
     const envelope = encryptVault(plaintext, kek, {
       version: 3,
-      kekVersion: 9,
+      kekVersion: 1,
       randomBytes: (size) => Buffer.alloc(size, 5),
     });
 
     expect(envelope.alg).toBe('AES-256-GCM');
     expect(Buffer.from(envelope.nonce, 'base64url')).toHaveLength(12);
     expect(Buffer.from(envelope.tag, 'base64url')).toHaveLength(16);
-    expect(envelope.aad).toEqual({ version: 3, alg: 'AES-256-GCM', kekVersion: 9 });
+    expect(envelope.aad).toEqual({ version: 3, alg: 'AES-256-GCM', kekVersion: 1 });
     expect(decryptVault(envelope, kek).toString('utf8')).toBe(plaintext.toString('utf8'));
   });
 
@@ -53,6 +53,19 @@ describe('credential vault crypto', () => {
 
     expect(() => decryptVault({ ...envelope, version: 99 }, kek))
       .toThrow(/aad|metadata|version/i);
+  });
+
+  it('fails closed when the authenticated KEK version is not mapped', () => {
+    const kek = generateKek(() => Buffer.alloc(32, 9));
+    const envelope = encryptVault(Buffer.from('secret'), kek, {
+      randomBytes: (size) => Buffer.alloc(size, 1),
+    });
+
+    expect(() => decryptVault({
+      ...envelope,
+      aad: { ...envelope.aad, kekVersion: 2 },
+    }, kek))
+      .toThrow(/unsupported KEK version/i);
   });
 
   it('rejects invalid KEK lengths', () => {

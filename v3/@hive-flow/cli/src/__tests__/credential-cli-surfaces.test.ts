@@ -196,6 +196,8 @@ describe('credential CLI surfaces', () => {
       holderCache: false,
       unlock: 'available',
     });
+    expect(result?.data).toHaveProperty('backend');
+    expect((result?.data as { backend?: Record<string, unknown> }).backend).not.toHaveProperty('locked');
     expect(JSON.stringify(result)).not.toContain('or-cli-secret');
   });
 

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import fc from 'fast-check';
@@ -16,6 +16,7 @@ import type { PeerCredential } from '../peer-credentials.js';
 class MemoryCredentialStore implements CredentialStoreProvider {
   readonly secrets = new Map<string, Buffer>();
   readonly backendName = 'memory-test-store';
+  unsealCalls = 0;
 
   isAvailable(): boolean {
     return true;
@@ -48,6 +49,7 @@ class MemoryCredentialStore implements CredentialStoreProvider {
   }
 
   async unsealKek(sealed: SealedKek): Promise<Uint8Array> {
+    this.unsealCalls += 1;
     const parsed = JSON.parse(Buffer.from(sealed.sealed).toString('utf8')) as { backend: string; provider: string };
     if (parsed.backend !== this.backendName) throw new Error('wrong backend');
     const kek = await this.retrieveSecret(parsed.provider);
@@ -112,6 +114,28 @@ describe('production credential holder runtime bootstrap', () => {
       createdVault: false,
       decrypts: true,
     });
+  });
+
+  it('rejects unsupported vault KEK versions before unsealing platform KEK material', async () => {
+    const root = makeRoot();
+    const store = new MemoryCredentialStore();
+    const vaultPath = join(root, '.hive-flow', 'credential-vault.json.gcm');
+
+    await initializeCredentialVault({
+      credentialStore: store,
+      vaultPath,
+      randomBytes: size => Buffer.alloc(size, 4),
+      now: () => new Date('2026-06-08T00:00:00.000Z'),
+    });
+    store.unsealCalls = 0;
+
+    const envelope = JSON.parse(readFileSync(vaultPath, 'utf8')) as { aad: { kekVersion: number } };
+    envelope.aad.kekVersion = 2;
+    writeFileSync(vaultPath, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8');
+
+    await expect(initializeCredentialVault({ credentialStore: store, vaultPath }))
+      .rejects.toThrow(/unsupported KEK version/i);
+    expect(store.unsealCalls).toBe(0);
   });
 
   it('starts a seeded holder and completes a strict provider call without leaking raw keys', async () => {

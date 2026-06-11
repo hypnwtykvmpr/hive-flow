@@ -20,6 +20,7 @@ export const VAULT_ALG = 'AES-256-GCM';
 export const VAULT_VERSION = 1;
 export const VAULT_NONCE_BYTES = 12;
 export const VAULT_TAG_BYTES = 16;
+export const SUPPORTED_VAULT_KEK_VERSION = 1;
 
 export interface VaultAad {
   version: number;
@@ -58,6 +59,15 @@ function decodeBase64Url(value: string, label: string): Buffer {
   }
 }
 
+export function assertSupportedVaultKekVersion(kekVersion: unknown): asserts kekVersion is number {
+  if (!Number.isInteger(kekVersion) || Number(kekVersion) < 1) {
+    throw new Error('credential vault envelope metadata does not match authenticated AAD');
+  }
+  if (kekVersion !== SUPPORTED_VAULT_KEK_VERSION) {
+    throw new Error(`credential vault envelope uses unsupported KEK version ${String(kekVersion)}`);
+  }
+}
+
 export function encryptVault(
   plaintext: Uint8Array | string,
   kek: Uint8Array,
@@ -66,6 +76,7 @@ export function encryptVault(
   assertValidKek(kek);
   const version = options.version ?? VAULT_VERSION;
   const kekVersion = options.kekVersion ?? 1;
+  assertSupportedVaultKekVersion(kekVersion);
   const random = options.randomBytes ?? randomBytes;
   const nonce = random(VAULT_NONCE_BYTES);
   if (nonce.byteLength !== VAULT_NONCE_BYTES) {
@@ -96,11 +107,10 @@ export function decryptVault(envelope: VaultEnvelope, kek: Uint8Array): Buffer {
   }
   if (!envelope.aad ||
       envelope.aad.version !== envelope.version ||
-      envelope.aad.alg !== envelope.alg ||
-      !Number.isInteger(envelope.aad.kekVersion) ||
-      envelope.aad.kekVersion < 1) {
+      envelope.aad.alg !== envelope.alg) {
     throw new Error('credential vault envelope metadata does not match authenticated AAD');
   }
+  assertSupportedVaultKekVersion(envelope.aad.kekVersion);
   const nonce = decodeBase64Url(envelope.nonce, 'nonce');
   const tag = decodeBase64Url(envelope.tag, 'tag');
   const ciphertext = decodeBase64Url(envelope.ciphertext, 'ciphertext');

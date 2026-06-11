@@ -81,7 +81,6 @@ export const installCommand: Command = {
               backend: {
                 available: credentialSetup.backend.available,
                 degraded: credentialSetup.backend.degraded,
-                locked: credentialSetup.backend.locked,
                 reason: credentialSetup.backend.reason,
               },
             }
