@@ -18,7 +18,7 @@
     "${HOME}/.hive-flow/enforcement/bin/",
     "${HOME}/.hive-flow/credential-vault*",
     "${HOME}/.hive-flow/credentials*",
-    "${HOME}/.hive-flow/run/credential-agent.sock",
+    "${HOME}/.hive-flow/run/credential-holder.sock",
     "scripts/permission-guard-setup.mjs",
     "scripts/install-enforcement.mjs"
   ],
@@ -38,7 +38,7 @@
     "${HOME}/.hive-flow/enforcement/bin/",
     "${HOME}/.hive-flow/credential-vault*",
     "${HOME}/.hive-flow/credentials*",
-    "${HOME}/.hive-flow/run/credential-agent.sock",
+    "${HOME}/.hive-flow/run/credential-holder.sock",
     "scripts/permission-guard-setup.mjs",
     "scripts/install-enforcement.mjs"
   ],
@@ -50,7 +50,7 @@
     "${HOME}/.hive-flow/enforcement/",
     "${HOME}/.hive-flow/credential-vault*",
     "${HOME}/.hive-flow/credentials*",
-    "${HOME}/.hive-flow/run/credential-agent.sock"
+    "${HOME}/.hive-flow/run/credential-holder.sock"
   ],
   "hmacKeyPath": ".hive-flow/enforcement/.hmac-key",
   "signedStateNames": [

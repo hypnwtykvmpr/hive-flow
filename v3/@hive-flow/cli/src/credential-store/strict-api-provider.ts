@@ -1,6 +1,7 @@
 import { existsSync, lstatSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import {
   CredentialHolderService,
   sendCredentialHolderCommand,
@@ -72,9 +73,15 @@ export function defaultCredentialHolderSocketPath(env: Record<string, unknown> =
     const user = String(env.USERNAME || env.USER || 'user').replace(/[^A-Za-z0-9._-]+/g, '-');
     return `\\\\.\\pipe\\hive-flow-credential-holder-${user}`;
   }
-  const runtimeDir = typeof env.XDG_RUNTIME_DIR === 'string' && env.XDG_RUNTIME_DIR.trim()
-    ? env.XDG_RUNTIME_DIR.trim()
-    : join(String(env.HOME || process.cwd()), '.hive-flow', 'run');
+  let runtimeDir: string;
+  if (typeof env.XDG_RUNTIME_DIR === 'string' && env.XDG_RUNTIME_DIR.trim()) {
+    runtimeDir = env.XDG_RUNTIME_DIR.trim();
+  } else if (typeof env.HIVE_FLOW_HOME === 'string' && env.HIVE_FLOW_HOME.trim()) {
+    runtimeDir = join(env.HIVE_FLOW_HOME.trim(), 'run');
+  } else {
+    const home = typeof env.HOME === 'string' && env.HOME.trim() ? env.HOME.trim() : homedir();
+    runtimeDir = join(home, '.hive-flow', 'run');
+  }
   return join(runtimeDir, 'credential-holder.sock');
 }
 

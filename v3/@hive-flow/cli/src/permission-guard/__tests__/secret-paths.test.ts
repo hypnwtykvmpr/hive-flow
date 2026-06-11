@@ -92,7 +92,7 @@ describe('secret-path classifier', () => {
     for (const target of [
       '~/.hive-flow/credential-vault.json.gcm',
       '~/.hive-flow/credentials/openrouter.json',
-      '~/.hive-flow/run/credential-agent.sock',
+      '~/.hive-flow/run/credential-holder.sock',
     ]) {
       expect(isSecretPath(target), target).toBe(true);
     }

@@ -18,7 +18,7 @@ let roots: string[] = [];
 function tempSocketPath(): string {
   const root = mkdtempSync(join(tmpdir(), 'hf-holder-'));
   roots.push(root);
-  return join(root, '.hive-flow', 'run', 'credential-agent.sock');
+  return join(root, '.hive-flow', 'run', 'credential-holder.sock');
 }
 
 afterEach(async () => {

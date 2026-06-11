@@ -1,5 +1,43 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createStrictApiProviderInvoker } from '../strict-api-provider.js';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { createStrictApiProviderInvoker, defaultCredentialHolderSocketPath } from '../strict-api-provider.js';
+
+describe('credential holder socket path resolution', () => {
+  it('keeps explicit holder socket ahead of all defaults', () => {
+    expect(defaultCredentialHolderSocketPath({
+      HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET: '/tmp/explicit-holder.sock',
+      XDG_RUNTIME_DIR: '/tmp/runtime',
+      HIVE_FLOW_HOME: '/tmp/hive-home',
+      HOME: '/tmp/home',
+    })).toBe('/tmp/explicit-holder.sock');
+  });
+
+  it('keeps XDG_RUNTIME_DIR ahead of HIVE_FLOW_HOME on POSIX', () => {
+    if (process.platform === 'win32') return;
+    expect(defaultCredentialHolderSocketPath({
+      XDG_RUNTIME_DIR: '/tmp/runtime',
+      HIVE_FLOW_HOME: '/tmp/hive-home',
+      HOME: '/tmp/home',
+    })).toBe(join('/tmp/runtime', 'credential-holder.sock'));
+  });
+
+  it('uses HIVE_FLOW_HOME run dir when XDG_RUNTIME_DIR is not set on POSIX', () => {
+    if (process.platform === 'win32') return;
+    expect(defaultCredentialHolderSocketPath({
+      HIVE_FLOW_HOME: '/tmp/hive-home',
+      HOME: '/tmp/home',
+    })).toBe(join('/tmp/hive-home', 'run', 'credential-holder.sock'));
+  });
+
+  it('uses os.homedir instead of process cwd when HOME is unset on POSIX', () => {
+    if (process.platform === 'win32') return;
+    const socketPath = defaultCredentialHolderSocketPath({ HOME: '' });
+
+    expect(socketPath).toBe(join(homedir(), '.hive-flow', 'run', 'credential-holder.sock'));
+    expect(socketPath).not.toBe(join(process.cwd(), '.hive-flow', 'run', 'credential-holder.sock'));
+  });
+});
 
 describe('strict API provider holder invoker', () => {
   it('rejects caller-supplied apiUrl before any bearer key can egress', async () => {

@@ -62,7 +62,7 @@ export const DEFAULT_SECRET_POLICY: SecretPathPolicy = {
   secretPathGlobs: [
     '${HOME}/.hive-flow/credential-vault*',
     '${HOME}/.hive-flow/credentials*',
-    '${HOME}/.hive-flow/run/credential-agent.sock',
+    '${HOME}/.hive-flow/run/credential-holder.sock',
   ],
   secretExtensions: [
     '.pem',

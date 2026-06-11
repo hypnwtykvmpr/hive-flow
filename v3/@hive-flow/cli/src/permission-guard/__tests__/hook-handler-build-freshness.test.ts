@@ -14,7 +14,7 @@ const secretPathsPolicySource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src',
 const credentialProtectedEntries = [
   '${HOME}/.hive-flow/credential-vault*',
   '${HOME}/.hive-flow/credentials*',
-  '${HOME}/.hive-flow/run/credential-agent.sock',
+  '${HOME}/.hive-flow/run/credential-holder.sock',
 ];
 
 function makeHookProject(): string {
@@ -103,7 +103,7 @@ describe('hook-handler permission-guard build freshness', () => {
       }
       expect(secretPolicy.secretPathGlobs).toContain('${HOME}/.hive-flow/credential-vault*');
       expect(secretPolicy.secretPathGlobs).toContain('${HOME}/.hive-flow/credentials*');
-      expect(secretPolicy.secretPathGlobs).toContain('${HOME}/.hive-flow/run/credential-agent.sock');
+      expect(secretPolicy.secretPathGlobs).toContain('${HOME}/.hive-flow/run/credential-holder.sock');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

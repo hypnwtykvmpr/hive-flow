@@ -119,7 +119,7 @@ describe('shared protected-path policy matcher', () => {
         join(homedir(), '.hive-flow', 'credential-vault.sqlite.gcm'),
         join(homedir(), '.hive-flow', 'credentials', 'openrouter.json'),
         join(homedir(), '.hive-flow', 'credentials-v2.json'),
-        join(homedir(), '.hive-flow', 'run', 'credential-agent.sock'),
+        join(homedir(), '.hive-flow', 'run', 'credential-holder.sock'),
       ]) {
         expect(isProtectedWritePath(target, root), target).toBe(true);
         expect(cjsPolicy.isProtectedWritePath(target, root), target).toBe(true);

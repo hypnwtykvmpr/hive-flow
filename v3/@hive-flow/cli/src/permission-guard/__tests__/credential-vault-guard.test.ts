@@ -28,7 +28,7 @@ const repoRoot = resolve(__dirname, '..', '..', '..', '..', '..', '..');
 const credentialProtectedEntries = [
   '${HOME}/.hive-flow/credential-vault*',
   '${HOME}/.hive-flow/credentials*',
-  '${HOME}/.hive-flow/run/credential-agent.sock',
+  '${HOME}/.hive-flow/run/credential-holder.sock',
 ];
 
 function bashInput(command: string): HookInput {
@@ -62,7 +62,7 @@ describe('credential vault protected path parity', () => {
     for (const target of [
       join(homedir(), '.hive-flow', 'credential-vault.json.gcm'),
       join(homedir(), '.hive-flow', 'credentials', 'providers.json'),
-      join(homedir(), '.hive-flow', 'run', 'credential-agent.sock'),
+      join(homedir(), '.hive-flow', 'run', 'credential-holder.sock'),
     ]) {
       expect(isProtectedWritePath(target, repoRoot), target).toBe(true);
       expect(cjsPolicy.isProtectedWritePath(target, repoRoot), target).toBe(true);
@@ -80,13 +80,13 @@ describe('credential vault secret path parity', () => {
     for (const target of [
       '~/.hive-flow/credential-vault.json.gcm',
       '~/.hive-flow/credentials/openrouter.json',
-      '~/.hive-flow/run/credential-agent.sock',
+      '~/.hive-flow/run/credential-holder.sock',
     ]) {
       expect(isSecretPath(target), target).toBe(true);
     }
     expect(secretPolicyJson.secretPathGlobs).toContain('${HOME}/.hive-flow/credential-vault*');
     expect(secretPolicyJson.secretPathGlobs).toContain('${HOME}/.hive-flow/credentials*');
-    expect(secretPolicyJson.secretPathGlobs).toContain('${HOME}/.hive-flow/run/credential-agent.sock');
+    expect(secretPolicyJson.secretPathGlobs).toContain('${HOME}/.hive-flow/run/credential-holder.sock');
   });
 
   it('does not classify repo credential source or guard test filenames as secret paths', () => {
@@ -103,7 +103,7 @@ describe('credential vault secret path parity', () => {
 describe('credential vault command denials', () => {
   it.each([
     'cat ~/.hive-flow/credential-vault.json.gcm',
-    'cat ~/.hive-flow/run/credential-agent.sock',
+    'cat ~/.hive-flow/run/credential-holder.sock',
     'cat /proc/123/environ',
     'ps eww 123',
     'ps -E -p 123',
