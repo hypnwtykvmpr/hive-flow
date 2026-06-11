@@ -778,5 +778,5 @@
       "auditLog": ".hive-flow/enforcement/audit.jsonl"
     }
   },
-  "model": "claude-sonnet-4-6"
+  "model": "claude-fable-5"
 }
