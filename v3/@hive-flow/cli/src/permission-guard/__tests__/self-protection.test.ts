@@ -104,6 +104,34 @@ describe('isProtectedPath', () => {
     }
   });
 
+  it('blocks writes to an absolute HIVE_FLOW_HOME without unprotecting the default hive home', () => {
+    const previousHiveHome = process.env.HIVE_FLOW_HOME;
+    const root = tmpDir();
+    const hiveHome = join(root, 'custom-hive-home');
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    try {
+      for (const target of [
+        join(hiveHome, 'enforcement', 'global', 'state.json'),
+        join(hiveHome, 'enforcement', 'dev-override.conf'),
+        join(hiveHome, 'credential-vault.json.gcm'),
+        join(hiveHome, 'credentials', 'openrouter.json'),
+        join(hiveHome, 'run', 'credential-holder.sock'),
+        `${HOME}/.hive-flow/enforcement/global/state.json`,
+        `${HOME}/.hive-flow/credential-vault.json.gcm`,
+      ]) {
+        const result = isProtectedPath(target, CWD);
+        expect(result.blocked, target).toBe(true);
+      }
+    } finally {
+      if (previousHiveHome === undefined) {
+        delete process.env.HIVE_FLOW_HOME;
+      } else {
+        process.env.HIVE_FLOW_HOME = previousHiveHome;
+      }
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('allows writes to normal project files', () => {
     const result = isProtectedPath(`${CWD}/src/index.ts`, CWD);
     expect(result.blocked).toBe(false);

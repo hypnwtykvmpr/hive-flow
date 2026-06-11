@@ -133,6 +133,70 @@ describe('shared protected-path policy matcher', () => {
     }
   });
 
+  it('adds absolute HIVE_FLOW_HOME protection without unprotecting the default hive home', () => {
+    const root = tmpProject();
+    const previousHiveFlowHome = process.env.HIVE_FLOW_HOME;
+    const hiveHome = join(root, 'custom-hive-home');
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    try {
+      const overriddenTargets = [
+        join(hiveHome, 'enforcement', 'global', 'state.json'),
+        join(hiveHome, 'enforcement', 'dev-override.conf'),
+        join(hiveHome, 'credential-vault.json.gcm'),
+        join(hiveHome, 'credentials', 'openrouter.json'),
+        join(hiveHome, 'run', 'credential-holder.sock'),
+      ];
+      const defaultTargets = [
+        join(homedir(), '.hive-flow', 'enforcement', 'global', 'state.json'),
+        join(homedir(), '.hive-flow', 'enforcement', 'dev-override.conf'),
+        join(homedir(), '.hive-flow', 'credential-vault.json.gcm'),
+        join(homedir(), '.hive-flow', 'credentials', 'openrouter.json'),
+        join(homedir(), '.hive-flow', 'run', 'credential-holder.sock'),
+      ];
+
+      for (const target of [...overriddenTargets, ...defaultTargets]) {
+        expect(isProtectedWritePath(target, root), target).toBe(true);
+        expect(cjsPolicy.isProtectedWritePath(target, root), target).toBe(true);
+        expect(isProtectedReadPath(target, root), target).toBe(true);
+        expect(cjsPolicy.isProtectedReadPath(target, root), target).toBe(true);
+        expect(getProtectedWriteScope(target, root), target).toBe('global');
+        expect(cjsPolicy.getProtectedWriteScope(target, root), target).toBe('global');
+      }
+
+      expect(isDevOverrideFloorPath(join(hiveHome, 'enforcement', 'dev-override.conf'), root)).toBe(true);
+      expect(cjsPolicy.isDevOverrideFloorPath(join(hiveHome, 'enforcement', 'dev-override.conf'), root)).toBe(true);
+      expect(isGuardedSettingsPath(join(hiveHome, '.claude', 'settings.json'), root)).toBe(false);
+      expect(cjsPolicy.isGuardedSettingsPath(join(hiveHome, '.claude', 'settings.json'), root)).toBe(false);
+    } finally {
+      if (previousHiveFlowHome === undefined) delete process.env.HIVE_FLOW_HOME;
+      else process.env.HIVE_FLOW_HOME = previousHiveFlowHome;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores empty and relative HIVE_FLOW_HOME values while preserving default protection', () => {
+    const root = tmpProject();
+    const previousHiveFlowHome = process.env.HIVE_FLOW_HOME;
+    try {
+      for (const configured of ['', 'relative-hive-home']) {
+        process.env.HIVE_FLOW_HOME = configured;
+        const relativeTarget = join(root, 'relative-hive-home', 'enforcement', 'state.json');
+        const defaultTarget = join(homedir(), '.hive-flow', 'enforcement', 'state.json');
+
+        expect(isProtectedWritePath(relativeTarget, root), configured).toBe(false);
+        expect(cjsPolicy.isProtectedWritePath(relativeTarget, root), configured).toBe(false);
+        expect(isProtectedReadPath(relativeTarget, root), configured).toBe(false);
+        expect(cjsPolicy.isProtectedReadPath(relativeTarget, root), configured).toBe(false);
+        expect(isProtectedWritePath(defaultTarget, root), configured).toBe(true);
+        expect(cjsPolicy.isProtectedWritePath(defaultTarget, root), configured).toBe(true);
+      }
+    } finally {
+      if (previousHiveFlowHome === undefined) delete process.env.HIVE_FLOW_HOME;
+      else process.env.HIVE_FLOW_HOME = previousHiveFlowHome;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('protects the relocation installer script itself', () => {
     const root = tmpProject();
     try {

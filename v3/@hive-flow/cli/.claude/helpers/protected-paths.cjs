@@ -86,6 +86,7 @@ const DEV_OVERRIDE_TOKEN_VERSION = 1;
 const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 let cachedPolicy = null;
+const HOME_HIVE_FLOW_POLICY_PREFIX = '${HOME}/.hive-flow';
 
 function policyCandidates() {
   return [
@@ -132,6 +133,34 @@ function expandPolicyPath(entry, projectRoot) {
     .replace(/\$\{PROJECT_ROOT\}/g, projectRoot)
     .replace(/\$\{CWD\}/g, projectRoot);
   return path.isAbsolute(expanded) ? path.resolve(expanded) : path.resolve(projectRoot, expanded);
+}
+
+function resolveHiveFlowHomeOverride() {
+  const raw = process.env.HIVE_FLOW_HOME;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed || !path.isAbsolute(trimmed)) return null;
+  return path.resolve(trimmed);
+}
+
+function isHomeHiveFlowPolicyEntry(entry) {
+  return entry === HOME_HIVE_FLOW_POLICY_PREFIX
+    || entry.startsWith(`${HOME_HIVE_FLOW_POLICY_PREFIX}/`)
+    || entry.startsWith(`${HOME_HIVE_FLOW_POLICY_PREFIX}\\`);
+}
+
+function expandHiveFlowHomeOverridePath(entry) {
+  const hiveHome = resolveHiveFlowHomeOverride();
+  if (!hiveHome || !isHomeHiveFlowPolicyEntry(entry)) return null;
+  const suffix = entry.slice(HOME_HIVE_FLOW_POLICY_PREFIX.length).replace(/^[/\\]+/, '');
+  return suffix ? path.resolve(hiveHome, suffix) : hiveHome;
+}
+
+function expandPolicyPaths(entry, projectRoot) {
+  const expanded = [expandPolicyPath(entry, projectRoot)];
+  const hiveHomeOverride = expandHiveFlowHomeOverridePath(entry);
+  if (hiveHomeOverride) expanded.push(hiveHomeOverride);
+  return [...new Set(expanded)];
 }
 
 function casefoldPath(filePath) {
@@ -221,22 +250,34 @@ function targetCandidates(filePath, projectRoot) {
 }
 
 function patternCandidates(entry, projectRoot) {
-  const lexical = expandPolicyPath(entry, projectRoot);
-  const real = resolveRealPathForPolicy(lexical, projectRoot);
-  return [...new Set([casefoldPath(lexical), casefoldPath(real)])];
+  return patternCandidateEntries(entry, projectRoot).map(candidate => candidate.pattern);
+}
+
+function patternCandidateEntries(entry, projectRoot) {
+  const candidates = [];
+  const seen = new Set();
+  for (const lexical of expandPolicyPaths(entry, projectRoot)) {
+    const real = resolveRealPathForPolicy(lexical, projectRoot);
+    for (const normalized of [casefoldPath(lexical), casefoldPath(real)]) {
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      candidates.push({ pattern: normalized, absolutePath: lexical });
+    }
+  }
+  return candidates;
 }
 
 function findPolicyMatch(entries, filePath, projectRoot, globalEntries) {
   if (!filePath) return null;
   const targets = targetCandidates(filePath, projectRoot);
   for (const entry of entries) {
-    const patterns = patternCandidates(entry, projectRoot);
+    const patterns = patternCandidateEntries(entry, projectRoot);
     for (const target of targets) {
       for (const pattern of patterns) {
-        if (matchNormalized(target, pattern, entry)) {
+        if (matchNormalized(target, pattern.pattern, entry)) {
           return {
             entry,
-            absolutePath: expandPolicyPath(entry, projectRoot),
+            absolutePath: pattern.absolutePath,
             scope: globalEntries.has(entry) ? 'global' : 'project',
           };
         }
@@ -248,11 +289,11 @@ function findPolicyMatch(entries, filePath, projectRoot, globalEntries) {
 
 function getProtectedWritePaths(projectRoot, policy = loadPolicy()) {
   const globalEntries = new Set(policy.protectedWriteGlobal);
-  return policy.protectedWrite.map(entry => ({
+  return policy.protectedWrite.flatMap(entry => expandPolicyPaths(entry, projectRoot).map(absolutePath => ({
     entry,
-    absolutePath: expandPolicyPath(entry, projectRoot),
+    absolutePath,
     scope: globalEntries.has(entry) ? 'global' : 'project',
-  }));
+  })));
 }
 
 function findProtectedWritePath(filePath, projectRoot, policy = loadPolicy()) {
@@ -269,11 +310,11 @@ function getProtectedWriteScope(filePath, projectRoot, policy = loadPolicy()) {
 }
 
 function getProtectedReadPaths(projectRoot, policy = loadPolicy()) {
-  return policy.protectedRead.map(entry => ({
+  return policy.protectedRead.flatMap(entry => expandPolicyPaths(entry, projectRoot).map(absolutePath => ({
     entry,
-    absolutePath: expandPolicyPath(entry, projectRoot),
+    absolutePath,
     scope: 'global',
-  }));
+  })));
 }
 
 function findProtectedReadPath(filePath, projectRoot, policy = loadPolicy()) {

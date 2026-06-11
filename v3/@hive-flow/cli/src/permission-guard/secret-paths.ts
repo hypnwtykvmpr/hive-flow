@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { casefoldPath } from './protected-paths.js';
 
@@ -87,6 +87,7 @@ export const DEFAULT_SECRET_POLICY: SecretPathPolicy = {
 };
 
 let cachedSecretPolicy: SecretPathPolicy | null = null;
+const HOME_HIVE_FLOW_POLICY_PREFIX = '${HOME}/.hive-flow';
 
 function policyCandidates(): string[] {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -136,6 +137,30 @@ function normalizeSecretPath(filePath: string): string {
   return casefoldPath(expanded).replace(/[\u0000-\u001F\u2028\u2029]/g, '/');
 }
 
+function resolveHiveFlowHomeOverride(): string | null {
+  const raw = process.env.HIVE_FLOW_HOME;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed || !isAbsolute(trimmed)) return null;
+  return resolve(trimmed);
+}
+
+function isHomeHiveFlowPolicyEntry(entry: string): boolean {
+  return entry === HOME_HIVE_FLOW_POLICY_PREFIX
+    || entry.startsWith(`${HOME_HIVE_FLOW_POLICY_PREFIX}/`)
+    || entry.startsWith(`${HOME_HIVE_FLOW_POLICY_PREFIX}\\`);
+}
+
+function expandSecretPolicyEntry(entry: string): string[] {
+  const expanded = [entry];
+  const hiveHome = resolveHiveFlowHomeOverride();
+  if (hiveHome && isHomeHiveFlowPolicyEntry(entry)) {
+    const suffix = entry.slice(HOME_HIVE_FLOW_POLICY_PREFIX.length).replace(/^[/\\]+/, '');
+    expanded.push(suffix ? resolve(hiveHome, suffix) : hiveHome);
+  }
+  return [...new Set(expanded)];
+}
+
 function pathComponents(normalizedPath: string): string[] {
   return normalizedPath.split('/').filter(Boolean);
 }
@@ -150,7 +175,7 @@ function globMatches(value: string, glob: string): boolean {
 }
 
 function normalizedPolicyList(entries: string[]): string[] {
-  return entries.map(entry => normalizeSecretPath(entry));
+  return entries.flatMap(entry => expandSecretPolicyEntry(entry).map(expanded => normalizeSecretPath(expanded)));
 }
 
 function componentSequenceMatches(components: string[], policyEntry: string): boolean {

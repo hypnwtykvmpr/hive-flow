@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { mkdtempSync, rmSync } from 'node:fs';
 import {
   isProtectedWritePath,
   casefoldPath,
@@ -95,6 +97,43 @@ describe('secret-path classifier', () => {
       '~/.hive-flow/run/credential-holder.sock',
     ]) {
       expect(isSecretPath(target), target).toBe(true);
+    }
+  });
+
+  it('classifies absolute HIVE_FLOW_HOME credential paths while keeping default home paths secret', () => {
+    const root = mkdtempSync(join(tmpdir(), 'secret-paths-hive-home-'));
+    const previousHiveFlowHome = process.env.HIVE_FLOW_HOME;
+    const hiveHome = join(root, 'hive-home');
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    try {
+      for (const target of [
+        join(hiveHome, 'credential-vault.json.gcm'),
+        join(hiveHome, 'credentials', 'openrouter.json'),
+        join(hiveHome, 'run', 'credential-holder.sock'),
+        join(homedir(), '.hive-flow', 'credential-vault.json.gcm'),
+        join(homedir(), '.hive-flow', 'credentials', 'openrouter.json'),
+        join(homedir(), '.hive-flow', 'run', 'credential-holder.sock'),
+      ]) {
+        expect(isSecretPath(target), target).toBe(true);
+      }
+    } finally {
+      if (previousHiveFlowHome === undefined) delete process.env.HIVE_FLOW_HOME;
+      else process.env.HIVE_FLOW_HOME = previousHiveFlowHome;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores relative HIVE_FLOW_HOME values for secret path expansion', () => {
+    const root = mkdtempSync(join(tmpdir(), 'secret-paths-relative-hive-home-'));
+    const previousHiveFlowHome = process.env.HIVE_FLOW_HOME;
+    process.env.HIVE_FLOW_HOME = 'relative-hive-home';
+    try {
+      expect(isSecretPath(join(root, 'relative-hive-home', 'credential-vault.json.gcm'))).toBe(false);
+      expect(isSecretPath(join(homedir(), '.hive-flow', 'credential-vault.json.gcm'))).toBe(true);
+    } finally {
+      if (previousHiveFlowHome === undefined) delete process.env.HIVE_FLOW_HOME;
+      else process.env.HIVE_FLOW_HOME = previousHiveFlowHome;
+      rmSync(root, { recursive: true, force: true });
     }
   });
 

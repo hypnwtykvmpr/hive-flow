@@ -121,6 +121,7 @@ export const DEV_OVERRIDE_TOKEN_VERSION = 1;
 export const MAX_DEV_OVERRIDE_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 let cachedPolicy: ProtectedPathPolicy | null = null;
+const HOME_HIVE_FLOW_POLICY_PREFIX = '${HOME}/.hive-flow';
 
 function policyCandidates(): string[] {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -168,6 +169,34 @@ export function expandPolicyPath(entry: string, projectRoot: string): string {
     .replace(/\$\{PROJECT_ROOT\}/g, projectRoot)
     .replace(/\$\{CWD\}/g, projectRoot);
   return isAbsolute(expanded) ? resolve(expanded) : resolve(projectRoot, expanded);
+}
+
+function resolveHiveFlowHomeOverride(): string | null {
+  const raw = process.env.HIVE_FLOW_HOME;
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed || !isAbsolute(trimmed)) return null;
+  return resolve(trimmed);
+}
+
+function isHomeHiveFlowPolicyEntry(entry: string): boolean {
+  return entry === HOME_HIVE_FLOW_POLICY_PREFIX
+    || entry.startsWith(`${HOME_HIVE_FLOW_POLICY_PREFIX}/`)
+    || entry.startsWith(`${HOME_HIVE_FLOW_POLICY_PREFIX}\\`);
+}
+
+function expandHiveFlowHomeOverridePath(entry: string): string | null {
+  const hiveHome = resolveHiveFlowHomeOverride();
+  if (!hiveHome || !isHomeHiveFlowPolicyEntry(entry)) return null;
+  const suffix = entry.slice(HOME_HIVE_FLOW_POLICY_PREFIX.length).replace(/^[/\\]+/, '');
+  return suffix ? resolve(hiveHome, suffix) : hiveHome;
+}
+
+function expandPolicyPaths(entry: string, projectRoot: string): string[] {
+  const expanded = [expandPolicyPath(entry, projectRoot)];
+  const hiveHomeOverride = expandHiveFlowHomeOverridePath(entry);
+  if (hiveHomeOverride) expanded.push(hiveHomeOverride);
+  return [...new Set(expanded)];
 }
 
 export function casefoldPath(filePath: string): string {
@@ -257,22 +286,34 @@ function targetCandidates(filePath: string, projectRoot: string): string[] {
 }
 
 function patternCandidates(entry: string, projectRoot: string): string[] {
-  const lexical = expandPolicyPath(entry, projectRoot);
-  const real = resolveRealPathForPolicy(lexical, projectRoot);
-  return [...new Set([casefoldPath(lexical), casefoldPath(real)])];
+  return patternCandidateEntries(entry, projectRoot).map(candidate => candidate.pattern);
+}
+
+function patternCandidateEntries(entry: string, projectRoot: string): Array<{ pattern: string; absolutePath: string }> {
+  const candidates: Array<{ pattern: string; absolutePath: string }> = [];
+  const seen = new Set<string>();
+  for (const lexical of expandPolicyPaths(entry, projectRoot)) {
+    const real = resolveRealPathForPolicy(lexical, projectRoot);
+    for (const normalized of [casefoldPath(lexical), casefoldPath(real)]) {
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      candidates.push({ pattern: normalized, absolutePath: lexical });
+    }
+  }
+  return candidates;
 }
 
 function findPolicyMatch(entries: string[], filePath: string, projectRoot: string, globalEntries: Set<string>): ProtectedPathMatch | null {
   if (!filePath) return null;
   const targets = targetCandidates(filePath, projectRoot);
   for (const entry of entries) {
-    const patterns = patternCandidates(entry, projectRoot);
+    const patterns = patternCandidateEntries(entry, projectRoot);
     for (const target of targets) {
       for (const pattern of patterns) {
-        if (matchNormalized(target, pattern, entry)) {
+        if (matchNormalized(target, pattern.pattern, entry)) {
           return {
             entry,
-            absolutePath: expandPolicyPath(entry, projectRoot),
+            absolutePath: pattern.absolutePath,
             scope: globalEntries.has(entry) ? 'global' : 'project',
           };
         }
@@ -284,11 +325,11 @@ function findPolicyMatch(entries: string[], filePath: string, projectRoot: strin
 
 export function getProtectedWritePaths(projectRoot: string, policy = loadPolicy()): ProtectedPathMatch[] {
   const globalEntries = new Set(policy.protectedWriteGlobal);
-  return policy.protectedWrite.map(entry => ({
+  return policy.protectedWrite.flatMap(entry => expandPolicyPaths(entry, projectRoot).map(absolutePath => ({
     entry,
-    absolutePath: expandPolicyPath(entry, projectRoot),
+    absolutePath,
     scope: globalEntries.has(entry) ? 'global' as const : 'project' as const,
-  }));
+  })));
 }
 
 export function findProtectedWritePath(filePath: string, projectRoot: string, policy = loadPolicy()): ProtectedPathMatch | null {
@@ -304,11 +345,11 @@ export function getProtectedWriteScope(filePath: string, projectRoot: string, po
 }
 
 export function getProtectedReadPaths(projectRoot: string, policy = loadPolicy()): ProtectedPathMatch[] {
-  return policy.protectedRead.map(entry => ({
+  return policy.protectedRead.flatMap(entry => expandPolicyPaths(entry, projectRoot).map(absolutePath => ({
     entry,
-    absolutePath: expandPolicyPath(entry, projectRoot),
+    absolutePath,
     scope: 'global' as const,
-  }));
+  })));
 }
 
 export function findProtectedReadPath(filePath: string, projectRoot: string, policy = loadPolicy()): ProtectedPathMatch | null {

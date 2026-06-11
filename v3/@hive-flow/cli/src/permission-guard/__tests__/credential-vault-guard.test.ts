@@ -119,6 +119,30 @@ describe('credential vault command denials', () => {
     expect(result.reason).toMatch(/credential|secret|environment|keychain|proc|ps/i);
   });
 
+  it('denies HIVE_FLOW_HOME override vault exposure without unprotecting defaults', async () => {
+    const previousHiveHome = process.env.HIVE_FLOW_HOME;
+    const hiveHome = join(tmpdir(), `hf-vault-override-${process.pid}-${Math.random()}`);
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    try {
+      for (const command of [
+        `cat ${join(hiveHome, 'credential-vault.json.gcm')}`,
+        `cat ${join(hiveHome, 'credentials', 'openrouter.json')}`,
+        `cat ${join(hiveHome, 'run', 'credential-holder.sock')}`,
+        'cat ~/.hive-flow/credential-vault.json.gcm',
+      ]) {
+        const result = await evalBash(command);
+        expect(result.decision, command).toBe('deny');
+        expect(result.reason, command).toMatch(/credential|secret|socket/i);
+      }
+    } finally {
+      if (previousHiveHome === undefined) {
+        delete process.env.HIVE_FLOW_HOME;
+      } else {
+        process.env.HIVE_FLOW_HOME = previousHiveHome;
+      }
+    }
+  });
+
   it('keeps the planted bypass non-vacuous by allowing the same vault read with credential secret policy removed', () => {
     const stripped = loadSecretPolicy();
     stripped.secretPathGlobs = stripped.secretPathGlobs.filter(entry => !entry.includes('.hive-flow/credential'));
