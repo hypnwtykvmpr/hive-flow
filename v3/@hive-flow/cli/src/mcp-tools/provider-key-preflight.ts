@@ -14,15 +14,15 @@ export interface ProviderKeyPreflightOptions {
   holderStatus?: CredentialHolderProbeStatus;
 }
 
-export function providerKeyPreflight(
+export async function providerKeyPreflight(
   provider: string | undefined,
   env: Record<string, unknown>,
   options: ProviderKeyPreflightOptions = {},
-): ProviderKeyPreflightResult {
+): Promise<ProviderKeyPreflightResult> {
   const normalized = String(provider || '').trim().toLowerCase();
 
   if (isStrictApiProvider(normalized)) {
-    const status = options.holderStatus ?? probeCredentialHolderStatus(env);
+    const status = options.holderStatus ?? await probeCredentialHolderStatus(env);
     if (status.available) return { ok: true };
     return {
       ok: false,

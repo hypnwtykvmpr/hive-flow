@@ -702,7 +702,7 @@ export const agentTools: MCPTool[] = [
           error: `Unsupported provider '${String(input.provider)}'. Supported providers: ${Array.from(AGENT_PROVIDERS).join(', ')}`,
         };
       }
-      const keyPreflight = providerKeyPreflight(provider, process.env);
+      const keyPreflight = await providerKeyPreflight(provider, process.env);
       if (!keyPreflight.ok) {
         return { success: false, error: keyPreflight.reason };
       }
@@ -1207,7 +1207,7 @@ export const agentTools: MCPTool[] = [
       const taskId = `task-${randomUUID()}`;
 
       // RC-2: Lock → fresh read → validate → set busy → save → unlock
-      const validationResult = await withBridgeLock(agentId, () => {
+      const validationResult = await withBridgeLock(agentId, async () => {
         const store = loadAgentStore();
         const agent = store.agents[agentId];
         if (!agent) {
@@ -1221,7 +1221,7 @@ export const agentTools: MCPTool[] = [
             error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter. Use Claude Code Task tool for native anthropic agents.",
           };
         }
-        const keyPreflight = providerKeyPreflight(agent.provider, process.env);
+        const keyPreflight = await providerKeyPreflight(agent.provider, process.env);
         if (!keyPreflight.ok) {
           return { error: keyPreflight.reason };
         }

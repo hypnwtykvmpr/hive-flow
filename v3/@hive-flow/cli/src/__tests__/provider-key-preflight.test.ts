@@ -142,8 +142,8 @@ describe('PH-B8 provider-key preflight', () => {
     else process.env.DEEPSEEK_API_KEY = originalDeepSeekKey;
   });
 
-  it('blocks strict OpenRouter when the credential holder is unavailable even if env has a key', () => {
-    const result = providerKeyPreflight('openrouter', { OPENROUTER_API_KEY: 'or-env-secret' }, {
+  it('blocks strict OpenRouter when the credential holder is unavailable even if env has a key', async () => {
+    const result = await providerKeyPreflight('openrouter', { OPENROUTER_API_KEY: 'or-env-secret' }, {
       holderStatus: { available: false, reason: 'socket missing' },
     });
 
@@ -152,16 +152,16 @@ describe('PH-B8 provider-key preflight', () => {
     expect(result.reason).not.toContain('or-env-secret');
   });
 
-  it('allows strict OpenRouter when the credential holder is available without env keys', () => {
-    const result = providerKeyPreflight('openrouter', {}, {
+  it('allows strict OpenRouter when the credential holder is available without env keys', async () => {
+    const result = await providerKeyPreflight('openrouter', {}, {
       holderStatus: { available: true },
     });
 
     expect(result).toEqual({ ok: true });
   });
 
-  it('blocks strict DeepSeek when the credential holder is unavailable', () => {
-    const result = providerKeyPreflight('deepseek', { DEEPSEEK_API_KEY: 'sk-deepseek-secret' }, {
+  it('blocks strict DeepSeek when the credential holder is unavailable', async () => {
+    const result = await providerKeyPreflight('deepseek', { DEEPSEEK_API_KEY: 'sk-deepseek-secret' }, {
       holderStatus: { available: false, reason: 'socket missing' },
     });
 
@@ -170,8 +170,8 @@ describe('PH-B8 provider-key preflight', () => {
     expect(result.reason).not.toContain('sk-deepseek-secret');
   });
 
-  it('degraded-labels env-only CLI providers instead of pretending they are strict', () => {
-    const result = providerKeyPreflight('codex-cli', {});
+  it('degraded-labels env-only CLI providers instead of pretending they are strict', async () => {
+    const result = await providerKeyPreflight('codex-cli', {});
 
     expect(result).toMatchObject({
       ok: true,
@@ -180,10 +180,10 @@ describe('PH-B8 provider-key preflight', () => {
     expect(result.warning).toMatch(/env-only CLI provider/i);
   });
 
-  it('uses only holder status for strict providers, not ambient process.env', () => {
+  it('uses only holder status for strict providers, not ambient process.env', async () => {
     process.env.OPENROUTER_API_KEY = 'ambient-openrouter-key';
 
-    const result = providerKeyPreflight('openrouter', {}, {
+    const result = await providerKeyPreflight('openrouter', {}, {
       holderStatus: { available: false, reason: 'socket missing' },
     });
 
@@ -192,18 +192,18 @@ describe('PH-B8 provider-key preflight', () => {
     expect(JSON.stringify(result)).not.toContain('ambient-openrouter-key');
   });
 
-  it('keeps strict OpenRouter preflight pure across arbitrary injected env objects and holder states', () => {
-    fc.assert(
-      fc.property(
+  it('keeps strict OpenRouter preflight pure across arbitrary injected env objects and holder states', async () => {
+    await fc.assert(
+      fc.asyncProperty(
         fc.dictionary(
           fc.stringMatching(/^[A-Z_][A-Z0-9_]*$/),
           fc.oneof(fc.string(), fc.constant(undefined)),
         ),
         fc.boolean(),
-        (env, holderAvailable) => {
+        async (env, holderAvailable) => {
           const before = { ...env };
 
-          const result = providerKeyPreflight('openrouter', env, {
+          const result = await providerKeyPreflight('openrouter', env, {
             holderStatus: holderAvailable
               ? { available: true }
               : { available: false, reason: 'property-test unavailable' },

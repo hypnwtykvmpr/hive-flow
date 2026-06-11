@@ -163,7 +163,7 @@ export async function inspectCredentialKeyStatus(
       present = false;
     }
   }
-  const holderStatus = probeCredentialHolderStatus();
+  const holderStatus = await probeCredentialHolderStatus();
   return {
     provider,
     present,
@@ -205,8 +205,8 @@ export async function bootstrapProductionCredentialHolder(
     baseUrls: options.baseUrls,
   });
 
-  await holder.start();
   const seededProviders: string[] = [];
+  const pendingSecrets: Array<{ provider: string; secret: Buffer }> = [];
   try {
     for (const provider of options.providers ?? DEFAULT_HOLDER_BOOTSTRAP_PROVIDERS) {
       const normalized = normalizeProviderKeyName(provider);
@@ -214,17 +214,19 @@ export async function bootstrapProductionCredentialHolder(
       const secret = await credentialStore.retrieveSecret(normalized);
       if (!secret) continue;
       const secretBuffer = Buffer.from(secret);
-      try {
-        holder.setProviderSecret(normalized, secretBuffer);
-        seededProviders.push(normalized);
-      } finally {
-        secretBuffer.fill(0);
-        if (secret instanceof Buffer) secret.fill(0);
-      }
+      pendingSecrets.push({ provider: normalized, secret: secretBuffer });
+      if (secret instanceof Buffer) secret.fill(0);
+    }
+    await holder.start();
+    for (const { provider, secret } of pendingSecrets) {
+      holder.setProviderSecret(provider, secret);
+      seededProviders.push(provider);
     }
   } catch (error) {
     await holder.stop();
     throw error;
+  } finally {
+    for (const { secret } of pendingSecrets) secret.fill(0);
   }
 
   return {

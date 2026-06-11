@@ -44,7 +44,7 @@ const listCommand: Command = {
 	  action: async (ctx: CommandContext): Promise<CommandResult> => {
 	    const filterType = ctx.flags.type as string || 'all';
 	    const registry = await getRegistry();
-	    const holderStatus = probeCredentialHolderStatus();
+	    const holderStatus = await probeCredentialHolderStatus();
 
     let providers = registry.getAll();
     if (filterType !== 'all') {
@@ -164,7 +164,7 @@ const testCommand: Command = {
 	    const providerId = ctx.flags.provider as string;
 	    const testAll = ctx.flags.all as boolean;
 	    const registry = await getRegistry();
-	    const holderStatus = probeCredentialHolderStatus();
+	    const holderStatus = await probeCredentialHolderStatus();
 
     output.writeln();
     output.writeln(output.bold('Provider Connectivity Test'));

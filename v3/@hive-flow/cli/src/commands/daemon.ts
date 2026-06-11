@@ -10,6 +10,8 @@ import { spawn, execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve, isAbsolute } from 'path';
 import * as fs from 'fs';
+import { pingCredentialHolder, type CredentialHolderLiveness } from '../credential-store/holder.js';
+import { defaultCredentialHolderSocketPath } from '../credential-store/strict-api-provider.js';
 
 // Start daemon subcommand
 const startCommand: Command = {
@@ -44,6 +46,9 @@ const startCommand: Command = {
         }
         return { success: true };
       }
+      await reapCredentialHolderAtSocket(defaultCredentialHolderSocketPath(), {
+        protectedPids: [process.pid],
+      });
     }
 
     // Background mode (default): fork a detached process
@@ -269,11 +274,17 @@ const stopCommand: Command = {
 
         // Also kill any background daemon by PID
         const killed = await killBackgroundDaemon(projectRoot);
+        await reapCredentialHolderAtSocket(defaultCredentialHolderSocketPath(), {
+          protectedPids: [process.pid],
+        });
 
         spinner.succeed(killed ? 'Worker daemon stopped' : 'Worker daemon was not running');
       } else {
         await stopDaemon();
         await killBackgroundDaemon(projectRoot);
+        await reapCredentialHolderAtSocket(defaultCredentialHolderSocketPath(), {
+          protectedPids: [process.pid],
+        });
       }
 
       return { success: true };
@@ -370,6 +381,106 @@ function isProcessRunning(pid: number): boolean {
   }
 }
 
+export interface CredentialHolderReapResult {
+  checked: boolean;
+  reaped: boolean;
+  socketPath: string;
+  pid?: number;
+  reason: string;
+}
+
+export interface CredentialHolderReapDeps {
+  pingCredentialHolder: (socketPath: string) => Promise<CredentialHolderLiveness>;
+  isProcessRunning: (pid: number) => boolean;
+  killProcess: (pid: number, signal: NodeJS.Signals) => void;
+  sleep: (ms: number) => Promise<void>;
+  unlinkSocket: (socketPath: string) => void;
+}
+
+const defaultCredentialHolderReapDeps: CredentialHolderReapDeps = {
+  pingCredentialHolder: (socketPath) => pingCredentialHolder(socketPath, { timeoutMs: 750 }),
+  isProcessRunning,
+  killProcess: (pid, signal) => process.kill(pid, signal),
+  sleep: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+  unlinkSocket: unlinkSocketIfSafe,
+};
+
+export async function reapCredentialHolderAtSocket(
+  socketPath: string,
+  options: {
+    protectedPids?: readonly number[];
+    deps?: CredentialHolderReapDeps;
+  } = {},
+): Promise<CredentialHolderReapResult> {
+  const deps = options.deps ?? defaultCredentialHolderReapDeps;
+  const protectedPids = new Set((options.protectedPids ?? []).filter(pid => Number.isInteger(pid) && pid > 0));
+  const liveness = await deps.pingCredentialHolder(socketPath);
+  if (!liveness.available || !liveness.pid) {
+    if (!liveness.securityFailure) {
+      deps.unlinkSocket(socketPath);
+      return {
+        checked: true,
+        reaped: false,
+        socketPath,
+        reason: 'credential holder is not serving; stale socket removed',
+      };
+    }
+    return {
+      checked: true,
+      reaped: false,
+      socketPath,
+      reason: liveness.reason || 'credential holder is not serving',
+    };
+  }
+
+  const pid = liveness.pid;
+  if (protectedPids.has(pid)) {
+    return {
+      checked: true,
+      reaped: false,
+      pid,
+      socketPath,
+      reason: 'credential holder belongs to a protected daemon pid',
+    };
+  }
+
+  if (!deps.isProcessRunning(pid)) {
+    deps.unlinkSocket(socketPath);
+    return {
+      checked: true,
+      reaped: false,
+      pid,
+      socketPath,
+      reason: 'credential holder pid is not running; stale socket removed',
+    };
+  }
+
+  deps.killProcess(pid, 'SIGTERM');
+  await deps.sleep(1000);
+  if (deps.isProcessRunning(pid)) {
+    deps.killProcess(pid, 'SIGKILL');
+    await deps.sleep(100);
+  }
+  deps.unlinkSocket(socketPath);
+  return {
+    checked: true,
+    reaped: true,
+    pid,
+    socketPath,
+    reason: 'orphan credential holder reaped',
+  };
+}
+
+function unlinkSocketIfSafe(socketPath: string): void {
+  try {
+    if (!fs.existsSync(socketPath)) return;
+    const stat = fs.lstatSync(socketPath);
+    if (stat.isSocket()) fs.unlinkSync(socketPath);
+  } catch {
+    // Best-effort cleanup only; callers still get truthful liveness on the next probe.
+  }
+}
+
 // Status subcommand
 const statusCommand: Command = {
   name: 'status',
@@ -395,8 +506,9 @@ const statusCommand: Command = {
       // Also check for background daemon
       const bgPid = getBackgroundDaemonPid(projectRoot);
       const bgRunning = bgPid ? isProcessRunning(bgPid) : false;
+      const holderStatus = await pingCredentialHolder(defaultCredentialHolderSocketPath(), { timeoutMs: 750 });
 
-      const isRunning = status.running || bgRunning;
+      const isRunning = status.running || bgRunning || holderStatus.available;
       const displayPid = bgPid || status.pid;
 
       output.writeln();
@@ -404,12 +516,19 @@ const statusCommand: Command = {
       // Daemon status box
       const statusIcon = isRunning ? output.success('●') : output.error('○');
       const statusText = isRunning ? output.success('RUNNING') : output.error('STOPPED');
-      const mode = bgRunning ? output.dim(' (background)') : status.running ? output.dim(' (foreground)') : '';
+      const mode = bgRunning
+        ? output.dim(' (background)')
+        : status.running
+          ? output.dim(' (foreground)')
+          : holderStatus.available
+            ? output.dim(' (holder-only)')
+            : '';
 
       output.printBox(
         [
           `Status: ${statusIcon} ${statusText}${mode}`,
           `PID: ${displayPid}`,
+          `Credential Holder: ${holderStatus.available ? output.success(`RUNNING${holderStatus.pid ? ` PID ${holderStatus.pid}` : ''}`) : output.dim(`stopped${holderStatus.reason ? ` (${holderStatus.reason})` : ''}`)}`,
           status.startedAt ? `Started: ${status.startedAt.toISOString()}` : '',
           `Workers Enabled: ${status.config.workers.filter(w => w.enabled).length}`,
           `Max Concurrent: ${status.config.maxConcurrent}`,
@@ -486,7 +605,7 @@ const statusCommand: Command = {
         });
       }
 
-      return { success: true, data: status };
+      return { success: true, data: { ...status, holder: holderStatus } };
     } catch (error) {
       // Daemon not initialized
       output.writeln();

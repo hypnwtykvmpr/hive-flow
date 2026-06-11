@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import {
   CredentialHolderService,
+  pingCredentialHolder,
   sendCredentialHolderCommand,
   type CredentialHolderServiceOptions,
   type ProviderUseHandlerInput,
@@ -17,6 +18,7 @@ export const ENV_ONLY_CLI_PROVIDERS = new Set(['codex-cli', 'gemini-cli', 'curso
 export interface CredentialHolderProbeStatus {
   available: boolean;
   socketPath?: string;
+  pid?: number;
   reason?: string;
 }
 
@@ -90,10 +92,10 @@ export function defaultCredentialHolderSocketPath(env: Record<string, unknown> =
   return join(runtimeDir, 'credential-holder.sock');
 }
 
-export function probeCredentialHolderStatus(
+export async function probeCredentialHolderStatus(
   env: Record<string, unknown> = process.env,
   socketPath = defaultCredentialHolderSocketPath(env),
-): CredentialHolderProbeStatus {
+): Promise<CredentialHolderProbeStatus> {
   if (process.platform === 'win32') {
     const explicit = typeof env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET === 'string'
       && env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET.trim().length > 0;
@@ -112,7 +114,10 @@ export function probeCredentialHolderStatus(
     if ((stat.mode & 0o077) !== 0) {
       return { available: false, socketPath, reason: 'credential holder socket grants group/other access' };
     }
-    return { available: true, socketPath };
+    const liveness = await pingCredentialHolder(socketPath, { timeoutMs: 750 });
+    return liveness.available
+      ? { available: true, socketPath, pid: liveness.pid }
+      : { available: false, socketPath, reason: liveness.reason || 'credential holder is not responding' };
   } catch (error) {
     return { available: false, socketPath, reason: (error as Error).message };
   }

@@ -1,4 +1,5 @@
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -10,6 +11,7 @@ import {
   assertFullRestartRequiresUnlock,
   sameRuntimeRestartCanRecover,
 } from '../holder.js';
+import { probeCredentialHolderStatus } from '../strict-api-provider.js';
 import type { PeerCredential } from '../peer-credentials.js';
 import { CREDENTIAL_BOUNDARY_GATES, getCredentialBoundaryGate } from '../boundary-gates.js';
 
@@ -19,6 +21,23 @@ function tempSocketPath(): string {
   const root = mkdtempSync(join(tmpdir(), 'hf-holder-'));
   roots.push(root);
   return join(root, '.hive-flow', 'run', 'credential-holder.sock');
+}
+
+async function createDeadSocketPath(socketPath: string): Promise<void> {
+  mkdirSync(join(socketPath, '..'), { recursive: true });
+  const child = spawnSync(process.execPath, ['-e', `
+    const net = require('node:net');
+    const socketPath = process.argv[1];
+    const server = net.createServer();
+    server.listen(socketPath, () => process.exit(0));
+  `, socketPath], { encoding: 'utf8' });
+  if (child.status !== 0) {
+    throw new Error(`test setup failed: stale socket child exited ${child.status}: ${child.stderr}`);
+  }
+  if (!existsSync(socketPath) || !lstatSync(socketPath).isSocket()) {
+    throw new Error('test setup failed: stale Unix socket path was not left behind');
+  }
+  chmodSync(socketPath, 0o600);
 }
 
 afterEach(async () => {
@@ -90,6 +109,36 @@ describe('credential holder socket lifecycle', () => {
       peerCredentialResolver: async () => ({ pid: process.pid, uid: 1234, startTime: 'now' }),
     });
     await expect(holder.start()).rejects.toThrow(/pre-existing|socket squat|not a socket/i);
+  });
+
+  it('unlinks a dead pre-existing Unix socket and binds a fresh holder', async () => {
+    const socketPath = tempSocketPath();
+    await createDeadSocketPath(socketPath);
+
+    const holder = new CredentialHolderService({
+      socketPath,
+      uid: 1234,
+      peerCredentialResolver: async () => ({ pid: process.pid, uid: 1234, startTime: 'now' }),
+    });
+
+    await holder.start();
+    try {
+      const status = await probeCredentialHolderStatus({}, socketPath);
+      expect(status).toMatchObject({ available: true, socketPath, pid: process.pid });
+    } finally {
+      await holder.stop();
+    }
+  });
+
+  it('does not report a dead Unix socket file as an available holder', async () => {
+    const socketPath = tempSocketPath();
+    await createDeadSocketPath(socketPath);
+
+    const status = await probeCredentialHolderStatus({}, socketPath);
+
+    expect(status.available).toBe(false);
+    expect(status.socketPath).toBe(socketPath);
+    expect(status.reason).toMatch(/not responding|refused|stale|closed|connect/i);
   });
 
   it('client refuses to send commands to a non-socket holder path', async () => {

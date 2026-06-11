@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -195,6 +195,115 @@ describe('production credential holder runtime bootstrap', () => {
       if (originalOpenRouterKey === undefined) delete process.env.OPENROUTER_API_KEY;
       else process.env.OPENROUTER_API_KEY = originalOpenRouterKey;
       await runtime?.stop();
+    }
+  });
+
+  it('seeds every strict API provider present in the credential backend by default', async () => {
+    const root = makeRoot();
+    const socketPath = makeSocketPath('seed-all');
+    const store = new MemoryCredentialStore();
+    await store.storeSecret('openrouter', 'or-seed-all-secret');
+    await store.storeSecret('deepseek', 'ds-seed-all-secret');
+    const seenAuth = new Map<string, string>();
+
+    const runtime = await bootstrapProductionCredentialHolder({
+      projectRoot: root,
+      socketPath,
+      credentialStore: store,
+      fetchImpl: vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        const renderedUrl = String(url);
+        const provider = renderedUrl.includes('deepseek') ? 'deepseek' : 'openrouter';
+        seenAuth.set(provider, String((init?.headers as Record<string, string> | undefined)?.Authorization || ''));
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: `${provider} seeded` }, finish_reason: 'stop' }],
+        }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }) as typeof fetch,
+      peerCredentialResolver: async () => sameUserPeer(),
+    });
+
+    try {
+      expect(runtime.seededProviders).toEqual(expect.arrayContaining(['deepseek', 'openrouter']));
+
+      const deepseek = await sendCredentialHolderCommand(socketPath, {
+        action: 'provider_call',
+        taskId: 'seed-all-deepseek',
+        provider: 'deepseek',
+        request: {
+          action: 'complete',
+          payload: {
+            messages: [{ role: 'user', content: 'ping' }],
+            model: 'deepseek-v4-pro',
+            timeout: 1_000,
+          },
+        },
+      });
+      const openrouter = await sendCredentialHolderCommand(socketPath, {
+        action: 'provider_call',
+        taskId: 'seed-all-openrouter',
+        provider: 'openrouter',
+        request: {
+          action: 'complete',
+          payload: {
+            messages: [{ role: 'user', content: 'ping' }],
+            model: 'auto',
+            timeout: 1_000,
+          },
+        },
+      });
+
+      expect(deepseek).toMatchObject({ ok: true, response: { content: 'deepseek seeded' } });
+      expect(openrouter).toMatchObject({ ok: true, response: { content: 'openrouter seeded' } });
+      expect(seenAuth.get('deepseek')).toBe('Bearer ds-seed-all-secret');
+      expect(seenAuth.get('openrouter')).toBe('Bearer or-seed-all-secret');
+    } finally {
+      await runtime.stop();
+    }
+  });
+
+  it('does not expose the holder socket until strict provider seeding has completed', async () => {
+    const root = makeRoot();
+    const socketPath = makeSocketPath('seed-before-bind');
+    const store = new MemoryCredentialStore();
+    await store.storeSecret('deepseek', 'ds-delayed-secret');
+    let releaseRetrieve!: () => void;
+    const originalRetrieve = store.retrieveSecret.bind(store);
+    const retrieveStarted = new Promise<void>((resolveStarted) => {
+      store.retrieveSecret = async (provider: string): Promise<Uint8Array | null> => {
+        if (provider.toLowerCase() === 'deepseek') {
+          resolveStarted();
+          await new Promise<void>((resolve) => {
+            releaseRetrieve = resolve;
+          });
+        }
+        return originalRetrieve(provider);
+      };
+    });
+
+    const boot = bootstrapProductionCredentialHolder({
+      projectRoot: root,
+      socketPath,
+      credentialStore: store,
+      fetchImpl: vi.fn(async () => new Response(JSON.stringify({
+        choices: [{ message: { content: 'seeded' }, finish_reason: 'stop' }],
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch,
+      peerCredentialResolver: async () => sameUserPeer(),
+    });
+
+    await retrieveStarted;
+    expect(existsSync(socketPath)).toBe(false);
+    releaseRetrieve();
+    const runtime = await boot;
+    try {
+      expect(existsSync(socketPath)).toBe(true);
+      expect(runtime.seededProviders).toContain('deepseek');
+    } finally {
+      await runtime.stop();
     }
   });
 

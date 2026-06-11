@@ -141,19 +141,19 @@ function hasOpenRouterHolderConfigReference(projectRoot: string): boolean {
     || source === 'credential-holder';
 }
 
-export function inspectProviderSetup(opts: {
+export async function inspectProviderSetup(opts: {
   cwd: string;
   homeDir?: string;
   env?: NodeJS.ProcessEnv;
   versionRunner?: VersionRunner;
   holderStatus?: CredentialHolderProbeStatus;
-}): ProviderSetupReport {
+}): Promise<ProviderSetupReport> {
   const env = opts.env ?? process.env;
   const homeDir = opts.homeDir ?? homedir();
   const versionRunner = opts.versionRunner ?? defaultVersionRunner;
   const openrouterEnv = typeof env.OPENROUTER_API_KEY === 'string' && env.OPENROUTER_API_KEY.length > 0;
   const openrouterConfig = hasOpenRouterHolderConfigReference(opts.cwd);
-  const openrouterHolder = opts.holderStatus ?? probeCredentialHolderStatus(env);
+  const openrouterHolder = opts.holderStatus ?? await probeCredentialHolderStatus(env);
   const geminiCli = versionRunner('gemini');
   const geminiOauth = existsSync(join(homeDir, '.gemini', 'oauth_creds.json'));
   const geminiApiKey = Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
@@ -467,7 +467,7 @@ const providersCommand: Command = {
     },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    const report = inspectProviderSetup({ cwd: ctx.cwd });
+    const report = await inspectProviderSetup({ cwd: ctx.cwd });
     const wroteConfig = ctx.flags.createConfig || ctx.flags['create-config']
       ? writeProviderCredentialReferences(ctx.cwd, report)
       : undefined;

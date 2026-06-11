@@ -191,14 +191,22 @@ export interface CredentialHolderProviderCallCommand {
   request?: unknown;
 }
 
+export interface CredentialHolderPingCommand {
+  action: 'ping';
+}
+
 export type CredentialHolderCommand =
   | CredentialHolderGrantCommand
   | CredentialHolderRedeemCommand
-  | CredentialHolderProviderCallCommand;
+  | CredentialHolderProviderCallCommand
+  | CredentialHolderPingCommand;
 
 export type CredentialHolderResponse = {
   ok: true;
   grant?: CapabilityTokenGrant;
+  ping?: {
+    pid: number;
+  };
   response?: unknown;
 } | {
   ok: false;
@@ -254,10 +262,7 @@ export class CredentialHolderService {
     }
     mkdirSync(dirname(this.socketPath), { recursive: true, mode: 0o700 });
     chmodSync(dirname(this.socketPath), 0o700);
-    if (existsSync(this.socketPath)) {
-      const stat = lstatSync(this.socketPath);
-      throw new Error(`credential holder socket squat refused: pre-existing path is ${stat.isSocket() ? 'a socket' : 'not a socket'}`);
-    }
+    await this.prepareUnixSocketPathForBind();
     this.server = createServer(socket => this.handleSocket(socket));
     await awaitServerListening(this.server, this.socketPath);
     chmodSync(this.socketPath, 0o600);
@@ -405,12 +410,31 @@ export class CredentialHolderService {
   private async dispatchSocketCommand(socket: Socket, line: string): Promise<CredentialHolderResponse> {
     try {
       const command = parseCredentialHolderCommand(line);
+      if (command.action === 'ping') {
+        return { ok: true, ping: { pid: process.pid } };
+      }
       if (command.action === 'grant') return { ok: true, grant: await this.requestUseGrant(command, socket) };
       if (command.action === 'provider_call') return { ok: true, response: await this.invokeProviderCall(command, socket) };
       return { ok: true, response: await this.redeemUseGrant(command, socket) };
     } catch (error) {
       return { ok: false, error: String(redactCredentialMaterial((error as Error).message)) };
     }
+  }
+
+  private async prepareUnixSocketPathForBind(): Promise<void> {
+    if (!existsSync(this.socketPath)) return;
+    const stat = lstatSync(this.socketPath);
+    if (!stat.isSocket()) {
+      throw new Error(`credential holder socket squat refused: pre-existing path is not a socket`);
+    }
+    const liveness = await pingCredentialHolder(this.socketPath, { timeoutMs: 500 });
+    if (liveness.available) {
+      throw new Error(`credential holder socket already has a live holder${liveness.pid ? ` (PID: ${liveness.pid})` : ''}`);
+    }
+    if (liveness.securityFailure) {
+      throw new Error(`credential holder socket squat refused: ${liveness.reason}`);
+    }
+    unlinkSync(this.socketPath);
   }
 
   private async lookupPeer(socket: Socket): Promise<PeerCredential> {
@@ -442,11 +466,25 @@ export class CredentialHolderService {
 export async function sendCredentialHolderCommand(
   socketPath: string,
   command: CredentialHolderCommand,
+  options: { timeoutMs?: number } = {},
 ): Promise<CredentialHolderResponse> {
   assertHolderSocketIdentity(socketPath);
   return new Promise((resolve, reject) => {
     const socket = createConnection(socketPath);
     let response = '';
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      fn();
+    };
+    const timer = options.timeoutMs && options.timeoutMs > 0
+      ? setTimeout(() => {
+        socket.destroy();
+        settle(() => reject(new Error(`credential holder command timed out after ${options.timeoutMs}ms`)));
+      }, options.timeoutMs)
+      : null;
     socket.setEncoding('utf8');
     socket.once('connect', () => {
       socket.write(`${JSON.stringify(command)}\n`);
@@ -454,15 +492,48 @@ export async function sendCredentialHolderCommand(
     socket.on('data', chunk => {
       response += chunk;
     });
-    socket.once('error', reject);
+    socket.once('error', error => settle(() => reject(error)));
     socket.once('end', () => {
       try {
-        resolve(JSON.parse(response.trim()) as CredentialHolderResponse);
+        settle(() => resolve(JSON.parse(response.trim()) as CredentialHolderResponse));
       } catch (error) {
-        reject(error);
+        settle(() => reject(error));
       }
     });
   });
+}
+
+export interface CredentialHolderLiveness {
+  available: boolean;
+  socketPath: string;
+  pid?: number;
+  reason?: string;
+  securityFailure?: boolean;
+}
+
+export async function pingCredentialHolder(
+  socketPath: string,
+  options: { timeoutMs?: number } = {},
+): Promise<CredentialHolderLiveness> {
+  try {
+    const response = await sendCredentialHolderCommand(socketPath, { action: 'ping' }, { timeoutMs: options.timeoutMs ?? 500 });
+    if (!response.ok) {
+      return { available: false, socketPath, reason: response.error };
+    }
+    const pid = response.ping?.pid;
+    if (!Number.isInteger(pid) || Number(pid) <= 0) {
+      return { available: false, socketPath, reason: 'credential holder ping response was malformed' };
+    }
+    return { available: true, socketPath, pid };
+  } catch (error) {
+    const reason = (error as Error).message;
+    return {
+      available: false,
+      socketPath,
+      reason,
+      securityFailure: /identity check|owner|permission|not a socket|symbolic/i.test(reason),
+    };
+  }
 }
 
 function assertHolderSocketIdentity(socketPath: string): void {
@@ -518,6 +589,7 @@ function parseCredentialHolderCommand(line: string): CredentialHolderCommand {
   if (!parsed || typeof parsed !== 'object') throw new Error('credential holder command must be an object');
   const record = parsed as Record<string, unknown>;
   const action = record.action;
+  if (action === 'ping') return { action };
   const taskId = String(record.taskId || '').trim();
   const provider = String(record.provider || '').trim();
   if (!taskId) throw new Error('credential holder command taskId is required');

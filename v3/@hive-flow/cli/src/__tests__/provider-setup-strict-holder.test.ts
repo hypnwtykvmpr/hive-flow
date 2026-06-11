@@ -25,9 +25,9 @@ afterEach(() => {
 });
 
 describe('provider setup strict API credential holder boundary', () => {
-  it('ignores ambient OpenRouter env and does not write env credential references', () => {
+  it('ignores ambient OpenRouter env and does not write env credential references', async () => {
     const root = makeRoot();
-    const report = inspectProviderSetup({
+    const report = await inspectProviderSetup({
       cwd: root,
       env: { OPENROUTER_API_KEY: 'or-secret-that-must-not-be-used' },
       versionRunner: noGemini,
@@ -46,9 +46,9 @@ describe('provider setup strict API credential holder boundary', () => {
     expect(JSON.parse(configText).values.openrouter).toBeUndefined();
   });
 
-  it('writes a non-secret holder reference when the credential holder is available', () => {
+  it('writes a non-secret holder reference when the credential holder is available', async () => {
     const root = makeRoot();
-    const report = inspectProviderSetup({
+    const report = await inspectProviderSetup({
       cwd: root,
       env: {},
       versionRunner: noGemini,
@@ -65,9 +65,9 @@ describe('provider setup strict API credential holder boundary', () => {
     expect(configText).not.toContain('/tmp/hive-flow-holder.sock');
   });
 
-  it('recognizes an existing holder reference without requiring env', () => {
+  it('recognizes an existing holder reference without requiring env', async () => {
     const root = makeRoot();
-    const first = inspectProviderSetup({
+    const first = await inspectProviderSetup({
       cwd: root,
       env: {},
       versionRunner: noGemini,
@@ -75,7 +75,7 @@ describe('provider setup strict API credential holder boundary', () => {
     });
     writeProviderCredentialReferences(root, first);
 
-    const second = inspectProviderSetup({
+    const second = await inspectProviderSetup({
       cwd: root,
       env: {},
       versionRunner: noGemini,
@@ -90,11 +90,11 @@ describe('provider setup strict API credential holder boundary', () => {
     });
   });
 
-  it('never serializes OpenRouter env references across arbitrary ambient env values', () => {
-    fc.assert(
-      fc.property(fc.string({ minLength: 1, maxLength: 80 }), (secret) => {
+  it('never serializes OpenRouter env references across arbitrary ambient env values', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.string({ minLength: 1, maxLength: 80 }), async (secret) => {
         const root = makeRoot();
-        const report = inspectProviderSetup({
+        const report = await inspectProviderSetup({
           cwd: root,
           env: { OPENROUTER_API_KEY: secret },
           versionRunner: noGemini,
