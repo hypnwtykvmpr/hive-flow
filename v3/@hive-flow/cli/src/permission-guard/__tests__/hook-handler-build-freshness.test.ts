@@ -32,6 +32,32 @@ function makeHookProject(): string {
   return root;
 }
 
+function makeRelocatedHookBinWithoutPolicy(): string {
+  const root = mkdtempSync(join(tmpdir(), 'hf-hook-relocated-no-policy-'));
+  const helperDir = join(root, '.hive-flow', 'enforcement', 'bin');
+  mkdirSync(helperDir, { recursive: true });
+  copyFileSync(hookHandlerSource, join(helperDir, 'hook-handler.cjs'));
+  copyFileSync(sessionIdSource, join(helperDir, 'session-id.cjs'));
+  return root;
+}
+
+function forcePermissionGuardAsyncRejection(root: string): void {
+  const handlerPath = join(root, '.claude', 'helpers', 'hook-handler.cjs');
+  const source = readFileSync(handlerPath, 'utf8');
+  const replacement = source.replace(
+    /  'permission-guard': async \(\) => \{[\s\S]*?\n  \},\n\n  'bug-hunter-check':/,
+    [
+      "  'permission-guard': async () => {",
+      "    throw new Error('forced async permission-guard rejection');",
+      '  },',
+      '',
+      "  'bug-hunter-check':",
+    ].join('\n'),
+  );
+  if (replacement === source) throw new Error('failed to force permission-guard async rejection');
+  writeFileSync(handlerPath, replacement, 'utf8');
+}
+
 function writeSourceStamp(root: string, stamp: string): void {
   writeFileSync(
     join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts'),
@@ -129,6 +155,82 @@ describe('hook-handler permission-guard build freshness', () => {
       expect(result.stderr).toBe('');
       expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
       expect(parsed.hookSpecificOutput?.permissionDecisionReason).toMatch(/permission guard|compiled|failed/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('allows normal in-repo compiled permission guard subprocess execution', () => {
+    const root = makeHookProject();
+    try {
+      writeSourceStamp(root, 'source-stamp');
+      writeDistGate(root, [
+        "export const PERMISSION_GUARD_BUILD_STAMP = 'source-stamp';",
+        "export async function evaluateHookInput() { return { decision: 'allow', reason: 'NORMAL-ALLOW' }; }",
+      ].join('\n'));
+
+      const result = runPermissionGuard(root);
+      const parsed = parseDecision(result.stdout);
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('allow');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed when compiled gate has no evaluator export', () => {
+    const root = makeHookProject();
+    try {
+      writeSourceStamp(root, 'source-stamp');
+      writeDistGate(root, "export const PERMISSION_GUARD_BUILD_STAMP = 'source-stamp';\n");
+
+      const result = runPermissionGuard(root);
+      const parsed = parseDecision(result.stdout);
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(parsed.hookSpecificOutput?.permissionDecisionReason).toMatch(/permission guard|evaluateHookInput|safety/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed with valid JSON when permission-guard rejects at the async handler boundary', () => {
+    const root = makeHookProject();
+    try {
+      forcePermissionGuardAsyncRejection(root);
+
+      const result = runPermissionGuard(root);
+      const parsed = parseDecision(result.stdout);
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(parsed.hookSpecificOutput?.permissionDecisionReason).toMatch(/permission guard|failed|safety/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('fails closed when relocated module initialization cannot load protected path policy', () => {
+    const root = makeRelocatedHookBinWithoutPolicy();
+    try {
+      const result = spawnSync(process.execPath, [join(root, '.hive-flow', 'enforcement', 'bin', 'hook-handler.cjs'), 'permission-guard'], {
+        cwd: root,
+        env: {
+          ...process.env,
+          HIVE_FLOW_PROJECT_ROOT: root,
+          CLAUDE_PROJECT_DIR: root,
+        },
+        input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'echo ok' }, cwd: root }),
+        encoding: 'utf8',
+      });
+
+      const parsed = parseDecision(result.stdout.trim());
+      expect(result.status).toBe(0);
+      expect(result.stderr.trim()).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(parsed.hookSpecificOutput?.permissionDecisionReason).toMatch(/permission guard|policy|safety/i);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

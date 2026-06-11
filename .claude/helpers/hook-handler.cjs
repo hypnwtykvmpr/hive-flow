@@ -196,7 +196,7 @@ function providerSummaryLine() {
 // Returns null if the module is not compiled or cannot be loaded (fail-open).
 function loadEnforcerModule() {
   try {
-    const enforcerPath = path.join(__dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
+    const enforcerPath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
     if (!fs.existsSync(enforcerPath)) return null;
     const { pathToFileURL } = require('url');
     // Note: dynamic import returns a promise, caller must await
@@ -395,7 +395,8 @@ const handlers = {
   'session-restore': () => {
     // Reset context tracker for new session
     try {
-      const ctxFile = path.join(helpersDir, '..', '.context-tracker.json');
+      const ctxFile = path.join(PROJECT_DIR, '.claude', '.context-tracker.json');
+      fs.mkdirSync(path.dirname(ctxFile), { recursive: true });
       fs.writeFileSync(ctxFile, JSON.stringify({ calls: 0, startedAt: Date.now() }));
     } catch { /* ignore */ }
 
@@ -1404,11 +1405,12 @@ const handlers = {
 
     // Context tracking: increment tool call counter (fire-and-forget, never blocks)
     try {
-      const ctxFile = path.join(helpersDir, '..', '.context-tracker.json');
+      const ctxFile = path.join(PROJECT_DIR, '.claude', '.context-tracker.json');
       let ctx = { calls: 0, startedAt: Date.now() };
       try { ctx = JSON.parse(fs.readFileSync(ctxFile, 'utf-8')); } catch { /* new session */ }
       ctx.calls = (ctx.calls || 0) + 1;
       ctx.lastCallAt = Date.now();
+      fs.mkdirSync(path.dirname(ctxFile), { recursive: true });
       fs.writeFileSync(ctxFile, JSON.stringify(ctx));
     } catch { /* never fail on tracking */ }
 
