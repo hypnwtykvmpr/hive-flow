@@ -913,11 +913,9 @@ function renderSwarm(
 
   const executing = swarm.activeAgents > 0;
   // Tri-state indicator per locked visual design.
-  const indicator = executing
-    ? `${p.active}◉${p.reset}`
-    : total > 0
-      ? `${p.memory}○${p.reset}`
-      : `${p.dim}○${p.reset}`;
+  const indicator = total > 0
+    ? `${executing ? p.active : p.memory}◉${p.reset}`
+    : `${p.dim}○${p.reset}`;
 
   const numberColor = executing ? p.active : total > 0 ? p.memory : p.dim;
   const slot = `[${numberColor}${String(total).padStart(2, ' ')}${p.reset}${p.gray}/${p.reset}${p.number}${swarm.maxAgents}${p.reset}]`;
@@ -930,8 +928,7 @@ function renderSwarm(
   const hivePart = hiveTag !== undefined ? `  ${p.separator}·${p.reset}  ${hiveTag}` : '';
   const detailMode = snapshot.rendererHints?.activeAgentDetail ?? 'off';
   const useRoleIcons = snapshot.rendererHints?.useRoleIcons === true;
-  const detailPart = renderActiveAgentDetailMode(detailMode, useRoleIcons, p);
-  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}${hivePart}  ${p.separator}·${p.reset}  ${detailPart}`;
+  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}${hivePart}`;
 
   // Active agents row collapses into the same section when role-icons toggle
   // is on (visual design 3.5). Default is `off` per config.
@@ -940,15 +937,6 @@ function renderSwarm(
     return `${swarmCore}  ${p.separator}·${p.reset}  ${active}`;
   }
   return swarmCore;
-}
-
-function renderActiveAgentDetailMode(
-  mode: 'off' | 'auto' | 'on',
-  useRoleIcons: boolean,
-  p: PaletteCodes,
-): string {
-  const iconPart = useRoleIcons ? '+roles' : '';
-  return `${p.gray}agents ${p.reset}${p.number}${mode}${iconPart}${p.reset}`;
 }
 
 function maybeRenderHiveSessionTag(

@@ -358,7 +358,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
       '▊ fixture-project  │  main +2 ~3 ↑3 ↓1  │  Opus 4.8 1M  │  📖 45% ctx · 82000 in/14000 out',
       RULE,
       '🤖 Claude Opus 7 · Sonnet 4  │  Codex 3',
-      '🪪 Swarm ◉ [ 7/50]  ♛2  ·  agents off',
+      '🪪 Swarm ◉ [ 7/50]  ♛2',
       '📊 Memory  Embeddings 290  │  Memories 41.1k  │  💾 333KB  │  🧪 Tests 142  │  🔌 MCP 5/7',
       '📌 attention  ! permission required',
       RULE,
@@ -382,7 +382,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
       '📊 Memory  Embeddings 290  │  Memories 41.1k  │  💾 333KB  │  🧪 Tests 142  │  🔌 MCP 5/7',
     );
     expect(plain).toContain('🤖 Claude Opus 7 · Sonnet 4  │  Codex 3');
-    expect(plain).toContain('🪪 Swarm ◉ [ 7/50]  ♛2  ·  agents off');
+    expect(plain).toContain('🪪 Swarm ◉ [ 7/50]  ♛2');
     expect(plain).toContain('📌 attention  ! permission required');
     expect(plain).toContain('► ⛔ ENFORCEMENT OFF · daemon on · data fresh 0s');
   });

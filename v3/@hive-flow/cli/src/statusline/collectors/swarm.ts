@@ -97,6 +97,8 @@ export interface CollectSwarmOptions {
   /** Absolute path to the project root. The collector reads
    *  `<projectRoot>/.hive-flow/agents/store.json` and the advocate-state file. */
   readonly projectRoot: string;
+  /** Session whose owned agents should be counted. Unowned/other-session agents are excluded. */
+  readonly sessionId?: string;
   /** Optional override for the swarm cap (testing / config injection). */
   readonly cap?: number;
 }
@@ -130,6 +132,7 @@ interface RawAgentRecord {
   provider?: unknown;
   model?: unknown;
   resolvedModel?: unknown;
+  ownerSessionId?: unknown;
 }
 
 interface RawStoreShape {
@@ -358,6 +361,7 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
   const agents: NormalizedAgentRow[] = [];
   let index = 0;
   for (const rec of records) {
+    if (opts.sessionId !== undefined && rec.ownerSessionId !== opts.sessionId) continue;
     const built = buildRow(rec, `agent-${index}`);
     index++;
     if (built === undefined) continue;

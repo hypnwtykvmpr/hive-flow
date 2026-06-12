@@ -65,6 +65,8 @@ import {
 export interface CollectInlineSnapshotOptions {
   /** Absolute path to the project root (the `.hive-flow/` parent). */
   readonly projectRoot: string;
+  /** Session whose owned agents should be counted. Unowned/other-session agents are excluded. */
+  readonly sessionId?: string;
   /**
    * Optional worktree root override. When provided, `git` probes are spawned
    * with `cwd: worktreeRoot` so a linked worktree's branch / status is read
@@ -176,7 +178,7 @@ export async function collectInlineSnapshot(
   let swarm: SwarmSummary | undefined;
   try {
     if (remainingBudget() > 0) {
-      swarm = await probeSwarm(projectRoot);
+      swarm = await probeSwarm(projectRoot, opts.sessionId);
     }
   } catch {
     swarm = undefined;
@@ -422,6 +424,7 @@ interface RawAgentRecord {
   provider?: unknown;
   model?: unknown;
   resolvedModel?: unknown;
+  ownerSessionId?: unknown;
 }
 
 /**
@@ -432,7 +435,7 @@ interface RawAgentRecord {
  * Returns `undefined` when the store is missing / symlinked / oversize /
  * corrupt — the renderer omits the swarm row in those cases.
  */
-async function probeSwarm(projectRoot: string): Promise<SwarmSummary | undefined> {
+async function probeSwarm(projectRoot: string, sessionId?: string): Promise<SwarmSummary | undefined> {
   const storePath = join(projectRoot, '.hive-flow', 'agents', 'store.json');
   const [raw, activeHives] = await Promise.all([
     readJsonFile<RawStoreShape>(storePath, MAX_INLINE_JSON_BYTES).catch(
@@ -470,6 +473,7 @@ async function probeSwarm(projectRoot: string): Promise<SwarmSummary | undefined
   const rows: NormalizedAgentRow[] = [];
 
   for (const rec of records) {
+    if (sessionId !== undefined && rec.ownerSessionId !== sessionId) continue;
     const rawStatus = typeof rec.status === 'string' ? rec.status : undefined;
     const status = normalizeAgentStatus(rawStatus);
     if (status === undefined) continue;

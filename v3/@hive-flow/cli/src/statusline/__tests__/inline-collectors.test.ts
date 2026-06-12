@@ -190,6 +190,44 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(snap.daemon?.running).toBe(true);
   });
 
+  it('strictly scopes inline swarm counts to the current session when sessionId is present', async () => {
+    writeStoreDict(fix.storePath, {
+      mineBusy: {
+        agentId: 'mine-busy',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+      },
+      otherBusy: {
+        agentId: 'other-busy',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-b',
+      },
+      unownedIdle: {
+        agentId: 'unowned-idle',
+        agentType: 'tester',
+        status: 'idle',
+      },
+    });
+
+    const scoped = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      sessionId: 'session-a',
+      deadlineMs: 1000,
+    });
+    expect(scoped.swarm?.activeAgents).toBe(1);
+    expect(scoped.swarm?.idleAgents).toBe(0);
+    expect(scoped.swarm?.agents?.map((agent) => agent.id)).toEqual(['mine-busy']);
+
+    const unscoped = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 1000,
+    });
+    expect(unscoped.swarm?.activeAgents).toBe(2);
+    expect(unscoped.swarm?.idleAgents).toBe(1);
+  });
+
   // -------------------------------------------------------------------------
   // 3. Budget exhaustion — `deadlineMs: 1` returns essentially immediately,
   // with no successful spawns. Other probes (which don't spawn) may still

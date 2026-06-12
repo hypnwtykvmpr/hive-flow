@@ -58,6 +58,7 @@ export interface AgentRecord {
   provider?: AgentProvider;  // LLM provider (anthropic, gemini-cli, codex-cli, cursor-cli)
   resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.5-flash, gpt-5.5)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
+  ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
 }
 
 export interface AgentStore {
@@ -754,6 +755,7 @@ export const agentTools: MCPTool[] = [
         modelRoutedBy: normalizedInputModel !== undefined && normalizedInputModel !== ''
           ? 'explicit'
           : routingResult.routedBy,
+        ownerSessionId: process.env.CLAUDE_SESSION_ID || process.env.AGENTIC_FLOW_SESSION_ID || undefined,
       };
 
       // Transition spawning → idle (setup complete)
