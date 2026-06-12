@@ -19,6 +19,11 @@ export interface AdapterCtx {
   /** Optional override for Claude Code user settings. Used by global init tests
    *  and by operators who point the adapter at a non-default settings file. */
   userSettingsPath?: string;
+  /** Absolute path to the shell startup file (.zshrc/.bashrc/.profile) the
+   *  shell-prompt adapter manages. Computed by setup.ts via the native-helper
+   *  `profilePathFor` resolver; required by the shell-prompt adapter, ignored
+   *  by all other adapters. Injected directly by tests. */
+  shellProfilePath?: string;
   dryRun: boolean;
   forceAdopt: boolean;
   createConfig: boolean;

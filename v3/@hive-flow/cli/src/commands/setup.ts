@@ -36,6 +36,8 @@ import { ADAPTERS, type AdapterId, claudeCodeStatuslineAdapter } from '../integr
 import { previousStatusLineCommandForLauncher } from '../integrations/adapters/claude-code-statusline.js';
 import { loadAdapter, isKnownTarget } from '../integrations/adapter-registry.js';
 import { diagnoseConnectors } from '../integrations/diagnose.js';
+import { shellPromptAdapter } from '../integrations/adapters/shell-prompt.js';
+import { profilePathFor } from '../install/native-helper-installer.js';
 import {
   probeCredentialHolderStatus,
   type CredentialHolderProbeStatus,
@@ -705,6 +707,7 @@ async function runReadOnly(opts: any) {
       projectRoot, homeDir, scope: opts.scope, launcherPath, statuslineLauncherPath, dryRun: true,
       createConfig: opts.createConfig, forceAdopt: opts.forceAdopt,
       statePath: statePathFor(opts.scope, homeDir, projectRoot),
+      shellProfilePath: process.platform === 'win32' ? undefined : profilePathFor(homeDir, process.env),
     };
     if (features.has('mcp')) {
       results.push({ agent: id as AdapterId, feature: 'mcp' as const, ...(await planAdapter(id, ctx)) });
@@ -714,6 +717,13 @@ async function runReadOnly(opts: any) {
         agent: id as AdapterId,
         feature: 'statusline' as const,
         ...(await claudeCodeStatuslineAdapter.plan(ctx)),
+      });
+    }
+    if (id === 'claude-code' && features.has('statusline') && ctx.shellProfilePath) {
+      results.push({
+        agent: id as AdapterId,
+        feature: 'shell-prompt' as const,
+        ...(await shellPromptAdapter.plan(ctx)),
       });
     }
     if (features.has('connector') && isKnownTarget(id)) {
@@ -739,6 +749,7 @@ async function runVerify(opts: any) {
     const ctx = {
       projectRoot, homeDir, scope: opts.scope, launcherPath, statuslineLauncherPath,
       dryRun: true, createConfig: opts.createConfig, forceAdopt: opts.forceAdopt, statePath,
+      shellProfilePath: process.platform === 'win32' ? undefined : profilePathFor(homeDir, process.env),
     };
     if (features.has('mcp')) {
       results.push({ agent: id as AdapterId, feature: 'mcp' as const, ...(await verifyAdapter(id, ctx)) });
@@ -748,6 +759,13 @@ async function runVerify(opts: any) {
         agent: id as AdapterId,
         feature: 'statusline' as const,
         ...(await claudeCodeStatuslineAdapter.verify(ctx)),
+      });
+    }
+    if (id === 'claude-code' && features.has('statusline') && ctx.shellProfilePath) {
+      results.push({
+        agent: id as AdapterId,
+        feature: 'shell-prompt' as const,
+        ...(await shellPromptAdapter.verify(ctx)),
       });
     }
     if (features.has('connector') && isKnownTarget(id)) {
@@ -796,6 +814,7 @@ async function runMutating(opts: any) {
       const ctx = {
         projectRoot, homeDir, scope: opts.scope, launcherPath, statuslineLauncherPath,
         dryRun: opts.dryRun, createConfig: opts.createConfig, forceAdopt: opts.forceAdopt, statePath,
+        shellProfilePath: process.platform === 'win32' ? undefined : profilePathFor(homeDir, process.env),
       };
       if (features.has('mcp')) {
         const r = opts.action === 'uninstall' ? await uninstallAdapter(id, ctx) : await applyAdapter(id, ctx);
@@ -806,6 +825,12 @@ async function runMutating(opts: any) {
           ? await claudeCodeStatuslineAdapter.uninstall(ctx)
           : await claudeCodeStatuslineAdapter.apply(ctx);
         results.push({ agent: id as AdapterId, feature: 'statusline' as const, ...r });
+      }
+      if (id === 'claude-code' && features.has('statusline') && ctx.shellProfilePath) {
+        const r = opts.action === 'uninstall'
+          ? await shellPromptAdapter.uninstall(ctx)
+          : await shellPromptAdapter.apply(ctx);
+        results.push({ agent: id as AdapterId, feature: 'shell-prompt' as const, ...r });
       }
       if (features.has('connector') && isKnownTarget(id)) {
         await importConnectorAdapters();

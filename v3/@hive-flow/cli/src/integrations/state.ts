@@ -7,7 +7,7 @@ import { stableStringify, atomicWrite } from './atomic-merge.js';
 
 export interface ManagedRecord {
   agent: string;
-  kind: 'mcp' | 'hooks' | 'statusline' | 'plugin' | 'extension';
+  kind: 'mcp' | 'hooks' | 'statusline' | 'plugin' | 'extension' | 'shell-prompt';
   scope: 'project' | 'user';
   targetPath: string;
   jsonPath: string;       // e.g., "mcpServers.hive-flow"

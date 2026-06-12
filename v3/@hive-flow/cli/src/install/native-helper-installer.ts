@@ -104,7 +104,7 @@ export function copyHelperSources(sourceDir: string, targetDir: string): void {
   copyRecursive(sourceDir, targetDir);
 }
 
-function profilePathFor(homeDir: string, env: NodeJS.ProcessEnv): string {
+export function profilePathFor(homeDir: string, env: NodeJS.ProcessEnv): string {
   const shell = String(env.SHELL ?? '');
   if (shell.endsWith('/zsh') || shell.endsWith('\\zsh')) return join(homeDir, '.zshrc');
   if (shell.endsWith('/bash') || shell.endsWith('\\bash')) return join(homeDir, '.bashrc');
