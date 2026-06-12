@@ -318,3 +318,7 @@ v4-plans/*
 /v3/extract_*
 /v3/**/read_ts.js
 /v3/**/_audit_dump.txt
+
+# .NET build output for the native Windows credential helpers
+/v3/**/credential-store/helpers/**/bin/
+/v3/**/credential-store/helpers/**/obj/
