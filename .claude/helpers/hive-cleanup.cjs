@@ -33,6 +33,8 @@ const MIN_WORKERS_PER_HIVE = 5; // queen is separate; keep at least 5 workers al
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
 const TASKS_DIR = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
+const AGENTS_DIR = path.join(PROJECT_DIR, '.hive-flow', 'agents');
+const AGENT_STORE_PATH = path.join(AGENTS_DIR, 'store.json');
 const LOCK_MAX_WAIT = parseInt(process.env.HIVE_FLOW_CLEANUP_LOCK_MAX_WAIT_MS, 10) || 1500;
 const LOCK_STALE_THRESHOLD = 30000; // 30s
 const CLEANUP_MAX_RUNTIME_MS = parseInt(process.env.HIVE_FLOW_CLEANUP_MAX_RUNTIME_MS, 10) || 4000;
@@ -237,6 +239,20 @@ async function reapWorkerProcess(agentId) {
   };
 }
 
+function isPositivePid(pid) {
+  return Number.isInteger(pid) && pid > 1;
+}
+
+function isPidDefinitelyDead(pid) {
+  if (!isPositivePid(pid)) return false;
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return err && err.code === 'ESRCH';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Core cleanup logic
 // ---------------------------------------------------------------------------
@@ -377,6 +393,115 @@ async function cleanupIdleAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS)
         hiveId: hive.hiveId,
         error: err && err.message ? err.message : String(err),
       });
+    }
+  }
+
+  return summary;
+}
+
+// ---------------------------------------------------------------------------
+// Stale busy cleanup — only demote busy agents whose tracked child PID is gone
+// ---------------------------------------------------------------------------
+
+async function cleanupStaleBusyAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
+  const summary = {
+    staleBusyFound: 0,
+    staleBusyReaped: 0,
+    hiveWorkersReaped: 0,
+    staleBusyAgents: [],
+    errors: [],
+  };
+
+  if (!fs.existsSync(AGENT_STORE_PATH)) return summary;
+  fs.mkdirSync(AGENTS_DIR, { recursive: true });
+  const lockPath = path.join(AGENTS_DIR, '.store.lock');
+  if (!acquireLockSync(lockPath)) {
+    summary.errors.push({ error: 'Could not acquire store lock for stale busy cleanup' });
+    return summary;
+  }
+
+  const staleByAgentId = new Map();
+  const nowIso = new Date().toISOString();
+
+  try {
+    let store;
+    try {
+      store = JSON.parse(fs.readFileSync(AGENT_STORE_PATH, 'utf-8'));
+    } catch (err) {
+      summary.errors.push({ error: err?.message || String(err) });
+      return summary;
+    }
+
+    for (const [id, agent] of Object.entries(store.agents || {})) {
+      if (deadlineExceeded(deadline)) {
+        summary.errors.push({ error: 'Cleanup runtime budget exceeded while scanning stale busy agents' });
+        break;
+      }
+      if (!agent || agent.status !== 'busy') continue;
+      const pid = agent.currentTaskPid;
+      if (!isPositivePid(pid)) continue;
+      if (!isPidDefinitelyDead(pid)) continue;
+
+      summary.staleBusyFound++;
+      agent.status = 'idle';
+      agent.idleSince = nowIso;
+      delete agent.currentTaskPid;
+      staleByAgentId.set(id, { agentId: id, pid, status: 'idle' });
+    }
+
+    if (staleByAgentId.size > 0) {
+      const tmpPath = AGENT_STORE_PATH + '.tmp.' + process.pid;
+      fs.writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+      fs.renameSync(tmpPath, AGENT_STORE_PATH);
+      summary.staleBusyReaped = staleByAgentId.size;
+      summary.staleBusyAgents = [...staleByAgentId.values()];
+    }
+  } finally {
+    releaseLock(lockPath);
+  }
+
+  if (staleByAgentId.size === 0) return summary;
+
+  const activeHives = listActiveHives();
+  for (const hive of activeHives) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: 'Cleanup runtime budget exceeded while updating stale busy hive workers' });
+      break;
+    }
+    try {
+      withHiveLockSync(hive.hiveId, () => {
+        const freshHive = loadHive(hive.hiveId);
+        if (!freshHive || freshHive.status !== 'active') return;
+        let changed = false;
+        for (const worker of freshHive.workers || []) {
+          if (!worker || worker.status !== 'busy') continue;
+          const stale = staleByAgentId.get(worker.agentId);
+          if (!stale) continue;
+          worker.status = 'idle';
+          worker.idleSince = nowIso;
+          changed = true;
+          summary.hiveWorkersReaped++;
+          stale.hiveId = freshHive.hiveId;
+          stale.workerId = worker.workerId;
+        }
+        if (!changed) return;
+        if (!freshHive.audit) freshHive.audit = [];
+        for (const stale of staleByAgentId.values()) {
+          if (stale.hiveId !== freshHive.hiveId) continue;
+          freshHive.audit.push({
+            timestamp: nowIso,
+            event: 'worker-idle',
+            hiveId: freshHive.hiveId,
+            detail: 'Stale busy cleanup: marked worker idle after child PID disappeared',
+            agentId: stale.agentId,
+            workerId: stale.workerId,
+            pid: stale.pid,
+          });
+        }
+        saveHive(freshHive.hiveId, freshHive);
+      });
+    } catch (err) {
+      summary.errors.push({ hiveId: hive.hiveId, error: err?.message || String(err) });
     }
   }
 
@@ -693,6 +818,7 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
   try {
     const deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS;
     const hiveResult = await cleanupIdleAgents(deadline);
+    const staleBusyResult = await cleanupStaleBusyAgents(deadline);
     const orphanResult = await cleanupOrphanedAgents(deadline);
     const autoFailResult = await autoFailStuckActiveHives(deadline);
     const hiveDirResult = cleanupStaleHiveDirs(deadline);
@@ -702,6 +828,8 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
 
     const combined = {
       ...hiveResult,
+      staleBusyReaped: staleBusyResult.staleBusyReaped,
+      hiveWorkersReaped: staleBusyResult.hiveWorkersReaped,
       orphansFound: orphanResult.orphansFound,
       orphansTerminated: orphanResult.orphansTerminated,
       hivesAutoFailed: autoFailResult.autoFailed,
@@ -714,6 +842,9 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
     if (orphanResult.terminated.length > 0) {
       combined.terminated = (combined.terminated || []).concat(orphanResult.terminated);
     }
+    if (staleBusyResult.staleBusyAgents.length > 0) {
+      combined.staleBusyAgents = staleBusyResult.staleBusyAgents;
+    }
     if (hiveDirResult.archived?.length > 0) {
       combined.archived = hiveDirResult.archived;
     }
@@ -725,6 +856,7 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
     }
     const allErrors = [
       ...(hiveResult.errors || []),
+      ...(staleBusyResult.errors || []),
       ...(orphanResult.errors || []),
       ...(autoFailResult.errors || []),
       ...(hiveDirResult.errors || []),
@@ -736,7 +868,8 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
 
     const totalWork = (combined.workersTerminated || 0) + (combined.orphansTerminated || 0)
       + (combined.hivesAutoFailed || 0) + (combined.hivesArchived || 0) + (combined.agentsPruned || 0)
-      + (combined.tasksCleaned || 0) + (combined.completedResultsCleaned || 0) + (combined.legacyWatchersPruned || 0);
+      + (combined.tasksCleaned || 0) + (combined.completedResultsCleaned || 0) + (combined.legacyWatchersPruned || 0)
+      + (combined.staleBusyReaped || 0) + (combined.hiveWorkersReaped || 0);
     if (totalWork === 0 && allErrors.length === 0) {
       process.stdout.write(JSON.stringify({}));
     } else {

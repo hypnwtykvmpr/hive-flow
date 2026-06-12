@@ -425,6 +425,7 @@ interface RawAgentRecord {
   model?: unknown;
   resolvedModel?: unknown;
   ownerSessionId?: unknown;
+  currentTaskPid?: unknown;
 }
 
 /**
@@ -435,6 +436,19 @@ interface RawAgentRecord {
  * Returns `undefined` when the store is missing / symlinked / oversize /
  * corrupt — the renderer omits the swarm row in those cases.
  */
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+function isPidDefinitelyDead(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return err instanceof Error && 'code' in err && err.code === 'ESRCH';
+  }
+}
+
 async function probeSwarm(projectRoot: string, sessionId?: string): Promise<SwarmSummary | undefined> {
   const storePath = join(projectRoot, '.hive-flow', 'agents', 'store.json');
   const [raw, activeHives] = await Promise.all([
@@ -477,6 +491,11 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
     const rawStatus = typeof rec.status === 'string' ? rec.status : undefined;
     const status = normalizeAgentStatus(rawStatus);
     if (status === undefined) continue;
+    if (status === 'busy'
+      && isPositiveInteger(rec.currentTaskPid)
+      && isPidDefinitelyDead(rec.currentTaskPid)) {
+      continue;
+    }
     const isQueen =
       (typeof rec.agentType === 'string' && rec.agentType.toLowerCase() === 'queen') ||
       (typeof rec.type === 'string' && rec.type.toLowerCase() === 'queen') ||

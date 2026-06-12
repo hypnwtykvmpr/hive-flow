@@ -54,6 +54,7 @@ function loadCleanupModule(projectDir) {
     `${source}
 module.exports = {
   cleanupIdleAgents,
+  cleanupStaleBusyAgents: typeof cleanupStaleBusyAgents === 'function' ? cleanupStaleBusyAgents : undefined,
   autoFailStuckActiveHives: typeof autoFailStuckActiveHives === 'function' ? autoFailStuckActiveHives : undefined,
   cleanupOrphanedTasks,
   cleanupLegacyWatchersDir: typeof cleanupLegacyWatchersDir === 'function' ? cleanupLegacyWatchersDir : undefined,
@@ -98,6 +99,19 @@ function writeHive(projectDir, hiveId, workers) {
 
 function readHive(projectDir, hiveId) {
   return JSON.parse(readFileSync(join(projectDir, '.hive-flow', 'hives', hiveId, 'hive.json'), 'utf8'));
+}
+
+function writeAgentStore(projectDir, agents) {
+  const agentsDir = join(projectDir, '.hive-flow', 'agents');
+  mkdirSync(agentsDir, { recursive: true });
+  writeFileSync(join(agentsDir, 'store.json'), JSON.stringify({
+    version: '3.0.0',
+    agents,
+  }, null, 2));
+}
+
+function readAgentStore(projectDir) {
+  return JSON.parse(readFileSync(join(projectDir, '.hive-flow', 'agents', 'store.json'), 'utf8'));
 }
 
 function writeTracking(projectDir, fileName, tracking) {
@@ -291,6 +305,82 @@ describe('hive-cleanup OS reaper', () => {
     const mod = loadCleanupModule(projectDir);
 
     assert.equal(mod.resolveWorkerPid('agent-1'), 23456);
+  });
+
+  it('reaps stale busy agent records only when currentTaskPid is definitely dead', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const deadPid = 626262;
+    const epermPid = 626263;
+    writeAgentStore(projectDir, {
+      dead: {
+        agentId: 'dead',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskPid: deadPid,
+        createdAt: new Date().toISOString(),
+      },
+      eperm: {
+        agentId: 'eperm',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskPid: epermPid,
+        createdAt: new Date().toISOString(),
+      },
+      legacy: {
+        agentId: 'legacy',
+        agentType: 'coder',
+        status: 'busy',
+        createdAt: new Date().toISOString(),
+      },
+    });
+    writeHive(projectDir, 'h1', [
+      makeIdleWorker(1, { agentId: 'dead', workerId: 'w-dead', status: 'busy' }),
+      makeIdleWorker(2, { agentId: 'eperm', workerId: 'w-eperm', status: 'busy' }),
+      makeIdleWorker(3, { agentId: 'legacy', workerId: 'w-legacy', status: 'busy' }),
+    ]);
+
+    const originalKill = process.kill;
+    process.kill = (pid, signal) => {
+      if (signal === 0 && pid === deadPid) {
+        const err = new Error('dead process');
+        err.code = 'ESRCH';
+        throw err;
+      }
+      if (signal === 0 && pid === epermPid) {
+        const err = new Error('permission denied');
+        err.code = 'EPERM';
+        throw err;
+      }
+      return true;
+    };
+
+    try {
+      const mod = loadCleanupModule(projectDir);
+      assert.equal(typeof mod.cleanupStaleBusyAgents, 'function');
+      const result = await mod.cleanupStaleBusyAgents(Date.now() + 2000);
+
+      assert.equal(result.staleBusyFound, 1);
+      assert.equal(result.staleBusyReaped, 1);
+      assert.equal(result.hiveWorkersReaped, 1);
+
+      const store = readAgentStore(projectDir);
+      assert.equal(store.agents.dead.status, 'idle');
+      assert.equal(store.agents.dead.currentTaskPid, undefined);
+      assert.match(store.agents.dead.idleSince, /^\d{4}-\d{2}-\d{2}T/);
+      assert.equal(store.agents.eperm.status, 'busy');
+      assert.equal(store.agents.eperm.currentTaskPid, epermPid);
+      assert.equal(store.agents.legacy.status, 'busy');
+      assert.equal(store.agents.legacy.currentTaskPid, undefined);
+
+      const hive = readHive(projectDir, 'h1');
+      assert.equal(hive.workers.find(w => w.agentId === 'dead').status, 'idle');
+      assert.equal(hive.workers.find(w => w.agentId === 'eperm').status, 'busy');
+      assert.equal(hive.workers.find(w => w.agentId === 'legacy').status, 'busy');
+      assert.equal(hive.audit.some(entry => entry.event === 'worker-idle' && entry.agentId === 'dead'), true);
+    } finally {
+      process.kill = originalKill;
+    }
   });
 
   it('auto-fails stuck active hives and reaps their worker tracking PIDs', async () => {

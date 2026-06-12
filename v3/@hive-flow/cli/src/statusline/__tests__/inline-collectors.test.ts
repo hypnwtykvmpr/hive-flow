@@ -228,6 +228,45 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(unscoped.swarm?.idleAgents).toBe(1);
   });
 
+  it('excludes only inline busy agents whose currentTaskPid is proven dead', async () => {
+    const deadPid = 525252;
+    const epermPid = 525253;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+      pid: number,
+      signal?: string | number,
+    ) => {
+      if (signal === 0 && pid === deadPid) {
+        const err = new Error('dead process') as NodeJS.ErrnoException;
+        err.code = 'ESRCH';
+        throw err;
+      }
+      if (signal === 0 && pid === epermPid) {
+        const err = new Error('permission denied') as NodeJS.ErrnoException;
+        err.code = 'EPERM';
+        throw err;
+      }
+      return true;
+    }) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      dead: { agentId: 'dead', agentType: 'coder', status: 'busy', currentTaskPid: deadPid },
+      live: { agentId: 'live', agentType: 'coder', status: 'busy', currentTaskPid: process.pid },
+      eperm: { agentId: 'eperm', agentType: 'coder', status: 'busy', currentTaskPid: epermPid },
+      legacy: { agentId: 'legacy', agentType: 'coder', status: 'busy' },
+    });
+
+    const snap = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 1000,
+    });
+
+    expect(killSpy).toHaveBeenCalledWith(deadPid, 0);
+    expect(killSpy).toHaveBeenCalledWith(process.pid, 0);
+    expect(killSpy).toHaveBeenCalledWith(epermPid, 0);
+    expect(snap.swarm?.activeAgents).toBe(3);
+    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual(['live', 'eperm', 'legacy']);
+  });
+
   // -------------------------------------------------------------------------
   // 3. Budget exhaustion — `deadlineMs: 1` returns essentially immediately,
   // with no successful spawns. Other probes (which don't spawn) may still

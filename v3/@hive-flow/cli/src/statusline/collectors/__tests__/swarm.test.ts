@@ -13,7 +13,7 @@
 // terminal-status drop, the freshness ladder, and the corrupt/missing
 // branches.
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   mkdirSync,
   mkdtempSync,
@@ -54,6 +54,7 @@ interface AgentLike {
   provider?: string;
   resolvedModel?: string;
   model?: string;
+  currentTaskPid?: number;
 }
 
 function writeStoreDict(storePath: string, agents: Record<string, AgentLike>): void {
@@ -86,6 +87,7 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
   });
   afterEach(() => {
     rmSync(fix.projectRoot, { recursive: true, force: true });
+    vi.restoreAllMocks();
   });
 
   // -------------------------------------------------------------------------
@@ -103,6 +105,43 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     expect(result.queensExecuting).toBe(0);
     expect(result.agents).toHaveLength(1);
     expect(result.agents[0]?.status).toBe('busy');
+  });
+
+  it('excludes only busy workers whose currentTaskPid is proven dead', async () => {
+    const deadPid = 424242;
+    const epermPid = 424243;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+      pid: number,
+      signal?: string | number,
+    ) => {
+      if (signal === 0 && pid === deadPid) {
+        const err = new Error('dead process') as NodeJS.ErrnoException;
+        err.code = 'ESRCH';
+        throw err;
+      }
+      if (signal === 0 && pid === epermPid) {
+        const err = new Error('permission denied') as NodeJS.ErrnoException;
+        err.code = 'EPERM';
+        throw err;
+      }
+      return true;
+    }) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      dead: { agentId: 'dead', agentType: 'coder', status: 'busy', currentTaskPid: deadPid },
+      live: { agentId: 'live', agentType: 'coder', status: 'busy', currentTaskPid: process.pid },
+      eperm: { agentId: 'eperm', agentType: 'coder', status: 'busy', currentTaskPid: epermPid },
+      legacy: { agentId: 'legacy', agentType: 'coder', status: 'busy' },
+    });
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(killSpy).toHaveBeenCalledWith(deadPid, 0);
+    expect(killSpy).toHaveBeenCalledWith(process.pid, 0);
+    expect(killSpy).toHaveBeenCalledWith(epermPid, 0);
+    expect(result.workersAlive).toBe(3);
+    expect(result.workersExecuting).toBe(3);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['live', 'eperm', 'legacy']);
   });
 
   // -------------------------------------------------------------------------

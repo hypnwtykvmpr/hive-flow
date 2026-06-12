@@ -59,6 +59,7 @@ export interface AgentRecord {
   resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.5-flash, gpt-5.5)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
   ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
+  currentTaskPid?: number;  // Provider bridge child pid for read-side liveness checks
 }
 
 export interface AgentStore {
@@ -110,11 +111,14 @@ export function transitionAgent(agent: AgentRecord, newStatus: AgentRecord['stat
   agent.status = newStatus;
   if (newStatus === 'idle') {
     agent.idleSince = new Date().toISOString();
+    delete agent.currentTaskPid;
   } else if (newStatus === 'busy') {
     delete agent.idleSince;
+    delete agent.currentTaskPid;
   } else if (newStatus === 'terminated') {
     agent.terminatedAt = new Date().toISOString();
     delete agent.idleSince;
+    delete agent.currentTaskPid;
   }
   return true;
 }
@@ -1214,8 +1218,23 @@ export const agentTools: MCPTool[] = [
 
       const taskId = `task-${randomUUID()}`;
 
-      // RC-2: Lock → fresh read → validate → set busy → save → unlock
-      const validationResult = await withBridgeLock(agentId, async () => {
+      // Resolve bridge script path relative to compiled output location
+      const thisDir = dirname(fileURLToPath(import.meta.url));
+      const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
+
+      if (!existsSync(bridgePath)) {
+        return { success: false, agentId, error: `Bridge script not found at ${bridgePath}` };
+      }
+
+      // Create task directory and files
+      const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+      mkdirSync(tasksDir, { recursive: true });
+
+      const taskFilePath = join(tasksDir, `${taskId}.task`);
+      const resultFilePath = join(tasksDir, `${taskId}.result.json`);
+
+      // RC-2 + liveness: lock → fresh read → validate → spawn → busy+pid save.
+      const dispatchResult = await withBridgeLock(agentId, async () => {
         const store = loadAgentStore();
         const agent = store.agents[agentId];
         if (!agent) {
@@ -1246,62 +1265,50 @@ export const agentTools: MCPTool[] = [
         const agentToken = typeof agent.config?._spawnToken === 'string'
           ? agent.config._spawnToken
           : undefined;
-        saveAgentStore(store);
-        return { error: null, agentToken, provider: agent.provider, model: agent.model };
-      });
 
-      if (validationResult.error) {
-        return { success: false, agentId, error: validationResult.error };
-      }
+        writeFileSync(taskFilePath, task, 'utf-8');
 
-      // Resolve bridge script path relative to compiled output location
-      const thisDir = dirname(fileURLToPath(import.meta.url));
-      const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
+        const agentDir = getAgentDir();
+        const agentRole = readVerifiedAgentRole(agentId);
+        const childEnv = buildProviderBridgeEnv(
+          agent.provider as AgentProvider,
+          agentId,
+          agentToken,
+          agentRole,
+        );
 
-      if (!existsSync(bridgePath)) {
-        await withBridgeLock(agentId, () => {
-          const s = loadAgentStore();
-          const a = s.agents[agentId];
-          if (a && a.status === 'busy') {
-            transitionAgent(a, 'idle');
-            saveAgentStore(s);
+        try {
+          const child = spawn('node', [
+            bridgePath,
+            '--agent-id', agentId,
+            ...(agentToken ? ['--agent-token', agentToken] : []),
+            '--task-file', taskFilePath,
+            '--result-file', resultFilePath,
+            '--store-dir', agentDir,
+            '--timeout', String(timeout),
+          ], {
+            detached: true,
+            stdio: 'ignore',
+            env: childEnv,
+          });
+
+          child.unref();
+          const childPid = child.pid;
+          if (typeof childPid === 'number' && Number.isInteger(childPid) && childPid > 0) {
+            agent.currentTaskPid = childPid;
           }
-        });
-        return { success: false, agentId, error: `Bridge script not found at ${bridgePath}` };
-      }
-
-      // Create task directory and files
-      const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
-      mkdirSync(tasksDir, { recursive: true });
-
-      const taskFilePath = join(tasksDir, `${taskId}.task`);
-      const resultFilePath = join(tasksDir, `${taskId}.result.json`);
-
-      writeFileSync(taskFilePath, task, 'utf-8');
-
-      const agentDir = getAgentDir();
-      const agentRole = readVerifiedAgentRole(agentId);
-      const childEnv = buildProviderBridgeEnv(
-        validationResult.provider as AgentProvider,
-        agentId,
-        validationResult.agentToken,
-        agentRole,
-      );
-      const child = spawn('node', [
-        bridgePath,
-        '--agent-id', agentId,
-        ...(validationResult.agentToken ? ['--agent-token', validationResult.agentToken] : []),
-        '--task-file', taskFilePath,
-        '--result-file', resultFilePath,
-        '--store-dir', agentDir,
-        '--timeout', String(timeout),
-      ], {
-        detached: true,
-        stdio: 'ignore',
-        env: childEnv,
+          saveAgentStore(store);
+          return { error: null, agentToken, provider: agent.provider, model: agent.model, pid: childPid };
+        } catch (err) {
+          transitionAgent(agent, 'idle');
+          saveAgentStore(store);
+          return { error: err instanceof Error ? err.message : String(err) };
+        }
       });
 
-      child.unref();
+      if (dispatchResult.error) {
+        return { success: false, agentId, error: dispatchResult.error };
+      }
 
       // Write tracking metadata. `provider` is persisted so agent_task_result
       // can emit a terminal call event correlated by the same taskId without
@@ -1311,20 +1318,20 @@ export const agentTools: MCPTool[] = [
         status: 'running',
         taskId,
         agentId,
-        provider: validationResult.provider,
+        provider: dispatchResult.provider,
         startedAt: new Date().toISOString(),
-        pid: child.pid,
+        pid: dispatchResult.pid,
       }, null, 2), 'utf-8');
 
       // Phase 11.1: best-effort, non-blocking call-start (eventId = taskId).
       void recordMcpCallStart({
         taskId,
         agentId,
-        provider: validationResult.provider,
-        model: validationResult.model,
+        provider: dispatchResult.provider,
+        model: dispatchResult.model,
       });
 
-      return { success: true, taskId, agentId, status: 'running', pid: child.pid };
+      return { success: true, taskId, agentId, status: 'running', pid: dispatchResult.pid };
     },
   },
   {

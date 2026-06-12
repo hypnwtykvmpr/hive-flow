@@ -133,6 +133,7 @@ interface RawAgentRecord {
   model?: unknown;
   resolvedModel?: unknown;
   ownerSessionId?: unknown;
+  currentTaskPid?: unknown;
 }
 
 interface RawStoreShape {
@@ -202,6 +203,19 @@ function isQueenRecord(rec: RawAgentRecord): boolean {
     if (typeof field === 'string' && field.toLowerCase() === 'queen') return true;
   }
   return false;
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+function isPidDefinitelyDead(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return err instanceof Error && 'code' in err && err.code === 'ESRCH';
+  }
 }
 
 /**
@@ -365,6 +379,11 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
     const built = buildRow(rec, `agent-${index}`);
     index++;
     if (built === undefined) continue;
+    if (built.row.status === 'busy'
+      && isPositiveInteger(rec.currentTaskPid)
+      && isPidDefinitelyDead(rec.currentTaskPid)) {
+      continue;
+    }
     agents.push(built.row);
     if (built.isQueen) {
       queensAlive++;

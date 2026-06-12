@@ -46,11 +46,27 @@ vi.mock('@hive-flow/providers', () => ({
     if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-8';
     return model;
   }),
+  resolveProviderModelOrOpus: vi.fn((provider: string, model: string | undefined) => {
+    if (provider === 'openrouter') {
+      if (model === 'xiaomi/mimo-v2.5-pro') return 'xiaomi/mimo-v2.5-pro';
+      if (model === 'mini' || model === 'sonnet') return 'moonshotai/kimi-k2.6';
+      return 'moonshotai/kimi-k2.6';
+    }
+    if (provider === 'codex-cli') return 'gpt-5.5';
+    if (provider === 'gemini-cli') return 'gemini-3.5-flash';
+    if (provider === 'cursor-cli') return 'auto';
+    if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
+    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-8';
+    return model;
+  }),
+}));
+vi.mock('../mcp-tools/provider-key-preflight.js', () => ({
+  providerKeyPreflight: vi.fn(async () => ({ ok: true })),
 }));
 
 import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { spawn } from 'node:child_process';
-import { agentTools } from '../mcp-tools/agent-tools.js';
+import { agentTools, transitionAgent } from '../mcp-tools/agent-tools.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -74,6 +90,7 @@ interface AgentRecord {
   provider?: string;
   model?: string;
   resolvedModel?: string;
+  currentTaskPid?: number;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -130,8 +147,7 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
     (path: string, data: string) => {
       if (typeof path === 'string' && path.includes('.tmp.')) {
         tmpWrites.set(path, data);
-      } else {
-        // Ignore non-JSON data (e.g. task file writes)
+      } else if (typeof path === 'string' && path.endsWith('store.json')) {
         try { currentStore = JSON.parse(data); } catch { /* not the store */ }
       }
     },
@@ -340,15 +356,22 @@ describe('agent_task handler (non-blocking)', () => {
     const agent = makeAgent({ status: 'idle' });
     const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    let statusDuringSpawn: string | undefined;
-    (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      statusDuringSpawn = getPersistedStore().agents[agent.agentId].status;
-      return { pid: 12345, unref: vi.fn() };
-    });
+    mockDetachedSpawn(12345);
 
     await handler({ agentId: agent.agentId, task: 'background work' });
 
-    expect(statusDuringSpawn).toBe('busy');
+    expect(getPersistedStore().agents[agent.agentId].status).toBe('busy');
+    expect(getPersistedStore().agents[agent.agentId].currentTaskPid).toBe(12345);
+  });
+
+  it('clears currentTaskPid when a busy agent transitions back to idle', () => {
+    const agent = makeAgent({ status: 'busy', currentTaskPid: 12345 });
+
+    const changed = transitionAgent(agent, 'idle');
+
+    expect(changed).toBe(true);
+    expect(agent.status).toBe('idle');
+    expect(agent.currentTaskPid).toBeUndefined();
   });
 
   // ------------------------------------------------------------------
