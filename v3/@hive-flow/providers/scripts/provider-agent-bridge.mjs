@@ -348,7 +348,7 @@ const MODEL_LIMITS = {
  * @param {string} [modelName] - Optional model name for substring matching
  * @returns {number} entry cap
  */
-function maxEntriesForTokenWindow(maxTokens, modelName) {
+export function maxEntriesForTokenWindow(maxTokens, modelName) {
   const normalizedModel = String(modelName || '').toLowerCase();
   // Anthropic Sonnet class: keep 50-entry cap regardless of token window
   if (/(^|\/)claude-.*sonnet/.test(normalizedModel) || normalizedModel === 'sonnet') {
@@ -452,7 +452,7 @@ function createStrictHolderProvider(providerName, config, agentId) {
 }
 
 // Token estimation: ~4 chars per token (conservative for code/mixed content)
-function estimateTokensFromText(text) {
+export function estimateTokensFromText(text) {
   if (typeof text !== 'string') return 0;
   // Rough estimate: characters / 4
   return Math.ceil(text.length / 4);
@@ -492,7 +492,7 @@ function estimateMessageTokens(msg) {
   return tokenCount + 10;
 }
 
-function getProviderLimits(providerName, modelName) {
+export function getProviderLimits(providerName, modelName) {
   const limits = { ...(PROVIDER_TOKEN_LIMITS[providerName] || {
     maxTokens: DEFAULT_MAX_PROMPT_TOKENS,
     maxEntries: DEFAULT_MAX_HISTORY_ENTRIES,
@@ -729,7 +729,7 @@ function summarizeAssistantMessage(msg) {
   };
 }
 
-function trimMessages(messages, limits) {
+export function trimMessages(messages, limits) {
   if (!limits) {
     throw new Error('trimMessages requires limits');
   }

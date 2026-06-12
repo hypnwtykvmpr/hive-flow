@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   patternIsRejected,
   fileGlobIsRejected,
@@ -6,9 +8,43 @@ import {
   buildGrepArgs,
 } from '../scripts/bridge-grep-validators.mjs';
 
-// Local copies of helper functions for testing. These mirror the helpers
-// implemented in provider-agent-bridge.mjs. When the bridge is refactored
-// to export them, swap these with imports.
+const here = dirname(fileURLToPath(import.meta.url));
+const bridgePath = resolve(here, '../scripts/provider-agent-bridge.mjs');
+const previousEnv = {
+  HIVE_FLOW_DEV_OVERRIDE_TOKEN: process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN,
+  HIVE_FLOW_DEV_OVERRIDE: process.env.HIVE_FLOW_DEV_OVERRIDE,
+};
+
+let maxEntriesForTokenWindow;
+
+function restoreEnv() {
+  for (const [key, value] of Object.entries(previousEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+}
+
+function restoreProcessListeners(event, preserved) {
+  const keep = new Set(preserved);
+  for (const listener of process.listeners(event)) {
+    if (!keep.has(listener)) process.off(event, listener);
+  }
+}
+
+beforeAll(async () => {
+  const sigtermListeners = process.listeners('SIGTERM');
+  const uncaughtExceptionListeners = process.listeners('uncaughtException');
+  try {
+    ({ maxEntriesForTokenWindow } = await import(`${pathToFileURL(bridgePath).href}?helpers=${Date.now()}`));
+  } finally {
+    restoreEnv();
+    restoreProcessListeners('SIGTERM', sigtermListeners);
+    restoreProcessListeners('uncaughtException', uncaughtExceptionListeners);
+  }
+});
+
+// Local copies of OpenRouter helper functions that are still private to the
+// bridge. Exported context helpers are imported above so drift is caught.
 
 function openRouterTierForAgentModel(model) {
   if (model === 'opus') return 'opus';
@@ -34,17 +70,6 @@ function makeOpenRouterTierExhaustedError(tier, attemptedModels) {
   error.code = 'OPENROUTER_TIER_EXHAUSTED';
   error.retryable = false;
   return error;
-}
-
-function maxEntriesForTokenWindow(maxTokens, modelName) {
-  const normalizedModel = String(modelName || '').toLowerCase();
-  // Anthropic Sonnet class: keep 50-entry cap regardless of token window
-  if (/(^|\/)claude-.*sonnet/.test(normalizedModel) || normalizedModel === 'sonnet') {
-    return 50;
-  }
-  if (maxTokens > 500000) return 100;
-  if (maxTokens >= 200000) return 50;
-  return 30;
 }
 
 const deterministicPicker = (pool) => pool[0];
