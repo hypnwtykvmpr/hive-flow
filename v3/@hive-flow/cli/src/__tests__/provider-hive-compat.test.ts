@@ -198,6 +198,32 @@ function setMockAgentTask(resultFactory: (input: Record<string, unknown>) => unk
   });
 }
 
+function setMockAgentTaskTerminalPoll(pollResult: Record<string, unknown>) {
+  const dispatchSpy = vi.fn();
+  const pollSpy = vi.fn();
+  _dispatchCallTracker = dispatchSpy;
+
+  (agentTools as AgentToolEntry[]).length = 0;
+
+  (agentTools as AgentToolEntry[]).push({
+    name: 'agent_task',
+    handler: async (input: Record<string, unknown>) => {
+      dispatchSpy(input);
+      return { success: true, taskId: 'mock-terminal-task-1', agentId: input.agentId, status: 'running', pid: 99999 };
+    },
+  });
+
+  (agentTools as AgentToolEntry[]).push({
+    name: 'agent_task_result',
+    handler: async (input: Record<string, unknown>) => {
+      pollSpy(input);
+      return { taskId: input.taskId, ...pollResult };
+    },
+  });
+
+  return { dispatchSpy, pollSpy };
+}
+
 function clearMockAgentTask() {
   (agentTools as AgentToolEntry[]).length = 0;
   _dispatchCallTracker = null;
@@ -817,6 +843,35 @@ describe('Provider-Hive Compatibility', () => {
       const results = result.results as ConsensusResultEntry[];
       expect(results[0].status).toBe('failed');
       expect(results[0].error).toContain('Provider timeout');
+    });
+
+    it('stops consensus polling when agent_task_result returns terminal:true without a status', async () => {
+      const { pollSpy } = setMockAgentTaskTerminalPoll({
+        success: false,
+        terminal: true,
+        error: 'Task not found: mock-terminal-task-1',
+      });
+
+      const workers = [
+        { agentId: 'terminal-w1', provider: 'openrouter', role: 'worker', joinedAt: '2025-01-01T00:00:00.000Z', status: 'idle' },
+      ];
+      setupFsMocks(makeExecuteState(workers));
+
+      const consensusTool = getTool('hive-mind_consensus');
+      const result = await consensusTool.handler({
+        action: 'execute', proposalId: 'exec-prop-1', task: 'Review code', timeout: 1,
+      }) as AnyResult;
+
+      const results = result.results as ConsensusResultEntry[];
+      expect(pollSpy).toHaveBeenCalledTimes(1);
+      expect(result.evaluated).toBe(1);
+      expect(result.abstentions).toBe(1);
+      expect(results[0]).toMatchObject({
+        agentId: 'terminal-w1',
+        provider: 'openrouter',
+        status: 'failed',
+        error: 'Task not found: mock-terminal-task-1',
+      });
     });
 
     it('checks majority after all votes', async () => {

@@ -1278,6 +1278,9 @@ export const agentTools: MCPTool[] = [
         );
 
         try {
+          // Persist busy before spawning so observers and the bridge never see a
+          // just-dispatched task as idle during the small spawn/save window.
+          saveAgentStore(store);
           const child = spawn('node', [
             bridgePath,
             '--agent-id', agentId,
@@ -1376,7 +1379,26 @@ export const agentTools: MCPTool[] = [
       const trackingPath = join(tasksDir, `${taskId}.json`);
 
       if (!existsSync(trackingPath)) {
-        return { success: false, error: `Task not found: ${taskId}` };
+        // Idempotent terminal: the tracking file is deleted the first time a
+        // completed result is consumed (see W3 below), but `.result.json` is
+        // intentionally kept alive. A later poll — notably the auto-poll
+        // monitor's next tick — must therefore return the SAME terminal
+        // 'completed' answer reconstructed from the result file, not a spurious
+        // "Task not found" that makes the monitor re-fire forever (the
+        // task-b13b61ab failure mode). Only a taskId with NEITHER a tracking
+        // file NOR a result file is genuinely unknown; mark that terminal so
+        // the monitor stops polling it.
+        const consumedResultPath = join(tasksDir, `${taskId}.result.json`);
+        if (existsSync(consumedResultPath)) {
+          try {
+            const result = JSON.parse(readFileSync(consumedResultPath, 'utf-8')) as Record<string, unknown>;
+            return { success: true, taskId, status: 'completed', alreadyConsumed: true, result };
+          } catch (err) {
+            const errorDetail = err instanceof Error ? err.message : String(err);
+            return { success: false, taskId, status: 'failed', terminal: true, error: `Failed to parse result file: ${errorDetail}` };
+          }
+        }
+        return { success: false, error: `Task not found: ${taskId}`, terminal: true };
       }
 
       let tracking: { status: string; taskId: string; agentId: string; startedAt: string; pid?: number; provider?: string };

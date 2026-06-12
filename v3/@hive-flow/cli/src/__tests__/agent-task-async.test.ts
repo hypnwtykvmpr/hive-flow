@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Module mocks (must be hoisted before imports) ──────────────────────────
 
-// Mock node:fs — controls existsSync, readFileSync, writeFileSync, mkdirSync, renameSync
+// Mock node:fs — controls existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
   renameSync: vi.fn(),
+  unlinkSync: vi.fn(),
 }));
 
 // Mock node:child_process — controls spawn (used for async bridge)
@@ -32,7 +33,7 @@ vi.mock('../hivector/enhanced-model-router.js', () => ({
   }),
 }));
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { agentTools } from '../mcp-tools/agent-tools.js';
 
@@ -322,19 +323,18 @@ describe('agent_task_async handler', () => {
     expect((spawn as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
   });
 
-  it('restores idleSince when dispatch fails before the bridge starts', async () => {
+  it('restores idleSince when bridge spawn fails after the busy transition', async () => {
     const agent = makeAgent({ status: 'idle' });
     const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
-      if (typeof p === 'string' && p.endsWith('store.json')) return true;
-      return false;
+    (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      throw new Error('spawn failed');
     });
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'missing bridge' }) as Record<string, unknown>;
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'spawn failure' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Bridge script not found/i);
+    expect(result.error).toMatch(/spawn failed/i);
     expect(getPersistedStore().agents[agent.agentId].status).toBe('idle');
     expect(getPersistedStore().agents[agent.agentId].idleSince).toBeDefined();
   });
@@ -381,6 +381,7 @@ describe('agent_task_result handler', () => {
     (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
     (renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
     (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (unlinkSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
   }
 
   // ------------------------------------------------------------------
@@ -432,6 +433,107 @@ describe('agent_task_result handler', () => {
     expect(result.taskId).toBe(TASK_ID);
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.result).toEqual(resultData);
+  });
+
+  it('returns completed/alreadyConsumed when tracking was deleted but result file remains', async () => {
+    const resultData = { success: true, response: 'cached terminal payload' };
+
+    baseExistsMock([`${TASK_ID}.result.json`]);
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(makeStore({}));
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.result.json`)) return JSON.stringify(resultData);
+      return JSON.stringify({});
+    });
+    baseWriteMock();
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      taskId: TASK_ID,
+      status: 'completed',
+      alreadyConsumed: true,
+      result: resultData,
+    });
+  });
+
+  it('marks a genuinely unknown taskId terminal so monitors stop polling', async () => {
+    baseExistsMock([]);
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(makeStore({}));
+      return JSON.stringify({});
+    });
+    baseWriteMock();
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(`Task not found: ${TASK_ID}`);
+    expect(result.terminal).toBe(true);
+  });
+
+  it('first completed poll deletes tracking and second poll replays the terminal result', async () => {
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
+    const resultData = { success: true, response: 'done once, readable forever' };
+    let currentStore = makeStore({ [AGENT_ID]: agent });
+    const presentSuffixes = new Set([`${TASK_ID}.task`, `${TASK_ID}.json`, `${TASK_ID}.result.json`]);
+
+    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return true;
+      return typeof p === 'string' && [...presentSuffixes].some((suffix) => p.endsWith(suffix));
+    });
+
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(currentStore);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.result.json`)) return JSON.stringify(resultData);
+      return JSON.stringify({});
+    });
+
+    const tmpWrites = new Map<string, string>();
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
+      if (typeof p === 'string' && p.includes('.tmp.')) {
+        tmpWrites.set(p, data);
+      }
+    });
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        currentStore = JSON.parse(data);
+        tmpWrites.delete(src);
+      }
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (unlinkSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      for (const suffix of [...presentSuffixes]) {
+        if (typeof p === 'string' && p.endsWith(suffix)) {
+          presentSuffixes.delete(suffix);
+        }
+      }
+    });
+
+    const first = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+    const second = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(first).toMatchObject({
+      success: true,
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      status: 'completed',
+      result: resultData,
+    });
+    expect(currentStore.agents[AGENT_ID].status).toBe('idle');
+    expect(presentSuffixes.has(`${TASK_ID}.json`)).toBe(false);
+    expect(presentSuffixes.has(`${TASK_ID}.task`)).toBe(false);
+    expect(presentSuffixes.has(`${TASK_ID}.result.json`)).toBe(true);
+    expect(second).toMatchObject({
+      success: true,
+      taskId: TASK_ID,
+      status: 'completed',
+      alreadyConsumed: true,
+      result: resultData,
+    });
   });
 
   // ------------------------------------------------------------------

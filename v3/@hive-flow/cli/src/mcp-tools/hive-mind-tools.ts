@@ -712,7 +712,7 @@ export const hiveMindTools: MCPTool[] = [
             if (pollResult.status === 'completed') {
               completedResults.set(entry.worker.agentId, (pollResult.result ?? pollResult) as Record<string, unknown>);
               pending.delete(taskId);
-            } else if (pollResult.status === 'failed') {
+            } else if (pollResult.status === 'failed' || pollResult.terminal === true) {
               completedResults.set(entry.worker.agentId, pollResult as Record<string, unknown>);
               pending.delete(taskId);
             }
