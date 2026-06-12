@@ -91,11 +91,35 @@ function writeHiveRecord(
   );
 }
 
-function invokeHook(root: string, hiveId: string, hiveHome: string): string {
+function writeHiveRecordWithWorkers(
+  root: string,
+  hiveId: string,
+  workers: Array<{ workerId: string; agentId: string; status: string }>,
+  workersAllocated = workers.length,
+): void {
+  const hiveDir = join(root, '.hive-flow', 'hives', hiveId);
+  mkdirSync(hiveDir, { recursive: true });
+  writeFileSync(
+    join(hiveDir, 'hive.json'),
+    JSON.stringify(
+      {
+        hiveId,
+        queenId: 'queen-1',
+        budget: { workersAllocated },
+        workers,
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
+}
+
+function invokeHookWithToolResponse(root: string, toolResponse: unknown, hiveHome: string): string {
   const payload = {
     hook_event_name: 'PostToolUse',
     tool_name: 'mcp__hive-flow__queen_mission_assign',
-    tool_response: JSON.stringify({ hiveId }),
+    tool_response: typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse),
   };
   return execFileSync(process.execPath, [join(root, '.claude', 'helpers', 'hive-enforcement.cjs')], {
     cwd: root,
@@ -106,14 +130,22 @@ function invokeHook(root: string, hiveId: string, hiveHome: string): string {
   });
 }
 
-function readAuditEvents(hiveHome: string): string[] {
+function invokeHook(root: string, hiveId: string, hiveHome: string): string {
+  return invokeHookWithToolResponse(root, { hiveId }, hiveHome);
+}
+
+function readAuditRecords(hiveHome: string): Array<Record<string, unknown>> {
   const auditPath = join(hiveHome, 'enforcement', 'hive-audit.jsonl');
   if (!existsSync(auditPath)) return [];
   return readFileSync(auditPath, 'utf8')
     .trim()
     .split('\n')
     .filter(Boolean)
-    .map((line) => JSON.parse(line).event);
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+function readAuditEvents(hiveHome: string): string[] {
+  return readAuditRecords(hiveHome).map((record) => record.event as string);
 }
 
 describe('hive enforcement watcher launch', () => {
@@ -161,6 +193,54 @@ describe('hive enforcement watcher launch', () => {
       expect(waitForFile(join(dataDir, 'watcher-spawned.json'), 250)).toBe(false);
       expect(readAuditEvents(hiveHome)).toEqual(['hive-enforcement-ok']);
       expect(existsSync(join(root, '.hive-flow', 'enforcement', 'hive-audit.jsonl'))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('extracts hiveId from the MCP object content wrapper shape', () => {
+    const root = makeTempProject();
+    try {
+      const hiveHome = join(root, 'global-home');
+      const hiveId = 'hive-wrapper';
+      installHookAndWatcher(root);
+      writeHiveRecord(root, hiveId, 5);
+
+      expect(invokeHookWithToolResponse(root, {
+        content: [
+          { type: 'text', text: JSON.stringify({ hiveId }) },
+        ],
+      }, hiveHome)).toBe('{}');
+
+      expect(readAuditEvents(hiveHome)).toEqual(['watcher-launched', 'hive-enforcement-ok']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('treats errored workers as non-live so a 4/5 hive enters the deficit refill path', () => {
+    const root = makeTempProject();
+    try {
+      const hiveHome = join(root, 'global-home');
+      const hiveId = 'hive-deficit';
+      installHookAndWatcher(root);
+      writeHiveRecordWithWorkers(root, hiveId, [
+        { workerId: 'worker-1', agentId: 'agent-1', status: 'idle' },
+        { workerId: 'worker-2', agentId: 'agent-2', status: 'idle' },
+        { workerId: 'worker-3', agentId: 'agent-3', status: 'idle' },
+        { workerId: 'worker-4', agentId: 'agent-4', status: 'idle' },
+        { workerId: 'worker-5', agentId: 'agent-5', status: 'error' },
+      ], 4);
+
+      expect(invokeHook(root, hiveId, hiveHome)).toBe('{}');
+
+      const records = readAuditRecords(hiveHome);
+      expect(records.map((record) => record.event)).toEqual(['watcher-launched', 'hive-enforcement-skipped']);
+      expect(records.at(-1)).toMatchObject({
+        event: 'hive-enforcement-skipped',
+        reason: 'agent-tools-not-available',
+        deficit: 1,
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -199,8 +199,24 @@ function releaseLock(lockPath) {
   try { fs.rmdirSync(lockPath); } catch { /* ignore */ }
 }
 
+const TERMINAL_WORKER_STATUSES = new Set([
+  'terminated',
+  'failed',
+  'complete',
+  'completed',
+  'cancelled',
+  'canceled',
+  'error',
+]);
+
+function isLiveWorker(worker) {
+  if (!worker || typeof worker !== 'object') return false;
+  const status = String(worker.status || '').trim().toLowerCase();
+  return !TERMINAL_WORKER_STATUSES.has(status);
+}
+
 function countLiveWorkers(workers) {
-  return (Array.isArray(workers) ? workers : []).filter(w => w.status !== 'terminated').length;
+  return (Array.isArray(workers) ? workers : []).filter(isLiveWorker).length;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,40 +326,48 @@ function extractHiveId(input) {
     const responseStr = typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse);
     if (!responseStr) return null;
 
-    // Parse the content-array wrapper
-    let contentArray;
+    // Parse the common MCP content wrapper shapes.
+    let parsedResponse;
     try {
-      contentArray = JSON.parse(responseStr);
+      parsedResponse = JSON.parse(responseStr);
     } catch {
-      // Maybe it's already the inner object
-      try {
-        const inner = JSON.parse(responseStr);
-        if (inner && inner.hiveId) return inner.hiveId;
-      } catch { /* fall through */ }
       return null;
     }
 
-    // Content-array: [{ type: "text", text: "<json>" }]
-    if (Array.isArray(contentArray)) {
-      for (const item of contentArray) {
-        if (item && item.type === 'text' && typeof item.text === 'string') {
-          try {
-            const parsed = JSON.parse(item.text);
-            if (parsed && parsed.hiveId) return parsed.hiveId;
-          } catch { /* try next item */ }
-        }
-      }
-    }
-
-    // Direct object with hiveId
-    if (contentArray && typeof contentArray === 'object' && contentArray.hiveId) {
-      return contentArray.hiveId;
-    }
-
-    return null;
+    return extractHiveIdFromParsedResponse(parsedResponse);
   } catch {
     return null;
   }
+}
+
+function extractHiveIdFromParsedResponse(value) {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      return extractHiveIdFromParsedResponse(JSON.parse(value));
+    } catch {
+      return null;
+    }
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = extractHiveIdFromParsedResponse(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value !== 'object') return null;
+  if (typeof value.hiveId === 'string' && value.hiveId) return value.hiveId;
+  if (Array.isArray(value.content)) {
+    for (const item of value.content) {
+      const found = extractHiveIdFromParsedResponse(item);
+      if (found) return found;
+    }
+  }
+  if (value.type === 'text' && typeof value.text === 'string') {
+    return extractHiveIdFromParsedResponse(value.text);
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -882,6 +906,7 @@ module.exports = {
   sanitizeHiveId,
   appendAuditLog,
   ensureHiveWatcherLaunched,
+  countLiveWorkers,
   TRIGGER_TOOLS,
   PROVIDERS,
   PROVIDER_MODELS,
