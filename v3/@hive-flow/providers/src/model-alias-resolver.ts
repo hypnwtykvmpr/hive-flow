@@ -240,6 +240,42 @@ export function resolveProviderModel(
 }
 
 /**
+ * Resolve a provider model, degrading to the OpenRouter opus class when the
+ * requested model does not resolve — so agent/hive spawns never hard-fail on a
+ * blocked or unknown OpenRouter slug.
+ *
+ * `resolveProviderModel` returns undefined for an OpenRouter direct model that
+ * is not in the operator's `allowedModels` allowlist. The opus tier pool
+ * (`tiers.opus`) is operator-controlled and is NOT gated by `allowedModels`
+ * (the pool itself is the source of truth for class aliases), so resolving the
+ * 'opus' alias always succeeds while the pool is non-empty. This makes OpenRouter
+ * spawns "always resolve" to an opus-class model instead of erroring. It only
+ * yields undefined if the opus pool itself is empty (e.g. every mapped model has
+ * been delisted) — the genuine "no model available" case.
+ *
+ * Non-OpenRouter providers keep their existing resolution result unchanged
+ * (which may be undefined — the caller decides how to handle it).
+ */
+export function resolveProviderModelOrOpus(
+  provider: string | undefined,
+  userModel: string | undefined,
+): string | undefined {
+  const resolved = resolveProviderModel(provider, userModel);
+  if (resolved !== undefined) return resolved;
+  if (provider === 'openrouter') {
+    const opusFallback = resolveProviderModel('openrouter', 'opus');
+    if (opusFallback !== undefined) {
+      console.warn(
+        `[model-resolver] OpenRouter model '${String(userModel)}' did not resolve; ` +
+          `defaulting to the opus class → '${opusFallback}'.`,
+      );
+      return opusFallback;
+    }
+  }
+  return resolved;
+}
+
+/**
  * Default context window sizes (in tokens) for known models.
  * Used for trimming, chunking, and budget calculations.
  */

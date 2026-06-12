@@ -59,7 +59,7 @@ export { bufferStreamResponse } from './streaming-buffer.js';
 export { escapeXml, parseToolCallPayload, parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
 
 // Export model alias resolver
-export { resolveProviderModel, PROVIDER_ALIAS_MAP, KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS, DEFAULT_CONTEXT_WINDOWS, getModelContextLength } from './model-alias-resolver.js';
+export { resolveProviderModel, resolveProviderModelOrOpus, PROVIDER_ALIAS_MAP, KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS, DEFAULT_CONTEXT_WINDOWS, getModelContextLength } from './model-alias-resolver.js';
 export type { ClaudeAlias, CLIProviderName } from './model-alias-resolver.js';
 
 // Export OpenRouter model config

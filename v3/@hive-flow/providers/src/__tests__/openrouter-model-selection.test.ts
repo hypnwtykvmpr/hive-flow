@@ -16,6 +16,7 @@ import {
 // Integration with the resolver — updated in Step 2
 import {
   resolveProviderModel,
+  resolveProviderModelOrOpus,
   PROVIDER_DEFAULTS,
 } from '../model-alias-resolver.js';
 
@@ -219,6 +220,40 @@ describe('OpenRouter config-driven model selection', () => {
       // Should NOT return 'opus' unchanged — should return a pool model
       expect(result).not.toBe('opus');
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('resolveProviderModelOrOpus opus-class fallback (always-resolve)', () => {
+    beforeEach(() => {
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      resetOpenRouterConfigCache();
+    });
+
+    it('degrades a blocked OpenRouter direct model to the opus class instead of undefined', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = resolveProviderModelOrOpus('openrouter', 'unknown/blocked-model');
+      expect(result).toBeDefined();
+      expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('defaulting to the opus class'));
+    });
+
+    it('passes through an allowed OpenRouter direct model unchanged (no degrade)', () => {
+      const result = resolveProviderModelOrOpus('openrouter', 'qwen/qwen3.7-max');
+      expect(result).toBe('qwen/qwen3.7-max');
+    });
+
+    it('opus alias still selects from the opus pool', () => {
+      const result = resolveProviderModelOrOpus('openrouter', 'opus');
+      expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
+    });
+
+    it('leaves non-OpenRouter CLI providers unchanged (codex-cli enforces gpt-5.5)', () => {
+      const result = resolveProviderModelOrOpus('codex-cli', 'minimax/minimax-m3');
+      expect(result).toBe('gpt-5.5');
+    });
+
+    it('does not inject opus for non-OpenRouter unresolved providers (openai → undefined)', () => {
+      expect(resolveProviderModelOrOpus('openai', undefined)).toBeUndefined();
     });
   });
 

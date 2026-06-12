@@ -713,16 +713,22 @@ export const agentTools: MCPTool[] = [
       let resolvedModel: string | undefined;
       if (provider !== 'anthropic') {
         try {
-          const { resolveProviderModel } = await import('@hive-flow/providers');
-          resolvedModel = resolveProviderModel(provider, modelForProviderResolution);
+          const { resolveProviderModelOrOpus } = await import('@hive-flow/providers');
+          // Never hard-fail on a blocked/unknown OpenRouter slug — degrade to the
+          // opus class (operator-controlled tier pool, not gated by allowedModels).
+          // Stays undefined only if the opus pool itself is empty (all mapped
+          // models delisted) — the genuine "no model available" case.
+          resolvedModel = resolveProviderModelOrOpus(provider, modelForProviderResolution);
         } catch {
           // Provider package not available — fall through without resolved model
         }
       }
 
-      // OpenRouter allowlist check: undefined resolvedModel means blocked
+      // OpenRouter: with opus-class fallback above, this only fires when the opus
+      // tier pool is empty (every mapped model delisted) — a real config/availability
+      // failure, not a blocked direct slug.
       if (provider === 'openrouter' && resolvedModel === undefined && normalizedInputModel) {
-        return { success: false, error: `Model '${normalizedInputModel}' not in OpenRouter allowedModels config.` };
+        return { success: false, error: `OpenRouter could not resolve a model for '${normalizedInputModel}' (opus tier pool empty — check .hive-flow/config.json openrouter.tiers.opus).` };
       }
 
       // SEC-011: Generate spawn-origin token for identity hardening.
