@@ -19,7 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { randomUUID } = require('crypto');
+const { randomUUID, createHash } = require('crypto');
 const { fork, spawn } = require('child_process');
 
 function loadProtectedPathPolicyModule() {
@@ -71,6 +71,8 @@ const GLOBAL_ENFORCEMENT_DIR = path.join(HIVE_HOME, 'enforcement');
 const GLOBAL_STATE_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'global', 'state.json');
 const GLOBAL_HMAC_KEY_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, '.hmac-key');
 const AUDIT_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'hive-audit.jsonl');
+const PROJECT_SCOPE_ID = `project-${createHash('sha256').update(PROJECT_DIR).digest('hex').slice(0, 16)}`;
+const PROJECT_STATE_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'projects', PROJECT_SCOPE_ID, 'state.json');
 
 const MIN_WORKERS = 5; // 5 workers + 1 queen = 6 total
 const LOCK_TIMEOUT_MS = 10000; // 10s
@@ -105,27 +107,37 @@ const WORKER_ROLES = ['coder', 'reviewer', 'tester', 'researcher'];
  * Returns 0 (NORMAL) only for fresh installs with no state file.
  */
 function readEnforcementLevel() {
+  let level = 0;
+  for (const stateFile of [
+    PROJECT_STATE_FILE,
+    GLOBAL_STATE_FILE,
+    path.join(ENFORCEMENT_DIR, 'state.json'),
+  ]) {
+    const candidate = readEnforcementLevelFromFile(stateFile);
+    if (candidate.invalid) return 3;
+    if (candidate.exists) level = Math.max(level, candidate.level);
+  }
+  return level;
+}
+
+function readEnforcementLevelFromFile(stateFile) {
   try {
-    const stateFile = firstExistingPath([
-      GLOBAL_STATE_FILE,
-      path.join(ENFORCEMENT_DIR, 'state.json'),
-    ]);
-    if (!fs.existsSync(stateFile)) return 0; // No state file = fresh install
+    if (!fs.existsSync(stateFile)) return { exists: false, invalid: false, level: 0 };
     const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
     // BUG-08: Reject unsigned state — missing hmac/signature → HALTED (fail-closed)
     if (raw?.state !== undefined && typeof raw.state?.level === 'number') {
-      if (!raw.hmac) return 3; // Unsigned state rejected
-      if (!verifyEnforcementHmac(raw.state, raw.hmac)) return 3;
-      return raw.state.level;
+      if (!raw.hmac) return { exists: true, invalid: true, level: 3 };
+      if (!verifyEnforcementHmac(raw.state, raw.hmac)) return { exists: true, invalid: true, level: 3 };
+      return { exists: true, invalid: false, level: raw.state.level };
     }
     if (raw?.payload !== undefined && typeof raw.payload?.level === 'number') {
-      if (!raw.signature) return 3; // Unsigned state rejected
-      if (!verifyEnforcementHmac(raw.payload, raw.signature)) return 3;
-      return raw.payload.level;
+      if (!raw.signature) return { exists: true, invalid: true, level: 3 };
+      if (!verifyEnforcementHmac(raw.payload, raw.signature)) return { exists: true, invalid: true, level: 3 };
+      return { exists: true, invalid: false, level: raw.payload.level };
     }
-    return 3; // Unrecognized format — fail-closed
+    return { exists: true, invalid: true, level: 3 };
   } catch {
-    return 3; // fail-closed
+    return { exists: true, invalid: true, level: 3 };
   }
 }
 
@@ -152,10 +164,6 @@ function verifyEnforcementHmac(stateObj, hmacHex) {
   } catch {
     return false;
   }
-}
-
-function firstExistingPath(paths) {
-  return paths.find(p => fs.existsSync(p)) || paths[0];
 }
 
 // ---------------------------------------------------------------------------

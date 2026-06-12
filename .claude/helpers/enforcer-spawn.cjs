@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
@@ -19,6 +20,8 @@ const HIVE_HOME = resolveHiveHome();
 const GLOBAL_ENFORCEMENT_DIR = path.join(HIVE_HOME, 'enforcement');
 const GLOBAL_STATE_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'global', 'state.json');
 const GLOBAL_HMAC_KEY_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, '.hmac-key');
+const PROJECT_SCOPE_ID = `project-${crypto.createHash('sha256').update(PROJECT_DIR).digest('hex').slice(0, 16)}`;
+const PROJECT_STATE_FILE = path.join(GLOBAL_ENFORCEMENT_DIR, 'projects', PROJECT_SCOPE_ID, 'state.json');
 
 function hasActiveHives() {
   if (!fs.existsSync(HIVES_DIR)) return false;
@@ -59,13 +62,22 @@ function hasActiveEnforcer() {
 }
 
 function readEnforcementLevel() {
-  const crypto = require('crypto');
+  let level = 0;
+  for (const stateFile of [
+    PROJECT_STATE_FILE,
+    GLOBAL_STATE_FILE,
+    path.join(ENFORCEMENT_DIR, 'state.json'),
+  ]) {
+    const candidate = readEnforcementLevelFromFile(stateFile);
+    if (candidate.invalid) return 3;
+    if (candidate.exists) level = Math.max(level, candidate.level);
+  }
+  return level;
+}
+
+function readEnforcementLevelFromFile(stateFile) {
   try {
-    const stateFile = firstExistingPath([
-      GLOBAL_STATE_FILE,
-      path.join(ENFORCEMENT_DIR, 'state.json'),
-    ]);
-    if (!fs.existsSync(stateFile)) return 0;
+    if (!fs.existsSync(stateFile)) return { exists: false, invalid: false, level: 0 };
     const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
 
     // SEC-005: HMAC verification before trusting enforcement level.
@@ -78,25 +90,22 @@ function readEnforcementLevel() {
     if (raw?.state !== undefined && typeof raw.hmac === 'string') {
       // enforcement.cjs envelope: { state, hmac }
       const actualBuf = Buffer.from(raw.hmac, 'hex');
-      if (!verifyWithAnyKey(crypto, hmacKeyFiles, raw.state, actualBuf)) return 3;
-      return typeof raw.state.level === 'number' ? raw.state.level : 0;
+      if (!verifyWithAnyKey(crypto, hmacKeyFiles, raw.state, actualBuf)) return { exists: true, invalid: true, level: 3 };
+      return { exists: true, invalid: false, level: typeof raw.state.level === 'number' ? raw.state.level : 0 };
     }
 
     if (raw?.payload !== undefined && typeof raw.signature === 'string') {
       // workflow-enforcer.ts envelope: { payload, signature }
       const actualBuf = Buffer.from(raw.signature, 'hex');
-      if (!verifyWithAnyKey(crypto, hmacKeyFiles, raw.payload, actualBuf)) return 3;
-      return typeof raw.payload.level === 'number' ? raw.payload.level : 0;
+      if (!verifyWithAnyKey(crypto, hmacKeyFiles, raw.payload, actualBuf)) return { exists: true, invalid: true, level: 3 };
+      return { exists: true, invalid: false, level: typeof raw.payload.level === 'number' ? raw.payload.level : 0 };
     }
 
     // Unsigned state — fail-closed (HALTED)
-    return 3;
-  } catch { /* ignore */ }
-  return 3; // Fail-closed on any error
-}
-
-function firstExistingPath(paths) {
-  return paths.find(p => fs.existsSync(p)) || paths[0];
+    return { exists: true, invalid: true, level: 3 };
+  } catch {
+    return { exists: true, invalid: true, level: 3 };
+  }
 }
 
 function verifyWithAnyKey(crypto, hmacKeyFiles, payload, actualBuf) {

@@ -4,7 +4,7 @@
   "files": [
     {
       "name": "enforcement.cjs",
-      "sha256": "b11f0503f47adbde6971edeffffa77544e50d54b9123675dbd789c40d0dd5bd3"
+      "sha256": "2286af112878617e506b6798f7c80e042d3882e7188d1a11b2b7cda6a8a80f51"
     },
     {
       "name": "role-enforcement.cjs",

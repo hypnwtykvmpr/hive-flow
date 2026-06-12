@@ -564,6 +564,15 @@ function getState(agentId) {
   return getScopedState('global', 'global').state;
 }
 
+// Project-effective status: the current project's own escalation or any genuine
+// global escalation, whichever is higher. Routine escalations are project-scoped
+// via escalateScoped(), so sibling project escalations never surface here.
+function getStatusState() {
+  const project = getScopedState('project', getProjectScopeId()).state;
+  const global = getScopedState('global', 'global').state;
+  return project.level >= global.level ? project : global;
+}
+
 function saveState(state, agentId) {
   if (agentId) return saveScopedState('agent', agentId, state);
   return saveScopedState('global', 'global', state);
@@ -3480,7 +3489,7 @@ function processResetCheck(input) {
 // ============================================================================
 
 function getEnforcementStatus() {
-  const state = getState();
+  const state = getStatusState();
   const levelNames = ['Normal', 'Warned', 'Restricted', 'Halted'];
   return {
     level: state.level,
@@ -3711,6 +3720,7 @@ module.exports = {
   getScopedState,
   saveState,
   saveScopedState,
+  getStatusState,
   appendViolation,
   escalate,
   escalateScoped,

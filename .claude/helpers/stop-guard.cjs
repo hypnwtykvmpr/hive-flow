@@ -96,8 +96,8 @@ function resolveHiveHome() {
   return path.join(os.homedir(), '.hive-flow');
 }
 
-function firstExistingPath(paths) {
-  return paths.find(p => fs.existsSync(p)) || paths[0];
+function getProjectScopeId(projectDir) {
+  return `project-${crypto.createHash('sha256').update(projectDir).digest('hex').slice(0, 16)}`;
 }
 
 function verifyEnvelopeWithAnyKey(envelope, hmacKeyPaths) {
@@ -122,19 +122,23 @@ function isPlanActive(projectDir) {
   try {
     const globalEnforcementDir = path.join(resolveHiveHome(), 'enforcement');
     const legacyEnforcementDir = path.join(projectDir, '.hive-flow', 'enforcement');
-    const statePath = firstExistingPath([
+    const statePaths = [
+      path.join(globalEnforcementDir, 'projects', getProjectScopeId(projectDir), 'state.json'),
       path.join(globalEnforcementDir, 'global', 'state.json'),
       path.join(legacyEnforcementDir, 'state.json'),
-    ]);
-    if (!fs.existsSync(statePath)) return false;
-    const raw = fs.readFileSync(statePath, 'utf8');
-    const envelope = JSON.parse(raw);
-    // Validate HMAC before trusting state
-    if (!verifyEnvelopeWithAnyKey(envelope, [
-      path.join(globalEnforcementDir, '.hmac-key'),
-      path.join(legacyEnforcementDir, '.hmac-key'),
-    ])) return false;
-    return envelope.state?.authorized === true;
+    ];
+    for (const statePath of statePaths) {
+      if (!fs.existsSync(statePath)) continue;
+      const raw = fs.readFileSync(statePath, 'utf8');
+      const envelope = JSON.parse(raw);
+      // Validate HMAC before trusting state
+      if (!verifyEnvelopeWithAnyKey(envelope, [
+        path.join(globalEnforcementDir, '.hmac-key'),
+        path.join(legacyEnforcementDir, '.hmac-key'),
+      ])) continue;
+      if (envelope.state?.authorized === true) return true;
+    }
+    return false;
   } catch {
     return false;
   }
