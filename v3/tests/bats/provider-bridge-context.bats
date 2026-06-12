@@ -111,3 +111,65 @@ NODE
   [ "$status" -eq 0 ]
   [[ "$output" == *'"ok":true'* ]]
 }
+
+@test "provider bridge prepareForProvider removes abort-orphan tool calls" {
+  script="$BATS_TEST_TMPDIR/provider-bridge-normalize.mjs"
+  cat > "$script" <<'NODE'
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const root = process.argv[2];
+const bridge = await import(pathToFileURL(join(root, 'v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs')).href);
+
+function toolCallsOf(msg) {
+  if (Array.isArray(msg.toolCalls)) return msg.toolCalls;
+  if (Array.isArray(msg.tool_calls)) return msg.tool_calls;
+  return [];
+}
+
+function toolCallIdOf(msg) {
+  if (typeof msg.toolCallId === 'string') return msg.toolCallId;
+  if (typeof msg.tool_call_id === 'string') return msg.tool_call_id;
+  return null;
+}
+
+function assertProviderLegalToolHistory(messages) {
+  for (let index = 0; index < messages.length; index += 1) {
+    const msg = messages[index];
+    if (msg.role === 'tool') throw new Error(`orphan tool result ${toolCallIdOf(msg) || '<missing>'}`);
+    const calls = toolCallsOf(msg);
+    if (msg.role !== 'assistant' || calls.length === 0) continue;
+    for (const call of calls) {
+      index += 1;
+      const toolMsg = messages[index];
+      if (toolMsg?.role !== 'tool' || toolCallIdOf(toolMsg) !== call.id) {
+        throw new Error(`missing adjacent result for ${call.id}`);
+      }
+    }
+  }
+}
+
+const messages = [
+  { role: 'system', content: 'system' },
+  { role: 'user', content: 'start' },
+  { role: 'assistant', content: '', toolCalls: [{ id: 'call_abort', type: 'function', function: { name: 'read_file', arguments: '{}' } }] },
+  { role: 'user', content: 'resume after abort' },
+  { role: 'assistant', content: 'done', toolCalls: [{ id: 'call_done', type: 'function', function: { name: 'grep', arguments: '{}' } }] },
+  { role: 'tool', toolCallId: 'call_done', name: 'grep', content: 'done payload' },
+];
+
+const limits = { maxTokens: 2000, maxEntries: 20, warningThreshold: 1500 };
+const prepared = bridge.prepareForProvider(JSON.parse(JSON.stringify(messages)), limits);
+assertProviderLegalToolHistory(prepared);
+
+if (JSON.stringify(prepared).includes('call_abort')) throw new Error('abort orphan survived');
+if (!JSON.stringify(prepared).includes('call_done')) throw new Error('completed pair was dropped');
+
+console.log(JSON.stringify({ ok: true, entries: prepared.length }));
+NODE
+
+  run node "$script" "$REPO_ROOT"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"ok":true'* ]]
+}

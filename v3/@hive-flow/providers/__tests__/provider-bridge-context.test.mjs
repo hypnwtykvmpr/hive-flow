@@ -114,6 +114,26 @@ function assertNoDanglingToolPairs(messages) {
   }
 }
 
+function assertProviderLegalToolHistory(messages) {
+  for (let index = 0; index < messages.length; index += 1) {
+    const msg = messages[index];
+    if (msg.role === 'tool') {
+      throw new Error(`orphaned tool result at index ${index}: ${toolCallIdOf(msg) || '<missing>'}`);
+    }
+
+    const toolCalls = toolCallsOf(msg);
+    if (msg.role !== 'assistant' || toolCalls.length === 0) continue;
+
+    for (const toolCall of toolCalls) {
+      index += 1;
+      const toolMsg = messages[index];
+      if (toolMsg?.role !== 'tool' || toolCallIdOf(toolMsg) !== toolCall.id) {
+        throw new Error(`missing adjacent tool result for ${toolCall.id}`);
+      }
+    }
+  }
+}
+
 function compactMessageForProperty(msg) {
   if (msg.role === 'assistant' && toolCallsOf(msg).length > 0) {
     return `assistant:${toolCallsOf(msg).map((toolCall) => toolCall.id).join(',')}`;
@@ -170,6 +190,92 @@ const messagesArb = fc.record({
 
     messages.push({ role: 'assistant', content: turn.assistant, tool_calls: [toolCall] });
     messages.push({ role: 'tool', name: 'read_file', tool_call_id: id, content: turn.tool });
+  });
+
+  messages.push({ role: 'user', content: latest });
+  return messages;
+});
+
+const abortTurnArb = fc.record({
+  user: smallTextArb,
+  assistant: smallTextArb,
+  tool: variedPayloadArb,
+  kind: fc.constantFrom(
+    'plain',
+    'complete-camel',
+    'complete-snake',
+    'abort-camel',
+    'abort-snake',
+    'partial',
+    'orphan-result',
+    'invalid-call',
+  ),
+});
+
+const abortHistoryArb = fc.record({
+  system: fc.option(smallTextArb, { nil: undefined }),
+  turns: fc.array(abortTurnArb, { minLength: 0, maxLength: 18 }),
+  latest: smallTextArb,
+}).map(({ system, turns, latest }) => {
+  const messages = [];
+  if (system !== undefined) messages.push({ role: 'system', content: system });
+
+  turns.forEach((turn, index) => {
+    const id = `call_${index}`;
+    const otherId = `call_${index}_other`;
+    messages.push({ role: 'user', content: turn.user });
+
+    if (turn.kind === 'plain') {
+      messages.push({ role: 'assistant', content: turn.assistant });
+      return;
+    }
+
+    if (turn.kind === 'orphan-result') {
+      messages.push({ role: 'tool', name: 'read_file', toolCallId: id, content: turn.tool });
+      return;
+    }
+
+    if (turn.kind === 'invalid-call') {
+      messages.push({
+        role: 'assistant',
+        content: turn.assistant,
+        toolCalls: [{ type: 'function', function: { name: 'read_file', arguments: '{}' } }],
+      });
+      return;
+    }
+
+    const toolCall = { id, type: 'function', function: { name: 'read_file', arguments: '{}' } };
+    if (turn.kind === 'complete-camel') {
+      messages.push({ role: 'assistant', content: turn.assistant, toolCalls: [toolCall] });
+      messages.push({ role: 'tool', name: 'read_file', toolCallId: id, content: turn.tool });
+      return;
+    }
+
+    if (turn.kind === 'complete-snake') {
+      messages.push({ role: 'assistant', content: turn.assistant, tool_calls: [toolCall] });
+      messages.push({ role: 'tool', name: 'read_file', tool_call_id: id, content: turn.tool });
+      return;
+    }
+
+    if (turn.kind === 'partial') {
+      messages.push({
+        role: 'assistant',
+        content: turn.assistant,
+        toolCalls: [
+          { id: otherId, type: 'function', function: { name: 'grep', arguments: '{}' } },
+          toolCall,
+        ],
+      });
+      messages.push({ role: 'tool', name: 'read_file', toolCallId: id, content: turn.tool });
+      return;
+    }
+
+    if (turn.kind === 'abort-snake') {
+      messages.push({ role: 'assistant', content: turn.assistant, tool_calls: [toolCall] });
+      return;
+    }
+
+    messages.push({ role: 'assistant', content: turn.assistant, toolCalls: [toolCall] });
   });
 
   messages.push({ role: 'user', content: latest });
@@ -274,6 +380,82 @@ describe('provider bridge context helpers', () => {
         expect(retrimmed).toEqual(trimmed);
       }),
       { numRuns: 200, seed: 20260612 },
+    );
+  });
+
+  it('normalizes abort-induced orphan tool calls before provider send', () => {
+    const messages = [
+      { role: 'system', content: 'system' },
+      { role: 'user', content: 'first' },
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [{ id: 'call_abort', type: 'function', function: { name: 'read_file', arguments: '{}' } }],
+      },
+      { role: 'user', content: 'new task after abort' },
+    ];
+
+    const normalized = bridge.normalizeForProvider(clone(messages));
+
+    expect(normalized).toEqual([
+      { role: 'system', content: 'system' },
+      { role: 'user', content: 'first' },
+      { role: 'user', content: 'new task after abort' },
+    ]);
+    assertProviderLegalToolHistory(normalized);
+  });
+
+  it('normalizes partial tool-call units to completed calls in assistant-call order', () => {
+    const messages = [
+      { role: 'user', content: 'Inspect files.' },
+      {
+        role: 'assistant',
+        content: 'I will inspect.',
+        toolCalls: [
+          { id: 'call_missing', type: 'function', function: { name: 'grep', arguments: '{}' } },
+          { id: 'call_done', type: 'function', function: { name: 'read_file', arguments: '{}' } },
+        ],
+      },
+      { role: 'tool', toolCallId: 'call_done', name: 'read_file', content: 'done payload' },
+      { role: 'tool', toolCallId: 'call_orphan', name: 'grep', content: 'orphan payload' },
+      { role: 'user', content: 'Continue.' },
+    ];
+
+    const normalized = bridge.normalizeForProvider(clone(messages));
+
+    expect(normalized).toEqual([
+      { role: 'user', content: 'Inspect files.' },
+      {
+        role: 'assistant',
+        content: 'I will inspect.',
+        toolCalls: [
+          { id: 'call_done', type: 'function', function: { name: 'read_file', arguments: '{}' } },
+        ],
+      },
+      { role: 'tool', toolCallId: 'call_done', name: 'read_file', content: 'done payload' },
+      { role: 'user', content: 'Continue.' },
+    ]);
+    assertProviderLegalToolHistory(normalized);
+  });
+
+  it('prepares generated abort/cancel histories into provider-legal bounded histories', () => {
+    fc.assert(
+      fc.property(abortHistoryArb, limitsArb, (messages, limits) => {
+        const normalized = bridge.normalizeForProvider(clone(messages));
+        const renormalized = bridge.normalizeForProvider(clone(normalized));
+        const prepared = bridge.prepareForProvider(clone(messages), limits);
+        const manuallyPrepared = bridge.trimMessages(clone(normalized), limits);
+
+        expect(renormalized).toEqual(normalized);
+        expect(prepared).toEqual(manuallyPrepared);
+        assertProviderLegalToolHistory(normalized);
+        assertProviderLegalToolHistory(prepared);
+        expect(estimateMessagesTokensForTest(prepared), compactMessageForProperty(prepared.at(-1))).toBeLessThanOrEqual(
+          limits.maxTokens,
+        );
+        expect(prepared.length).toBeLessThanOrEqual(effectiveMaxEntries(limits));
+      }),
+      { numRuns: 300, seed: 20260612 },
     );
   });
 });

@@ -551,7 +551,7 @@ describe('agent_task_result handler', () => {
 
     // Simulate dead PID: process.kill(pid, 0) throws
     const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
-      throw new Error('ESRCH');
+      throw Object.assign(new Error('no such process'), { code: 'ESRCH' });
     });
 
     const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
@@ -561,6 +561,64 @@ describe('agent_task_result handler', () => {
     expect(result.taskId).toBe(TASK_ID);
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.error).toMatch(/Process exited without producing a result/i);
+
+    killSpy.mockRestore();
+  });
+
+  it('treats EPERM liveness as running instead of failing the task', async () => {
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
+
+    baseExistsMock([`${TASK_ID}.json`]);
+    baseReadMock(makeStore({ [AGENT_ID]: agent }), tracking);
+    baseWriteMock();
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
+      throw Object.assign(new Error('operation not permitted'), { code: 'EPERM' });
+    });
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      status: 'running',
+    });
+    expect(writeFileSync).not.toHaveBeenCalledWith(
+      expect.stringContaining(`${TASK_ID}.json`),
+      expect.stringContaining('"failed"'),
+      expect.anything(),
+    );
+
+    killSpy.mockRestore();
+  });
+
+  it('treats ambiguous non-ESRCH liveness errors as running fail-safe', async () => {
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
+
+    baseExistsMock([`${TASK_ID}.json`]);
+    baseReadMock(makeStore({ [AGENT_ID]: agent }), tracking);
+    baseWriteMock();
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
+      throw Object.assign(new Error('invalid signal target'), { code: 'EINVAL' });
+    });
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      status: 'running',
+    });
+    expect(writeFileSync).not.toHaveBeenCalledWith(
+      expect.stringContaining(`${TASK_ID}.json`),
+      expect.stringContaining('"failed"'),
+      expect.anything(),
+    );
 
     killSpy.mockRestore();
   });
@@ -637,7 +695,7 @@ describe('agent_task_result handler', () => {
     (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
 
     const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
-      throw new Error('ESRCH');
+      throw Object.assign(new Error('no such process'), { code: 'ESRCH' });
     });
 
     await resultHandler({ taskId: TASK_ID });

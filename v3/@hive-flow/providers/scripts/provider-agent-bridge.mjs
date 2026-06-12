@@ -729,6 +729,83 @@ function summarizeAssistantMessage(msg) {
   };
 }
 
+function toolCallsOf(msg) {
+  if (Array.isArray(msg?.toolCalls)) return msg.toolCalls;
+  if (Array.isArray(msg?.tool_calls)) return msg.tool_calls;
+  return [];
+}
+
+function toolCallIdOf(msg) {
+  if (typeof msg?.toolCallId === 'string') return msg.toolCallId;
+  if (typeof msg?.tool_call_id === 'string') return msg.tool_call_id;
+  return null;
+}
+
+function withNormalizedToolCalls(msg, toolCalls) {
+  const next = { ...msg };
+  delete next.toolCalls;
+  delete next.tool_calls;
+  if (toolCalls.length > 0) {
+    if (Array.isArray(msg.tool_calls) && !Array.isArray(msg.toolCalls)) {
+      next.tool_calls = toolCalls;
+    } else {
+      next.toolCalls = toolCalls;
+    }
+  }
+  return next;
+}
+
+function hasAssistantContent(msg) {
+  if (typeof msg.content === 'string') return msg.content.length > 0;
+  return msg.content !== undefined && msg.content !== null;
+}
+
+export function normalizeForProvider(messages) {
+  if (!Array.isArray(messages)) return [];
+
+  const normalized = [];
+  for (let i = 0; i < messages.length; i += 1) {
+    const msg = messages[i];
+    if (!msg || typeof msg !== 'object') continue;
+
+    const rawToolCalls = toolCallsOf(msg);
+    const toolCalls = rawToolCalls.filter((toolCall) => toolCall?.id);
+    if (msg.role !== 'assistant' || rawToolCalls.length === 0) {
+      if (msg.role === 'tool') continue;
+      normalized.push({ ...msg });
+      continue;
+    }
+
+    const followingTools = [];
+    let cursor = i + 1;
+    while (cursor < messages.length && messages[cursor]?.role === 'tool') {
+      followingTools.push(messages[cursor]);
+      cursor += 1;
+    }
+
+    const toolResultsById = new Map();
+    for (const toolMsg of followingTools) {
+      const id = toolCallIdOf(toolMsg);
+      if (id && !toolResultsById.has(id)) {
+        toolResultsById.set(id, toolMsg);
+      }
+    }
+
+    const completedCalls = toolCalls.filter((toolCall) => toolResultsById.has(toolCall.id));
+    const assistant = withNormalizedToolCalls(msg, completedCalls);
+    if (completedCalls.length > 0 || hasAssistantContent(assistant)) {
+      normalized.push(assistant);
+    }
+    for (const toolCall of completedCalls) {
+      normalized.push({ ...toolResultsById.get(toolCall.id) });
+    }
+
+    i = cursor - 1;
+  }
+
+  return normalized;
+}
+
 export function trimMessages(messages, limits) {
   if (!limits) {
     throw new Error('trimMessages requires limits');
@@ -1043,6 +1120,10 @@ export function trimMessages(messages, limits) {
   });
 
   return result;
+}
+
+export function prepareForProvider(messages, limits) {
+  return trimMessages(normalizeForProvider(messages), limits);
 }
 
 // ===== Provider Default Models (loaded from model-alias-resolver if available) =====
@@ -2969,7 +3050,7 @@ async function main() {
   const { store, agent, storePath, messages, providerName } = await withFileLock(lockPath, async () => {
     const { store, agent, storePath } = loadAgentState(storeDir, agentId);
     const rawMessages = buildMessages(agent, task);
-    const messages = trimMessages(rawMessages, getProviderLimits(agent.provider, agent.resolvedModel));
+    const messages = prepareForProvider(rawMessages, getProviderLimits(agent.provider, agent.resolvedModel));
     const providerName = agent.provider;
     return { store, agent, storePath, messages, providerName };
   });
@@ -3077,7 +3158,7 @@ async function main() {
             // Store for reuse in the tool loop so every iteration uses the same
             // dynamic limit rather than re-calling getProviderLimits().
             dynamicLimits = correctedLimits;
-            request.messages = trimMessages(request.messages, correctedLimits);
+            request.messages = prepareForProvider(request.messages, correctedLimits);
           }
         }
       } catch (err) {
@@ -3405,7 +3486,7 @@ async function main() {
             successfulRerolledModel = nextModel;
             dynamicLimits = null;
             currentBridgeLimits = getProviderLimits(providerName, nextModel);
-            request.messages = trimMessages(request.messages, currentBridgeLimits);
+            request.messages = prepareForProvider(request.messages, currentBridgeLimits);
           }
           throw error;
         }
@@ -3513,7 +3594,7 @@ async function main() {
         // Prefer dynamicLimits (set by Phase 2 OpenRouter discovery) over the
         // static Phase 1 limits so context windows are consistent throughout.
         const limits = dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel);
-        request.messages = trimMessages(request.messages, limits);
+        request.messages = prepareForProvider(request.messages, limits);
 
         // Stuck detection: fingerprint + error counter
         if (response.toolCalls && response.toolCalls.length > 0) {
@@ -3578,7 +3659,7 @@ async function main() {
           }],
           model: request.model,
         };
-        summaryRequest.messages = trimMessages(summaryRequest.messages, dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel));
+        summaryRequest.messages = prepareForProvider(summaryRequest.messages, dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel));
         const summaryResponse = await provider.complete(summaryRequest);
         if (summaryResponse.content && summaryResponse.content.trim() !== '') {
           response = { ...response, content: summaryResponse.content };

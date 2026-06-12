@@ -123,6 +123,17 @@ export function transitionAgent(agent: AgentRecord, newStatus: AgentRecord['stat
   return true;
 }
 
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    // Only ESRCH proves the process is gone. EPERM and other ambiguous errors
+    // mean the process may still exist, so keep the task running fail-safe.
+    return (err as NodeJS.ErrnoException)?.code !== 'ESRCH';
+  }
+}
+
 function getAgentDir(): string {
   return join(process.cwd(), STORAGE_DIR, AGENT_DIR);
 }
@@ -1485,10 +1496,9 @@ export const agentTools: MCPTool[] = [
 
       // No result file yet — check if process is still running (signal 0 liveness only)
       if (tracking.pid && tracking.pid > 0 && Number.isInteger(tracking.pid)) {
-        try {
-          process.kill(tracking.pid, 0); // signal 0 = existence check
+        if (isPidAlive(tracking.pid)) {
           return { success: true, taskId, agentId: tracking.agentId, status: 'running' };
-        } catch {
+        } else {
           // Process exited without writing a result
           tracking.status = 'failed';
           writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
