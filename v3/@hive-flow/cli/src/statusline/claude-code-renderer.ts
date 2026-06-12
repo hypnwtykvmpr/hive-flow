@@ -385,6 +385,7 @@ async function resolveModeForRender(
   const paths = statuslinePaths(scope.projectRoot);
   const globalPaths = globalStatuslinePaths(scope.projectKey, resolveStatuslineSessionKey(stdin));
   const hiveFlowExists = existsSync(paths.root);
+  const sessionId = resolveStatuslineSessionId(stdin);
 
   // Try the snapshot path first when cache.json is present.
   const cached = await tryReadSnapshot(paths.cache).catch(() => undefined);
@@ -397,7 +398,7 @@ async function resolveModeForRender(
     // `.hive-flow/` exists; otherwise stick with the stale snapshot as
     // header-only-style data (we still prefer ANY cache over inventing rows).
     if (hiveFlowExists) {
-      const inline = await tryInlineCollect(scope, deadlineMs);
+      const inline = await tryInlineCollect(scope, deadlineMs, sessionId);
       if (inline !== undefined) {
         return { snapshot: mergeSnapshots(cached, inline), mode: 'inline-collector' };
       }
@@ -415,7 +416,7 @@ async function resolveModeForRender(
       return { snapshot: globalCached, mode: 'snapshot' };
     }
     if (hiveFlowExists) {
-      const inline = await tryInlineCollect(scope, deadlineMs);
+      const inline = await tryInlineCollect(scope, deadlineMs, sessionId);
       if (inline !== undefined) {
         return { snapshot: mergeSnapshots(globalCached, inline), mode: 'inline-collector' };
       }
@@ -432,7 +433,7 @@ async function resolveModeForRender(
   }
 
   // `.hive-flow/` present, no cache: inline-collector mode.
-  const inline = await tryInlineCollect(scope, deadlineMs);
+  const inline = await tryInlineCollect(scope, deadlineMs, sessionId);
   if (inline !== undefined) {
     return { snapshot: inline, mode: 'inline-collector' };
   }
@@ -467,12 +468,14 @@ function isSnapshotFreshEnough(snapshot: StatuslineSnapshotV1, maxAgeMs: number)
 async function tryInlineCollect(
   scope: ProjectScope,
   deadlineMs: number,
+  sessionId: string | undefined,
 ): Promise<StatuslineSnapshotV1 | undefined> {
   const remaining = deadlineMs - Date.now();
   if (remaining <= 25) return undefined;
   const inline = await collectInlineSnapshot({
     projectRoot: scope.projectRoot,
     ...(scope.worktreeRoot !== undefined ? { worktreeRoot: scope.worktreeRoot } : {}),
+    ...(sessionId !== undefined ? { sessionId } : {}),
     deadlineMs: remaining,
   }).catch(() => undefined);
   if (inline === undefined) return undefined;

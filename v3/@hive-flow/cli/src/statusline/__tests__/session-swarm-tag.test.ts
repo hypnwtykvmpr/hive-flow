@@ -29,11 +29,16 @@ function stdinPayload(projectRoot: string, sessionId?: string): Record<string, u
   };
 }
 
-function writeSwarmStore(projectRoot: string): void {
+function writeSwarmStore(projectRoot: string, ownerSessionId?: string): void {
   writeJson(join(projectRoot, '.hive-flow', 'agents', 'store.json'), {
     version: '1.0',
     agents: {
-      coder: { agentId: 'coder', agentType: 'coder', status: 'busy' },
+      coder: {
+        agentId: 'coder',
+        agentType: 'coder',
+        status: 'busy',
+        ...(ownerSessionId !== undefined ? { ownerSessionId } : {}),
+      },
     },
   });
 }
@@ -96,7 +101,7 @@ describe('statusline R7 swarm session tag', () => {
   });
 
   it('annotates active hives split between the current session and other sessions', async () => {
-    writeSwarmStore(projectRoot);
+    writeSwarmStore(projectRoot, 'sid-current');
     writeHive(projectRoot, 'hive-current', 'sid-current');
     writeHive(projectRoot, 'hive-other', 'sid-other');
 
@@ -117,7 +122,7 @@ describe('statusline R7 swarm session tag', () => {
   });
 
   it('leaves the swarm row unchanged when every active hive belongs to the current session', async () => {
-    writeSwarmStore(projectRoot);
+    writeSwarmStore(projectRoot, 'sid-current');
     const baseline = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
 
     writeHive(projectRoot, 'hive-a', 'sid-current');

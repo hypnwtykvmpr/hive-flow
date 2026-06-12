@@ -417,6 +417,46 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(record?.mode).toBe('inline-collector');
   });
 
+  it('inline-collector mode scopes swarm counts to the current session before rendering', async () => {
+    mkdirSync(join(fix.projectRoot, '.hive-flow', 'agents'), { recursive: true });
+    writeFileSync(
+      join(fix.projectRoot, '.hive-flow', 'agents', 'store.json'),
+      JSON.stringify({
+        version: '1.0',
+        agents: {
+          mine: {
+            agentId: 'mine',
+            agentType: 'coder',
+            status: 'busy',
+            ownerSessionId: 'session-a',
+          },
+          other: {
+            agentId: 'other',
+            agentType: 'coder',
+            status: 'busy',
+            ownerSessionId: 'session-b',
+          },
+          unowned: {
+            agentId: 'unowned',
+            agentType: 'tester',
+            status: 'idle',
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    const output = await renderClaudeCodeStatusline(
+      stdinPayload({ session_id: 'session-a' }),
+      fix.projectRoot,
+    );
+    const plain = stripAnsi(output);
+
+    expect(plain).toContain('Swarm ◉');
+    expect(plain).toMatch(/\[\s*1\/50\]/);
+    expect(plain).not.toMatch(/\[\s*3\/50\]/);
+  });
+
   // -------------------------------------------------------------------------
   // 3. Header-only mode — no `.hive-flow/`
   // -------------------------------------------------------------------------
