@@ -58,9 +58,24 @@ interface StrictApiCompletionPayload {
   };
 }
 
+interface StrictApiHealthCheckPayload {
+  action: 'health_check';
+  payload?: {
+    timeout?: number;
+  };
+}
+
 interface StrictApiInvokeRequest {
   action?: unknown;
   payload?: unknown;
+}
+
+export interface StrictApiProviderStatus {
+  healthy: boolean;
+  error?: string;
+  status?: number;
+  latency?: number;
+  details?: Record<string, unknown>;
 }
 
 export function isStrictApiProvider(provider: string | undefined): boolean {
@@ -155,15 +170,48 @@ export async function completeStrictApiProviderViaHolder(
   return normalizeStrictApiCompletion(redactCredentialMaterial(response.response));
 }
 
+export async function statusStrictApiProviderViaHolder(
+  providerName: string,
+  env: Record<string, unknown> = process.env,
+  timeoutMs = 5_000,
+): Promise<StrictApiProviderStatus> {
+  const provider = String(providerName || '').trim().toLowerCase();
+  if (!isStrictApiProvider(provider)) throw new Error(`provider ${providerName} is not a strict API provider`);
+  const socketPath = defaultCredentialHolderSocketPath(env);
+  const command = {
+    action: 'provider_call' as const,
+    taskId: `provider-status-${randomUUID()}`,
+    provider,
+    request: {
+      action: 'health_check',
+      payload: { timeout: timeoutMs },
+    } satisfies StrictApiHealthCheckPayload,
+  };
+  const response = await sendCredentialHolderCommand(socketPath, command, { timeoutMs: timeoutMs + 1_000 });
+  if (!response.ok) {
+    throw new Error(`credential holder provider_status failed: ${String(response.error)}`);
+  }
+  return normalizeStrictApiProviderStatus(redactCredentialMaterial(response.response));
+}
+
 export function createStrictApiProviderInvoker(options: {
   fetchImpl?: typeof fetch;
   baseUrls?: Partial<Record<string, string>>;
 } = {}) {
   const fetchImpl = options.fetchImpl ?? fetch;
-  return async function strictApiProviderInvoker(input: ProviderUseHandlerInput): Promise<StrictApiProviderCompletion> {
+  return async function strictApiProviderInvoker(input: ProviderUseHandlerInput): Promise<StrictApiProviderCompletion | StrictApiProviderStatus> {
     const provider = String(input.provider || '').trim().toLowerCase();
     if (!isStrictApiProvider(provider)) throw new Error(`provider ${input.provider} is not a strict API provider`);
     const request = asStrictApiInvokeRequest(input.request);
+    if (request.action === 'health_check') {
+      return invokeStrictApiHealthCheck({
+        provider,
+        secret: input.secret,
+        fetchImpl,
+        baseUrl: (options.baseUrls?.[provider] || defaultStrictApiBaseUrl(provider)).replace(/\/+$/, ''),
+        payload: request.payload,
+      });
+    }
     if (request.action !== 'complete') throw new Error(`unsupported strict API holder action: ${String(request.action)}`);
     const payload = asStrictCompletionPayload(request.payload);
     const baseUrl = (options.baseUrls?.[provider] || defaultStrictApiBaseUrl(provider)).replace(/\/+$/, '');
@@ -217,6 +265,45 @@ export function createProductionCredentialHolderService(options: {
       baseUrls: options.baseUrls,
     }),
   });
+}
+
+async function invokeStrictApiHealthCheck(options: {
+  provider: string;
+  secret: Buffer;
+  fetchImpl: typeof fetch;
+  baseUrl: string;
+  payload: unknown;
+}): Promise<StrictApiProviderStatus> {
+  const timeout = asStrictHealthCheckTimeout(options.payload);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  const start = Date.now();
+  try {
+    const response = await options.fetchImpl(`${options.baseUrl}/models`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${options.secret.toString('utf8')}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    return {
+      healthy: response.ok,
+      status: response.status,
+      latency: Date.now() - start,
+      ...(response.ok ? {} : { error: `HTTP ${response.status}` }),
+      details: { credentialBoundary: 'holder', provider: options.provider },
+    };
+  } catch (error) {
+    clearTimeout(timer);
+    return {
+      healthy: false,
+      error: redactErrorText((error as Error).message),
+      latency: Date.now() - start,
+      details: { credentialBoundary: 'holder', provider: options.provider },
+    };
+  }
 }
 
 function defaultStrictApiBaseUrl(provider: string): string {
@@ -311,6 +398,26 @@ function asStrictCompletionPayload(value: unknown): StrictApiCompletionPayload['
     ...(tools?.length ? { tools } : {}),
     ...(toolChoice !== undefined ? { tool_choice: toolChoice } : {}),
     timeout,
+  };
+}
+
+function asStrictHealthCheckTimeout(value: unknown): number {
+  if (!value || typeof value !== 'object') return 5_000;
+  const timeout = (value as Record<string, unknown>).timeout;
+  return typeof timeout === 'number' && Number.isFinite(timeout) && timeout > 0 ? timeout : 5_000;
+}
+
+function normalizeStrictApiProviderStatus(value: unknown): StrictApiProviderStatus {
+  if (!value || typeof value !== 'object') {
+    throw new Error('credential holder provider_status response was malformed');
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    healthy: record.healthy === true,
+    ...(typeof record.error === 'string' ? { error: record.error } : {}),
+    ...(typeof record.status === 'number' ? { status: record.status } : {}),
+    ...(typeof record.latency === 'number' ? { latency: record.latency } : {}),
+    ...(record.details && typeof record.details === 'object' ? { details: record.details as Record<string, unknown> } : {}),
   };
 }
 

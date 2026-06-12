@@ -11,6 +11,7 @@ import {
   completeStrictApiProviderViaHolder,
   isEnvOnlyCliProvider,
   isStrictApiProvider,
+  statusStrictApiProviderViaHolder,
 } from '../credential-store/strict-api-provider.js';
 import { redactCredentialMaterial } from '../credential-store/safe-serialization.js';
 
@@ -62,6 +63,28 @@ export const providerTools: MCPTool[] = [
 
       const results = await Promise.allSettled(providers.map(async (name) => {
         const start = Date.now();
+        if (isStrictApiProvider(name)) {
+          try {
+            const health = await statusStrictApiProviderViaHolder(name, process.env, 5_000);
+            return {
+              name,
+              available: health.healthy,
+              healthy: health.healthy,
+              latency: health.latency ?? Date.now() - start,
+              credentialBoundary: 'holder',
+              error: health.error,
+            };
+          } catch (err) {
+            return {
+              name,
+              available: false,
+              healthy: false,
+              credentialBoundary: 'holder',
+              error: (err as Error).message,
+              latency: Date.now() - start,
+            };
+          }
+        }
         const { createProviderManager } = await import('@hive-flow/providers');
         let manager: Awaited<ReturnType<typeof createProviderManager>> | null = null;
         try {

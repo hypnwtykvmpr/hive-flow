@@ -19,9 +19,11 @@ vi.mock('@hive-flow/providers', () => ({
 import { providerTools } from '../mcp-tools/provider-tools.js';
 
 const providerComplete = providerTools.find((tool) => tool.name === 'provider_complete')!;
+const providerStatus = providerTools.find((tool) => tool.name === 'provider_status')!;
 
 describe('provider_complete strict API holder route', () => {
   const originalSocket = process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET;
+  const originalOpenRouterKey = process.env.OPENROUTER_API_KEY;
   let originalCwd: string;
   let tmpRoot = '';
   let server: Server | undefined;
@@ -40,6 +42,8 @@ describe('provider_complete strict API holder route', () => {
     }
     if (originalSocket === undefined) delete process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET;
     else process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET = originalSocket;
+    if (originalOpenRouterKey === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = originalOpenRouterKey;
     process.chdir(originalCwd);
     if (tmpRoot) rmSync(tmpRoot, { recursive: true, force: true });
   });
@@ -106,5 +110,59 @@ describe('provider_complete strict API holder route', () => {
       },
     });
     expect(JSON.stringify(observedCommands[0])).not.toContain('OPENROUTER_API_KEY');
+  });
+
+  it('routes strict provider_status through the holder health check instead of raw-key provider manager', async () => {
+    const socketPath = join(tmpRoot, 'credential-holder.sock');
+    const observedCommands: unknown[] = [];
+    process.env.OPENROUTER_API_KEY = 'or-env-secret-that-must-not-be-used';
+    server = createServer((socket: Socket) => {
+      let buffer = '';
+      socket.setEncoding('utf8');
+      socket.on('data', (chunk) => {
+        buffer += chunk;
+        if (!buffer.includes('\n')) return;
+        const line = buffer.slice(0, buffer.indexOf('\n'));
+        observedCommands.push(JSON.parse(line));
+        socket.end(`${JSON.stringify({
+          ok: true,
+          response: {
+            healthy: true,
+            status: 200,
+            latency: 4,
+            details: { credentialBoundary: 'holder' },
+          },
+        })}\n`);
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      server!.once('error', reject);
+      server!.listen(socketPath, () => resolve());
+    });
+    chmodSync(socketPath, 0o600);
+    process.env.HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET = socketPath;
+
+    const result = await providerStatus.handler({ provider: 'openrouter' }) as Record<string, unknown>;
+
+    expect(result.providers).toEqual([
+      expect.objectContaining({
+        name: 'openrouter',
+        available: true,
+        healthy: true,
+        latency: 4,
+        credentialBoundary: 'holder',
+      }),
+    ]);
+    expect(createProviderManager).not.toHaveBeenCalled();
+    expect(observedCommands).toHaveLength(1);
+    expect(observedCommands[0]).toMatchObject({
+      action: 'provider_call',
+      provider: 'openrouter',
+      request: {
+        action: 'health_check',
+        payload: { timeout: 5_000 },
+      },
+    });
+    expect(JSON.stringify(observedCommands[0])).not.toContain('or-env-secret-that-must-not-be-used');
   });
 });
