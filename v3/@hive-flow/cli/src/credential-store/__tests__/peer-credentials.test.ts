@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   HELPER_BINARIES,
-  installedHelperPath,
+  configuredOrInstalledHelperPath,
 } from '../helper-paths.js';
 import {
   createPeerCredentialResolver,
@@ -73,10 +73,11 @@ describe('peer credential resolver fail-closed behavior', () => {
   });
 
   it('parses valid native helper JSON and rejects ambiguous output', () => {
-    expect(parsePeerCredentialJson('{"pid":123,"uid":501,"gid":20,"startTime":"42"}')).toEqual({
+    expect(parsePeerCredentialJson('{"pid":123,"uid":501,"gid":20,"sid":"S-1-5-21-123","startTime":"42"}')).toEqual({
       pid: 123,
       uid: 501,
       gid: 20,
+      sid: 'S-1-5-21-123',
       startTime: '42',
     });
     expect(() => parsePeerCredentialJson('{}')).toThrow(/ambiguous|pid|uid/i);
@@ -128,7 +129,7 @@ describe('native peer credential helpers', () => {
   it.skipIf(process.platform !== 'win32' || process.env.HIVE_FLOW_RUN_NATIVE_WINDOWS_PEER_CRED_TESTS !== '1')(
     'runs the Windows named-pipe GetNamedPipeClientProcessId self-test helper in CI',
     () => {
-      const helper = installedHelperPath(HELPER_BINARIES.winPeerCred) ?? HELPER_BINARIES.winPeerCred;
+      const helper = configuredOrInstalledHelperPath(HELPER_BINARIES.winPeerCred) ?? HELPER_BINARIES.winPeerCred;
       const result = JSON.parse(execFileSync(helper, ['selftest'], { encoding: 'utf8' }));
       expect(result.platform).toBe('win32');
       expect(result.pid).toBeGreaterThan(0);

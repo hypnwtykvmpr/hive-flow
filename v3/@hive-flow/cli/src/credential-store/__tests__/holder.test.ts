@@ -175,6 +175,106 @@ describe('credential holder socket lifecycle', () => {
       process.chdir(cwd);
     }
   });
+
+  it('serves win32 commands only through an injected hardened named-pipe bridge', async () => {
+    let requestHandler: ((request: { peer: PeerCredential; line: string }) => Promise<unknown>) | undefined;
+    let stopped = false;
+    const invocations: unknown[] = [];
+    const holder = new CredentialHolderService({
+      socketPath: '\\\\.\\pipe\\hive-flow-holder-test',
+      platform: 'win32',
+      uid: 0,
+      peerCredentialResolver: async () => {
+        throw new Error('win32 bridge should supply authenticated peer credentials directly');
+      },
+      providerInvoker: async (input) => {
+        invocations.push({
+          provider: input.provider,
+          taskId: input.taskId,
+          peer: input.peer,
+          secret: input.secret.toString('utf8'),
+          request: input.request,
+        });
+        return { content: 'windows holder response' };
+      },
+      windowsPipeBridgeFactory: ({ onRequest }: { onRequest: (request: { peer: PeerCredential; line: string }) => Promise<unknown> }) => ({
+        start: async () => {
+          requestHandler = onRequest;
+        },
+        stop: async () => {
+          stopped = true;
+        },
+      }),
+    } as unknown as ConstructorParameters<typeof CredentialHolderService>[0]);
+
+    await holder.start();
+    holder.setProviderSecret('deepseek', Buffer.from('ds-raw-secret'));
+    expect(requestHandler).toBeDefined();
+
+    const response = await requestHandler!({
+      peer: { pid: 4242, uid: 0, sid: 'S-1-5-21-4242', startTime: '4242' },
+      line: JSON.stringify({
+        action: 'provider_call',
+        taskId: 'task-win',
+        provider: 'deepseek',
+        request: { action: 'complete', payload: { prompt: 'ping' } },
+      }),
+    });
+
+    expect(response).toEqual({ ok: true, response: { content: 'windows holder response' } });
+    expect(JSON.stringify(response)).not.toContain('ds-raw-secret');
+    expect(invocations).toEqual([
+      {
+        provider: 'deepseek',
+        taskId: 'task-win',
+        peer: { pid: 4242, uid: 0, sid: 'S-1-5-21-4242', startTime: '4242' },
+        secret: 'ds-raw-secret',
+        request: { action: 'complete', payload: { prompt: 'ping' } },
+      },
+    ]);
+    await holder.stop();
+    expect(stopped).toBe(true);
+  });
+
+  it.skipIf(process.platform !== 'win32' || process.env.HIVE_FLOW_RUN_NATIVE_WINDOWS_PEER_CRED_TESTS !== '1')(
+    'serves a real hardened Windows named pipe and validates the connecting peer in CI',
+    async () => {
+      const socketPath = `\\\\.\\pipe\\hive-flow-holder-native-${process.pid}-${Date.now()}`;
+      const holder = new CredentialHolderService({
+        socketPath,
+        platform: 'win32',
+        uid: 0,
+        peerCredentialResolver: async () => {
+          throw new Error('native Windows holder bridge should supply peer credentials directly');
+        },
+        providerInvoker: async (input) => {
+          expect(input.peer.pid).toBeGreaterThan(0);
+          expect(input.peer.sid).toMatch(/^S-/);
+          expect(input.secret.toString('utf8')).toBe('or-native-secret');
+          return { provider: input.provider, taskId: input.taskId, peerSid: input.peer.sid };
+        },
+      });
+      await holder.start();
+      try {
+        holder.setProviderSecret('openrouter', Buffer.from('or-native-secret'));
+        const response = await sendCredentialHolderCommand(socketPath, {
+          action: 'provider_call',
+          taskId: 'native-win',
+          provider: 'openrouter',
+          request: { action: 'complete', payload: { messages: [{ role: 'user', content: 'ping' }] } },
+        }, { timeoutMs: 10_000 });
+
+        expect(response.ok).toBe(true);
+        expect(response.response).toMatchObject({
+          provider: 'openrouter',
+          taskId: 'native-win',
+        });
+        expect(JSON.stringify(response)).not.toContain('or-native-secret');
+      } finally {
+        await holder.stop();
+      }
+    },
+  );
 });
 
 describe('credential holder same-user USE grants', () => {

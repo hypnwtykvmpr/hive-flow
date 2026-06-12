@@ -2,7 +2,7 @@ import { execFileSync as nodeExecFileSync } from 'node:child_process';
 import type { Socket } from 'node:net';
 import {
   HELPER_BINARIES,
-  installedHelperPath,
+  configuredOrInstalledHelperPath,
 } from './helper-paths.js';
 
 type ExecOptions = {
@@ -16,6 +16,7 @@ export interface PeerCredential {
   pid: number;
   uid: number;
   gid?: number;
+  sid?: string;
   startTime: string;
 }
 
@@ -62,6 +63,7 @@ export function parsePeerCredentialJson(raw: string | Buffer): PeerCredential {
     startTime: record.startTime,
   };
   if (Number.isInteger(record.gid) && Number(record.gid) >= 0) credential.gid = Number(record.gid);
+  if (typeof record.sid === 'string' && record.sid.length > 0) credential.sid = record.sid;
   return credential;
 }
 
@@ -74,7 +76,7 @@ function socketFd(socket: Socket | undefined): number | undefined {
 export function createPeerCredentialResolver(options: PeerCredentialResolverOptions = {}): PeerCredentialResolver {
   const platform = options.platform ?? process.platform;
   const defaultHelper = platform === 'win32' ? HELPER_BINARIES.winPeerCred : HELPER_BINARIES.peerCred;
-  const helperCommand = options.helperCommand ?? installedHelperPath(defaultHelper) ?? defaultHelper;
+  const helperCommand = options.helperCommand ?? configuredOrInstalledHelperPath(defaultHelper) ?? defaultHelper;
   const execFileSync = options.execFileSync ?? ((file, args, execOptions = {}) => nodeExecFileSync(file, [...args], execOptions as Parameters<typeof nodeExecFileSync>[2]));
 
   return {

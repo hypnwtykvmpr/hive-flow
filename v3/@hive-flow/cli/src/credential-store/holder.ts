@@ -1,11 +1,16 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { chmodSync, existsSync, lstatSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createConnection, createServer, type Server, type Socket } from 'node:net';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
 import { normalizeProviderKeyName } from './credential-store.js';
-import type { PeerCredential, PeerCredentialResolver } from './peer-credentials.js';
+import { parsePeerCredentialJson, type PeerCredential, type PeerCredentialResolver } from './peer-credentials.js';
 import { redactCredentialMaterial } from './safe-serialization.js';
+import {
+  HELPER_BINARIES,
+  configuredOrInstalledHelperPath,
+} from './helper-paths.js';
 
 export interface CapabilityTokenIssuerOptions {
   ttlMs?: number;
@@ -155,6 +160,8 @@ export interface CredentialHolderServiceOptions {
   now?: () => number;
   randomToken?: () => string;
   holderSecret?: Uint8Array;
+  windowsPipeHelperCommand?: string;
+  windowsPipeBridgeFactory?: WindowsCredentialHolderPipeBridgeFactory;
 }
 
 export interface CredentialHolderProcessHardeningOptions {
@@ -213,6 +220,26 @@ export type CredentialHolderResponse = {
   error: string;
 };
 
+export interface WindowsCredentialHolderPipeBridgeRequest {
+  peer: PeerCredential;
+  line: string;
+}
+
+export interface WindowsCredentialHolderPipeBridge {
+  start(): Promise<void>;
+  stop(): Promise<void>;
+}
+
+export interface WindowsCredentialHolderPipeBridgeFactoryOptions {
+  socketPath: string;
+  helperCommand?: string;
+  onRequest(request: WindowsCredentialHolderPipeBridgeRequest): Promise<CredentialHolderResponse>;
+}
+
+export type WindowsCredentialHolderPipeBridgeFactory = (
+  options: WindowsCredentialHolderPipeBridgeFactoryOptions,
+) => WindowsCredentialHolderPipeBridge;
+
 export interface ProviderUseContext {
   taskId: string;
   provider: string;
@@ -234,9 +261,12 @@ export class CredentialHolderService {
   private readonly uid: number;
   private readonly peerCredentialResolver: PeerCredentialResolver['lookup'];
   private readonly providerInvoker: (input: ProviderUseHandlerInput) => Promise<unknown> | unknown;
+  private readonly windowsPipeHelperCommand?: string;
+  private readonly windowsPipeBridgeFactory: WindowsCredentialHolderPipeBridgeFactory;
   private readonly tokenIssuer: CapabilityTokenIssuer;
   private readonly secrets = new Map<string, Buffer>();
   private server: Server | null = null;
+  private windowsPipeBridge: WindowsCredentialHolderPipeBridge | null = null;
 
   constructor(options: CredentialHolderServiceOptions) {
     this.socketPath = options.socketPath;
@@ -246,6 +276,8 @@ export class CredentialHolderService {
     this.providerInvoker = options.providerInvoker ?? (() => {
       throw new Error('credential holder has no internal provider invoker configured');
     });
+    this.windowsPipeHelperCommand = options.windowsPipeHelperCommand;
+    this.windowsPipeBridgeFactory = options.windowsPipeBridgeFactory ?? createNativeWindowsCredentialHolderPipeBridge;
     this.tokenIssuer = new CapabilityTokenIssuer({
       ttlMs: options.tokenTtlMs,
       now: options.now,
@@ -272,31 +304,30 @@ export class CredentialHolderService {
   }
 
   /**
-   * Windows named-pipe bind — SECURITY, NEEDS-REAL-WINDOWS-VALIDATION. Fails closed BEFORE binding.
-   *
-   * A Windows named pipe's trust anchor is the security descriptor (DACL) applied ATOMICALLY at
-   * creation via CreateNamedPipe(SECURITY_ATTRIBUTES) to restrict the pipe to the current-user SID,
-   * plus a per-connection GetNamedPipeClientProcessId peer check — the equivalent of the POSIX 0600
-   * socket + same-uid gate. Node's net.Server.listen creates the pipe with libuv's default security
-   * descriptor and exposes no way to supply SECURITY_ATTRIBUTES or FILE_FLAG_FIRST_PIPE_INSTANCE.
-   * Because the descriptor must be set at creation (an unhardened pipe cannot be "hardened after"),
-   * we refuse to bind at all until a native helper creates the hardened pipe and a real Windows host
-   * validates it. On that host, replace this throw with the native hardened-pipe bind +
-   * GetNamedPipeClientProcessId wiring; the path/peer plumbing (lookupPeer namedPipeName, stop
-   * no-unlink, client identity skip) is already in place around it.
+   * Windows named-pipe bind. The native helper owns the pipe handle so it can apply the security
+   * descriptor at CreateNamedPipe time and validate each connected client before forwarding the
+   * request into this TypeScript holder. If the helper is unavailable, startup fails closed before
+   * any insecure Node-created pipe is bound.
    */
   private async startWindowsNamedPipe(): Promise<void> {
     if (!isWindowsNamedPipePath(this.socketPath)) {
       throw new Error(`credential holder on win32 requires a \\\\.\\pipe\\ named pipe path, got: ${this.socketPath}`);
     }
-    throw new Error(
-      'credential holder Windows named-pipe hardening is not implemented or validated on a real '
-      + 'Windows host (NEEDS-REAL-WINDOWS-VALIDATION): refusing to bind an unhardened pipe; a native '
-      + 'helper must create the pipe with a current-user-only DACL',
-    );
+    const bridge = this.windowsPipeBridgeFactory({
+      socketPath: this.socketPath,
+      helperCommand: this.windowsPipeHelperCommand,
+      onRequest: request => this.dispatchPeerCommand(request.peer, request.line),
+    });
+    this.windowsPipeBridge = bridge;
+    await bridge.start();
   }
 
   async stop(): Promise<void> {
+    const windowsPipeBridge = this.windowsPipeBridge;
+    this.windowsPipeBridge = null;
+    if (windowsPipeBridge) {
+      await windowsPipeBridge.stop().catch(() => undefined);
+    }
     const server = this.server;
     this.server = null;
     if (server) {
@@ -325,8 +356,8 @@ export class CredentialHolderService {
     this.tokenIssuer.invalidateProvider(provider);
   }
 
-  private async requestUseGrant(command: CredentialHolderGrantCommand, socket: Socket): Promise<CapabilityTokenGrant> {
-    const peer = await this.lookupPeer(socket);
+  private requestUseGrantForPeer(command: CredentialHolderGrantCommand, peer: PeerCredential): CapabilityTokenGrant {
+    this.assertPeerCredential(peer);
     if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
     const provider = normalizeProviderKeyName(command.provider);
     if (!this.secrets.has(provider)) throw new Error(`credential holder has no secret for provider ${provider}`);
@@ -338,8 +369,8 @@ export class CredentialHolderService {
     });
   }
 
-  private async redeemUseGrant(command: CredentialHolderRedeemCommand, socket: Socket): Promise<unknown> {
-    const peer = await this.lookupPeer(socket);
+  private async redeemUseGrantForPeer(command: CredentialHolderRedeemCommand, peer: PeerCredential): Promise<unknown> {
+    this.assertPeerCredential(peer);
     const consumed = this.tokenIssuer.consume(command.token, {
       taskId: command.taskId,
       provider: command.provider,
@@ -365,8 +396,8 @@ export class CredentialHolderService {
     }
   }
 
-  private async invokeProviderCall(command: CredentialHolderProviderCallCommand, socket: Socket): Promise<unknown> {
-    const peer = await this.lookupPeer(socket);
+  private async invokeProviderCallForPeer(command: CredentialHolderProviderCallCommand, peer: PeerCredential): Promise<unknown> {
+    this.assertPeerCredential(peer);
     if (peer.uid !== this.uid) throw new Error(`credential holder same-user uid check failed: ${peer.uid} !== ${this.uid}`);
     const provider = normalizeProviderKeyName(command.provider);
     const secret = this.secrets.get(provider);
@@ -413,12 +444,33 @@ export class CredentialHolderService {
       if (command.action === 'ping') {
         return { ok: true, ping: { pid: process.pid } };
       }
-      if (command.action === 'grant') return { ok: true, grant: await this.requestUseGrant(command, socket) };
-      if (command.action === 'provider_call') return { ok: true, response: await this.invokeProviderCall(command, socket) };
-      return { ok: true, response: await this.redeemUseGrant(command, socket) };
+      const peer = await this.lookupPeer(socket);
+      return await this.dispatchAuthenticatedCommand(command, peer);
     } catch (error) {
       return { ok: false, error: String(redactCredentialMaterial((error as Error).message)) };
     }
+  }
+
+  private async dispatchPeerCommand(peer: PeerCredential, line: string): Promise<CredentialHolderResponse> {
+    try {
+      const command = parseCredentialHolderCommand(line);
+      if (command.action === 'ping') {
+        this.assertPeerCredential(peer);
+        return { ok: true, ping: { pid: process.pid } };
+      }
+      return await this.dispatchAuthenticatedCommand(command, peer);
+    } catch (error) {
+      return { ok: false, error: String(redactCredentialMaterial((error as Error).message)) };
+    }
+  }
+
+  private async dispatchAuthenticatedCommand(
+    command: Exclude<CredentialHolderCommand, CredentialHolderPingCommand>,
+    peer: PeerCredential,
+  ): Promise<CredentialHolderResponse> {
+    if (command.action === 'grant') return { ok: true, grant: this.requestUseGrantForPeer(command, peer) };
+    if (command.action === 'provider_call') return { ok: true, response: await this.invokeProviderCallForPeer(command, peer) };
+    return { ok: true, response: await this.redeemUseGrantForPeer(command, peer) };
   }
 
   private async prepareUnixSocketPathForBind(): Promise<void> {
@@ -448,7 +500,17 @@ export class CredentialHolderService {
     if (!peer || !Number.isInteger(peer.pid) || !Number.isInteger(peer.uid) || !peer.startTime) {
       throw new Error('credential holder failed closed: ambiguous peer credential');
     }
+    this.assertPeerCredential(peer);
     return peer;
+  }
+
+  private assertPeerCredential(peer: PeerCredential): void {
+    if (!peer || !Number.isInteger(peer.pid) || peer.pid <= 0 || !Number.isInteger(peer.uid) || peer.uid < 0 || !peer.startTime) {
+      throw new Error('credential holder failed closed: ambiguous peer credential');
+    }
+    if (this.platform === 'win32' && (typeof peer.sid !== 'string' || !peer.sid.startsWith('S-'))) {
+      throw new Error('credential holder failed closed: Windows peer SID is required');
+    }
   }
 
   private zeroizeSecret(provider: string): void {
@@ -461,6 +523,143 @@ export class CredentialHolderService {
     for (const secret of this.secrets.values()) secret.fill(0);
     this.secrets.clear();
   }
+}
+
+type WindowsHelperReadyMessage = {
+  type: 'ready';
+  pipeName?: string;
+  currentSid?: string;
+};
+
+type WindowsHelperRequestMessage = {
+  type: 'request';
+  id: string;
+  peer: unknown;
+  line: string;
+};
+
+type WindowsHelperMessage = WindowsHelperReadyMessage | WindowsHelperRequestMessage;
+
+class NativeWindowsCredentialHolderPipeBridge implements WindowsCredentialHolderPipeBridge {
+  private child: ChildProcessWithoutNullStreams | null = null;
+  private reader: ReadlineInterface | null = null;
+  private stderr = '';
+  private ready = false;
+  private readyResolve: (() => void) | null = null;
+  private readyReject: ((error: Error) => void) | null = null;
+
+  constructor(
+    private readonly socketPath: string,
+    private readonly helperCommand: string,
+    private readonly onRequest: (request: WindowsCredentialHolderPipeBridgeRequest) => Promise<CredentialHolderResponse>,
+  ) {}
+
+  async start(): Promise<void> {
+    const child = spawn(this.helperCommand, ['serve', this.socketPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    this.child = child;
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', chunk => {
+      this.stderr += String(chunk);
+    });
+    child.once('error', error => {
+      this.rejectReady(new Error(`credential holder Windows named-pipe helper failed closed: ${error.message}`));
+    });
+    child.once('exit', (code, signal) => {
+      if (!this.ready) {
+        const suffix = this.stderr.trim() ? `: ${this.stderr.trim()}` : '';
+        this.rejectReady(new Error(`credential holder Windows named-pipe helper exited before ready (${signal ?? code})${suffix}`));
+      }
+    });
+    this.reader = createInterface({ input: child.stdout });
+    this.reader.on('line', line => void this.handleHelperLine(line));
+
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error('credential holder Windows named-pipe helper timed out before ready'));
+      }, 10_000);
+      this.readyResolve = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      this.readyReject = error => {
+        clearTimeout(timer);
+        reject(error);
+      };
+    });
+  }
+
+  async stop(): Promise<void> {
+    const child = this.child;
+    this.child = null;
+    this.reader?.close();
+    this.reader = null;
+    if (!child) return;
+    child.stdin.end();
+    if (child.exitCode === null && !child.killed) {
+      child.kill();
+      await new Promise<void>(resolve => {
+        const timer = setTimeout(resolve, 1000);
+        child.once('exit', () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+    }
+  }
+
+  private async handleHelperLine(line: string): Promise<void> {
+    let message: WindowsHelperMessage;
+    try {
+      message = JSON.parse(line) as WindowsHelperMessage;
+    } catch (error) {
+      this.rejectReady(new Error(`credential holder Windows named-pipe helper emitted invalid JSON: ${(error as Error).message}`));
+      return;
+    }
+    if (message.type === 'ready') {
+      this.ready = true;
+      this.readyResolve?.();
+      this.readyResolve = null;
+      this.readyReject = null;
+      return;
+    }
+    if (message.type !== 'request') return;
+    const child = this.child;
+    if (!child || !child.stdin.writable) return;
+    const response = await this.handleRequestMessage(message);
+    child.stdin.write(`${JSON.stringify({ id: message.id, response })}\n`);
+  }
+
+  private async handleRequestMessage(message: WindowsHelperRequestMessage): Promise<CredentialHolderResponse> {
+    try {
+      if (!message.id || typeof message.line !== 'string') {
+        throw new Error('credential holder Windows named-pipe helper request is malformed');
+      }
+      const peer = parsePeerCredentialJson(JSON.stringify(message.peer));
+      return await this.onRequest({ peer, line: message.line });
+    } catch (error) {
+      return { ok: false, error: String(redactCredentialMaterial((error as Error).message)) };
+    }
+  }
+
+  private rejectReady(error: Error): void {
+    if (this.readyReject) {
+      this.readyReject(error);
+      this.readyReject = null;
+      this.readyResolve = null;
+    }
+  }
+}
+
+function createNativeWindowsCredentialHolderPipeBridge(
+  options: WindowsCredentialHolderPipeBridgeFactoryOptions,
+): WindowsCredentialHolderPipeBridge {
+  const helperCommand = options.helperCommand
+    ?? configuredOrInstalledHelperPath(HELPER_BINARIES.winPeerCred)
+    ?? HELPER_BINARIES.winPeerCred;
+  return new NativeWindowsCredentialHolderPipeBridge(options.socketPath, helperCommand, options.onRequest);
 }
 
 export async function sendCredentialHolderCommand(
