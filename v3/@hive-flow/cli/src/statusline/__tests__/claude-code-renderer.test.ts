@@ -274,6 +274,33 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(plain).toContain('Codex');
   });
 
+  it('swarm slot displays live spawned agents, not executing-only agents, and shows detail mode', async () => {
+    writeSnapshot(fix.projectRoot, {
+      swarm: {
+        activeAgents: 0,
+        idleAgents: 5,
+        queuedAgents: 0,
+        maxAgents: 50,
+        activeQueens: 0,
+        executingQueens: 0,
+      },
+      rendererHints: {
+        activeAgentDetail: 'off',
+        useRoleIcons: false,
+        allow16ColorYellowFallback: false,
+        openRouterBreakdown: 'aggregate',
+      },
+      daemon: { running: true, health: 'healthy', observedAt: new Date().toISOString() },
+    });
+
+    const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
+    const plain = stripAnsi(output);
+    expect(plain).toContain('Swarm');
+    expect(plain).toMatch(/\[\s*5\/50\]/);
+    expect(plain).not.toMatch(/\[\s*0\/50\]/);
+    expect(plain).toContain('agents off');
+  });
+
   it('snapshot mode reads sessions instead of treating them as dead cache data', async () => {
     writeSnapshot(fix.projectRoot, {
       sessions: {

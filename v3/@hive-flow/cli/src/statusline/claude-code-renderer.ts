@@ -920,7 +920,7 @@ function renderSwarm(
       : `${p.dim}○${p.reset}`;
 
   const numberColor = executing ? p.active : total > 0 ? p.memory : p.dim;
-  const slot = `[${numberColor}${String(swarm.activeAgents).padStart(2, ' ')}${p.reset}${p.gray}/${p.reset}${p.number}${swarm.maxAgents}${p.reset}]`;
+  const slot = `[${numberColor}${String(total).padStart(2, ' ')}${p.reset}${p.gray}/${p.reset}${p.number}${swarm.maxAgents}${p.reset}]`;
 
   const queenPart = swarm.activeQueens > 0
     ? `  ${swarm.executingQueens > 0 ? p.queen : p.queenIdle}♛${swarm.activeQueens}${p.reset}`
@@ -928,15 +928,27 @@ function renderSwarm(
 
   const hiveTag = maybeRenderHiveSessionTag(swarm, currentSessionId, p);
   const hivePart = hiveTag !== undefined ? `  ${p.separator}·${p.reset}  ${hiveTag}` : '';
-  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}${hivePart}`;
+  const detailMode = snapshot.rendererHints?.activeAgentDetail ?? 'off';
+  const useRoleIcons = snapshot.rendererHints?.useRoleIcons === true;
+  const detailPart = renderActiveAgentDetailMode(detailMode, useRoleIcons, p);
+  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}${hivePart}  ${p.separator}·${p.reset}  ${detailPart}`;
 
   // Active agents row collapses into the same section when role-icons toggle
   // is on (visual design 3.5). Default is `off` per config.
-  const active = maybeRenderActive(swarm, p, snapshot.rendererHints?.activeAgentDetail ?? 'off', snapshot.rendererHints?.useRoleIcons === true);
+  const active = maybeRenderActive(swarm, p, detailMode, useRoleIcons);
   if (active !== undefined) {
     return `${swarmCore}  ${p.separator}·${p.reset}  ${active}`;
   }
   return swarmCore;
+}
+
+function renderActiveAgentDetailMode(
+  mode: 'off' | 'auto' | 'on',
+  useRoleIcons: boolean,
+  p: PaletteCodes,
+): string {
+  const iconPart = useRoleIcons ? '+roles' : '';
+  return `${p.gray}agents ${p.reset}${p.number}${mode}${iconPart}${p.reset}`;
 }
 
 function maybeRenderHiveSessionTag(
