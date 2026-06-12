@@ -319,7 +319,9 @@ async function startCredentialHolderFixture(holderOwnedApiUrl) {
   };
 }
 
-function makeStore(root, agentId) {
+function makeStore(root, agentId, opts = {}) {
+  const provider = opts.provider ?? 'deepseek';
+  const resolvedModel = opts.resolvedModel ?? 'deepseek-v4-flash';
   const storeDir = join(root, '.hive-flow', 'agents');
   mkdirSync(storeDir, { recursive: true });
   writeFileSync(join(storeDir, 'store.json'), JSON.stringify({
@@ -329,9 +331,9 @@ function makeStore(root, agentId) {
         name: agentId,
         type: 'coder',
         status: 'busy',
-        provider: 'deepseek',
+        provider,
         model: 'sonnet',
-        resolvedModel: 'deepseek-v4-flash',
+        resolvedModel,
         systemPrompt: 'Use tools exactly as requested by the fixture.',
         conversationHistory: [],
         taskCount: 0,
@@ -342,12 +344,12 @@ function makeStore(root, agentId) {
   return storeDir;
 }
 
-async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerPath, agentId = 'single-path-agent' }) {
+async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerPath, agentId = 'single-path-agent', provider, resolvedModel }) {
   const key = writeKey(root);
   writeEnvelope(root, key, 0);
   const fixture = await startFixtureServer(toolName, toolArgs);
   const holder = await startCredentialHolderFixture(fixture.baseUrl);
-  const storeDir = makeStore(root, agentId);
+  const storeDir = makeStore(root, agentId, { provider, resolvedModel });
   const tasksDir = join(root, '.hive-flow', 'tasks');
   mkdirSync(tasksDir, { recursive: true });
   const taskFile = join(tasksDir, 'single-path.task');
@@ -369,6 +371,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
       ...childEnv(root, markerPath ? { HF_FAKE_MCP_MARKER: markerPath } : {}),
       HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET: holder.socketPath,
       DEEPSEEK_API_URL: fixture.baseUrl,
+      OPENROUTER_API_URL: fixture.baseUrl,
     },
   });
 
@@ -479,7 +482,10 @@ describe('provider bridge single tool execution path', () => {
       expect(firstToolNames).not.toContain('run_shell');
       expect(firstToolNames).not.toContain('web_fetch');
       expect(firstToolNames).not.toContain('web_search');
-      expect(requests[0].tool_choice).toBe('required');
+      // DeepSeek (thinking mode) rejects tool_choice:"required" with HTTP 400, so the
+      // bridge must NOT send it for deepseek; grounding is still enforced by the
+      // UNGROUNDED_TOOL_TASK floor (covered by the fail-closed test below).
+      expect(requests[0].tool_choice).not.toBe('required');
       expect(Buffer.byteLength(JSON.stringify(requests[0].tools), 'utf8')).toBeLessThan(10 * 1024);
       expect(result.success).toBe(true);
       expect(result.content).toContain('tool-result:detached built-in read');
@@ -489,6 +495,33 @@ describe('provider bridge single tool execution path', () => {
       });
       expect(bridgeLog).toContain('"message":"Bridge tool dispatch"');
       expect(bridgeLog).toContain('"tool":"read_file"');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('still sends tool_choice:required for providers that support it (openrouter)', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-single-path-openrouter-');
+    try {
+      const readable = join(root, 'src', 'fixture.txt');
+      writeFileSync(readable, 'openrouter grounded read\n', 'utf8');
+
+      const { result, requests } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'read_file',
+        toolArgs: { path: readable },
+        provider: 'openrouter',
+        resolvedModel: 'xiaomi/mimo-v2.5-pro',
+      });
+
+      expect(requests.length).toBeGreaterThanOrEqual(2);
+      // OpenRouter supports the grounding nudge — it must still be sent.
+      expect(requests[0].tool_choice).toBe('required');
+      expect(result.success).toBe(true);
+      expect(result.toolUse).toMatchObject({ iterations: 2, tools: ['read_file'] });
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(layout.installRoot, { recursive: true, force: true });

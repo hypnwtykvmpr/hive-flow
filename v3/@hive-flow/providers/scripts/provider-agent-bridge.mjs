@@ -279,6 +279,13 @@ const PROVIDER_TOKEN_LIMITS = {
 
 const STRICT_API_PROVIDERS = new Set(['openrouter', 'deepseek', 'openai', 'qwen']);
 
+// Providers whose models reject OpenAI-style `tool_choice: "required"`. DeepSeek's
+// reasoning models ("thinking mode") return HTTP 400 "Thinking mode does not support
+// this tool_choice". For these we omit the nudge and let the model decide; grounding
+// is still enforced by the UNGROUNDED_TOOL_TASK floor (a strict task that executes
+// zero tools is refused), so correctness is preserved without the incompatible flag.
+const TOOL_CHOICE_REQUIRED_UNSUPPORTED = new Set(['deepseek']);
+
 // Model-specific overrides (when model is known at runtime)
 const MODEL_LIMITS = {
   // Anthropic
@@ -3268,7 +3275,7 @@ async function main() {
     if (!isBashNative) {
       if (isStrictApi) {
         request.tools = strictApiReadOnlyTools;
-        if (taskRequiresBridgeToolGrounding(task)) {
+        if (taskRequiresBridgeToolGrounding(task) && !TOOL_CHOICE_REQUIRED_UNSUPPORTED.has(providerName)) {
           request.toolChoice = 'required';
         }
       } else if (agent.config?.tools && Array.isArray(agent.config.tools)) {
