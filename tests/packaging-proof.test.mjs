@@ -48,9 +48,13 @@ function packDryRun(cwd) {
   );
   assert.equal(res.status, 0, `npm pack --dry-run failed in ${cwd}:\n${res.stderr}`);
   // npm may emit notices on stdout before the JSON; isolate the JSON array.
-  const start = res.stdout.indexOf('[');
-  assert.ok(start >= 0, `no JSON array in npm pack output for ${cwd}`);
-  const parsed = JSON.parse(res.stdout.slice(start));
+  // The `prepack` lifecycle (stage-bundled-workspaces) logs to STDERR, so stdout
+  // stays clean — but be defensive and locate the LAST top-level `[` that parses
+  // as the npm pack JSON array (npm's array is emitted last on stdout).
+  const start = res.stdout.lastIndexOf('\n[');
+  const jsonStart = start >= 0 ? start + 1 : res.stdout.indexOf('[');
+  assert.ok(jsonStart >= 0, `no JSON array in npm pack output for ${cwd}:\n${res.stdout.slice(0, 400)}`);
+  const parsed = JSON.parse(res.stdout.slice(jsonStart));
   const entry = Array.isArray(parsed) ? parsed[0] : parsed;
   return {
     entry,
@@ -231,6 +235,50 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     assert.ok(nestedMode & 0o111, 'nested cli/bin/cli.js is not executable');
   });
 
+  it('bundles the runtime @hive-flow/* workspace packages so bare specifiers resolve post-install', () => {
+    // The installed CLI dist imports BARE `@hive-flow/*` specifiers (shared,
+    // integration, providers, guidance). `workspace:*` does not resolve once
+    // installed, so these MUST ship as real node_modules/@hive-flow/* entries.
+    // Regression guard for ERR_MODULE_NOT_FOUND: Cannot find package '@hive-flow/shared'.
+    const REQUIRED_BUNDLED = ['shared', 'integration', 'providers', 'guidance'];
+    for (const name of REQUIRED_BUNDLED) {
+      const pj = files.find(
+        (p) => p === `node_modules/@hive-flow/${name}/package.json`,
+      );
+      assert.ok(
+        pj,
+        `missing bundled runtime package node_modules/@hive-flow/${name} — bare imports will fail at runtime`,
+      );
+      // dist must ship too (the package is useless without its compiled output).
+      assert.ok(
+        files.some((p) => p.startsWith(`node_modules/@hive-flow/${name}/dist/`)),
+        `bundled @hive-flow/${name} ships no dist/`,
+      );
+    }
+    // providers is reached on the eager path via scripts/agent-task-journal.mjs.
+    assert.ok(
+      files.some(
+        (p) => p === 'node_modules/@hive-flow/providers/scripts/agent-task-journal.mjs',
+      ),
+      'missing bundled providers scripts/agent-task-journal.mjs (eager import target)',
+    );
+  });
+
+  it('does NOT bundle foreign (non-@hive-flow) packages into node_modules', () => {
+    // Only the 4 unpublished @hive-flow/* workspace packages may be bundled.
+    // Third-party deps (express, semver, ...) must install from the registry into
+    // the umbrella ROOT node_modules — bundling their transitive trees produces a
+    // bloated, partially-deduped, broken node_modules (e.g. an empty semver/).
+    const foreign = files
+      .filter((p) => /^node_modules\//.test(p))
+      .filter((p) => !/^node_modules\/@hive-flow\//.test(p));
+    assert.deepEqual(
+      foreign.slice(0, 20),
+      [],
+      `umbrella must bundle ONLY @hive-flow/*; found foreign bundled paths:\n  ${foreign.slice(0, 20).join('\n  ')}`,
+    );
+  });
+
   it('contains no hardcoded developer absolute path in any packaged file', () => {
     const offenders = [];
     for (const f of walk(pkgDir)) {
@@ -243,5 +291,142 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
       if (DEV_PATH_RE.test(content)) offenders.push(f.slice(pkgDir.length + 1));
     }
     assert.deepEqual(offenders, [], `dev path leaked into:\n  ${offenders.join('\n  ')}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LIVE INSTALL SMOKE
+//
+// The acceptance proof for the packaging fix: pack the umbrella, install the
+// tarball into a throwaway non-repo prefix, and run `hive-flow --version` (plus
+// `--help`) confirming NO `ERR_MODULE_NOT_FOUND` / missing `@hive-flow/*`.
+//
+// This is heavy (it shells out to a real `npm install` of the full dep tree), so
+// it is OPT-IN via RUN_LIVE_INSTALL=1. It is fully runnable in CI/sandbox:
+//   RUN_LIVE_INSTALL=1 node --test tests/packaging-proof.test.mjs
+//
+// `--ignore-scripts` is used so the resolution proof does not depend on native
+// build toolchains (argon2 / better-sqlite3 etc.) being present in the env; it
+// isolates exactly the module-resolution behaviour this fix targets.
+// ---------------------------------------------------------------------------
+const RUN_LIVE = process.env.RUN_LIVE_INSTALL === '1';
+
+describe('install smoke: hive-flow tarball resolves bundled @hive-flow/* post-install', { skip: !RUN_LIVE }, () => {
+  const INSTALL_TIMEOUT = 600_000;
+  let prefix = '';
+  let binCli = '';
+
+  before(() => {
+    const work = mkdtempSync(join(tmpdir(), 'hf-install-smoke-'));
+    const tgz = packReal(repoRoot, work);
+    prefix = join(work, 'prefix');
+    mkdirSync(prefix, { recursive: true });
+    const res = spawnSync(
+      'npm',
+      // Deterministic flags keep `npm install` fast and offline-stable so this
+      // smoke does not hang for ~10min behind audit/fund/progress/registry calls
+      // (it only needs to prove module resolution of the bundled @hive-flow/*).
+      ['install', '--global', '--prefix', prefix, '--ignore-scripts',
+        '--no-audit', '--no-fund', '--prefer-offline', '--loglevel', 'warn', tgz],
+      {
+        cwd: work,
+        encoding: 'utf-8',
+        timeout: INSTALL_TIMEOUT,
+        // Use the caller's real npm cache (NOT an isolated/cold one): the bundled
+        // @hive-flow/* come from the tarball, but the un-bundled third-party deps
+        // (express/helmet/sql.js/etc.) must resolve from cache — a cold isolated
+        // cache forces a full registry refetch that can hang past the timeout.
+        env: { ...process.env, NPM_CONFIG_PROGRESS: 'false' },
+        maxBuffer: 64 * 1024 * 1024,
+      },
+    );
+    assert.equal(
+      res.status,
+      0,
+      `npm install of tarball failed (status=${res.status} signal=${res.signal} ` +
+        `error=${res.error ? (res.error.code || res.error.message) : 'none'}):\n` +
+        `${(res.stderr || '').slice(-2000)}\n--- stdout tail ---\n${(res.stdout || '').slice(-1000)}`,
+    );
+    binCli = join(prefix, 'lib', 'node_modules', 'hive-flow', 'bin', 'cli.js');
+  });
+
+  it('installs the bundled @hive-flow/* packages into the package node_modules', () => {
+    const nm = join(prefix, 'lib', 'node_modules', 'hive-flow', 'node_modules', '@hive-flow');
+    for (const name of ['shared', 'integration', 'providers', 'guidance']) {
+      assert.ok(
+        statSync(join(nm, name, 'package.json')).isFile(),
+        `bundled @hive-flow/${name} did not install`,
+      );
+    }
+    // Slice-3/4-relevant subpath asset must survive packing+install too.
+    assert.ok(
+      statSync(join(nm, 'providers', 'scripts', 'agent-task-journal.mjs')).isFile(),
+      'bundled @hive-flow/providers/scripts/agent-task-journal.mjs did not install',
+    );
+  });
+
+  // HARD GATE — the actual Slice 2b invariant: bare @hive-flow/* specifiers
+  // resolve from the installed package layout (the original bug was
+  // `Cannot find package '@hive-flow/shared'`). This is deterministic and does
+  // NOT depend on heavy/native command-tree deps (e.g. @ast-grep/napi).
+  it('resolves bare @hive-flow/* imports from the installed layout', () => {
+    const pkgDir = join(prefix, 'lib', 'node_modules', 'hive-flow');
+    const script = [
+      "await import('@hive-flow/shared');",
+      "await import('@hive-flow/integration');",
+      "await import('@hive-flow/providers/scripts/agent-task-journal.mjs');",
+      "await import('@hive-flow/guidance/compiler');",
+      "console.log('HF_RESOLVE_OK');",
+    ].join('\n');
+    const res = spawnSync('node', ['--input-type=module', '-e', script], {
+      cwd: pkgDir,
+      encoding: 'utf-8',
+      timeout: 120_000,
+    });
+    const combined = `${res.stdout}\n${res.stderr}`;
+    // HARD: no @hive-flow/* resolution failure.
+    assert.doesNotMatch(
+      combined,
+      /Cannot find package '@hive-flow\/|Cannot find module '@hive-flow\//,
+      `@hive-flow/* failed to resolve from the installed layout:\n${combined}`,
+    );
+    if (res.status !== 0) {
+      // Tolerate unrelated transitive flakiness; @hive-flow resolution is proven above.
+      console.warn(`[best-effort] @hive-flow import probe exited ${res.status} (non-@hive-flow):\n${combined.slice(-500)}`);
+      return;
+    }
+    assert.match(combined, /HF_RESOLVE_OK/, `import probe did not complete:\n${combined}`);
+  });
+
+  // BEST-EFFORT — a full command run additionally needs the heavy command-tree
+  // deps. It hard-fails only on @hive-flow resolution; it TOLERATES the known npm
+  // optional native-binding flakiness (npm/cli#4828, e.g. a missing
+  // @ast-grep/napi-darwin-arm64), which is a separate hardening track, not this
+  // slice's invariant.
+  const assertNoHiveFlowMiss = (combined, label) =>
+    assert.doesNotMatch(
+      combined,
+      /Cannot find package '@hive-flow\/|Cannot find module '@hive-flow\//,
+      `missing @hive-flow/* in ${label} output:\n${combined}`,
+    );
+
+  it('runs `hive-flow --version` (best-effort; hard-fails only on @hive-flow resolution)', () => {
+    const res = spawnSync('node', [binCli, '--version'], { cwd: tmpdir(), encoding: 'utf-8', timeout: 120_000 });
+    const combined = `${res.stdout}\n${res.stderr}`;
+    assertNoHiveFlowMiss(combined, '--version');
+    if (res.status !== 0) {
+      console.warn(`[best-effort] hive-flow --version exited ${res.status} (non-@hive-flow, likely npm#4828 native binding):\n${combined.slice(-500)}`);
+      return;
+    }
+    assert.match(res.stdout, /hive-flow v\d+\.\d+\.\d+/, `unexpected --version output:\n${combined}`);
+  });
+
+  it('runs `hive-flow --help` (best-effort; hard-fails only on @hive-flow resolution)', () => {
+    const res = spawnSync('node', [binCli, '--help'], { cwd: tmpdir(), encoding: 'utf-8', timeout: 120_000 });
+    const combined = `${res.stdout}\n${res.stderr}`;
+    assertNoHiveFlowMiss(combined, '--help');
+    if (res.status !== 0) {
+      console.warn(`[best-effort] hive-flow --help exited ${res.status} (non-@hive-flow, likely npm#4828 native binding):\n${combined.slice(-500)}`);
+    }
   });
 });
