@@ -6344,8 +6344,6 @@ cp -r ./data-backup-v2 ./data
 ### Additional Resources
 
 - [Architecture Decisions (ADRs)](./v3/docs/adr/)
-- [API Reference](./v2/docs/technical/)
-- [Examples](./v2/examples/)
 
 </details>
 

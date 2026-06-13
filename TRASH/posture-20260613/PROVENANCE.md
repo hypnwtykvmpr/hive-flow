@@ -175,3 +175,90 @@ before and after** the move — no `package-lock.json` or `TRASH/` path ships.
 ```
 git mv TRASH/posture-20260613/dependabot/package-lock.json package-lock.json
 ```
+
+---
+
+# v2 Legacy Tree Retirement (slice 4) — Entire `v2/` Quarantined
+
+**Date:** 2026-06-13
+**Original path:** `v2/` (the entire legacy v2 tree)
+**Quarantine path:** `TRASH/posture-20260613/v2/`
+**Pre-move SHA:** `dc859cb359496319e5eee241dbed0ddb4bcd120c` (`git rev-parse HEAD` immediately before the move)
+
+## What Moved — Count & Rule
+
+- **6413 tracked files moved** — the complete legacy `v2/` tree, including
+  `v2/package-lock.json` (~100 of the moved files are nested lockfiles/node artifacts).
+- **Rule:** `git mv v2 TRASH/posture-20260613/v2` — every tracked `v2/<path>` relocated to
+  `TRASH/posture-20260613/v2/<path>`, original relative path preserved verbatim.
+- All 6413 staged changes are pure renames (`git diff --cached --name-status` reports
+  `R100` for every entry — 100% content similarity, history-preserving). Zero non-R100.
+- Live `v2/` no longer exists in the tracked tree (`git ls-files | grep '^v2/'` = 0).
+- No non-`v2` file was touched by the move itself.
+
+## Why Dead
+
+The v3 packages have **zero v3->v2 runtime imports** (coordinator-verified prove-dead). The
+only live references into `v2/` were documentation links, a cleanup script path, an
+`.npmignore` comment, and two provenance-only `affectedFiles` strings in the CVE registry —
+all of which were migrated (see below). Every remaining `v2` grep hit across the repo is an
+API-version / version-string **false positive**, not a path reference:
+`all-MiniLM-L6-v2`, `Claude Code v2.1.19`, `oauth2/v2/auth`, `migrate --from v2`,
+`/v1/, /v2/ prefix`, etc. — these were deliberately **not** touched.
+
+## Reference Migrations (the only live refs into `v2/`, all moved off it)
+
+1. **`.npmignore`** — comment-only update above the existing `v2/` ignore rule:
+   `# V2 legacy (not needed in npm package)` ->
+   `# V2 legacy retired to TRASH/posture-20260613/v2/ (quarantined; covered by TRASH/ rules below)`.
+   (The `v2/` ignore line itself is retained as defense-in-depth.)
+2. **`README.md`** — removed 3 dead relative links under "Additional Resources":
+   `- [V2 Documentation](./v2/README.md)`, `- [API Reference](./v2/docs/technical/)`,
+   `- [Examples](./v2/examples/)`.
+3. **`v3/@hive-flow/cli/README.md`** — removed 2 dead relative links:
+   `- [API Reference](./v2/docs/technical/)`, `- [Examples](./v2/examples/)`.
+4. **`scripts/cleanup-v3.sh`** — Step 1 artifact path:
+   `v2/dist-cjs` -> `TRASH/posture-20260613/v2/dist-cjs` (both the `[ -d ... ]` test and the
+   `remove_from_git` call, with the descriptive label reworded to drop the bare live `v2/`
+   token and point at the quarantine path instead).
+5. **`v3/@hive-flow/security/src/CVE-REMEDIATION.ts`** — two `affectedFiles` entries:
+   `v2/src/api/auth-service.ts:580-588` -> `TRASH/posture-20260613/v2/src/api/auth-service.ts:580-588`
+   and `v2/src/api/auth-service.ts:602-643` -> `TRASH/posture-20260613/v2/src/api/auth-service.ts:602-643`,
+   each with a `// Legacy v2 surface retired ...; path kept for provenance.` comment.
+
+## Prove-Dead Evidence (coordinator-verified, BEFORE the move)
+
+- **Zero v3->v2 runtime imports / requires / globs / copies.** No v3 package or build/CI path
+  resolves into `v2/`.
+- The five reference migrations above were the **only** live (non-false-positive) references
+  into `v2/`; all were migrated off the live path.
+- Remaining `v2` grep hits are version-string / API-version false positives (enumerated
+  above) and resolve to **no** filesystem path under `v2/`.
+
+## Verification Performed
+
+- All 6413 staged changes are `R100` (lossless, history-preserving renames). Zero non-R100.
+- `git ls-files | grep '^v2/'` returns **0** (no live `v2/` tracked path remains).
+- `git ls-files TRASH/posture-20260613/v2/ | wc -l` is **> 0** (quarantine populated).
+- The 5 reference migrations verified surgical (doc-link removals + path rewrites + comments).
+- A static guard, `v3/tests/bats/v2-retirement-guard.bats`, asserts these invariants and
+  guards against silent regression.
+
+## Packaging Safety
+
+`TRASH/**` is already excluded from npm pack (root `files` allowlist negation `"!TRASH/**"`
++ `.npmignore` guard; the retained `v2/` ignore line is additional defense-in-depth).
+`npm pack --dry-run` filtered for `v2/|TRASH/` is **CLEAN** — no `v2/` or `TRASH/` path ships
+in the tarball (root and `@hive-flow/cli`).
+
+## Expected Dependabot Impact
+
+Retiring the v2 tree removes ~**173** open alerts that pointed at v2 manifests/lockfiles
+(including ~100 from `v2/package-lock.json` and its nested lockfiles), on top of the slice-3
+root-lockfile retirement.
+
+## Restore
+
+```
+git mv TRASH/posture-20260613/v2 v2
+```

@@ -6977,10 +6977,7 @@ cp -r ./data-backup-v2 ./data
 
 ### Additional Resources
 
-- [V2 Documentation](./v2/README.md)
 - [Architecture Decisions (ADRs)](./v3/docs/adr/)
-- [API Reference](./v2/docs/technical/)
-- [Examples](./v2/examples/)
 
 </details>
 

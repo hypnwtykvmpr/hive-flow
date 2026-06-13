@@ -34,7 +34,7 @@
 .DS_Store
 Thumbs.db
 
-# V2 legacy (not needed in npm package)
+# V2 legacy retired to TRASH/posture-20260613/v2/ (quarantined; covered by TRASH/ rules below)
 v2/
 
 # Development docs

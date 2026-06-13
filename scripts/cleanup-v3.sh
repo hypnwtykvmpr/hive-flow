@@ -96,8 +96,8 @@ fi
 
 echo -e "${BLUE}Step 1: Remove tracked build artifacts (dist-cjs/)${NC}"
 echo "----------------------------------------"
-if [ -d "v2/dist-cjs" ]; then
-    remove_from_git "v2/dist-cjs" "CommonJS build artifacts (v2/dist-cjs/)"
+if [ -d "TRASH/posture-20260613/v2/dist-cjs" ]; then
+    remove_from_git "TRASH/posture-20260613/v2/dist-cjs" "CommonJS build artifacts (legacy dist-cjs, now quarantined under TRASH/posture-20260613/v2/)"
 
     if [ "$DRY_RUN" = false ]; then
         echo "  Ensuring dist-cjs is in .gitignore..."
