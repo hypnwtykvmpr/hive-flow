@@ -2850,6 +2850,312 @@ const BRIDGE_TOOL_REGISTRY = {
   'web_search': webSearchTool,
 };
 
+const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
+  read_file: {
+    capability: 'filesystem.read',
+    authority: 'read',
+    exposeDefault: true,
+    exposeStrictApi: true,
+    requiresPathJail: true,
+    requiresProtectedReadGate: true,
+    outputRedaction: 'bridge-string',
+    idempotent: true,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'read_file',
+        description: 'Read the contents of a file.',
+        parameters: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: 'Absolute or relative path to the file.' },
+          },
+          required: ['path'],
+        },
+      },
+    },
+  },
+  write_file: {
+    capability: 'filesystem.write',
+    authority: 'write',
+    exposeDefault: true,
+    exposeStrictApi: false,
+    requiresPathJail: true,
+    requiresProtectedWriteGate: true,
+    requiresEnforcementWriteGate: true,
+    outputRedaction: 'bridge-string',
+    idempotent: false,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'write_file',
+        description: 'Write content to a file, creating parent directories if needed.',
+        parameters: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: 'Absolute or relative path to the file.' },
+            content: { type: 'string', description: 'Full content to write to the file.' },
+          },
+          required: ['path', 'content'],
+        },
+      },
+    },
+  },
+  edit_file: {
+    capability: 'filesystem.write',
+    authority: 'write',
+    exposeDefault: true,
+    exposeStrictApi: false,
+    requiresPathJail: true,
+    requiresProtectedWriteGate: true,
+    requiresEnforcementWriteGate: true,
+    outputRedaction: 'bridge-string',
+    idempotent: false,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'edit_file',
+        description: 'Replace an exact substring in a file with new text.',
+        parameters: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: 'Absolute or relative path to the file.' },
+            old_string: { type: 'string', description: 'The exact text to find and replace.' },
+            new_string: { type: 'string', description: 'The text to replace it with.' },
+          },
+          required: ['path', 'old_string', 'new_string'],
+        },
+      },
+    },
+  },
+  list_directory: {
+    capability: 'filesystem.read',
+    authority: 'read',
+    exposeDefault: true,
+    exposeStrictApi: true,
+    requiresPathJail: true,
+    requiresProtectedReadGate: true,
+    outputRedaction: 'bridge-string',
+    idempotent: true,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'list_directory',
+        description: 'List the contents of a directory.',
+        parameters: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: 'Directory path to list. Defaults to current directory.' },
+          },
+          required: [],
+        },
+      },
+    },
+  },
+  grep: {
+    capability: 'filesystem.search',
+    authority: 'read',
+    exposeDefault: true,
+    exposeStrictApi: true,
+    requiresPathJail: true,
+    requiresProtectedReadGate: true,
+    outputRedaction: 'bridge-string',
+    idempotent: true,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'grep',
+        description: 'Search file contents for pattern using grep/ripgrep.',
+        parameters: {
+          type: 'object',
+          properties: {
+            pattern: { type: 'string', description: 'Pattern to search for (regex).' },
+            path: { type: 'string', description: 'Directory path to search. Defaults to project root.' },
+            file_glob: { type: 'string', description: 'Glob pattern to filter files (e.g., "*.js"). Requires ripgrep (rg).' },
+            max_results: { type: 'number', description: 'Maximum number of results to return. Defaults to 50.' },
+          },
+          required: ['pattern'],
+        },
+      },
+    },
+  },
+  find_file: {
+    capability: 'filesystem.search',
+    authority: 'read',
+    exposeDefault: true,
+    exposeStrictApi: true,
+    requiresPathJail: true,
+    requiresProtectedReadGate: true,
+    outputRedaction: 'bridge-string',
+    idempotent: true,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'find_file',
+        description: 'Search for files by glob pattern.',
+        parameters: {
+          type: 'object',
+          properties: {
+            pattern: { type: 'string', description: 'Glob pattern to match (e.g., "*.js", "**/*.md").' },
+            path: { type: 'string', description: 'Directory path to search. Defaults to current directory.' },
+          },
+          required: ['pattern'],
+        },
+      },
+    },
+  },
+  run_shell: {
+    capability: 'process.exec.sandboxed',
+    authority: 'exec',
+    exposeDefault: true,
+    exposeStrictApi: false,
+    requiresPermissionGuard: true,
+    requiresSandbox: true,
+    requiresEnforcementExecGate: true,
+    outputRedaction: 'structured-redactor',
+    idempotent: false,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'run_shell',
+        description: 'Run a simple command in a deny-by-default sandbox. Shell operators, redirects, pipes, env prefixes, launch wrappers, inline code, and network are denied.',
+        parameters: {
+          type: 'object',
+          properties: {
+            command: { type: 'string', description: 'Simple command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
+            argv: {
+              type: 'array',
+              description: 'Preferred direct argv form. Executed without shell=true after Bash-gate approval.',
+              items: { type: 'string' },
+            },
+            timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+  },
+  run_command: {
+    capability: 'process.exec.readonly',
+    authority: 'read',
+    exposeDefault: false,
+    exposeStrictApi: true,
+    requiresPathJail: true,
+    requiresReadOnlyAllowlist: true,
+    outputRedaction: 'structured-redactor',
+    idempotent: true,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'run_command',
+        description: 'Run a read-only allowlisted command in the project. Allowed: git status/diff/log/show/rev-parse/ls-files/describe/cat-file, pwd, ls, cat, head, tail, wc. No shell, writes, env exposure, launchers, pipes, or redirects.',
+        parameters: {
+          type: 'object',
+          properties: {
+            command: { type: 'string', description: 'Simple read-only command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
+            argv: {
+              type: 'array',
+              description: 'Preferred direct argv form. Executed without shell=true after the read-only allowlist and project path jail pass.',
+              items: { type: 'string' },
+            },
+            timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+  },
+  web_fetch: {
+    capability: 'network.fetch.allowlisted',
+    authority: 'network',
+    exposeDefault: true,
+    exposeStrictApi: false,
+    requiresAllowlist: true,
+    requiresSsrfGuard: true,
+    requiresEnforcementFetchGate: true,
+    outputRedaction: 'structured-redactor',
+    idempotent: true,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'web_fetch',
+        description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Requires project allowlist; follows redirects manually; returns status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and denyReason on denial.',
+        parameters: {
+          type: 'object',
+          properties: {
+            url: { type: 'string', description: 'HTTPS URL to fetch. No embedded credentials. Host must pass the bridge allowlist and SSRF checks.' },
+          },
+          required: ['url'],
+          additionalProperties: false,
+        },
+      },
+    },
+  },
+  web_search: {
+    capability: 'network.search.unsupported',
+    authority: 'unsupported',
+    exposeDefault: true,
+    exposeStrictApi: false,
+    alwaysDenied: true,
+    outputRedaction: 'structured-redactor',
+    idempotent: true,
+    definition: {
+      type: 'function',
+      function: {
+        name: 'web_search',
+        description: 'Unsupported in provider bridge. Returns a clear web-search-unsupported denial; open web search is intentionally not available.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query. Currently denied by policy.' },
+          },
+          required: ['query'],
+          additionalProperties: false,
+        },
+      },
+    },
+  },
+});
+
+export function bridgeToolDefinitionsForProviderMode(mode = 'default') {
+  const strictApi = mode === 'strict-api';
+  return Object.values(BRIDGE_TOOL_CAPABILITY_MANIFEST)
+    .filter((entry) => strictApi ? entry.exposeStrictApi === true : entry.exposeDefault === true)
+    .map((entry) => entry.definition);
+}
+
+export function bridgeToolCapabilityManifest() {
+  return Object.freeze(Object.fromEntries(
+    Object.entries(BRIDGE_TOOL_CAPABILITY_MANIFEST).map(([name, entry]) => [
+      name,
+      Object.freeze({
+        capability: entry.capability,
+        authority: entry.authority,
+        exposeDefault: entry.exposeDefault === true,
+        exposeStrictApi: entry.exposeStrictApi === true,
+        requiresPathJail: entry.requiresPathJail === true,
+        requiresProtectedReadGate: entry.requiresProtectedReadGate === true,
+        requiresProtectedWriteGate: entry.requiresProtectedWriteGate === true,
+        requiresEnforcementWriteGate: entry.requiresEnforcementWriteGate === true,
+        requiresEnforcementExecGate: entry.requiresEnforcementExecGate === true,
+        requiresEnforcementFetchGate: entry.requiresEnforcementFetchGate === true,
+        requiresSandbox: entry.requiresSandbox === true,
+        requiresPermissionGuard: entry.requiresPermissionGuard === true,
+        requiresReadOnlyAllowlist: entry.requiresReadOnlyAllowlist === true,
+        requiresAllowlist: entry.requiresAllowlist === true,
+        requiresSsrfGuard: entry.requiresSsrfGuard === true,
+        alwaysDenied: entry.alwaysDenied === true,
+        idempotent: entry.idempotent === true,
+        outputRedaction: entry.outputRedaction,
+      }),
+    ]),
+  ));
+}
+
+export function bridgeToolRegistryNames() {
+  return Object.freeze(Object.keys(BRIDGE_TOOL_REGISTRY).sort());
+}
+
 function parseBridgeToolArgs(toolArgs) {
   if (typeof toolArgs === 'string') {
     try { return JSON.parse(toolArgs); } catch { return {}; }
@@ -3225,178 +3531,10 @@ async function main() {
     }
     let successfulRerolledModel = null;
 
-    // Always include built-in filesystem tools so providers know they can use them.
+    // Always include bridge-owned tools so providers know they can use them.
     // These are handled directly in the bridge (no MCP client required).
-    const builtInFilesystemTools = [
-      {
-        type: 'function',
-        function: {
-          name: 'read_file',
-          description: 'Read the contents of a file.',
-          parameters: {
-            type: 'object',
-            properties: {
-              path: { type: 'string', description: 'Absolute or relative path to the file.' },
-            },
-            required: ['path'],
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'write_file',
-          description: 'Write content to a file, creating parent directories if needed.',
-          parameters: {
-            type: 'object',
-            properties: {
-              path: { type: 'string', description: 'Absolute or relative path to the file.' },
-              content: { type: 'string', description: 'Full content to write to the file.' },
-            },
-            required: ['path', 'content'],
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'edit_file',
-          description: 'Replace an exact substring in a file with new text.',
-          parameters: {
-            type: 'object',
-            properties: {
-              path: { type: 'string', description: 'Absolute or relative path to the file.' },
-              old_string: { type: 'string', description: 'The exact text to find and replace.' },
-              new_string: { type: 'string', description: 'The text to replace it with.' },
-            },
-            required: ['path', 'old_string', 'new_string'],
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'list_directory',
-          description: 'List the contents of a directory.',
-          parameters: {
-            type: 'object',
-            properties: {
-              path: { type: 'string', description: 'Directory path to list. Defaults to current directory.' },
-            },
-            required: [],
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'grep',
-          description: 'Search file contents for pattern using grep/ripgrep.',
-          parameters: {
-            type: 'object',
-            properties: {
-              pattern: { type: 'string', description: 'Pattern to search for (regex).' },
-              path: { type: 'string', description: 'Directory path to search. Defaults to project root.' },
-              file_glob: { type: 'string', description: 'Glob pattern to filter files (e.g., "*.js"). Requires ripgrep (rg).' },
-              max_results: { type: 'number', description: 'Maximum number of results to return. Defaults to 50.' },
-            },
-            required: ['pattern'],
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'find_file',
-          description: 'Search for files by glob pattern.',
-          parameters: {
-            type: 'object',
-            properties: {
-              pattern: { type: 'string', description: 'Glob pattern to match (e.g., "*.js", "**/*.md").' },
-              path: { type: 'string', description: 'Directory path to search. Defaults to current directory.' },
-            },
-            required: ['pattern'],
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'run_shell',
-          description: 'Run a simple command in a deny-by-default sandbox. Shell operators, redirects, pipes, env prefixes, launch wrappers, inline code, and network are denied.',
-          parameters: {
-            type: 'object',
-            properties: {
-              command: { type: 'string', description: 'Simple command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
-              argv: {
-                type: 'array',
-                description: 'Preferred direct argv form. Executed without shell=true after Bash-gate approval.',
-                items: { type: 'string' },
-              },
-              timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
-            },
-            additionalProperties: false,
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'web_fetch',
-          description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Requires project allowlist; follows redirects manually; returns status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and denyReason on denial.',
-          parameters: {
-            type: 'object',
-            properties: {
-              url: { type: 'string', description: 'HTTPS URL to fetch. No embedded credentials. Host must pass the bridge allowlist and SSRF checks.' },
-            },
-            required: ['url'],
-            additionalProperties: false,
-          },
-        },
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'web_search',
-          description: 'Unsupported in provider bridge. Returns a clear web-search-unsupported denial; open web search is intentionally not available.',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Search query. Currently denied by policy.' },
-            },
-            required: ['query'],
-            additionalProperties: false,
-          },
-        },
-      },
-    ];
-
-    const runCommandToolDefinition = {
-      type: 'function',
-      function: {
-        name: 'run_command',
-        description: 'Run a read-only allowlisted command in the project. Allowed: git status/diff/log/show/rev-parse/ls-files/describe/cat-file, pwd, ls, cat, head, tail, wc. No shell, writes, env exposure, launchers, pipes, or redirects.',
-        parameters: {
-          type: 'object',
-          properties: {
-            command: { type: 'string', description: 'Simple read-only command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
-            argv: {
-              type: 'array',
-              description: 'Preferred direct argv form. Executed without shell=true after the read-only allowlist and project path jail pass.',
-              items: { type: 'string' },
-            },
-            timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
-          },
-          additionalProperties: false,
-        },
-      },
-    };
-
-    const strictApiReadOnlyToolNames = new Set(['read_file', 'list_directory', 'grep', 'find_file']);
-    const strictApiReadOnlyTools = [
-      ...builtInFilesystemTools.filter((tool) => strictApiReadOnlyToolNames.has(tool.function.name)),
-      runCommandToolDefinition,
-    ];
+    const builtInFilesystemTools = bridgeToolDefinitionsForProviderMode('default');
+    const strictApiReadOnlyTools = bridgeToolDefinitionsForProviderMode('strict-api');
 
     // Bash-native providers (codex-cli, cursor-cli) have built-in shell execution.
     // They run commands directly and do NOT need structured tool definitions.

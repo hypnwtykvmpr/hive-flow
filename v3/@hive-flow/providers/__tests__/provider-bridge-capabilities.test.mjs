@@ -1,0 +1,346 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import fc from 'fast-check';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const bridgePath = resolve(here, '../scripts/provider-agent-bridge.mjs');
+
+const previousEnv = {
+  HIVE_FLOW_DEV_OVERRIDE_TOKEN: process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN,
+  HIVE_FLOW_DEV_OVERRIDE: process.env.HIVE_FLOW_DEV_OVERRIDE,
+};
+
+let bridge;
+
+function restoreEnv() {
+  for (const [key, value] of Object.entries(previousEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+}
+
+function restoreProcessListeners(event, preserved) {
+  const keep = new Set(preserved);
+  for (const listener of process.listeners(event)) {
+    if (!keep.has(listener)) process.off(event, listener);
+  }
+}
+
+beforeAll(async () => {
+  const sigtermListeners = process.listeners('SIGTERM');
+  const uncaughtExceptionListeners = process.listeners('uncaughtException');
+  try {
+    bridge = await import(`${pathToFileURL(bridgePath).href}?capabilities=${Date.now()}-${Math.random()}`);
+  } finally {
+    restoreEnv();
+    restoreProcessListeners('SIGTERM', sigtermListeners);
+    restoreProcessListeners('uncaughtException', uncaughtExceptionListeners);
+  }
+});
+
+afterAll(() => {
+  restoreEnv();
+});
+
+const DEFAULT_TOOL_NAMES = [
+  'read_file',
+  'write_file',
+  'edit_file',
+  'list_directory',
+  'grep',
+  'find_file',
+  'run_shell',
+  'web_fetch',
+  'web_search',
+];
+
+const STRICT_API_TOOL_NAMES = [
+  'read_file',
+  'list_directory',
+  'grep',
+  'find_file',
+  'run_command',
+];
+
+const EXPECTED_DEFINITIONS = {
+  read_file: {
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: 'Read the contents of a file.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Absolute or relative path to the file.' },
+        },
+        required: ['path'],
+      },
+    },
+  },
+  write_file: {
+    type: 'function',
+    function: {
+      name: 'write_file',
+      description: 'Write content to a file, creating parent directories if needed.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Absolute or relative path to the file.' },
+          content: { type: 'string', description: 'Full content to write to the file.' },
+        },
+        required: ['path', 'content'],
+      },
+    },
+  },
+  edit_file: {
+    type: 'function',
+    function: {
+      name: 'edit_file',
+      description: 'Replace an exact substring in a file with new text.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Absolute or relative path to the file.' },
+          old_string: { type: 'string', description: 'The exact text to find and replace.' },
+          new_string: { type: 'string', description: 'The text to replace it with.' },
+        },
+        required: ['path', 'old_string', 'new_string'],
+      },
+    },
+  },
+  list_directory: {
+    type: 'function',
+    function: {
+      name: 'list_directory',
+      description: 'List the contents of a directory.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'Directory path to list. Defaults to current directory.' },
+        },
+        required: [],
+      },
+    },
+  },
+  grep: {
+    type: 'function',
+    function: {
+      name: 'grep',
+      description: 'Search file contents for pattern using grep/ripgrep.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pattern: { type: 'string', description: 'Pattern to search for (regex).' },
+          path: { type: 'string', description: 'Directory path to search. Defaults to project root.' },
+          file_glob: { type: 'string', description: 'Glob pattern to filter files (e.g., "*.js"). Requires ripgrep (rg).' },
+          max_results: { type: 'number', description: 'Maximum number of results to return. Defaults to 50.' },
+        },
+        required: ['pattern'],
+      },
+    },
+  },
+  find_file: {
+    type: 'function',
+    function: {
+      name: 'find_file',
+      description: 'Search for files by glob pattern.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pattern: { type: 'string', description: 'Glob pattern to match (e.g., "*.js", "**/*.md").' },
+          path: { type: 'string', description: 'Directory path to search. Defaults to current directory.' },
+        },
+        required: ['pattern'],
+      },
+    },
+  },
+  run_shell: {
+    type: 'function',
+    function: {
+      name: 'run_shell',
+      description: 'Run a simple command in a deny-by-default sandbox. Shell operators, redirects, pipes, env prefixes, launch wrappers, inline code, and network are denied.',
+      parameters: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'Simple command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
+          argv: {
+            type: 'array',
+            description: 'Preferred direct argv form. Executed without shell=true after Bash-gate approval.',
+            items: { type: 'string' },
+          },
+          timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  run_command: {
+    type: 'function',
+    function: {
+      name: 'run_command',
+      description: 'Run a read-only allowlisted command in the project. Allowed: git status/diff/log/show/rev-parse/ls-files/describe/cat-file, pwd, ls, cat, head, tail, wc. No shell, writes, env exposure, launchers, pipes, or redirects.',
+      parameters: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'Simple read-only command string. No shell operators, redirects, pipes, env prefixes, or command substitution.' },
+          argv: {
+            type: 'array',
+            description: 'Preferred direct argv form. Executed without shell=true after the read-only allowlist and project path jail pass.',
+            items: { type: 'string' },
+          },
+          timeoutMs: { type: 'number', description: 'Optional timeout in milliseconds, capped by the bridge.' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  web_fetch: {
+    type: 'function',
+    function: {
+      name: 'web_fetch',
+      description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Requires project allowlist; follows redirects manually; returns status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and denyReason on denial.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: { type: 'string', description: 'HTTPS URL to fetch. No embedded credentials. Host must pass the bridge allowlist and SSRF checks.' },
+        },
+        required: ['url'],
+        additionalProperties: false,
+      },
+    },
+  },
+  web_search: {
+    type: 'function',
+    function: {
+      name: 'web_search',
+      description: 'Unsupported in provider bridge. Returns a clear web-search-unsupported denial; open web search is intentionally not available.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search query. Currently denied by policy.' },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+    },
+  },
+};
+
+function namesOf(tools) {
+  return tools.map((tool) => tool.function.name);
+}
+
+function definitionsByName(tools) {
+  return Object.fromEntries(tools.map((tool) => [tool.function.name, tool]));
+}
+
+function expectedDefinitionsFor(names) {
+  return Object.fromEntries(names.map((name) => [name, EXPECTED_DEFINITIONS[name]]));
+}
+
+describe('provider bridge capability manifest', () => {
+  it('pins the default provider exposure by name', () => {
+    expect(namesOf(bridge.bridgeToolDefinitionsForProviderMode('default'))).toEqual(DEFAULT_TOOL_NAMES);
+  });
+
+  it('pins the strict API provider exposure by name', () => {
+    expect(namesOf(bridge.bridgeToolDefinitionsForProviderMode('strict-api'))).toEqual(STRICT_API_TOOL_NAMES);
+  });
+
+  it('preserves the prior default provider schemas verbatim', () => {
+    const definitions = definitionsByName(bridge.bridgeToolDefinitionsForProviderMode('default'));
+    expect(definitions).toEqual(expectedDefinitionsFor(DEFAULT_TOOL_NAMES));
+  });
+
+  it('preserves the prior strict API provider schemas verbatim', () => {
+    const definitions = definitionsByName(bridge.bridgeToolDefinitionsForProviderMode('strict-api'));
+    expect(definitions).toEqual(expectedDefinitionsFor(STRICT_API_TOOL_NAMES));
+  });
+
+  it('keeps the manifest aligned with the executable bridge registry', () => {
+    const manifest = bridge.bridgeToolCapabilityManifest();
+    expect(Object.keys(manifest).sort()).toEqual(bridge.bridgeToolRegistryNames());
+    expect(bridge.bridgeToolRegistryNames()).toEqual([...new Set([...DEFAULT_TOOL_NAMES, ...STRICT_API_TOOL_NAMES])].sort());
+  });
+
+  it('does not expose MCP aliases through any provider mode', () => {
+    for (const mode of ['default', 'strict-api', 'unknown-mode']) {
+      for (const name of namesOf(bridge.bridgeToolDefinitionsForProviderMode(mode))) {
+        expect(name.startsWith('mcp__')).toBe(false);
+      }
+    }
+  });
+
+  it('keeps strict API exposure read-only and deny-only', () => {
+    const manifest = bridge.bridgeToolCapabilityManifest();
+    const strictNames = namesOf(bridge.bridgeToolDefinitionsForProviderMode('strict-api'));
+    for (const name of strictNames) {
+      expect(manifest[name].exposeStrictApi).toBe(true);
+      expect(['read', 'unsupported']).toContain(manifest[name].authority);
+      expect(manifest[name].requiresEnforcementWriteGate).toBe(false);
+      expect(manifest[name].requiresEnforcementExecGate).toBe(false);
+      expect(manifest[name].requiresEnforcementFetchGate).toBe(false);
+    }
+  });
+
+  it('documents capability flags without changing handler policy', () => {
+    const manifest = bridge.bridgeToolCapabilityManifest();
+    expect(manifest.write_file).toMatchObject({
+      authority: 'write',
+      exposeDefault: true,
+      exposeStrictApi: false,
+      requiresProtectedWriteGate: true,
+      requiresEnforcementWriteGate: true,
+    });
+    expect(manifest.run_shell).toMatchObject({
+      authority: 'exec',
+      exposeDefault: true,
+      exposeStrictApi: false,
+      requiresPermissionGuard: true,
+      requiresSandbox: true,
+      requiresEnforcementExecGate: true,
+    });
+    expect(manifest.run_command).toMatchObject({
+      authority: 'read',
+      exposeDefault: false,
+      exposeStrictApi: true,
+      requiresReadOnlyAllowlist: true,
+    });
+    expect(manifest.web_search).toMatchObject({
+      authority: 'unsupported',
+      exposeDefault: true,
+      exposeStrictApi: false,
+      alwaysDenied: true,
+    });
+  });
+
+  it('keeps provider-mode derivation consistent with manifest flags', () => {
+    const manifest = bridge.bridgeToolCapabilityManifest();
+    const manifestNames = Object.keys(manifest);
+
+    fc.assert(
+      fc.property(fc.constantFrom(...manifestNames), (name) => {
+        const entry = manifest[name];
+        const defaultNames = namesOf(bridge.bridgeToolDefinitionsForProviderMode('default'));
+        const strictNames = namesOf(bridge.bridgeToolDefinitionsForProviderMode('strict-api'));
+
+        expect(defaultNames.includes(name)).toBe(entry.exposeDefault);
+        expect(strictNames.includes(name)).toBe(entry.exposeStrictApi);
+        if (entry.authority === 'write') {
+          expect(entry.exposeStrictApi).toBe(false);
+          expect(entry.requiresProtectedWriteGate).toBe(true);
+        }
+        if (entry.authority === 'exec') {
+          expect(entry.exposeStrictApi).toBe(false);
+          expect(entry.requiresPermissionGuard || entry.requiresReadOnlyAllowlist).toBe(true);
+        }
+        if (entry.authority === 'network') {
+          expect(entry.exposeStrictApi).toBe(false);
+          expect(entry.requiresAllowlist).toBe(true);
+        }
+      }),
+      { numRuns: 80 },
+    );
+  });
+});

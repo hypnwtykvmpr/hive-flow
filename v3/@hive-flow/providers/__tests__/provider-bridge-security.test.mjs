@@ -53,7 +53,8 @@ describe('provider-agent bridge security wiring', () => {
     expect(bridgeSource).toContain('function redactBridgeCredentialMaterial');
     expect(bridgeSource).toContain('function safeBridgeJsonStringify');
     expect(bridgeSource).toContain('appendFileSync(getBridgeLogPath(), safeBridgeJsonStringify(entry) +');
-    expect(bridgeSource).toContain('writeFileSync(tmpResult, safeBridgeJsonStringify(errorResponse, 2) +');
+    expect(bridgeSource).toContain('const payload = safeBridgeJsonStringify(errorResponse, 2) +');
+    expect(bridgeSource).toContain('writeFileSync(tmpResult, payload);');
     expect(bridgeSource).toContain('process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) +');
     expect(bridgeSource).toContain("return typeof result === 'string' ? redactBridgeString(result) : safeBridgeJsonStringify(result)");
     expect(bridgeSource).toContain("const rawContent = typeof tr.result === 'string' ? redactBridgeString(tr.result) : safeBridgeJsonStringify(tr.result)");
