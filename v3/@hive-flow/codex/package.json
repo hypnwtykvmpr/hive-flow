@@ -79,6 +79,6 @@
     "toml": "^3.0.0"
   },
   "devDependencies": {
-    "vitest": "^1.4.0"
+    "vitest": "^4.0.16"
   }
 }

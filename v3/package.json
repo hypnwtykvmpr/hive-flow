@@ -91,7 +91,9 @@
       "axios": ">=1.13.6",
       "express-rate-limit": ">=8.3.0",
       "hono": ">=4.12.5",
-      "diff": ">=8.0.3"
+      "diff": ">=8.0.3",
+      "protobufjs": ">=7.5.5 <8",
+      "handlebars": ">=4.7.9 <5"
     }
   }
 }

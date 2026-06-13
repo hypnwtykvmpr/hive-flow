@@ -102,3 +102,76 @@ reviewability and restore.
 > git mv TRASH/posture-20260613/delete-marked/<path> <path>
 > ```
 > The original `<path>` for every file is recorded in `RENAME-MAP.txt`.
+
+---
+
+# Dependabot Posture (slice 3) — Dead Root npm Lockfile Retirement
+
+**Date:** 2026-06-13
+**Quarantine path:** `TRASH/posture-20260613/dependabot/package-lock.json`
+**Pre-move SHA:** `d99de9a2a4f7dc923e219edfe6f014afd9e5cc14` (`git rev-parse HEAD` immediately before the move)
+
+## What & Why-Dead
+
+Moved root `package-lock.json` -> `TRASH/posture-20260613/dependabot/package-lock.json`
+via `git mv` (history-preserving rename).
+
+The repo is **pnpm-canonical** (`package.json` `packageManager: pnpm@9.15.9`; canonical
+lockfile `pnpm-lock.yaml`). The root npm `package-lock.json` was a stale, unconsumed
+artifact and the single largest Dependabot alert source: **73 open alerts** point at
+`package-lock.json` (confirmed via the Dependabot API, grouped by `manifest_path`).
+Retiring it retires those 73 alerts. It already did not ship in any npm package
+(`npm pack --dry-run` clean before and after), so the move is purely an alert-surface
+and tree-hygiene win with zero runtime/packaging impact.
+
+## Prove-Dead Evidence (ran BEFORE the move)
+
+Goal: confirm nothing in the live install/build/test/CI flow consumes the root
+`package-lock.json` (i.e. no `npm ci` / repo-root `npm install`).
+
+1. **`npm ci` across the repo** (`*.yml/yaml/json/sh/mjs/cjs/js/md`, excluding
+   `node_modules`, `/TRASH/`, `/.git/`):
+   ```
+   grep -rn "npm ci" . --include=... | grep -v node_modules | grep -v /TRASH/ | grep -v /.git/
+   ```
+   Hits: **only docs/skills/worktrees** (`.agents/skills/*`, `.claude/worktrees/*`,
+   `v2/docs/*`). **Zero** `npm ci` in any live root build/CI/install path.
+
+2. **`npm install` / `npm i` in real paths** (`scripts/`, `.github/`, root `package.json`):
+   ```
+   grep -rnE "npm (ci|install|i)\b" scripts/ .github/ package.json
+   ```
+   Hits are all **global registry installs** (`npm install -g hive-flow` /
+   `npm install -g @anthropic-ai/claude-code` in `scripts/install.sh`; a comment in
+   `scripts/stage-bundled-workspaces.mjs`). **None** runs `npm install` in the repo root,
+   so none consumes the root `package-lock.json`.
+
+3. **`package-lock` references in real source** (excluding docs/worktrees/v2/.agents/.claude):
+   - `.claude/helpers/security-scanner.sh:61` — `if [ -f package-lock.json ]` then `echo "0"`
+     in **both** branches: a pure no-op, never installs.
+   - `v3/@hive-flow/cli/bin/preinstall.cjs:106-123` — deletes stale lockfiles in the **npx
+     cache** (`~/.npm/_npx/*/package-lock.json`), not the repo root.
+   - `v3/@hive-flow/guidance/src/ledger.ts:138` — filename classifier flagging package files
+     for manual review; does not install or require the lockfile.
+
+4. **CI:** the only live workflow `.github/workflows/credential-backends.yml` installs with
+   `pnpm install --frozen-lockfile` (lines 43-44) — pnpm, never npm.
+
+5. **No `scripts/install.sh` repo-root npm install:** it only offers a global package install
+   (`npm install -g hive-flow`), which pulls from the npm registry and never reads the repo's
+   root lockfile.
+
+**Conclusion:** The root `package-lock.json` is consumed by **nothing** in the
+pnpm-canonical flow. Dead. Moved.
+
+## Packaging Safety
+
+`TRASH/**` is already excluded from npm pack (root `files` allowlist negation `"!TRASH/**"`
++ `.npmignore` guard). `npm pack --dry-run` filtered for `package-lock|TRASH` was **CLEAN
+before and after** the move — no `package-lock.json` or `TRASH/` path ships.
+
+## Restore
+
+```
+git mv TRASH/posture-20260613/dependabot/package-lock.json package-lock.json
+```
