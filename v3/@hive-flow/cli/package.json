@@ -68,7 +68,21 @@
   "files": [
     "dist",
     "bin",
-    ".claude",
+    "agents/**/*.yaml",
+    ".claude/commands/**",
+    ".claude/helpers/**",
+    ".claude/skills/**",
+    ".claude/settings.json",
+    "!.claude/**/DELETE_*",
+    "!**/DELETE_*",
+    "!.claude/**/.hive-flow/**",
+    "!.claude/**/*.db",
+    "!.claude/**/*.db-shm",
+    "!.claude/**/*.db-wal",
+    "!.claude/**/*.db-journal",
+    "!.claude/**/.context-tracker.json",
+    "!.claude/**/checkpoints/**",
+    "!**/*.map",
     "README.md"
   ],
   "scripts": {

@@ -284,13 +284,13 @@ show_quickstart() {
         echo -e "  ${BOLD}claude mcp add hive-flow -- hive-flow mcp start${NC}"
     else
         echo -e "  ${DIM}# Initialize project${NC}"
-        echo -e "  ${BOLD}node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --wizard${NC}"
+        echo -e "  ${BOLD}npx ${PACKAGE} init --wizard${NC}"
         echo ""
         echo -e "  ${DIM}# Run system diagnostics${NC}"
-        echo -e "  ${BOLD}node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor${NC}"
+        echo -e "  ${BOLD}npx ${PACKAGE} doctor${NC}"
         echo ""
         echo -e "  ${DIM}# Add as MCP server to Claude Code${NC}"
-        echo -e "  ${BOLD}claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js mcp start${NC}"
+        echo -e "  ${BOLD}claude mcp add hive-flow -- npx -y ${PACKAGE} mcp start${NC}"
     fi
 
     echo ""
@@ -321,9 +321,9 @@ setup_mcp_server() {
             print_substep "MCP server configured ✓" || \
             print_warning "MCP setup failed - run manually: claude mcp add hive-flow -- hive-flow mcp start"
     else
-        claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js mcp start 2>/dev/null && \
+        claude mcp add hive-flow -- npx -y "$PACKAGE" mcp start 2>/dev/null && \
             print_substep "MCP server configured ✓" || \
-            print_warning "MCP setup failed - run manually: claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js mcp start"
+            print_warning "MCP setup failed - run manually: claude mcp add hive-flow -- npx -y ${PACKAGE} mcp start"
     fi
     echo ""
 }
@@ -339,7 +339,7 @@ run_doctor() {
     if [ "$GLOBAL" = "1" ]; then
         hive-flow doctor 2>&1 || true
     else
-        node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor 2>&1 || true
+        npx -y "$PACKAGE" doctor 2>&1 || true
     fi
     echo ""
 }
@@ -355,7 +355,7 @@ run_init() {
     if [ "$GLOBAL" = "1" ]; then
         hive-flow init --yes 2>&1 || true
     else
-        node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --yes 2>&1 || true
+        npx -y "$PACKAGE" init --yes 2>&1 || true
     fi
     echo ""
 }

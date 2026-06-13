@@ -16,6 +16,20 @@ success() { echo -e "${GREEN}✓${NC} $1"; }
 warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 error() { echo -e "${RED}✗${NC} $1"; }
 
+# Resolve the hive-flow CLI portably:
+#  1. plugin-bundled bin (when invoked as a Claude Code plugin)
+#  2. global install on PATH
+#  3. npx fallback
+hf_cli() {
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$CLAUDE_PLUGIN_ROOT/v3/@hive-flow/cli/bin/cli.js" ]; then
+    node "$CLAUDE_PLUGIN_ROOT/v3/@hive-flow/cli/bin/cli.js" "$@"
+  elif command -v hive-flow &>/dev/null; then
+    hive-flow "$@"
+  else
+    npx -y hive-flow "$@"
+  fi
+}
+
 echo -e "${BLUE}═══════════════════════════════════════════════════${NC}"
 echo -e "${BLUE}    Hive Flow Plugin Verification${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════${NC}"
@@ -69,8 +83,8 @@ fi
 
 # Check MCP packages
 info "Checking MCP packages..."
-if node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version &> /dev/null; then
-    VERSION=$(node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version 2>/dev/null || echo "unknown")
+if hf_cli --version &> /dev/null; then
+    VERSION=$(hf_cli --version 2>/dev/null || echo "unknown")
     success "hive-flow MCP: $VERSION"
 else
     warning "hive-flow MCP not installed"

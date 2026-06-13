@@ -104,7 +104,9 @@
   },
   "permissions": {
     "allow": [
-      "Bash(node /Users/jonathandirks/Development/Tools/hive-flow/*)",
+      "Bash(npx -y hive-flow*)",
+      "Bash(npx hive-flow*)",
+      "Bash(hive-flow*)",
       "Bash(node .claude/*)",
       "mcp__hive-flow__:*"
     ],

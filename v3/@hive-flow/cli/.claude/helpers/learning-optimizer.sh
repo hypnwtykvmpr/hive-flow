@@ -14,6 +14,15 @@ LAST_RUN_FILE="$METRICS_DIR/.optimizer-last-run"
 
 mkdir -p "$LEARNING_DIR" "$METRICS_DIR"
 
+# Resolve the hive-flow CLI portably (global install on PATH, else npx).
+hf_cli() {
+  if command -v hive-flow &>/dev/null; then
+    hive-flow "$@"
+  else
+    npx -y hive-flow "$@"
+  fi
+}
+
 should_run() {
   if [ ! -f "$LAST_RUN_FILE" ]; then return 0; fi
   local last_run=$(cat "$LAST_RUN_FILE" 2>/dev/null || echo "0")
@@ -106,7 +115,7 @@ run_sona_training() {
   echo "[$(date +%H:%M:%S)] Spawning SONA learning agent..."
 
   # Use agentic-flow for deep learning optimization
-  node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks intelligence 2>/dev/null || true
+  hf_cli hooks intelligence 2>/dev/null || true
 
   echo "[$(date +%H:%M:%S)] ✓ SONA training triggered"
 }

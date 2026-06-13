@@ -12,6 +12,15 @@ LAST_RUN_FILE="$METRICS_DIR/.perf-last-run"
 
 mkdir -p "$METRICS_DIR"
 
+# Resolve the hive-flow CLI portably (global install on PATH, else npx).
+hf_cli() {
+  if command -v hive-flow &>/dev/null; then
+    hive-flow "$@"
+  else
+    npx -y hive-flow "$@"
+  fi
+}
+
 # Check if we should run (throttle to once per 5 minutes)
 should_run() {
   if [ ! -f "$LAST_RUN_FILE" ]; then
@@ -66,8 +75,19 @@ benchmark_memory() {
 benchmark_startup() {
   local start=$(date +%s%3N)
 
-  # Quick check of agentic-flow responsiveness
-  timeout 5 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --version >/dev/null 2>&1 || true
+  # Quick hive-flow responsiveness check. `timeout` needs a real executable, not the
+  # hf_cli shell function, so resolve the binary first (mirrors hf_cli's resolution).
+  local hf_bin
+  if command -v hive-flow >/dev/null 2>&1; then
+    hf_bin="hive-flow"
+  else
+    hf_bin="npx -y hive-flow"
+  fi
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 5 $hf_bin --version >/dev/null 2>&1 || true
+  else
+    $hf_bin --version >/dev/null 2>&1 || true
+  fi
 
   local end=$(date +%s%3N)
   local duration=$((end - start))
@@ -116,7 +136,7 @@ run_benchmarks() {
 run_deep_benchmark() {
   echo "[$(date +%H:%M:%S)] Spawning performance-benchmarker agent..."
 
-  node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js --agent perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
+  hf_cli --agent perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
   local pid=$!
 
   # Don't wait, let it run in background

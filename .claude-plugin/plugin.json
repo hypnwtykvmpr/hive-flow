@@ -44,7 +44,7 @@
     "hive-flow": {
       "command": "node",
       "args": [
-        "/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js"
+        "${CLAUDE_PLUGIN_ROOT}/v3/@hive-flow/cli/bin/mcp-server.js"
       ],
       "description": "Core Hive Flow MCP server for swarm coordination, agent management, and task orchestration (40+ tools)",
       "optional": false

@@ -10,9 +10,15 @@ if ! command -v claude &> /dev/null; then
     exit 1
 fi
 
-# Add MCP server
+# Add MCP server (portable: global install on PATH, else npx)
 echo "📦 Adding Hive Flow MCP server..."
-claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+if command -v hive-flow-mcp &>/dev/null; then
+    claude mcp add hive-flow -- hive-flow-mcp
+elif command -v hive-flow &>/dev/null; then
+    claude mcp add hive-flow -- hive-flow mcp start
+else
+    claude mcp add hive-flow -- npx -y hive-flow mcp start
+fi
 
 echo "✅ MCP server setup complete!"
 echo "🎯 You can now use mcp__hive-flow__ tools in Claude Code"
