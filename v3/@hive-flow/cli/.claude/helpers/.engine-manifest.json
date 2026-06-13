@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-06-11T01:53:19.009Z",
+  "syncedAt": "2026-06-12T06:17:58.528Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -16,7 +16,7 @@
     },
     {
       "name": "hook-handler.cjs",
-      "sha256": "b4ef28b5ad7484009cbde8f9de6df4ccd2164bcc708ecb21ef71a22d824baee2"
+      "sha256": "f92cd9c87ba6db740de9642332226d6726c12c4a9f705f07c0dc52f5cb2f6496"
     },
     {
       "name": "settings-reconciler.cjs",

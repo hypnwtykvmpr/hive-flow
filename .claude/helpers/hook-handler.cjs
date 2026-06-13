@@ -123,22 +123,66 @@ function permissionGuardAllow(additionalContext) {
 }
 
 function permissionGuardGateMissingDecision(projectDir) {
-  const sourcePath = path.join(projectDir, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
-  if (fs.existsSync(sourcePath)) {
+  const roots = permissionGuardCandidateRoots(projectDir);
+  if (roots.some((root) => fs.existsSync(permissionGuardSourcePath(root)))) {
     return permissionGuardAllow('[PERMISSION GUARD] Compiled gate not built — run npm run build in v3/@hive-flow/cli. Degraded (allow) for first-run.');
   }
   return permissionGuardDeny('[PERMISSION GUARD] Compiled gate not found at relocated root. Tool blocked for safety.');
 }
 
-function readPermissionGuardSourceStamp() {
-  const sourcePath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
+function permissionGuardGatePath(root) {
+  return path.join(root, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
+}
+
+function permissionGuardSourcePath(root) {
+  return path.join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
+}
+
+function readInstalledEngineSourceRoot() {
+  try {
+    const versionPath = path.join(helpersDir, '.version');
+    const version = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
+    return typeof version.source === 'string' && version.source.trim()
+      ? path.resolve(version.source)
+      : '';
+  } catch {
+    return '';
+  }
+}
+
+function permissionGuardCandidateRoots(projectDir) {
+  const roots = [
+    projectDir,
+    process.env.HIVE_FLOW_PERMISSION_GUARD_ROOT,
+    process.env.HIVE_FLOW_ENGINE_ROOT,
+    readInstalledEngineSourceRoot(),
+    path.resolve(helpersDir, '..', '..'),
+  ];
+  const seen = new Set();
+  return roots
+    .filter((root) => typeof root === 'string' && root.trim())
+    .map((root) => path.resolve(root))
+    .filter((root) => {
+      if (seen.has(root)) return false;
+      seen.add(root);
+      return true;
+    });
+}
+
+function resolvePermissionGuardGateRoot(projectDir) {
+  return permissionGuardCandidateRoots(projectDir)
+    .find((root) => fs.existsSync(permissionGuardGatePath(root))) || '';
+}
+
+function readPermissionGuardSourceStamp(gateRoot = PROJECT_DIR) {
+  const sourcePath = permissionGuardSourcePath(gateRoot);
   const source = fs.readFileSync(sourcePath, 'utf8');
   const match = source.match(/PERMISSION_GUARD_BUILD_STAMP\s*=\s*['"]([^'"]+)['"]/);
   return match ? match[1] : null;
 }
 
-function assertPermissionGuardBuildFresh(gate) {
-  const sourceStamp = readPermissionGuardSourceStamp();
+function assertPermissionGuardBuildFresh(gate, gateRoot = PROJECT_DIR) {
+  const sourceStamp = readPermissionGuardSourceStamp(gateRoot);
   const compiledStamp = gate?.PERMISSION_GUARD_BUILD_STAMP || null;
   if (!sourceStamp || !compiledStamp || sourceStamp !== compiledStamp) {
     throw new Error('permission guard compiled gate failed build freshness check');
@@ -1476,15 +1520,16 @@ const handlers = {
         });
       });
 
-      const gatePath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
-      if (!fs.existsSync(gatePath)) {
+      const gateRoot = resolvePermissionGuardGateRoot(PROJECT_DIR);
+      if (!gateRoot) {
         console.log(permissionGuardGateMissingDecision(PROJECT_DIR));
         return;
       }
+      const gatePath = permissionGuardGatePath(gateRoot);
       try {
         const { pathToFileURL } = require('url');
         const gate = await import(pathToFileURL(gatePath).href);
-        assertPermissionGuardBuildFresh(gate);
+        assertPermissionGuardBuildFresh(gate, gateRoot);
         const result = gate.evaluateHookInput
           ? await gate.evaluateHookInput(input)
           : { decision: 'deny', reason: '[PERMISSION GUARD] Compiled gate did not export evaluateHookInput. Tool blocked for safety.' };

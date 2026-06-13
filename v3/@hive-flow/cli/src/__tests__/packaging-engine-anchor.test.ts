@@ -74,8 +74,23 @@ function writeStubPermissionGate(projectRoot: string): void {
     join(distDir, 'gate.js'),
     [
       "export const PERMISSION_GUARD_BUILD_STAMP = 'p1-stub';",
-      "export async function evaluateHookInput() { return { decision: 'deny', reason: 'STUB-DENY' }; }",
+      "export async function evaluateHookInput(input) {",
+      "  const filePath = input?.tool_input?.file_path || '';",
+      "  if (filePath.includes('EXPECT-CWD-MARK')) return { decision: 'deny', reason: `CWD:${input?.cwd || ''}` };",
+      "  return { decision: 'deny', reason: 'STUB-DENY' };",
+      "}",
     ].join('\n'),
+  );
+}
+
+function writeInstalledVersion(binDir: string, sourceRoot: string): void {
+  writeFileSync(
+    join(binDir, '.version'),
+    JSON.stringify({
+      installedAt: '2026-06-12T00:00:00.000Z',
+      source: sourceRoot,
+      files: ENGINE_FILES.map((file) => file.name),
+    }, null, 2),
   );
 }
 
@@ -164,6 +179,45 @@ describe('P1 engine packaging anchor', () => {
       expect(parsed.hookSpecificOutput?.permissionDecisionReason).toBe('STUB-DENY');
     } finally {
       rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('relocated synced hook-handler can load the compiled gate from the installed engine source', () => {
+    const activeRoot = mkdtempSync(join(tmpdir(), 'hf-p1-active-non-hive-project-'));
+    const engineRoot = mkdtempSync(join(tmpdir(), 'hf-p1-engine-source-root-'));
+    const home = mkdtempSync(join(tmpdir(), 'hf-p1-engine-source-home-'));
+    try {
+      const binDir = join(home, '.hive-flow', 'enforcement', 'bin');
+      copyAnchorToBin(binDir);
+      writeInstalledVersion(binDir, engineRoot);
+      writeStubPermissionGate(engineRoot);
+
+      const result = spawnSync(process.execPath, [join(binDir, 'hook-handler.cjs'), 'permission-guard'], {
+        cwd: activeRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: activeRoot,
+          HIVE_FLOW_PROJECT_ROOT: activeRoot,
+        },
+        input: JSON.stringify({
+          tool_name: 'Write',
+          tool_input: { file_path: join(activeRoot, 'src', 'EXPECT-CWD-MARK.ts') },
+          cwd: activeRoot,
+        }),
+        encoding: 'utf8',
+      });
+      const parsed = JSON.parse(result.stdout.trim() || '{}') as {
+        hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string };
+      };
+
+      expect(result.status).toBe(0);
+      expect(result.stderr.trim()).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(parsed.hookSpecificOutput?.permissionDecisionReason).toBe(`CWD:${activeRoot}`);
+    } finally {
+      rmSync(activeRoot, { recursive: true, force: true });
+      rmSync(engineRoot, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });
     }
   });

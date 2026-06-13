@@ -44,6 +44,8 @@ function makeProject(): { root: string; bin: string } {
   copyFileSync(hookHandlerSource, join(bin, 'hook-handler.cjs'));
   copyFileSync(providerTrackerSource, join(bin, 'provider-tracker.cjs'));
   copyFileSync(sessionIdSource, join(bin, 'session-id.cjs'));
+  copyFileSync(policySource, join(bin, 'protected-paths.cjs'));
+  copyFileSync(policyJsonSource, join(bin, 'protected-paths.policy.json'));
 
   return { root, bin };
 }
@@ -68,11 +70,24 @@ function writeGateStub(root: string): void {
       'export async function evaluateHookInput(input) {',
       '  const filePath = input?.tool_input?.file_path || "";',
       '  if (filePath.includes("STUB-DENY-MARK")) return { decision: "deny", reason: "STUB-DENY" };',
+      '  if (filePath.includes("EXPECT-CWD-MARK")) return { decision: "deny", reason: `CWD:${input?.cwd || ""}` };',
       '  if (filePath.includes("/.hive-flow/enforcement/")) return { decision: "deny", reason: "PROTECTED-STUB-DENY" };',
       '  return { decision: "allow" };',
       '}',
       '',
     ].join('\n'),
+    'utf8',
+  );
+}
+
+function writeInstalledVersion(bin: string, sourceRoot: string): void {
+  writeFileSync(
+    join(bin, '.version'),
+    JSON.stringify({
+      installedAt: '2026-06-12T00:00:00.000Z',
+      source: sourceRoot,
+      files: ['hook-handler.cjs'],
+    }, null, 2),
     'utf8',
   );
 }
@@ -201,6 +216,24 @@ describe('relocated enforcement engine root resolution', () => {
       expect(output.hookSpecificOutput?.permissionDecisionReason).toBe('STUB-DENY');
     } finally {
       rmSync(root, { recursive: true, force: true });
+      rmSync(bin, { recursive: true, force: true });
+    }
+  });
+
+  it('loads the permission guard gate from the installed engine source for a non-hive-flow project', () => {
+    const externalRoot = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-external-project-')));
+    const { root: engineRoot, bin } = makeProject();
+    try {
+      writeGateStub(engineRoot);
+      writeInstalledVersion(bin, engineRoot);
+
+      const output = runRelocatedHook(externalRoot, bin, writePayload(externalRoot, 'EXPECT-CWD-MARK.ts'));
+
+      expect(output.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(output.hookSpecificOutput?.permissionDecisionReason).toBe(`CWD:${externalRoot}`);
+    } finally {
+      rmSync(externalRoot, { recursive: true, force: true });
+      rmSync(engineRoot, { recursive: true, force: true });
       rmSync(bin, { recursive: true, force: true });
     }
   });
