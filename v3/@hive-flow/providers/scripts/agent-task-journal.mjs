@@ -56,6 +56,8 @@ const SECRET_KEY_PATTERN = /(?:api[_-]?key|authorization|bearer|cookie|credentia
 const SECRET_VALUE_PATTERNS = [
   /\b(?:sk|or)-[A-Za-z0-9._-]{12,}\b/g,
   /\b(?:ghp|github_pat|hf|xoxb)_[A-Za-z0-9_]{12,}\b/g,
+  /\bAKIA[A-Z0-9]{16}\b/g,
+  /\bAIza[0-9A-Za-z_-]{20,}\b/g,
   /\bBearer\s+[A-Za-z0-9._-]{12,}\b/gi,
   /\b[A-Z][A-Z0-9_]{2,}\s*=\s*\S{6,}\b/g,
   /(?<![A-Za-z0-9+/_-])(?:[A-Za-z0-9+/]{40,}={0,2}|[A-Za-z0-9_-]{40,})(?![A-Za-z0-9+/_-])/g,
@@ -197,12 +199,22 @@ export function appendTaskJournalEvent(input) {
 }
 
 export function replayTaskJournalEvents(linesOrEvents) {
+  const parseReplayEntry = (entry) => {
+    try {
+      const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
   const events = Array.isArray(linesOrEvents)
-    ? linesOrEvents.map((entry) => typeof entry === 'string' ? JSON.parse(entry) : entry)
+    ? linesOrEvents.map(parseReplayEntry).filter(Boolean)
     : String(linesOrEvents || '')
       .split(/\r?\n/)
       .filter(Boolean)
-      .map((line) => JSON.parse(line));
+      .map(parseReplayEntry)
+      .filter(Boolean);
 
   let previousTs = '';
   let monotonic = true;

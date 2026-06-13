@@ -84,6 +84,8 @@ describe('agent task journal', () => {
       fc.constant('sk-' + 'a'.repeat(32)),
       fc.constant('or-' + 'b'.repeat(32)),
       fc.constant('ghp_' + 'c'.repeat(32)),
+      fc.constant('AKIA1234567890ABCDEF'),
+      fc.constant('AIzaSyA0000000000000000000000000'),
       fc.constant('OPENROUTER_API_KEY=sk-' + 'd'.repeat(24)),
       fc.constant('A'.repeat(44)),
     );
@@ -122,5 +124,22 @@ describe('agent task journal', () => {
     expect(replay.valid).toBe(true);
     expect(replay.events.map((event) => event.event)).toEqual(events.map((event) => event.event));
     expect(replay.events.filter((event) => event.event === 'result_written')).toHaveLength(1);
+  });
+
+  it('replayTaskJournalEvents skips malformed entries fail-open', () => {
+    const good = JSON.stringify({ ts: '2026-06-13T00:00:00.000Z', event: 'dispatch' });
+    const terminal = JSON.stringify({ ts: '2026-06-13T00:00:01.000Z', event: 'result_written' });
+
+    expect(() => replayTaskJournalEvents(`${good}\n{not json}\n42\n${terminal}\n`)).not.toThrow();
+    const fromJsonl = replayTaskJournalEvents(`${good}\n{not json}\n42\n${terminal}\n`);
+    expect(fromJsonl.valid).toBe(true);
+    expect(fromJsonl.events.map((event) => event.event)).toEqual(['dispatch', 'result_written']);
+    expect(fromJsonl.terminalCount).toBe(1);
+
+    expect(() => replayTaskJournalEvents([good, '{not json}', null, 42, terminal])).not.toThrow();
+    const fromArray = replayTaskJournalEvents([good, '{not json}', null, 42, terminal]);
+    expect(fromArray.valid).toBe(true);
+    expect(fromArray.events.map((event) => event.event)).toEqual(['dispatch', 'result_written']);
+    expect(fromArray.terminalCount).toBe(1);
   });
 });

@@ -103,6 +103,7 @@ function makeInstallLayout({ fakeMcpClient = false } = {}) {
 
   for (const scriptName of [
     'provider-agent-bridge.mjs',
+    'agent-task-journal.mjs',
     'bridge-grep-validators.mjs',
     'provider-auth-helpers.mjs',
     'sandbox-runner.mjs',
