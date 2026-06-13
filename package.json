@@ -26,6 +26,9 @@
     ".claude/**",
     "!.claude/**/*.db",
     "!.claude/**/*.map",
+    "!.claude/**/DELETE_*",
+    "!**/DELETE_*",
+    "!TRASH/**",
     "README.md",
     "LICENSE"
   ],

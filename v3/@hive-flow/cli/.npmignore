@@ -1,0 +1,6 @@
+# Defense-in-depth: never ship the quarantine or any human-marked DELETE_ file.
+# The cli package uses a package.json "files" allowlist (dist, bin, .claude, README.md),
+# which already excludes TRASH/; this file is an explicit guard against regressions.
+TRASH/
+**/TRASH/
+**/DELETE_*

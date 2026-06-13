@@ -53,3 +53,8 @@ tmp/
 temp/
 *.tmp
 *.log
+
+# Quarantine — human-marked DELETE_ files (tracked for restore, never shipped)
+TRASH/
+**/TRASH/
+**/DELETE_*
