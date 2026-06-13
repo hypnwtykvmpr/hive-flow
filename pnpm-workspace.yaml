@@ -1,0 +1,4 @@
+packages:
+  - "v3/@hive-flow/*"
+  - "v3/mcp"
+  - "v3/plugins/*"
