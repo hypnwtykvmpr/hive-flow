@@ -37,6 +37,7 @@
     "!**/*.db-journal",
     "!**/.context-tracker.json",
     "!**/checkpoints/**",
+    "!**/__tests__/**",
     "!**/*.map",
     "!TRASH/**",
     "README.md",

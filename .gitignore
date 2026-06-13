@@ -322,3 +322,7 @@ v4-plans/*
 # .NET build output for the native Windows credential helpers
 /v3/**/credential-store/helpers/**/bin/
 /v3/**/credential-store/helpers/**/obj/
+
+# Cleanup-audit scratch (one-off investigation artifacts + audit probes; never commit)
+/.tmp-audit/
+**/.audit-probe.cjs

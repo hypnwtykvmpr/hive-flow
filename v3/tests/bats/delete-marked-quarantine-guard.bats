@@ -60,12 +60,17 @@ setup() {
   #   - ewc-architecture-honesty    : dir-walk that SKIPS DELETE_ entries
   #   - ca4-neural-honesty.test     : dir-walk that SKIPS DELETE_ segments
   #   - BEAD_DELETE_FAILED          : unrelated error constant (coincidental substring)
+  #   - packaging-proof.test.mjs    : the packaging junk-guard that ASSERTS the
+  #                                   DELETE_ pattern is ABSENT from packs (its
+  #                                   JUNK_PATTERNS names DELETE_ to enforce its
+  #                                   exclusion — a legitimate mention, not a leak).
   # Portable (no mapfile/bash4): grep all tracked non-TRASH files via xargs -0.
   hits="$(git ls-files -z | grep -zv '^TRASH/' | xargs -0 grep -nI 'DELETE_' 2>/dev/null \
     | grep -vE '(^|/)\.gitignore:' \
     | grep -vE '(^|/)\.npmignore:' \
     | grep -vE '(^|/)package\.json:[0-9]+:[[:space:]]*"!' \
     | grep -vE '(^|/)tsconfig\.json:[0-9]+:.*"exclude"' \
+    | grep -vE '(^|/)packaging-proof\.test\.mjs:' \
     | grep -vE 'delete-marked-quarantine-guard\.bats:' \
     | grep -vE 'scripts/quarantine-delete-marked\.sh:' \
     | grep -vE 'debrand-static-grep-zero\.test\.ts:' \

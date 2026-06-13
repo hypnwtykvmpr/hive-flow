@@ -264,6 +264,33 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     );
   });
 
+  it('ships ZERO sourcemaps (bundled) and ZERO __tests__ (anywhere) in the umbrella tarball', () => {
+    // PACKAGING HYGIENE (slice A): the 4 bundled @hive-flow/* packages are packed
+    // via the umbrella root `bundledDependencies`, which BYPASSES the root `files`
+    // `!**/*.map` negation (npm packs bundled deps by their own rules). The staging
+    // script (scripts/stage-bundled-workspaces.mjs) therefore strips `*.map` and
+    // `__tests__/` at the copy step. Regression guard for the 440-`.map` + 36-
+    // `__tests__/` bundled bloat the audit found.
+    const bundledMaps = files.filter(
+      (p) => /^node_modules\/@hive-flow\/.*\.map$/.test(p),
+    );
+    assert.deepEqual(
+      bundledMaps.slice(0, 20),
+      [],
+      `umbrella must ship ZERO bundled @hive-flow/* sourcemaps; found:\n  ${bundledMaps.slice(0, 20).join('\n  ')}`,
+    );
+    // Broadened (Codex bounce): ZERO __tests__/ ANYWHERE in the umbrella tarball,
+    // not just bundled node_modules. The root `files` directly allowlists
+    // `v3/@hive-flow/shared/dist/**/*.js`, which also pulled in dist/.../__tests__/;
+    // the root `!**/__tests__/**` negation now excludes them. Regression guard.
+    const shippedTests = files.filter((p) => /(^|\/)__tests__\//.test(p));
+    assert.deepEqual(
+      shippedTests.slice(0, 20),
+      [],
+      `umbrella must ship ZERO __tests__/ anywhere; found:\n  ${shippedTests.slice(0, 20).join('\n  ')}`,
+    );
+  });
+
   it('does NOT bundle foreign (non-@hive-flow) packages into node_modules', () => {
     // Only the 4 unpublished @hive-flow/* workspace packages may be bundled.
     // Third-party deps (express, semver, ...) must install from the registry into

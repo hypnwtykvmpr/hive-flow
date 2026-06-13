@@ -111,6 +111,19 @@ function sanitizePackageJson(raw) {
   return JSON.stringify(pkg, null, 2) + '\n';
 }
 
+// PACKAGING HYGIENE (slice A / DO-NOT-REVERT): predicate for paths that must NOT
+// land in the staged bundled payload. Returns true to EXCLUDE:
+//   - sourcemaps: any `*.js.map` / `*.d.ts.map` (and any other `*.map`),
+//   - test dirs: any path with a `__tests__` segment (prunes the whole subtree).
+// Rationale: bundledDependencies bypass the root `files` `!**/*.map` negation, so
+// these would otherwise ship in the root tarball. See the cpSync filter call.
+function shouldExcludeFromBundle(srcPath) {
+  if (srcPath.endsWith('.map')) return true; // *.js.map, *.d.ts.map, ...
+  // Match `__tests__` only as a full path segment (not a substring of a filename).
+  if (/(^|[\\/])__tests__([\\/]|$)/.test(srcPath)) return true;
+  return false;
+}
+
 function stageOne({ name, copy }) {
   const srcDir = join(wsRoot, name);
   const srcPkgJson = join(srcDir, 'package.json');
@@ -132,7 +145,18 @@ function stageOne({ name, copy }) {
   for (const rel of copy) {
     const from = join(srcDir, rel);
     if (!existsSync(from)) continue; // optional asset (e.g. wasm-pkg)
-    cpSync(from, join(destDir, rel), { recursive: true });
+    // PACKAGING HYGIENE (slice A / DO-NOT-REVERT): exclude sourcemaps and test
+    // dirs from the staged bundled payload. These packages are bundled via the
+    // umbrella root `bundledDependencies`, and npm packs bundled deps by their
+    // OWN rules — the root `files` `!**/*.map` negation does NOT reach into
+    // bundled `node_modules/@hive-flow/*`. Without this filter the root tarball
+    // ships 440 `.js.map`/`.d.ts.map` + 36 `__tests__/` from these copies. We
+    // strip them at the copy step so the bundled payload carries only runtime
+    // dist js/d.ts (+ sanitized package.json). Keep `*.js`/`*.d.ts` intact.
+    cpSync(from, join(destDir, rel), {
+      recursive: true,
+      filter: (src) => !shouldExcludeFromBundle(src),
+    });
   }
 
   const sanitized = sanitizePackageJson(readFileSync(srcPkgJson, 'utf8'));

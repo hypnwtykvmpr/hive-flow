@@ -47,6 +47,49 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
+@test "zero v3-to-v2 runtime imports in tracked source" {
+  # Ported extra (slice B): the hard runtime invariant — no import/require/from
+  # string resolves INTO the top-level v2/ tree. v2-compat* are v3-internal
+  # protocol shims (sibling files), NOT the v2/ tree, so exclude. api/v2 (REST
+  # route example) and oauth2/v2 (google URL) are not filesystem paths.
+  hits="$(git ls-files -z | grep -zv '^TRASH/' | grep -zv '^v2/' \
+    | xargs -0 grep -nIE "(from|require|import)[[:space:]]*[(]?['\"][^'\"]*v2/" 2>/dev/null \
+    | grep -vE 'v2-compat' \
+    | grep -vE 'api/v2' \
+    | grep -vE 'oauth2/v2' \
+    || true)"
+  if [ -n "$hits" ]; then
+    echo "Unexpected v3-to-v2 runtime import(s) in tracked source:" >&2
+    echo "$hits" >&2
+  fi
+  [ -z "$hits" ]
+}
+
+@test "npm pack ships zero v2 or TRASH paths" {
+  # Ported extra (slice B): the npm-pack-clean invariant. Implemented in
+  # ISOLATED-CACHE style (NPM_CONFIG_CACHE) — NOT the raw `npm pack` the stale
+  # duplicate used, which fails in shared-cache CI environments. Mirrors
+  # tests/packaging-proof.test.mjs. Slow / runs the prepack staging hook, so it
+  # is gated behind the same RUN_PACK_CHECK opt-in this lane already uses.
+  if [ "${RUN_PACK_CHECK:-0}" != "1" ]; then
+    skip "set RUN_PACK_CHECK=1 to run the npm pack tarball check"
+  fi
+  cd "$REPO_ROOT"
+  isolated_cache="$BATS_TEST_TMPDIR/npm-cache"
+  mkdir -p "$isolated_cache"
+  run env NPM_CONFIG_CACHE="$isolated_cache" npm pack --dry-run --json
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qE '"path":[[:space:]]*"v2/' && {
+    echo "v2/ path leaked into npm pack tarball" >&2
+    return 1
+  }
+  echo "$output" | grep -qE '"path":[[:space:]]*"TRASH/' && {
+    echo "TRASH/ path leaked into npm pack tarball" >&2
+    return 1
+  }
+  return 0
+}
+
 @test "no tracked non-TRASH file references a dead relative link or path into v2" {
   # Search every tracked file EXCEPT those under TRASH/ for precise v2/ path forms.
   # Patterns are anchored so version-strings / API false positives do NOT match:

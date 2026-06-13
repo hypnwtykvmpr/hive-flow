@@ -262,3 +262,39 @@ root-lockfile retirement.
 ```
 git mv TRASH/posture-20260613/v2 v2
 ```
+
+---
+
+# Stale Untracked Guard Quarantine (slice B) — `v2-retirement-quarantine-guard.bats`
+
+**Date:** 2026-06-13
+**Original path:** `v3/tests/bats/v2-retirement-quarantine-guard.bats` (UNTRACKED)
+**Quarantine path:** `TRASH/posture-20260613/stale-untracked-tests/v2-retirement-quarantine-guard.bats`
+
+## What & Why-Stale
+
+`v3/tests/bats/v2-retirement-quarantine-guard.bats` was an UNTRACKED stale near-duplicate
+of the tracked canonical guard `v3/tests/bats/v2-retirement-guard.bats`. Because
+`v3/scripts/run-bats.sh` globs the entire `v3/tests/bats` directory, the untracked draft
+RAN in the local `pnpm test:bats` lane — but not in CI fresh-clones (file untracked), a
+local/CI discrepancy. Worse, its test 4 used a broad `grep 'v2/'` that false-failed against
+benign mentions, where the canonical guard uses a narrow+strip approach that passes.
+
+It carried 2 genuine extras the canonical guard lacked. Those were PORTED into
+`v3/tests/bats/v2-retirement-guard.bats` before this quarantine:
+  - **(i) zero v3->v2 runtime import check** — ported verbatim as
+    `@test "zero v3-to-v2 runtime imports in tracked source"`.
+  - **(ii) npm-pack-clean invariant** — ported as
+    `@test "npm pack ships zero v2 or TRASH paths"`, but re-implemented in
+    ISOLATED-CACHE (`NPM_CONFIG_CACHE`) packaging-proof style (the duplicate's raw
+    `npm pack` fails in shared-cache CI), gated behind `RUN_PACK_CHECK=1`.
+
+With both extras ported, this draft is fully superseded. It is relocated here (NOT deleted)
+so the human owns final destruction. It was UNTRACKED, so the relocation is a plain `mv`
+into `TRASH/` + `git add` of the new path (git mv refuses untracked sources).
+
+## Restore
+
+```
+git mv TRASH/posture-20260613/stale-untracked-tests/v2-retirement-quarantine-guard.bats v3/tests/bats/v2-retirement-quarantine-guard.bats
+```
