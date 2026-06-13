@@ -12,6 +12,7 @@ import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 import { sanitizePathId } from '@hive-flow/shared';
+import { appendTaskJournalEvent } from '@hive-flow/providers/scripts/agent-task-journal.mjs';
 import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
 import {
   recordMcpAgentSpawn,
@@ -938,6 +939,13 @@ export const agentTools: MCPTool[] = [
                 try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* best-effort */ }
                 // Skip .result.json deletion — may still be needed by collect_results
                 try { unlinkSync(trackingPath); } catch { /* best-effort */ }
+                appendTaskJournalEvent({
+                  tasksDir,
+                  taskId,
+                  event: 'terminate',
+                  agentId,
+                  pid: tracking.pid,
+                });
               } catch {
                 // Ignore unreadable tracking files during termination cleanup
               }
@@ -1334,6 +1342,16 @@ export const agentTools: MCPTool[] = [
         startedAt: new Date().toISOString(),
         pid: dispatchResult.pid,
       }, null, 2), 'utf-8');
+      appendTaskJournalEvent({
+        tasksDir,
+        taskId,
+        event: 'dispatch',
+        agentId,
+        provider: dispatchResult.provider,
+        model: dispatchResult.model,
+        pid: dispatchResult.pid,
+        meta: { timeoutMs: timeout },
+      });
 
       // Phase 11.1: best-effort, non-blocking call-start (eventId = taskId).
       void recordMcpCallStart({
@@ -1401,6 +1419,14 @@ export const agentTools: MCPTool[] = [
         if (existsSync(consumedResultPath)) {
           try {
             const result = JSON.parse(readFileSync(consumedResultPath, 'utf-8')) as Record<string, unknown>;
+            appendTaskJournalEvent({
+              tasksDir,
+              taskId,
+              event: 'result_consumed',
+              agentId: typeof result.agentId === 'string' ? result.agentId : undefined,
+              provider: typeof result.provider === 'string' ? result.provider : undefined,
+              meta: { alreadyConsumed: true, status: 'completed' },
+            });
             return { success: true, taskId, status: 'completed', alreadyConsumed: true, result };
           } catch (err) {
             const errorDetail = err instanceof Error ? err.message : String(err);
@@ -1488,6 +1514,14 @@ export const agentTools: MCPTool[] = [
         // Keep .result.json alive — agent_terminate and hive-cleanup may still reference it
         try { unlinkSync(join(tasksDir, `${taskId}.task`)); } catch { /* ignore */ }
         try { unlinkSync(trackingPath); } catch { /* ignore */ }
+        appendTaskJournalEvent({
+          tasksDir,
+          taskId,
+          event: 'result_consumed',
+          agentId: tracking.agentId,
+          provider: tracking.provider,
+          meta: { status: 'completed' },
+        });
 
         return { success: true, taskId, agentId: tracking.agentId, status: 'completed', result };
       }

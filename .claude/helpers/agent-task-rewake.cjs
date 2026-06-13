@@ -34,6 +34,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const DEFAULT_MAX_WAIT_MS = 30 * 60 * 1000;
 const DEFAULT_POLL_MS = 1500;
@@ -226,6 +227,40 @@ function notifyCompletedTaskIfReady(projectRoot, taskId) {
   return { notified: true, summary };
 }
 
+async function importJournalModule(projectRoot) {
+  const sourcePath = path.join(projectRoot, 'v3', '@hive-flow', 'providers', 'scripts', 'agent-task-journal.mjs');
+  try {
+    if (fs.existsSync(sourcePath)) {
+      return import(pathToFileURL(sourcePath).href);
+    }
+  } catch {
+    /* fall through to package resolution */
+  }
+  try {
+    const resolved = require.resolve('@hive-flow/providers/scripts/agent-task-journal.mjs', {
+      paths: [projectRoot, process.cwd(), __dirname],
+    });
+    return import(pathToFileURL(resolved).href);
+  } catch {
+    return null;
+  }
+}
+
+async function appendRewakeJournalEvent(projectRoot, taskId, meta) {
+  try {
+    const journal = await importJournalModule(projectRoot);
+    if (!journal || typeof journal.appendTaskJournalEvent !== 'function') return false;
+    return journal.appendTaskJournalEvent({
+      tasksDir: path.join(projectRoot, '.hive-flow', 'tasks'),
+      taskId,
+      event: 'rewake_notified',
+      meta,
+    });
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   const raw = readStdin();
   const taskId = extractTaskId(raw);
@@ -248,6 +283,7 @@ async function main() {
   while (Date.now() < deadline) {
     const result = notifyCompletedTaskIfReady(dir, taskId);
     if (result.notified) {
+      await appendRewakeJournalEvent(dir, taskId, { reason: 'completed' });
       // Layer 3: async-rewake attempt — stderr summary + exit 2.
       process.stderr.write(result.summary + '\n');
       process.exit(2);
@@ -262,6 +298,7 @@ async function main() {
     JSON.stringify({ kind: 'task-check', taskId, ts: new Date().toISOString(), summary }),
   );
   if (!won) process.exit(0);
+  await appendRewakeJournalEvent(dir, taskId, { reason: 'timeout' });
   process.stderr.write(summary + '\n');
   process.exit(2);
 }
@@ -284,5 +321,7 @@ module.exports = {
   claimNotifiedMarker,
   releaseNotifiedMarker,
   notifyCompletedTaskIfReady,
+  importJournalModule,
+  appendRewakeJournalEvent,
   main,
 };

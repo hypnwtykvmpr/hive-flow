@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock node:fs — controls existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync
 vi.mock('node:fs', () => ({
+  appendFileSync: vi.fn(),
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
   readdirSync: vi.fn(),
@@ -36,7 +37,7 @@ vi.mock('../hivector/enhanced-model-router.js', () => ({
   }),
 }));
 
-import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, rmSync, renameSync, unlinkSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, rmSync, renameSync, unlinkSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { agentTools } from '../mcp-tools/agent-tools.js';
 
@@ -383,6 +384,7 @@ describe('agent_task_result handler', () => {
   }
 
   function baseWriteMock() {
+    (appendFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
     (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
     (renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
     (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
@@ -438,6 +440,29 @@ describe('agent_task_result handler', () => {
     expect(result.taskId).toBe(TASK_ID);
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.result).toEqual(resultData);
+  });
+
+  it('does not read the observability journal to decide terminal result authority', async () => {
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
+    const resultData = { success: true, response: 'result json remains the authority' };
+
+    baseExistsMock([`${TASK_ID}.json`, `${TASK_ID}.result.json`, `${TASK_ID}.events.jsonl`]);
+    baseReadMock(makeStore({ [AGENT_ID]: agent }), tracking, resultData);
+    baseWriteMock();
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      status: 'completed',
+      result: resultData,
+    });
+    expect((readFileSync as ReturnType<typeof vi.fn>).mock.calls.some(([path]) =>
+      typeof path === 'string' && path.endsWith(`${TASK_ID}.events.jsonl`),
+    )).toBe(false);
   });
 
   it('returns completed/alreadyConsumed when tracking was deleted but result file remains', async () => {

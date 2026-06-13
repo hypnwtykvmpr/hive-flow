@@ -12,12 +12,18 @@
       "import": "./dist/index.js"
     },
     "./scripts/provider-agent-bridge.mjs": "./scripts/provider-agent-bridge.mjs",
+    "./scripts/agent-task-journal.mjs": {
+      "types": "./scripts/agent-task-journal.d.ts",
+      "import": "./scripts/agent-task-journal.mjs"
+    },
     "./scripts/sandbox-runner.mjs": "./scripts/sandbox-runner.mjs"
   },
   "files": [
     "dist",
     "src",
     "scripts/provider-agent-bridge.mjs",
+    "scripts/agent-task-journal.mjs",
+    "scripts/agent-task-journal.d.ts",
     "scripts/bridge-grep-validators.mjs",
     "scripts/provider-auth-helpers.mjs",
     "scripts/sandbox-runner.mjs"

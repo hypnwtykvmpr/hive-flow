@@ -35,6 +35,10 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { lookup as dnsLookup } from 'dns/promises';
 import { createConnection, isIP } from 'net';
 import {
+  appendTaskJournalEvent,
+  classifyJournalError,
+} from './agent-task-journal.mjs';
+import {
   patternIsRejected,
   fileGlobIsRejected,
   buildRgArgs,
@@ -116,6 +120,35 @@ function safeBridgeJsonStringify(value, space) {
   return JSON.stringify(redactBridgeCredentialMaterial(value), null, space);
 }
 
+function taskIdFromResultFile(resultFile) {
+  if (!resultFile) return '';
+  const file = basename(resultFile);
+  return file.endsWith('.result.json') ? file.slice(0, -'.result.json'.length) : '';
+}
+
+function appendBridgeJournalEvent({
+  event,
+  resultFile,
+  agentId,
+  provider,
+  model,
+  pid = process.pid,
+  meta,
+}) {
+  const taskId = taskIdFromResultFile(resultFile);
+  if (!taskId) return false;
+  return appendTaskJournalEvent({
+    tasksDir: dirname(resultFile),
+    taskId,
+    event,
+    agentId,
+    provider,
+    model,
+    pid,
+    meta,
+  });
+}
+
 // Module-level limits — set once in main() after provider/model are resolved.
 // Used by BRIDGE_FILESYSTEM_TOOLS handlers for context-aware size caps.
 let currentBridgeLimits = null;
@@ -157,8 +190,20 @@ process.on('SIGTERM', () => {
   if (resultFile) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
-      writeFileSync(tmpResult, safeBridgeJsonStringify(errorResponse, 2) + '\n');
+      const payload = safeBridgeJsonStringify(errorResponse, 2) + '\n';
+      writeFileSync(tmpResult, payload);
       renameSync(tmpResult, resultFile);
+      appendBridgeJournalEvent({
+        event: 'result_written',
+        resultFile,
+        agentId: logAgentId,
+        meta: {
+          success: false,
+          resultBytes: Buffer.byteLength(payload, 'utf8'),
+          reason: 'SIGTERM',
+          status: 'failed',
+        },
+      });
     } catch {
       // File write failed — fall back to stdout
       process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
@@ -3054,6 +3099,14 @@ async function main() {
     const providerName = agent.provider;
     return { store, agent, storePath, messages, providerName };
   });
+  appendBridgeJournalEvent({
+    event: 'bridge_start',
+    resultFile,
+    agentId,
+    provider: providerName,
+    model: agent.resolvedModel,
+    pid: process.pid,
+  });
 
   // Set module-level limits so BRIDGE_FILESYSTEM_TOOLS handlers can use them
   currentBridgeLimits = getProviderLimits(providerName, agent.resolvedModel);
@@ -3385,6 +3438,57 @@ async function main() {
     const MAX_TOOL_ITERATIONS = 25;
     const providerStartTime = Date.now();
     const executedTools = [];
+    const completeProviderRequest = async (requestToSend, meta = {}) => {
+      const requestStart = Date.now();
+      appendBridgeJournalEvent({
+        event: 'provider_request_start',
+        resultFile,
+        agentId,
+        provider: providerName,
+        model: requestToSend.model || agent.resolvedModel,
+        meta: {
+          iteration: iterations + 1,
+          messageCount: Array.isArray(requestToSend.messages) ? requestToSend.messages.length : undefined,
+          ...meta,
+        },
+      });
+      try {
+        const providerResponse = await provider.complete(requestToSend);
+        appendBridgeJournalEvent({
+          event: 'provider_request_end',
+          resultFile,
+          agentId,
+          provider: providerName,
+          model: providerResponse.model || requestToSend.model || agent.resolvedModel,
+          meta: {
+            iteration: iterations + 1,
+            durationMs: Date.now() - requestStart,
+            finishReason: providerResponse.finishReason,
+            contentLength: typeof providerResponse.content === 'string' ? providerResponse.content.length : 0,
+            inputTokens: providerResponse.usage?.promptTokens ?? providerResponse.usage?.inputTokens,
+            outputTokens: providerResponse.usage?.completionTokens ?? providerResponse.usage?.outputTokens,
+            ...meta,
+          },
+        });
+        return providerResponse;
+      } catch (error) {
+        appendBridgeJournalEvent({
+          event: 'provider_error',
+          resultFile,
+          agentId,
+          provider: providerName,
+          model: requestToSend.model || agent.resolvedModel,
+          meta: {
+            iteration: iterations + 1,
+            durationMs: Date.now() - requestStart,
+            errorClass: classifyJournalError(error),
+            httpStatus: error?.status ?? error?.statusCode ?? error?.response?.status,
+            ...meta,
+          },
+        });
+        throw error;
+      }
+    };
 
     // Stuck detection state
     const STUCK_WINDOW = 4;
@@ -3422,8 +3526,22 @@ async function main() {
           };
           try {
             const tmpResult = resultFile + `.tmp.${process.pid}`;
-            writeFileSync(tmpResult, safeBridgeJsonStringify(termResult, 2) + '\n');
+            const payload = safeBridgeJsonStringify(termResult, 2) + '\n';
+            writeFileSync(tmpResult, payload);
             renameSync(tmpResult, resultFile);
+            appendBridgeJournalEvent({
+              event: 'result_written',
+              resultFile,
+              agentId,
+              provider: providerName,
+              model: request.model || agent.resolvedModel,
+              meta: {
+                success: false,
+                resultBytes: Buffer.byteLength(payload, 'utf8'),
+                reason: 'TERMINATED',
+                status: 'failed',
+              },
+            });
           } catch (writeErr) {
             bridgeLog('error', 'Failed to write termination result file', { agentId, error: writeErr.message });
           }
@@ -3452,7 +3570,7 @@ async function main() {
 
       const completeWithOpenRouterReroll = async () => {
         try {
-          return await provider.complete(request);
+          return await completeProviderRequest(request);
         } catch (error) {
           if (providerName === 'openrouter' && classifyError(error) === 'timeout') {
             const tier = openRouterTierForAgentModel(agent.model);
@@ -3545,19 +3663,59 @@ async function main() {
         });
 
         const toolResults = await Promise.all(
-          response.toolCalls.map((tc) =>
-            executeBridgeTool(tc.function.name, tc.function.arguments, {
+          response.toolCalls.map((tc) => {
+            const toolStart = Date.now();
+            appendBridgeJournalEvent({
+              event: 'tool_exec_start',
+              resultFile,
+              agentId,
+              provider: providerName,
+              model: request.model || agent.resolvedModel,
+              meta: { toolName: tc.function.name, iteration: iterations },
+            });
+            return executeBridgeTool(tc.function.name, tc.function.arguments, {
               agentId,
               source: 'response-loop',
               recordExecution: (toolName) => executedTools.push(toolName),
             })
-              .then((result) => ({ id: tc.id, name: tc.function.name, result }))
-              .catch((err) => ({
-                id: tc.id,
-                name: tc.function.name,
-                result: { status: 'error', error: err.message || String(err) },
-              }))
-          )
+              .then((result) => {
+                appendBridgeJournalEvent({
+                  event: 'tool_exec_end',
+                  resultFile,
+                  agentId,
+                  provider: providerName,
+                  model: request.model || agent.resolvedModel,
+                  meta: {
+                    toolName: tc.function.name,
+                    iteration: iterations,
+                    durationMs: Date.now() - toolStart,
+                    success: true,
+                  },
+                });
+                return { id: tc.id, name: tc.function.name, result };
+              })
+              .catch((err) => {
+                appendBridgeJournalEvent({
+                  event: 'tool_exec_end',
+                  resultFile,
+                  agentId,
+                  provider: providerName,
+                  model: request.model || agent.resolvedModel,
+                  meta: {
+                    toolName: tc.function.name,
+                    iteration: iterations,
+                    durationMs: Date.now() - toolStart,
+                    success: false,
+                    errorClass: classifyJournalError(err),
+                  },
+                });
+                return {
+                  id: tc.id,
+                  name: tc.function.name,
+                  result: { status: 'error', error: err.message || String(err) },
+                };
+              });
+          })
         );
 
         const toolLimits = dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel);
@@ -3660,7 +3818,7 @@ async function main() {
           model: request.model,
         };
         summaryRequest.messages = prepareForProvider(summaryRequest.messages, dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel));
-        const summaryResponse = await provider.complete(summaryRequest);
+        const summaryResponse = await completeProviderRequest(summaryRequest, { reason: 'summary' });
         if (summaryResponse.content && summaryResponse.content.trim() !== '') {
           response = { ...response, content: summaryResponse.content };
         }
@@ -3774,8 +3932,22 @@ async function main() {
   // Output result as JSON
   if (resultFile) {
     const tmpResult = resultFile + `.tmp.${process.pid}`;
-    writeFileSync(tmpResult, safeBridgeJsonStringify(result, 2) + '\n');
+    const payload = safeBridgeJsonStringify(result, 2) + '\n';
+    writeFileSync(tmpResult, payload);
     renameSync(tmpResult, resultFile);
+    appendBridgeJournalEvent({
+      event: 'result_written',
+      resultFile,
+      agentId,
+      provider: providerName,
+      model: result.model,
+      meta: {
+        success: result.success === true,
+        resultBytes: Buffer.byteLength(payload, 'utf8'),
+        iterations: result.toolUse?.iterations,
+        historyLength: result.historyLength,
+      },
+    });
   } else {
     process.stdout.write(safeBridgeJsonStringify(result, 2) + '\n');
   }
@@ -3865,8 +4037,21 @@ async function handleMainError(err) {
   if (resultFile) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
-      writeFileSync(tmpResult, safeBridgeJsonStringify(errorResponse, 2) + '\n');
+      const payload = safeBridgeJsonStringify(errorResponse, 2) + '\n';
+      writeFileSync(tmpResult, payload);
       renameSync(tmpResult, resultFile);
+      appendBridgeJournalEvent({
+        event: 'result_written',
+        resultFile,
+        agentId: logAgentId,
+        meta: {
+          success: false,
+          resultBytes: Buffer.byteLength(payload, 'utf8'),
+          errorClass: classifyJournalError(err),
+          classification,
+          status: 'failed',
+        },
+      });
     } catch {
       // File write failed — fall back to stdout
       process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
