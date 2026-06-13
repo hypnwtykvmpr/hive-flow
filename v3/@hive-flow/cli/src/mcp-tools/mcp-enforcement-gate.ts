@@ -4,8 +4,9 @@
  */
 
 import { existsSync, readFileSync } from 'fs';
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
-import { dirname, join, resolve } from 'path';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import { dirname, isAbsolute, join, resolve } from 'path';
+import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 
 export enum ToolRisk {
@@ -99,14 +100,28 @@ function resolveProjectDir(): string {
 // Highest enforcement level — used for fail-closed behavior on any error.
 const LEVEL_HALTED = 3;
 
-function getOrReadHmacKey(enforcementDir: string): string | null {
-  try {
-    const keyFile = join(enforcementDir, '.hmac-key');
-    if (existsSync(keyFile)) {
-      return readFileSync(keyFile, 'utf8').trim();
+/**
+ * Read the FIRST present HMAC key from an ordered list of candidate paths.
+ *
+ * Mirrors `.claude/helpers/enforcement.cjs` `getOrCreateHmacKey()` (lines ~145-173):
+ * the shared key at `<hiveHome>/enforcement/.hmac-key` is preferred, with the
+ * legacy project-local key at `<projectDir>/.hive-flow/enforcement/.hmac-key`
+ * as fallback. A SINGLE shared key signs EVERY hiveHome-rooted scope — there are
+ * NO per-scope sibling keys (the previous gate wrongly assumed sibling keys).
+ *
+ * NOTE: the gate is read-only and never creates a key (unlike enforcement.cjs,
+ * which would mint one). If neither key exists, callers fail-closed.
+ */
+function readFirstHmacKey(candidatePaths: string[]): string | null {
+  for (const keyFile of candidatePaths) {
+    try {
+      if (existsSync(keyFile)) {
+        const key = readFileSync(keyFile, 'utf8').trim();
+        if (key) return key;
+      }
+    } catch {
+      // Cannot read this candidate — try the next.
     }
-  } catch {
-    // Cannot read key — treat as unavailable
   }
   return null;
 }
@@ -125,38 +140,202 @@ function verifyEnvelopeHmac(envelope: { state: unknown; hmac: string }, key: str
   }
 }
 
-export function getEnforcementLevel(): number {
+/**
+ * Resolve the hive home directory used for the global enforcement scope.
+ * Mirrors `resolveHiveHome` semantics and `.claude/helpers/enforcement.cjs`:
+ * an absolute HIVE_FLOW_HOME wins; otherwise default to `~/.hive-flow`.
+ */
+function resolveHiveHomeDir(): string {
+  const configured = process.env.HIVE_FLOW_HOME;
+  if (configured && isAbsolute(configured)) {
+    return configured;
+  }
+  return join(homedir(), '.hive-flow');
+}
+
+/**
+ * Sanitize a scope id, mirroring `.claude/helpers/enforcement.cjs` ->
+ * `protected-paths.cjs` `sanitizeScopeId()` (maxLen 64). Non-string / empty
+ * yields the provided fallback; otherwise non-[A-Za-z0-9_-] runs collapse to
+ * `_`, leading/trailing `_` are stripped, and the result is truncated to 64.
+ */
+function sanitizeScopeId(id: unknown, fallback = ''): string {
+  if (typeof id !== 'string' || !id.trim()) return fallback;
+  const sanitized = id
+    .replace(/[^A-Za-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64);
+  return sanitized || fallback;
+}
+
+/**
+ * project scope id, mirroring enforcement.cjs `getProjectScopeId()` (line ~223):
+ *   `project-${sha256(PROJECT_DIR).slice(0,16)}`
+ */
+function getProjectScopeId(projectDir: string): string {
+  return `project-${createHash('sha256').update(projectDir).digest('hex').slice(0, 16)}`;
+}
+
+/**
+ * Read and verify a SINGLE scope state file.
+ *
+ * Returns:
+ *   - `null` when the scope file is ABSENT (this scope simply does not apply).
+ *   - a numeric level when the file is PRESENT and its signed envelope verifies.
+ *   - LEVEL_HALTED (fail-closed) when the file is PRESENT but tampered, unsigned,
+ *     unreadable, or otherwise invalid — tamper handling must NOT be downgraded.
+ *
+ * `keyCandidates` is the ordered list of `.hmac-key` paths used to verify the
+ * envelope (shared hiveHome key first, legacy project-local key as fallback) —
+ * matching enforcement.cjs `getOrCreateHmacKey()`.
+ */
+function readScopeLevel(stateFile: string, keyCandidates: string[]): number | null {
+  // ABSENT scope file — does not contribute a level. A missing scope file
+  // must NOT, by itself, produce a phantom HALTED.
+  if (!existsSync(stateFile)) return null;
+
   try {
-    const projectDir = resolveProjectDir();
-    const enforcementDir = join(projectDir, '.hive-flow', 'enforcement');
-    const stateFile = join(enforcementDir, 'state.json');
-
-    // SEC-008: fail-CLOSED when state file is missing — treat as HALTED
-    if (!existsSync(stateFile)) return LEVEL_HALTED;
-
     const raw = JSON.parse(readFileSync(stateFile, 'utf8'));
 
     // SEC-009: HMAC verification before trusting the level.
     // Only the signed envelope format is accepted. Legacy plain-state files are
     // rejected (fail-closed) because their integrity cannot be verified.
     if (raw?.state !== undefined && typeof raw?.hmac === 'string') {
-      const key = getOrReadHmacKey(enforcementDir);
+      const key = readFirstHmacKey(keyCandidates);
       if (key === null) {
-        // Cannot verify — fail-closed
+        // Present but cannot verify — fail-closed
         return LEVEL_HALTED;
       }
       if (!verifyEnvelopeHmac(raw as { state: unknown; hmac: string }, key)) {
-        // HMAC mismatch — state tampered, fail-closed
+        // Present but HMAC mismatch — state tampered, fail-closed
         return LEVEL_HALTED;
       }
       const state = raw.state as Record<string, unknown>;
       return typeof state?.level === 'number' ? state.level : LEVEL_HALTED;
     }
 
-    // No HMAC envelope present — unsigned state, fail-closed
+    // Present but no HMAC envelope — unsigned state, fail-closed
     return LEVEL_HALTED;
   } catch {
-    // SEC-008: fail-CLOSED on any error reading state
+    // Present but unreadable/unparseable — fail-closed
+    return LEVEL_HALTED;
+  }
+}
+
+/**
+ * One enforcement scope: its primary state file at the canonical hiveHome path,
+ * plus an optional legacy fallback path. enforcement.cjs `getScopedState()`
+ * reads the primary file if present, else the legacy file (lines ~487-488).
+ */
+interface ScopeSpec {
+  stateFile: string;
+  legacyStateFile?: string;
+}
+
+export function getEnforcementLevel(): number {
+  try {
+    const hiveHome = resolveHiveHomeDir();
+    const projectDir = resolveProjectDir();
+
+    const enforcementDir = join(hiveHome, 'enforcement');
+    const legacyEnforcementDir = join(projectDir, '.hive-flow', 'enforcement');
+
+    // HMAC key resolution — mirrors enforcement.cjs `getOrCreateHmacKey()`
+    // (lines ~145-173): the SINGLE shared key at <hiveHome>/enforcement/.hmac-key
+    // signs ALL hiveHome-rooted scopes, with the legacy project-local key as
+    // fallback. The previous gate wrongly used per-scope sibling keys.
+    const keyCandidates = [
+      join(enforcementDir, '.hmac-key'),
+      join(legacyEnforcementDir, '.hmac-key'),
+    ];
+
+    const projectId = getProjectScopeId(projectDir);
+
+    // Scope set + paths mirror enforcement.cjs:
+    //   - getScopedStateFile() (lines ~259-268): canonical hiveHome paths
+    //   - getLegacyScopedStateFile() (lines ~247-256): <projectDir>/.hive-flow legacy paths
+    //   - loadEffectiveState() (lines ~736-748): the scopes MAXed over —
+    //     agent, hive, session, project, global. enforcement.cjs gates the
+    //     agent/hive/session scopes behind spawn-token identity trust; the
+    //     read-only gate cannot replicate that, so it conservatively includes
+    //     any of those scopes whose state file is PRESENT on disk at the correct
+    //     hiveHome path (a present, signed, non-zero scope MUST still block).
+    //
+    // Scope ids come from the same env vars enforcement.cjs reads:
+    //   agent   => AGENTIC_FLOW_AGENT_ID || CLAUDE_AGENT_ID
+    //   hive    => HIVE_FLOW_HIVE_ID
+    //   session => CLAUDE_SESSION_ID || HIVE_FLOW_SESSION_ID || AGENTIC_FLOW_SESSION_ID
+    const agentId = sanitizeScopeId(
+      process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '',
+    );
+    const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID || '');
+    const sessionId = sanitizeScopeId(
+      process.env.CLAUDE_SESSION_ID ||
+        process.env.HIVE_FLOW_SESSION_ID ||
+        process.env.AGENTIC_FLOW_SESSION_ID ||
+        '',
+    );
+
+    const scopes: ScopeSpec[] = [];
+
+    if (agentId) {
+      scopes.push({
+        stateFile: join(enforcementDir, 'agents', agentId, 'state.json'),
+        legacyStateFile: join(legacyEnforcementDir, 'agents', agentId, 'state.json'),
+      });
+    }
+    if (hiveId) {
+      scopes.push({
+        stateFile: join(enforcementDir, 'hives', hiveId, 'state.json'),
+        legacyStateFile: join(legacyEnforcementDir, 'hives', hiveId, 'state.json'),
+      });
+    }
+    if (sessionId) {
+      scopes.push({
+        stateFile: join(enforcementDir, 'sessions', sessionId, 'state.json'),
+        legacyStateFile: join(legacyEnforcementDir, 'sessions', sessionId, 'state.json'),
+      });
+    }
+    // project scope — CORRECTED PATH. enforcement.cjs project state lives at
+    // <hiveHome>/enforcement/projects/<project-id>/state.json (NOT at
+    // <projectDir>/.hive-flow/enforcement/state.json, which the prior gate read
+    // and which let a REAL project-scoped HALT slip through as 0). The legacy
+    // project fallback is <projectDir>/.hive-flow/enforcement/projects/<id>/state.json.
+    scopes.push({
+      stateFile: join(enforcementDir, 'projects', projectId, 'state.json'),
+      legacyStateFile: join(legacyEnforcementDir, 'projects', projectId, 'state.json'),
+    });
+    // global scope — <hiveHome>/enforcement/global/state.json. Legacy global
+    // fallback is <projectDir>/.hive-flow/enforcement/state.json
+    // (getLegacyScopedStateFile('global'), line ~248).
+    scopes.push({
+      stateFile: join(enforcementDir, 'global', 'state.json'),
+      legacyStateFile: join(legacyEnforcementDir, 'state.json'),
+    });
+
+    // EFFECTIVE LEVEL = MAX over all PRESENT scopes (mirrors loadEffectiveState
+    // MAX-walk, lines ~755-760). A real HALT(3)/RESTRICTED(2)/WARNED(1) in ANY
+    // present scope still applies. If NO scope file is present at all, return 0
+    // (NORMAL) — the system clean default. A present-but-tampered scope
+    // contributes LEVEL_HALTED (fail-closed).
+    let effective: number | null = null;
+    for (const scope of scopes) {
+      // Prefer the canonical hiveHome path; fall back to the legacy path only
+      // when the canonical file is absent (enforcement.cjs getScopedState).
+      const present = existsSync(scope.stateFile)
+        ? scope.stateFile
+        : scope.legacyStateFile && existsSync(scope.legacyStateFile)
+        ? scope.legacyStateFile
+        : null;
+      if (present === null) continue; // absent scope — skip
+      const level = readScopeLevel(present, keyCandidates);
+      if (level === null) continue;
+      effective = effective === null ? level : Math.max(effective, level);
+    }
+
+    return effective === null ? 0 : effective;
+  } catch {
+    // SEC-008: fail-CLOSED on any unexpected error in scope resolution
     return LEVEL_HALTED;
   }
 }

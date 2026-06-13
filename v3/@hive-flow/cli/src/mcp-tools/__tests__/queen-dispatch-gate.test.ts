@@ -107,7 +107,9 @@ import { checkMCPEnforcement, classifyTool, ToolRisk } from '../mcp-enforcement-
 
 const originalCwd = process.cwd();
 const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
+const originalHiveFlowHome = process.env.HIVE_FLOW_HOME;
 let root: string;
+let hiveHome: string;
 
 function makeAgent(agentId: string, agentType = 'worker'): AgentRecord {
   return {
@@ -134,11 +136,19 @@ function resetAgentMocks(): void {
   mockAgentState.calls = { spawn: 0, task: 0, asyncTask: 0, terminate: 0, taskResult: 0 };
 }
 
+// Persist the shared HMAC key once per sandbox so repeated writeSignedState()
+// calls re-sign with a stable key (the gate reads <hiveHome>/enforcement/.hmac-key).
+let sandboxKey: string;
+
 function writeSignedState(level: number): void {
-  const enforcementDir = join(root, '.hive-flow', 'enforcement');
-  mkdirSync(enforcementDir, { recursive: true });
-  const key = randomBytes(32).toString('hex');
-  writeFileSync(join(enforcementDir, '.hmac-key'), `${key}\n`);
+  // Canonical hiveHome-rooted GLOBAL scope path that the corrected gate (and
+  // enforcement.cjs getScopedStateFile('global')) reads:
+  //   <hiveHome>/enforcement/global/state.json
+  // signed by the single shared key at <hiveHome>/enforcement/.hmac-key.
+  const enforcementDir = join(hiveHome, 'enforcement');
+  const globalDir = join(enforcementDir, 'global');
+  mkdirSync(globalDir, { recursive: true });
+  writeFileSync(join(enforcementDir, '.hmac-key'), `${sandboxKey}\n`);
   const state = {
     level,
     consecutiveDenials: 0,
@@ -147,8 +157,8 @@ function writeSignedState(level: number): void {
     resetAt: null,
     integrityCompromised: false,
   };
-  const hmac = createHmac('sha256', key).update(JSON.stringify(state)).digest('hex');
-  writeFileSync(join(enforcementDir, 'state.json'), JSON.stringify({ state, hmac }, null, 2));
+  const hmac = createHmac('sha256', sandboxKey).update(JSON.stringify(state)).digest('hex');
+  writeFileSync(join(globalDir, 'state.json'), JSON.stringify({ state, hmac }, null, 2));
 }
 
 function getQueenTool(name: string) {
@@ -207,8 +217,14 @@ function expectMcpDeny(value: unknown): void {
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'hive-flow-queen-dispatch-gate-'));
+  // Isolated HIVE_FLOW_HOME so the gate's canonical scopes resolve inside the
+  // sandbox and NEVER touch the real ~/.hive-flow operator state.
+  hiveHome = join(root, 'hive-home');
+  mkdirSync(hiveHome, { recursive: true });
+  sandboxKey = randomBytes(32).toString('hex');
   process.chdir(root);
   process.env.CLAUDE_PROJECT_DIR = root;
+  process.env.HIVE_FLOW_HOME = hiveHome;
   resetAgentMocks();
   writeSignedState(0);
 });
@@ -219,6 +235,11 @@ afterEach(() => {
     delete process.env.CLAUDE_PROJECT_DIR;
   } else {
     process.env.CLAUDE_PROJECT_DIR = originalProjectDir;
+  }
+  if (originalHiveFlowHome === undefined) {
+    delete process.env.HIVE_FLOW_HOME;
+  } else {
+    process.env.HIVE_FLOW_HOME = originalHiveFlowHome;
   }
   if (root && existsSync(root)) rmSync(root, { recursive: true, force: true });
 });
