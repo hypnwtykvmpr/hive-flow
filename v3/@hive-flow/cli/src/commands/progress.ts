@@ -223,6 +223,77 @@ const watchCommand: Command = {
   },
 };
 
+// Classify subcommand
+const classifyCommand: Command = {
+  name: 'classify',
+  description: 'Classify current work authority and progress state (read-only)',
+  options: [
+    {
+      name: 'agent',
+      short: 'a',
+      description: 'Agent name to match router handoffs against',
+      type: 'string',
+    },
+    {
+      name: 'session-id',
+      description: 'Owner session id for swarm liveness scoping',
+      type: 'string',
+    },
+  ],
+  action: async (ctx: CommandContext): Promise<CommandResult> => {
+    const spinner = output.createSpinner({ text: 'Classifying progress authority...' });
+    const agent = typeof ctx.flags.agent === 'string' ? ctx.flags.agent : undefined;
+    const sessionId = typeof ctx.flags['session-id'] === 'string' ? ctx.flags['session-id'] : undefined;
+
+    try {
+      spinner.start();
+      const result = await callMCPTool<{
+        classification: string;
+        confidence: string;
+        observedAt: string;
+        projectRoot: string;
+        authority: { present: boolean; sources: string[]; missing: string[] };
+        reasons: string[];
+      }>('progress_classify', { cwd: ctx.cwd, agent, sessionId });
+      spinner.stop();
+
+      if (ctx.flags.format === 'json') {
+        output.printJson(result);
+        return { success: true, data: result };
+      }
+
+      output.writeln();
+      output.writeln(output.bold('Progress Authority Classification'));
+      output.writeln();
+      output.writeln(`${output.highlight('State:')} ${result.classification}`);
+      output.writeln(`${output.highlight('Confidence:')} ${result.confidence}`);
+      output.writeln(`${output.highlight('Authority:')} ${result.authority.present ? 'present' : 'missing'}`);
+      if (result.authority.sources.length > 0) {
+        output.writeln(`${output.highlight('Sources:')} ${result.authority.sources.join(', ')}`);
+      }
+      if (result.reasons.length > 0) {
+        output.writeln();
+        for (const reason of result.reasons) {
+          output.writeln(`  - ${reason}`);
+        }
+      }
+      output.writeln();
+      output.writeln(output.dim(`Project: ${result.projectRoot}`));
+      output.writeln(output.dim(`Observed: ${result.observedAt}`));
+
+      return { success: true, data: result };
+    } catch (error) {
+      spinner.fail('Progress authority classification failed');
+      if (error instanceof MCPClientError) {
+        output.printError(`Error: ${error.message}`);
+      } else {
+        output.printError(`Unexpected error: ${String(error)}`);
+      }
+      return { success: false, exitCode: 1 };
+    }
+  },
+};
+
 // Main progress command
 export const progressCommand: Command = {
   name: 'progress',
@@ -233,6 +304,7 @@ export const progressCommand: Command = {
     syncCommand,
     summaryCommand,
     watchCommand,
+    classifyCommand,
   ],
   options: [
     {
@@ -273,6 +345,10 @@ export const progressCommand: Command = {
     {
       command: 'hive-flow progress watch',
       description: 'Watch for changes',
+    },
+    {
+      command: 'hive-flow progress classify --json',
+      description: 'Classify current work authority state',
     },
     {
       command: 'hive-flow progress --json',

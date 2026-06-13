@@ -11,6 +11,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSy
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
+import { classifyCurrentProgressAuthority } from '../progress/progress-authority-classifier.js';
 
 // Get project root - handles both src and dist paths
 const __filename = fileURLToPath(import.meta.url);
@@ -376,6 +377,46 @@ const progressWatch: MCPTool = {
 };
 
 /**
+ * progress/classify - Read-only progress authority classifier
+ */
+const progressClassify: MCPTool = {
+  name: 'progress_classify',
+  description: 'Classify whether current Hive Flow work is progressing, stalled, waiting for human input, or lacks authority evidence. Read-only.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      cwd: {
+        type: 'string',
+        description: 'Working directory to resolve project scope from',
+      },
+      agent: {
+        type: 'string',
+        description: 'Optional agent name to match router handoffs against',
+      },
+      sessionId: {
+        type: 'string',
+        description: 'Optional owner session id for swarm liveness scoping',
+      },
+      nowMs: {
+        type: 'number',
+        description: 'Optional injected clock for deterministic classification',
+      },
+    },
+    required: [],
+  },
+  handler: async (params: Record<string, unknown>) => {
+    return classifyCurrentProgressAuthority({
+      cwd: typeof params.cwd === 'string' ? params.cwd : undefined,
+      agent: typeof params.agent === 'string' ? params.agent : undefined,
+      sessionId: typeof params.sessionId === 'string' ? params.sessionId : undefined,
+      nowMs: typeof params.nowMs === 'number' && Number.isFinite(params.nowMs)
+        ? params.nowMs
+        : undefined,
+    });
+  },
+};
+
+/**
  * All progress tools
  */
 export const progressTools: MCPTool[] = [
@@ -383,6 +424,7 @@ export const progressTools: MCPTool[] = [
   progressSync,
   progressSummary,
   progressWatch,
+  progressClassify,
 ];
 
 export default progressTools;
