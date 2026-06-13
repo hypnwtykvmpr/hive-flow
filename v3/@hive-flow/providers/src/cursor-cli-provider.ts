@@ -68,6 +68,66 @@ const FREE = { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' };
 /** Safety limit to prevent unbounded stdout accumulation */
 const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50 MB
 
+// ============================================================================
+// slice 5 / cursor timeout-budget — PROMPT-SIZE-AWARE TIMEOUT
+//
+// WHY: cursor's timeout used to be a FLAT 120s (CURSOR_BASE_TIMEOUT_MS) for
+// every request, and the agentic path was hard-clamped to a 600s ceiling.
+// Large cursor prompts (~66K+ chars baseline; some workflows push 200K) routinely
+// exceed 120s and can hit the 600s ceiling, causing SPURIOUS timeouts on prompts
+// that would otherwise succeed. We scale the budget with prompt size, mirroring
+// the gemini GEMINI_STDIN_PROMPT_THRESHOLD size-threshold pattern.
+//
+// DO-NOT-REVERT to a flat 120s/600s without revisiting slice 5. The dispatch
+// layer (agent-tools.ts) already permits up to 3_600_000ms (60min); the real
+// bottleneck was these provider/wrapper clamps, not dispatch.
+// ============================================================================
+
+/**
+ * Prompt length (chars) at/above which the timeout budget starts scaling.
+ * Aligned with gemini's GEMINI_STDIN_PROMPT_THRESHOLD (24_000) so both CLI
+ * providers treat "large prompt" identically. Below this, behavior is unchanged
+ * (flat base budget).
+ */
+export const CURSOR_LARGE_PROMPT_THRESHOLD = 24_000;
+
+/** Base timeout (ms) for small prompts — preserves the historical flat default. */
+export const CURSOR_BASE_TIMEOUT_MS = 120_000;
+
+/**
+ * Extra budget (ms) granted per 1K chars of prompt ABOVE the threshold.
+ * Tuned so a ~66K prompt (~42K over threshold) gets ~120s + 42*1.5s ≈ 183s,
+ * and a 200K prompt (~176K over) gets ~120s + 176*1.5s ≈ 384s — comfortably
+ * under the raised ceiling while well above the old flat 120s that was timing out.
+ */
+export const CURSOR_TIMEOUT_PER_KCHAR_MS = 1_500;
+
+/**
+ * Raised ceiling (ms) for the scaled budget. 900s (15min) is a sane upper bound:
+ * it is >= what very large prompts realistically need, stays under the dispatch
+ * cap of 3_600_000ms, and is shared with the agentic-wrapper large-prompt clamp
+ * (single source of truth — see agentic-wrapper.ts import).
+ */
+export const CURSOR_MAX_TIMEOUT_MS = 900_000;
+
+/**
+ * Pure, prompt-size-aware timeout helper for cursor.
+ *
+ * - If `explicit` is provided (caller-supplied `request.timeout`), it is returned
+ *   verbatim — caller override always wins (slice 5 contract).
+ * - Otherwise: BASE for prompts below the threshold, then a linear ramp of
+ *   CURSOR_TIMEOUT_PER_KCHAR_MS per 1K chars above the threshold, clamped to
+ *   [BASE, MAX]. Monotonically non-decreasing in promptChars.
+ *
+ * Exported for deterministic unit testing (no fake timers needed).
+ */
+export function computeCursorTimeout(promptChars: number, explicit?: number): number {
+  if (explicit !== undefined) return explicit;
+  const overThreshold = Math.max(0, promptChars - CURSOR_LARGE_PROMPT_THRESHOLD);
+  const scaled = CURSOR_BASE_TIMEOUT_MS + (overThreshold / 1000) * CURSOR_TIMEOUT_PER_KCHAR_MS;
+  return Math.min(Math.max(scaled, CURSOR_BASE_TIMEOUT_MS), CURSOR_MAX_TIMEOUT_MS);
+}
+
 /**
  * stderr patterns that indicate cursor-cli requires a real TTY and cannot
  * operate in non-interactive pipe mode. When matched, the tmux fallback is
@@ -147,7 +207,10 @@ export class CursorCLIProvider extends BaseProvider {
 
   constructor(options: BaseProviderOptions) {
     super(options);
-    this.defaultTimeout = options.config.timeout || 120000;
+    // slice 5 / cursor timeout-budget: base falls back to CURSOR_BASE_TIMEOUT_MS
+    // (120s). This is only the SMALL-prompt floor; computeCursorTimeout() scales
+    // it up for large prompts at each call site (doComplete/doStream/FIFO).
+    this.defaultTimeout = options.config.timeout || CURSOR_BASE_TIMEOUT_MS;
   }
 
   protected validateConfig(): void {
@@ -181,8 +244,9 @@ export class CursorCLIProvider extends BaseProvider {
       let stdout = '';
       let stderr = '';
 
-      // Declare timer before listeners that reference it
-      const timeoutMs = request.timeout || this.defaultTimeout;
+      // Declare timer before listeners that reference it.
+      // slice 5 / cursor timeout-budget: scale by prompt size (explicit override wins).
+      const timeoutMs = computeCursorTimeout(prompt.length, request.timeout);
       const timer = setTimeout(() => {
         if (settled) return;
         child.kill('SIGKILL');
@@ -269,7 +333,10 @@ export class CursorCLIProvider extends BaseProvider {
     child.on('close', () => { done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
     child.on('error', (err) => { spawnError = err; done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
 
-    const streamTimeoutMs = (request.timeout || this.defaultTimeout) * 2;
+    // slice 5 / cursor timeout-budget: scale base by prompt size, then keep the
+    // streaming x2 multiplier (streaming legitimately runs longer). Explicit
+    // override is honored by computeCursorTimeout and still doubled for streaming.
+    const streamTimeoutMs = computeCursorTimeout(prompt.length, request.timeout) * 2;
     const timer = setTimeout(() => { child.kill('SIGKILL'); done = true; wake(); }, streamTimeoutMs);
 
     let promptTokens = 0;
@@ -678,7 +745,9 @@ export class CursorCLIProvider extends BaseProvider {
 
     // Open the FIFO for reading with a timeout to prevent indefinite blocking.
     const fifoStream = fs.createReadStream(pipePath);
-    const fifoTimeoutMs = this.defaultTimeout * 2;
+    // slice 5 / cursor timeout-budget: scale the FIFO read budget by prompt size,
+    // then keep the historical x2 (tmux/TTY fallback path runs longer than direct).
+    const fifoTimeoutMs = computeCursorTimeout(prompt.length) * 2;
     const fifoTimer = setTimeout(() => {
       fifoStream.destroy(new Error(`FIFO read timed out after ${fifoTimeoutMs}ms`));
       try { execFileSync(tmuxBin, ['kill-session', '-t', sessionId], { stdio: 'ignore' }); } catch { /* already gone */ }

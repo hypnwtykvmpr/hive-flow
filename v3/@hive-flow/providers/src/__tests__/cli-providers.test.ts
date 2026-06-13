@@ -14,7 +14,7 @@ vi.mock('child_process', () => {
 import { spawn, execFile } from 'child_process';
 import { GeminiCLIProvider } from '../gemini-cli-provider.js';
 import { CodexCLIProvider } from '../codex-cli-provider.js';
-import { CursorCLIProvider } from '../cursor-cli-provider.js';
+import { CursorCLIProvider, computeCursorTimeout, CURSOR_BASE_TIMEOUT_MS, CURSOR_LARGE_PROMPT_THRESHOLD, CURSOR_MAX_TIMEOUT_MS } from '../cursor-cli-provider.js';
 import type { LLMModel, LLMStreamEvent } from '../types.js';
 
 // Typed mock aliases — eliminates `as any` on mock method access
@@ -1261,6 +1261,34 @@ describe('CursorCLIProvider — parseJsonOutput usage parsing', () => {
     expect(result.usage.promptTokens).toBe(100);
     expect(result.usage.completionTokens).toBe(50);
     provider.destroy();
+  });
+});
+
+// ============================================================
+// slice 5 / cursor timeout-budget — REDUNDANT guard (mirrors the dedicated
+// cursor-timeout-budget.test.ts; lives here too so anyone editing the cursor
+// provider's main test file sees the prompt-size-aware contract).
+// ============================================================
+
+describe('CursorCLIProvider — prompt-size-aware timeout (slice 5)', () => {
+  it('small prompt yields the flat base budget', () => {
+    expect(computeCursorTimeout(500)).toBe(CURSOR_BASE_TIMEOUT_MS);
+  });
+
+  it('large 66K/200K prompts scale up monotonically, capped at MAX', () => {
+    const t66 = computeCursorTimeout(66_000);
+    const t200 = computeCursorTimeout(200_000);
+    expect(t66).toBeGreaterThan(CURSOR_BASE_TIMEOUT_MS);
+    expect(t200).toBeGreaterThan(t66);
+    expect(t200).toBeLessThanOrEqual(CURSOR_MAX_TIMEOUT_MS);
+  });
+
+  it('explicit override is respected verbatim', () => {
+    expect(computeCursorTimeout(200_000, 7_777)).toBe(7_777);
+  });
+
+  it('threshold aligns with the gemini large-prompt threshold value', () => {
+    expect(CURSOR_LARGE_PROMPT_THRESHOLD).toBe(24_000);
   });
 });
 

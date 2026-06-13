@@ -12,13 +12,32 @@ import { spawn, ChildProcess, execFile } from 'child_process';
 import { createInterface } from 'readline';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
+// slice 5 / cursor timeout-budget: single source of truth for the large-prompt
+// threshold and raised ceiling. Imported (not duplicated) so cursor's scaled
+// budget and this wrapper's clamp can never drift apart.
+import { CURSOR_LARGE_PROMPT_THRESHOLD, CURSOR_MAX_TIMEOUT_MS } from './cursor-cli-provider.js';
+
+/**
+ * slice 5 / cursor timeout-budget: hard upper bound that no agentic timeout may
+ * exceed. Mirrors the dispatch cap in agent-tools.ts (3_600_000ms / 60min).
+ * Large-prompt requests may rise to CURSOR_MAX_TIMEOUT_MS but never past this.
+ */
+const AGENTIC_DISPATCH_CEILING_MS = 3_600_000;
+
+/** Non-large-prompt ceiling — preserves the historical 600s clamp for small tasks. */
+const AGENTIC_SMALL_PROMPT_CEILING_MS = 600_000;
 
 // ===== Types =====
 
 export type AgenticProvider = 'codex-cli' | 'gemini-cli' | 'cursor-cli';
 
 export interface AgenticOptions {
-  /** Timeout in milliseconds (default: 120_000, max: 600_000) */
+  /**
+   * Timeout in milliseconds (default: 120_000). Upper clamp is prompt-aware
+   * (slice 5): 600_000 for small prompts, up to CURSOR_MAX_TIMEOUT_MS for large
+   * prompts (task length >= CURSOR_LARGE_PROMPT_THRESHOLD), never above the
+   * dispatch cap of 3_600_000.
+   */
   timeout?: number;
   /** Working directory for the subprocess */
   cwd?: string;
@@ -215,7 +234,20 @@ export class AgenticWrapper {
     task: string,
     options?: AgenticOptions
   ): Promise<AgenticResult> {
-    const timeout = Math.min(Math.max(options?.timeout ?? 120_000, 1000), 600_000);
+    // slice 5 / cursor timeout-budget: the upper clamp is now PROMPT-AWARE.
+    // Small prompts keep the historical 600s ceiling. Large prompts (task length
+    // >= CURSOR_LARGE_PROMPT_THRESHOLD, the same threshold cursor's scaled budget
+    // uses) may rise to CURSOR_MAX_TIMEOUT_MS — because large cursor prompts
+    // (~66K+ chars) legitimately need more than 600s and were spuriously timing
+    // out here even after the provider granted a larger budget. The max(.., 1000)
+    // floor is preserved, and the ceiling never exceeds the dispatch cap.
+    // DO-NOT-REVERT to a flat 600_000 ceiling without revisiting slice 5.
+    const isLargePrompt = task.length >= CURSOR_LARGE_PROMPT_THRESHOLD;
+    const upperCeiling = Math.min(
+      isLargePrompt ? CURSOR_MAX_TIMEOUT_MS : AGENTIC_SMALL_PROMPT_CEILING_MS,
+      AGENTIC_DISPATCH_CEILING_MS,
+    );
+    const timeout = Math.min(Math.max(options?.timeout ?? 120_000, 1000), upperCeiling);
     const binary = await resolveBinary(provider);
     const args = this.buildArgs(provider, task);
     const startMs = Date.now();
