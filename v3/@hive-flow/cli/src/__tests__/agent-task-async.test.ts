@@ -6,8 +6,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
+  readdirSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
+  rmdirSync: vi.fn(),
+  rmSync: vi.fn(),
   renameSync: vi.fn(),
   unlinkSync: vi.fn(),
 }));
@@ -33,7 +36,7 @@ vi.mock('../hivector/enhanced-model-router.js', () => ({
   }),
 }));
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, rmSync, renameSync, unlinkSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { agentTools } from '../mcp-tools/agent-tools.js';
 
@@ -129,9 +132,11 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
 /** Find tool handlers */
 const asyncTool = agentTools.find((t) => t.name === 'agent_task_async')!;
 const resultTool = agentTools.find((t) => t.name === 'agent_task_result')!;
+const terminateTool = agentTools.find((t) => t.name === 'agent_terminate')!;
 
 const asyncHandler = asyncTool.handler;
 const resultHandler = resultTool.handler;
+const terminateHandler = terminateTool.handler;
 
 /**
  * Mock spawn to return a detached-style child with only pid and unref()
@@ -849,6 +854,141 @@ describe('parallel dispatch', () => {
     for (const id of taskIds) {
       expect(id.startsWith('task-')).toBe(true);
     }
+  });
+});
+
+// ── agent_terminate cleanup liveness tests ──────────────────────────────────
+
+describe('agent_terminate cleanup liveness', () => {
+  const TASK_ID = 'task-terminate-liveness';
+  const AGENT_ID = 'terminate-agent';
+  const PID = 77777;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (rmSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (unlinkSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (readdirSync as ReturnType<typeof vi.fn>).mockReturnValue([`${TASK_ID}.json`]);
+  });
+
+  function setupTerminateStore(options: {
+    resultAppearsAfterChecks?: number;
+  } = {}) {
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    let currentStore = makeStore({ [AGENT_ID]: agent });
+    let resultChecks = 0;
+    const resultAppearsAfterChecks = options.resultAppearsAfterChecks ?? Number.POSITIVE_INFINITY;
+    const tracking = {
+      status: 'running',
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      pid: PID,
+    };
+
+    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p !== 'string') return false;
+      if (p.endsWith('store.json')) return true;
+      if (p.endsWith('.hive-flow/tasks')) return true;
+      if (p.endsWith(`${TASK_ID}.result.json`)) {
+        resultChecks += 1;
+        return resultChecks >= resultAppearsAfterChecks;
+      }
+      return false;
+    });
+
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(currentStore);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      return JSON.stringify({});
+    });
+
+    const tmpWrites = new Map<string, string>();
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
+      if (typeof p === 'string' && p.includes('.tmp.')) {
+        tmpWrites.set(p, data);
+      }
+    });
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        currentStore = JSON.parse(data);
+        tmpWrites.delete(src);
+      }
+    });
+
+    return {
+      getResultChecks: () => resultChecks,
+      getStore: () => currentStore,
+    };
+  }
+
+  it('breaks termination cleanup wait when PID is proven dead by ESRCH', async () => {
+    const fixture = setupTerminateStore();
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
+      throw Object.assign(new Error('no such process'), { code: 'ESRCH' });
+    });
+    const timeoutSpy = vi.spyOn(global, 'setTimeout');
+
+    const result = await terminateHandler({ agentId: AGENT_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ success: true, agentId: AGENT_ID, terminated: true });
+    expect(killSpy).toHaveBeenCalledWith(PID, 0);
+    expect(timeoutSpy).not.toHaveBeenCalled();
+    expect(fixture.getResultChecks()).toBe(1);
+    expect(fixture.getStore().agents[AGENT_ID].status).toBe('terminated');
+    expect(unlinkSync).toHaveBeenCalledWith(expect.stringContaining(`${TASK_ID}.json`));
+    expect(unlinkSync).toHaveBeenCalledWith(expect.stringContaining(`${TASK_ID}.task`));
+
+    killSpy.mockRestore();
+    timeoutSpy.mockRestore();
+  });
+
+  it('continues termination cleanup wait on EPERM until the result appears', async () => {
+    const fixture = setupTerminateStore({ resultAppearsAfterChecks: 2 });
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
+      throw Object.assign(new Error('operation not permitted'), { code: 'EPERM' });
+    });
+    const timeoutSpy = vi.spyOn(global, 'setTimeout').mockImplementation((callback: TimerHandler) => {
+      if (typeof callback === 'function') callback();
+      return 0 as unknown as NodeJS.Timeout;
+    });
+
+    const result = await terminateHandler({ agentId: AGENT_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ success: true, agentId: AGENT_ID, terminated: true });
+    expect(killSpy).toHaveBeenCalledWith(PID, 0);
+    expect(timeoutSpy).toHaveBeenCalled();
+    expect(fixture.getResultChecks()).toBe(2);
+    expect(unlinkSync).toHaveBeenCalledWith(expect.stringContaining(`${TASK_ID}.json`));
+    expect(unlinkSync).toHaveBeenCalledWith(expect.stringContaining(`${TASK_ID}.task`));
+
+    killSpy.mockRestore();
+    timeoutSpy.mockRestore();
+  });
+
+  it('continues termination cleanup wait on ambiguous non-ESRCH errors until the result appears', async () => {
+    const fixture = setupTerminateStore({ resultAppearsAfterChecks: 2 });
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
+      throw Object.assign(new Error('invalid target'), { code: 'EINVAL' });
+    });
+    const timeoutSpy = vi.spyOn(global, 'setTimeout').mockImplementation((callback: TimerHandler) => {
+      if (typeof callback === 'function') callback();
+      return 0 as unknown as NodeJS.Timeout;
+    });
+
+    const result = await terminateHandler({ agentId: AGENT_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ success: true, agentId: AGENT_ID, terminated: true });
+    expect(killSpy).toHaveBeenCalledWith(PID, 0);
+    expect(timeoutSpy).toHaveBeenCalled();
+    expect(fixture.getResultChecks()).toBe(2);
+
+    killSpy.mockRestore();
+    timeoutSpy.mockRestore();
   });
 });
 

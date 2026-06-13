@@ -925,9 +925,7 @@ export const agentTools: MCPTool[] = [
                   if (existsSync(expectedResult)) break;
                   // Also check if bridge already exited (PID no longer alive)
                   if (tracking.pid && tracking.pid > 0 && Number.isInteger(tracking.pid)) {
-                    try {
-                      process.kill(tracking.pid, 0);
-                    } catch {
+                    if (!isPidAlive(tracking.pid)) {
                       break; // Process already gone
                     }
                   } else {
