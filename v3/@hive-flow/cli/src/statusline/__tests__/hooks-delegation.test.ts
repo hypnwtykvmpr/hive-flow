@@ -178,5 +178,6 @@ describe('hooks statusline delegation (§12.4)', () => {
     expect(source).not.toContain('bin/cli.js statusline');
     expect(source).not.toContain('hive-flow statusline');
     expect(source).not.toContain('npx ');
+    expect(source).toContain('HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS');
   });
 });

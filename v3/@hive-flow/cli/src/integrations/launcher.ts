@@ -201,7 +201,10 @@ HIVE_FLOW_STATUSLINE_STDIN="$(cat || true)"
 HIVE_FLOW_STATUSLINE_OUTPUT="$(printf '%s' "$HIVE_FLOW_STATUSLINE_STDIN" | node ${quoted} "$@" 2>/dev/null || true)"
 HIVE_FLOW_PREVIOUS_STATUSLINE_COMMAND=${quotedPreviousCommand}
 HIVE_FLOW_PREVIOUS_STATUSLINE_OUTPUT=""
-if [ -n "$HIVE_FLOW_PREVIOUS_STATUSLINE_COMMAND" ]; then
+# DO-NOT-REVERT: previous statusLine is captured for uninstall restore only.
+# Chaining it by default leaks the user's old shell prompt under the Hive Flow
+# board in every non-repo global install. Set this env var only for diagnostics.
+if [ "\${HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS:-0}" = "1" ] && [ -n "$HIVE_FLOW_PREVIOUS_STATUSLINE_COMMAND" ]; then
   HIVE_FLOW_PREVIOUS_STATUSLINE_OUTPUT="$(printf '%s' "$HIVE_FLOW_STATUSLINE_STDIN" | HIVE_FLOW_STATUSLINE_CHAINED=1 bash -lc "$HIVE_FLOW_PREVIOUS_STATUSLINE_COMMAND" 2>/dev/null || true)"
 fi
 if [ -n "$HIVE_FLOW_STATUSLINE_OUTPUT" ]; then
@@ -269,7 +272,9 @@ const rendered = spawnSync(process.execPath, args, {
 });
 if (!rendered.error && rendered.stdout) emit(rendered.stdout);
 
-if (PREVIOUS_STATUSLINE_COMMAND) {
+// DO-NOT-REVERT: previous statusLine is retained for uninstall restore only.
+// Chaining it by default leaks host prompt output under the Hive Flow board.
+if (PREVIOUS_STATUSLINE_COMMAND && process.env.HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS === '1') {
   const chained = spawnSync(PREVIOUS_STATUSLINE_COMMAND, {
     input: stdin,
     encoding: 'utf8',

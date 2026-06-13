@@ -51,7 +51,7 @@ describe('Windows launcher generation', () => {
     expect(source).not.toContain('/usr/bin/env bash');
   });
 
-  it('writes a Windows statusline launcher and Node companion with the chained prompt preserved', async () => {
+  it('writes a Windows statusline launcher and Node companion with the prior prompt preserved but not chained by default', async () => {
     const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-code-statusline.cmd');
     const entrypoint = join(root, 'project with spaces', 'bin', 'statusline.js');
     const previousCommand = 'powershell.exe -NoProfile -Command "Write-Output CUSTOM"';
@@ -72,6 +72,7 @@ describe('Windows launcher generation', () => {
     expect(companion).toContain(JSON.stringify(entrypoint));
     expect(companion).toContain(JSON.stringify(previousCommand));
     expect(companion).toContain('spawnSync(process.execPath');
+    expect(companion).toContain("process.env.HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS === '1'");
     expect(companion).toContain('shell: true');
   });
 });

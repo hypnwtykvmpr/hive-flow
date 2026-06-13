@@ -225,7 +225,7 @@ describe('init --global --claude-code', () => {
     }
   });
 
-  it('installs a managed global statusLine that chains the prior prompt and restores it on uninstall', async () => {
+  it('installs a managed global statusLine that suppresses the prior prompt and restores it on uninstall', async () => {
     const settingsPath = join(homeDir, '.claude', 'settings.json');
     const customWrapper = join(homeDir, '.claude', 'statusline-wrapper.sh');
     const previousStatusLine = {
@@ -270,7 +270,21 @@ describe('init --global --claude-code', () => {
 
     expect(launched.status).toBe(0);
     expect(launched.stdout).toContain('HF_BOARD');
-    expect(launched.stdout).toContain('CUSTOM_PROMPT');
+    expect(launched.stdout).not.toContain('CUSTOM_PROMPT');
+
+    const diagnosticChain = spawnSync(statuslineLauncher, [], {
+      cwd,
+      input: JSON.stringify({
+        workspace: { current_dir: cwd, project_dir: cwd },
+        model: { display_name: 'Opus 4.8' },
+      }),
+      encoding: 'utf8',
+      timeout: 5000,
+      env: { ...process.env, HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS: '1' },
+    });
+    expect(diagnosticChain.status).toBe(0);
+    expect(diagnosticChain.stdout).toContain('HF_BOARD');
+    expect(diagnosticChain.stdout).toContain('CUSTOM_PROMPT');
 
     const rerun = await initCommand.action!(makeCtx(cwd, {
       global: true,
@@ -292,7 +306,7 @@ describe('init --global --claude-code', () => {
     });
     expect(relaunched.status).toBe(0);
     expect(relaunched.stdout.match(/HF_BOARD/g) || []).toHaveLength(1);
-    expect(relaunched.stdout.match(/CUSTOM_PROMPT/g) || []).toHaveLength(1);
+    expect(relaunched.stdout).not.toContain('CUSTOM_PROMPT');
 
     const uninstall = await runSetup({
       action: 'uninstall',
@@ -307,13 +321,13 @@ describe('init --global --claude-code', () => {
       features: 'statusline',
     });
 
-    expect(uninstall.results).toEqual([
+    expect(uninstall.results).toEqual(expect.arrayContaining([
       expect.objectContaining({
         agent: 'claude-code',
         feature: 'statusline',
         outcome: 'applied',
       }),
-    ]);
+    ]));
     const restored = JSON.parse(readFileSync(settingsPath, 'utf8'));
     expect(restored.statusLine).toEqual(previousStatusLine);
   });

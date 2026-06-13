@@ -40,6 +40,11 @@ managed_tree() {
   run "$HOME_DIR/.hive-flow/bin/claude-code-statusline"
   [ "$status" -eq 0 ]
   [[ "$output" == *"HF_BOARD"* ]]
+  [[ "$output" != *"CUSTOM"* ]]
+
+  run env HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS=1 "$HOME_DIR/.hive-flow/bin/claude-code-statusline"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"HF_BOARD"* ]]
   [[ "$output" == *"CUSTOM"* ]]
 
   run node "$REPO_ROOT/v3/@hive-flow/cli/bin/cli.js" init --global --claude-code --yes --home "$HOME_DIR" --user-settings "$SETTINGS_PATH" --project-root "$PROJECT_ROOT" --format json
@@ -48,7 +53,7 @@ managed_tree() {
   run "$HOME_DIR/.hive-flow/bin/claude-code-statusline"
   [ "$status" -eq 0 ]
   [[ "$output" == *"HF_BOARD"* ]]
-  [[ "$output" == *"CUSTOM"* ]]
+  [[ "$output" != *"CUSTOM"* ]]
   count="$(printf '%s\n' "$output" | grep -c 'HF_BOARD')"
   [ "$count" -eq 1 ]
 }
