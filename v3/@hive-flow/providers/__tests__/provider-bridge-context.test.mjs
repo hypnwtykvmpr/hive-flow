@@ -292,7 +292,15 @@ describe('provider bridge context helpers', () => {
       maxEntries: 100,
     });
     expect(bridge.getProviderLimits('openrouter', 'x-ai/grok-4.3')).toMatchObject({
-      maxTokens: 2_000_000,
+      maxTokens: 1_000_000,
+      maxEntries: 100,
+    });
+    expect(bridge.getProviderLimits('openrouter', 'minimax/minimax-m3')).toMatchObject({
+      maxTokens: 1_048_576,
+      maxEntries: 100,
+    });
+    expect(bridge.getProviderLimits('openrouter', 'qwen/qwen3.7-plus')).toMatchObject({
+      maxTokens: 1_000_000,
       maxEntries: 100,
     });
     expect(bridge.getProviderLimits('codex-cli')).toMatchObject({ maxTokens: 400_000, maxEntries: 50 });

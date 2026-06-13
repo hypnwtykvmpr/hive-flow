@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import fc from 'fast-check';
 import { spawn, execFileSync } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -112,6 +113,10 @@ function makeInstallLayout({ fakeMcpClient = false } = {}) {
   }
   safeSymlinkDir(providersDistPath, join(nodeProviders, 'dist'));
   safeSymlinkDir(sharedRoot, nodeShared);
+  if (existsSync(join(providersRoot, 'node_modules', 'undici'))) {
+    mkdirSync(join(nodeProviders, 'node_modules'), { recursive: true });
+    safeSymlinkDir(realpathSync.native(join(providersRoot, 'node_modules', 'undici')), join(nodeProviders, 'node_modules', 'undici'));
+  }
   cpSync(cliPermissionGuardDistPath, join(nodeCli, 'dist', 'src', 'permission-guard'), { recursive: true });
   copyFileSync(
     resolve(cliRoot, 'dist/src/install/portable-prompt.js'),
@@ -345,17 +350,30 @@ function makeStore(root, agentId, opts = {}) {
   return storeDir;
 }
 
-async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerPath, agentId = 'single-path-agent', provider, resolvedModel }) {
+async function runDetachedBridge({
+  bridgePath,
+  root,
+  toolName,
+  toolArgs,
+  markerPath,
+  agentId = 'single-path-agent',
+  provider,
+  resolvedModel,
+  taskText = 'Call read_file on a local workspace file through the scripted bridge tool call.',
+  envExtra = {},
+  fixtureOptions = {},
+  allowFailure = false,
+}) {
   const key = writeKey(root);
   writeEnvelope(root, key, 0);
-  const fixture = await startFixtureServer(toolName, toolArgs);
+  const fixture = await startFixtureServer(toolName, toolArgs, fixtureOptions);
   const holder = await startCredentialHolderFixture(fixture.baseUrl);
   const storeDir = makeStore(root, agentId, { provider, resolvedModel });
   const tasksDir = join(root, '.hive-flow', 'tasks');
   mkdirSync(tasksDir, { recursive: true });
   const taskFile = join(tasksDir, 'single-path.task');
   const resultFile = join(tasksDir, 'single-path.result.json');
-  writeFileSync(taskFile, 'Call read_file on a local workspace file through the scripted bridge tool call.', 'utf8');
+  writeFileSync(taskFile, taskText, 'utf8');
 
   const child = spawn(process.execPath, [
     bridgePath,
@@ -370,6 +388,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
     stdio: 'ignore',
     env: {
       ...childEnv(root, markerPath ? { HF_FAKE_MCP_MARKER: markerPath } : {}),
+      ...envExtra,
       HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET: holder.socketPath,
       DEEPSEEK_API_URL: fixture.baseUrl,
       OPENROUTER_API_URL: fixture.baseUrl,
@@ -392,7 +411,7 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
       });
     });
 
-    if (exitCode !== 0) {
+    if (exitCode !== 0 && !allowFailure) {
       const detail = existsSync(resultFile) ? readFileSync(resultFile, 'utf8') : '<no result file>';
       throw new Error(`provider bridge exited ${exitCode}: ${detail}`);
     }
@@ -406,6 +425,71 @@ async function runDetachedBridge({ bridgePath, root, toolName, toolArgs, markerP
     await holder.close();
   }
 }
+
+const STRICT_PROVIDER_CASES = [
+  { provider: 'deepseek', resolvedModel: 'deepseek-v4-pro' },
+  { provider: 'openrouter', resolvedModel: 'minimax/minimax-m3' },
+];
+
+const STRICT_TOOL_CASES = [
+  {
+    toolName: 'read_file',
+    toolArgs: (root) => ({ path: join(root, 'src', 'matrix.txt') }),
+    taskText: 'Read the local workspace file src/matrix.txt using the read_file bridge tool.',
+    expectContent: (content) => expect(content).toContain('strict matrix needle'),
+  },
+  {
+    toolName: 'write_file',
+    toolArgs: (root) => ({ path: join(root, 'src', 'matrix-write.txt'), content: 'strict matrix write\n' }),
+    taskText: 'Write a temp workspace file src/matrix-write.txt using the write_file bridge tool.',
+    expectContent: (content) => expect(content).toContain('File written:'),
+  },
+  {
+    toolName: 'edit_file',
+    toolArgs: (root) => ({ path: join(root, 'src', 'matrix-edit.txt'), old_string: 'before matrix edit', new_string: 'after matrix edit' }),
+    taskText: 'Edit the temp workspace file src/matrix-edit.txt using the edit_file bridge tool.',
+    expectContent: (content) => expect(content).toContain('File edited:'),
+  },
+  {
+    toolName: 'list_directory',
+    toolArgs: (root) => ({ path: join(root, 'src') }),
+    taskText: 'List the local workspace directory src using the list_directory bridge tool.',
+    expectContent: (content) => expect(content).toContain('matrix.txt'),
+  },
+  {
+    toolName: 'grep',
+    toolArgs: (root) => ({ pattern: 'strict matrix needle', path: join(root, 'src') }),
+    taskText: 'Search the local workspace path src for strict matrix needle using the grep bridge tool.',
+    expectContent: (content) => expect(content).toContain('strict matrix needle'),
+  },
+  {
+    toolName: 'find_file',
+    toolArgs: (root) => ({ pattern: 'matrix.txt', path: join(root, 'src') }),
+    taskText: 'Find the local workspace file matrix.txt using the find_file bridge tool.',
+    expectContent: (content) => expect(content).toContain('matrix.txt'),
+  },
+  {
+    toolName: 'run_command',
+    toolArgs: () => ({ argv: ['pwd'] }),
+    taskText: 'Check the current workspace path using the run_command bridge tool.',
+    expectContent: (content) => expect(content).toContain('"status":"executed"'),
+  },
+  {
+    toolName: 'web_fetch',
+    toolArgs: () => ({ url: 'https://127.0.0.1/' }),
+    taskText: 'Fetch the web URL https://127.0.0.1/ using the web_fetch bridge tool and report the denial status.',
+    expectContent: (content) => {
+      expect(content).toContain('"status":"denied"');
+      expect(content).toContain('denyReason');
+    },
+  },
+  {
+    toolName: 'web_search',
+    toolArgs: () => ({ query: 'current OpenRouter MiniMax M3 model slug' }),
+    taskText: 'Search the web for the current OpenRouter MiniMax M3 model slug using the web_search bridge tool.',
+    expectContent: (content) => expect(content).toContain('web-search-unsupported'),
+  },
+];
 
 describe('provider bridge single tool execution path', () => {
   it('exposes one bridge-owned seam for filesystem tools and explicit denials', () => {
@@ -473,16 +557,16 @@ describe('provider bridge single tool execution path', () => {
       const firstToolNames = (requests[0].tools ?? []).map((tool) => tool.function?.name);
       expect(firstToolNames).toEqual([
         'read_file',
+        'write_file',
+        'edit_file',
         'list_directory',
         'grep',
         'find_file',
         'run_command',
+        'web_fetch',
+        'web_search',
       ]);
-      expect(firstToolNames).not.toContain('write_file');
-      expect(firstToolNames).not.toContain('edit_file');
       expect(firstToolNames).not.toContain('run_shell');
-      expect(firstToolNames).not.toContain('web_fetch');
-      expect(firstToolNames).not.toContain('web_search');
       // DeepSeek (thinking mode) rejects tool_choice:"required" with HTTP 400, so the
       // bridge must NOT send it for deepseek; grounding is still enforced by the
       // UNGROUNDED_TOOL_TASK floor (covered by the fail-closed test below).
@@ -502,7 +586,7 @@ describe('provider bridge single tool execution path', () => {
     }
   }, 30000);
 
-  it('still sends tool_choice:required for providers that support it (openrouter)', async () => {
+  it('does not send incompatible tool_choice:required for OpenRouter MiniMax M3', async () => {
     const layout = makeInstallLayout({ fakeMcpClient: false });
     const root = makeProjectRoot('hf-bridge-single-path-openrouter-');
     try {
@@ -515,12 +599,13 @@ describe('provider bridge single tool execution path', () => {
         toolName: 'read_file',
         toolArgs: { path: readable },
         provider: 'openrouter',
-        resolvedModel: 'xiaomi/mimo-v2.5-pro',
+        resolvedModel: 'minimax/minimax-m3',
       });
 
       expect(requests.length).toBeGreaterThanOrEqual(2);
-      // OpenRouter supports the grounding nudge — it must still be sent.
-      expect(requests[0].tool_choice).toBe('required');
+      // OpenRouter MiniMax M3 rejects tool_choice:required live. Grounding is
+      // still enforced by the UNGROUNDED_TOOL_TASK fail-closed floor.
+      expect(requests[0].tool_choice).not.toBe('required');
       expect(result.success).toBe(true);
       expect(result.toolUse).toMatchObject({ iterations: 2, tools: ['read_file'] });
     } finally {
@@ -528,6 +613,123 @@ describe('provider bridge single tool execution path', () => {
       rmSync(layout.installRoot, { recursive: true, force: true });
     }
   }, 30000);
+
+  it('DO-NOT-REVERT: strict API web tasks are grounded through bridge tools', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-single-path-web-');
+    try {
+      const { result, requests } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'web_search',
+        toolArgs: { query: 'current OpenRouter MiniMax M3 model slug' },
+        provider: 'openrouter',
+        resolvedModel: 'minimax/minimax-m3',
+        taskText: 'Search the web for the current OpenRouter MiniMax M3 model slug using a bridge web tool.',
+      });
+
+      expect(requests.length).toBeGreaterThanOrEqual(2);
+      const firstToolNames = (requests[0].tools ?? []).map((tool) => tool.function?.name);
+      expect(firstToolNames).toContain('web_fetch');
+      expect(firstToolNames).toContain('web_search');
+      expect(requests[0].tool_choice).not.toBe('required');
+      expect(result.success).toBe(true);
+      expect(result.toolUse).toMatchObject({ iterations: 2, tools: ['web_search'] });
+      expect(result.content).toContain('web-search-unsupported');
+      expect(result.content).not.toMatch(/UNGROUNDED_TOOL_TASK/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('DO-NOT-REVERT: strict API web tasks fail closed without a tool call', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-single-path-web-ungrounded-');
+    try {
+      const { result, requests } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'web_search',
+        toolArgs: { query: 'current OpenRouter MiniMax M3 model slug' },
+        provider: 'openrouter',
+        resolvedModel: 'minimax/minimax-m3',
+        taskText: 'Search the web for the current OpenRouter MiniMax M3 model slug and report the grounded answer.',
+        fixtureOptions: { noToolCalls: true },
+        allowFailure: true,
+      });
+
+      expect(requests.length).toBe(1);
+      expect(result).toMatchObject({
+        success: false,
+        code: 'UNGROUNDED_TOOL_TASK',
+      });
+      expect(result.error).toMatch(/workspace\/web task/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('exercises every strict bridge tool through both OpenRouter and DeepSeek response loops', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const seenPairs = new Set();
+    try {
+      for (const providerCase of STRICT_PROVIDER_CASES) {
+        for (const toolCase of STRICT_TOOL_CASES) {
+          const root = makeProjectRoot(`hf-bridge-matrix-${providerCase.provider}-${toolCase.toolName}-`);
+          try {
+            const readable = join(root, 'src', 'matrix.txt');
+            writeFileSync(readable, 'strict matrix needle\n', 'utf8');
+            writeFileSync(join(root, 'src', 'matrix-edit.txt'), 'before matrix edit\n', 'utf8');
+
+            const { result, requests } = await runDetachedBridge({
+              bridgePath: layout.bridgePath,
+              root,
+              toolName: toolCase.toolName,
+              toolArgs: toolCase.toolArgs(root),
+              provider: providerCase.provider,
+              resolvedModel: providerCase.resolvedModel,
+              taskText: toolCase.taskText,
+            });
+
+            expect(requests.length).toBeGreaterThanOrEqual(2);
+            const firstToolNames = (requests[0].tools ?? []).map((tool) => tool.function?.name);
+            for (const expectedName of STRICT_TOOL_CASES.map((entry) => entry.toolName)) {
+              expect(firstToolNames).toContain(expectedName);
+            }
+            expect(firstToolNames).not.toContain('run_shell');
+            expect(requests[0].tool_choice).not.toBe('required');
+            expect(result.success).toBe(true);
+            expect(result.toolUse).toMatchObject({ iterations: 2, tools: [toolCase.toolName] });
+            toolCase.expectContent(result.content);
+            if (toolCase.toolName === 'write_file') {
+              expect(readFileSync(join(root, 'src', 'matrix-write.txt'), 'utf8')).toBe('strict matrix write\n');
+            }
+            if (toolCase.toolName === 'edit_file') {
+              expect(readFileSync(join(root, 'src', 'matrix-edit.txt'), 'utf8')).toBe('after matrix edit\n');
+            }
+            seenPairs.add(`${providerCase.provider}:${toolCase.toolName}`);
+          } finally {
+            rmSync(root, { recursive: true, force: true });
+          }
+        }
+      }
+
+      fc.assert(
+        fc.property(
+          fc.constantFrom(...STRICT_PROVIDER_CASES.map((entry) => entry.provider)),
+          fc.constantFrom(...STRICT_TOOL_CASES.map((entry) => entry.toolName)),
+          (provider, toolName) => {
+            expect(seenPairs.has(`${provider}:${toolName}`)).toBe(true);
+          },
+        ),
+        { numRuns: 80 },
+      );
+    } finally {
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 120000);
 
   it('denies unknown response-loop tools even when a fake MCP client is loadable', async () => {
     const layout = makeInstallLayout({ fakeMcpClient: true });

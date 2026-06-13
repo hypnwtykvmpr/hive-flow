@@ -15,5 +15,13 @@ console.log(JSON.stringify({
   registryNames: bridge.bridgeToolRegistryNames(),
   manifestNames: Object.keys(manifest).sort(),
   writeFileStrict: manifest.write_file.exposeStrictApi,
+  editFileStrict: manifest.edit_file.exposeStrictApi,
+  writeFileStrictGuarded: manifest.write_file.requiresProtectedWriteGate && manifest.write_file.requiresEnforcementWriteGate,
+  editFileStrictGuarded: manifest.edit_file.requiresProtectedWriteGate && manifest.edit_file.requiresEnforcementWriteGate,
   runCommandStrict: manifest.run_command.exposeStrictApi,
+  webFetchStrict: manifest.web_fetch.exposeStrictApi,
+  webFetchGuarded: manifest.web_fetch.requiresAllowlist &&
+    manifest.web_fetch.requiresSsrfGuard &&
+    manifest.web_fetch.requiresEnforcementFetchGate,
+  webSearchStrictDenied: manifest.web_search.exposeStrictApi && manifest.web_search.alwaysDenied,
 }));

@@ -25,6 +25,7 @@
     "scripts/agent-task-journal.mjs",
     "scripts/agent-task-journal.d.ts",
     "scripts/bridge-grep-validators.mjs",
+    "scripts/diagnose-strict-provider-tools.mjs",
     "scripts/provider-auth-helpers.mjs",
     "scripts/sandbox-runner.mjs"
   ],

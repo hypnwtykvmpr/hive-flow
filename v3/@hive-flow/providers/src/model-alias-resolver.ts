@@ -82,7 +82,9 @@ export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
   'codex-cli': 'gpt-5.5',
   'cursor-cli': 'auto',
   'deepseek': 'deepseek-v4-pro',
-  'openrouter': 'xiaomi/mimo-v2.5-pro',
+  // DO-NOT-REVERT: human-selected OpenRouter default is MiniMax M3.
+  // Xiaomi may remain an allowlisted fallback, but it is not the default.
+  'openrouter': 'minimax/minimax-m3',
 };
 
 /**
@@ -123,7 +125,7 @@ export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
   ]),
   'openrouter': new Set([
     'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
-    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-max', 'z-ai/glm-5.1',
+    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.1',
     'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
   ]),
 };

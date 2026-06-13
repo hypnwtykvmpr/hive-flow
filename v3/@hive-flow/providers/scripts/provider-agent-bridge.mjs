@@ -34,6 +34,7 @@ import { execFileSync } from 'child_process';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { lookup as dnsLookup } from 'dns/promises';
 import { createConnection, isIP } from 'net';
+import { createRequire } from 'module';
 import {
   appendTaskJournalEvent,
   classifyJournalError,
@@ -52,6 +53,8 @@ import {
 import {
   sandboxExec,
 } from './sandbox-runner.mjs';
+
+const bridgeRequire = createRequire(import.meta.url);
 
 async function importCliPermissionGuardDist(moduleName) {
   const modulePath = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName);
@@ -322,14 +325,19 @@ const PROVIDER_TOKEN_LIMITS = {
   'openrouter':    { maxTokens: 128000,  maxEntries: 30 },
 };
 
+// DO-NOT-REVERT: strict API providers must receive the guarded bridge web tools.
+// OpenRouter/DeepSeek agents are expected to ground web tasks through tool calls,
+// not silently answer from model priors.
 const STRICT_API_PROVIDERS = new Set(['openrouter', 'deepseek', 'openai', 'qwen']);
 
-// Providers whose models reject OpenAI-style `tool_choice: "required"`. DeepSeek's
-// reasoning models ("thinking mode") return HTTP 400 "Thinking mode does not support
-// this tool_choice". For these we omit the nudge and let the model decide; grounding
-// is still enforced by the UNGROUNDED_TOOL_TASK floor (a strict task that executes
-// zero tools is refused), so correctness is preserved without the incompatible flag.
-const TOOL_CHOICE_REQUIRED_UNSUPPORTED = new Set(['deepseek']);
+// Providers whose models reject OpenAI-style `tool_choice: "required"`.
+// DeepSeek reasoning models ("thinking mode") return HTTP 400 for the flag.
+// OpenRouter MiniMax M3 returns 404 "No endpoints found that support the
+// provided tool_choice value" for grounded bridge tasks. For these we omit the
+// nudge and let the model decide; grounding is still enforced by the
+// UNGROUNDED_TOOL_TASK floor (a strict task that executes zero tools is
+// refused), so correctness is preserved without the incompatible flag.
+const TOOL_CHOICE_REQUIRED_UNSUPPORTED = new Set(['deepseek', 'openrouter']);
 
 // Model-specific overrides (when model is known at runtime)
 const MODEL_LIMITS = {
@@ -364,10 +372,10 @@ const MODEL_LIMITS = {
   'deepseek-v4-flash':           { maxTokens: 1000000, maxEntries: 100 },
   // OpenRouter known defaults
   'xiaomi/mimo-v2.5-pro':                       { maxTokens: 1048576, maxEntries: 100 },
-  'x-ai/grok-4.3':                              { maxTokens: 2000000, maxEntries: 100 },
-  'minimax/minimax-m3':                         { maxTokens: 204800,  maxEntries: 50 },
+  'x-ai/grok-4.3':                              { maxTokens: 1000000, maxEntries: 100 },
+  'minimax/minimax-m3':                         { maxTokens: 1048576, maxEntries: 100 },
   'moonshotai/kimi-k2.6':                       { maxTokens: 262144,  maxEntries: 50 },
-  'qwen/qwen3.7-max':                           { maxTokens: 262144,  maxEntries: 50 },
+  'qwen/qwen3.7-plus':                          { maxTokens: 1000000, maxEntries: 100 },
   'z-ai/glm-5.1':                               { maxTokens: 202752,  maxEntries: 50 },
   'qwen/qwen3.6-plus':                          { maxTokens: 1000000, maxEntries: 100 },
   'nvidia/nemotron-3-super-120b-a12b:free':     { maxTokens: 262144,  maxEntries: 50 },
@@ -1199,7 +1207,9 @@ async function getProviderDefaults() {
     'codex-cli': 'gpt-5.5',
     'cursor-cli': 'auto',
     'deepseek': 'deepseek-v4-pro',
-    'openrouter': 'xiaomi/mimo-v2.5-pro',
+    // DO-NOT-REVERT: human-selected OpenRouter default is MiniMax M3. Xiaomi
+    // may remain an allowlisted fallback, but it is not the default.
+    'openrouter': 'minimax/minimax-m3',
   };
   return _providerDefaults;
 }
@@ -2263,16 +2273,51 @@ function validateWebFetchUrl(rawUrl, options) {
 }
 
 async function importUndiciDispatcher(options) {
-  if (options.forceDispatcherUnavailable) return null;
-  try {
-    const undici = await import('undici');
-    if (typeof undici.Agent !== 'function' || typeof undici.buildConnector !== 'function' || typeof undici.request !== 'function') {
-      return null;
-    }
-    return undici;
-  } catch {
+  if (options.forceDispatcherUnavailable) {
+    bridgeLog('warn', 'web_fetch dispatcher unavailable', { reason: 'forced-unavailable' });
     return null;
   }
+  let dynamicUndici = null;
+  try {
+    dynamicUndici = await import('undici');
+    if (typeof dynamicUndici.Agent === 'function' && typeof dynamicUndici.buildConnector === 'function' && typeof dynamicUndici.request === 'function') {
+      return dynamicUndici;
+    }
+  } catch (error) {
+    bridgeLog('warn', 'web_fetch dispatcher unavailable', {
+      reason: 'dynamic-import-failed',
+      error: redactBridgeString(error?.message || String(error)),
+    });
+  }
+  try {
+    const requiredUndici = bridgeRequire('undici');
+    if (
+      typeof requiredUndici.Agent === 'function' &&
+      typeof requiredUndici.buildConnector === 'function' &&
+      typeof requiredUndici.request === 'function'
+    ) {
+      bridgeLog('info', 'web_fetch dispatcher loaded through bridge require fallback');
+      return requiredUndici;
+    }
+  } catch (error) {
+    bridgeLog('warn', 'web_fetch dispatcher unavailable', {
+      reason: 'require-failed',
+      error: redactBridgeString(error?.message || String(error)),
+    });
+  }
+  bridgeLog('warn', 'web_fetch dispatcher unavailable', {
+    reason: 'missing-undici-api',
+    apiTypes: {
+      Agent: typeof dynamicUndici?.Agent,
+      buildConnector: typeof dynamicUndici?.buildConnector,
+      request: typeof dynamicUndici?.request,
+    },
+    exports: dynamicUndici ? Object.keys(dynamicUndici).slice(0, 20) : [],
+    defaultExports: dynamicUndici?.default && typeof dynamicUndici.default === 'object'
+      ? Object.keys(dynamicUndici.default).slice(0, 20)
+      : [],
+  });
+  return null;
 }
 
 async function resolveWebHost(url, options) {
@@ -2879,7 +2924,14 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
     capability: 'filesystem.write',
     authority: 'write',
     exposeDefault: true,
-    exposeStrictApi: false,
+    // SECURITY-BOUNDARY / REVERSIBLE: exposing write_file to strict API
+    // providers means remote OpenRouter/DeepSeek models may request writes
+    // inside the project jail. This is intentionally enabled for full harness
+    // parity and live diagnostics. To roll back to the previous read-only
+    // credential boundary, set write_file/edit_file exposeStrictApi to false.
+    // Handler safety still lives in path jail + protected path + enforcement
+    // write gates; diagnostics must only write in temporary project roots.
+    exposeStrictApi: true,
     requiresPathJail: true,
     requiresProtectedWriteGate: true,
     requiresEnforcementWriteGate: true,
@@ -2905,7 +2957,10 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
     capability: 'filesystem.write',
     authority: 'write',
     exposeDefault: true,
-    exposeStrictApi: false,
+    // SECURITY-BOUNDARY / REVERSIBLE: strict API edit_file crosses the same
+    // remote-write boundary as write_file above. Keep this comment adjacent to
+    // the flag so the rollback point is visible during future audits.
+    exposeStrictApi: true,
     requiresPathJail: true,
     requiresProtectedWriteGate: true,
     requiresEnforcementWriteGate: true,
@@ -3069,7 +3124,9 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
     capability: 'network.fetch.allowlisted',
     authority: 'network',
     exposeDefault: true,
-    exposeStrictApi: false,
+    // DO-NOT-REVERT: strict API agents need this guarded fetch tool for real
+    // web grounding; safety lives in allowlist + SSRF + fetch gates below.
+    exposeStrictApi: true,
     requiresAllowlist: true,
     requiresSsrfGuard: true,
     requiresEnforcementFetchGate: true,
@@ -3095,7 +3152,9 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
     capability: 'network.search.unsupported',
     authority: 'unsupported',
     exposeDefault: true,
-    exposeStrictApi: false,
+    // DO-NOT-REVERT: expose the denial-shaped search tool so strict providers
+    // can ground "search" attempts honestly instead of hallucinating results.
+    exposeStrictApi: true,
     alwaysDenied: true,
     outputRedaction: 'structured-redactor',
     idempotent: true,
@@ -3379,12 +3438,17 @@ function taskRequiresBridgeToolGrounding(task) {
     /read_file|list_directory|run_command/.test(text);
   const namesLocalSurface = /\b(file|directory|folder|workspace|repo|repository|path|contents?)\b/.test(text) ||
     /package\.json|tsconfig|readme|git status|exact version/.test(text);
-  return asksToInspect && namesLocalSurface;
+  const asksForWebGrounding = /\b(web|online|internet|browser|fetch|url|search|lookup|current|latest)\b/.test(text) ||
+    /https?:\/\//.test(text) ||
+    /web_fetch|web_search/.test(text);
+  const namesWebSurface = /\b(url|website|webpage|site|online|internet|http|https|search|lookup|current|latest)\b/.test(text) ||
+    /https?:\/\//.test(text);
+  return (asksToInspect && namesLocalSurface) || (asksForWebGrounding && namesWebSurface);
 }
 
 function ungroundedToolTaskError(providerName) {
   const error = new Error(
-    `Strict API provider '${providerName}' answered a local workspace task but did not use bridge tools; refusing ungrounded result.`
+    `Strict API provider '${providerName}' answered a grounded workspace/web task but did not use bridge tools; refusing ungrounded result.`
   );
   error.code = 'UNGROUNDED_TOOL_TASK';
   return error;

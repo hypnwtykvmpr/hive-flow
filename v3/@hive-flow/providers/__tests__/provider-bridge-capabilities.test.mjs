@@ -57,10 +57,14 @@ const DEFAULT_TOOL_NAMES = [
 
 const STRICT_API_TOOL_NAMES = [
   'read_file',
+  'write_file',
+  'edit_file',
   'list_directory',
   'grep',
   'find_file',
   'run_command',
+  'web_fetch',
+  'web_search',
 ];
 
 const EXPECTED_DEFINITIONS = {
@@ -272,15 +276,29 @@ describe('provider bridge capability manifest', () => {
     }
   });
 
-  it('keeps strict API exposure read-only and deny-only', () => {
+  it('keeps strict API exposure explicit across write, read, guarded-network, and deny-only tools', () => {
     const manifest = bridge.bridgeToolCapabilityManifest();
     const strictNames = namesOf(bridge.bridgeToolDefinitionsForProviderMode('strict-api'));
     for (const name of strictNames) {
       expect(manifest[name].exposeStrictApi).toBe(true);
-      expect(['read', 'unsupported']).toContain(manifest[name].authority);
-      expect(manifest[name].requiresEnforcementWriteGate).toBe(false);
+      expect(['write', 'read', 'network', 'unsupported']).toContain(manifest[name].authority);
       expect(manifest[name].requiresEnforcementExecGate).toBe(false);
-      expect(manifest[name].requiresEnforcementFetchGate).toBe(false);
+      if (manifest[name].authority === 'write') {
+        expect(['write_file', 'edit_file']).toContain(name);
+        expect(manifest[name].requiresProtectedWriteGate).toBe(true);
+        expect(manifest[name].requiresEnforcementWriteGate).toBe(true);
+        expect(manifest[name].requiresPathJail).toBe(true);
+      } else {
+        expect(manifest[name].requiresEnforcementWriteGate).toBe(false);
+      }
+      if (manifest[name].authority === 'network') {
+        expect(name).toBe('web_fetch');
+        expect(manifest[name].requiresAllowlist).toBe(true);
+        expect(manifest[name].requiresSsrfGuard).toBe(true);
+        expect(manifest[name].requiresEnforcementFetchGate).toBe(true);
+      } else {
+        expect(manifest[name].requiresEnforcementFetchGate).toBe(false);
+      }
     }
   });
 
@@ -289,7 +307,14 @@ describe('provider bridge capability manifest', () => {
     expect(manifest.write_file).toMatchObject({
       authority: 'write',
       exposeDefault: true,
-      exposeStrictApi: false,
+      exposeStrictApi: true,
+      requiresProtectedWriteGate: true,
+      requiresEnforcementWriteGate: true,
+    });
+    expect(manifest.edit_file).toMatchObject({
+      authority: 'write',
+      exposeDefault: true,
+      exposeStrictApi: true,
       requiresProtectedWriteGate: true,
       requiresEnforcementWriteGate: true,
     });
@@ -307,12 +332,42 @@ describe('provider bridge capability manifest', () => {
       exposeStrictApi: true,
       requiresReadOnlyAllowlist: true,
     });
+    expect(manifest.web_fetch).toMatchObject({
+      authority: 'network',
+      exposeDefault: true,
+      exposeStrictApi: true,
+      requiresAllowlist: true,
+      requiresSsrfGuard: true,
+      requiresEnforcementFetchGate: true,
+    });
     expect(manifest.web_search).toMatchObject({
       authority: 'unsupported',
       exposeDefault: true,
-      exposeStrictApi: false,
+      exposeStrictApi: true,
       alwaysDenied: true,
     });
+  });
+
+  it('DO-NOT-REVERT: strict API providers keep write/edit and web grounding tools without shell exposure', () => {
+    const strictNames = namesOf(bridge.bridgeToolDefinitionsForProviderMode('strict-api'));
+    expect(strictNames).toContain('write_file');
+    expect(strictNames).toContain('edit_file');
+    expect(strictNames).toContain('web_fetch');
+    expect(strictNames).toContain('web_search');
+
+    fc.assert(
+      fc.property(fc.constantFrom('write_file', 'edit_file'), (remoteWriteName) => {
+        expect(strictNames).toContain(remoteWriteName);
+      }),
+      { numRuns: 30 },
+    );
+
+    fc.assert(
+      fc.property(fc.constantFrom('run_shell'), (blockedName) => {
+        expect(strictNames).not.toContain(blockedName);
+      }),
+      { numRuns: 30 },
+    );
   });
 
   it('keeps provider-mode derivation consistent with manifest flags', () => {
@@ -328,16 +383,21 @@ describe('provider bridge capability manifest', () => {
         expect(defaultNames.includes(name)).toBe(entry.exposeDefault);
         expect(strictNames.includes(name)).toBe(entry.exposeStrictApi);
         if (entry.authority === 'write') {
-          expect(entry.exposeStrictApi).toBe(false);
+          expect(['write_file', 'edit_file']).toContain(name);
+          expect(entry.exposeStrictApi).toBe(true);
           expect(entry.requiresProtectedWriteGate).toBe(true);
+          expect(entry.requiresEnforcementWriteGate).toBe(true);
         }
         if (entry.authority === 'exec') {
           expect(entry.exposeStrictApi).toBe(false);
           expect(entry.requiresPermissionGuard || entry.requiresReadOnlyAllowlist).toBe(true);
         }
         if (entry.authority === 'network') {
-          expect(entry.exposeStrictApi).toBe(false);
+          expect(name).toBe('web_fetch');
+          expect(entry.exposeStrictApi).toBe(true);
           expect(entry.requiresAllowlist).toBe(true);
+          expect(entry.requiresSsrfGuard).toBe(true);
+          expect(entry.requiresEnforcementFetchGate).toBe(true);
         }
       }),
       { numRuns: 80 },

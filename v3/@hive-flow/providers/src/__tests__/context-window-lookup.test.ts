@@ -104,7 +104,7 @@ describe('Dynamic context window lookup', () => {
         'x-ai/grok-4.3',
         'minimax/minimax-m3',
         'moonshotai/kimi-k2.6',
-        'qwen/qwen3.7-max',
+        'qwen/qwen3.7-plus',
         'z-ai/glm-5.1',
         'qwen/qwen3.6-plus',
         'nvidia/nemotron-3-super-120b-a12b:free',
@@ -121,8 +121,16 @@ describe('Dynamic context window lookup', () => {
       expect(OR_DEFAULT_CONTEXT_WINDOWS['xiaomi/mimo-v2.5-pro']).toBe(1048576);
     });
 
-    it('x-ai/grok-4.3 has 2000000 context', () => {
-      expect(OR_DEFAULT_CONTEXT_WINDOWS['x-ai/grok-4.3']).toBe(2000000);
+    it('x-ai/grok-4.3 has 1000000 context', () => {
+      expect(OR_DEFAULT_CONTEXT_WINDOWS['x-ai/grok-4.3']).toBe(1000000);
+    });
+
+    it('minimax/minimax-m3 has 1048576 context', () => {
+      expect(OR_DEFAULT_CONTEXT_WINDOWS['minimax/minimax-m3']).toBe(1048576);
+    });
+
+    it('qwen/qwen3.7-plus has 1000000 context', () => {
+      expect(OR_DEFAULT_CONTEXT_WINDOWS['qwen/qwen3.7-plus']).toBe(1000000);
     });
   });
 

@@ -240,7 +240,7 @@ describe('resolveProviderModel', () => {
     it('returns opus-tier model for openrouter when no model specified', async () => {
       // OpenRouter default tier is now opus (per user directive)
       const result = resolveProviderModel('openrouter', undefined);
-      // Should return a model from the opus tier pool (e.g., xiaomi/mimo-v2.5-pro)
+      // Should return a model from the opus tier pool (MiniMax M3 is first by default)
       expect(result).toBeDefined();
       expect(typeof result).toBe('string');
       // Verify it's in the opus pool using dynamic import (ESM)
@@ -419,6 +419,15 @@ describe('resolveProviderModel', () => {
     });
     it('edge: openrouter + uppercase direct model → canonical allowlist slug', () => {
       expect(resolveProviderModel('openrouter', ' Xiaomi/MIMO-V2.5-PRO ')).toBe('xiaomi/mimo-v2.5-pro');
+    });
+
+    it('DO-NOT-REVERT: OpenRouter default and Qwen model pins stay on current human-selected slugs', () => {
+      expect(PROVIDER_DEFAULTS.openrouter).toBe('minimax/minimax-m3');
+      expect(KNOWN_PROVIDER_MODELS.openrouter.has('minimax/minimax-m3')).toBe(true);
+      expect(KNOWN_PROVIDER_MODELS.openrouter.has('x-ai/grok-4.3')).toBe(true);
+      expect(KNOWN_PROVIDER_MODELS.openrouter.has('qwen/qwen3.7-plus')).toBe(true);
+      expect(KNOWN_PROVIDER_MODELS.openrouter.has('qwen/qwen3.7-max')).toBe(false);
+      expect(resolveProviderModel('openrouter', 'qwen/qwen3.7-plus')).toBe('qwen/qwen3.7-plus');
     });
 
     // Undefined model for each CLI provider

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fc from 'fast-check';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -44,31 +45,41 @@ describe('OpenRouter config-driven model selection', () => {
     });
 
     it('falls back to DEFAULT_CONFIG when config file is missing', () => {
-      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-or-missing-'));
 
-      const config = loadOpenRouterConfig();
-      expect(config).toEqual(DEFAULT_CONFIG);
+      try {
+        const config = loadOpenRouterConfig(tmpRoot);
+        expect(config).toEqual(DEFAULT_CONFIG);
+      } finally {
+        fs.rmSync(tmpRoot, { recursive: true, force: true });
+      }
     });
 
     it('falls back to DEFAULT_CONFIG when config has malformed JSON', () => {
-      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-      vi.spyOn(fs, 'readFileSync').mockReturnValue('not-valid-json{{{');
+      const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-or-malformed-'));
+      fs.mkdirSync(path.join(tmpRoot, '.hive-flow'), { recursive: true });
+      fs.writeFileSync(path.join(tmpRoot, '.hive-flow', 'config.json'), 'not-valid-json{{{');
 
-      const config = loadOpenRouterConfig();
-      expect(config).toEqual(DEFAULT_CONFIG);
+      try {
+        const config = loadOpenRouterConfig(tmpRoot);
+        expect(config).toEqual(DEFAULT_CONFIG);
+      } finally {
+        fs.rmSync(tmpRoot, { recursive: true, force: true });
+      }
     });
 
     it('caches config and returns same result within TTL', () => {
-      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
-      const readSpy = vi.spyOn(fs, 'readFileSync');
+      const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hf-or-cache-missing-'));
 
-      const config1 = loadOpenRouterConfig();
-      const config2 = loadOpenRouterConfig();
+      try {
+        const config1 = loadOpenRouterConfig(tmpRoot);
+        const config2 = loadOpenRouterConfig(tmpRoot);
 
-      expect(config1).toBe(config2); // same reference = cached
-      // existsSync may be called once or twice, but readFileSync should not be called
-      // since the file doesn't exist — the key thing is the result is the same object
-      expect(config1).toEqual(DEFAULT_CONFIG);
+        expect(config1).toBe(config2); // same reference = cached
+        expect(config1).toEqual(DEFAULT_CONFIG);
+      } finally {
+        fs.rmSync(tmpRoot, { recursive: true, force: true });
+      }
     });
 
     it('reloads config after resetOpenRouterConfigCache()', () => {
@@ -156,6 +167,7 @@ describe('OpenRouter config-driven model selection', () => {
 
       const config = loadOpenRouterConfig();
       expect(isModelAllowed(config, 'xiaomi/mimo-v2.5-pro')).toBe(true);
+      expect(isModelAllowed(config, 'minimax/minimax-m3')).toBe(true);
     });
 
     it('blocks model NOT in allowedModels and returns undefined', () => {
@@ -169,7 +181,7 @@ describe('OpenRouter config-driven model selection', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(false);
 
       const config = loadOpenRouterConfig();
-      expect(isModelAllowed(config, 'qwen/qwen3.7-max')).toBe(true);
+      expect(isModelAllowed(config, 'qwen/qwen3.7-plus')).toBe(true);
     });
   });
 
@@ -197,8 +209,8 @@ describe('OpenRouter config-driven model selection', () => {
     });
 
     it('resolveProviderModel with openrouter + direct model returns it if allowed', () => {
-      const result = resolveProviderModel('openrouter', 'qwen/qwen3.7-max');
-      expect(result).toBe('qwen/qwen3.7-max');
+      const result = resolveProviderModel('openrouter', 'qwen/qwen3.7-plus');
+      expect(result).toBe('qwen/qwen3.7-plus');
     });
 
     it('resolveProviderModel with openrouter + blocked model returns undefined', () => {
@@ -238,8 +250,8 @@ describe('OpenRouter config-driven model selection', () => {
     });
 
     it('passes through an allowed OpenRouter direct model unchanged (no degrade)', () => {
-      const result = resolveProviderModelOrOpus('openrouter', 'qwen/qwen3.7-max');
-      expect(result).toBe('qwen/qwen3.7-max');
+      const result = resolveProviderModelOrOpus('openrouter', 'qwen/qwen3.7-plus');
+      expect(result).toBe('qwen/qwen3.7-plus');
     });
 
     it('opus alias still selects from the opus pool', () => {
@@ -352,7 +364,7 @@ describe('OpenRouter config-driven model selection', () => {
 
       // Layer 1: predicate
       expect(isModelAllowed(emptyAllowConfig, 'xiaomi/mimo-v2.5-pro')).toBe(false);
-      expect(isModelAllowed(emptyAllowConfig, 'qwen/qwen3.7-max')).toBe(false);
+      expect(isModelAllowed(emptyAllowConfig, 'qwen/qwen3.7-plus')).toBe(false);
       expect(isModelAllowed(emptyAllowConfig, 'unknown/blocked-model')).toBe(false);
 
       // Layer 2: resolver via a real on-disk config in a temp working dir
@@ -427,6 +439,25 @@ describe('OpenRouter config-driven model selection', () => {
     });
 
     // ── Regression prevention (user directive + runbook fixes) ──
+
+    it('DO-NOT-REVERT: OpenRouter defaults stay pinned to MiniMax M3, Grok 4.3, and Qwen Plus', () => {
+      expect(PROVIDER_DEFAULTS.openrouter).toBe('minimax/minimax-m3');
+      expect(DEFAULT_CONFIG.tiers.opus[0]).toBe('minimax/minimax-m3');
+      expect(DEFAULT_CONFIG.tiers.opus).toContain('x-ai/grok-4.3');
+      expect(DEFAULT_CONFIG.tiers.sonnet).toContain('qwen/qwen3.7-plus');
+      expect(DEFAULT_CONFIG.allowedModels).toContain('minimax/minimax-m3');
+      expect(DEFAULT_CONFIG.allowedModels).toContain('x-ai/grok-4.3');
+      expect(DEFAULT_CONFIG.allowedModels).toContain('qwen/qwen3.7-plus');
+      expect(DEFAULT_CONFIG.allowedModels).not.toContain('qwen/qwen3.7-max');
+
+      fc.assert(
+        fc.property(fc.constantFrom(...Object.values(DEFAULT_CONFIG.tiers).flat()), (model) => {
+          expect(DEFAULT_CONFIG.allowedModels).toContain(model);
+          expect(model).not.toBe('qwen/qwen3.7-max');
+        }),
+        { numRuns: 60 },
+      );
+    });
 
     it('regression: undefined model picks from opus pool (user directive — not sonnet)', () => {
       for (let i = 0; i < 30; i++) {
