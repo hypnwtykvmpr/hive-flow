@@ -180,7 +180,8 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('initializes with binary found', async () => {
-    mockBinaryFound('gemini', 'Gemini CLI 0.30.0');
+    // DO-NOT-REVERT (2026-06): binary is ANTIGRAVITY `agy`, not dead `gemini`.
+    mockBinaryFound('agy', 'agy version 1.0.7');
     await provider.initialize();
     // Should not throw
   });
@@ -192,7 +193,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('completes with valid JSON output', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -224,7 +225,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('omits --sandbox by default (opt-in, requires Docker)', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -245,7 +246,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('passes --sandbox when sandbox=true in config', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     const sandboxProvider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-2.5-pro', sandbox: true },
       logger: noopLogger,
@@ -273,7 +274,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('passes request-scoped env vars to the spawned CLI process', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     provider = new GeminiCLIProvider({
       config: {
         provider: 'gemini-cli',
@@ -300,7 +301,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('passes small prompts through --prompt for headless execution', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -311,7 +312,11 @@ describe('GeminiCLIProvider', () => {
     const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     const spawnOptions = mockSpawn.mock.calls[0][2];
     expect(spawnArgs).toContain('--prompt');
-    expect(spawnArgs).toContain('--skip-trust');
+    // DO-NOT-REVERT (2026-06): Antigravity `agy` uses --dangerously-skip-permissions,
+    // NOT the dead gemini's --skip-trust, and has NO --output-format flag.
+    expect(spawnArgs).toContain('--dangerously-skip-permissions');
+    expect(spawnArgs).not.toContain('--skip-trust');
+    expect(spawnArgs).not.toContain('--output-format');
     expect(spawnArgs[spawnArgs.indexOf('--prompt') + 1]).toContain('test');
     expect(spawnOptions.detached).toBe(process.platform !== 'win32');
     expect(mockChild.stdin.write).not.toHaveBeenCalled();
@@ -323,7 +328,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('uses --prompt empty plus stdin for large prompts to avoid argv limits', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -344,7 +349,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('rejects immediately on interactive authentication output', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -365,7 +370,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('does not treat cached OAuth credential notices as authentication failure', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -383,7 +388,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('rejects on non-zero exit code', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -400,7 +405,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('rejects with specific message on exit code 42 (empty prompt)', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -416,7 +421,7 @@ describe('GeminiCLIProvider', () => {
   });
 
   it('streams with stream-json events', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     // Gemini doStreamComplete uses `for await (const line of rl)` on readline,
@@ -957,7 +962,7 @@ describe('GeminiCLIProvider — tool calling', () => {
   });
 
   it('doComplete() extracts tool_call from response', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider.initialize();
 
     const mockChild = createMockChild();
@@ -1133,6 +1138,74 @@ describe('CursorCLIProvider — spawnCursor binary detection', () => {
   });
 });
 
+// ============================================================
+// DO-NOT-REVERT GUARD: headless cursor-agent CLI, never the IDE / Background Agents.
+//
+// These tests are intentionally REDUNDANT with the binary-detection tests above.
+// They exist to fail loudly if anyone regresses the cursor provider toward the
+// Cursor IDE / "Background Agents" path (which hangs headless and surfaces as the
+// 300s timeout the human reported). They assert the headless CLI invariant directly
+// on the argv the provider builds via spawnCursor().
+// ============================================================
+
+describe('CursorCLIProvider — headless CLI argv guard (DO-NOT-REVERT)', () => {
+  beforeEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  function spawnArgvFor(binaryPath: string, stream = false): string[] {
+    const provider = new CursorCLIProvider({
+      config: { provider: 'cursor-cli', model: 'auto' },
+      logger: noopLogger,
+    });
+    (provider as PrivateAccess).binaryPath = binaryPath;
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    (provider as PrivateAccess).spawnCursor('guard prompt', 'auto', stream);
+    const argv = mockSpawn.mock.calls[0][1] as string[];
+    provider.destroy();
+    return argv;
+  }
+
+  it('cursor-agent binary: argv begins with --print and includes --force (headless)', () => {
+    const argv = spawnArgvFor('/home/user/.local/bin/cursor-agent');
+    expect(argv[0]).toBe('--print');
+    expect(argv).toContain('--print');
+    expect(argv).toContain('--force');
+    // headless cursor-agent never uses the 'agent' subcommand
+    expect(argv).not.toContain('agent');
+  });
+
+  it('cursor launcher fallback: uses the "agent" headless subcommand with --print/--force', () => {
+    const argv = spawnArgvFor('/usr/local/bin/cursor');
+    // The launcher reaches the SAME headless CLI via its 'agent' subcommand.
+    expect(argv[0]).toBe('agent');
+    expect(argv).toContain('--print');
+    expect(argv).toContain('--force');
+  });
+
+  it('NEVER emits a Cursor IDE / Background Agents invocation', () => {
+    for (const bin of ['/home/user/.local/bin/cursor-agent', '/usr/local/bin/cursor']) {
+      const argv = spawnArgvFor(bin);
+      const joined = argv.join(' ').toLowerCase();
+      expect(joined).not.toContain('background-agent');
+      expect(joined).not.toContain('background_agent');
+      expect(joined).not.toContain('--background');
+      expect(joined).not.toContain('--ide');
+      expect(joined).not.toContain('--gui');
+      expect(joined).not.toContain('--editor');
+    }
+  });
+
+  it('streaming mode keeps the headless --print/--force flags', () => {
+    const argv = spawnArgvFor('/home/user/.local/bin/cursor-agent', true);
+    expect(argv).toContain('--print');
+    expect(argv).toContain('--force');
+    expect(argv).toContain('--stream-partial-output');
+    expect(argv).toContain('stream-json');
+    expect(argv).not.toContain('agent');
+  });
+});
+
 describe('CursorCLIProvider — parseJsonOutput usage parsing', () => {
   afterEach(() => { vi.clearAllMocks(); });
 
@@ -1200,7 +1273,7 @@ describe('GeminiCLIProvider — error handling', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
@@ -1986,7 +2059,7 @@ describe('GeminiCLIProvider — health check', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('doHealthCheck returns healthy when binary and version ok', async () => {
-    mockBinaryFound('gemini', '1.5.0');
+    mockBinaryFound('agy', '1.5.0');
     const provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
@@ -2010,7 +2083,7 @@ describe('GeminiCLIProvider — health check', () => {
   });
 
   it('doHealthCheck returns unhealthy when --version fails', async () => {
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     const provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
@@ -2065,7 +2138,7 @@ describe('GeminiCLIProvider — streaming edge cases (PassThrough)', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
@@ -2621,7 +2694,7 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
 describe('GeminiCLIProvider — validateConfig', () => {
   it('sets model to gemini-3.5-flash when model is not provided', async () => {
     vi.clearAllMocks();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     const provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: undefined as unknown as LLMModel /* SAFETY: testing undefined model edge case */ },
       logger: noopLogger,
@@ -2633,7 +2706,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
 
   it('warns on unsupported model', async () => {
     vi.clearAllMocks();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     const warnLogger = { ...noopLogger, warn: vi.fn() };
     const provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'unsupported-model' },
@@ -2665,7 +2738,7 @@ describe('GeminiCLIProvider — doComplete timeout (fake timers)', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
@@ -2711,7 +2784,7 @@ describe('GeminiCLIProvider — parseJsonOutput malformed JSON with tool calls',
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
@@ -2750,7 +2823,7 @@ describe('GeminiCLIProvider — stdin EPIPE handling', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     provider = new GeminiCLIProvider({
       config: { provider: 'gemini-cli', model: 'gemini-3.5-flash' },
       logger: noopLogger,
@@ -2788,7 +2861,7 @@ describe('GeminiCLIProvider — stdin EPIPE handling', () => {
       logger: warnLogger,
     });
     vi.clearAllMocks();
-    mockBinaryFound('gemini');
+    mockBinaryFound('agy');
     await provider2.initialize();
 
     const mockChild = createMockChild();

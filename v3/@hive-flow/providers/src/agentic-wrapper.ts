@@ -69,7 +69,14 @@ function whichBinary(name: string): Promise<string | null> {
 async function resolveBinary(provider: AgenticProvider): Promise<string> {
   const names: Record<AgenticProvider, string[]> = {
     'codex-cli': ['codex'],
-    'gemini-cli': ['gemini'],
+    // DO-NOT-REVERT (2026-06): `gemini-cli` resolves Google's ANTIGRAVITY binary
+    // `agy`, NOT the dead `@google/gemini-cli` (`gemini`). The legacy `gemini`
+    // binary's backend returns HTTP 404 ModelNotFoundError for current models
+    // (e.g. gemini-3.5-flash). `agy` is the live Go rewrite. Reverting this to
+    // `['gemini']` reintroduces the 404 regression. A stale `gemini` may still
+    // exist on PATH (e.g. /opt/homebrew/bin/gemini) — listing it here would
+    // resolve the WRONG CLI. MUST be `['agy']`.
+    'gemini-cli': ['agy'],
     'cursor-cli': ['cursor-agent', 'cursor'],
   };
   for (const name of names[provider]) {
@@ -314,8 +321,12 @@ export class AgenticWrapper {
         // Prompt is passed via stdin; flags only here
         return ['exec', '--full-auto', '--json', '--ephemeral', '--skip-git-repo-check'];
       case 'gemini-cli':
-        // Prompt is passed via stdin; flags only here
-        return ['-p', '--yolo', '--output-format', 'stream-json'];
+        // DO-NOT-REVERT (2026-06): ANTIGRAVITY (`agy`) headless flags, NOT the
+        // dead `gemini` flags. `agy` does NOT support `--output-format` /
+        // `--yolo` (errors "flags provided but not defined") and emits PLAIN
+        // TEXT. Prompt is passed via stdin (empty `--prompt`).
+        // `--dangerously-skip-permissions` is agy's headless auto-approve.
+        return ['--dangerously-skip-permissions', '--prompt', ''];
       case 'cursor-cli':
         // Prompt is passed via stdin; flags only here
         return ['--print', '--trust', '--force'];

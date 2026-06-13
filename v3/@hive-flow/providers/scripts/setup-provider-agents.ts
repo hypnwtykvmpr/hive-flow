@@ -48,7 +48,11 @@ interface ProviderBinaryInfo {
 }
 
 const PROVIDER_BINARIES: Array<{ name: string; binary: string; fallback?: string }> = [
-  { name: 'gemini-cli', binary: 'gemini' },
+  // DO-NOT-REVERT (2026-06): `gemini-cli` is backed by Google's ANTIGRAVITY CLI
+  // (`agy`), NOT the dead `@google/gemini-cli` (`gemini`). The legacy `gemini`
+  // binary 404s (ModelNotFoundError) for current models; a stale copy may linger
+  // on PATH. Reverting `binary` to `gemini` reintroduces the 404 regression.
+  { name: 'gemini-cli', binary: 'agy' },
   { name: 'codex-cli', binary: 'codex' },
   { name: 'cursor-cli', binary: 'cursor-agent', fallback: 'cursor' },
 ];
@@ -390,7 +394,8 @@ function main(): void {
 
   if (readyCount === 0) {
     console.log('\nNo provider binaries found. Install at least one:');
-    console.log('  Gemini CLI: install @anthropic/gemini-cli with your configured package manager');
+    // DO-NOT-REVERT (2026-06): point at ANTIGRAVITY (`agy`), not @google/gemini-cli (dead, 404s).
+    console.log('  Gemini CLI: install Antigravity (https://antigravity.google), then run "agy install" — binary "agy"');
     console.log('  Codex CLI:  install @openai/codex with your configured package manager');
     console.log('  Cursor CLI: Available via Cursor IDE');
   }

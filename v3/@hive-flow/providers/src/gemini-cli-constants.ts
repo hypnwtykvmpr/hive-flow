@@ -3,12 +3,30 @@
  *
  * Extracted from gemini-cli-provider.ts to keep the provider under 500 lines.
  *
+ * ============================================================================
+ * DO-NOT-REVERT (2026-06): The `gemini-cli` provider now drives Google's
+ * ANTIGRAVITY CLI (`agy`), NOT the dead `@google/gemini-cli` (`gemini`) binary.
+ * Google deprecated/killed "Gemini CLI"; its API returns HTTP 404
+ * `ModelNotFoundError: Requested entity was not found` for current models
+ * (e.g. gemini-3.5-flash). Antigravity (`agy`, a Go rewrite) is the live
+ * replacement and ships gemini-3.5-flash as its base model.
+ * Reverting the binary name, install hint, or CLI flags here to `gemini` /
+ * `@google/gemini-cli` reintroduces the 404 regression. Confirmed live by
+ * running `agy -p "..."` (returns content) vs
+ * `gemini --output-format json --model gemini-3.5-flash` (returns code:404).
+ * ============================================================================
+ *
  * @module @hive-flow/providers/gemini-cli-constants
  */
 
 import { LLMModel, ProviderCapabilities } from './types.js';
 
-/** Shape returned by `gemini --output-format json` (batch mode) */
+/**
+ * Shape returned by older `gemini --output-format json` (batch mode).
+ * Antigravity `agy -p` emits PLAIN TEXT, not JSON, so the provider's parser
+ * falls back to raw-text handling. This interface is retained only for the
+ * defensive JSON path (in case a future agy build adds structured output).
+ */
 export interface GeminiJsonOutput {
   response?: string;
   type?: string;

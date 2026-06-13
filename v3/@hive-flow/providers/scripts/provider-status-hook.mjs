@@ -23,7 +23,11 @@ import { join } from 'path';
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 const PROVIDERS = [
-  { name: 'gemini-cli', binary: 'gemini' },
+  // DO-NOT-REVERT (2026-06): `gemini-cli` resolves Google's ANTIGRAVITY CLI
+  // (`agy`), NOT the dead `@google/gemini-cli` (`gemini`). The legacy `gemini`
+  // binary 404s (ModelNotFoundError) for current models; a stale copy may linger
+  // on PATH. Reverting `binary` to `gemini` reintroduces the 404 regression.
+  { name: 'gemini-cli', binary: 'agy' },
   { name: 'codex-cli', binary: 'codex' },
   { name: 'cursor-cli', binary: 'cursor-agent', fallback: 'cursor' },
 ];

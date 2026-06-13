@@ -1,6 +1,21 @@
 /**
  * V3 Gemini CLI Subprocess Provider
  * Issues handled: #6715 (stdin close), #9009 (malformed JSON), #15874 (SIGKILL on timeout)
+ *
+ * ============================================================================
+ * DO-NOT-REVERT (2026-06): This provider drives Google's ANTIGRAVITY CLI
+ * (binary `agy`), NOT the dead `@google/gemini-cli` (`gemini`) binary.
+ * Google replaced "Gemini CLI" with Antigravity (a Go rewrite). The old
+ * `gemini` binary's backend returns HTTP 404
+ * `ModelNotFoundError: Requested entity was not found` for current models —
+ * THAT is the recurring regression. Antigravity `agy` is signed in and live.
+ * Headless usage (confirmed live): `agy -p "<prompt>" --model gemini-3.5-flash`.
+ * NOTE: `agy` has NO `--output-format` / `--skip-trust` flags and emits PLAIN
+ * TEXT (no JSON). Do NOT re-add `--output-format`, `--skip-trust`, or switch
+ * the binary back to `gemini` / install `@google/gemini-cli` — doing so
+ * reintroduces the 404 regression.
+ * ============================================================================
+ *
  * @module @hive-flow/providers/gemini-cli-provider
  */
 
@@ -47,15 +62,18 @@ export class GeminiCLIProvider extends BaseProvider {
   protected async doInitialize(): Promise<void> {
     this.binaryPath = await this.findBinary();
     if (!this.binaryPath) {
+      // DO-NOT-REVERT (2026-06): Install hint must point at ANTIGRAVITY (`agy`),
+      // NOT `@google/gemini-cli` (dead, causes 404 ModelNotFoundError).
       this.logger.warn(
-        'Gemini CLI binary not found in PATH. Install: npm i -g @google/gemini-cli ' +
-        'or see Gemini CLI documentation'
+        'Antigravity CLI binary "agy" not found in PATH. Install Antigravity and run "agy install" ' +
+        '(https://antigravity.google). The legacy "gemini" / @google/gemini-cli is deprecated and ' +
+        'returns 404 ModelNotFoundError — do not use it.'
       );
     } else {
-      this.logger.info(`Gemini CLI found at: ${this.binaryPath}`);
+      this.logger.info(`Antigravity CLI (agy) found at: ${this.binaryPath}`);
       const binaryOk = await this.checkBinaryRunnable();
       if (!binaryOk) {
-        this.logger.warn('Gemini CLI found but failed to run. You may need to run "gemini auth" in a terminal.');
+        this.logger.warn('Antigravity CLI (agy) found but failed to run. Sign in via the Antigravity app/CLI.');
       }
     }
   }
@@ -208,21 +226,18 @@ export class GeminiCLIProvider extends BaseProvider {
           failStreamWithAuth(line);
           continue;
         }
+        // DO-NOT-REVERT (2026-06): Antigravity `agy -p` emits PLAIN TEXT, not
+        // newline-delimited JSON. So a non-JSON line is real content and MUST
+        // be streamed (the old code silently dropped it, which broke streaming
+        // once we moved off the dead `gemini --output-format stream-json`).
+        // We still parse JSON defensively in case a future agy build emits it.
+        let text: string | undefined;
         try {
           const evt = JSON.parse(line) as GeminiJsonOutput;
-          const text = evt.response
+          text = evt.response
             || (evt.type === 'message' && evt.message?.content)
             || (evt.type === 'message' && evt.content)
             || evt.content;
-          if (text) {
-            contentBuffer += text;
-            const flushed = flushToolCallsFromBuffer(contentBuffer, 'gemini', streamToolCallCount);
-            contentBuffer = flushed.remainingBuffer;
-            streamToolCallCount = flushed.count;
-            for (const event of flushed.events) {
-              yield event;
-            }
-          }
           if (evt.stats?.models) {
             const s = Object.values(evt.stats.models)[0];
             if (s?.tokens) {
@@ -230,7 +245,19 @@ export class GeminiCLIProvider extends BaseProvider {
               completionTokens = s.tokens.candidates || 0;
             }
           }
-        } catch { /* non-JSON line — skip */ }
+        } catch {
+          // Plain-text line from agy — emit it (preserve newline between lines).
+          text = (contentBuffer.length > 0 ? '\n' : '') + line;
+        }
+        if (text) {
+          contentBuffer += text;
+          const flushed = flushToolCallsFromBuffer(contentBuffer, 'gemini', streamToolCallCount);
+          contentBuffer = flushed.remainingBuffer;
+          streamToolCallCount = flushed.count;
+          for (const event of flushed.events) {
+            yield event;
+          }
+        }
       }
 
       if (contentBuffer.length > 0) {
@@ -305,10 +332,11 @@ export class GeminiCLIProvider extends BaseProvider {
     if (!this.binaryPath) this.binaryPath = await this.findBinary();
 
     if (!this.binaryPath) {
+      // DO-NOT-REVERT (2026-06): hint must reference Antigravity `agy`, not @google/gemini-cli.
       return {
-        healthy: false, error: 'Gemini CLI binary not found in PATH',
+        healthy: false, error: 'Antigravity CLI binary "agy" not found in PATH',
         timestamp: new Date(),
-        details: { hint: 'Install: npm i -g @google/gemini-cli' },
+        details: { hint: 'Install Antigravity (https://antigravity.google) then run "agy install"' },
       };
     }
 
@@ -316,14 +344,14 @@ export class GeminiCLIProvider extends BaseProvider {
       const version = await this.runVersion();
       return {
         healthy: true, timestamp: new Date(),
-        details: { binary: this.binaryPath, version, authMethod: 'google-oauth' },
+        details: { binary: this.binaryPath, version, authMethod: 'antigravity-oauth' },
       };
     } catch (error) {
       return {
         healthy: false,
-        error: error instanceof Error ? error.message : 'Failed to run gemini --version',
+        error: error instanceof Error ? error.message : 'Failed to run agy --version',
         timestamp: new Date(),
-        details: { binary: this.binaryPath, hint: 'Gemini CLI installed but may not be functional' },
+        details: { binary: this.binaryPath, hint: 'Antigravity CLI (agy) installed but may not be functional' },
       };
     }
   }
@@ -357,9 +385,13 @@ export class GeminiCLIProvider extends BaseProvider {
   }
 
   private findBinary(): Promise<string | null> {
+    // DO-NOT-REVERT (2026-06): Resolve the ANTIGRAVITY binary `agy`, NOT `gemini`.
+    // The dead `@google/gemini-cli` (`gemini`) returns HTTP 404 ModelNotFoundError
+    // for gemini-3.5-flash. `agy` is Google's live replacement. Reverting this
+    // lookup to 'gemini' reintroduces the 404 regression.
     const cmd = process.platform === 'win32' ? 'where' : 'which';
     return new Promise((resolve) => {
-      execFile(cmd, ['gemini'], (err, stdout) => {
+      execFile(cmd, ['agy'], (err, stdout) => {
         resolve(!err && stdout.trim() ? stdout.trim().split('\n')[0].trim() : null);
       });
     });
@@ -409,22 +441,35 @@ export class GeminiCLIProvider extends BaseProvider {
 
   private ensureBinary(): void {
     if (!this.binaryPath) {
+      // DO-NOT-REVERT (2026-06): require Antigravity `agy`, not @google/gemini-cli.
       throw new ProviderUnavailableError('gemini-cli', {
-        message: 'Gemini CLI binary not found in PATH',
-        hint: 'Install: npm i -g @google/gemini-cli',
+        message: 'Antigravity CLI binary "agy" not found in PATH',
+        hint: 'Install Antigravity (https://antigravity.google) then run "agy install". ' +
+          'The legacy "gemini"/@google/gemini-cli is deprecated (404 ModelNotFoundError).',
       });
     }
   }
 
   private buildCliArgs(
-    outputFormat: 'json' | 'stream-json',
+    _outputFormat: 'json' | 'stream-json',
     model: LLMModel,
     prompt: string
   ): { args: string[]; stdinPrompt?: string } {
-    const args = ['--output-format', outputFormat, '--skip-trust'];
+    // DO-NOT-REVERT (2026-06): Build ANTIGRAVITY (`agy`) headless args, NOT the
+    // dead `gemini` flags. `agy` does NOT support `--output-format` or
+    // `--skip-trust` (it errors: "flags provided but not defined"); it emits
+    // PLAIN TEXT. The previous `['--output-format', fmt, '--skip-trust', ...]`
+    // form belongs to the dead `@google/gemini-cli` and is part of the 404
+    // regression. Use `--print`/`--prompt`, `--model`, and
+    // `--dangerously-skip-permissions` (agy's headless auto-approve). The
+    // `_outputFormat` arg is retained for call-site compatibility but unused.
+    const args: string[] = ['--dangerously-skip-permissions'];
     if (model && model !== 'auto') args.push('--model', model);
     if (this.config.sandbox === true) args.push('--sandbox');
 
+    // Large prompts: pass empty --prompt and stream the body over stdin to
+    // avoid OS argv length limits. Confirmed live: `echo "<prompt>" | agy -p ""`
+    // reads the prompt from stdin.
     if (prompt.length > GEMINI_STDIN_PROMPT_THRESHOLD) {
       args.push('--prompt', '');
       return { args, stdinPrompt: prompt };
@@ -435,11 +480,15 @@ export class GeminiCLIProvider extends BaseProvider {
   }
 
   private parseJsonOutput(stdout: string, model: LLMModel): LLMResponse {
+    // DO-NOT-REVERT (2026-06): Antigravity `agy -p` emits PLAIN TEXT, so the
+    // JSON.parse below is EXPECTED to fail and fall through to the raw-text
+    // branch — that is the normal path now, not an error. JSON parsing is kept
+    // only as a defensive fast-path for any future structured agy output.
     let parsed: GeminiJsonOutput;
     try {
       parsed = JSON.parse(stdout);
     } catch {
-      this.logger.warn('Gemini CLI returned malformed JSON; falling back to raw text');
+      this.logger.debug('Antigravity (agy) returned plain text; using raw-text content path');
       const content = stdout.trim();
       if (!content) {
         throw new LLMProviderError('Gemini CLI returned empty output', 'EMPTY_RESPONSE', 'gemini-cli', undefined, true);
@@ -509,8 +558,9 @@ export class GeminiCLIProvider extends BaseProvider {
     const msg = filtered.trim() || `Gemini CLI exited with code ${code}`;
     switch (code) {
       case EXIT.Auth:
+        // DO-NOT-REVERT (2026-06): re-auth via Antigravity, not dead `gemini auth`.
         return new AuthenticationError(
-          `Gemini CLI auth failed: ${msg}. Run 'gemini auth' to re-authenticate.`,
+          `Antigravity CLI (agy) auth failed: ${msg}. Sign in via the Antigravity app/CLI to re-authenticate.`,
           'gemini-cli', { exitCode: code }
         );
       case EXIT.Input:
@@ -546,8 +596,9 @@ export class GeminiCLIProvider extends BaseProvider {
       .filter(line => !/loaded cached credentials/i.test(line))
       .join('\n')
       .trim();
+    // DO-NOT-REVERT (2026-06): sign-in is via Antigravity (`agy`), not legacy gemini.
     return new AuthenticationError(
-      `Gemini CLI requires sign-in. Run gemini in a terminal and complete Google OAuth (or set GEMINI_API_KEY/GOOGLE_API_KEY). Details: ${filtered || `exit code ${code}`}`,
+      `Antigravity CLI (agy) requires sign-in. Open the Antigravity app/CLI and complete Google sign-in. Details: ${filtered || `exit code ${code}`}`,
       'gemini-cli',
       { exitCode: code },
     );

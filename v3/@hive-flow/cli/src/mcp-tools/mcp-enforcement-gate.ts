@@ -299,6 +299,11 @@ export function checkModelEnforcement(
   const ALLOWED_ALIASES = new Set(['opus', 'sonnet', 'mini', 'inherit', undefined]);
 
   // Rule 2: gemini-cli requires gemini-3.5-flash (top tier) or an alias.
+  // DO-NOT-REVERT (2026-06): The `gemini-cli` provider now drives Google's
+  // ANTIGRAVITY CLI (`agy`), and `gemini-3.5-flash` is Antigravity's live base
+  // model (confirmed: `agy models` lists "Gemini 3.5 Flash" and
+  // `agy -p "..." --model gemini-3.5-flash` succeeds). This gate value is
+  // therefore correct and must NOT be changed to a legacy/dead model id.
   if (
     normInput.provider === 'gemini-cli' &&
     normInput.model !== 'gemini-3.5-flash' &&
@@ -306,7 +311,7 @@ export function checkModelEnforcement(
   ) {
     return {
       allowed: false,
-      reason: 'MODEL ENFORCEMENT: gemini-cli requires gemini-3.5-flash (top tier).',
+      reason: 'MODEL ENFORCEMENT: gemini-cli requires gemini-3.5-flash (top tier, Antigravity base model).',
     };
   }
 

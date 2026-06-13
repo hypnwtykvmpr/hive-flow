@@ -405,7 +405,10 @@ export class CursorCLIProvider extends BaseProvider {
   // -- Private helpers -------------------------------------------------------
 
   private async findBinary(): Promise<string | null> {
-    // Prefer cursor-agent (standalone); fall back to cursor (IDE binary with 'agent' subcommand)
+    // DO-NOT-REVERT: `cursor-agent` (the standalone headless CLI) MUST be preferred.
+    // `cursor` is only a fallback launcher whose `agent` subcommand reaches the SAME
+    // headless CLI. This order must never be flipped, and no Cursor IDE / Background
+    // Agents path may be added here — see spawnCursor() for the failure mode (300s hang).
     for (const name of ['cursor-agent', 'cursor']) {
       const found = await this.whichBinary(name);
       if (found) return found;
@@ -447,12 +450,29 @@ export class CursorCLIProvider extends BaseProvider {
     //  1. OS ARG_MAX limits for large prompts
     //  2. Prompt text leaking into process listings (ps aux)
     // cursor-agent takes flags directly; cursor (IDE binary) needs 'agent' subcommand
+    //
+    // ⚠️ DO-NOT-REVERT — HEADLESS CURSOR CLI INVARIANT ⚠️
+    // This provider MUST drive the headless `cursor-agent` CLI binary (installed via
+    // `curl https://cursor.com/install`) using `--print` (headless/non-interactive) and
+    // `--force` (allow tool/file actions in --print mode). The `cursor` launcher binary
+    // is ONLY a last-resort fallback and is invoked via its `agent` subcommand — which is
+    // still the SAME headless CLI agent, NOT the Cursor IDE.
+    //
+    // NEVER route this to the Cursor IDE / "Background Agents" (the cloud-VM GUI feature
+    // embedded in the Cursor editor). That feature is not headless: it opens an editor /
+    // remote VM session and BLOCKS indefinitely with no stdout, which surfaces here as a
+    // hard ~300s caller timeout (SIGKILL) with an empty response. The correct headless
+    // path returns a JSON result object on stdout in seconds-to-minutes.
+    //
+    // Required headless flags below (--print + --force) and the cursor-agent-first binary
+    // resolution in findBinary() are load-bearing. Do not drop them, do not reorder the
+    // binary preference, and do not add any `background-agent` / IDE-launch path.
     const isCursorIDE = this.binaryPath!.endsWith('/cursor') || this.binaryPath!.endsWith('\\cursor');
     const args = [
       ...(isCursorIDE ? ['agent'] : []),
-      '--print',
+      '--print',  // DO-NOT-REVERT: headless/non-interactive mode (no TTY, prints to stdout)
       '--trust',  // Prevent workspace trust prompt blocking non-interactive mode
-      '--force',  // Required for file writes in --print mode
+      '--force',  // DO-NOT-REVERT: required for file writes/tool actions in --print mode
       '--output-format', stream ? 'stream-json' : 'json',
       '--model', String(model),
       ...(stream ? ['--stream-partial-output'] : []),
