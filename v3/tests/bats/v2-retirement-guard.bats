@@ -1,17 +1,19 @@
 #!/usr/bin/env bats
 #
-# DO-NOT-REVERT GUARD — the legacy v2 tree stays retired and quarantined.
+# DO-NOT-REVERT GUARD — the legacy v2 tree stays retired and destroyed.
 #
 # On 2026-06-13 the entire tracked v2/ tree (6413 files incl v2/package-lock.json) was
 # git-mv'd into a tracked quarantine at TRASH/posture-20260613/v2/ (see
 # TRASH/posture-20260613/PROVENANCE.md, slice 4). Prove-dead: zero v3 to v2 runtime
 # imports; only doc/script/comment refs existed and were migrated; remaining v2 grep
 # hits are API-version / version-string false positives.
+# On 2026-06-13/14 the human approved final destruction of TRASH; this guard now
+# proves v2 does not return in live paths, tracked quarantine paths, or package output.
 #
 # This static guard prevents silent regression. It asserts three invariants over the
 # TRACKED tree (git ls-files), run from repo root:
 #   (a) zero tracked paths live under v2/ — the live tree is gone.
-#   (b) the quarantine TRASH/posture-20260613/v2/ is present and tracked.
+#   (b) zero tracked paths live under TRASH/ — the final destruction is complete.
 #   (c) no tracked non-TRASH file carries a dead relative LINK or filesystem path into
 #       v2/ — precise patterns only, so API-version false positives do NOT trip it.
 #
@@ -33,18 +35,14 @@ setup() {
   [ -z "$live" ]
 }
 
-@test "the quarantined v2 tree is present and tracked" {
-  count="$(git ls-files -z 'TRASH/posture-20260613/v2/' | tr '\0' '\n' | grep -c . || true)"
-  if [ "$count" -le 0 ]; then
-    echo "Quarantine TRASH/posture-20260613/v2/ is empty or untracked." >&2
+@test "the final TRASH destruction removed the v2 quarantine from git and disk" {
+  tracked="$(git ls-files -z 'TRASH/**' | tr '\0' '\n' || true)"
+  if [ -n "$tracked" ]; then
+    echo "TRASH paths are still tracked after final destruction:" >&2
+    echo "$tracked" >&2
   fi
-  [ "$count" -gt 0 ]
-}
-
-@test "the slice-4 v2 provenance entry exists" {
-  [ -f "$REPO_ROOT/TRASH/posture-20260613/PROVENANCE.md" ]
-  run grep -F 'v2 Legacy Tree Retirement (slice 4)' "$REPO_ROOT/TRASH/posture-20260613/PROVENANCE.md"
-  [ "$status" -eq 0 ]
+  [ -z "$tracked" ]
+  [ ! -e "$REPO_ROOT/TRASH" ]
 }
 
 @test "zero v3-to-v2 runtime imports in tracked source" {

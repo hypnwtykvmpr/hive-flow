@@ -73,6 +73,7 @@ export const PACKAGE_INFO = {
   version: VERSION,
   description: 'Codex CLI integration for Hive Flow',
   futureUmbrella: 'coflow',
+  repository: 'https://github.com/hypnwtykvmpr/hive-flow',
 } as const;
 
 /**

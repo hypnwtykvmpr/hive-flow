@@ -1,15 +1,16 @@
 #!/usr/bin/env bats
 #
-# DO-NOT-REVERT GUARD — human-marked DELETE_ files stay quarantined and dead.
+# DO-NOT-REVERT GUARD — human-marked DELETE_ files stay destroyed and dead.
 #
 # On 2026-06-13 the human prefixed 274 tracked paths with DELETE_ to mark them for
 # deletion. They were git-mv'd out of their live locations into a tracked quarantine
 # at TRASH/posture-20260613/delete-marked/ (see TRASH/posture-20260613/PROVENANCE.md).
+# On 2026-06-13/14 the human approved final destruction of TRASH; this guard now
+# proves the deleted files do not re-enter the tracked tree or package/runtime refs.
 #
 # This static guard prevents silent regression. It asserts two invariants over the
 # TRACKED tree (git ls-files), space-safe via -z:
-#   (a) zero tracked files carry DELETE_ in a LIVE path — every DELETE_ path lives
-#       only under TRASH/.
+#   (a) zero tracked files carry DELETE_ in any path — the deletion is final.
 #   (b) no tracked runtime/build/CI source references a DELETE_ path (import, require,
 #       glob, copy, or CI step). Known-benign mentions are explicitly excluded.
 #
@@ -22,26 +23,37 @@ setup() {
   cd "$REPO_ROOT"
 }
 
-@test "no tracked file has DELETE_ in a live (non-TRASH) path" {
+@test "no tracked file has DELETE_ in its path" {
   # -z + tr keeps paths with spaces intact (e.g. 'DELETE_settings copy.json').
-  live="$(git ls-files -z | tr '\0' '\n' | grep 'DELETE_' | grep -v '^TRASH/' || true)"
+  live="$(git ls-files -z | tr '\0' '\n' | grep 'DELETE_' || true)"
   if [ -n "$live" ]; then
-    echo "LIVE DELETE_ paths still tracked outside TRASH/:" >&2
+    echo "DELETE_ paths still tracked after final destruction:" >&2
     echo "$live" >&2
   fi
   [ -z "$live" ]
 }
 
-@test "the quarantine provenance and rename map exist" {
-  # Existence (not tracked-state): the human stages/commits the quarantine later.
-  [ -f "$REPO_ROOT/TRASH/posture-20260613/PROVENANCE.md" ]
-  [ -f "$REPO_ROOT/TRASH/posture-20260613/RENAME-MAP.txt" ]
+@test "the final TRASH destruction removed the quarantine from disk and git" {
+  tracked="$(git ls-files -z 'TRASH/**' | tr '\0' '\n' || true)"
+  if [ -n "$tracked" ]; then
+    echo "TRASH paths are still tracked after final destruction:" >&2
+    echo "$tracked" >&2
+  fi
+  [ -z "$tracked" ]
+  [ ! -e "$REPO_ROOT/TRASH" ]
 }
 
-@test "the quarantine actually holds the moved DELETE_ files" {
-  count="$(git ls-files -z 'TRASH/posture-20260613/delete-marked/' | tr '\0' '\n' | grep -c 'DELETE_' || true)"
-  # 274 files were moved; assert the bulk is present (>= 200 tolerates future curation).
-  [ "$count" -ge 200 ]
+@test "the destroyed DELETE_ quarantine cannot leak through live git status paths" {
+  status_paths="$(git status --short --porcelain=v1 \
+    | awk '{print $2}' \
+    | grep 'DELETE_' \
+    | grep -v '^TRASH/' \
+    || true)"
+  if [ -n "$status_paths" ]; then
+    echo "Live DELETE_ path still appears in git status after final destruction:" >&2
+    echo "$status_paths" >&2
+  fi
+  [ -z "$status_paths" ]
 }
 
 @test "no tracked runtime/build/CI source references a DELETE_ path" {

@@ -133,7 +133,6 @@ export class IntegrationRegressionSuite {
         // Create in-memory backend
         const backend = new HybridBackend({
           sqlite: { databasePath: ':memory:', walMode: false, optimize: true, defaultNamespace: 'test', maxEntries: 1000 },
-          agentdb: { dbPath: ':memory:' },
         });
 
         await backend.initialize();
@@ -169,7 +168,6 @@ export class IntegrationRegressionSuite {
 
         const backend = new HybridBackend({
           sqlite: { databasePath: ':memory:', walMode: false, optimize: true, defaultNamespace: 'test', maxEntries: 1000 },
-          agentdb: { dbPath: ':memory:' },
         });
 
         await backend.initialize();
