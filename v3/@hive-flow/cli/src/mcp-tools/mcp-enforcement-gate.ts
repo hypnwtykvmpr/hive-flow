@@ -8,6 +8,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { dirname, isAbsolute, join, resolve } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { resolveProjectRoot } from '../permission-guard/protected-paths.js';
 
 export enum ToolRisk {
   CRITICAL = 3,
@@ -68,14 +69,9 @@ export function classifyTool(toolName: string): ToolRisk {
   return ToolRisk.LOW;
 }
 
-function resolveProjectDir(): string {
-  // Priority 1: explicit env var (safe for MCP servers)
-  if (process.env.CLAUDE_PROJECT_DIR) {
-    return process.env.CLAUDE_PROJECT_DIR;
-  }
-
-  // Priority 2: ESM import.meta.url (dirname/fileURLToPath imported at top level)
-  // Compiled layout: dist/src/mcp-tools/ → 5 levels up to project root
+function resolveGateSourceRoot(): string {
+  // Compiled layout: dist/src/mcp-tools/ -> 5 levels up to project root.
+  // Source layout under src/mcp-tools keeps the same relative root contract.
   try {
     const metaUrl = (import.meta as { url?: string })?.url;
     if (metaUrl) {
@@ -95,6 +91,19 @@ function resolveProjectDir(): string {
 
   // Priority 4: cwd fallback
   return process.cwd();
+}
+
+function resolveProjectDir(): string {
+  // Keep MCP gating byte-identical to enforcement.cjs PROJECT_DIR selection.
+  // The shared resolver honors HIVE_FLOW_PROJECT_ROOT before CLAUDE_PROJECT_DIR
+  // and normalizes candidates through realpath when available. Do not replace
+  // this with bespoke env/cwd logic; project-scope HMAC paths depend on the
+  // exact sha256(projectRoot) match.
+  return resolveProjectRoot({
+    env: process.env,
+    cwd: resolveGateSourceRoot(),
+    fallbackRoot: process.cwd(),
+  });
 }
 
 // Highest enforcement level — used for fail-closed behavior on any error.

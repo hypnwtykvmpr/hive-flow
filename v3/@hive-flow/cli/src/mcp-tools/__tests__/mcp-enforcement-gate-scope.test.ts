@@ -32,12 +32,12 @@
  * substrate. Scope-id env vars are cleared per-test for determinism.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync, symlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { createHash, createHmac } from 'crypto';
-import { join } from 'path';
+import { dirname, join } from 'path';
 
-import { getEnforcementLevel } from '../mcp-enforcement-gate.js';
+import { checkMCPEnforcement, getEnforcementLevel } from '../mcp-enforcement-gate.js';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers — replicate exactly the signing + layout the gate verifies:
@@ -69,6 +69,7 @@ interface Sandbox {
 }
 
 let originalHiveFlowHome: string | undefined;
+let originalHiveFlowProjectRoot: string | undefined;
 let originalProjectDir: string | undefined;
 let originalAgentId: string | undefined;
 let originalCcAgentId: string | undefined;
@@ -80,6 +81,7 @@ const createdRoots: string[] = [];
 
 beforeEach(() => {
   originalHiveFlowHome = process.env.HIVE_FLOW_HOME;
+  originalHiveFlowProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT;
   originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
   originalAgentId = process.env.AGENTIC_FLOW_AGENT_ID;
   originalCcAgentId = process.env.CLAUDE_AGENT_ID;
@@ -103,6 +105,7 @@ function restore(name: string, value: string | undefined): void {
 
 afterEach(() => {
   restore('HIVE_FLOW_HOME', originalHiveFlowHome);
+  restore('HIVE_FLOW_PROJECT_ROOT', originalHiveFlowProjectRoot);
   restore('CLAUDE_PROJECT_DIR', originalProjectDir);
   restore('AGENTIC_FLOW_AGENT_ID', originalAgentId);
   restore('CLAUDE_AGENT_ID', originalCcAgentId);
@@ -130,9 +133,10 @@ function makeSandbox(): Sandbox {
   const root = mkdtempSync(join(tmpdir(), 'hf-gate-scope-'));
   createdRoots.push(root);
   const hiveHome = join(root, 'hive-home');
-  const projectDir = join(root, 'project');
+  const lexicalProjectDir = join(root, 'project');
   mkdirSync(hiveHome, { recursive: true });
-  mkdirSync(projectDir, { recursive: true });
+  mkdirSync(lexicalProjectDir, { recursive: true });
+  const projectDir = realpathSync.native(lexicalProjectDir);
   process.env.HIVE_FLOW_HOME = hiveHome; // absolute => honored
   process.env.CLAUDE_PROJECT_DIR = projectDir;
   return { hiveHome, projectDir };
@@ -162,11 +166,15 @@ function writeGlobalState(sb: Sandbox, level: number): void {
  *   <hiveHome>/enforcement/projects/<project-id>/state.json
  */
 function writeProjectState(sb: Sandbox, level: number): void {
+  writeProjectStateForProjectDir(sb, sb.projectDir, level);
+}
+
+function writeProjectStateForProjectDir(sb: Sandbox, projectDir: string, level: number): void {
   writeSharedKey(sb);
-  const id = projectScopeId(sb.projectDir);
-  const projectDir = join(sb.hiveHome, 'enforcement', 'projects', id);
-  mkdirSync(projectDir, { recursive: true });
-  writeFileSync(join(projectDir, 'state.json'), signEnvelope({ level }, SHARED_KEY), 'utf8');
+  const id = projectScopeId(projectDir);
+  const scopeDir = join(sb.hiveHome, 'enforcement', 'projects', id);
+  mkdirSync(scopeDir, { recursive: true });
+  writeFileSync(join(scopeDir, 'state.json'), signEnvelope({ level }, SHARED_KEY), 'utf8');
 }
 
 /** Write a valid signed scope state.json under <hiveHome>/enforcement/<dir>/<id>/. */
@@ -234,6 +242,42 @@ describe('getEnforcementLevel — scope-aware (security regression)', () => {
     expect(id).toMatch(/^project-[0-9a-f]{16}$/);
     writeScopeState(sb, 'projects', id, 3);
     expect(getEnforcementLevel()).toBe(3);
+  });
+
+  it('[BUG #3] HIVE_FLOW_PROJECT_ROOT wins over CLAUDE_PROJECT_DIR for project HALT', () => {
+    const sb = makeSandbox();
+    const root = dirname(sb.projectDir);
+    const hiveFlowProjectRoot = join(root, 'hive-flow-project-root');
+    const claudeProjectDir = join(root, 'claude-project-dir');
+    mkdirSync(hiveFlowProjectRoot, { recursive: true });
+    mkdirSync(claudeProjectDir, { recursive: true });
+
+    process.env.HIVE_FLOW_PROJECT_ROOT = hiveFlowProjectRoot;
+    process.env.CLAUDE_PROJECT_DIR = claudeProjectDir;
+
+    const canonicalProjectRoot = realpathSync.native(hiveFlowProjectRoot);
+    writeProjectStateForProjectDir(sb, canonicalProjectRoot, 3);
+
+    expect(getEnforcementLevel()).toBe(3);
+    expect(checkMCPEnforcement('agent_spawn').allowed).toBe(false);
+  });
+
+  it('[BUG #3] symlinked HIVE_FLOW_PROJECT_ROOT hashes the real project root', () => {
+    const sb = makeSandbox();
+    const root = dirname(sb.projectDir);
+    const realProjectRoot = join(root, 'real-project-root');
+    const linkedProjectRoot = join(root, 'linked-project-root');
+    mkdirSync(realProjectRoot, { recursive: true });
+    symlinkSync(realProjectRoot, linkedProjectRoot, 'dir');
+
+    process.env.HIVE_FLOW_PROJECT_ROOT = linkedProjectRoot;
+    delete process.env.CLAUDE_PROJECT_DIR;
+
+    const canonicalProjectRoot = realpathSync.native(realProjectRoot);
+    writeProjectStateForProjectDir(sb, canonicalProjectRoot, 3);
+
+    expect(getEnforcementLevel()).toBe(3);
+    expect(checkMCPEnforcement('agent_spawn').allowed).toBe(false);
   });
 
   it('[BUG #2] a state file at the OLD wrong path is IGNORED (no false security)', () => {
