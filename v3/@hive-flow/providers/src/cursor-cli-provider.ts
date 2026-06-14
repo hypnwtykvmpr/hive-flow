@@ -111,21 +111,62 @@ export const CURSOR_TIMEOUT_PER_KCHAR_MS = 1_500;
 export const CURSOR_MAX_TIMEOUT_MS = 900_000;
 
 /**
+ * Hard ceiling (ms) for the streaming / FIFO budget. The streaming and tmux-FIFO
+ * paths legitimately run longer than a direct completion, so their scaled budget
+ * is multiplied (see CURSOR_STREAM_MULTIPLIER) — but the result is RE-CLAMPED to
+ * this ceiling so a 200K prompt can never blow past a sane upper bound (F2).
+ * Set to CURSOR_MAX_TIMEOUT_MS so streaming shares the same single ceiling as the
+ * direct path and the agentic-wrapper clamp.
+ */
+export const CURSOR_STREAM_MAX_TIMEOUT_MS = CURSOR_MAX_TIMEOUT_MS;
+
+/** Multiplier applied to the SCALED budget for streaming / FIFO paths only. */
+export const CURSOR_STREAM_MULTIPLIER = 2;
+
+/**
  * Pure, prompt-size-aware timeout helper for cursor.
  *
  * - If `explicit` is provided (caller-supplied `request.timeout`), it is returned
- *   verbatim — caller override always wins (slice 5 contract).
+ *   verbatim — caller override always wins (slice 5 contract). NaN/negative
+ *   explicit values are ignored (treated as "no override") so a malformed caller
+ *   value can never zero-out or NaN the timer (F4).
  * - Otherwise: BASE for prompts below the threshold, then a linear ramp of
  *   CURSOR_TIMEOUT_PER_KCHAR_MS per 1K chars above the threshold, clamped to
- *   [BASE, MAX]. Monotonically non-decreasing in promptChars.
+ *   [BASE, MAX]. Monotonically non-decreasing in promptChars. A NaN/negative
+ *   promptChars is floored to 0 (F4).
  *
  * Exported for deterministic unit testing (no fake timers needed).
  */
 export function computeCursorTimeout(promptChars: number, explicit?: number): number {
-  if (explicit !== undefined) return explicit;
-  const overThreshold = Math.max(0, promptChars - CURSOR_LARGE_PROMPT_THRESHOLD);
+  if (explicit !== undefined && Number.isFinite(explicit) && explicit >= 0) return explicit;
+  const chars = Number.isFinite(promptChars) && promptChars > 0 ? promptChars : 0;
+  const overThreshold = Math.max(0, chars - CURSOR_LARGE_PROMPT_THRESHOLD);
   const scaled = CURSOR_BASE_TIMEOUT_MS + (overThreshold / 1000) * CURSOR_TIMEOUT_PER_KCHAR_MS;
   return Math.min(Math.max(scaled, CURSOR_BASE_TIMEOUT_MS), CURSOR_MAX_TIMEOUT_MS);
+}
+
+/**
+ * Streaming / FIFO budget helper (F2 + F3).
+ *
+ * Precedence (shared with the direct path): explicit request.timeout > config
+ * fallback > scaled computeCursorTimeout(promptChars).
+ *
+ * - An EXPLICIT request.timeout (or config fallback) is honored VERBATIM and is
+ *   NEVER silently doubled — the documented verbatim-honor contract (F2). The
+ *   caller owns that value; we do not breach it in either direction.
+ * - Only the SCALED default (no explicit/config value) gets the streaming
+ *   multiplier, and the multiplied result is RE-CLAMPED to
+ *   CURSOR_STREAM_MAX_TIMEOUT_MS so it cannot exceed the shared ceiling (F2).
+ */
+export function computeCursorStreamTimeout(
+  promptChars: number,
+  explicit?: number,
+): number {
+  // Explicit/config value wins verbatim — honored, not doubled.
+  if (explicit !== undefined && Number.isFinite(explicit) && explicit >= 0) return explicit;
+  const scaled = computeCursorTimeout(promptChars);
+  const multiplied = scaled * CURSOR_STREAM_MULTIPLIER;
+  return Math.min(Math.max(multiplied, CURSOR_BASE_TIMEOUT_MS), CURSOR_STREAM_MAX_TIMEOUT_MS);
 }
 
 /**
@@ -205,12 +246,40 @@ export class CursorCLIProvider extends BaseProvider {
   private activeProcesses: Set<ChildProcess> = new Set();
   private defaultTimeout: number;
 
+  /**
+   * User-configured `config.timeout`, captured at construction. Distinguished
+   * from CURSOR_BASE_TIMEOUT_MS so the config fallback only kicks in when the
+   * user actually set one (F1). `null` means "no config timeout configured" —
+   * fall through to the scaled prompt-size-aware default.
+   */
+  private readonly configTimeout: number | null;
+
   constructor(options: BaseProviderOptions) {
     super(options);
     // slice 5 / cursor timeout-budget: base falls back to CURSOR_BASE_TIMEOUT_MS
     // (120s). This is only the SMALL-prompt floor; computeCursorTimeout() scales
     // it up for large prompts at each call site (doComplete/doStream/FIFO).
     this.defaultTimeout = options.config.timeout || CURSOR_BASE_TIMEOUT_MS;
+    // F1: honor an explicitly configured config.timeout as the precedence-2
+    // fallback (explicit request.timeout > config.timeout > scaled default).
+    // Only a finite, positive configured value counts; otherwise null so the
+    // scaled prompt-size-aware default applies.
+    const cfg = options.config.timeout;
+    this.configTimeout = typeof cfg === 'number' && Number.isFinite(cfg) && cfg > 0 ? cfg : null;
+  }
+
+  /**
+   * Precedence resolver for the timeout "explicit" arg threaded into
+   * computeCursorTimeout / computeCursorStreamTimeout (F1/F3):
+   *   explicit request.timeout > config.timeout > undefined (=> scaled default).
+   * Returns `undefined` when neither is set so the pure helpers fall through to
+   * their prompt-size-aware scaling.
+   */
+  private resolveExplicitTimeout(requestTimeout?: number): number | undefined {
+    if (requestTimeout !== undefined && Number.isFinite(requestTimeout) && requestTimeout >= 0) {
+      return requestTimeout;
+    }
+    return this.configTimeout ?? undefined;
   }
 
   protected validateConfig(): void {
@@ -237,7 +306,7 @@ export class CursorCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCursor(prompt, model, false);
+    const child = this.spawnCursor(prompt, model, false, this.resolveExplicitTimeout(request.timeout));
 
     return new Promise<LLMResponse>((resolve, reject) => {
       let settled = false;
@@ -245,8 +314,9 @@ export class CursorCLIProvider extends BaseProvider {
       let stderr = '';
 
       // Declare timer before listeners that reference it.
-      // slice 5 / cursor timeout-budget: scale by prompt size (explicit override wins).
-      const timeoutMs = computeCursorTimeout(prompt.length, request.timeout);
+      // slice 5 / cursor timeout-budget: scale by prompt size. Precedence (F1):
+      // explicit request.timeout > config.timeout > scaled default.
+      const timeoutMs = computeCursorTimeout(prompt.length, this.resolveExplicitTimeout(request.timeout));
       const timer = setTimeout(() => {
         if (settled) return;
         child.kill('SIGKILL');
@@ -320,7 +390,7 @@ export class CursorCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCursor(prompt, model, true);
+    const child = this.spawnCursor(prompt, model, true, this.resolveExplicitTimeout(request.timeout));
     const rl = createInterface({ input: child.stdout! });
 
     const queue: string[] = [];
@@ -333,11 +403,24 @@ export class CursorCLIProvider extends BaseProvider {
     child.on('close', () => { done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
     child.on('error', (err) => { spawnError = err; done = true; this.activeProcesses.delete(child); rl.close(); wake(); });
 
-    // slice 5 / cursor timeout-budget: scale base by prompt size, then keep the
-    // streaming x2 multiplier (streaming legitimately runs longer). Explicit
-    // override is honored by computeCursorTimeout and still doubled for streaming.
-    const streamTimeoutMs = computeCursorTimeout(prompt.length, request.timeout) * 2;
-    const timer = setTimeout(() => { child.kill('SIGKILL'); done = true; wake(); }, streamTimeoutMs);
+    // slice 5 / cursor timeout-budget: scale base by prompt size, apply the
+    // streaming multiplier (streaming legitimately runs longer), and RE-CLAMP to
+    // the shared ceiling (F2). Precedence (F1): explicit request.timeout >
+    // config.timeout > scaled default; an explicit/config value is honored
+    // VERBATIM (never silently doubled past intent).
+    const streamTimeoutMs = computeCursorStreamTimeout(
+      prompt.length,
+      this.resolveExplicitTimeout(request.timeout),
+    );
+    let streamTimedOut = false;
+    const timer = setTimeout(() => {
+      // F7: surface stream timeouts as an error (mirrors doComplete's TIMEOUT),
+      // rather than swallowing them as a silent "done".
+      streamTimedOut = true;
+      child.kill('SIGKILL');
+      done = true;
+      wake();
+    }, streamTimeoutMs);
 
     let promptTokens = 0;
     let completionTokens = 0;
@@ -406,6 +489,18 @@ export class CursorCLIProvider extends BaseProvider {
       // Emit any remaining buffer as content
       if (contentBuffer.length > 0) {
         yield { type: 'content', delta: { content: contentBuffer } };
+      }
+
+      // F7: a stream timeout must surface as an error (consistent with
+      // doComplete's TIMEOUT), not be swallowed as a silent successful "done".
+      if (streamTimedOut) {
+        yield {
+          type: 'error',
+          error: new LLMProviderError(
+            `Stream timed out after ${streamTimeoutMs}ms`, 'TIMEOUT', 'cursor-cli', undefined, true
+          ),
+        };
+        return;
       }
 
       // Surface spawn errors instead of silently completing
@@ -501,7 +596,12 @@ export class CursorCLIProvider extends BaseProvider {
     }
   }
 
-  private spawnCursor(prompt: string, model: LLMModel, stream: boolean): ChildProcess {
+  private spawnCursor(
+    prompt: string,
+    model: LLMModel,
+    stream: boolean,
+    explicitTimeout?: number,
+  ): ChildProcess {
     const trimmed = prompt.trim();
     if (!trimmed) {
       throw new LLMProviderError(
@@ -639,7 +739,7 @@ export class CursorCLIProvider extends BaseProvider {
       }
 
       try {
-        const tmuxChild = this.spawnInTmux(trimmed, args, env as NodeJS.ProcessEnv, tmuxPath);
+        const tmuxChild = this.spawnInTmux(trimmed, args, env as NodeJS.ProcessEnv, tmuxPath, explicitTimeout);
         this.activeProcesses.add(tmuxChild);
 
         (proxy as unknown as Record<string, unknown>).stdout = tmuxChild.stdout;
@@ -682,6 +782,7 @@ export class CursorCLIProvider extends BaseProvider {
     args: string[],
     env: NodeJS.ProcessEnv,
     tmuxBin: string,
+    explicitTimeout?: number,
   ): ChildProcess {
     const sessionId = `hive-cursor-${Date.now()}-${randomBytes(4).toString('hex')}`;
     const pipePath = path.join(os.tmpdir(), `${sessionId}.pipe`);
@@ -746,8 +847,11 @@ export class CursorCLIProvider extends BaseProvider {
     // Open the FIFO for reading with a timeout to prevent indefinite blocking.
     const fifoStream = fs.createReadStream(pipePath);
     // slice 5 / cursor timeout-budget: scale the FIFO read budget by prompt size,
-    // then keep the historical x2 (tmux/TTY fallback path runs longer than direct).
-    const fifoTimeoutMs = computeCursorTimeout(prompt.length) * 2;
+    // apply the streaming/FIFO multiplier, and RE-CLAMP to the shared ceiling (F2).
+    // F3: thread the caller's explicit request.timeout / config fallback so the
+    // FIFO (tmux/TTY) path honors a caller override instead of dropping it; an
+    // explicit value is honored verbatim (not multiplied), matching doStream.
+    const fifoTimeoutMs = computeCursorStreamTimeout(prompt.length, explicitTimeout);
     const fifoTimer = setTimeout(() => {
       fifoStream.destroy(new Error(`FIFO read timed out after ${fifoTimeoutMs}ms`));
       try { execFileSync(tmuxBin, ['kill-session', '-t', sessionId], { stdio: 'ignore' }); } catch { /* already gone */ }

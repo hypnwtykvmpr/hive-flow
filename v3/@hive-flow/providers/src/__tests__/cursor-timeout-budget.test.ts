@@ -15,11 +15,29 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import {
+  CursorCLIProvider,
   computeCursorTimeout,
+  computeCursorStreamTimeout,
   CURSOR_BASE_TIMEOUT_MS,
   CURSOR_LARGE_PROMPT_THRESHOLD,
   CURSOR_MAX_TIMEOUT_MS,
+  CURSOR_STREAM_MAX_TIMEOUT_MS,
+  CURSOR_STREAM_MULTIPLIER,
 } from '../cursor-cli-provider.js';
+
+const noopLogger = {
+  debug: () => {}, info: () => {}, warn: () => {}, error: () => {},
+};
+
+/** Access the private precedence resolver without spawning anything. */
+function resolveExplicit(configTimeout: number | undefined, requestTimeout?: number): number | undefined {
+  const provider = new CursorCLIProvider({
+    config: { provider: 'cursor-cli', model: 'auto', ...(configTimeout !== undefined ? { timeout: configTimeout } : {}) },
+    logger: noopLogger,
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (provider as any).resolveExplicitTimeout(requestTimeout);
+}
 
 // Mirror of the agentic-wrapper clamp logic. Kept in the test (not imported) so
 // it acts as an independent oracle: if the wrapper's clamp regresses, the
