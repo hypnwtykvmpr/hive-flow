@@ -1,3 +1,5 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import {
   reapCredentialHolderAtSocket,
@@ -89,7 +91,8 @@ describe('daemon credential holder lifecycle helpers', () => {
 });
 
 describe('daemon MCP stdio server lifecycle helpers', () => {
-  const hiveFlowMcpCommand = () => `node ${process.cwd()}/bin/mcp-server.js`;
+  const cliPackageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+  const hiveFlowMcpCommand = () => `node ${resolve(cliPackageRoot, 'bin', 'mcp-server.js')}`;
 
   it('reaps legacy MCP server processes that have no live heartbeat registry record', async () => {
     const killCalls: Array<{ pid: number; signal: NodeJS.Signals }> = [];
