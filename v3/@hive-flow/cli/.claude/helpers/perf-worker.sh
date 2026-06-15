@@ -17,7 +17,7 @@ hf_cli() {
   if command -v hive-flow &>/dev/null; then
     hive-flow "$@"
   else
-    npx -y hive-flow "$@"
+    npx -y "hive-flow" "$@"
   fi
 }
 
@@ -81,7 +81,7 @@ benchmark_startup() {
   if command -v hive-flow >/dev/null 2>&1; then
     hf_bin="hive-flow"
   else
-    hf_bin="npx -y hive-flow"
+    hf_bin="npx -y \"hive-flow\""
   fi
   if command -v timeout >/dev/null 2>&1; then
     timeout 5 $hf_bin --version >/dev/null 2>&1 || true

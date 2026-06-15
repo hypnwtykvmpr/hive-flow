@@ -792,7 +792,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
   // -------------------------------------------------------------------------
   it('hot-path integrity: renderer source has no shell-outs / sync I/O / TODO markers', async () => {
     const source = readFileSync(
-      join(process.cwd(), 'src', 'statusline', 'claude-code-renderer.ts'),
+      join(__dirname, '..', 'claude-code-renderer.ts'),
       'utf8',
     );
     // Drop comments before substring scans so we only check live code.

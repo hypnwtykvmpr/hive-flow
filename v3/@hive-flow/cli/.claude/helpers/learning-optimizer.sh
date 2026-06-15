@@ -19,7 +19,7 @@ hf_cli() {
   if command -v hive-flow &>/dev/null; then
     hive-flow "$@"
   else
-    npx -y hive-flow "$@"
+    npx -y "hive-flow" "$@"
   fi
 }
 

@@ -234,6 +234,12 @@ function isAllowedRuntimeUrl(rawUrl: string): boolean {
     host === 'accounts.google.com' ||
     host === 'oauth2.googleapis.com' ||
     host === 'dotnet.microsoft.com' ||
+    // Third-party provider-install hints (load-bearing, DO-NOT-REVERT in source):
+    // Antigravity CLI (`agy`) install URL — replaces the dead @google/gemini-cli;
+    // Cursor headless CLI install URL. Functional install guidance, not the
+    // dropped project brand — same class as the dotnet.microsoft.com entry above.
+    host === 'antigravity.google' ||
+    host === 'cursor.com' ||
     (host === 'github.com' && parsed.pathname.startsWith('/login/oauth/'))
   );
 }

@@ -596,7 +596,6 @@ program
       console.log(chalk.white(`  Version:     ${PACKAGE_INFO.version}`));
       console.log(chalk.white(`  Description: ${PACKAGE_INFO.description}`));
       console.log(chalk.white(`  Future:      ${PACKAGE_INFO.futureUmbrella} (umbrella package)`));
-      console.log(chalk.white(`  Repository:  ${PACKAGE_INFO.repository}`));
       console.log(chalk.gray('  ' + '='.repeat(40)));
       console.log(chalk.gray('\n  Part of the coflow rebranding initiative'));
       console.log();

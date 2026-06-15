@@ -167,7 +167,9 @@ describe('Step 1: Gate not compiled fallback', () => {
 
     const handlerSection = hookHandlerSource.slice(pgStart, pgStart + 6000);
     expect(handlerSection).toContain('catch');
-    expect(handlerSection).toContain('fs.existsSync(gatePath)');
+    expect(handlerSection).toContain('resolvePermissionGuardGateRoot(PROJECT_DIR)');
+    expect(handlerSection).toContain('permissionGuardGateMissingDecision(PROJECT_DIR)');
+    expect(handlerSection).toContain('permissionGuardGatePath(gateRoot)');
     expect(handlerSection).toContain("preToolUseDecision('allow')");
     expect(handlerSection).toContain('assertPermissionGuardBuildFresh');
     expect(handlerSection).toContain('permissionGuardDeny');

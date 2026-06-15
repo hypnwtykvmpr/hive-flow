@@ -106,6 +106,7 @@ import { createHive, saveHive } from '../hive-store.js';
 import { checkMCPEnforcement, classifyTool, ToolRisk } from '../mcp-enforcement-gate.js';
 
 const originalCwd = process.cwd();
+const cliPackageRoot = join(__dirname, '..', '..', '..');
 const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
 const originalHiveFlowHome = process.env.HIVE_FLOW_HOME;
 let root: string;
@@ -331,9 +332,9 @@ describe('D-32: queen in-process dispatch gate', () => {
   });
 
   it('statically keeps every in-process dispatch sink behind assertDispatchAllowed', () => {
-    const queenSource = readFileSync(join(originalCwd, 'src/mcp-tools/queen-tools.ts'), 'utf8');
-    const hiveMindSource = readFileSync(join(originalCwd, 'src/mcp-tools/hive-mind-tools.ts'), 'utf8');
-    const headlessWorkerSource = readFileSync(join(originalCwd, 'src/services/headless-worker-executor.ts'), 'utf8');
+    const queenSource = readFileSync(join(cliPackageRoot, 'src/mcp-tools/queen-tools.ts'), 'utf8');
+    const hiveMindSource = readFileSync(join(cliPackageRoot, 'src/mcp-tools/hive-mind-tools.ts'), 'utf8');
+    const headlessWorkerSource = readFileSync(join(cliPackageRoot, 'src/services/headless-worker-executor.ts'), 'utf8');
 
     expect(queenSource).toMatch(/function callAgentSpawn[\s\S]*assertDispatchAllowed\('agent_spawn'\)[\s\S]*spawnTool\.handler/);
     expect(queenSource).toMatch(/function callAgentTask[\s\S]*assertDispatchAllowed\('agent_task'\)[\s\S]*taskTool\.handler/);

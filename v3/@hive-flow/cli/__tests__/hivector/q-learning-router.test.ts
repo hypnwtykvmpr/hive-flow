@@ -65,7 +65,7 @@ describe('QLearningRouter', () => {
     });
 
     it('should return route from valid ROUTE_NAMES', () => {
-      const validRoutes = ['coder', 'tester', 'reviewer', 'architect', 'researcher', 'optimizer', 'debugger', 'documenter'];
+      const validRoutes = ['implementer', 'tester', 'verifier', 'architect', 'researcher', 'performance-engineer', 'debugger', 'documenter'];
       const decision = router.route('test task');
       expect(validRoutes).toContain(decision.route);
     });
@@ -83,9 +83,9 @@ describe('QLearningRouter', () => {
 
     it('should return alternatives sorted by score', () => {
       // Update Q-values to have clear ordering
-      router.update('task', 'coder', 10);
+      router.update('task', 'implementer', 10);
       router.update('task', 'tester', 5);
-      router.update('task', 'reviewer', 3);
+      router.update('task', 'verifier', 3);
       
       const decision = router.route('task', false);
       expect(decision.alternatives.length).toBeLessThanOrEqual(3);
@@ -109,13 +109,13 @@ describe('QLearningRouter', () => {
 
   describe('update', () => {
     it('should update Q-values and return TD error', () => {
-      const tdError = router.update('task context', 'coder', 1.0);
+      const tdError = router.update('task context', 'implementer', 1.0);
       expect(typeof tdError).toBe('number');
     });
 
     it('should increase Q-value for positive reward', () => {
       // First update to establish the action
-      router.update('context', 'coder', 10.0);
+      router.update('context', 'implementer', 10.0);
 
       const afterDecision = router.route('context', false);
       // At least one Q-value should be non-zero after update
@@ -130,28 +130,28 @@ describe('QLearningRouter', () => {
     it('should decay epsilon over updates', () => {
       const initialEpsilon = router.getStats().epsilon;
       for (let i = 0; i < 100; i++) {
-        router.update(`context_${i}`, 'coder', 1.0);
+        router.update(`context_${i}`, 'implementer', 1.0);
       }
       const finalEpsilon = router.getStats().epsilon;
       expect(finalEpsilon).toBeLessThan(initialEpsilon);
     });
 
     it('should track average TD error', () => {
-      router.update('c1', 'coder', 5.0);
+      router.update('c1', 'implementer', 5.0);
       router.update('c2', 'tester', 3.0);
       const stats = router.getStats();
       expect(stats.avgTDError).toBeGreaterThan(0);
     });
 
     it('should update with next context (non-terminal)', () => {
-      const tdError = router.update('current', 'coder', 1.0, 'next');
+      const tdError = router.update('current', 'implementer', 1.0, 'next');
       expect(typeof tdError).toBe('number');
     });
 
     it('should prune Q-table when exceeding maxStates', () => {
       const smallRouter = new QLearningRouter({ maxStates: 10 });
       for (let i = 0; i < 20; i++) {
-        smallRouter.update(`unique_context_${i}`, 'coder', 1.0);
+        smallRouter.update(`unique_context_${i}`, 'implementer', 1.0);
       }
       const stats = smallRouter.getStats();
       expect(stats.qTableSize).toBeLessThanOrEqual(10);
@@ -173,7 +173,7 @@ describe('QLearningRouter', () => {
       const before = router.getStats();
       expect(before.updateCount).toBe(0);
       
-      router.update('test', 'coder', 1.0);
+      router.update('test', 'implementer', 1.0);
       
       const after = router.getStats();
       expect(after.updateCount).toBe(1);
@@ -183,7 +183,7 @@ describe('QLearningRouter', () => {
 
   describe('reset', () => {
     it('should clear Q-table', () => {
-      router.update('test', 'coder', 1.0);
+      router.update('test', 'implementer', 1.0);
       expect(router.getStats().qTableSize).toBe(1);
       
       router.reset();
@@ -192,7 +192,7 @@ describe('QLearningRouter', () => {
 
     it('should reset epsilon to initial value', () => {
       for (let i = 0; i < 100; i++) {
-        router.update(`ctx_${i}`, 'coder', 1.0);
+        router.update(`ctx_${i}`, 'implementer', 1.0);
       }
       expect(router.getStats().epsilon).toBeLessThan(1.0);
       
@@ -201,7 +201,7 @@ describe('QLearningRouter', () => {
     });
 
     it('should reset update count', () => {
-      router.update('test', 'coder', 1.0);
+      router.update('test', 'implementer', 1.0);
       expect(router.getStats().updateCount).toBe(1);
       
       router.reset();
@@ -211,7 +211,7 @@ describe('QLearningRouter', () => {
 
   describe('export/import', () => {
     it('should export Q-table data', () => {
-      router.update('context1', 'coder', 5.0);
+      router.update('context1', 'implementer', 5.0);
       router.update('context2', 'tester', 3.0);
 
       const exported = router.export();
@@ -221,7 +221,7 @@ describe('QLearningRouter', () => {
     });
 
     it('should export qValues and visits for each state', () => {
-      router.update('test', 'coder', 1.0);
+      router.update('test', 'implementer', 1.0);
       const exported = router.export();
       const firstKey = Object.keys(exported)[0];
       
@@ -241,7 +241,7 @@ describe('QLearningRouter', () => {
     });
 
     it('should restore Q-values after import', () => {
-      router.update('original', 'coder', 10.0);
+      router.update('original', 'implementer', 10.0);
       const exported = router.export();
       
       router.reset();
@@ -252,7 +252,7 @@ describe('QLearningRouter', () => {
     });
 
     it('should clear existing data on import', () => {
-      router.update('old', 'coder', 1.0);
+      router.update('old', 'implementer', 1.0);
       router.import({ 'new_state': { qValues: [1,2,3,4,5,6,7,8], visits: 1 } });
       
       expect(router.getStats().qTableSize).toBe(1);
@@ -288,7 +288,7 @@ describe('QLearningRouter', () => {
 
     it('should maintain consistency for same context', () => {
       // After learning, same context should give consistent results
-      router.update('consistent_context', 'coder', 100.0);
+      router.update('consistent_context', 'implementer', 100.0);
       
       const decisions = Array.from({ length: 10 }, () => 
         router.route('consistent_context', false)
@@ -328,8 +328,8 @@ describe('QLearningRouter Advanced Scenarios', () => {
       // Train specific patterns
       for (let i = 0; i < 50; i++) {
         router.update('write unit tests', 'tester', 10.0);
-        router.update('implement feature', 'coder', 10.0);
-        router.update('review code quality', 'reviewer', 10.0);
+        router.update('implement feature', 'implementer', 10.0);
+        router.update('review code quality', 'verifier', 10.0);
       }
 
       // Verify Q-values increased for trained actions
@@ -344,7 +344,7 @@ describe('QLearningRouter Advanced Scenarios', () => {
 
     it('should learn from negative reinforcement', () => {
       // Initially train with positive reward
-      router.update('bug fix', 'coder', 10.0);
+      router.update('bug fix', 'implementer', 10.0);
 
       // Then add negative reward for tester
       for (let i = 0; i < 20; i++) {
@@ -367,7 +367,7 @@ describe('QLearningRouter Advanced Scenarios', () => {
 
       // With low epsilon, should exploit more
       const lowExplorRouter = new QLearningRouter({ explorationInitial: 0.0 });
-      lowExplorRouter.update('task', 'coder', 100.0);
+      lowExplorRouter.update('task', 'implementer', 100.0);
       const exploitations = Array.from({ length: 100 }, () =>
         lowExplorRouter.route('task', false).explored
       );
@@ -378,7 +378,7 @@ describe('QLearningRouter Advanced Scenarios', () => {
 
   describe('context hashing', () => {
     it('should generate consistent hashes for same context', () => {
-      router.update('context A', 'coder', 5.0);
+      router.update('context A', 'implementer', 5.0);
       const decision1 = router.route('context A', false);
       const decision2 = router.route('context A', false);
 
@@ -387,7 +387,7 @@ describe('QLearningRouter Advanced Scenarios', () => {
     });
 
     it('should generate different hashes for different contexts', () => {
-      router.update('context A', 'coder', 10.0);
+      router.update('context A', 'implementer', 10.0);
       router.update('context B', 'tester', 10.0);
 
       const decisionA = router.route('context A', false);
@@ -405,7 +405,7 @@ describe('QLearningRouter Advanced Scenarios', () => {
       const lowGammaRouter = new QLearningRouter({ gamma: 0.1 });
 
       // Update with next state
-      lowGammaRouter.update('current', 'coder', 10.0, 'next');
+      lowGammaRouter.update('current', 'implementer', 10.0, 'next');
       lowGammaRouter.update('next', 'tester', 10.0);
 
       const stats = lowGammaRouter.getStats();
@@ -416,7 +416,7 @@ describe('QLearningRouter Advanced Scenarios', () => {
     it('should propagate value further with high gamma', () => {
       const highGammaRouter = new QLearningRouter({ gamma: 0.99 });
 
-      highGammaRouter.update('state1', 'coder', 1.0, 'state2');
+      highGammaRouter.update('state1', 'implementer', 1.0, 'state2');
       highGammaRouter.update('state2', 'tester', 100.0);
 
       const decision = highGammaRouter.route('state1', false);
@@ -427,7 +427,7 @@ describe('QLearningRouter Advanced Scenarios', () => {
   describe('concurrent updates', () => {
     it('should handle rapid sequential updates', () => {
       for (let i = 0; i < 1000; i++) {
-        router.update(`task_${i % 10}`, 'coder', Math.random() * 10);
+        router.update(`task_${i % 10}`, 'implementer', Math.random() * 10);
       }
 
       expect(router.getStats().updateCount).toBe(1000);
@@ -439,9 +439,9 @@ describe('QLearningRouter Advanced Scenarios', () => {
   describe('state persistence', () => {
     it('should export and import complete state', () => {
       // Build up some state
-      router.update('task1', 'coder', 10.0);
+      router.update('task1', 'implementer', 10.0);
       router.update('task2', 'tester', 8.0);
-      router.update('task3', 'reviewer', 6.0);
+      router.update('task3', 'verifier', 6.0);
 
       const originalStats = router.getStats();
       const exported = router.export();

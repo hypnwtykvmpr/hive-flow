@@ -303,7 +303,7 @@ Then in Claude Code:
 
 ```bash
 # Add MCP servers to Claude Code
-claude mcp add hive-flow -- npx -y hive-flow mcp start
+claude mcp add hive-flow -- npx -y "hive-flow" mcp start
 claude mcp add flow-nexus flow-nexus mcp start  # Optional
 ```
 
@@ -355,7 +355,7 @@ cp -r agents ~/.claude/agents/
 
 ```bash
 # Run setup via npx
-npx -y hive-flow init --plugin
+npx -y "hive-flow" init --plugin
 
 # This will:
 # 1. Create .claude directory

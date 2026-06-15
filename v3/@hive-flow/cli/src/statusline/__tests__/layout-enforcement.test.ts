@@ -538,7 +538,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
 
   it('ANTI-COLLAPSE: renderer source contains NO newline-stripping code path', () => {
     const source = readFileSync(
-      join(process.cwd(), 'src', 'statusline', 'claude-code-renderer.ts'),
+      join(__dirname, '..', 'claude-code-renderer.ts'),
       'utf8',
     );
     const code = source

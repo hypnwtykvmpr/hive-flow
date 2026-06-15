@@ -17,7 +17,7 @@ if command -v hive-flow-mcp &>/dev/null; then
 elif command -v hive-flow &>/dev/null; then
     claude mcp add hive-flow -- hive-flow mcp start
 else
-    claude mcp add hive-flow -- npx -y hive-flow mcp start
+    claude mcp add hive-flow -- npx -y "hive-flow" mcp start
 fi
 
 echo "✅ MCP server setup complete!"

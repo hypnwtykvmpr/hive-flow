@@ -201,7 +201,7 @@ The swarm automatically:
 
 ```bash
 # Core MCP (required)
-claude mcp add hive-flow -- npx -y hive-flow mcp start
+claude mcp add hive-flow -- npx -y "hive-flow" mcp start
 
 # Cloud features (optional - requires auth)
 claude mcp add flow-nexus flow-nexus mcp start
@@ -293,7 +293,7 @@ ls ~/.claude/commands/
 cat ~/.claude/settings.json
 
 # Verify MCP package
-npx -y hive-flow --version
+npx -y "hive-flow" --version
 
 # Reinstall if needed
 ```
