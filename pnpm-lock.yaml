@@ -26,7 +26,8 @@ overrides:
   '@opentelemetry/sdk-node': '>=0.217.0'
   vitest@<3.2.6: 3.2.6
   minimatch@>=9.0.0 <9.0.7: '>=9.0.7'
-  ws@>=8.0.0 <8.20.1: '>=8.20.1'
+  ws@>=7.0.0 <7.5.11: 7.5.11
+  ws@>=8.0.0 <8.21.0: 8.21.0
   esbuild@>=0.17.0 <0.28.1: '>=0.28.1'
   vite@<6.4.2: 6.4.2
 
@@ -71,7 +72,7 @@ importers:
         specifier: ^1.14.1
         version: 1.14.1
       ws:
-        specifier: '>=8.20.1'
+        specifier: 8.21.0
         version: 8.21.0
       zod:
         specifier: ^3.25.0
@@ -372,7 +373,7 @@ importers:
         specifier: ^8.1.0
         version: 8.1.0
       ws:
-        specifier: '>=8.20.1'
+        specifier: 8.21.0
         version: 8.21.0
       zod:
         specifier: ^3.25.0
@@ -494,7 +495,7 @@ importers:
         specifier: ^1.14.1
         version: 1.14.1
       ws:
-        specifier: '>=8.20.1'
+        specifier: 8.21.0
         version: 8.21.0
       zod:
         specifier: ^3.25.0
@@ -568,7 +569,7 @@ importers:
         specifier: ^8.1.0
         version: 8.1.0
       ws:
-        specifier: '>=8.20.1'
+        specifier: 8.21.0
         version: 8.21.0
       zod:
         specifier: ^3.25.0
@@ -5913,8 +5914,8 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  ws@7.5.10:
-    resolution: {integrity: sha512-+dbF1tHwZpXcbOJdVOkzLDxZP1ailvSxM6ZweXTegylPny803bFhA+vqBYw4s31NSAk4S2Qz+AKXK9a4wkdjcQ==}
+  ws@7.5.11:
+    resolution: {integrity: sha512-zS54Oen9bITtp7kp2XM3AydrCIq1D+HwJOuH+c+e4LfpL/lotP5osijd+UoMnxwAam1GN8R4KtLAyIrIcBNpiA==}
     engines: {node: '>=8.3.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -9676,7 +9677,7 @@ snapshots:
 
   gun@0.2020.1241:
     dependencies:
-      ws: 7.5.10
+      ws: 7.5.11
     optionalDependencies:
       '@peculiar/webcrypto': 1.5.0
     transitivePeerDependencies:
@@ -11715,7 +11716,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@7.5.10:
+  ws@7.5.11:
     optional: true
 
   ws@8.21.0: {}
