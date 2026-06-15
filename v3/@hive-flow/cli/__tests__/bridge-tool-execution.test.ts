@@ -57,6 +57,16 @@ vi.mock('../src/hivector/enhanced-model-router.js', () => ({
   }),
 }));
 
+// The provider-key preflight gate is exercised by its own dedicated suites
+// (provider-key-preflight.test.ts, *-strict-holder.test.ts). Here we stub it so
+// that strict-provider dispatch (e.g. openrouter) can reach the spawn site and
+// we can assert the bridge's env contract directly. Strict providers require an
+// available credential holder; mocking it as { ok: true } emulates the holder
+// being available so the spawn path is reachable.
+vi.mock('../src/mcp-tools/provider-key-preflight.js', () => ({
+  providerKeyPreflight: vi.fn(async () => ({ ok: true })),
+}));
+
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { agentTools } from '../src/mcp-tools/agent-tools.js';
@@ -296,7 +306,15 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       expect(storeDirValue.length).toBeGreaterThan(0);
     });
 
-    it('passes OPENROUTER_API_KEY explicitly to the bridge child when present', async () => {
+    it('never leaks OPENROUTER_API_KEY into the bridge child env (strict provider, holder-owned)', async () => {
+      // SECURITY INVARIANT (regression guard): openrouter is a STRICT API
+      // provider. The credential holder owns the key and makes the API call;
+      // the spawned bridge child must NEVER receive OPENROUTER_API_KEY in its
+      // env. buildProviderBridgeEnv only forwards a provider credential env key
+      // for ENV-ONLY CLI providers (selectedProviderCredentialEnvKey →
+      // isEnvOnlyCliProvider), and OPENROUTER_API_KEY is not in
+      // BRIDGE_BASE_ENV_KEYS. So even with the key set in the parent process
+      // env, it must be excluded from the child env.
       const originalKey = process.env.OPENROUTER_API_KEY;
       process.env.OPENROUTER_API_KEY = 'or-test-redacted';
       try {
@@ -308,12 +326,26 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
         setupStoreMocks(makeStore({ [agent.agentId]: agent }));
         mockDetachedSpawn();
 
-        await handler({ agentId: agent.agentId, task: 'Use OpenRouter' });
+        // A strict-provider dispatch requires an available credential holder.
+        // The mocked providerKeyPreflight ({ ok: true }) emulates that, so the
+        // dispatch reaches the spawn site.
+        const result = await handler({
+          agentId: agent.agentId,
+          task: 'Use OpenRouter',
+        }) as DispatchResult;
 
+        // The bridge must have been spawned (holder available → dispatch proceeds).
+        expect(result.success).toBe(true);
+        expect(result.status).toBe('running');
+        expect(spawn).toHaveBeenCalledTimes(1);
+
+        // The key must be ABSENT from the child env — it stays with the holder.
         const { opts } = getSpawnCall();
-        expect(opts.env).toMatchObject({
-          OPENROUTER_API_KEY: 'or-test-redacted',
-        });
+        expect(opts.env).toBeDefined();
+        expect(opts.env).not.toHaveProperty('OPENROUTER_API_KEY');
+        // And nowhere in the serialized child env (defense-in-depth: catches
+        // the key leaking under any other env var name as well).
+        expect(JSON.stringify(opts.env)).not.toContain('or-test-redacted');
       } finally {
         if (originalKey === undefined) {
           delete process.env.OPENROUTER_API_KEY;
