@@ -36,6 +36,7 @@ import {
 } from './protected-paths.js';
 import { isSecretPath } from './secret-paths.js';
 import { loadLayeredPermissionConfig, resetPermissionResolverCache } from './permission-resolver.js';
+import { getCompiledPattern } from './glob-to-regex.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -468,16 +469,6 @@ function isCommentEntry(entry: BashPatternEntry): boolean {
   return false;
 }
 
-/**
- * Anchor a pattern to the start of the string if it isn't already.
- * Patterns that start with ^ are used as-is. Otherwise they're wrapped
- * in ^(?:...) so glob-like patterns (e.g. "rm *") only match when "rm"
- * is the leading command, not when it appears inside arguments.
- */
-function anchorPattern(pattern: string): string {
-  return pattern.startsWith('^') ? pattern : `^(?:${pattern})`;
-}
-
 export function checkBashPatterns(cmd: string, patterns: BashPatternEntry[]): string | null {
   const stripped = stripCommand(cmd);
   for (const entry of patterns) {
@@ -496,7 +487,7 @@ export function checkBashPatterns(cmd: string, patterns: BashPatternEntry[]): st
     }
     if (!pattern) continue;
     try {
-      if (new RegExp(anchorPattern(pattern), 'i').test(stripped)) {
+      if (getCompiledPattern(pattern).test(stripped)) {
         return feedback;
       }
     } catch {
@@ -511,7 +502,7 @@ function checkPatternList(cmd: string, patterns: BashPatternEntry[]): boolean {
   for (const entry of patterns) {
     if (typeof entry !== 'string' || entry.startsWith('COMMENT:')) continue;
     try {
-      if (new RegExp(anchorPattern(entry), 'i').test(stripped)) return true;
+      if (getCompiledPattern(entry).test(stripped)) return true;
     } catch {
       continue;
     }
@@ -590,6 +581,16 @@ export function splitShellCommands(cmd: string): string[] {
 
     // Only split on operators when not inside any quotes
     if (!inSingle && !inDouble && !inDollarQuote) {
+      // Shell treats physical newlines like command separators. CRLF is a
+      // single separator so Windows-pasted commands cannot bypass segment checks.
+      if (ch === '\n' || ch === '\r') {
+        const trimmed = current.trim();
+        if (trimmed) segments.push(trimmed);
+        current = '';
+        if (ch === '\r' && cmd[i + 1] === '\n') i++;
+        continue;
+      }
+
       // Check for && (two chars)
       if (ch === '&' && cmd[i + 1] === '&') {
         const trimmed = current.trim();

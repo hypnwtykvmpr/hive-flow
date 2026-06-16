@@ -24,6 +24,7 @@ import {
   getCompiledPattern,
   clearPatternCache,
 } from '../glob-to-regex.js';
+import { checkBashAllow, checkBashPatterns } from '../gate.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -870,6 +871,34 @@ describe('globMatch convenience function', () => {
 // ===========================================================================
 
 describe('Integration: gate.ts pattern checking simulation', () => {
+  it('uses the real gate allow matcher for glob patterns, not raw regex', () => {
+    const allowPatterns = ['node *', 'npm run *', 'git status*'];
+
+    expect(checkBashAllow('node script.js', allowPatterns)).toBe(true);
+    expect(checkBashAllow('node_modules/.bin/tsc', allowPatterns)).toBe(false);
+  });
+
+  it('uses the real gate deny matcher for glob patterns, not raw regex', () => {
+    const denyPatterns = [
+      { pattern: 'rm *', feedback: 'DENIED: rm is blocked' },
+      { pattern: 'git push --force*', feedback: 'DENIED: force push blocked' },
+    ];
+
+    expect(checkBashPatterns('rm -rf build/', denyPatterns)).toBe('DENIED: rm is blocked');
+    expect(checkBashPatterns('permission granted', denyPatterns)).toBeNull();
+    expect(checkBashPatterns('git push --force-with-lease origin', denyPatterns)).toBe('DENIED: force push blocked');
+    expect(checkBashPatterns('git push origin main', denyPatterns)).toBeNull();
+  });
+
+  it('keeps regex passthrough for real gate patterns beginning with ^', () => {
+    const denyPatterns = [
+      { pattern: '^halt(\\s|$)', feedback: 'DENIED: halt' },
+    ];
+
+    expect(checkBashPatterns('halt now', denyPatterns)).toBe('DENIED: halt');
+    expect(checkBashPatterns('halted', denyPatterns)).toBeNull();
+  });
+
   /**
    * This simulates the FIXED version of checkBashPatterns that uses globToRegex
    * instead of raw `new RegExp(pattern)`.

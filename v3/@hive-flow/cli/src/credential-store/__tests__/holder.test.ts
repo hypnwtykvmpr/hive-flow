@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyCredentialHolderProcessHardening,
   CapabilityTokenIssuer,
@@ -97,6 +97,35 @@ describe('credential holder socket lifecycle', () => {
       await holder.stop();
     }
     expect(existsSync(socketPath)).toBe(false);
+  });
+
+  it('binds the Unix socket while a private umask is active', async () => {
+    if (process.platform === 'win32') return;
+
+    const socketPath = tempSocketPath();
+    const holder = new CredentialHolderService({
+      socketPath,
+      uid: 1234,
+      peerCredentialResolver: async () => ({ pid: process.pid, uid: 1234, startTime: 'now' }),
+      now: () => 1000,
+      randomToken: () => 'token-1',
+    });
+    const previousUmask = process.umask();
+    const umaskSpy = vi.spyOn(process, 'umask');
+
+    try {
+      await holder.start();
+      const setUmaskCalls = umaskSpy.mock.calls
+        .filter((args) => args.length > 0)
+        .map(([value]) => value);
+      expect(setUmaskCalls).toContain(0o177);
+      expect(setUmaskCalls).toContain(previousUmask);
+      expect(statSync(socketPath).mode & 0o777).toBe(0o600);
+    } finally {
+      await holder.stop().catch(() => undefined);
+      umaskSpy.mockRestore();
+      process.umask(previousUmask);
+    }
   });
 
   it('refuses socket squat attempts when the socket path pre-exists', async () => {

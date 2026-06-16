@@ -498,6 +498,15 @@ const FILE_MODIFYING_COMMANDS: Array<{
       return args.length >= 1 ? args : [];
     },
   },
+  // touch — creating or timestamping protected files can alter guard state.
+  {
+    pattern: /\btouch\s+(?:-[a-zA-Z]+\s+)*(.+)/,
+    name: 'touch',
+    extractTargets: (_m, fullCmd) => {
+      const args = extractArguments(fullCmd, 'touch');
+      return args.length >= 1 ? args : [];
+    },
+  },
   // mv — check ALL arguments (source AND destination): `mv .claude/settings.json /tmp/` must be caught
   // even if /tmp/ is not a protected path, because the SOURCE is protected.
   {

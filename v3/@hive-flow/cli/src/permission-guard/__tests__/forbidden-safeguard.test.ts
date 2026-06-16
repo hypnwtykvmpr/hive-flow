@@ -67,6 +67,17 @@ describe('splitShellCommands', () => {
     expect(splitShellCommands('ls | rm -rf /')).toEqual(['ls', 'rm -rf /']);
   });
 
+  it('splits on newline outside quotes', () => {
+    expect(splitShellCommands('echo ok\nchmod 777 /etc')).toEqual(['echo ok', 'chmod 777 /etc']);
+  });
+
+  it('splits on CRLF outside quotes', () => {
+    expect(splitShellCommands('echo ok\r\ngit push --force origin main')).toEqual([
+      'echo ok',
+      'git push --force origin main',
+    ]);
+  });
+
   it('does NOT split inside double quotes', () => {
     const result = splitShellCommands('echo "hello && world"');
     expect(result).toEqual(['echo "hello && world"']);
@@ -80,6 +91,11 @@ describe('splitShellCommands', () => {
   it('does NOT split inside $-quotes', () => {
     const result = splitShellCommands("echo $'a&&b' && ls");
     expect(result).toEqual(["echo $'a&&b'", 'ls']);
+  });
+
+  it('does NOT split newlines inside quotes', () => {
+    const result = splitShellCommands('printf "a\nb" && ls');
+    expect(result).toEqual(['printf "a\nb"', 'ls']);
   });
 
   it('handles escaped characters outside quotes', () => {
@@ -222,6 +238,16 @@ describe('Forbidden safeguard catches chained commands', () => {
 
   it('catches forbidden command with env var prefix in chain', async () => {
     const result = await evaluateHookInput(bashInput('echo ok && MY_VAR=1 rm -rf /tmp'));
+    expect(result.decision).toBe('deny');
+  });
+
+  it('catches chmod after a newline separator', async () => {
+    const result = await evaluateHookInput(bashInput('echo ok\nchmod 777 /etc'));
+    expect(result.decision).toBe('deny');
+  });
+
+  it('catches git force push after a CRLF separator', async () => {
+    const result = await evaluateHookInput(bashInput('echo ok\r\ngit push --force origin main'));
     expect(result.decision).toBe('deny');
   });
 });

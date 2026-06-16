@@ -296,7 +296,7 @@ export class CredentialHolderService {
     chmodSync(dirname(this.socketPath), 0o700);
     await this.prepareUnixSocketPathForBind();
     this.server = createServer(socket => this.handleSocket(socket));
-    await awaitServerListening(this.server, this.socketPath);
+    await awaitPrivateUnixSocketListening(this.server, this.socketPath);
     chmodSync(this.socketPath, 0o600);
     const stat = statSync(this.socketPath);
     if (!stat.isSocket()) throw new Error('credential holder path is not a socket after bind');
@@ -776,6 +776,15 @@ function awaitServerListening(server: Server, path: string): Promise<void> {
     server.once('listening', onListening);
     server.listen(path);
   });
+}
+
+async function awaitPrivateUnixSocketListening(server: Server, path: string): Promise<void> {
+  const previousUmask = process.umask(0o177);
+  try {
+    await awaitServerListening(server, path);
+  } finally {
+    process.umask(previousUmask);
+  }
 }
 
 function parseCredentialHolderCommand(line: string): CredentialHolderCommand {

@@ -204,6 +204,40 @@ describe('chown on protected paths', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 6a. touch .claude/settings.json → blocked
+// ---------------------------------------------------------------------------
+
+describe('touch on protected paths', () => {
+  it('blocks touch targeting settings.json via evaluateSelfProtection', () => {
+    const result = evaluateSelfProtection(
+      'Bash',
+      { command: `touch ${CWD}/.claude/settings.json` },
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.reason).toContain('touch');
+  });
+
+  it('blocks touch on hook-handler.cjs via checkBashSelfProtection when matched', () => {
+    const result = checkBashSelfProtection(
+      `touch ${CWD}/.claude/helpers/hook-handler.cjs`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
+  it('allows touch under a non-protected project directory', () => {
+    const result = checkBashSelfProtection(
+      `touch ${CWD}/src/generated.ts`,
+      CWD,
+    );
+    expect(result).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 6b. rm and mkdir must not bypass self-protection
 // ---------------------------------------------------------------------------
 
