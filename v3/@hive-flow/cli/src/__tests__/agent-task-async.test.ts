@@ -146,6 +146,7 @@ const terminateHandler = terminateTool.handler;
 function mockDetachedSpawn(pid: number = 12345) {
   (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
     pid,
+    on: vi.fn(),
     unref: vi.fn(),
   }));
 }
@@ -185,7 +186,7 @@ describe('agent_task_async handler', () => {
     let statusDuringSpawn: string | undefined;
     (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
       statusDuringSpawn = getPersistedStore().agents[agent.agentId].status;
-      return { pid: 12345, unref: vi.fn() };
+      return { pid: 12345, on: vi.fn(), unref: vi.fn() };
     });
 
     await asyncHandler({ agentId: agent.agentId, task: 'background work' });
@@ -287,6 +288,7 @@ describe('agent_task_async handler', () => {
     const mockUnref = vi.fn();
     (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       pid: 42,
+      on: vi.fn(),
       unref: mockUnref,
     }));
 
@@ -854,6 +856,7 @@ describe('parallel dispatch', () => {
     let pidCounter = 10000;
     (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       pid: ++pidCounter,
+      on: vi.fn(),
       unref: vi.fn(),
     }));
 

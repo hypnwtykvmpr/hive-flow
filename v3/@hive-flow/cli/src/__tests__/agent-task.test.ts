@@ -187,6 +187,7 @@ interface AgentTaskResult {
 function mockDetachedSpawn(pid: number = 12345) {
   (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
     pid,
+    on: vi.fn(),
     unref: vi.fn(),
   }));
 }
@@ -409,6 +410,7 @@ describe('agent_task handler (non-blocking)', () => {
     const mockUnref = vi.fn();
     (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
       pid: 42,
+      on: vi.fn(),
       unref: mockUnref,
     }));
 

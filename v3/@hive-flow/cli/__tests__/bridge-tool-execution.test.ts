@@ -178,6 +178,7 @@ interface DispatchResult {
 function mockDetachedSpawn(pid: number = 12345) {
   (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
     pid,
+    on: vi.fn(),
     unref: vi.fn(),
   }));
 }
@@ -474,7 +475,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       let statusAtSpawnTime: string | undefined;
       (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
         statusAtSpawnTime = getPersistedStore().agents[agent.agentId].status;
-        return { pid: 12345, unref: vi.fn() };
+        return { pid: 12345, on: vi.fn(), unref: vi.fn() };
       });
 
       const result = await handler({
@@ -507,7 +508,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => {
         const store = getPersistedStore();
         otherAgentAccessible = store.agents['other-agent'] !== undefined;
-        return { pid: 12345, unref: vi.fn() };
+        return { pid: 12345, on: vi.fn(), unref: vi.fn() };
       });
 
       await handler({ agentId: agent1.agentId, task: 'long tool execution' });
@@ -533,6 +534,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       const unrefSpy = vi.fn();
       (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
         pid: 77777,
+        on: vi.fn(),
         unref: unrefSpy,
       }));
 
