@@ -308,12 +308,23 @@ describe('TokenGenerator', () => {
 
     it('should use timing-safe comparison', () => {
       // This test verifies the comparison takes consistent time
-      // regardless of where the mismatch occurs
+      // regardless of where the mismatch occurs.
+      //
+      // Determinism note: the mutated character must be GUARANTEED to differ,
+      // regardless of the (random) token contents. Substituting a fixed literal
+      // like 'X' is unsound — if the random base64url token already starts/ends
+      // with that character, the "mismatch" equals the original token and
+      // compare() correctly returns true, flaking the test (~1/64 per end).
+      // flip() returns a character provably different from its input, so the
+      // single-character difference holds for every possible token while
+      // preserving the security intent: a mismatch at the start or end must be
+      // rejected.
+      const flip = (c: string) => (c === 'A' ? 'B' : 'A');
       const token = generator.generate();
-      const mismatchEarly = 'X' + token.slice(1);
-      const mismatchLate = token.slice(0, -1) + 'X';
+      const mismatchEarly = flip(token[0]) + token.slice(1);
+      const mismatchLate = token.slice(0, -1) + flip(token[token.length - 1]);
 
-      // Both comparisons should work (timing consistency is internal)
+      // Same-length, single-character difference at each extreme must be rejected.
       expect(generator.compare(token, mismatchEarly)).toBe(false);
       expect(generator.compare(token, mismatchLate)).toBe(false);
     });
