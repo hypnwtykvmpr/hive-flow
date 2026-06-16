@@ -235,8 +235,14 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    // Persist only the view's own byte region so subarray/sliced Float32Arrays
+    // are stored correctly (byteOffset>0 or byteLength<buffer.byteLength).
     const embeddingBuffer = entry.embedding
-      ? Buffer.from(entry.embedding.buffer)
+      ? Buffer.from(
+          entry.embedding.buffer,
+          entry.embedding.byteOffset,
+          entry.embedding.byteLength,
+        )
       : null;
 
     this.db!.run(stmt, [
@@ -729,7 +735,15 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
       key: row.key as string,
       content: row.content as string,
       embedding: row.embedding
-        ? new Float32Array(new Uint8Array(row.embedding as Uint8Array).buffer)
+        ? (() => {
+            // Reconstruct from raw bytes stored by sql.js (Uint8Array).
+            // Copy into a fresh, offset-free ArrayBuffer so the resulting
+            // Float32Array always starts at byteOffset 0 with the exact
+            // element count (byteLength / 4).
+            const raw = new Uint8Array(row.embedding as Uint8Array);
+            const buf = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength);
+            return new Float32Array(buf);
+          })()
         : undefined,
       type: row.type as MemoryType,
       namespace: row.namespace as string,

@@ -472,6 +472,13 @@ const BRIDGE_BASE_ENV_KEYS = new Set([
   'CLAUDE_PROJECT_DIR',
   'HIVE_FLOW_CONFIG',
   'HIVE_FLOW_LOG_LEVEL',
+  // Proxy configuration — required for CLI providers in proxied/corporate networks
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
 ]);
 
 function isDeniedBridgeEnvKey(key: string): boolean {
@@ -1700,7 +1707,6 @@ export const agentTools: MCPTool[] = [
 
       // A9: Block cross-agent mutations when enforcement level > 0
       const callerAgentId = process.env.AGENTIC_FLOW_AGENT_ID
-        || process.env.CLAUDE_SESSION_ID
         || process.env.CLAUDE_AGENT_ID
         || null;
       if (callerAgentId && callerAgentId !== agentId) {

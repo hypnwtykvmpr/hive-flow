@@ -109,14 +109,14 @@ export function isHiveFlowCacheIndexEntry(content) {
     // a different package name like `hive-flow-utils`).
     return (
       /registry\.npmjs\.org\/hive-flow(?:[/?#]|$)/.test(key) ||
-      /registry\.npmjs\.org\/@hive-flow\//.test(key)
+      /registry\.npmjs\.org\/@hive-flow(?:\/|%2[fF])/.test(key)
     );
   }
 
   // Fallback for non-JSON content: require the registry URL patterns.
   return (
     /registry\.npmjs\.org\/hive-flow(?:[/?#]|$)/.test(str) ||
-    /registry\.npmjs\.org\/@hive-flow\//.test(str)
+    /registry\.npmjs\.org\/@hive-flow(?:\/|%2[fF])/.test(str)
   );
 }
 

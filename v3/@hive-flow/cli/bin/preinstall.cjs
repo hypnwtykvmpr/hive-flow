@@ -24,8 +24,74 @@ var os = require('os');
 
 var npmDir = path.join(os.homedir(), '.npm');
 
-function isHiveFlowCacheIndexEntry(content) {
-  return String(content || '').indexOf('hive-flow') !== -1;
+/**
+ * Anchored predicate: true only when a single cacache JSONL line's `key` field
+ * matches the real `hive-flow` package or the `@hive-flow/*` scope.
+ *
+ * Mirrors bin/npx-repair.js#isHiveFlowCacheIndexEntry — kept in sync so the
+ * two repair paths behave identically.  A raw substring match on the full file
+ * content is deliberately avoided because it would evict unrelated packages
+ * that merely mention "hive-flow" in description/peer-dep fields.
+ */
+function isHiveFlowCacheIndexEntry(line) {
+  var str = String(line || '');
+  // Fast-path: reject lines that don't mention hive-flow at all.
+  if (str.indexOf('hive-flow') === -1) return false;
+
+  // Extract the JSON portion (everything after the first tab).
+  var tabIdx = str.indexOf('\t');
+  var jsonStr = tabIdx !== -1 ? str.slice(tabIdx + 1) : str;
+
+  var key = null;
+  try {
+    var parsed = JSON.parse(jsonStr);
+    if (parsed && typeof parsed.key === 'string') key = parsed.key;
+  } catch (e) { /* non-JSON — fall through to URL pattern check */ }
+
+  if (key !== null) {
+    // Match only the real hive-flow package and @hive-flow/* scope.
+    // A trailing [/?#] or end-of-string prevents matching `hive-flow-unrelated`.
+    return (
+      /registry\.npmjs\.org\/hive-flow(?:[/?#]|$)/.test(key) ||
+      /registry\.npmjs\.org\/@hive-flow(?:\/|%2[fF])/.test(key)
+    );
+  }
+
+  // Fallback for non-JSON: require the anchored registry URL patterns.
+  return (
+    /registry\.npmjs\.org\/hive-flow(?:[/?#]|$)/.test(str) ||
+    /registry\.npmjs\.org\/@hive-flow(?:\/|%2[fF])/.test(str)
+  );
+}
+
+/**
+ * Process a single cacache bucket file: drop hive-flow JSONL lines, keep the
+ * rest.  Returns true when the file was modified.
+ */
+function pruneOrDeleteCacheBucket(fp) {
+  try {
+    var content = fs.readFileSync(fp, 'utf-8');
+    var lines = content.split('\n');
+    var keep = [];
+    var removed = 0;
+    for (var li = 0; li < lines.length; li++) {
+      var line = lines[li];
+      if (line.trim() !== '' && isHiveFlowCacheIndexEntry(line)) {
+        removed++;
+      } else {
+        keep.push(line);
+      }
+    }
+    if (removed === 0) return false;
+    var survivors = keep.join('\n');
+    if (survivors.trim() === '') {
+      fs.unlinkSync(fp);
+    } else {
+      fs.writeFileSync(fp, survivors, 'utf-8');
+    }
+    return true;
+  } catch (e) { /* skip unreadable */ }
+  return false;
 }
 
 // 1. Clean stale rename artifacts from npx cache (fixes ENOTEMPTY)
@@ -58,18 +124,19 @@ try {
 } catch (e) { /* non-fatal */ }
 
 // 2. Remove corrupted integrity entries from _cacache (fixes ECOMPROMISED)
-//    Scans index-v5 hash buckets for entries referencing hive-flow
-//    packages and removes them so npm re-fetches with correct integrity.
+//    Scans index-v5 hash buckets for lines referencing hive-flow packages and
+//    prunes them using the anchored per-line predicate so unrelated packages
+//    that happen to mention "hive-flow" in their metadata are NOT evicted.
 try {
   var cacheIndex = path.join(npmDir, '_cacache', 'index-v5');
   if (fs.existsSync(cacheIndex)) {
-    // Walk the two-level hash bucket structure: index-v5/XX/YY/...
+    // Walk the two-level (or three-level) hash bucket structure.
     var buckets = fs.readdirSync(cacheIndex);
     for (var bi = 0; bi < buckets.length; bi++) {
       var bucketPath = path.join(cacheIndex, buckets[bi]);
       try {
-        var stat = fs.statSync(bucketPath);
-        if (!stat.isDirectory()) continue;
+        var bStat = fs.statSync(bucketPath);
+        if (!bStat.isDirectory()) continue;
         var subBuckets = fs.readdirSync(bucketPath);
         for (var si = 0; si < subBuckets.length; si++) {
           var subPath = path.join(bucketPath, subBuckets[si]);
@@ -79,22 +146,10 @@ try {
               // Third level
               var files = fs.readdirSync(subPath);
               for (var fi = 0; fi < files.length; fi++) {
-                var filePath = path.join(subPath, files[fi]);
-                try {
-                  var content = fs.readFileSync(filePath, 'utf-8');
-                  if (isHiveFlowCacheIndexEntry(content)) {
-                    fs.unlinkSync(filePath);
-                  }
-                } catch (e2) { /* skip unreadable */ }
+                pruneOrDeleteCacheBucket(path.join(subPath, files[fi]));
               }
             } else {
-              // File at second level
-              try {
-                var content2 = fs.readFileSync(subPath, 'utf-8');
-                if (isHiveFlowCacheIndexEntry(content2)) {
-                  fs.unlinkSync(subPath);
-                }
-              } catch (e2) { /* skip unreadable */ }
+              pruneOrDeleteCacheBucket(subPath);
             }
           } catch (e2) { /* skip */ }
         }
