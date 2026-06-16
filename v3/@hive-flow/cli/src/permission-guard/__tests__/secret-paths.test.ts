@@ -30,9 +30,12 @@ describe('secret-path classifier', () => {
     for (const target of [
       'id_rsa',
       'path/.env',
+      '.envrc',
       '.env.production',
       'app/.env.local',
       'app/.env.staging.local',
+      'authorized_keys',
+      'ssh-copy/known_hosts',
       'credentials',
       '.netrc',
       'service-account-123.json',
@@ -69,7 +72,6 @@ describe('secret-path classifier', () => {
 
   it('uses component equality and does not substring-match benign paths', () => {
     for (const target of [
-      '.envrc',
       '.ssh_backup/x',
       'x.private',
       'my notes.txt',
@@ -181,7 +183,7 @@ describe('secret-path classifier', () => {
     fc.assert(
       fc.property(
         fc.stringMatching(/[a-z0-9_-]{1,16}/),
-        fc.constantFrom('.ssh_backup', 'x.private', '.envrc', 'secretary', 'credentials-old'),
+        fc.constantFrom('.ssh_backup', 'x.private', 'envrc', 'secretary', 'credentials-old'),
         (prefix, sibling) => {
           expect(isSecretPath(`src/${prefix}-${sibling}/notes.txt`)).toBe(false);
         },
