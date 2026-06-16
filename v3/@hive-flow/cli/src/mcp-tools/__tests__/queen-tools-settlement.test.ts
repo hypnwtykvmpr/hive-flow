@@ -188,3 +188,102 @@ describe('queen hive settlement predicate', () => {
     expect(settled?.status).toBe('active');
   });
 });
+
+// d3-002 regression: hive_terminate must persist partial worker mutations before
+// returning early on an [MCP ENFORCEMENT] error, so the store stays consistent
+// with the in-memory hive record.
+//
+// Deterministic red/green proof:
+//   - worker-1 agent_terminate → success  (worker-1 gets mutated to 'terminated' in memory)
+//   - worker-2 agent_terminate → [MCP ENFORCEMENT] deny (early-return triggered)
+//   - Pre-fix: saveHive() was only called after the early-return, so worker-1 stayed
+//     'idle' on disk (store inconsistent with memory). Post-fix: saveHive() is called
+//     before returning, so worker-1 is persisted as 'terminated' on disk.
+describe('hive_terminate — store consistency on enforcement error (d3-002)', () => {
+  it('persists worker-1 as terminated even when worker-2 triggers [MCP ENFORCEMENT] early-return', async () => {
+    const hive = await seedHive([
+      makeWorker({ workerId: 'worker-1', agentId: 'agent-1', status: 'idle' }),
+      makeWorker({ workerId: 'worker-2', agentId: 'agent-2', status: 'idle' }),
+    ]);
+
+    const terminateTool = getQueenTool('hive_terminate');
+
+    // Seed agent store so agent_terminate finds the agents
+    const agentStoreDir = join(tempDir, '.hive-flow', 'agents');
+    mkdirSync(agentStoreDir, { recursive: true });
+    writeFileSync(join(agentStoreDir, 'agents.json'), JSON.stringify({
+      agents: {
+        [hive.queenId]: { agentId: hive.queenId, status: 'idle', provider: 'codex-cli', model: 'gpt-5.5', config: {}, spawnedAt: new Date().toISOString() },
+        'agent-1': { agentId: 'agent-1', status: 'idle', provider: 'codex-cli', model: 'gpt-5.5', config: {}, spawnedAt: new Date().toISOString() },
+        'agent-2': { agentId: 'agent-2', status: 'idle', provider: 'codex-cli', model: 'gpt-5.5', config: {}, spawnedAt: new Date().toISOString() },
+      },
+    }, null, 2));
+
+    // Intercept agentTools to inject a controlled agent_terminate handler.
+    // callAgentTerminate() does `await import('./agent-tools.js')` on every call —
+    // ES module imports are cached, so mutating agentTools in-place is visible.
+    //
+    // We also redirect HIVE_FLOW_HOME to a pristine temp dir so that
+    // assertDispatchAllowed() in callAgentTerminate() sees enforcement level 0
+    // (NORMAL — no enforcement state files) and passes the gate, letting our
+    // injected handler control success/failure per agent.
+    const savedHiveFlowHome = process.env.HIVE_FLOW_HOME;
+    process.env.HIVE_FLOW_HOME = tempDir; // no enforcement files here → level 0
+
+    const { agentTools } = await import('../agent-tools.js');
+    const terminateEntry = agentTools.find(t => t.name === 'agent_terminate');
+    if (!terminateEntry) throw new Error('agent_terminate tool not found in agentTools');
+
+    const originalHandler = terminateEntry.handler;
+
+    // Replace handler: worker-1 (agent-1) succeeds, worker-2 (agent-2) returns enforcement deny.
+    // This directly proves the d3-002 bug: pre-fix, saveHive() was NOT called before the
+    // early-return, so worker-1's in-memory mutation was never persisted to disk.
+    terminateEntry.handler = async (input: Record<string, unknown>) => {
+      const agentId = input.agentId as string;
+      if (agentId === 'agent-1') {
+        // Succeed for worker-1 — hive_terminate will then mutate worker-1 to 'terminated'
+        // in the hive record (line 1092 in queen-tools.ts) before processing worker-2.
+        return { success: true, agentId, terminated: true };
+      }
+      // agent-2 and the queen: simulate [MCP ENFORCEMENT] block on worker-2.
+      if (agentId === 'agent-2') {
+        return { success: false, error: '[MCP ENFORCEMENT] test deny' };
+      }
+      // queen: also succeed so it doesn't interfere
+      return { success: true, agentId, terminated: true };
+    };
+
+    let result: Record<string, unknown>;
+    try {
+      result = await terminateTool.handler({ hiveId: hive.hiveId, reason: 'test' }) as Record<string, unknown>;
+    } finally {
+      terminateEntry.handler = originalHandler;
+      if (savedHiveFlowHome === undefined) {
+        delete process.env.HIVE_FLOW_HOME;
+      } else {
+        process.env.HIVE_FLOW_HOME = savedHiveFlowHome;
+      }
+    }
+
+    // The enforcement error on worker-2 must cause hive_terminate to return failure
+    expect(result!.success).toBe(false);
+    expect(String(result!.error)).toContain('[MCP ENFORCEMENT]');
+
+    // CRITICAL invariant (d3-002): worker-1 must be persisted as 'terminated' with
+    // terminatedAt set. Pre-fix: the early-return happened before saveHive(), so
+    // worker-1 stayed 'idle' on disk. Post-fix: saveHive() is called before returning.
+    const stored = loadHive(hive.hiveId);
+    expect(stored).not.toBeNull();
+
+    const w1 = stored!.workers.find(w => w.workerId === 'worker-1');
+    expect(w1).toBeDefined();
+    expect(w1!.status).toBe('terminated');
+    expect(w1!.terminatedAt).toBeDefined();
+
+    // Confirm worker-2 is NOT terminated (enforcement blocked it)
+    const w2 = stored!.workers.find(w => w.workerId === 'worker-2');
+    expect(w2).toBeDefined();
+    expect(w2!.status).not.toBe('terminated');
+  });
+});

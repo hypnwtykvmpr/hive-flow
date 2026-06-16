@@ -584,10 +584,17 @@ export class QLearningRouter {
       case 'linear':
         return explorationFinal + (explorationInitial - explorationFinal) * (1 - progress);
 
-      case 'exponential':
+      case 'exponential': {
         // Exponential decay: epsilon = final + (initial - final) * exp(-decay_rate * step)
-        const decayRate = -Math.log((explorationFinal / explorationInitial) + 1e-8) / explorationDecay;
-        return explorationFinal + (explorationInitial - explorationFinal) * Math.exp(-decayRate * this.stepCount);
+        // Once progress reaches 1.0 (step >= explorationDecay), return explorationFinal
+        // exactly so the agent fully commits to exploitation.
+        if (progress >= 1.0) return explorationFinal;
+        // decayRate chosen so exp(-decayRate * explorationDecay) = explorationFinal/explorationInitial,
+        // meaning the un-clamped formula reaches explorationFinal at t = explorationDecay.
+        const ratio = Math.max(explorationFinal / explorationInitial, 1e-10);
+        const decayRate = -Math.log(ratio) / explorationDecay;
+        return Math.max(explorationFinal, explorationFinal + (explorationInitial - explorationFinal) * Math.exp(-decayRate * this.stepCount));
+      }
 
       case 'cosine':
         // Cosine annealing: smooth transition

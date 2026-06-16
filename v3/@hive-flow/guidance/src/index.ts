@@ -74,11 +74,11 @@ export type { CompilerConfig } from './compiler.js';
 export { ShardRetriever, createRetriever, HashEmbeddingProvider } from './retriever.js';
 export type { IEmbeddingProvider } from './retriever.js';
 export { EnforcementGates, createGates } from './gates.js';
-export {
-  GuidanceHookProvider,
-  createGuidanceHooks,
-  gateResultsToHookResult,
-} from './hooks.js';
+// GuidanceHookProvider, createGuidanceHooks, gateResultsToHookResult are
+// available via the '@hive-flow/guidance/hooks' subpath export only.
+// They are NOT re-exported here because hooks.ts has a hard static import of
+// '@hive-flow/hooks', which is not bundled with the umbrella package. A bare
+// `import '@hive-flow/guidance'` would throw MODULE_NOT_FOUND for @hive-flow/hooks.
 export {
   RunLedger,
   createLedger,

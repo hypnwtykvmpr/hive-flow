@@ -882,9 +882,18 @@ export class MCPServerManager extends EventEmitter {
    * Start HTTP server in-process
    */
   private async startHttpServer(): Promise<void> {
-    // Dynamically import the MCP server package
-    // FIX for issue #942: Use proper package import instead of broken relative path
-    const { createMCPServer } = await import('@hive-flow/mcp');
+    // Dynamically import the MCP server package (HTTP/WS transport only).
+    // @hive-flow/mcp is bundled in the umbrella package; if resolution fails
+    // the user is on a dev install without the workspace built.
+    let createMCPServer: (typeof import('@hive-flow/mcp'))['createMCPServer'];
+    try {
+      ({ createMCPServer } = await import('@hive-flow/mcp'));
+    } catch (importErr) {
+      throw new Error(
+        `HTTP/WebSocket MCP transport requires @hive-flow/mcp which could not be loaded: ${(importErr as Error).message}. ` +
+        `Use --transport stdio (default) or run 'pnpm install' in the repo root to build all workspaces.`,
+      );
+    }
 
     const logger = {
       debug: (msg: string, data?: unknown) => this.emit('log', { level: 'debug', msg, data }),

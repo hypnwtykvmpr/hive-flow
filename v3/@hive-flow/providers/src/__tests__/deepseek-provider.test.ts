@@ -101,4 +101,53 @@ describe('DeepSeekProvider', () => {
     expect((provider as unknown as { headers?: Record<string, string> }).headers?.Authorization).toBeUndefined();
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  // d4-001 regression: streaming [DONE] must use accumulated content length, not hardcoded 100
+  it('streaming [DONE] derives completionTokens from streamed content, not hardcoded 100', async () => {
+    process.env.DEEPSEEK_API_KEY = 'sk-test-key';
+    const provider = new DeepSeekProvider({
+      config: { provider: 'deepseek', model: 'deepseek-v4-flash', apiKey: 'sk-test-key' },
+      logger: noopLogger,
+    });
+    await provider.initialize();
+
+    const longContent = 'word '.repeat(200); // ~200 tokens worth of content
+    const chunks = [
+      `data: ${JSON.stringify({ choices: [{ delta: { content: longContent } }] })}\n\n`,
+      'data: [DONE]\n\n',
+    ];
+
+    let chunkIdx = 0;
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      pull(controller) {
+        if (chunkIdx < chunks.length) {
+          controller.enqueue(encoder.encode(chunks[chunkIdx++]));
+        } else {
+          controller.close();
+        }
+      },
+    });
+
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(stream, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    })));
+
+    const events: import('../types.js').LLMStreamEvent[] = [];
+    for await (const event of provider.streamComplete({
+      messages: [{ role: 'user', content: 'hi' }],
+      model: 'deepseek-v4-flash',
+    })) {
+      events.push(event);
+    }
+
+    const doneEvent = events.find(e => e.type === 'done') as Extract<import('../types.js').LLMStreamEvent, { type: 'done' }> | undefined;
+    expect(doneEvent).toBeDefined();
+    // completionTokens must NOT be the hardcoded 100 — it should reflect the streamed content
+    expect(doneEvent!.usage.completionTokens).toBeGreaterThan(100);
+    expect(doneEvent!.usage.totalTokens).toBe(
+      doneEvent!.usage.promptTokens + doneEvent!.usage.completionTokens,
+    );
+  });
 });

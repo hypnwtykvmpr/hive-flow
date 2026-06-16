@@ -44,6 +44,9 @@ importers:
       '@hive-flow/integration':
         specifier: 3.0.0
         version: link:v3/@hive-flow/integration
+      '@hive-flow/mcp':
+        specifier: 3.0.0-alpha.8
+        version: link:v3/@hive-flow/mcp
       '@hive-flow/providers':
         specifier: 3.0.0-alpha.6
         version: link:v3/@hive-flow/providers

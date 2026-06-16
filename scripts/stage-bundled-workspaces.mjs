@@ -20,6 +20,7 @@
  * Eager runtime closure (traced from bin/cli.js -> dist/src/index.js):
  *   - @hive-flow/shared       (bare + /core/config/defaults + /workflow)  REQUIRED for every command
  *   - @hive-flow/integration  (bare, via commands/hooks.js)               REQUIRED for every command
+ *   - @hive-flow/mcp          (dynamic import in startHttpServer)         REQUIRED for HTTP/WS MCP transport
  *   - @hive-flow/providers    (/scripts/agent-task-journal.mjs)           REQUIRED for every command
  *   - @hive-flow/guidance     (/compiler,/retriever,/gates,/analyzer)     REQUIRED for `guidance` cmd (unguarded import)
  *
@@ -51,6 +52,7 @@ const destRoot = join(repoRoot, 'node_modules', '@hive-flow');
 const BUNDLED = [
   { name: 'shared', copy: ['dist'] },
   { name: 'integration', copy: ['dist'] },
+  { name: 'mcp', copy: ['dist'] },
   { name: 'providers', copy: ['dist', 'scripts'] },
   { name: 'guidance', copy: ['dist', 'wasm-pkg'] },
 ];

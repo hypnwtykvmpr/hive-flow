@@ -65,6 +65,7 @@
     "@ast-grep/napi": "^0.43.0",
     "@hive-flow/guidance": "3.0.0-alpha.1",
     "@hive-flow/integration": "3.0.0",
+    "@hive-flow/mcp": "3.0.0-alpha.8",
     "@hive-flow/providers": "3.0.0-alpha.6",
     "@hive-flow/shared": "3.0.0-alpha.6",
     "@noble/ed25519": "^3.0.0",
@@ -80,6 +81,7 @@
   "bundledDependencies": [
     "@hive-flow/shared",
     "@hive-flow/integration",
+    "@hive-flow/mcp",
     "@hive-flow/providers",
     "@hive-flow/guidance"
   ],

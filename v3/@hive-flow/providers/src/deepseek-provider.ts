@@ -109,6 +109,7 @@ export class DeepSeekProvider extends BaseProvider {
       const reader = response.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let streamedContent = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -122,16 +123,18 @@ export class DeepSeekProvider extends BaseProvider {
           const data = line.slice(6);
           if (data === '[DONE]') {
             const promptTokens = this.estimateTokens(JSON.stringify(request.messages));
+            const completionTokens = this.estimateTokens(streamedContent);
+            const totalTokens = promptTokens + completionTokens;
             const model = request.model || this.config.model;
             const pr = this.capabilities.pricing[model];
             yield {
               type: 'done',
-              usage: { promptTokens, completionTokens: 100, totalTokens: promptTokens + 100 },
+              usage: { promptTokens, completionTokens, totalTokens },
               cost: {
                 promptCost: (promptTokens / 1000) * (pr?.promptCostPer1k ?? 0),
-                completionCost: (100 / 1000) * (pr?.completionCostPer1k ?? 0),
+                completionCost: (completionTokens / 1000) * (pr?.completionCostPer1k ?? 0),
                 totalCost: (promptTokens / 1000) * (pr?.promptCostPer1k ?? 0) +
-                  (100 / 1000) * (pr?.completionCostPer1k ?? 0),
+                  (completionTokens / 1000) * (pr?.completionCostPer1k ?? 0),
                 currency: 'USD',
               },
             };
@@ -139,7 +142,10 @@ export class DeepSeekProvider extends BaseProvider {
           }
           try {
             const delta = JSON.parse(data).choices?.[0]?.delta;
-            if (delta?.content) yield { type: 'content', delta: { content: delta.content } };
+            if (delta?.content) {
+              streamedContent += delta.content;
+              yield { type: 'content', delta: { content: delta.content } };
+            }
             if (delta?.tool_calls) {
               for (const tc of delta.tool_calls) {
                 yield { type: 'tool_call', delta: { toolCall: { id: tc.id, type: 'function', function: tc.function } } };

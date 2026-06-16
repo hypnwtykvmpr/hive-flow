@@ -1081,6 +1081,9 @@ const hiveTerminateTool: MCPTool = {
             if (!terminateResult.success) {
               const error = String(terminateResult.error || 'agent_terminate failed');
               if (error.includes('[MCP ENFORCEMENT]')) {
+                // Persist any worker mutations already applied before returning
+                // so the store stays consistent with the in-memory hive record.
+                saveHive(hiveId, hive);
                 return { success: false, hiveId, error, status: hive.status };
               }
               errors.push(`Failed to terminate worker ${worker.workerId}: ${error}`);
@@ -1103,6 +1106,8 @@ const hiveTerminateTool: MCPTool = {
         if (!queenTerminateResult.success) {
           const error = String(queenTerminateResult.error || 'agent_terminate failed');
           if (error.includes('[MCP ENFORCEMENT]')) {
+            // Persist any worker mutations already applied before returning.
+            saveHive(hiveId, hive);
             return { success: false, hiveId, error, status: hive.status };
           }
           errors.push(`Failed to terminate queen ${hive.queenId}: ${error}`);

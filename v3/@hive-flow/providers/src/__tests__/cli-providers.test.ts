@@ -2916,3 +2916,43 @@ describe('GeminiCLIProvider — stdin EPIPE handling', () => {
     provider2.destroy();
   });
 });
+
+// d4-002 regression: CodexCLIProvider.validateConfig enforces temperature range
+// directly — it intentionally does NOT call super.validateConfig() because the base
+// rejects a missing model, but Codex allows model=undefined (uses CLI default).
+describe('CodexCLIProvider.validateConfig enforces temperature without requiring model (d4-002)', () => {
+  const noopLogger = {
+    debug: () => {},
+    info: () => {},
+    warn: vi.fn(),
+    error: () => {},
+  };
+
+  it('throws on temperature > 2 (CodexCLIProvider own range check)', () => {
+    const provider = new CodexCLIProvider({
+      config: { provider: 'codex-cli', model: 'auto', temperature: 3.0 },
+      logger: noopLogger,
+    });
+    // Access the protected method directly — it enforces temperature without calling super
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (provider as any).validateConfig()).toThrow();
+  });
+
+  it('throws on temperature < 0 (CodexCLIProvider own range check)', () => {
+    const provider = new CodexCLIProvider({
+      config: { provider: 'codex-cli', model: 'auto', temperature: -0.1 },
+      logger: noopLogger,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (provider as any).validateConfig()).toThrow();
+  });
+
+  it('does not throw on valid temperature', () => {
+    const provider = new CodexCLIProvider({
+      config: { provider: 'codex-cli', model: 'auto', temperature: 1.0 },
+      logger: noopLogger,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(() => (provider as any).validateConfig()).not.toThrow();
+  });
+});

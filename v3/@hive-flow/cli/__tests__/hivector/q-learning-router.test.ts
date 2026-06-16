@@ -459,4 +459,43 @@ describe('QLearningRouter Advanced Scenarios', () => {
       expect(origDecision.qValues).toEqual(newDecision.qValues);
     });
   });
+
+  describe('epsilon decay convergence (d9-001 regression)', () => {
+    it('should converge to explorationFinal at explorationDecay steps (exponential)', () => {
+      const explorationFinal = 0.01;
+      const explorationDecay = 10000;
+      const r = new QLearningRouter({
+        explorationInitial: 1.0,
+        explorationFinal,
+        explorationDecay,
+        explorationDecayType: 'exponential',
+      });
+
+      // Simulate exactly explorationDecay update steps
+      for (let i = 0; i < explorationDecay; i++) {
+        r.update('state', 'implementer', 1.0);
+      }
+
+      const { epsilon } = r.getStats();
+      // Must be AT explorationFinal, not ~2x it (the old bug yielded ~0.0199)
+      expect(epsilon).toBe(explorationFinal);
+    });
+
+    it('should not exceed explorationInitial and not go below explorationFinal (exponential)', () => {
+      const explorationFinal = 0.01;
+      const r = new QLearningRouter({
+        explorationInitial: 1.0,
+        explorationFinal,
+        explorationDecay: 500,
+        explorationDecayType: 'exponential',
+      });
+
+      for (let i = 0; i < 1000; i++) {
+        r.update('state', 'implementer', 1.0);
+        const { epsilon } = r.getStats();
+        expect(epsilon).toBeGreaterThanOrEqual(explorationFinal);
+        expect(epsilon).toBeLessThanOrEqual(1.0);
+      }
+    });
+  });
 });

@@ -224,4 +224,29 @@ describe('OpenRouter provider hardening with mocked fetch', () => {
     expect(response.model).toBe(resolvedModel);
     expect(response.cost?.totalCost).toBeCloseTo(0.0001);
   });
+
+  // d4-003 regression: pricing must not be empty — known DEFAULT_MODELS must have entries
+  it('capabilities.pricing is populated for DEFAULT_MODELS (d4-003)', () => {
+    const provider = new OpenRouterProvider({
+      config: { provider: 'openrouter', apiKey: SECRET },
+      logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
+    });
+
+    const pricing = provider.capabilities.pricing;
+    // Every default model that is NOT free must have non-zero pricing entries
+    const paidModels = [
+      'x-ai/grok-4.3',
+      'minimax/minimax-m3',
+      'moonshotai/kimi-k2.6',
+      'deepseek/deepseek-v4-flash',
+    ];
+    for (const model of paidModels) {
+      expect(pricing[model], `pricing missing for ${model}`).toBeDefined();
+      expect(pricing[model].promptCostPer1k).toBeGreaterThan(0);
+      expect(pricing[model].completionCostPer1k).toBeGreaterThan(0);
+    }
+    // Free model should have zero pricing
+    expect(pricing['nvidia/nemotron-3-super-120b-a12b:free']).toBeDefined();
+    expect(pricing['nvidia/nemotron-3-super-120b-a12b:free'].promptCostPer1k).toBe(0);
+  });
 });

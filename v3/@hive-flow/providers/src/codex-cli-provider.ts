@@ -123,8 +123,17 @@ export class CodexCLIProvider extends BaseProvider {
   }
 
   protected validateConfig(): void {
-    // Don't set default model - omitting --model flag lets Codex use config.toml default
-    // 'auto' is explicitly handled as "use default" in spawnCodex()
+    // Do NOT call super.validateConfig() unconditionally: the base class rejects
+    // a missing/undefined model, but CodexCLI legitimately omits --model to let
+    // Codex fall back to its own config.toml default ('auto' is also handled below).
+    // We still enforce the base temperature range check here explicitly.
+    if (this.config.temperature !== undefined) {
+      if (this.config.temperature < 0 || this.config.temperature > 2) {
+        throw new Error('Temperature must be between 0 and 2');
+      }
+    }
+    // Warn (not throw) when an explicit model is set that isn't in the supported list.
+    // 'auto' is explicitly handled as "use default" in spawnCodex().
     if (this.config.model && this.config.model !== 'auto' && !this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by codex-cli`);
     }

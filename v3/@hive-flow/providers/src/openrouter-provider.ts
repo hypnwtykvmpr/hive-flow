@@ -67,6 +67,24 @@ const DEFAULT_MODELS: LLMModel[] = [
   'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
 ];
 
+// Public OpenRouter pricing per 1K tokens (input / output) for DEFAULT_MODELS.
+// These are the static published prices; dynamic per-request cost comes from
+// usage data in the response when available (see transformResponse).
+const p = (prompt: number, completion: number) =>
+  ({ promptCostPer1k: prompt, completionCostPer1k: completion, currency: 'USD' as const });
+
+const DEFAULT_PRICING: Record<string, { promptCostPer1k: number; completionCostPer1k: number; currency: string }> = {
+  'xiaomi/mimo-v2.5-pro':                   p(0.0005, 0.002),
+  'x-ai/grok-4.3':                          p(0.003,  0.015),
+  'minimax/minimax-m3':                      p(0.0004, 0.0016),
+  'moonshotai/kimi-k2.6':                   p(0.0005, 0.0025),
+  'qwen/qwen3.7-plus':                       p(0.0005, 0.002),
+  'z-ai/glm-5.1':                            p(0.0003, 0.0012),
+  'qwen/qwen3.6-plus':                       p(0.0005, 0.002),
+  'nvidia/nemotron-3-super-120b-a12b:free':  p(0,      0),
+  'deepseek/deepseek-v4-flash':              p(0.00014, 0.00028),
+};
+
 export class OpenRouterProvider extends BaseProvider {
   readonly name: LLMProvider = 'openrouter';
   readonly capabilities: ProviderCapabilities = {
@@ -90,9 +108,10 @@ export class OpenRouterProvider extends BaseProvider {
     supportsEmbeddings: false,
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 200, tokensPerMinute: 10000000, concurrentRequests: 50 },
-    // OpenRouter pricing is model/provider dynamic. Do not advertise unknown
-    // model prices as zero; callers should treat missing pricing as unavailable.
-    pricing: {},
+    // Pricing for DEFAULT_MODELS populated from public OpenRouter docs.
+    // Models added at runtime via listModels() will not have pricing entries;
+    // callers should treat a missing entry as unavailable (not zero).
+    pricing: { ...DEFAULT_PRICING },
   };
 
   private baseUrl = 'https://openrouter.ai/api/v1';

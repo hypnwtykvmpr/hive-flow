@@ -1312,6 +1312,26 @@ export const agentTools: MCPTool[] = [
             env: childEnv,
           });
 
+          // Attach an error listener before unref() so a spawn failure
+          // (e.g. ENOENT) marks the task failed instead of crashing the
+          // MCP server with an unhandled ChildProcess 'error' event.
+          child.on('error', (spawnErr) => {
+            try {
+              transitionAgent(agent, 'idle');
+              delete agent.currentTaskPid;
+              saveAgentStore(store);
+            } catch { /* best-effort: store may have compacted */ }
+            // Write a failed-task result so agent_task_result can surface the error.
+            try {
+              writeFileSync(resultFilePath, JSON.stringify({
+                success: false,
+                error: `spawn error: ${(spawnErr as Error).message}`,
+                agentId,
+                taskId,
+                completedAt: new Date().toISOString(),
+              }), 'utf-8');
+            } catch { /* best-effort */ }
+          });
           child.unref();
           const childPid = child.pid;
           if (typeof childPid === 'number' && Number.isInteger(childPid) && childPid > 0) {
