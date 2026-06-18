@@ -1905,6 +1905,50 @@ function hasFlagArg(args, names) {
   return args.some(arg => names.some(name => arg === name || arg.startsWith(`${name}=`)));
 }
 
+const GIT_GLOBAL_VALUE_FLAGS = new Set([
+  '-C',
+  '-c',
+  '--config-env',
+  '--git-dir',
+  '--namespace',
+  '--work-tree',
+]);
+
+function skipGitGlobalOptions(argTokens) {
+  let index = 0;
+  while (index < argTokens.length) {
+    const word = argTokens[index]?.text || '';
+    if (!word) break;
+    if (word === '--') return index + 1;
+    if (!word.startsWith('-')) break;
+    const flagName = word.split('=', 1)[0];
+    if (GIT_GLOBAL_VALUE_FLAGS.has(word) || GIT_GLOBAL_VALUE_FLAGS.has(flagName)) {
+      index += word.includes('=') ? 1 : 2;
+      continue;
+    }
+    index++;
+  }
+  return index;
+}
+
+function protectedGitTargetArg(arg) {
+  const value = String(arg || '');
+  if (!value || value.startsWith('-')) return false;
+  return /(?:^|[\\/])(?:\.hive-flow[\\/]enforcement|\.claude[\\/])/.test(value);
+}
+
+function findProtectedGitMutation(command) {
+  for (const execution of collectShellCommandExecutions(command)) {
+    if (commandBasename(execution.command).toLowerCase() !== 'git') continue;
+    const subcommandIndex = skipGitGlobalOptions(execution.argTokens);
+    const subcommand = (execution.argTokens[subcommandIndex]?.text || '').toLowerCase();
+    if (!['checkout', 'restore', 'revert'].includes(subcommand)) continue;
+    const targetArgs = execution.argTokens.slice(subcommandIndex + 1).map(token => token.text);
+    if (targetArgs.some(protectedGitTargetArg)) return execution;
+  }
+  return null;
+}
+
 function hasShortFlagArg(args, flags) {
   return args.some(arg => flags.some(flag => arg === flag || (arg.startsWith(flag) && !arg.startsWith('--'))));
 }
@@ -2543,7 +2587,7 @@ function detectCircumvention(toolName, toolInput, state) {
       };
     }
 
-    if (/git\s+(checkout|restore|revert)\s+.*\.(hive-flow\/enforcement|claude\/)/i.test(command)) {
+    if (findProtectedGitMutation(command)) {
       return {
         circumvention: true,
         reason: `CIRCUMVENTION: Git operation targeting enforcement/hook files`,
@@ -2648,6 +2692,21 @@ function detectCircumvention(toolName, toolInput, state) {
       };
     }
 
+    // 2d3. clear-role circumvention
+    // A direct Bash call can forge hook_event_name/user_prompt on stdin. The
+    // genuine /clear-role path runs through Claude's UserPromptSubmit hook, not
+    // through an agent-visible Bash tool invocation.
+    if (isClearRoleInvocationAttempt(command)) {
+      return {
+        circumvention: true,
+        reason: `CIRCUMVENTION: Attempted to call hook-handler.cjs clear-role directly — role clearing is only allowed through the UserPromptSubmit hook`,
+        severity: 'critical',
+        substrateAttack: true,
+        protectedEnforcementAttack: true,
+        systemic: true,
+      };
+    }
+
     // 2d3. enforcement-reset circumvention
     // Agents must not invoke enforcement reset via Bash — only the UserPromptSubmit
     // hook (human-triggered) is allowed to reset enforcement.
@@ -2701,6 +2760,14 @@ function detectCircumvention(toolName, toolInput, state) {
   }
 
   return { circumvention: false };
+}
+
+function isClearRoleInvocationAttempt(command) {
+  if (!command) return false;
+  return hasCommandPositionInvocation(command, execution => (
+    isScriptInvocation(execution, 'hook-handler.cjs') &&
+    execution.args.includes('clear-role')
+  ));
 }
 
 function isResetCheckHookInvocation(command) {
@@ -2947,8 +3014,11 @@ function getRestrictionGroups(toolName) {
 // Verification Gate (with HMAC — 12.4)
 // ============================================================================
 
-function checkVerificationGate(toolName, toolInput) {
+function checkVerificationGate(toolName, toolInput, options = {}) {
   if (toolName !== 'Bash') return { blocked: false };
+  const appendGateViolation = violation => {
+    if (!options.dryRun) appendViolation(violation);
+  };
 
   const command = toolInput?.command || '';
   if (!isGitCommitCommand(command)) return { blocked: false };
@@ -2992,7 +3062,7 @@ function checkVerificationGate(toolName, toolInput) {
             }
           } catch { overrideValid = false; }
           if (overrideValid) {
-            appendViolation({ type: 'pipeline-hmac-override', taskId: pState.taskId, timestamp: new Date().toISOString() });
+            appendGateViolation({ type: 'pipeline-hmac-override', taskId: pState.taskId, timestamp: new Date().toISOString() });
             return { blocked: false };
           }
         }
@@ -3000,7 +3070,7 @@ function checkVerificationGate(toolName, toolInput) {
     }
     // Reject bare HIVE_FLOW_PIPELINE_OVERRIDE=1 (unsigned) — log as circumvention attempt
     if (pipelineOverride === '1') {
-      appendViolation({ type: 'unsigned-pipeline-override-attempt', taskId: pState.taskId, timestamp: new Date().toISOString() });
+      appendGateViolation({ type: 'unsigned-pipeline-override-attempt', taskId: pState.taskId, timestamp: new Date().toISOString() });
       // Fall through to incomplete-stages check (do NOT bypass)
     }
     const incompleteStages = (pState.requiredStages || []).filter(
@@ -3063,6 +3133,12 @@ function updateActivityTracking(state, denied) {
   return { hung: false };
 }
 
+function recordDeniedActivity(effective) {
+  const hangCheck = updateActivityTracking(effective.state, true);
+  saveScopedState(effective.scopeType, effective.scopeId, effective.state);
+  return hangCheck;
+}
+
 // ============================================================================
 // Output Formatting (12.1: CORRECT Claude Code PreToolUse protocol)
 // ============================================================================
@@ -3108,7 +3184,8 @@ function sanitizeContext(text) {
 // Main Hook Entry Point
 // ============================================================================
 
-function processPreToolUse(input) {
+function processPreToolUse(input, options = {}) {
+  const dryRun = options.dryRun === true;
   const toolName = input?.tool_name || input?.toolName || '';
   if (!toolName) {
     // Empty input is used for SubagentStart hooks; avoid overwriting
@@ -3127,6 +3204,10 @@ function processPreToolUse(input) {
       substrateAttack: true,
       systemic: true,
     };
+    if (dryRun) {
+      const target = chooseEscalationScope(ctx, violation);
+      return makeDeny(`${violation.reason} [DRY RUN: would escalate ${escalationScopeLabel(target.scopeType, target.scopeId)}].`);
+    }
     const escalation = escalateScoped(ctx, violation);
     const hangCheck = updateActivityTracking(escalation.state, true);
     saveScopedState(escalation.scopeType, escalation.scopeId, escalation.state);
@@ -3137,13 +3218,16 @@ function processPreToolUse(input) {
   const circ = detectCircumvention(toolName, toolInput, effective.state);
   if (circ.circumvention) {
     if (canDevOverrideBypassCircumvention(input, toolName, toolInput, circ)) {
-      appendViolation({
+      if (!dryRun) appendViolation({
         type: 'dev-override-used',
         tool: toolName,
         projectId: ctx.projectId,
         timestamp: new Date().toISOString(),
       });
     } else if (circ.protectedMutation) {
+      if (dryRun) {
+        return makeDeny(`${circ.reason} [DRY RUN: would deny protected mutation without writing denial ledger].`);
+      }
       const verdict = evaluateProtectedMutationDenial(ctx, circ.target, circ.channel, Date.now());
       if (verdict.escalate) {
         const escalation = escalateScoped(ctx, {
@@ -3170,7 +3254,7 @@ function processPreToolUse(input) {
       });
       return makeDeny(circ.reason);
     } else if (circ.denyOnly) {
-      appendViolation({
+      if (!dryRun) appendViolation({
         type: 'deny-only',
         reason: circ.reason,
         tool: toolName,
@@ -3179,6 +3263,10 @@ function processPreToolUse(input) {
       });
       return makeDeny(circ.reason);
     } else {
+      if (dryRun) {
+        const target = chooseEscalationScope(ctx, circ);
+        return makeDeny(`${circ.reason}. [DRY RUN: would escalate ${escalationScopeLabel(target.scopeType, target.scopeId)}].`);
+      }
       const escalation = escalateScoped(ctx, {
         ...circ,
         restrictionGroups: getRestrictionGroups(toolName),
@@ -3193,20 +3281,23 @@ function processPreToolUse(input) {
 
   const recoveryGate = checkCompactionRecoveryGate(input, toolName, toolInput);
   if (recoveryGate.blocked) {
-    appendViolation({
+    if (!dryRun) appendViolation({
       type: 'post-compact-recovery-blocked',
       reason: recoveryGate.reason,
       tool: toolName,
       projectId: ctx.projectId,
       timestamp: new Date().toISOString(),
     });
-    return makeDeny(recoveryGate.reason);
+    if (dryRun) return makeDeny(recoveryGate.reason);
+    const hangCheck = recordDeniedActivity(effective);
+    return makeDeny(recoveryGate.reason + (hangCheck.hung ? ' ' + hangCheck.message : ''));
   }
 
   // Step 2: Check tool restriction
   const refreshedEffective = loadEffectiveState(ctx).effective;
   const restriction = checkToolRestriction(toolName, refreshedEffective.state, refreshedEffective, toolInput);
   if (!restriction.allowed) {
+    if (dryRun) return makeDeny(restriction.reason);
     const hangCheck = updateActivityTracking(refreshedEffective.state, true);
     saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
 
@@ -3215,14 +3306,16 @@ function processPreToolUse(input) {
   }
 
   // Step 3: Check verification gate (for git commit)
-  const verifyGate = checkVerificationGate(toolName, toolInput);
+  const verifyGate = checkVerificationGate(toolName, toolInput, { dryRun });
   if (verifyGate.blocked) {
-    appendViolation({
+    if (!dryRun) appendViolation({
       type: 'verification-gate-blocked',
       tool: toolName,
       command: (toolInput?.command || '').slice(0, 200),
     });
-    return makeDeny(verifyGate.reason);
+    if (dryRun) return makeDeny(verifyGate.reason);
+    const hangCheck = recordDeniedActivity(refreshedEffective);
+    return makeDeny(verifyGate.reason + (hangCheck.hung ? ' ' + hangCheck.message : ''));
   }
 
   // Step 3b: Detect headless claude -p invocations in Bash
@@ -3264,6 +3357,10 @@ function processPreToolUse(input) {
   updateActivityTracking(refreshedEffective.state, false);
   saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
   return makeAllow();
+}
+
+function processPreToolUseDryRun(input) {
+  return processPreToolUse(input, { dryRun: true });
 }
 
 // ============================================================================
@@ -3703,6 +3800,8 @@ if (require.main === module) {
     let result;
     if (process.argv[2] === '--reset-check') {
       result = processResetCheck(input);
+    } else if (process.argv[2] === '--dry-run') {
+      result = processPreToolUseDryRun(input);
     } else {
       result = processPreToolUse(input);
     }
@@ -3740,6 +3839,7 @@ module.exports = {
   checkVerificationGate,
   updateActivityTracking,
   processPreToolUse,
+  processPreToolUseDryRun,
   resetEnforcement,
   parseResetScope,
   processResetCheck,

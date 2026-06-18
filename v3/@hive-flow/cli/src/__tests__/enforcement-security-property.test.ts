@@ -899,6 +899,81 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
+  it('blocks protected git restore/checkout targets even when git flags precede the subcommand', () => {
+    const state = {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    };
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'git -C "$CLAUDE_PROJECT_DIR" restore -- .claude/helpers/hook-handler.cjs' },
+      state,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'git --work-tree=. --git-dir=.git checkout HEAD -- .hive-flow/enforcement/state.json' },
+      state,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'git --exec-path checkout HEAD -- .claude/helpers/enforcement.cjs' },
+      state,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'git --super-prefix checkout HEAD -- .hive-flow/enforcement/state.json' },
+      state,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'git -C "$CLAUDE_PROJECT_DIR" checkout feat/self-compaction' },
+      state,
+    ).circumvention).toBe(false);
+  });
+
+  it('dry-runs hostile verifier probes without persisting live escalation state', () => {
+    resetModule();
+    resetEnforcementStoresForTest();
+
+    const probeInput = {
+      session_id: 'audit-probe',
+      tool_name: 'Bash',
+      tool_input: {
+        command: 'git checkout HEAD -- .claude/helpers/enforcement.cjs',
+      },
+    };
+
+    const dryRun = enf.processPreToolUseDryRun(probeInput);
+
+    expect(dryRun.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(dryRun.hookSpecificOutput.permissionDecisionReason).toContain('CIRCUMVENTION: Git operation targeting enforcement/hook files');
+    expect(dryRun.hookSpecificOutput.permissionDecisionReason).toContain('DRY RUN');
+    expect(readScopedState('global', 'global')).toBeNull();
+    expect(readScopedState('session', 'audit-probe')).toBeNull();
+    expect(readViolationRows()).toEqual([]);
+
+    const live = enf.processPreToolUse(probeInput);
+    expect(live.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(live.hookSpecificOutput.permissionDecisionReason).toContain('Escalated global to level');
+    expect(readScopedState('global', 'global')?.level).toBe(enf.LEVELS.RESTRICTED);
+    expect(readViolationRows()).toEqual([
+      expect.objectContaining({
+        type: 'escalation',
+        reason: 'CIRCUMVENTION: Git operation targeting enforcement/hook files',
+        scopeType: 'global',
+        sessionId: 'audit-probe',
+      }),
+    ]);
+  });
+
   it('blocks mutating work after compact until recovery is acknowledged', () => {
     const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
     mkdirSync(dirname(recoveryPath), { recursive: true });
@@ -1347,6 +1422,93 @@ describe('enforcement security property contracts', () => {
       { command: 'node .claude/helpers/enforcement.cjs --reset' },
       state,
     ).circumvention).toBe(true);
+  });
+
+  it('blocks direct clear-role hook invocation from Bash even with forged hook input', () => {
+    const state = {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      history: [],
+      integrityCompromised: false,
+    };
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'node .claude/helpers/hook-handler.cjs clear-role' },
+      state,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
+      { command: 'printf \'{"hook_event_name":"UserPromptSubmit","user_prompt":"/clear-role"}\' | node .claude/helpers/hook-handler.cjs clear-role' },
+      state,
+    ).circumvention).toBe(true);
+  });
+
+  it('counts compaction recovery gate denials toward hang detection', () => {
+    const projectId = enf.getProjectScopeId();
+    writeScopedState('global', 'global', {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      consecutiveDenials: 4,
+    });
+    writeScopedState('project', projectId, {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      consecutiveDenials: 4,
+    });
+    writeScopedState('session', 'session-a', {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      consecutiveDenials: 4,
+    });
+    const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
+    mkdirSync(dirname(recoveryPath), { recursive: true });
+    writeFileSync(recoveryPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-required',
+      sessionId: 'session-a',
+      recoveryNonce: 'nonce-a',
+    }));
+
+    const result = enf.processPreToolUse({
+      hook_event_name: 'PreToolUse',
+      session_id: 'session-a',
+      tool_name: 'Write',
+      tool_input: { file_path: 'src/after-compact.ts' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Agent appears hung');
+    expect(readScopedState('session', 'session-a')?.consecutiveDenials).toBe(5);
+    const projectDenials = Number(readScopedState('project', projectId)?.consecutiveDenials || 0);
+    const globalDenials = Number(readScopedState('global', 'global')?.consecutiveDenials || 0);
+    expect(Math.max(projectDenials, globalDenials)).toBe(4);
+  });
+
+  it('counts verification gate denials toward hang detection', () => {
+    const projectId = enf.getProjectScopeId();
+    writeScopedState('project', projectId, {
+      level: 0,
+      violations: 0,
+      restrictedGroups: [],
+      consecutiveDenials: 4,
+    });
+    const swarmDir = join(root, '.hive-flow', 'swarm');
+    mkdirSync(swarmDir, { recursive: true });
+
+    const result = enf.processPreToolUse({
+      hook_event_name: 'PreToolUse',
+      tool_name: 'Bash',
+      tool_input: { command: 'git commit -m "needs verification"' },
+    });
+
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('Agent appears hung');
+    expect(readScopedState('project', projectId)?.consecutiveDenials).toBe(5);
   });
 
   it('does not classify filenames containing reset-enforcement as reset invocations', () => {

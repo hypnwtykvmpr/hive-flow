@@ -149,6 +149,13 @@ function readAuditEvents(hiveHome: string): string[] {
 }
 
 describe('hive enforcement watcher launch', () => {
+  it('launches the watcher outside the hive record lock', () => {
+    const source = readFileSync(sourceHook, 'utf8');
+    expect(source).not.toContain('queenId = record.queenId;\n\n    ensureHiveWatcherLaunched(toolName, sanitizedId);');
+    expect(source).toContain('releaseLock(lockPath);\n      if (shouldLaunchWatcher) ensureHiveWatcherLaunched(toolName, sanitizedId);');
+    expect(source).toContain('releaseLock(lockPath);\n  if (shouldLaunchWatcher) ensureHiveWatcherLaunched(toolName, sanitizedId);');
+  });
+
   it('launches the completion watcher before the fully staffed early return', () => {
     const root = makeTempProject();
     try {

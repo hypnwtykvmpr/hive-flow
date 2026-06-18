@@ -1,5 +1,6 @@
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -8,8 +9,12 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
+const AGENT_ACTIVITY_LOGGER = join(REPO_ROOT, '.claude', 'helpers', 'agent-activity-logger.cjs');
 const ACTIVITY_LOGGER = join(REPO_ROOT, '.claude', 'helpers', 'enforcer-activity-logger.cjs');
 const MONITOR = join(REPO_ROOT, '.claude', 'helpers', 'enforcer-monitor.cjs');
+const ROLE_ENFORCEMENT = join(REPO_ROOT, '.claude', 'helpers', 'role-enforcement.cjs');
+const PROTECTED_PATHS = join(REPO_ROOT, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
+const PROTECTED_PATHS_POLICY = join(REPO_ROOT, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.policy.json');
 
 const tempRoots = [];
 
@@ -39,9 +44,34 @@ function runHook(script, input, { hiveHome, projectDir, agentId = 'queen-1' }) {
   return JSON.parse(result.stdout.trim() || '{}');
 }
 
+function installAgentActivityHook(projectDir) {
+  const helperDir = join(projectDir, '.claude', 'helpers');
+  const policyDir = join(projectDir, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard');
+  mkdirSync(helperDir, { recursive: true });
+  mkdirSync(policyDir, { recursive: true });
+  copyFileSync(AGENT_ACTIVITY_LOGGER, join(helperDir, 'agent-activity-logger.cjs'));
+  copyFileSync(ROLE_ENFORCEMENT, join(helperDir, 'role-enforcement.cjs'));
+  copyFileSync(PROTECTED_PATHS, join(policyDir, 'protected-paths.cjs'));
+  copyFileSync(PROTECTED_PATHS_POLICY, join(policyDir, 'protected-paths.policy.json'));
+  return join(helperDir, 'agent-activity-logger.cjs');
+}
+
 function writeJsonl(filePath, rows) {
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${rows.map(row => JSON.stringify(row)).join('\n')}\n`);
+}
+
+function writeSignedRole(hiveHome, agentId, state) {
+  const key = 'enforcer-telemetry-test-key';
+  const keyPath = join(hiveHome, 'enforcement', '.hmac-key');
+  mkdirSync(dirname(keyPath), { recursive: true });
+  writeFileSync(keyPath, key, { mode: 0o600 });
+  const roleFile = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
+  mkdirSync(dirname(roleFile), { recursive: true });
+  writeFileSync(roleFile, JSON.stringify({
+    state,
+    hmac: createHmac('sha256', key).update(JSON.stringify(state)).digest('hex'),
+  }, null, 2));
 }
 
 describe('enforcer telemetry global home', () => {
@@ -56,12 +86,7 @@ describe('enforcer telemetry global home', () => {
     const projectDir = makeTempDir('hf-enforcer-telemetry-project-');
     const agentId = 'queen-logger';
 
-    const globalRole = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
-    mkdirSync(dirname(globalRole), { recursive: true });
-    writeFileSync(globalRole, JSON.stringify({
-      state: { type: 'queen', hiveId: 'hive-a' },
-      hmac: 'not-checked-by-telemetry-peek',
-    }));
+    writeSignedRole(hiveHome, agentId, { type: 'queen', hiveId: 'hive-a' });
 
     runHook(ACTIVITY_LOGGER, { tool_name: 'Bash' }, { hiveHome, projectDir, agentId });
 
@@ -75,6 +100,46 @@ describe('enforcer telemetry global home', () => {
     assert.equal(row.event, 'direct-work');
     assert.equal(row.agentId, agentId);
     assert.equal(row.hiveId, 'hive-a');
+  });
+
+  it('activity logger ignores tampered role envelopes instead of trusting fast-peek metadata', () => {
+    const hiveHome = makeTempDir('hf-enforcer-telemetry-home-');
+    const projectDir = makeTempDir('hf-enforcer-telemetry-project-');
+    const agentId = 'queen-tampered';
+
+    const globalRole = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
+    mkdirSync(dirname(globalRole), { recursive: true });
+    writeFileSync(globalRole, JSON.stringify({
+      state: { type: 'queen', hiveId: 'forged-hive' },
+      hmac: '0'.repeat(64),
+    }, null, 2));
+
+    runHook(ACTIVITY_LOGGER, { tool_name: 'mcp__hive-flow__queen_task_worker' }, { hiveHome, projectDir, agentId });
+
+    const row = JSON.parse(readFileSync(join(hiveHome, 'enforcement', 'enforcer-activity.jsonl'), 'utf8').trim());
+    assert.equal(row.event, 'delegation');
+    assert.equal(row.agentId, agentId);
+    assert.equal(row.hiveId, null);
+  });
+
+  it('agent activity logger reads role metadata only through the HMAC-verified loader', () => {
+    const hiveHome = makeTempDir('hf-agent-activity-home-');
+    const projectDir = makeTempDir('hf-agent-activity-project-');
+    const script = installAgentActivityHook(projectDir);
+    const agentId = 'agent-activity-tampered';
+    const roleFile = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
+    mkdirSync(dirname(roleFile), { recursive: true });
+    writeFileSync(roleFile, JSON.stringify({
+      state: { type: 'queen', hiveId: 'forged-agent-hive' },
+      hmac: '0'.repeat(64),
+    }, null, 2));
+
+    runHook(script, { tool_name: 'Bash', tool_input: { command: 'echo ok' } }, { hiveHome, projectDir, agentId });
+
+    const row = JSON.parse(readFileSync(join(projectDir, '.hive-flow', 'logs', 'activity.jsonl'), 'utf8').trim());
+    assert.equal(row.agentId, agentId);
+    assert.equal(row.hiveId, null);
+    assert.equal(row.role, null);
   });
 
   it('monitor reads global activity and writes reports under HIVE_FLOW_HOME, not project .hive-flow', () => {
@@ -120,5 +185,26 @@ describe('enforcer telemetry global home', () => {
     assert.ok(queen, 'expected merged queen report entry');
     assert.equal(queen.delegation, 1);
     assert.equal(queen.direct, 1);
+  });
+
+  it('monitor deduplicates the same activity replayed through global and legacy stores', () => {
+    const hiveHome = makeTempDir('hf-enforcer-telemetry-home-');
+    const projectDir = makeTempDir('hf-enforcer-telemetry-project-');
+    const copiedMonitor = join(projectDir, '.claude', 'helpers', 'enforcer-monitor.cjs');
+    const agentId = 'queen-dedupe';
+    const now = new Date().toISOString();
+    const row = { ts: now, timestamp: now, event: 'delegation', agentId };
+
+    mkdirSync(dirname(copiedMonitor), { recursive: true });
+    copyFileSync(MONITOR, copiedMonitor);
+    writeJsonl(join(hiveHome, 'enforcement', 'enforcer-activity.jsonl'), [row]);
+    writeJsonl(join(projectDir, '.hive-flow', 'enforcement', 'enforcer-activity.jsonl'), [row]);
+
+    const report = runHook(copiedMonitor, { hours: 1 }, { hiveHome, projectDir, agentId });
+    const queen = report.perQueen.find(entry => entry.queenId === agentId);
+
+    assert.ok(queen, 'expected deduped queen report entry');
+    assert.equal(queen.delegation, 1);
+    assert.equal(queen.direct, 0);
   });
 });

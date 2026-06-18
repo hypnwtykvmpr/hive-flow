@@ -647,6 +647,7 @@ async function processPostToolUse(input) {
   let liveWorkerCount;
   let deficit;
   let queenId;
+  let shouldLaunchWatcher = false;
   try {
     record = loadHiveRecord(sanitizedId);
     if (!record) {
@@ -661,8 +662,7 @@ async function processPostToolUse(input) {
     }
 
     queenId = record.queenId;
-
-    ensureHiveWatcherLaunched(toolName, sanitizedId);
+    shouldLaunchWatcher = true;
 
     // Count live workers plus any already-reserved budget slots.
     const workers = Array.isArray(record.workers) ? record.workers : [];
@@ -681,6 +681,7 @@ async function processPostToolUse(input) {
         saveHiveRecord(sanitizedId, record);
       }
       releaseLock(lockPath);
+      if (shouldLaunchWatcher) ensureHiveWatcherLaunched(toolName, sanitizedId);
       appendAuditLog({
         event: 'hive-enforcement-ok',
         hiveId: sanitizedId,
@@ -706,6 +707,7 @@ async function processPostToolUse(input) {
 
   // Step 2: Release lock BEFORE spawning (spawning may take time)
   releaseLock(lockPath);
+  if (shouldLaunchWatcher) ensureHiveWatcherLaunched(toolName, sanitizedId);
 
   // Step 3: Load agent-tools from dist/
   const agentTools = await loadAgentTools();

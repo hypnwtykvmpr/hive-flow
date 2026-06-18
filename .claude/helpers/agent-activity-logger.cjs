@@ -7,19 +7,17 @@
 const fs = require('fs');
 const path = require('path');
 
-const { getRoleFilePath } = require('./role-enforcement.cjs');
+const { loadRole } = require('./role-enforcement.cjs');
 
 const PROJECT_DIR = path.resolve(__dirname, '..', '..'); // BUG-10: __dirname-derived, not env-poisonable
 const LOG_DIR = path.join(PROJECT_DIR, '.hive-flow', 'logs');
 const ACTIVITY_FILE = path.join(LOG_DIR, 'activity.jsonl');
 
-/** Fast role peek — no HMAC verify (hook speed). */
+/** Fast role peek via role-enforcement's HMAC-verified loader. */
 function peekRole(agentId) {
   try {
-    const roleFile = getRoleFilePath(agentId);
-    if (!roleFile || !fs.existsSync(roleFile)) return { hiveId: null, role: null };
-    const raw = JSON.parse(fs.readFileSync(roleFile, 'utf8'));
-    const state = raw.state || raw;
+    const state = loadRole(agentId);
+    if (!state) return { hiveId: null, role: null };
     return {
       hiveId: state.hiveId ?? null,
       role: state.type ?? null,

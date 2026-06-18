@@ -206,19 +206,23 @@ function computeHmac(data, key) {
 }
 
 function verifyRoleHmac(envelope) {
-  if (!envelope || typeof envelope !== 'object') return false;
-  if (!envelope.state || !envelope.hmac) return false;
+  try {
+    if (!envelope || typeof envelope !== 'object') return false;
+    if (!envelope.state || !envelope.hmac) return false;
 
-  const key = getHmacKey();
-  if (!key) return false;
+    const key = getHmacKey();
+    if (!key) return false;
 
-  const expected = computeHmac(envelope.state, key);
-  const expectedBuf = Buffer.from(expected, 'hex');
-  const actualBuf = Buffer.from(envelope.hmac, 'hex');
+    const expected = computeHmac(envelope.state, key);
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const actualBuf = Buffer.from(String(envelope.hmac), 'hex');
 
-  if (expectedBuf.length !== actualBuf.length) return false;
+    if (expectedBuf.length !== actualBuf.length) return false;
 
-  return crypto.timingSafeEqual(expectedBuf, actualBuf);
+    return crypto.timingSafeEqual(expectedBuf, actualBuf);
+  } catch {
+    return false;
+  }
 }
 
 // ============================================================================
@@ -310,13 +314,28 @@ function loadQueenHive(hiveId) {
   const safeHiveId = sanitizeId(String(hiveId));
   if (!safeHiveId || safeHiveId !== hiveId) return null;
   try {
-    const hiveFile = path.join(PROJECT_DIR, '.hive-flow', 'hives', safeHiveId, 'hive.json');
+    const hiveFile = getQueenHiveFilePath(hiveId);
     if (!fs.existsSync(hiveFile)) return null;
     const stats = fs.statSync(hiveFile);
     if (stats.size > 102400) return null; // 100KB sanity limit
     return JSON.parse(fs.readFileSync(hiveFile, 'utf8'));
   } catch {
     return null;
+  }
+}
+
+function getQueenHiveFilePath(hiveId) {
+  const safeHiveId = sanitizeId(String(hiveId || ''));
+  if (!safeHiveId || safeHiveId !== hiveId) return null;
+  return path.join(PROJECT_DIR, '.hive-flow', 'hives', safeHiveId, 'hive.json');
+}
+
+function queenHiveFileExists(hiveId) {
+  try {
+    const hiveFile = getQueenHiveFilePath(hiveId);
+    return Boolean(hiveFile && fs.existsSync(hiveFile));
+  } catch {
+    return false;
   }
 }
 
@@ -469,6 +488,12 @@ function enforceQueenRole(toolName, role, agentId) {
 
     const hive = loadQueenHive(hiveId);
     if (!hive) {
+      if (queenHiveFileExists(hiveId)) {
+        return makeDeny(
+          '[QUEEN DELEGATION] Hive record is unreadable or invalid. ' +
+          'Fix .hive-flow/hives state before using direct work tools.'
+        );
+      }
       incrementDirectWorkCount(agentId, role);
       return makeAllow(
         '[QUEEN DELEGATION] Hive record missing — verify hive id and .hive-flow/hives state. ' +
@@ -497,7 +522,10 @@ function enforceQueenRole(toolName, role, agentId) {
     incrementDirectWorkCount(agentId, role);
     return makeAllow();
   } catch {
-    return makeAllow();
+    return makeDeny(
+      '[QUEEN DELEGATION ERROR] Internal error while checking hive delegation state. ' +
+      'Tool blocked for governance safety.'
+    );
   }
 }
 

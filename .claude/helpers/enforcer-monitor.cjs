@@ -62,6 +62,26 @@ function loadRecentLines(filePath, cutoffMs) {
   return out;
 }
 
+function activityDedupKey(row) {
+  return [
+    row.agentId || '',
+    row.event || '',
+    row.timestamp || row.ts || '',
+  ].join('\0');
+}
+
+function dedupeActivityRows(rows) {
+  const seen = new Set();
+  const out = [];
+  for (const row of rows) {
+    const key = activityDedupKey(row);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
 function main() {
   // Allow stdin JSON override for window hours (optional hook use)
   let hours = parseArgsHours();
@@ -71,9 +91,13 @@ function main() {
   } catch { /* ignore */ }
 
   const cutoff = Date.now() - hours * 3600000;
-  // Merge global + legacy recent activity so migration loses no in-flight telemetry. Each event is
-  // written to exactly one location per deploy, so there is no double-counting.
-  const rows = [...loadRecentLines(ACTIVITY, cutoff), ...loadRecentLines(LEGACY_ACTIVITY, cutoff)];
+  // Merge global + legacy recent activity so migration loses no in-flight telemetry.
+  // Dedup by the stable row identity because some interrupted migrations replay the
+  // same event through both stores.
+  const rows = dedupeActivityRows([
+    ...loadRecentLines(ACTIVITY, cutoff),
+    ...loadRecentLines(LEGACY_ACTIVITY, cutoff),
+  ]);
   const MIN_SAMPLES = 3;
   const byQueen = {};
   for (const r of rows) {

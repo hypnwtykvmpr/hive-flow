@@ -306,6 +306,17 @@ describe('Role Enforcement System', () => {
       const result = roleEnf.enforceQueenRole('Bash', { type: 'queen', hiveId: 'nonexistent-hive' });
       expect(result.hookSpecificOutput?.permissionDecision).toBe('allow');
     });
+
+    it('denies queen work tools when an existing hive record is malformed', () => {
+      const hiveDir = require('path').join(ROLE_TEST_PROJECT_REAL_DIR, '.hive-flow', 'hives', 'hive-malformed');
+      mkdirSync(hiveDir, { recursive: true });
+      writeFileSync(require('path').join(hiveDir, 'hive.json'), '{"hiveId":');
+
+      const result = roleEnf.enforceQueenRole('Bash', { type: 'queen', hiveId: 'hive-malformed' }, 'queen-agent');
+
+      expect(result.hookSpecificOutput?.permissionDecision).toBe('deny');
+      expect(result.hookSpecificOutput?.permissionDecisionReason).toContain('Hive record is unreadable');
+    });
   });
 
   // ── verifyRoleHmac ──
