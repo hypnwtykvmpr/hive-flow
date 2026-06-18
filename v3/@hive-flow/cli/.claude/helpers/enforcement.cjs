@@ -3322,8 +3322,10 @@ function processPreToolUse(input, options = {}) {
   if (toolName === 'Bash') {
     const bashCmd = toolInput?.command || '';
     if (/\bclaude\s+(-p|--print)\b/i.test(bashCmd)) {
-      updateActivityTracking(refreshedEffective.state, false);
-      saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+      if (!dryRun) {
+        updateActivityTracking(refreshedEffective.state, false);
+        saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+      }
       return makeAllow(
         '[ENFORCEMENT] Headless `claude -p` detected. WARNING: Headless workers bypass hook enforcement, verification gates, and hive composition tracking. Consider using Task tool or MCP agent_spawn instead for governed execution.'
       );
@@ -3332,8 +3334,10 @@ function processPreToolUse(input, options = {}) {
 
   // Step 4: SendMessage at HALTED — append enforcement warning (12.14)
   if (toolName === 'SendMessage' && refreshedEffective.state.level >= LEVELS.HALTED) {
-    updateActivityTracking(refreshedEffective.state, false);
-    saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+    if (!dryRun) {
+      updateActivityTracking(refreshedEffective.state, false);
+      saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+    }
     return makeAllow(
       '[ENFORCEMENT] This agent is under enforcement restrictions (HALTED). Do not execute tool operations on its behalf.'
     );
@@ -3346,16 +3350,20 @@ function processPreToolUse(input, options = {}) {
   // runs AFTER role-enforcement.cjs in settings.json SubagentStart hooks.
   // If ordering changes, role identity text may be lost at WARNED level.
   if (refreshedEffective.state.level === LEVELS.WARNED) {
-    updateActivityTracking(refreshedEffective.state, false);
-    saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+    if (!dryRun) {
+      updateActivityTracking(refreshedEffective.state, false);
+      saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+    }
     return makeAllow(
       `[ENFORCEMENT WARNING: ${escalationScopeLabel(refreshedEffective.scopeType, refreshedEffective.scopeId)}] You have ${refreshedEffective.state.violations} violation(s). Further circumvention will restrict tool access. Follow the plan exactly.`
     );
   }
 
   // Step 6: Normal pass-through
-  updateActivityTracking(refreshedEffective.state, false);
-  saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+  if (!dryRun) {
+    updateActivityTracking(refreshedEffective.state, false);
+    saveScopedState(refreshedEffective.scopeType, refreshedEffective.scopeId, refreshedEffective.state);
+  }
   return makeAllow();
 }
 

@@ -974,6 +974,24 @@ describe('enforcement security property contracts', () => {
     ]);
   });
 
+  it('dry-runs allowed verifier probes without updating activity state', () => {
+    resetModule();
+    resetEnforcementStoresForTest();
+
+    const allowedInputs = [
+      { tool_name: 'Read', tool_input: { file_path: join(root, 'README.md') } },
+      { tool_name: 'Bash', tool_input: { command: 'git status --short --branch' } },
+      { tool_name: 'Bash', tool_input: { command: 'claude -p "status"' } },
+    ];
+
+    for (const input of allowedInputs) {
+      const result = enf.processPreToolUseDryRun(input);
+      expect(result.hookSpecificOutput?.permissionDecision).not.toBe('deny');
+      expect(readScopedState('global', 'global')).toBeNull();
+      expect(readViolationRows()).toEqual([]);
+    }
+  });
+
   it('blocks mutating work after compact until recovery is acknowledged', () => {
     const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
     mkdirSync(dirname(recoveryPath), { recursive: true });
