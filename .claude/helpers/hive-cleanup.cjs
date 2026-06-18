@@ -325,16 +325,18 @@ async function cleanupIdleAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS)
         }
 
         // Compute how many we can terminate:
-        // terminatable = max(0, idleCount - max(0, MIN_WORKERS - nonIdleCount))
-        // This ensures at least MIN_WORKERS_PER_HIVE workers remain alive.
-        const keepFromIdle = Math.max(0, MIN_WORKERS_PER_HIVE - nonIdleWorkers.length);
+        // terminatable = max(0, idleCount - max(0, MIN_WORKERS - nonQueenNonIdleCount))
+        // MIN_WORKERS_PER_HIVE is the NON-QUEEN floor: queens are tracked separately
+        // and must never be terminated, so exclude them from the floor calculation.
+        const nonQueenNonIdleCount = nonIdleWorkers.filter(w => w.role !== 'queen').length;
+        const keepFromIdle = Math.max(0, MIN_WORKERS_PER_HIVE - nonQueenNonIdleCount);
         const terminatableCount = Math.max(0, idleWorkers.length - keepFromIdle);
 
         if (terminatableCount === 0) return;
 
-        // Select workers to terminate (oldest idle first)
+        // Select workers to terminate (oldest idle first: sort by idleSince, fall back to spawnedAt)
         const toTerminate = idleWorkers
-          .sort((a, b) => new Date(a.spawnedAt).getTime() - new Date(b.spawnedAt).getTime())
+          .sort((a, b) => new Date(a.idleSince || a.spawnedAt).getTime() - new Date(b.idleSince || b.spawnedAt).getTime())
           .slice(0, terminatableCount);
 
         // Mark as terminated in hive record

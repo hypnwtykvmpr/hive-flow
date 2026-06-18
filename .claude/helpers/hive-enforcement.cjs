@@ -82,7 +82,7 @@ const STALE_LOCK_MS = 30000; // 30s
 const PROVIDERS = ['gemini-cli', 'codex-cli', 'anthropic-cli'];
 const PROVIDER_MODELS = {
   'gemini-cli': 'gemini-3.1-pro-preview',
-  'codex-cli': 'gpt-5.4',
+  'codex-cli': 'gpt-5.5',
   'anthropic-cli': 'sonnet',
 };
 

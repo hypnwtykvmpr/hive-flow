@@ -467,13 +467,28 @@ function extractHiveSentinelState() {
     for (const f of files) {
       try {
         const raw = JSON.parse(readFileSync(join(dataDir, f), 'utf-8'));
+        // Derive progress fields from the fields the watcher actually writes.
+        // The watcher emits: completedCount, failedCount, terminatedCount, runningCount,
+        // idleCount, workerCount, updatedAt — it never emits workersReported / workersDone directly.
+        // Backward compat: if those fields ARE present (future watcher), honour them.
+        // workersDone means completed only; failed/terminated are not "done" under the formatter text.
+        const workersDone = raw.workersDone != null
+          ? (raw.workersDone || 0)
+          : (raw.completedCount || 0);
+        // workersReported is the total reported worker set, not just terminal workers.
+        const workersReported = raw.workersReported != null
+          ? (raw.workersReported || 0)
+          : (typeof raw.workerCount === 'number' && Number.isFinite(raw.workerCount))
+            ? raw.workerCount
+            : ((raw.completedCount || 0) + (raw.runningCount || 0) + (raw.failedCount || 0) +
+               (raw.idleCount || 0) + (raw.terminatedCount || 0));
         watchers.push({
           id: f.replace(/^watcher-/, '').replace(/\.json$/, ''),
           hiveId: raw.hiveId || null,
           status: raw.status || 'unknown',
           lastHeartbeat: raw.lastHeartbeat || raw.updatedAt || null,
-          workersReported: raw.workersReported || 0,
-          workersDone: raw.workersDone || 0,
+          workersReported,
+          workersDone,
         });
       } catch { /* skip malformed watcher file */ }
     }
