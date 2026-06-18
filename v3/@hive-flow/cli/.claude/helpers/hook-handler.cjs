@@ -511,12 +511,20 @@ const handlers = {
     // Auto-reset enforcement on new session start — only WARNED/RESTRICTED.
     // HALTED (level 3) is PRESERVED across compaction/session restarts.
     // Only a human /enforcement-reset can clear HALTED.
+    // Reset only the effective project/global scope reported by enforcement.cjs;
+    // child agent/hive/session scopes and roles must survive session restore.
     try {
       const enforcementMod = require(path.join(helpersDir, 'enforcement.cjs'));
       const status = enforcementMod.getEnforcementStatus();
       if (status && status.level > 0 && status.level < 3) {
-        enforcementMod.resetEnforcement();
-        console.log(`[ENFORCEMENT] Auto-reset from level ${status.level} to NORMAL (WARNED/RESTRICTED cleared, HALTED preserved)`);
+        const resetScope = status.scopeType === 'project'
+          ? { scope: 'project', projectId: status.scopeId }
+          : { scope: 'global' };
+        enforcementMod.resetEnforcement(resetScope);
+        const scopeLabel = status.scopeType === 'project'
+          ? `project ${status.scopeId || 'current'}`
+          : 'global';
+        console.log(`[ENFORCEMENT] Auto-reset from level ${status.level} to NORMAL (${scopeLabel} WARNED/RESTRICTED cleared, child scopes preserved, HALTED preserved)`);
       } else if (status && status.level >= 3) {
         console.log(`[ENFORCEMENT] Level ${status.level} (HALTED) preserved across session restore — human /enforcement-reset required`);
       }
@@ -946,8 +954,9 @@ const handlers = {
   },
 
   'clear-role': () => {
-    // BUG-09: HMAC-signed IPC — matches enforcement-reset-check pattern
-    const crypto = require('crypto');
+    // UserPromptSubmit-only. Do not self-sign inside this process: generating
+    // and verifying the same token here is vacuous auth and lets direct helper
+    // invocation strip roles without a real human prompt hook.
     let rawInput = '';
     try { rawInput = fs.readFileSync(0, 'utf8'); } catch { /* empty stdin */ }
     let input;
@@ -956,17 +965,15 @@ const handlers = {
     const userPrompt = input?.user_prompt || input?.prompt || '';
     if (!/\/clear-role\b/i.test(userPrompt)) { console.log(JSON.stringify({})); return; }
 
-    // Generate and verify HMAC token (human-only command)
-    const enforcementMod = require(path.join(__dirname, 'enforcement.cjs'));
-    const key = enforcementMod.getOrCreateHmacKey();
-    const timestamp = String(Date.now());
-    const hmacPayload = `clear-role:${timestamp}`;
-    const signature = crypto.createHmac('sha256', key).update(hmacPayload).digest('hex');
-    // Self-signed (hook-handler generates + verifies in same call — human-triggered via UserPromptSubmit)
-    const expectedBuf = Buffer.from(signature, 'hex');
-    const actualBuf = Buffer.from(signature, 'hex');
-    if (expectedBuf.length !== actualBuf.length || !crypto.timingSafeEqual(expectedBuf, actualBuf)) {
-      console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', permissionDecision: 'deny', permissionDecisionReason: '[ROLE] Clear-role HMAC verification failed.' } }));
+    const hookEventName = input?.hook_event_name || input?.hookEventName || '';
+    if (hookEventName !== 'UserPromptSubmit') {
+      console.log(JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'UserPromptSubmit',
+          permissionDecision: 'deny',
+          permissionDecisionReason: '[ROLE] /clear-role is allowed only from the UserPromptSubmit hook.',
+        },
+      }));
       return;
     }
 

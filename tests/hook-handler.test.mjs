@@ -5,11 +5,13 @@ import { createHmac } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
 const SCRIPT = join(REPO_ROOT, '.claude/helpers/hook-handler.cjs');
+const require = createRequire(import.meta.url);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,6 +68,64 @@ function installIsolatedHookHelpers(root) {
 
 function parseHookOutput(stdout) {
   return JSON.parse(stdout.trim() || '{}')?.hookSpecificOutput || {};
+}
+
+function projectScopeIdFromIsolatedHelper(script, { projectDir, hiveHome }) {
+  const enforcementScript = join(dirname(script), 'enforcement.cjs');
+  const previous = {
+    HIVE_FLOW_HOME: process.env.HIVE_FLOW_HOME,
+    CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+    HIVE_FLOW_PROJECT_ROOT: process.env.HIVE_FLOW_PROJECT_ROOT,
+  };
+  try {
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.CLAUDE_PROJECT_DIR = projectDir;
+    delete process.env.HIVE_FLOW_PROJECT_ROOT;
+    delete require.cache[require.resolve(enforcementScript)];
+    return require(enforcementScript).getProjectScopeId();
+  } finally {
+    if (previous.HIVE_FLOW_HOME === undefined) delete process.env.HIVE_FLOW_HOME;
+    else process.env.HIVE_FLOW_HOME = previous.HIVE_FLOW_HOME;
+    if (previous.CLAUDE_PROJECT_DIR === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = previous.CLAUDE_PROJECT_DIR;
+    if (previous.HIVE_FLOW_PROJECT_ROOT === undefined) delete process.env.HIVE_FLOW_PROJECT_ROOT;
+    else process.env.HIVE_FLOW_PROJECT_ROOT = previous.HIVE_FLOW_PROJECT_ROOT;
+  }
+}
+
+function freshEnforcementState(overrides = {}) {
+  return {
+    level: 0,
+    violations: 0,
+    consecutiveDenials: 0,
+    lastActivity: new Date().toISOString(),
+    restrictedGroups: [],
+    history: [],
+    resetAt: null,
+    integrityCompromised: false,
+    ...overrides,
+  };
+}
+
+function ensureGlobalHmacKey(hiveHome) {
+  const keyFile = join(hiveHome, 'enforcement', '.hmac-key');
+  mkdirSync(dirname(keyFile), { recursive: true });
+  const key = 'hook-handler-test-hmac-key';
+  writeFileSync(keyFile, key, 'utf8');
+  return key;
+}
+
+function writeSignedEnvelope(filePath, state, key) {
+  mkdirSync(dirname(filePath), { recursive: true });
+  const hmac = createHmac('sha256', key)
+    .update(JSON.stringify(state))
+    .digest('hex');
+  writeFileSync(filePath, JSON.stringify({ state, hmac }, null, 2));
+}
+
+function readSignedState(filePath) {
+  const envelope = JSON.parse(readFileSync(filePath, 'utf8'));
+  return envelope.state || envelope;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +219,80 @@ describe('hook-handler.cjs', () => {
   });
 
   // =========================================================================
+  // 2c. clear-role — human prompt only, no self-signed bypass
+  // =========================================================================
+  describe('clear-role', () => {
+    it('denies a direct non-hook invocation and preserves the assigned role', () => {
+      const hiveHome = join(tmpDir, 'global-hive-home');
+      const agentId = 'clear-role-direct-denied';
+      const script = installIsolatedHookHelpers(tmpDir);
+
+      const setRes = runHandler('set-role', {
+        cwd: tmpDir,
+        script,
+        env: {
+          HIVE_FLOW_HOME: hiveHome,
+          AGENTIC_FLOW_AGENT_ID: agentId,
+        },
+        stdinData: JSON.stringify({ hook_event_name: 'UserPromptSubmit', user_prompt: '/set-role queen' }),
+      });
+      assert.equal(setRes.status, 0);
+      const roleFile = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
+      assert.ok(existsSync(roleFile), 'precondition: set-role should create role.json');
+
+      const clearRes = runHandler('clear-role', {
+        cwd: tmpDir,
+        script,
+        env: {
+          HIVE_FLOW_HOME: hiveHome,
+          AGENTIC_FLOW_AGENT_ID: agentId,
+        },
+        stdinData: JSON.stringify({ user_prompt: '/clear-role' }),
+      });
+
+      assert.equal(clearRes.status, 0);
+      const output = parseHookOutput(clearRes.stdout);
+      assert.equal(output.permissionDecision, 'deny');
+      assert.match(output.permissionDecisionReason || '', /UserPromptSubmit/);
+      assert.ok(existsSync(roleFile), 'direct invocation must not remove role.json');
+    });
+
+    it('clears the assigned role when invoked by the UserPromptSubmit hook', () => {
+      const hiveHome = join(tmpDir, 'global-hive-home');
+      const agentId = 'clear-role-human-hook';
+      const script = installIsolatedHookHelpers(tmpDir);
+
+      const setRes = runHandler('set-role', {
+        cwd: tmpDir,
+        script,
+        env: {
+          HIVE_FLOW_HOME: hiveHome,
+          AGENTIC_FLOW_AGENT_ID: agentId,
+        },
+        stdinData: JSON.stringify({ hook_event_name: 'UserPromptSubmit', user_prompt: '/set-role queen' }),
+      });
+      assert.equal(setRes.status, 0);
+      const roleFile = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
+      assert.ok(existsSync(roleFile), 'precondition: set-role should create role.json');
+
+      const clearRes = runHandler('clear-role', {
+        cwd: tmpDir,
+        script,
+        env: {
+          HIVE_FLOW_HOME: hiveHome,
+          AGENTIC_FLOW_AGENT_ID: agentId,
+        },
+        stdinData: JSON.stringify({ hook_event_name: 'UserPromptSubmit', user_prompt: '/clear-role' }),
+      });
+
+      assert.equal(clearRes.status, 0);
+      const output = parseHookOutput(clearRes.stdout);
+      assert.match(output.additionalContext || '', /ROLE CLEARED/);
+      assert.equal(existsSync(roleFile), false, 'UserPromptSubmit /clear-role should remove role.json');
+    });
+  });
+
+  // =========================================================================
   // 3. pre-task — registers entry in live-tasks.json
   // =========================================================================
   describe('pre-task', () => {
@@ -239,11 +373,10 @@ describe('hook-handler.cjs', () => {
     });
 
     it('resets .context-tracker.json', () => {
-      // The handler writes the tracker at helpersDir/../.context-tracker.json,
-      // which is REPO_ROOT/.claude/.context-tracker.json — not inside tmpDir.
-      const ctxFile = join(REPO_ROOT, '.claude', '.context-tracker.json');
+      const script = installIsolatedHookHelpers(tmpDir);
+      const ctxFile = join(tmpDir, '.claude', '.context-tracker.json');
 
-      runHandler('session-restore', { cwd: tmpDir });
+      runHandler('session-restore', { cwd: tmpDir, script });
 
       if (existsSync(ctxFile)) {
         const ctx = JSON.parse(readFileSync(ctxFile, 'utf8'));
@@ -262,6 +395,50 @@ describe('hook-handler.cjs', () => {
       // Marker should be deleted after session-restore reads it
       assert.ok(!existsSync(markerFile), 'forbidden-stop.json should be removed after session-restore');
       assert.match(res.stdout, /FORBIDDEN-STOP-VIOLATION/, 'Should warn about the forbidden stop in stdout');
+    });
+
+    it('auto-resets only the effective project/global scope and preserves child agent scopes', () => {
+      const hiveHome = join(tmpDir, 'global-hive-home');
+      const agentId = 'session-restore-child-preserved';
+      const script = installIsolatedHookHelpers(tmpDir);
+      const key = ensureGlobalHmacKey(hiveHome);
+      const projectId = projectScopeIdFromIsolatedHelper(script, { projectDir: tmpDir, hiveHome });
+      const projectStateFile = join(hiveHome, 'enforcement', 'projects', projectId, 'state.json');
+      const agentStateFile = join(hiveHome, 'enforcement', 'agents', agentId, 'state.json');
+      const roleFile = join(hiveHome, 'enforcement', 'agents', agentId, 'role.json');
+
+      writeSignedEnvelope(projectStateFile, freshEnforcementState({
+        level: 1,
+        violations: 2,
+        history: [{ reason: 'project warning' }],
+      }), key);
+      writeSignedEnvelope(agentStateFile, freshEnforcementState({
+        level: 2,
+        violations: 4,
+        history: [{ reason: 'agent restriction must survive' }],
+      }), key);
+      writeSignedEnvelope(roleFile, {
+        type: 'queen',
+        assignedAt: new Date().toISOString(),
+        assignedBy: 'human',
+        hiveId: null,
+        directWorkCount: 0,
+      }, key);
+
+      const res = runHandler('session-restore', {
+        cwd: tmpDir,
+        script,
+        env: {
+          HIVE_FLOW_HOME: hiveHome,
+          AGENTIC_FLOW_AGENT_ID: agentId,
+        },
+      });
+
+      assert.equal(res.status, 0, `session-restore should exit 0, stderr: ${res.stderr}`);
+      assert.match(res.stdout, /Auto-reset from level 1 to NORMAL/);
+      assert.equal(readSignedState(projectStateFile).level, 0, 'current project scope should be reset');
+      assert.equal(readSignedState(agentStateFile).level, 2, 'child agent scope must be preserved');
+      assert.ok(existsSync(roleFile), 'child agent role must be preserved by session-restore auto-reset');
     });
   });
 

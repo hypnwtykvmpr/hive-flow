@@ -567,10 +567,17 @@ function getState(agentId) {
 // Project-effective status: the current project's own escalation or any genuine
 // global escalation, whichever is higher. Routine escalations are project-scoped
 // via escalateScoped(), so sibling project escalations never surface here.
-function getStatusState() {
-  const project = getScopedState('project', getProjectScopeId()).state;
+function getStatusStateEntry() {
+  const projectScopeId = getProjectScopeId();
+  const project = getScopedState('project', projectScopeId).state;
   const global = getScopedState('global', 'global').state;
-  return project.level >= global.level ? project : global;
+  return project.level >= global.level
+    ? { state: project, scopeType: 'project', scopeId: projectScopeId }
+    : { state: global, scopeType: 'global', scopeId: 'global' };
+}
+
+function getStatusState() {
+  return getStatusStateEntry().state;
 }
 
 function saveState(state, agentId) {
@@ -3489,10 +3496,13 @@ function processResetCheck(input) {
 // ============================================================================
 
 function getEnforcementStatus() {
-  const state = getStatusState();
+  const entry = getStatusStateEntry();
+  const state = entry.state;
   const levelNames = ['Normal', 'Warned', 'Restricted', 'Halted'];
   return {
     level: state.level,
+    scopeType: entry.scopeType,
+    scopeId: entry.scopeId,
     levelName: levelNames[state.level] || 'Unknown',
     violations: state.violations,
     consecutiveDenials: state.consecutiveDenials,
