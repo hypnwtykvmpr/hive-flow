@@ -427,4 +427,53 @@ describe('hive-watcher regressions', () => {
     assert.match(source, /lastStaleSignature/);
     assert.doesNotMatch(source, /Reset stale counter/);
   });
+
+  it('d7rA-010 regression: poll loop calls pollWorkers exactly once per iteration (single snapshot)', () => {
+    // Structural assertion: the main poll loop must not contain inline pollWorkers() call-sites.
+    // All three former usages (handleStopRequest, appendPendingTerminal, status) must be collapsed
+    // into a single `const snapshot = pollWorkers(...)` at the top of the loop body.
+    const source = readFileSync(SCRIPT, 'utf8');
+
+    // The single cached read must be present
+    assert.match(
+      source,
+      /const snapshot = pollWorkers\(paths\.hivesDir, paths\.tasksDir, hiveId\)/,
+      'expected single snapshot assignment at top of poll loop',
+    );
+
+    // handleStopRequest must be called with the snapshot, not with an inline poll
+    assert.match(
+      source,
+      /handleStopRequest\(paths, hiveId, snapshot\)/,
+      'expected handleStopRequest to receive snapshot, not inline pollWorkers call',
+    );
+
+    // appendPendingTerminal must receive snapshot, not an inline poll
+    assert.match(
+      source,
+      /appendPendingTerminal\(\s*paths,\s*hiveId,\s*snapshot,/,
+      'expected appendPendingTerminal to receive snapshot, not inline pollWorkers call',
+    );
+
+    // status must be assigned from snapshot, not from a new pollWorkers call
+    assert.match(
+      source,
+      /const status = snapshot/,
+      'expected status to be aliased from snapshot, not from a fresh pollWorkers call',
+    );
+
+    // Guard: no inline pollWorkers calls should remain inside the while(true) loop body.
+    // Extract the loop body from "while (true) {" to the closing line to scope the check.
+    const loopStart = source.indexOf('// Main poll loop');
+    assert.ok(loopStart !== -1, 'could not locate main poll loop comment');
+    const loopBody = source.slice(loopStart);
+
+    // Count all pollWorkers( occurrences in the loop region — exactly one is allowed (the snapshot assignment)
+    const allMatches = [...loopBody.matchAll(/pollWorkers\(/g)];
+    assert.equal(
+      allMatches.length,
+      1,
+      `expected exactly 1 pollWorkers() call in the poll loop region, found ${allMatches.length}`,
+    );
+  });
 });

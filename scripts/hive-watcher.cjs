@@ -547,7 +547,10 @@ async function main() {
 
   // Main poll loop
   while (true) {
-    if (handleStopRequest(paths, hiveId, pollWorkers(paths.hivesDir, paths.tasksDir, hiveId))) {
+    // Single snapshot per iteration — all decisions below share the same consistent read.
+    const snapshot = pollWorkers(paths.hivesDir, paths.tasksDir, hiveId);
+
+    if (handleStopRequest(paths, hiveId, snapshot)) {
       break;
     }
 
@@ -562,15 +565,15 @@ async function main() {
       appendPendingTerminal(
         paths,
         hiveId,
-        pollWorkers(paths.hivesDir, paths.tasksDir, hiveId),
+        snapshot,
         `[HIVE TIMEOUT: ${hiveId}] Watcher reached ${MAX_RUNTIME_MS / 3600000}h safety cap. Check hive_status manually.`,
         config.sessionId || null,
       );
       break;
     }
 
-    // Poll worker status
-    const status = pollWorkers(paths.hivesDir, paths.tasksDir, hiveId);
+    // Reuse the snapshot taken at the top of this iteration
+    const status = snapshot;
 
     // Write progress file every cycle
     const ownerSessionId = config.sessionId || status.ownerSessionId || null;
