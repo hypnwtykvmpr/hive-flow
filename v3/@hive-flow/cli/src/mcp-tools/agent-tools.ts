@@ -1003,6 +1003,7 @@ export const agentTools: MCPTool[] = [
 
         if (agent) {
           return {
+            id: agent.agentId,
             agentId: agent.agentId,
             agentType: agent.agentType,
             status: agent.status,
@@ -1033,6 +1034,11 @@ export const agentTools: MCPTool[] = [
       type: 'object',
       properties: {
         status: { type: 'string', description: 'Filter by status' },
+        agentType: {
+          type: 'string',
+          enum: [...CANONICAL_AGENT_TYPES],
+          description: `Filter by canonical agent type. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+        },
         domain: { type: 'string', description: 'Filter by domain' },
         includeTerminated: { type: 'boolean', description: 'Include terminated agents' },
       },
@@ -1040,12 +1046,19 @@ export const agentTools: MCPTool[] = [
     handler: async (input) => {
       const store = loadAgentStore();
       let agents = Object.values(store.agents);
+      const requestedStatus = typeof input.status === 'string' ? input.status.trim() : '';
+      const includeAllStatuses = requestedStatus.toLowerCase() === 'all';
 
       // Filter by status
-      if (input.status) {
-        agents = agents.filter(a => a.status === input.status);
+      if (requestedStatus && !includeAllStatuses) {
+        agents = agents.filter(a => a.status === requestedStatus);
       } else if (!input.includeTerminated) {
         agents = agents.filter(a => a.status !== 'terminated');
+      }
+
+      // Filter by canonical agent type
+      if (typeof input.agentType === 'string' && input.agentType.trim()) {
+        agents = agents.filter(a => a.agentType === input.agentType);
       }
 
       // Filter by domain
@@ -1055,6 +1068,7 @@ export const agentTools: MCPTool[] = [
 
       return {
         agents: agents.map(a => ({
+          id: a.agentId,
           agentId: a.agentId,
           agentType: a.agentType,
           status: a.status,
@@ -1069,9 +1083,10 @@ export const agentTools: MCPTool[] = [
         })),
         total: agents.length,
         filters: {
-          status: input.status,
+          status: includeAllStatuses ? 'all' : requestedStatus || undefined,
+          agentType: input.agentType,
           domain: input.domain,
-          includeTerminated: input.includeTerminated,
+          includeTerminated: input.includeTerminated || includeAllStatuses,
         },
       };
     },

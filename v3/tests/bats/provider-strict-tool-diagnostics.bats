@@ -16,6 +16,7 @@ setup() {
   [[ "$output" == *"edit_file"* ]]
   [[ "$output" == *"web_fetch"* ]]
   [[ "$output" == *"web_search"* ]]
+  [[ "$output" == *"--project-root"* ]]
 }
 
 @test "strict provider diagnostic script refuses accidental quota use without --live" {

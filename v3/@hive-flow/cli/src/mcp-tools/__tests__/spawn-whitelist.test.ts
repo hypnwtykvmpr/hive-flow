@@ -8,6 +8,8 @@ import { agentCommand } from '../../commands/agent.js';
 import { agentTools } from '../agent-tools.js';
 
 const spawnTool = agentTools.find(tool => tool.name === 'agent_spawn')!;
+const listTool = agentTools.find(tool => tool.name === 'agent_list')!;
+const statusTool = agentTools.find(tool => tool.name === 'agent_status')!;
 const ORIGINAL_CWD = process.cwd();
 
 function readSpawnedTypes(root: string): string[] {
@@ -78,6 +80,64 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentType: 'bug-hunter',
     });
     expect(readSpawnedTypes(tmpRoot)).toContain('bug-hunter');
+  });
+
+  it('lists spawned idle agents when status is all and supports canonical type filters', async () => {
+    await spawnTool.handler({
+      agentId: 'list-implementer',
+      agentType: 'implementer',
+      provider: 'anthropic',
+    });
+    await spawnTool.handler({
+      agentId: 'list-verifier',
+      agentType: 'verifier',
+      provider: 'anthropic',
+    });
+
+    const allResult = await listTool.handler({ status: 'all' }) as {
+      total: number;
+      agents: Array<{ id?: string; agentId?: string; agentType?: string; status?: string }>;
+      filters?: Record<string, unknown>;
+    };
+    expect(allResult.total).toBe(2);
+    expect(allResult.filters?.status).toBe('all');
+    expect(allResult.filters?.includeTerminated).toBe(true);
+    expect(allResult.agents.map(agent => agent.agentId).sort()).toEqual(['list-implementer', 'list-verifier']);
+    expect(allResult.agents.every(agent => agent.id === agent.agentId)).toBe(true);
+
+    const implementers = await listTool.handler({ status: 'all', agentType: 'implementer' }) as {
+      total: number;
+      agents: Array<{ agentId?: string; agentType?: string }>;
+      filters?: Record<string, unknown>;
+    };
+    expect(implementers.total).toBe(1);
+    expect(implementers.filters?.agentType).toBe('implementer');
+    expect(implementers.agents[0]).toMatchObject({
+      agentId: 'list-implementer',
+      agentType: 'implementer',
+    });
+  });
+
+  it('returns both id and agentId from agent_status for CLI display compatibility', async () => {
+    await spawnTool.handler({
+      agentId: 'status-implementer',
+      agentType: 'implementer',
+      provider: 'anthropic',
+    });
+
+    const status = await statusTool.handler({ agentId: 'status-implementer' }) as {
+      id?: string;
+      agentId?: string;
+      agentType?: string;
+      status?: string;
+    };
+
+    expect(status).toMatchObject({
+      id: 'status-implementer',
+      agentId: 'status-implementer',
+      agentType: 'implementer',
+      status: 'idle',
+    });
   });
 
   it.each(['totally-made-up', 'coder'])('rejects non-canonical agent type %s', async (agentType) => {

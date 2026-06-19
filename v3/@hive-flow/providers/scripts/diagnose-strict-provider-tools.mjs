@@ -51,7 +51,7 @@ const STRICT_TOOLS = [
 
 function usage() {
   return `Usage:
-  node scripts/diagnose-strict-provider-tools.mjs --live [--provider openrouter] [--provider deepseek] [--tool all|read_file] [--json]
+  node scripts/diagnose-strict-provider-tools.mjs --live [--provider openrouter] [--provider deepseek] [--tool all|read_file] [--project-root PATH] [--json]
 
 Runs the strict API provider bridge with a real AgentRecord and the live credential holder.
 This spends provider quota and is therefore blocked unless --live is present.
@@ -61,6 +61,9 @@ Options:
   --provider <name>   openrouter or deepseek. Repeatable. Default: both.
   --tool <name|all>   Strict tool to exercise. Repeatable. Default: all.
                       Tools: ${STRICT_TOOLS.join(', ')}.
+  --project-root PATH Run with CLAUDE_PROJECT_DIR/HIVE_FLOW_PROJECT_ROOT set to this root,
+                      while keeping mutable fixtures under PATH/.tmp-audit.
+                      Default: isolated external temporary project root.
   --timeout-ms <n>    Bridge timeout per tool. Default: 120000.
   --keep-temp         Keep the temporary project root for debugging.
   --json              Emit machine-readable JSON only.
@@ -75,6 +78,7 @@ function parseArgs(argv) {
     keepTemp: false,
     providers: [],
     tools: [],
+    projectRoot: null,
     timeoutMs: 120_000,
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -100,6 +104,10 @@ function parseArgs(argv) {
       opts.tools.push(String(argv[++i] || ''));
       continue;
     }
+    if (arg === '--project-root') {
+      opts.projectRoot = String(argv[++i] || '').trim() || null;
+      continue;
+    }
     if (arg === '--timeout-ms') {
       opts.timeoutMs = Number(argv[++i] || 0);
       continue;
@@ -120,6 +128,13 @@ function assertValidOptions(opts) {
   if (badTools.length > 0) throw new Error(`Unsupported tool(s): ${badTools.join(', ')}`);
   if (!Number.isInteger(opts.timeoutMs) || opts.timeoutMs < 10_000 || opts.timeoutMs > 600_000) {
     throw new Error('--timeout-ms must be an integer between 10000 and 600000');
+  }
+  if (opts.projectRoot) {
+    const resolved = resolve(opts.projectRoot);
+    if (!existsSync(resolved)) throw new Error(`--project-root does not exist: ${resolved}`);
+    const stat = statSync(resolved);
+    if (!stat.isDirectory()) throw new Error(`--project-root is not a directory: ${resolved}`);
+    opts.projectRoot = realpathSync(resolved);
   }
 }
 
@@ -144,21 +159,44 @@ function assertCredentialHolderAvailable(socketPath) {
   if (!stat.isSocket()) throw new Error(`credential holder path is not a socket: ${socketPath}`);
 }
 
-function makeProjectRoot() {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'hf-strict-provider-live-')));
-  mkdirSync(join(root, '.hive-flow', 'agents'), { recursive: true });
-  mkdirSync(join(root, '.hive-flow', 'enforcement'), { recursive: true });
-  mkdirSync(join(root, '.hive-flow', 'tasks'), { recursive: true });
-  mkdirSync(join(root, 'src'), { recursive: true });
-  writeFileSync(join(root, 'src', 'diagnostic.txt'), 'strict diagnostic needle\n', 'utf8');
-  writeFileSync(join(root, 'src', 'editable.txt'), 'strict edit before\n', 'utf8');
-  writeFileSync(join(root, 'src', 'secondary.log'), 'strict diagnostic needle in log\n', 'utf8');
-  return root;
+function makeDiagnosticContext(projectRootOption) {
+  if (!projectRootOption) {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'hf-strict-provider-live-')));
+    initializeFixtureRoot(root);
+    return {
+      projectRoot: root,
+      fixtureRoot: root,
+      cleanupRoot: root,
+      rootMode: 'external-temp',
+    };
+  }
+
+  const projectRoot = realpathSync(projectRootOption);
+  const auditRoot = join(projectRoot, '.tmp-audit');
+  mkdirSync(auditRoot, { recursive: true });
+  const fixtureRoot = realpathSync(mkdtempSync(join(auditRoot, 'hf-strict-provider-live-')));
+  initializeFixtureRoot(fixtureRoot);
+  return {
+    projectRoot,
+    fixtureRoot,
+    cleanupRoot: fixtureRoot,
+    rootMode: 'project-root',
+  };
 }
 
-function writeEnforcementEnvelope(root) {
+function initializeFixtureRoot(fixtureRoot) {
+  mkdirSync(join(fixtureRoot, '.hive-flow', 'agents'), { recursive: true });
+  mkdirSync(join(fixtureRoot, '.hive-flow', 'enforcement', 'global'), { recursive: true });
+  mkdirSync(join(fixtureRoot, '.hive-flow', 'tasks'), { recursive: true });
+  mkdirSync(join(fixtureRoot, 'src'), { recursive: true });
+  writeFileSync(join(fixtureRoot, 'src', 'diagnostic.txt'), 'strict diagnostic needle\n', 'utf8');
+  writeFileSync(join(fixtureRoot, 'src', 'editable.txt'), 'strict edit before\n', 'utf8');
+  writeFileSync(join(fixtureRoot, 'src', 'secondary.log'), 'strict diagnostic needle in log\n', 'utf8');
+}
+
+function writeEnforcementEnvelope(fixtureRoot) {
   const key = randomBytes(32).toString('hex');
-  const keyPath = join(root, '.hive-flow', 'enforcement', '.hmac-key');
+  const keyPath = join(fixtureRoot, '.hive-flow', 'enforcement', '.hmac-key');
   writeFileSync(keyPath, key, { encoding: 'utf8', mode: 0o600 });
   try { chmodSync(keyPath, 0o600); } catch { /* best effort */ }
   const state = {
@@ -173,7 +211,7 @@ function writeEnforcementEnvelope(root) {
     state,
     hmac: createHmac('sha256', key).update(JSON.stringify(state)).digest('hex'),
   };
-  writeFileSync(join(root, '.hive-flow', 'enforcement', 'state.json'), JSON.stringify(envelope, null, 2), 'utf8');
+  writeFileSync(join(fixtureRoot, '.hive-flow', 'enforcement', 'global', 'state.json'), JSON.stringify(envelope, null, 2), 'utf8');
 }
 
 function toolArgsFor(root, tool) {
@@ -332,14 +370,14 @@ function verifyToolResult(tool, toolResult, root) {
   return { ok: false, evidence: `unknown diagnostic expectation for ${tool}` };
 }
 
-async function runBridgeCase({ root, bridgePath, providerName, tool, timeoutMs, socketPath, keptTemp }) {
+async function runBridgeCase({ projectRoot, fixtureRoot, bridgePath, providerName, tool, timeoutMs, socketPath, keptTemp, rootMode }) {
   const providerCase = STRICT_PROVIDERS[providerName];
   const agentId = `diagnostic-${providerName}-${tool}-${Date.now()}`;
-  const storeDir = writeStore(root, agentId, providerCase);
-  const tasksDir = join(root, '.hive-flow', 'tasks');
+  const storeDir = writeStore(fixtureRoot, agentId, providerCase);
+  const tasksDir = join(fixtureRoot, '.hive-flow', 'tasks');
   const taskPath = join(tasksDir, `${agentId}.task.txt`);
   const resultPath = join(tasksDir, `${agentId}.result.json`);
-  const args = toolArgsFor(root, tool);
+  const args = toolArgsFor(fixtureRoot, tool);
   writeFileSync(taskPath, taskFor(tool, args), 'utf8');
 
   const child = spawn(process.execPath, [
@@ -350,11 +388,13 @@ async function runBridgeCase({ root, bridgePath, providerName, tool, timeoutMs, 
     '--store-dir', storeDir,
     '--timeout', String(timeoutMs),
   ], {
-    cwd: root,
+    cwd: projectRoot,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
-      CLAUDE_PROJECT_DIR: root,
+      CLAUDE_PROJECT_DIR: projectRoot,
+      HIVE_FLOW_PROJECT_ROOT: projectRoot,
+      HIVE_FLOW_HOME: join(fixtureRoot, '.hive-flow'),
       HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET: socketPath,
       HIVE_FLOW_PROVIDER_WEB_ALLOWLIST: [
         String(process.env.HIVE_FLOW_PROVIDER_WEB_ALLOWLIST || '').trim(),
@@ -391,18 +431,27 @@ async function runBridgeCase({ root, bridgePath, providerName, tool, timeoutMs, 
       result = { success: false, error: `result JSON parse failed: ${error.message}` };
     }
   }
-  const logs = collectBridgeLog(root);
-  const toolLogCount = logs.filter((entry) => entry.message === 'Bridge tool dispatch' && entry.meta?.tool === tool).length;
+  const logs = [
+    ...collectBridgeLog(fixtureRoot),
+    ...(projectRoot === fixtureRoot ? [] : collectBridgeLog(projectRoot)),
+  ];
+  const toolLogCount = logs.filter((entry) =>
+    entry.message === 'Bridge tool dispatch' &&
+    entry.meta?.tool === tool &&
+    entry.meta?.agentId === agentId
+  ).length;
   const toolUse = Array.isArray(result?.toolUse?.tools) ? result.toolUse.tools : [];
   const toolResult = readToolResult(storeDir, agentId, tool);
-  const toolExpectation = verifyToolResult(tool, toolResult, root);
-  const ok = exitCode === 0 && result?.success === true && toolUse.includes(tool) && toolLogCount > 0 && toolExpectation.ok;
+  const toolExpectation = verifyToolResult(tool, toolResult, fixtureRoot);
+  const ok = exitCode === 0 && result?.success === true && toolUse.includes(tool) && toolExpectation.ok;
 
   return {
     provider: providerName,
     model: providerCase.model,
     tool,
-    ...(keptTemp ? { tempRoot: root } : {}),
+    rootMode,
+    projectRoot,
+    ...(keptTemp ? { tempRoot: fixtureRoot } : {}),
     ok,
     exitCode,
     toolUse,
@@ -438,21 +487,23 @@ async function main() {
   try {
     for (const providerName of opts.providers) {
       for (const tool of opts.tools) {
-        const root = makeProjectRoot();
-        writeEnforcementEnvelope(root);
+        const context = makeDiagnosticContext(opts.projectRoot);
+        writeEnforcementEnvelope(context.fixtureRoot);
         try {
           rows.push(await runBridgeCase({
-            root,
+            projectRoot: context.projectRoot,
+            fixtureRoot: context.fixtureRoot,
             bridgePath,
             providerName,
             tool,
             timeoutMs: opts.timeoutMs,
             socketPath,
             keptTemp: opts.keepTemp,
+            rootMode: context.rootMode,
           }));
-          if (opts.keepTemp) keptRoots.push(root);
+          if (opts.keepTemp) keptRoots.push(context.fixtureRoot);
         } finally {
-          if (!opts.keepTemp) rmSync(root, { recursive: true, force: true });
+          if (!opts.keepTemp) rmSync(context.cleanupRoot, { recursive: true, force: true });
         }
       }
     }
@@ -462,6 +513,7 @@ async function main() {
     ok: rows.every((row) => row.ok),
     roots: opts.keepTemp ? keptRoots : rows.map((row) => row.tempRoot || `cleaned:${row.provider}:${row.tool}`),
     socketPath,
+    projectRoot: opts.projectRoot || null,
     providers: opts.providers,
     tools: opts.tools,
     rows,
