@@ -55,7 +55,7 @@ src/
 │   ├── assertion-helpers.ts # Custom Vitest matchers
 │   └── setup-teardown.ts    # Global setup/teardown
 ├── mocks/              # Mock service implementations
-│   ├── mock-services.ts     # AgentDB, SwarmCoordinator, etc.
+│   ├── mock-services.ts     # HiveMemory, SwarmCoordinator, etc.
 │   └── mock-mcp-client.ts   # MCP client for CLI testing
 ├── setup.ts            # Global test configuration
 └── index.ts            # Main exports
@@ -288,12 +288,12 @@ expect(app.taskManager.tasks.size).toBe(1);
 
 ## Mock Services
 
-### MockAgentDB
+### MockHiveMemory
 
 ```typescript
-import { MockAgentDB } from '@hive-flow/testing';
+import { MockHiveMemory } from '@hive-flow/testing';
 
-const db = new MockAgentDB();
+const db = new MockHiveMemory();
 
 // Insert vectors
 await db.insert('vec-1', embedding, { type: 'pattern' });
@@ -477,7 +477,7 @@ assertV3PerformanceTargets({
 
 // Access constants
 console.log(TEST_CONFIG.FLASH_ATTENTION_SPEEDUP_MIN); // 2.49
-console.log(TEST_CONFIG.AGENTDB_SEARCH_IMPROVEMENT_MAX); // 12500
+console.log(TEST_CONFIG.HIVEMEMORY_SEARCH_IMPROVEMENT_MAX); // 12500
 ```
 
 ## Best Practices

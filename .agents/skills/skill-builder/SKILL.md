@@ -890,5 +890,5 @@ See `resources$templates/` for available component templates.
 
 **Created**: 2025-10-19
 **Version**: 1.0.0
-**Maintained By**: agentic-flow team
+**Maintained By**: hive-flow team
 **License**: MIT

@@ -35,7 +35,7 @@ function runHook(script, input, { hiveHome, projectDir, agentId = 'queen-1' }) {
       HIVE_FLOW_HOME: hiveHome,
       CLAUDE_PROJECT_DIR: projectDir,
       HIVE_FLOW_PROJECT_ROOT: projectDir,
-      AGENTIC_FLOW_AGENT_ID: agentId,
+      HIVE_FLOW_AGENT_ID: agentId,
       CLAUDE_AGENT_ID: '',
       CLAUDE_SESSION_ID: '',
     },

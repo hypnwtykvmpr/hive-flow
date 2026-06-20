@@ -87,7 +87,7 @@ export const defaultMemoryConfig: MemoryConfig = {
     inMemory: false,
     wal: true,
   },
-  agentdb: {
+  hivememory: {
     dimensions: 1536,
     indexType: 'hnsw',
     efConstruction: 200,

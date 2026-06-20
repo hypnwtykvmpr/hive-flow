@@ -3,28 +3,28 @@
  *
  * Provides integration bridges for external systems:
  * - local compatibility API for swarm coordination
- * - AgentDB for vector storage and similarity search
+ * - HiveMemory for vector storage and similarity search
  */
 
 export {
-  // Agentic Flow
-  AgenticFlowBridge,
-  getAgenticFlowBridge,
-  AGENTIC_FLOW_EVENTS,
-  type AgenticFlowConfig,
+  // Hive Integration
+  HiveIntegrationBridge,
+  getHiveIntegrationBridge,
+  HIVE_INTEGRATION_EVENTS,
+  type HiveIntegrationConfig,
   type SwarmTopology,
   type AgentSpawnOptions,
   type SpawnedAgent,
   type TaskOrchestrationOptions,
   type OrchestrationResult,
-  type AgenticFlowEvent,
+  type HiveIntegrationEvent,
 
-  // AgentDB
-  AgentDBBridge,
-  getAgentDBBridge,
+  // HiveMemory
+  HiveMemoryBridge,
+  getHiveMemoryBridge,
   resetBridges,
-  type AgentDBConfig,
+  type HiveMemoryConfig,
   type VectorEntry,
   type VectorSearchOptions,
   type VectorSearchResult,
-} from './agentic-flow.js';
+} from './hive-integration.js';

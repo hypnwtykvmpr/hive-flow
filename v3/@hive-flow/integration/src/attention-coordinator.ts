@@ -1,9 +1,8 @@
 /**
- * Attention Coordinator for Flash Attention Integration
+ * Attention Coordinator
  *
- * Provides integration with agentic-flow's attention mechanisms,
- * including Flash Attention for Flash Attention optimization with
- * 50-75% memory reduction.
+ * Provides local attention mechanism selection, execution, caching, and
+ * performance monitoring.
  *
  * Supported Mechanisms:
  * - Flash Attention (fastest, recommended)
@@ -26,38 +25,6 @@ import type {
   AttentionMetrics,
   DEFAULT_ATTENTION_CONFIG,
 } from './types.js';
-
-/**
- * Interface for agentic-flow Attention reference (for delegation)
- * This allows the coordinator to delegate to agentic-flow when available
- */
-interface AgenticFlowAttentionReference {
-  compute(params: {
-    query: number[] | Float32Array;
-    key: number[] | Float32Array;
-    value: number[] | Float32Array;
-    mask?: boolean[];
-    mechanism?: string;
-  }): Promise<{
-    output: number[];
-    latencyMs: number;
-    memoryBytes: number;
-    mechanism: string;
-  }>;
-  setMechanism(mechanism: string): Promise<void>;
-  getMetrics(): Promise<{
-    avgLatencyMs: number;
-    throughputTps: number;
-    memoryEfficiency: number;
-    speedupFactor: number;
-  }>;
-}
-
-/**
- * Threshold for delegating to native attention (tokens)
- * Sequences longer than this benefit most from Flash Attention optimization
- */
-const DELEGATION_SEQUENCE_THRESHOLD = 512;
 
 /**
  * Mechanism-specific performance characteristics
@@ -135,44 +102,10 @@ export class AttentionCoordinator extends EventEmitter {
   private cache: Map<string, AttentionResult> = new Map();
   private maxCacheSize: number = 1000;
 
-  /**
-   * Reference to agentic-flow Attention for delegation (ADR-001)
-   * When set, performAttention delegates to native Flash Attention
-   */
-  private agenticFlowAttention: AgenticFlowAttentionReference | null = null;
-
-  /**
-   * Indicates if delegation to agentic-flow is active
-   */
-  private delegationEnabled: boolean = false;
-
   constructor(config: Partial<AttentionConfiguration> = {}) {
     super();
     this.config = this.mergeConfig(config);
     this.metrics = this.initializeMetrics();
-  }
-
-  /**
-   * Set reference to agentic-flow Attention for delegation
-   *
-   * This implements ADR-001: Adopt agentic-flow as Core Foundation
-   * When a reference is provided, attention computation for sequences
-   * longer than 512 tokens delegates to agentic-flow's optimized
-   * Flash Attention implementation for Flash Attention optimization.
-   *
-   * @param attentionRef - The agentic-flow Attention interface reference
-   */
-  setAgenticFlowReference(attentionRef: AgenticFlowAttentionReference): void {
-    this.agenticFlowAttention = attentionRef;
-    this.delegationEnabled = true;
-    this.emit('delegation-enabled', { target: 'agentic-flow' });
-  }
-
-  /**
-   * Check if delegation to agentic-flow is enabled
-   */
-  isDelegationEnabled(): boolean {
-    return this.delegationEnabled && this.agenticFlowAttention !== null;
   }
 
   /**
@@ -495,9 +428,7 @@ export class AttentionCoordinator extends EventEmitter {
   /**
    * Perform attention computation
    *
-   * ADR-001: For sequences longer than 512 tokens, delegates to
-   * agentic-flow's native Flash Attention for Flash Attention optimization
-   * and 50-75% memory reduction.
+   * Performs local attention computation.
    */
   private async performAttention(params: {
     query: number[] | Float32Array;
@@ -505,54 +436,11 @@ export class AttentionCoordinator extends EventEmitter {
     value: number[] | Float32Array;
     mask?: boolean[];
   }): Promise<number[]> {
-    const { query, key, value, mask } = params;
+    const { query, key, value } = params;
 
     const qArray = Array.isArray(query) ? query : Array.from(query);
     const kArray = Array.isArray(key) ? key : Array.from(key);
     const vArray = Array.isArray(value) ? value : Array.from(value);
-
-    // Calculate sequence length for delegation decision
-    const sequenceLength = qArray.length;
-
-    // ADR-001: Delegate to agentic-flow for long sequences
-    // Flash Attention provides Flash Attention optimization for sequences > 512 tokens
-    if (
-      this.isDelegationEnabled() &&
-      this.agenticFlowAttention &&
-      sequenceLength > DELEGATION_SEQUENCE_THRESHOLD
-    ) {
-      try {
-        const result = await this.agenticFlowAttention.compute({
-          query: qArray,
-          key: kArray,
-          value: vArray,
-          mask,
-          mechanism: this.config.mechanism,
-        });
-
-        this.emit('attention-delegated', {
-          sequenceLength,
-          mechanism: result.mechanism,
-          latencyMs: result.latencyMs,
-          target: 'agentic-flow',
-        });
-
-        return result.output;
-      } catch (error) {
-        // Log delegation failure and fall back to local implementation
-        this.emit('delegation-failed', {
-          method: 'performAttention',
-          sequenceLength,
-          error: (error as Error).message,
-          fallback: 'local',
-        });
-        // Continue with local implementation below
-      }
-    }
-
-    // Local implementation (fallback or for short sequences)
-    // For short sequences, local JS implementation is sufficient
-    // and avoids overhead of cross-boundary calls
 
     // Compute attention scores (Q * K^T)
     let score = this.dotProduct(qArray, kArray);

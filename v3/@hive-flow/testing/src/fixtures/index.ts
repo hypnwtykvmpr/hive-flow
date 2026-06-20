@@ -7,7 +7,7 @@
 // Agent fixtures (comprehensive)
 export * from './agent-fixtures.js';
 
-// Memory fixtures (AgentDB, HNSW, ReasoningBank)
+// Memory fixtures (HiveMemory, HNSW, ReasoningBank)
 export * from './memory-fixtures.js';
 
 // Swarm fixtures (topologies, coordination, consensus)

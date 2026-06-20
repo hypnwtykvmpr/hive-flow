@@ -33,7 +33,7 @@ check_health() {
 
   # Process counts
   local node_procs=$(pgrep -c node 2>/dev/null || echo "0")
-  local agentic_procs=$(ps aux 2>/dev/null | grep -c "agentic-flow" | grep -v grep || echo "0")
+  local agentic_procs=$(ps aux 2>/dev/null | grep -c "hive-flow" | grep -v grep || echo "0")
 
   # CPU load
   local load_avg=$(cat /proc/loadavg 2>/dev/null | awk '{print $1}' || echo "0")
@@ -77,7 +77,7 @@ check_health() {
   },
   "processes": {
     "node": $node_procs,
-    "agentic_flow": $agentic_procs
+    "hive_flow": $agentic_procs
   },
   "load_avg": $load_avg,
   "fd_used": $fd_used,

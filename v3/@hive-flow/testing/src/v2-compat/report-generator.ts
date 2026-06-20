@@ -184,7 +184,7 @@ function generateEnhancedMarkdown(report: FullValidationReport, options: ReportO
   lines.push('| MCP Tools | 65 tools | Via name mapping | Full |');
   lines.push('| Hooks | 42 hooks | All supported | Full |');
   lines.push('| API Classes | 5 interfaces | Via aliases | Full |');
-  lines.push('| Memory Backend | SQLite | Hybrid (SQLite + AgentDB) | Enhanced |');
+  lines.push('| Memory Backend | SQLite | Hybrid (SQLite + HiveMemory) | Enhanced |');
   lines.push('| Search | Brute-force | HNSW indexed (fast) | Enhanced |');
   lines.push('| Deno Runtime | Supported | Removed (Node.js 20+) | Breaking |');
   lines.push('');
@@ -391,7 +391,7 @@ function generateMigrationScriptsSection(): string[] {
   lines.push('  backend: hybrid');
   lines.push('  sqlite:');
   lines.push('    path: ./.hive-flow/memory.db');
-  lines.push('  agentdb:');
+  lines.push('  hivememory:');
   lines.push('    enableHNSW: true');
   lines.push('    dimensions: 384');
   lines.push('hooks:');

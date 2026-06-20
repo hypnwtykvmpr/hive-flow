@@ -33,7 +33,7 @@ const OP_CLASSES = [
 
 const previousEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
-  AGENTIC_FLOW_AGENT_ID: process.env.AGENTIC_FLOW_AGENT_ID,
+  HIVE_FLOW_AGENT_ID: process.env.HIVE_FLOW_AGENT_ID,
   CLAUDE_AGENT_ID: process.env.CLAUDE_AGENT_ID,
   HIVE_FLOW_HIVE_ID: process.env.HIVE_FLOW_HIVE_ID,
 };
@@ -133,7 +133,7 @@ function applyEnvelopeCase(root, envelopeCase) {
   cleanEnforcement(root);
   const key = writeKey(root);
   process.env.CLAUDE_PROJECT_DIR = root;
-  process.env.AGENTIC_FLOW_AGENT_ID = envelopeCase.agent.present ? 'parity-agent' : '';
+  process.env.HIVE_FLOW_AGENT_ID = envelopeCase.agent.present ? 'parity-agent' : '';
   process.env.CLAUDE_AGENT_ID = envelopeCase.agent.present ? 'parity-agent' : '';
   process.env.HIVE_FLOW_HIVE_ID = envelopeCase.hive.present ? 'parity-hive' : '';
 

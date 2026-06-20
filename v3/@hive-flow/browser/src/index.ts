@@ -7,7 +7,7 @@
  * - AI-optimized snapshots with element refs (@e1, @e2)
  * - Multi-session support for swarm coordination
  * - Trajectory tracking for ReasoningBank/SONA learning
- * - Integration with agentic-flow optimizations
+ * - Integration with hive-flow optimizations
  *
  * @example
  * ```typescript

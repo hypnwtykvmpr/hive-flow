@@ -2,11 +2,9 @@
  * Worker task types — neutral home for the agent task/result/status/message
  * contracts used across the worker subsystem.
  *
- * These types were historically declared in `agentic-flow-agent.ts`. They are
- * generic worker-execution contracts with no dependency on the (removed)
- * `agentic-flow` package, so they live here under a neutral filename to keep
- * the worker files (`worker-base`, `worker-pool`, `specialized-worker`,
- * `long-running-worker`, `provider-adapter`) free of legacy import targets.
+ * These are generic worker-execution contracts with no optional bridge
+ * dependency, so worker files can import them without pulling in unrelated
+ * integration modules.
  *
  * @module v3/integration/worker-task-types
  */

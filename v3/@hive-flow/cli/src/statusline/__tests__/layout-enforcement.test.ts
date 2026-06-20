@@ -190,10 +190,10 @@ function fullFixtureSnapshot(projectRoot: string): void {
       executingQueens: 1,
     },
     memory: {
-      embeddings: { count: 290, source: 'agentdb', observedAt: new Date().toISOString() },
-      memories: { count: 41_100, source: 'agentdb', observedAt: new Date().toISOString() },
+      embeddings: { count: 290, source: 'hivememory', observedAt: new Date().toISOString() },
+      memories: { count: 41_100, source: 'hivememory', observedAt: new Date().toISOString() },
       dbSizeBytes: 340_000,
-      sourceDescription: 'agentdb',
+      sourceDescription: 'hivememory',
     },
     tests: {
       suite: {
@@ -279,10 +279,10 @@ function materializedEightRowFixture(projectRoot: string): void {
   });
 
   writeJsonFixture(paths.memoryStats, {
-    embeddings: { count: 290, source: 'agentdb', observedAt },
-    memories: { count: 41_100, source: 'agentdb', observedAt },
+    embeddings: { count: 290, source: 'hivememory', observedAt },
+    memories: { count: 41_100, source: 'hivememory', observedAt },
     dbSizeBytes: 340_000,
-    sourceDescription: 'agentdb',
+    sourceDescription: 'hivememory',
   });
 
   writeJsonFixture(paths.testsCurrent, {

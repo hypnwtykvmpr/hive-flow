@@ -109,7 +109,7 @@ export interface SwarmConfig {
 }
 
 export interface MemoryConfig {
-  backend: 'agentdb' | 'sqlite' | 'memory' | 'hybrid';
+  backend: 'hivememory' | 'sqlite' | 'memory' | 'hybrid';
   persistPath: string;
   cacheSize: number;
   enableHNSW: boolean;

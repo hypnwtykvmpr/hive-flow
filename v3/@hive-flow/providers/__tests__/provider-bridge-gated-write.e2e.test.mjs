@@ -31,12 +31,12 @@ const previousEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
   HIVE_FLOW_HOME: process.env.HIVE_FLOW_HOME,
   HIVE_FLOW_PROJECT_ROOT: process.env.HIVE_FLOW_PROJECT_ROOT,
-  AGENTIC_FLOW_AGENT_ID: process.env.AGENTIC_FLOW_AGENT_ID,
+  HIVE_FLOW_AGENT_ID: process.env.HIVE_FLOW_AGENT_ID,
   CLAUDE_AGENT_ID: process.env.CLAUDE_AGENT_ID,
   HIVE_FLOW_HIVE_ID: process.env.HIVE_FLOW_HIVE_ID,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
-  AGENTIC_FLOW_SESSION_ID: process.env.AGENTIC_FLOW_SESSION_ID,
+  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
 };
 
 function restoreEnv() {
@@ -246,12 +246,12 @@ function childEnv(root, extra = {}) {
     HIVE_FLOW_HOME: join(root, '.hive-flow'),
     HIVE_FLOW_PROJECT_ROOT: root,
     CLAUDE_PROJECT_DIR: root,
-    AGENTIC_FLOW_AGENT_ID: '',
+    HIVE_FLOW_AGENT_ID: '',
     CLAUDE_AGENT_ID: '',
     HIVE_FLOW_HIVE_ID: '',
     CLAUDE_SESSION_ID: '',
     HIVE_FLOW_SESSION_ID: '',
-    AGENTIC_FLOW_SESSION_ID: '',
+    HIVE_FLOW_SESSION_ID: '',
     ...extra,
   };
 }
@@ -473,7 +473,7 @@ describe('PH-B3 provider bridge gated-write milestone', () => {
         harnessRoot,
         'write_file',
         { path: target, content: 'agent' },
-        { AGENTIC_FLOW_AGENT_ID: 'agent-a', CLAUDE_AGENT_ID: 'agent-a' },
+        { HIVE_FLOW_AGENT_ID: 'agent-a', CLAUDE_AGENT_ID: 'agent-a' },
       );
       expect(perAgent).toMatchObject({ status: 'error' });
       expect(perAgent.error).toMatch(/RESTRICTED\+/);
@@ -545,12 +545,12 @@ describe('PH-B3 provider bridge gated-write milestone', () => {
         process.env.HIVE_FLOW_HOME = join(root, '.hive-flow');
         process.env.HIVE_FLOW_PROJECT_ROOT = root;
         process.env.CLAUDE_PROJECT_DIR = root;
-        process.env.AGENTIC_FLOW_AGENT_ID = '';
+        process.env.HIVE_FLOW_AGENT_ID = '';
         process.env.CLAUDE_AGENT_ID = '';
         process.env.HIVE_FLOW_HIVE_ID = '';
         process.env.CLAUDE_SESSION_ID = '';
         process.env.HIVE_FLOW_SESSION_ID = '';
-        process.env.AGENTIC_FLOW_SESSION_ID = '';
+        process.env.HIVE_FLOW_SESSION_ID = '';
 
         writeEnvelope(root, key, 1);
         for (const toolName of ['agent_spawn', 'agent_task', 'agent_task_async']) {

@@ -64,13 +64,13 @@ function readAuditEntries(logFile) {
 async function runGate(command, options = {}) {
   const tmp = mkdtempSync(join(tmpdir(), 'permission-guard-checkout-sim-'));
   const logFile = join(tmp, 'permission-log.jsonl');
-  const previousAgentId = process.env.AGENTIC_FLOW_AGENT_ID;
+  const previousAgentId = process.env.HIVE_FLOW_AGENT_ID;
   const previousSessionId = process.env.CLAUDE_SESSION_ID;
   try {
     if (options.subagent) {
-      process.env.AGENTIC_FLOW_AGENT_ID = 'checkout-sim-worker';
+      process.env.HIVE_FLOW_AGENT_ID = 'checkout-sim-worker';
     } else {
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
     }
     process.env.CLAUDE_SESSION_ID = options.sessionId || 'trusted-root-checkout-simulation';
 
@@ -89,9 +89,9 @@ async function runGate(command, options = {}) {
     };
   } finally {
     if (previousAgentId === undefined) {
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
     } else {
-      process.env.AGENTIC_FLOW_AGENT_ID = previousAgentId;
+      process.env.HIVE_FLOW_AGENT_ID = previousAgentId;
     }
     if (previousSessionId === undefined) {
       delete process.env.CLAUDE_SESSION_ID;

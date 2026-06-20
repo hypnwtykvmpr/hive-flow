@@ -50,7 +50,7 @@ async function main() {
   await eventStore.append(
     createSwarmInitializedEvent('hierarchical-mesh', 15, {
       security: { strict: true },
-      memory: { backend: 'agentdb' },
+      memory: { backend: 'hivememory' },
     })
   );
 

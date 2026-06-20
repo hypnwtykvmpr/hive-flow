@@ -19,7 +19,7 @@ const goldenPath = resolve(here, 'fixtures/provider-bridge-contracts.golden.json
 
 const previousEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
-  AGENTIC_FLOW_AGENT_ID: process.env.AGENTIC_FLOW_AGENT_ID,
+  HIVE_FLOW_AGENT_ID: process.env.HIVE_FLOW_AGENT_ID,
   CLAUDE_AGENT_ID: process.env.CLAUDE_AGENT_ID,
   HIVE_FLOW_HIVE_ID: process.env.HIVE_FLOW_HIVE_ID,
   HIVE_FLOW_DEV_OVERRIDE_TOKEN: process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN,
@@ -79,7 +79,7 @@ async function importBridgeForRoot(root) {
   const uncaughtExceptionListeners = process.listeners('uncaughtException');
   process.chdir(root);
   process.env.CLAUDE_PROJECT_DIR = root;
-  process.env.AGENTIC_FLOW_AGENT_ID = '';
+  process.env.HIVE_FLOW_AGENT_ID = '';
   process.env.CLAUDE_AGENT_ID = '';
   process.env.HIVE_FLOW_HIVE_ID = '';
   delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;

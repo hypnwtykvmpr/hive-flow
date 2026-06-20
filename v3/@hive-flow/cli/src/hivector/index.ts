@@ -161,15 +161,9 @@ export async function isHivectorAvailable(): Promise<boolean> {
   return false;
 }
 
-/** @deprecated Use isHivectorAvailable. */
-export const isRuvectorAvailable = isHivectorAvailable;
-
 /**
  * Get external vector package version if available.
  */
 export async function getHivectorVersion(): Promise<string | null> {
   return null;
 }
-
-/** @deprecated Use getHivectorVersion. */
-export const getRuvectorVersion = getHivectorVersion;

@@ -5,7 +5,7 @@
  * - Plugin lifecycle management
  * - Worker capabilities
  * - Hook system
- * - Memory backends (AgentDB integration)
+ * - Memory backends
  * - LLM providers
  * - MCP tools
  */

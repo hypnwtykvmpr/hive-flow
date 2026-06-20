@@ -62,7 +62,7 @@ async function initDatabase() {
 
     CREATE TABLE IF NOT EXISTS swarm_activity (
       id INTEGER PRIMARY KEY,
-      agentic_flow_processes INTEGER DEFAULT 0,
+      hive_flow_processes INTEGER DEFAULT 0,
       mcp_server_processes INTEGER DEFAULT 0,
       estimated_agents INTEGER DEFAULT 0,
       swarm_active INTEGER DEFAULT 0,
@@ -227,17 +227,17 @@ function countProcesses() {
   try {
     const ps = execSync('ps aux 2>/dev/null || echo ""', { encoding: 'utf-8' });
 
-    const agenticFlow = (ps.match(/agentic-flow/g) || []).length;
+    const hiveFlow = (ps.match(/hive-flow/g) || []).length;
     const mcp = (ps.match(/mcp.*start/g) || []).length;
     const agents = (ps.match(/agent|swarm|coordinator/g) || []).length;
 
     return {
-      agenticFlow: Math.max(0, agenticFlow - 1), // Exclude grep itself
+      hiveFlow: Math.max(0, hiveFlow - 1), // Exclude grep itself
       mcp,
       agents: Math.max(0, agents - 1)
     };
   } catch (e) {
-    return { agenticFlow: 0, mcp: 0, agents: 0 };
+    return { hiveFlow: 0, mcp: 0, agents: 0 };
   }
 }
 
@@ -255,7 +255,7 @@ async function syncMetrics() {
   if (existsSync(modulesDir)) {
     const entries = readdirSync(modulesDir, { withFileTypes: true });
     for (const entry of entries) {
-      // Skip hidden directories (like .agentic-flow, .hive-flow)
+      // Skip hidden directories (like .hive-flow, .hive-flow)
       if (entry.isDirectory() && !entry.name.startsWith('.')) {
         const moduleDir = join(modulesDir, entry.name);
         const { files, lines } = countFilesAndLines(moduleDir);
@@ -329,7 +329,7 @@ async function syncMetrics() {
   const processes = countProcesses();
   db.run(`
     UPDATE swarm_activity SET
-      agentic_flow_processes = ?,
+      hive_flow_processes = ?,
       mcp_server_processes = ?,
       estimated_agents = ?,
       swarm_active = ?,
@@ -337,11 +337,11 @@ async function syncMetrics() {
       last_updated = ?
     WHERE id = 1
   `, [
-    processes.agenticFlow,
+    processes.hiveFlow,
     processes.mcp,
     processes.agents,
     processes.agents > 0 ? 1 : 0,
-    processes.agenticFlow > 0 ? 1 : 0,
+    processes.hiveFlow > 0 ? 1 : 0,
     now
   ]);
 
@@ -427,7 +427,7 @@ function exportToJSON() {
   writeFileSync(join(metricsDir, 'swarm-activity.json'), JSON.stringify({
     timestamp: metrics.swarmActivity.last_updated,
     processes: {
-      agentic_flow: metrics.swarmActivity.agentic_flow_processes,
+      hive_flow: metrics.swarmActivity.hive_flow_processes,
       mcp_server: metrics.swarmActivity.mcp_server_processes,
       estimated_agents: metrics.swarmActivity.estimated_agents
     },

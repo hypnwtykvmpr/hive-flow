@@ -142,7 +142,7 @@ hooks:
     config:
       sampling_rate: 0.1        # Sample 10% of actions for analysis
       anomaly_threshold: 0.8    # Alert threshold for anomaly score
-      store_embeddings: true    # Store action embeddings in AgentDB
+      store_embeddings: true    # Store action embeddings in HiveMemory
 
   # Pre-swarm-init: Verify swarm security policies
   pre-swarm-init:
@@ -154,8 +154,8 @@ hooks:
 
 # Integration with hive-flow systems
 integration:
-  # AgentDB integration for shared threat patterns
-  agentdb:
+  # HiveMemory integration for shared threat patterns
+  hivememory:
     enabled: true
     namespace: security_threats
     hnsw_enabled: true

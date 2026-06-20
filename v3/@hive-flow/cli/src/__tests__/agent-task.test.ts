@@ -432,7 +432,7 @@ describe('agent_task handler (non-blocking)', () => {
 
     const { opts } = getSpawnCall();
     const env = opts.env as Record<string, string>;
-    expect(env.AGENTIC_FLOW_AGENT_ID).toBe(agent.agentId);
+    expect(env.HIVE_FLOW_AGENT_ID).toBe(agent.agentId);
     expect(env.CLAUDE_AGENT_ID).toBe(agent.agentId);
   });
 

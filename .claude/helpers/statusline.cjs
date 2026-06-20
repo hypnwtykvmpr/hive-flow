@@ -240,7 +240,7 @@ function getLearningStats() {
     path.join(CWD, '.hive-flow', 'memory.db'),
     path.join(CWD, '.claude', 'memory.db'),
     path.join(CWD, 'data', 'memory.db'),
-    path.join(CWD, '.agentdb', 'memory.db'),
+    path.join(CWD, '.hivememory', 'memory.db'),
   ];
 
   for (const dbPath of memoryPaths) {
@@ -441,7 +441,7 @@ function getSwarmStatus() {
 function getSystemMetrics() {
   const memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
   const learning = getLearningStats();
-  const agentdb = getAgentDBStats();
+  const hivememory = getHiveMemoryStats();
 
   // Intelligence from learning.json
   const learningData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'learning.json'));
@@ -452,7 +452,7 @@ function getSystemMetrics() {
     intelligencePct = Math.min(100, Math.floor(learningData.intelligence.score));
   } else {
     const fromPatterns = learning.patterns > 0 ? Math.min(100, Math.floor(learning.patterns / 10)) : 0;
-    const fromVectors = agentdb.vectorCount > 0 ? Math.min(100, Math.floor(agentdb.vectorCount / 100)) : 0;
+    const fromVectors = hivememory.vectorCount > 0 ? Math.min(100, Math.floor(hivememory.vectorCount / 100)) : 0;
     intelligencePct = Math.max(fromPatterns, fromVectors);
   }
 
@@ -543,8 +543,8 @@ function getHooksStatus() {
   return { categories, matchers, commands };
 }
 
-// AgentDB stats (pure stat calls)
-function getAgentDBStats() {
+// HiveMemory stats (pure stat calls)
+function getHiveMemoryStats() {
   let vectorCount = 0;
   let dbSizeKB = 0;
   let namespaces = 0;
@@ -569,9 +569,9 @@ function getAgentDBStats() {
 
   if (vectorCount === 0) {
     const dbDirs = [
-      path.join(CWD, '.hive-flow', 'agentdb'),
-      path.join(CWD, '.swarm', 'agentdb'),
-      path.join(CWD, '.agentdb'),
+      path.join(CWD, '.hive-flow', 'hivememory'),
+      path.join(CWD, '.swarm', 'hivememory'),
+      path.join(CWD, '.hivememory'),
     ];
     for (const dir of dbDirs) {
       try {
@@ -839,7 +839,7 @@ function getEnforcementStateFiles() {
   const legacyEnforcementDir = path.join(CWD, '.hive-flow', 'enforcement');
   const stdin = getStdinData();
   const sessionId = sanitizeScopeId(stdin?.session_id || stdin?.sessionId || process.env.CLAUDE_SESSION_ID);
-  const agentId = sanitizeScopeId(process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID);
+  const agentId = sanitizeScopeId(process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID);
   const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID);
   const files = [
     path.join(globalEnforcementDir, 'global', 'state.json'),
@@ -933,7 +933,7 @@ function generateStatusline() {
   const system = getSystemMetrics();
   const adrs = getADRStatus();
   const hooks = getHooksStatus();
-  const agentdb = getAgentDBStats();
+  const hivememory = getHiveMemoryStats();
   const tests = getTestStats();
   const session = getSessionStats();
   const integration = getIntegrationStatus();
@@ -1091,10 +1091,10 @@ function generateStatusline() {
     `${c.cyan}ADRs${c.reset} ${adrDisplay}`
   );
 
-  // Line 4: AgentDB, Tests, Integration
-  const hnswInd = agentdb.hasHnsw ? `${c.brightGreen}\u26A1${c.reset}` : '';
-  const sizeDisp = agentdb.dbSizeKB >= 1024 ? `${(agentdb.dbSizeKB / 1024).toFixed(1)}MB` : `${agentdb.dbSizeKB}KB`;
-  const vectorColor = agentdb.vectorCount > 0 ? c.brightGreen : c.dim;
+  // Line 4: HiveMemory, Tests, Integration
+  const hnswInd = hivememory.hasHnsw ? `${c.brightGreen}\u26A1${c.reset}` : '';
+  const sizeDisp = hivememory.dbSizeKB >= 1024 ? `${(hivememory.dbSizeKB / 1024).toFixed(1)}MB` : `${hivememory.dbSizeKB}KB`;
+  const vectorColor = hivememory.vectorCount > 0 ? c.brightGreen : c.dim;
   const testColor = tests.testFiles > 0 ? c.brightGreen : c.dim;
 
   let integStr = '';
@@ -1108,8 +1108,8 @@ function generateStatusline() {
   if (!integStr) integStr = `${c.dim}\u25CF none${c.reset}`;
 
   lines.push(
-    `${c.brightCyan}\uD83D\uDCCA AgentDB${c.reset}    ` +
-    `${c.cyan}Vectors${c.reset} ${vectorColor}\u25CF${agentdb.vectorCount}${hnswInd}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
+    `${c.brightCyan}\uD83D\uDCCA HiveMemory${c.reset}    ` +
+    `${c.cyan}Vectors${c.reset} ${vectorColor}\u25CF${hivememory.vectorCount}${hnswInd}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
     `${c.cyan}Size${c.reset} ${c.brightWhite}${sizeDisp}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
     `${c.cyan}Tests${c.reset} ${testColor}\u25CF${tests.testFiles}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
     integStr
@@ -1146,7 +1146,7 @@ function generateStatusline() {
 function generateJSON() {
   const git = getGitInfo();
   const security = getSecurityStatus();
-  const agentdb = getAgentDBStats();
+  const hivememory = getHiveMemoryStats();
   const tests = getTestStats();
   const system = getSystemMetrics();
   const adrs = getADRStatus();
@@ -1180,10 +1180,10 @@ function generateJSON() {
   if (adrs && adrs.count > 0) {
     json.adrs = { count: adrs.count, implemented: adrs.implemented, compliance: adrs.compliance };
   }
-  if (agentdb && (agentdb.dbSizeKB > 0 || agentdb.vectorCount > 0)) {
+  if (hivememory && (hivememory.dbSizeKB > 0 || hivememory.vectorCount > 0)) {
     // vectorCount is heuristic-derived from file size; emit only dbSizeKB + hasHnsw
     // which have real sources. Per runbook OMIT > FAKE.
-    json.agentdb = { dbSizeKB: agentdb.dbSizeKB, hasHnsw: agentdb.hasHnsw, namespaces: agentdb.namespaces };
+    json.hivememory = { dbSizeKB: hivememory.dbSizeKB, hasHnsw: hivememory.hasHnsw, namespaces: hivememory.namespaces };
   }
   if (tests && tests.testFiles > 0) {
     // testCases (testFiles * 4) is synthetic — OMITTED. Only the real testFiles count is emitted.

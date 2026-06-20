@@ -111,7 +111,7 @@ interface Configuration {
 
   // Memory configuration
   memory?: {
-    backend?: 'agentdb' | 'sqlite' | 'hybrid';
+    backend?: 'hivememory' | 'sqlite' | 'hybrid';
     maxSize?: number;
     cacheEnabled?: boolean;
     cacheTTL?: number;

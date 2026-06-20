@@ -281,7 +281,7 @@ export type BrowserEvent =
   | { type: 'error:occurred'; message: string; stack?: string; timestamp: string };
 
 // ============================================================================
-// Integration with agentic-flow
+// Integration with hive-flow
 // ============================================================================
 
 export interface BrowserTrajectory {

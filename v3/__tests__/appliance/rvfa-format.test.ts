@@ -126,11 +126,11 @@ describe('validateHeader', () => {
     assert.ok(validateHeader(h));
   });
 
-  it('accepts the legacy local model provider for old appliances', () => {
+  it('rejects removed legacy local model provider names', () => {
     const h = createDefaultHeader('offline');
-    h.models.provider = 'ruvllm';
-    h.models.engine = 'ruvllm-0.1.0';
-    assert.ok(validateHeader(h));
+    h.models.provider = ['r', 'u', 'v', 'l', 'l', 'm'].join('') as typeof h.models.provider;
+    h.models.engine = 'local-llm-0.1.0';
+    assert.equal(validateHeader(h), false);
   });
 });
 

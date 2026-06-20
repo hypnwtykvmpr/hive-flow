@@ -1,29 +1,14 @@
 /**
- * Topology Optimizer - BMSSP-powered graph optimization for team communication
+ * Topology Optimizer - local graph optimization for team communication
  *
- * Uses WebAssembly-accelerated shortest path algorithms (10-15x faster than JS)
- * to optimize message routing, delegation chains, and team topology.
+ * Uses deterministic local path algorithms to optimize message routing,
+ * delegation chains, and team topology.
  *
  * @module @hive-flow/teammate-plugin/topology
  * @version 1.0.0-alpha.1
  */
 
 import type { TeammateInfo, TeamState, TeamTopology } from './types.js';
-
-// Dynamic import for BMSSP (WASM module)
-let WasmGraph: any = null;
-
-async function loadBMSSP(): Promise<void> {
-  if (WasmGraph) return;
-
-  try {
-    const bmssp = await import('@ruvnet/bmssp');
-    await bmssp.default(); // Initialize WASM
-    WasmGraph = bmssp.WasmGraph;
-  } catch (error) {
-    console.warn('[TopologyOptimizer] BMSSP not available, using fallback');
-  }
-}
 
 // ============================================================================
 // Types
@@ -91,16 +76,10 @@ export class TopologyOptimizer {
    * Initialize the optimizer with WASM support
    */
   async initialize(): Promise<boolean> {
-    try {
-      await loadBMSSP();
-      this.initialized = true;
-      this.useFallback = !WasmGraph;
-      return !this.useFallback;
-    } catch {
-      this.useFallback = true;
-      this.initialized = true;
-      return false;
-    }
+    this.graph = null;
+    this.useFallback = true;
+    this.initialized = true;
+    return false;
   }
 
   /**
@@ -143,11 +122,6 @@ export class TopologyOptimizer {
     const index = this.nodeCount++;
     this.nodeMap.set(teammate.id, index);
     this.reverseNodeMap.set(index, teammate.id);
-
-    if (!this.useFallback && WasmGraph && !this.graph) {
-      // Create graph with initial capacity
-      this.graph = new WasmGraph(100, true); // directed graph
-    }
 
     if (this.useFallback) {
       this.fallbackAdjList.set(index, []);

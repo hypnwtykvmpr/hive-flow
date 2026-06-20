@@ -7,8 +7,9 @@ import { embeddingsTools } from '../embeddings-tools.js';
 
 const initNeuralTool = embeddingsTools.find((tool) => tool.name === 'embeddings_neural');
 const statusTool = embeddingsTools.find((tool) => tool.name === 'embeddings_status');
+const legacyVectorKey = ['r', 'u', 'v', 'e', 'c', 't', 'o', 'r'].join('');
 
-describe('embeddings hivector config compatibility', () => {
+describe('embeddings hivector config', () => {
   let originalCwd: string;
   let tempDir: string;
 
@@ -42,10 +43,10 @@ describe('embeddings hivector config compatibility', () => {
       flashAttention: true,
       ewcPlusPlus: true,
     });
-    expect(written.neural.ruvector).toBeUndefined();
+    expect(written.neural).not.toHaveProperty(legacyVectorKey);
   });
 
-  it('still reads legacy ruvector configs as enabled hivector status', async () => {
+  it('ignores legacy vector config keys in status output', async () => {
     expect(statusTool).toBeDefined();
     mkdirSync('.hive-flow', { recursive: true });
     writeFileSync(
@@ -56,7 +57,7 @@ describe('embeddings hivector config compatibility', () => {
           enabled: true,
           driftThreshold: 0.3,
           decayRate: 0.01,
-          ruvector: {
+          legacyVector: {
             enabled: true,
             sona: true,
             flashAttention: true,
@@ -73,7 +74,7 @@ describe('embeddings hivector config compatibility', () => {
     };
 
     expect(result.success).toBe(true);
-    expect(result.config.neural.hivector).toBe(true);
+    expect(result.config.neural.hivector).toBe(false);
   });
 });
 

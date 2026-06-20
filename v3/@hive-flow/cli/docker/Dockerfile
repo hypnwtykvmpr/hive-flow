@@ -32,12 +32,12 @@ RUN npm install -g hive-flow@latest \
 # Prune heavy optional transitive deps that npm still resolves.
 # These are all optionalDependencies of @hive-flow/cli — the CLI
 # works fine without them (graceful fallbacks built in).
-#   agentic-flow: 238MB (ONNX runtimes, OpenTelemetry, Anthropic SDK)
-#   @opentelemetry: 135MB (transitive via agentic-flow)
+#   hive-flow: 238MB (ONNX runtimes, OpenTelemetry, Anthropic SDK)
+#   @opentelemetry: 135MB (transitive via hive-flow)
 #   onnxruntime-node/web: 158MB (ML inference, not needed for CLI)
 #   @anthropic-ai: 72MB (SDK, only needed when calling API directly)
 #   @xenova: 45MB (transformers.js, not needed for CLI)
-#   agentdb: 37MB (optional memory backend)
+#   hivememory: 37MB (optional memory backend)
 #   onnx-proto: 22MB (protobuf for ONNX)
 #   tiktoken: 23MB (token counting, optional)
 #   @img: 16MB (image processing, not needed)
@@ -45,14 +45,14 @@ RUN npm install -g hive-flow@latest \
 RUN GLOBAL_PREFIX=$(npm config get prefix) \
     && CLI_NM="${GLOBAL_PREFIX}/lib/node_modules/hive-flow/node_modules" \
     && rm -rf \
-      "${CLI_NM}/agentic-flow" \
+      "${CLI_NM}/hive-flow" \
       "${CLI_NM}/@opentelemetry" \
       "${CLI_NM}/onnxruntime-node" \
       "${CLI_NM}/onnxruntime-web" \
       "${CLI_NM}/onnx-proto" \
       "${CLI_NM}/@anthropic-ai" \
       "${CLI_NM}/@xenova" \
-      "${CLI_NM}/agentdb" \
+      "${CLI_NM}/hivememory" \
       "${CLI_NM}/tiktoken" \
       "${CLI_NM}/@img" \
       "${CLI_NM}/better-sqlite3" \
@@ -67,8 +67,8 @@ RUN GLOBAL_PREFIX=$(npm config get prefix) \
       "${CLI_NM}/@hive-flow/plugin-gastown-bridge" \
     && NESTED="${CLI_NM}/@hive-flow/cli/node_modules" \
     && rm -rf \
-      "${NESTED}/agentic-flow" \
-      "${NESTED}/agentdb" \
+      "${NESTED}/hive-flow" \
+      "${NESTED}/hivememory" \
     && rm -rf \
       "${CLI_NM}/@hive-flow/neural" \
       "${CLI_NM}/@grpc" \

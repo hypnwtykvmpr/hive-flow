@@ -63,14 +63,14 @@ RUN GLOBAL_NM="$(npm config get prefix)/lib/node_modules" \
 # The CLI has graceful fallbacks for all of these.
 RUN GLOBAL_NM="$(npm config get prefix)/lib/node_modules" \
     && rm -rf \
-       "$GLOBAL_NM/hive-flow/node_modules/agentic-flow" \
+       "$GLOBAL_NM/hive-flow/node_modules/hive-flow" \
        "$GLOBAL_NM/hive-flow/node_modules/@opentelemetry" \
        "$GLOBAL_NM/hive-flow/node_modules/onnxruntime-node" \
        "$GLOBAL_NM/hive-flow/node_modules/onnxruntime-web" \
        "$GLOBAL_NM/hive-flow/node_modules/onnx-proto" \
        "$GLOBAL_NM/hive-flow/node_modules/@anthropic-ai" \
        "$GLOBAL_NM/hive-flow/node_modules/@xenova" \
-       "$GLOBAL_NM/hive-flow/node_modules/agentdb" \
+       "$GLOBAL_NM/hive-flow/node_modules/hivememory" \
        "$GLOBAL_NM/hive-flow/node_modules/tiktoken" \
        "$GLOBAL_NM/hive-flow/node_modules/@img" \
        "$GLOBAL_NM/hive-flow/node_modules/better-sqlite3" \

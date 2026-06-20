@@ -4,7 +4,7 @@
  * Production embedding service:
  * - OpenAI provider (text-embedding-3-small/large)
  * - Transformers.js provider (local ONNX models)
- * - Historical agentic-flow provider alias backed by local deterministic embeddings
+ * - RVF provider (local deterministic embeddings)
  * - Mock provider (development/testing)
  *
  * Additional features:
@@ -32,7 +32,6 @@ export {
   OpenAIEmbeddingService,
   TransformersEmbeddingService,
   MockEmbeddingService,
-  AgenticFlowEmbeddingService,
 } from './embedding-service.js';
 
 export type { AutoEmbeddingConfig } from './embedding-service.js';
@@ -114,7 +113,6 @@ export type {
   OpenAIEmbeddingConfig,
   TransformersEmbeddingConfig,
   MockEmbeddingConfig,
-  AgenticFlowEmbeddingConfig,
   RvfEmbeddingConfig,
   EmbeddingResult,
   BatchEmbeddingResult,

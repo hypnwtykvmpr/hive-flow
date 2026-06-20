@@ -102,7 +102,7 @@ export declare function getToolByName(name: string): MCPTool | undefined;
  * import { getToolsByTag } from './mcp/tools/index.js';
  *
  * const lifecycleTools = getToolsByTag('lifecycle');
- * const agentdbTools = getToolsByTag('agentdb');
+ * const hivememoryTools = getToolsByTag('hivememory');
  * ```
  */
 export declare function getToolsByTag(tag: string): MCPTool[];

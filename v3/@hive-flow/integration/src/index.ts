@@ -1,59 +1,40 @@
 /**
  * @hive-flow/integration - V3 Integration Module
  *
- * Main entry point for the agentic-flow@alpha integration module.
- * Provides deep integration with SONA learning, Flash Attention,
- * and AgentDB for maximum performance and capability.
- *
- * This module implements ADR-001: Adopt agentic-flow as Core Foundation
+ * Main entry point for Hive Flow integration utilities.
  *
  * Key Features:
  * - SONA Learning: Real-time adaptation with low-latency response
  * - Flash Attention: optimization enabled with 50-75% memory reduction
- * - AgentDB: fast HNSW-indexed search via HNSW indexing
+ * - HiveMemory: fast HNSW-indexed search via HNSW indexing
  * - Intelligence Bridge: 19 hook tools + 9 learning tools
  * - Trajectory Tracking: Experience replay for continuous learning
  *
  * Usage:
  * ```typescript
- * import { createAgenticFlowBridge } from '@hive-flow/integration';
+ * import { createHiveAgent } from '@hive-flow/integration';
  *
- * const bridge = await createAgenticFlowBridge({
- *   features: {
- *     enableSONA: true,
- *     enableFlashAttention: true,
- *     enableAgentDB: true,
- *   }
+ * const agent = await createHiveAgent({
+ *   id: 'agent-1',
+ *   name: 'Coder',
+ *   type: 'coder',
+ *   capabilities: ['code-generation'],
+ *   maxConcurrentTasks: 1,
+ *   priority: 5,
  * });
- *
- * // Get SONA adapter for learning
- * const sona = await bridge.getSONAAdapter();
- * await sona.setMode('real-time');
- *
- * // Get Attention coordinator
- * const attention = await bridge.getAttentionCoordinator();
- * const result = await attention.compute({ query, key, value });
  * ```
  *
  * @module @hive-flow/integration
  * @version 3.0.0-alpha.1
  */
 
-// ===== Agentic-Flow Loader (shared dynamic import) =====
-export {
-  loadAgenticFlow,
-  loadAgenticFlowSubpath,
-  isAgenticFlowAvailable,
-  resetAgenticFlowLoader,
-} from './agentic-flow-loader.js';
-
 // ===== Core Bridge =====
 export {
-  AgenticFlowBridge,
-  createAgenticFlowBridge,
+  IntegrationBridge,
+  createIntegrationBridge,
   getDefaultBridge,
   resetDefaultBridge,
-} from './agentic-flow-bridge.js';
+} from './integration-bridge.js';
 
 // ===== SONA Adapter =====
 export {
@@ -80,18 +61,11 @@ export {
   getDefaultFeatureFlagManager,
 } from './feature-flags.js';
 
-// ===== Agent Integration (ADR-001) =====
+// ===== Local Agent Integration =====
 export {
-  AgenticFlowAgent,
-  createAgenticFlowAgent,
-} from './agentic-flow-agent.js';
-
-export {
-  AgentAdapter,
-  createAgentAdapter,
-  getDefaultAgentAdapter,
-  resetDefaultAgentAdapter,
-} from './agent-adapter.js';
+  HiveAgent,
+  createHiveAgent,
+} from './hive-agent.js';
 
 // ===== Types =====
 export type {
@@ -109,11 +83,11 @@ export type {
   AttentionResult,
   AttentionMetrics,
 
-  // AgentDB Types
-  AgentDBConfiguration,
-  AgentDBVector,
-  AgentDBSearchResult,
-  AgentDBStats,
+  // HiveMemory Types
+  HiveMemoryConfiguration,
+  HiveMemoryVector,
+  HiveMemorySearchResult,
+  HiveMemoryStats,
 
   // Integration Types
   IntegrationConfig,
@@ -149,15 +123,10 @@ export type {
   AgentType,
   // Execution
   AgentHealth,
-  AgentConfig,
-} from './agentic-flow-agent.js';
+  HiveAgentConfig,
+} from './hive-agent.js';
 
-export type {
-  AgentAdapterConfig,
-  AgentConversionResult,
-} from './agent-adapter.js';
-
-// ===== Swarm Adapter (agentic-flow pattern alignment) =====
+// ===== Swarm Adapter (Hive Flow pattern alignment) =====
 export {
   SwarmAdapter,
   createSwarmAdapter,
@@ -166,13 +135,13 @@ export {
 } from './swarm-adapter.js';
 
 export type {
-  // agentic-flow pattern types
-  AgenticFlowTopology,
-  AgenticFlowAttentionMechanism,
-  AgenticFlowAgentOutput,
-  AgenticFlowSpecializedAgent,
-  AgenticFlowExpertRoute,
-  AgenticFlowAttentionResult,
+  // Hive Flow pattern types
+  HiveTopology,
+  HiveAttentionMechanism,
+  HiveAgentOutput,
+  HiveSpecializedAgent,
+  HiveExpertRoute,
+  HiveAttentionResult,
   GraphRoPEContext,
   // V3 Swarm types
   V3TopologyType,
@@ -276,7 +245,7 @@ export type {
 export {
   DEFAULT_SONA_CONFIG,
   DEFAULT_ATTENTION_CONFIG,
-  DEFAULT_AGENTDB_CONFIG,
+  DEFAULT_HIVEMEMORY_CONFIG,
   DEFAULT_FEATURE_FLAGS,
   DEFAULT_INTEGRATION_CONFIG,
 } from './types.js';
@@ -319,11 +288,11 @@ export async function quickStart(options?: {
   mode?: 'minimal' | 'standard' | 'full';
   debug?: boolean;
 }): Promise<{
-  bridge: import('./agentic-flow-bridge.js').AgenticFlowBridge;
+  bridge: import('./integration-bridge.js').IntegrationBridge;
   sona: import('./sona-adapter.js').SONAAdapter | null;
   attention: import('./attention-coordinator.js').AttentionCoordinator | null;
 }> {
-  const { AgenticFlowBridge } = await import('./agentic-flow-bridge.js');
+  const { IntegrationBridge } = await import('./integration-bridge.js');
   const { FeatureFlagManager } = await import('./feature-flags.js');
   type SONAAdapterType = import('./sona-adapter.js').SONAAdapter;
   type AttentionCoordinatorType = import('./attention-coordinator.js').AttentionCoordinator;
@@ -331,7 +300,7 @@ export async function quickStart(options?: {
   const mode = options?.mode || 'standard';
   const flags = FeatureFlagManager.fromProfile(mode);
 
-  const bridge = new AgenticFlowBridge({
+  const bridge = new IntegrationBridge({
     features: flags,
     debug: options?.debug ?? false,
   });
@@ -445,17 +414,17 @@ export const VERSION = '3.0.0-alpha.1';
 export const METADATA = {
   name: '@hive-flow/integration',
   version: VERSION,
-  description: 'Deep agentic-flow@alpha integration for hive-flow v3',
+  description: 'Deep Hive Flow@alpha integration for hive-flow v3',
   implements: ['ADR-001'],
   features: [
     'SONA Learning (5 modes)',
     'Flash Attention (8 mechanisms)',
-    'AgentDB (HNSW indexing)',
+    'HiveMemory (HNSW indexing)',
     'Intelligence Bridge (19 tools)',
     'Trajectory Tracking',
     'Feature Flags',
     'SDK Compatibility Layer',
-    'Worker Patterns (agentic-flow aligned)',
+    'Worker Patterns (Hive Flow aligned)',
     'Specialized Workers (16 domains)',
     'Long-Running Workers (checkpoint support)',
     'Worker Pool (intelligent routing)',
@@ -464,7 +433,7 @@ export const METADATA = {
   ],
   performance: {
     flashAttentionSpeedup: 'Flash Attention optimization',
-    agentDBSearchSpeedup: 'HNSW-indexed',
+    hiveMemorySearchSpeedup: 'HNSW-indexed',
     sonaAdaptationLatency: 'low-latency',
     memoryReduction: '50-75%',
   },

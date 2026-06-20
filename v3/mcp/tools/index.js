@@ -158,7 +158,7 @@ export function getToolByName(name) {
  * import { getToolsByTag } from './mcp/tools/index.js';
  *
  * const lifecycleTools = getToolsByTag('lifecycle');
- * const agentdbTools = getToolsByTag('agentdb');
+ * const hivememoryTools = getToolsByTag('hivememory');
  * ```
  */
 export function getToolsByTag(tag) {

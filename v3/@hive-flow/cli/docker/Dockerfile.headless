@@ -29,14 +29,14 @@ RUN npm install -g hive-flow@latest \
 RUN GLOBAL_PREFIX=$(npm config get prefix) \
     && CLI_NM="${GLOBAL_PREFIX}/lib/node_modules/hive-flow/node_modules" \
     && rm -rf \
-      "${CLI_NM}/agentic-flow" \
+      "${CLI_NM}/hive-flow" \
       "${CLI_NM}/@opentelemetry" \
       "${CLI_NM}/onnxruntime-node" \
       "${CLI_NM}/onnxruntime-web" \
       "${CLI_NM}/onnx-proto" \
       "${CLI_NM}/@anthropic-ai" \
       "${CLI_NM}/@xenova" \
-      "${CLI_NM}/agentdb" \
+      "${CLI_NM}/hivememory" \
       "${CLI_NM}/tiktoken" \
       "${CLI_NM}/@img" \
       "${CLI_NM}/better-sqlite3" \
@@ -51,8 +51,8 @@ RUN GLOBAL_PREFIX=$(npm config get prefix) \
       "${CLI_NM}/@hive-flow/plugin-gastown-bridge" \
     && NESTED="${CLI_NM}/@hive-flow/cli/node_modules" \
     && rm -rf \
-      "${NESTED}/agentic-flow" \
-      "${NESTED}/agentdb" \
+      "${NESTED}/hive-flow" \
+      "${NESTED}/hivememory" \
     && rm -rf \
       "${CLI_NM}/@hive-flow/neural" \
       "${CLI_NM}/@grpc" \

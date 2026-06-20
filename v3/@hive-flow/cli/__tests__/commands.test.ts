@@ -718,11 +718,11 @@ describe('Memory Commands', () => {
       const configureCmd = memoryCommand.subcommands?.find(c => c.name === 'configure');
       expect(configureCmd).toBeDefined();
 
-      ctx.flags = { backend: 'agentdb', _: [] };
+      ctx.flags = { backend: 'hivememory', _: [] };
       const result = await configureCmd!.action!(ctx);
 
       expect(result.success).toBe(true);
-      expect(result.data).toHaveProperty('backend', 'agentdb');
+      expect(result.data).toHaveProperty('backend', 'hivememory');
     });
   });
 });

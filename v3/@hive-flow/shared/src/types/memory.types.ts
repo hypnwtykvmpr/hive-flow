@@ -1,7 +1,7 @@
 /**
  * V3 Memory Types
  * Modernized type system for memory management
- * Aligned with AgentDB integration (ADR-006, ADR-009)
+ * Aligned with HiveMemory integration (ADR-006, ADR-009)
  */
 
 import type { IMemoryEntry, MemoryType, IVectorSearchParams, IVectorSearchResult } from '../core/interfaces/memory.interface.js';
@@ -9,7 +9,7 @@ import type { IMemoryEntry, MemoryType, IVectorSearchParams, IVectorSearchResult
 /**
  * Memory backend type
  */
-export type MemoryBackendType = 'sqlite' | 'agentdb' | 'hybrid' | 'redis' | 'memory';
+export type MemoryBackendType = 'sqlite' | 'hivememory' | 'hybrid' | 'redis' | 'memory';
 
 /**
  * Memory backend configuration
@@ -27,8 +27,8 @@ export interface MemoryBackendConfig {
     wal?: boolean;
   };
 
-  // AgentDB specific (vector storage)
-  agentdb?: {
+  // HiveMemory specific (vector storage)
+  hivememory?: {
     dimensions?: number;
     indexType?: 'hnsw' | 'flat' | 'ivf';
     efConstruction?: number;
@@ -45,10 +45,10 @@ export interface MemoryBackendConfig {
     keyPrefix?: string;
   };
 
-  // Hybrid (SQLite + AgentDB)
+  // Hybrid (SQLite + HiveMemory)
   hybrid?: {
     sqliteConfig?: MemoryBackendConfig['sqlite'];
-    agentdbConfig?: MemoryBackendConfig['agentdb'];
+    hivememoryConfig?: MemoryBackendConfig['hivememory'];
     vectorThreshold?: number;
   };
 }

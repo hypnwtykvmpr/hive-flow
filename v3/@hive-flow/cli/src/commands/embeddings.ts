@@ -3,7 +3,7 @@
  * Vector embeddings, semantic search, similarity operations
  *
  * Features:
- * - Multiple providers: OpenAI, Transformers.js, Agentic-Flow, Mock
+ * - Multiple providers: OpenAI, Transformers.js, Local, Mock
  * - Document chunking with overlap
  * - L2/L1/minmax/zscore normalization
  * - Hyperbolic embeddings (Poincaré ball)
@@ -31,7 +31,7 @@ const generateCommand: Command = {
   description: 'Generate embeddings for text',
   options: [
     { name: 'text', short: 't', type: 'string', description: 'Text to embed', required: true },
-    { name: 'provider', short: 'p', type: 'string', description: 'Provider: openai, transformers, agentic-flow, local', default: 'local' },
+    { name: 'provider', short: 'p', type: 'string', description: 'Provider: openai, transformers, local, mock', default: 'local' },
     { name: 'model', short: 'm', type: 'string', description: 'Model to use' },
     { name: 'output', short: 'o', type: 'string', description: 'Output format: json, array, preview', default: 'preview' },
   ],
@@ -826,13 +826,13 @@ const providersCommand: Command = {
         { provider: 'OpenAI', model: 'text-embedding-3-small', dims: '1536', type: 'Cloud', status: output.success('Ready') },
         { provider: 'OpenAI', model: 'text-embedding-3-large', dims: '3072', type: 'Cloud', status: output.success('Ready') },
         { provider: 'Transformers.js', model: 'all-MiniLM-L6-v2', dims: '384', type: 'Local', status: output.success('Ready') },
-        { provider: 'Agentic Flow', model: 'ONNX optimized', dims: '384', type: 'Local', status: output.success('Ready') },
+        { provider: 'Local', model: 'hash/ONNX-ready', dims: '384', type: 'Local', status: output.success('Ready') },
         { provider: 'Mock', model: 'mock-embedding', dims: '384', type: 'Dev', status: output.dim('Dev only') },
       ],
     });
 
     output.writeln();
-    output.writeln(output.dim('Agentic Flow provider uses WASM SIMD for 75x faster inference'));
+    output.writeln(output.dim('Local provider uses the built-in embedding path without external runtime dependencies'));
 
     return { success: true };
   },
@@ -1138,7 +1138,7 @@ const neuralCommand: Command = {
 
     const neuralConfig = (config.neural || {}) as Record<string, unknown>;
     const features = (neuralConfig.features || {}) as Record<string, boolean>;
-    const localKernels = ((neuralConfig.hivector || neuralConfig.ruvector) || {}) as Record<string, boolean>;
+    const localKernels = (neuralConfig.hivector || {}) as Record<string, boolean>;
 
     output.printTable({
       columns: [

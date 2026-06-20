@@ -35,13 +35,6 @@ interface EmbeddingsConfig {
       flashAttention: boolean;
       ewcPlusPlus: boolean;
     };
-    /** @deprecated Use hivector. */
-    ruvector?: {
-      enabled: boolean;
-      sona: boolean;
-      flashAttention: boolean;
-      ewcPlusPlus: boolean;
-    };
     features?: {
       semanticDrift: boolean;
       memoryPhysics: boolean;
@@ -674,7 +667,7 @@ export const embeddingsTools: MCPTool[] = [
               neural: {
                 enabled: config.neural.enabled,
                 sonaEnabled: stats.sonaEnabled,
-                hivector: config.neural.hivector || config.neural.ruvector || { enabled: false },
+                hivector: config.neural.hivector || { enabled: false },
                 features: config.neural.features || {},
                 realMetrics: {
                   patternsLearned: stats.patternsLearned,
@@ -700,7 +693,7 @@ export const embeddingsTools: MCPTool[] = [
               action: 'status',
               neural: {
                 enabled: config.neural.enabled,
-                hivector: config.neural.hivector || config.neural.ruvector || { enabled: false },
+                hivector: config.neural.hivector || { enabled: false },
                 features: config.neural.features || {},
               },
               message: 'Intelligence module not available - showing config only',
@@ -856,7 +849,7 @@ export const embeddingsTools: MCPTool[] = [
           hyperbolic: config.hyperbolic,
           neural: {
             enabled: config.neural.enabled,
-            hivector: (config.neural.hivector ?? config.neural.ruvector)?.enabled ?? false,
+            hivector: config.neural.hivector?.enabled ?? false,
           },
         },
         paths: {

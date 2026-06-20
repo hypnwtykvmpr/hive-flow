@@ -271,17 +271,17 @@ export function getEnforcementLevel(): number {
     //     hiveHome path (a present, signed, non-zero scope MUST still block).
     //
     // Scope ids come from the same env vars enforcement.cjs reads:
-    //   agent   => AGENTIC_FLOW_AGENT_ID || CLAUDE_AGENT_ID
+    //   agent   => HIVE_FLOW_AGENT_ID || CLAUDE_AGENT_ID
     //   hive    => HIVE_FLOW_HIVE_ID
-    //   session => CLAUDE_SESSION_ID || HIVE_FLOW_SESSION_ID || AGENTIC_FLOW_SESSION_ID
+    //   session => CLAUDE_SESSION_ID || HIVE_FLOW_SESSION_ID || HIVE_FLOW_SESSION_ID
     const agentId = sanitizeScopeId(
-      process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '',
+      process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '',
     );
     const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID || '');
     const sessionId = sanitizeScopeId(
       process.env.CLAUDE_SESSION_ID ||
         process.env.HIVE_FLOW_SESSION_ID ||
-        process.env.AGENTIC_FLOW_SESSION_ID ||
+        process.env.HIVE_FLOW_SESSION_ID ||
         '',
     );
 

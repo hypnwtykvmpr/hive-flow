@@ -86,7 +86,7 @@ export const taskDefinitions: Record<string, TaskDefinition> = {
     type: 'optimization',
     payload: {
       targetReduction: 0.50,
-      backend: 'agentdb',
+      backend: 'hivememory',
     },
     priority: 70,
   },

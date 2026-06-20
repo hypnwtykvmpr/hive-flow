@@ -457,7 +457,7 @@ integration:
   memory:
     type: shared-kernel
     components:
-      - AgentDB
+      - HiveMemory
       - HNSW
       - Embeddings
       - ReasoningBank
@@ -643,7 +643,7 @@ implementation:
         phase: 2
         priority: critical
         estimatedLines: 300
-        description: Memory domain integration (AgentDB, HNSW)
+        description: Memory domain integration (HiveMemory, HNSW)
 
       - path: src/bridges/QESecurityBridge.ts
         status: pending

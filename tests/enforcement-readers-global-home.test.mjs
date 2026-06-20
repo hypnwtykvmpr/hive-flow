@@ -77,7 +77,7 @@ function runNode(args, { hiveHome, projectDir, cwd = REPO_ROOT, input = '', time
       CLAUDE_PROJECT_DIR: projectDir,
       HIVE_FLOW_PROJECT_ROOT: projectDir,
       CLAUDE_SESSION_ID: '',
-      AGENTIC_FLOW_AGENT_ID: '',
+      HIVE_FLOW_AGENT_ID: '',
       CLAUDE_AGENT_ID: '',
       HIVE_FLOW_HIVE_ID: '',
     },

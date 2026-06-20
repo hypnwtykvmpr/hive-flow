@@ -44,7 +44,7 @@ import {
 // Bridge imports
 import { GtBridge, createGtBridge } from './bridges/gt-bridge.js';
 import { BdBridge, createBdBridge } from './bridges/bd-bridge.js';
-import { SyncBridge, createSyncBridge, type IAgentDBService, type AgentDBEntry } from './bridges/sync-bridge.js';
+import { SyncBridge, createSyncBridge, type IHiveMemoryService, type HiveMemoryEntry } from './bridges/sync-bridge.js';
 
 // Formula executor
 import { FormulaExecutor, createFormulaExecutor, type IWasmLoader } from './formula/executor.js';
@@ -233,7 +233,7 @@ export interface GasTownBridgeConfig {
 
   /** SyncBridge configuration */
   syncBridge?: {
-    /** AgentDB namespace for beads */
+    /** HiveMemory namespace for beads */
     namespace?: string;
     /** Sync interval in ms */
     syncInterval?: number;
@@ -854,7 +854,7 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
       'topological-sort',
       'cycle-detection',
       'critical-path',
-      'agentdb-sync',
+      'hivememory-sync',
       'sling-operations',
       'gupp-adapter',
     ];
@@ -1066,13 +1066,13 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
     });
     await this.bdBridge.initialize();
 
-    // Initialize SyncBridge - requires an AgentDB service
-    // We create a stub AgentDB service that will be replaced when
+    // Initialize SyncBridge - requires an HiveMemory service
+    // We create a stub HiveMemory service that will be replaced when
     // the plugin context provides a real one
-    const stubAgentDB = this.createStubAgentDB();
-    this.syncBridge = createSyncBridge(stubAgentDB, {
+    const stubHiveMemory = this.createStubHiveMemory();
+    this.syncBridge = createSyncBridge(stubHiveMemory, {
       beadsBridge: this.config.bdBridge,
-      agentdbNamespace: this.config.syncBridge?.namespace ?? 'gastown:beads',
+      hivememoryNamespace: this.config.syncBridge?.namespace ?? 'gastown:beads',
     });
 
     this.logger.debug('Bridges initialized');
@@ -1138,12 +1138,12 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
   }
 
   /**
-   * Create a stub AgentDB service for SyncBridge initialization.
+   * Create a stub HiveMemory service for SyncBridge initialization.
    * This stub stores data in-memory and should be replaced with
-   * the real AgentDB service from the plugin context.
+   * the real HiveMemory service from the plugin context.
    */
-  private createStubAgentDB(): IAgentDBService {
-    const storage = new Map<string, Map<string, AgentDBEntry>>();
+  private createStubHiveMemory(): IHiveMemoryService {
+    const storage = new Map<string, Map<string, HiveMemoryEntry>>();
 
     return {
       async store(key: string, value: unknown, namespace?: string, metadata?: Record<string, unknown>): Promise<void> {
@@ -1159,17 +1159,17 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
           version: 1,
         });
       },
-      async retrieve(key: string, namespace?: string): Promise<AgentDBEntry | null> {
+      async retrieve(key: string, namespace?: string): Promise<HiveMemoryEntry | null> {
         const ns = namespace ?? 'default';
         return storage.get(ns)?.get(key) ?? null;
       },
-      async search(_query: string, namespace?: string, limit?: number): Promise<AgentDBEntry[]> {
+      async search(_query: string, namespace?: string, limit?: number): Promise<HiveMemoryEntry[]> {
         const ns = namespace ?? 'default';
         const entries = storage.get(ns);
         if (!entries) return [];
         return Array.from(entries.values()).slice(0, limit ?? 100);
       },
-      async list(namespace?: string, limit?: number, offset?: number): Promise<AgentDBEntry[]> {
+      async list(namespace?: string, limit?: number, offset?: number): Promise<HiveMemoryEntry[]> {
         const ns = namespace ?? 'default';
         const entries = storage.get(ns);
         if (!entries) return [];
@@ -1467,15 +1467,15 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
     return {
       async pullBeads(_rig?: string, _namespace?: string) {
         if (!sync) return { synced: 0, conflicts: 0 };
-        // SyncBridge uses syncFromAgentDB to pull beads
-        const beads = await sync.syncFromAgentDB();
+        // SyncBridge uses syncFromHiveMemory to pull beads
+        const beads = await sync.syncFromHiveMemory();
         return { synced: beads.length, conflicts: sync.getPendingConflicts().length };
       },
       async pushTasks(_namespace?: string) {
         if (!sync || !bd) return { pushed: 0, conflicts: 0 };
-        // SyncBridge uses syncToAgentDB to push beads
+        // SyncBridge uses syncToHiveMemory to push beads
         const allBeads = await bd.listBeads({});
-        const result = await sync.syncToAgentDB(allBeads);
+        const result = await sync.syncToHiveMemory(allBeads);
         return { pushed: result.synced, conflicts: result.conflicts };
       },
     };
@@ -1641,7 +1641,7 @@ export class GasTownBridgePlugin extends EventEmitter implements IPlugin {
       name: 'gt/beads-sync',
       event: 'session-start',
       priority: 100,
-      description: 'Sync beads with AgentDB on session start',
+      description: 'Sync beads with HiveMemory on session start',
       handler: async (_context: PluginContext, payload: unknown) => {
         if (this.config.gastown?.enableBeadsSync && this.syncBridge) {
           this.logger.info('Beads sync triggered on session start');

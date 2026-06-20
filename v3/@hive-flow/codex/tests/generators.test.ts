@@ -536,7 +536,7 @@ describe('generateBuiltInSkill', () => {
     const result = await generateBuiltInSkill('memory-management');
 
     expect(result.skillMd).toContain('name: memory-management');
-    expect(result.skillMd).toContain('AgentDB memory system');
+    expect(result.skillMd).toContain('HiveMemory memory system');
     expect(result.skillMd).toContain('Store Pattern');
     expect(result.skillMd).toContain('Semantic Search');
   });

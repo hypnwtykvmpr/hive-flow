@@ -440,7 +440,7 @@ function readSignedEnforcementLevel(stateFile: string): number | undefined {
 function readParentEnforcementLevel(): number {
   const globalLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'state.json')) ?? 0;
   const projectLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'projects', PROJECT_ENFORCEMENT_ID, 'state.json')) ?? 0;
-  const callerAgentId = sanitizePathId(process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '', 64);
+  const callerAgentId = sanitizePathId(process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '', 64);
   const agentLevel = callerAgentId
     ? (readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'agents', callerAgentId, 'state.json')) ?? 0)
     : 0;
@@ -479,7 +479,7 @@ const BRIDGE_BASE_ENV_KEYS = new Set([
   'HIVE_FLOW_CLIENT_KIND',
   'CLAUDE_SESSION_ID',
   'CODEX_SESSION_ID',
-  'AGENTIC_FLOW_SESSION_ID',
+  'HIVE_FLOW_SESSION_ID',
   'HIVE_FLOW_CONFIG',
   'HIVE_FLOW_LOG_LEVEL',
   // Proxy configuration — required for CLI providers in proxied/corporate networks
@@ -532,7 +532,7 @@ function buildProviderBridgeEnv(
     childEnv[selectedCredentialKey] = process.env[selectedCredentialKey]!;
   }
 
-  childEnv.AGENTIC_FLOW_AGENT_ID = agentId;
+  childEnv.HIVE_FLOW_AGENT_ID = agentId;
   childEnv.CLAUDE_AGENT_ID = agentId;
   if (agentToken) childEnv.HIVE_FLOW_AGENT_TOKEN = agentToken;
   if (agentRole?.hiveId) childEnv.HIVE_FLOW_HIVE_ID = agentRole.hiveId;
@@ -788,7 +788,7 @@ export const agentTools: MCPTool[] = [
         modelRoutedBy: normalizedInputModel !== undefined && normalizedInputModel !== ''
           ? 'explicit'
           : routingResult.routedBy,
-        ownerSessionId: process.env.CLAUDE_SESSION_ID || process.env.AGENTIC_FLOW_SESSION_ID || undefined,
+        ownerSessionId: process.env.CLAUDE_SESSION_ID || process.env.HIVE_FLOW_SESSION_ID || undefined,
       };
 
       // Transition spawning → idle (setup complete)
@@ -1731,7 +1731,7 @@ export const agentTools: MCPTool[] = [
       const agentId = input.agentId as string;
 
       // A9: Block cross-agent mutations when enforcement level > 0
-      const callerAgentId = process.env.AGENTIC_FLOW_AGENT_ID
+      const callerAgentId = process.env.HIVE_FLOW_AGENT_ID
         || process.env.CLAUDE_AGENT_ID
         || null;
       if (callerAgentId && callerAgentId !== agentId) {

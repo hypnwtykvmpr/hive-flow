@@ -156,7 +156,7 @@ function cliCommandsTable(): string {
 | \`init\` | 4 | Project initialization |
 | \`agent\` | 8 | Agent lifecycle management |
 | \`swarm\` | 6 | Multi-agent swarm coordination |
-| \`memory\` | 11 | AgentDB memory with HNSW search |
+| \`memory\` | 11 | HiveMemory with HNSW search |
 | \`task\` | 6 | Task creation and lifecycle |
 | \`session\` | 7 | Session state management |
 | \`hooks\` | 17 | Self-learning hooks + 12 workers |

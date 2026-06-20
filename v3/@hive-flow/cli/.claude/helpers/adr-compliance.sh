@@ -14,7 +14,7 @@ mkdir -p "$METRICS_DIR"
 
 # V3 ADRs to check
 declare -A ADRS=(
-  ["ADR-001"]="agentic-flow as core foundation"
+  ["ADR-001"]="local Hive Flow as core foundation"
   ["ADR-002"]="Domain-Driven Design structure"
   ["ADR-003"]="Single coordination engine"
   ["ADR-004"]="Plugin-based architecture"
@@ -34,14 +34,14 @@ should_run() {
 }
 
 check_adr_001() {
-  # ADR-001: agentic-flow as core foundation
+  # ADR-001: local Hive Flow as core foundation
   local score=0
 
-  # Check package.json for agentic-flow dependency
-  grep -q "agentic-flow" "$PROJECT_ROOT/package.json" 2>/dev/null && score=$((score + 50))
+  # Check package.json for the Hive Flow package identity
+  grep -q "hive-flow" "$PROJECT_ROOT/package.json" 2>/dev/null && score=$((score + 50))
 
-  # Check for imports from agentic-flow
-  local imports=$(grep -r "from.*agentic-flow\|require.*agentic-flow" "$PROJECT_ROOT/v3" "$PROJECT_ROOT/src" 2>/dev/null | grep -v node_modules | wc -l)
+  # Check for local Hive Flow package imports
+  local imports=$(grep -r "from.*@hive-flow\|require.*@hive-flow" "$PROJECT_ROOT/v3" "$PROJECT_ROOT/src" 2>/dev/null | grep -v node_modules | wc -l)
   [ "$imports" -gt 5 ] && score=$((score + 50))
 
   echo "$score"
@@ -147,7 +147,7 @@ check_compliance() {
   "compliantCount": $compliant_count,
   "totalADRs": 10,
   "adrs": {
-    "ADR-001": {"score": $adr_001, "title": "agentic-flow as core foundation"},
+    "ADR-001": {"score": $adr_001, "title": "local Hive Flow as core foundation"},
     "ADR-002": {"score": $adr_002, "title": "Domain-Driven Design structure"},
     "ADR-003": {"score": $adr_003, "title": "Single coordination engine"},
     "ADR-004": {"score": $adr_004, "title": "Plugin-based architecture"},

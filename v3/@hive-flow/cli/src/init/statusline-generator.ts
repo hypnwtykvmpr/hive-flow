@@ -21,7 +21,7 @@ import { DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
  * 🏗️  DDD Domains    [●●○○○]  2/5    ⚡ HNSW
  * 🤖 Swarm  ◉ [ 5/15]  👥 2    🪝 10/17    🟢 CVE 3/3    💾 4MB    🧠  63%
  * 🔧 Architecture    ADRs ●71%  │  DDD ● 13%  │  Security ●CLEAN
- * 📊 AgentDB    Embeddings ●3104⚡  │  Size 216KB  │  Tests ●6 (~24 cases)  │  MCP ●1/1
+ * 📊 HiveMemory    Embeddings ●3104⚡  │  Size 216KB  │  Tests ●6 (~24 cases)  │  MCP ●1/1
  */
 export function generateStatuslineScript(options: InitOptions): string {
   const maxAgents = options.runtime.maxAgents;
@@ -446,8 +446,8 @@ function getHooksStatus() {
   return { enabled, total };
 }
 
-// AgentDB stats (pure stat calls + one trusted metrics read)
-function getAgentDBStats() {
+// HiveMemory stats (pure stat calls + one trusted metrics read)
+function getHiveMemoryStats() {
   let vectorCount = 0;
   let dbSizeKB = 0;
   let namespaces = 0;
@@ -492,9 +492,9 @@ function getAgentDBStats() {
 
   if (namespaces === 0) {
     const dbDirs = [
-      path.join(CWD, '.hive-flow', 'agentdb'),
-      path.join(CWD, '.swarm', 'agentdb'),
-      path.join(CWD, '.agentdb'),
+      path.join(CWD, '.hive-flow', 'hivememory'),
+      path.join(CWD, '.swarm', 'hivememory'),
+      path.join(CWD, '.hivememory'),
     ];
     for (const dir of dbDirs) {
       try {
@@ -625,7 +625,7 @@ function generateStatusline() {
   const system = getSystemMetrics();
   const adrs = getADRStatus();
   const hooks = getHooksStatus();
-  const agentdb = getAgentDBStats();
+  const hiveMemory = getHiveMemoryStats();
   const tests = getTestStats();
   const session = getSessionStats();
   const integration = getIntegrationStatus();
@@ -680,7 +680,7 @@ function generateStatusline() {
   // and are removed). When no trusted perf metric exists, omit the indicator
   // rather than print an aspirational "target" string.
   let perfIndicator = '';
-  if (agentdb.hasHnsw && agentdb.vectorCount > 0) {
+  if (hiveMemory.hasHnsw && hiveMemory.vectorCount > 0) {
     perfIndicator = c.brightGreen + '\\u26A1 HNSW' + c.reset;
   } else if (progress.patternsLearned > 0) {
     const pk = progress.patternsLearned >= 1000 ? (progress.patternsLearned / 1000).toFixed(1) + 'k' : String(progress.patternsLearned);
@@ -746,16 +746,16 @@ function generateStatusline() {
     c.cyan + 'Security' + c.reset + ' ' + secColor + '\\u25CF' + security.status + c.reset
   );
 
-  // Line 4: AgentDB, Tests, Integration
-  const hnswInd = agentdb.hasHnsw ? c.brightGreen + '\\u26A1' + c.reset : '';
-  const sizeDisp = agentdb.dbSizeKB >= 1024 ? (agentdb.dbSizeKB / 1024).toFixed(1) + 'MB' : agentdb.dbSizeKB + 'KB';
+  // Line 4: HiveMemory, Tests, Integration
+  const hnswInd = hiveMemory.hasHnsw ? c.brightGreen + '\\u26A1' + c.reset : '';
+  const sizeDisp = hiveMemory.dbSizeKB >= 1024 ? (hiveMemory.dbSizeKB / 1024).toFixed(1) + 'MB' : hiveMemory.dbSizeKB + 'KB';
   const testColor = tests.testFiles > 0 ? c.brightGreen : c.dim;
   // Phase 12: the embeddings segment renders ONLY when backed by an exact
-  // count from memory/stats.json (agentdb.vectorCount > 0). The legacy
+  // count from memory/stats.json (hiveMemory.vectorCount > 0). The legacy
   // byte-derived embedding label was removed; when no real count exists the
   // segment is omitted rather than printing a fabricated number.
-  const embStr = agentdb.vectorCount > 0
-    ? c.cyan + 'Embeddings' + c.reset + ' ' + c.brightGreen + '\\u25CF' + agentdb.vectorCount + hnswInd + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  '
+  const embStr = hiveMemory.vectorCount > 0
+    ? c.cyan + 'Embeddings' + c.reset + ' ' + c.brightGreen + '\\u25CF' + hiveMemory.vectorCount + hnswInd + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  '
     : '';
 
   let integStr = '';
@@ -769,7 +769,7 @@ function generateStatusline() {
   if (!integStr) integStr = c.dim + '\\u25CF none' + c.reset;
 
   lines.push(
-    c.brightCyan + '\\uD83D\\uDCCA AgentDB' + c.reset + '    ' +
+    c.brightCyan + '\\uD83D\\uDCCA HiveMemory' + c.reset + '    ' +
     embStr +
     c.cyan + 'Size' + c.reset + ' ' + c.brightWhite + sizeDisp + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  ' +
     c.cyan + 'Tests' + c.reset + ' ' + testColor + '\\u25CF' + tests.testFiles + c.reset + ' ' + c.dim + '(~' + tests.testCases + ' cases)' + c.reset + '  ' + c.dim + '\\u2502' + c.reset + '  ' +
@@ -790,7 +790,7 @@ function generateJSON() {
     system: getSystemMetrics(),
     adrs: getADRStatus(),
     hooks: getHooksStatus(),
-    agentdb: getAgentDBStats(),
+    hiveMemory: getHiveMemoryStats(),
     tests: getTestStats(),
     git: { modified: git.modified, untracked: git.untracked, staged: git.staged, ahead: git.ahead, behind: git.behind },
     lastUpdated: new Date().toISOString(),

@@ -1,14 +1,14 @@
 /**
  * Threat Learning Service
  *
- * Self-learning threat pattern service using AgentDB for vector search
+ * Self-learning threat pattern service using HiveMemory for vector search
  * and ReasoningBank-style pattern storage.
  *
  * Features:
  * - HNSW-indexed threat pattern search (fast HNSW-indexed)
  * - Pattern learning from successful detections
  * - Effectiveness tracking for adaptive mitigation
- * - Integration with agentic-flow attention mechanisms
+ * - Integration with hive-flow attention mechanisms
  */
 
 import type {
@@ -70,7 +70,7 @@ export interface LearningTrajectory {
 }
 
 /**
- * AgentDB-compatible vector store interface
+ * HiveMemory-compatible vector store interface
  */
 export interface VectorStore {
   store(params: {
@@ -95,7 +95,7 @@ export interface VectorStore {
 
 /**
  * Simple in-memory vector store for standalone usage
- * Replace with AgentDB in production
+ * Replace with HiveMemory in production
  */
 export class InMemoryVectorStore implements VectorStore {
   private storage = new Map<string, Map<string, { value: unknown; embedding?: number[] }>>();
@@ -165,7 +165,7 @@ export class ThreatLearningService {
 
   /**
    * Search for similar threat patterns using HNSW
-   * When connected to AgentDB, achieves HNSW-indexed speedup
+   * When connected to HiveMemory, achieves HNSW-indexed speedup
    */
   async searchSimilarThreats(
     query: string,
@@ -400,7 +400,7 @@ export class ThreatLearningService {
 }
 
 /**
- * Create a ThreatLearningService with optional AgentDB vector store
+ * Create a ThreatLearningService with optional HiveMemory vector store
  */
 export function createThreatLearningService(
   vectorStore?: VectorStore

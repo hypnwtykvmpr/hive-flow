@@ -68,7 +68,7 @@ setup() {
   #                                   the DELETE_ paths (operates on DELETE_ by design,
   #                                   does not reference a live DELETE_ dependency)
   #   - debrand-static-grep-zero    : guard asserting DELETE_ names are not shipped
-  #   - agentdb-ripout.test         : dir-walk that SKIPS DELETE_ entries
+  #   - hivememory-ripout.test         : dir-walk that SKIPS DELETE_ entries
   #   - ewc-architecture-honesty    : dir-walk that SKIPS DELETE_ entries
   #   - ca4-neural-honesty.test     : dir-walk that SKIPS DELETE_ segments
   #   - BEAD_DELETE_FAILED          : unrelated error constant (coincidental substring)
@@ -86,7 +86,7 @@ setup() {
     | grep -vE 'delete-marked-quarantine-guard\.bats:' \
     | grep -vE 'scripts/quarantine-delete-marked\.sh:' \
     | grep -vE 'debrand-static-grep-zero\.test\.ts:' \
-    | grep -vE 'agentdb-ripout\.test\.ts:' \
+    | grep -vE 'hivememory-ripout\.test\.ts:' \
     | grep -vE 'ewc-architecture-honesty\.test\.ts:' \
     | grep -vE 'ca4-neural-honesty\.test\.ts:' \
     | grep -vE 'BEAD_DELETE_FAILED|GT_BEAD_DELETE_FAILED' \

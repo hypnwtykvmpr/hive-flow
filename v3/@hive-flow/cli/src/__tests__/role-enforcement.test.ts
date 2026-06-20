@@ -110,7 +110,7 @@ describe('Role Enforcement System', () => {
   });
 
   afterEach(() => {
-    delete process.env.AGENTIC_FLOW_AGENT_ID;
+    delete process.env.HIVE_FLOW_AGENT_ID;
     delete process.env.CLAUDE_SESSION_ID;
     delete process.env.CLAUDE_AGENT_ID;
     delete process.env.CLAUDE_PARENT_AGENT_ID;
@@ -369,7 +369,7 @@ describe('Role Enforcement System', () => {
   describe('processPreToolUse', () => {
     it('passes through when no agent ID env vars set', () => {
       // Ensure no agent ID env vars
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       delete process.env.CLAUDE_SESSION_ID;
       delete process.env.CLAUDE_AGENT_ID;
 
@@ -387,7 +387,7 @@ describe('Role Enforcement System', () => {
 
     it('accepts both tool_name and toolName input formats', () => {
       // Without a role, both should passthrough
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       const r1 = roleEnf.processPreToolUse({ tool_name: 'Read' });
       const r2 = roleEnf.processPreToolUse({ toolName: 'Read' });
       expect(r1).toEqual({});
@@ -398,7 +398,7 @@ describe('Role Enforcement System', () => {
       // Even if we could mock a role with type: 'worker', it should pass through.
       // Without actual fs mocking at the module level, we verify the code path
       // by checking that the function handles the case.
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       const result = roleEnf.processPreToolUse({ tool_name: 'Bash' });
       expect(result).toEqual({});
     });
@@ -439,7 +439,7 @@ describe('Role Enforcement System', () => {
     });
 
     it('keeps subagent advocate work tools blocked while dev override is active', () => {
-      process.env.AGENTIC_FLOW_AGENT_ID = 'worker-agent';
+      process.env.HIVE_FLOW_AGENT_ID = 'worker-agent';
       const overridePath = require('path').join(
         ROLE_TEST_PROJECT_REAL_DIR,
         '.hive-flow',
@@ -563,7 +563,7 @@ describe('Role Enforcement System', () => {
 
   describe('processSubagentStartHook', () => {
     it('returns empty object when no agent ID', () => {
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       delete process.env.CLAUDE_SESSION_ID;
       delete process.env.CLAUDE_AGENT_ID;
 
@@ -668,8 +668,8 @@ describe('Role Enforcement System', () => {
   // ── Agent ID env var priority ──
 
   describe('agent ID env var priority', () => {
-    it('uses AGENTIC_FLOW_AGENT_ID first', () => {
-      process.env.AGENTIC_FLOW_AGENT_ID = 'agent-1';
+    it('uses HIVE_FLOW_AGENT_ID first', () => {
+      process.env.HIVE_FLOW_AGENT_ID = 'agent-1';
       process.env.CLAUDE_SESSION_ID = 'agent-2';
       process.env.CLAUDE_AGENT_ID = 'agent-3';
 
@@ -681,7 +681,7 @@ describe('Role Enforcement System', () => {
     });
 
     it('uses hook agent_id for native Task agents before CLAUDE_AGENT_ID', () => {
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       process.env.CLAUDE_SESSION_ID = 'session-agent';
       process.env.CLAUDE_AGENT_ID = 'claude-agent';
 
@@ -691,7 +691,7 @@ describe('Role Enforcement System', () => {
     });
 
     it('falls back to CLAUDE_SESSION_ID for legacy/root role enforcement', () => {
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       process.env.CLAUDE_SESSION_ID = 'session-agent';
       delete process.env.CLAUDE_AGENT_ID;
 
@@ -701,7 +701,7 @@ describe('Role Enforcement System', () => {
     });
 
     it('falls back to CLAUDE_AGENT_ID as last resort', () => {
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       delete process.env.CLAUDE_SESSION_ID;
       process.env.CLAUDE_AGENT_ID = 'claude-only';
 

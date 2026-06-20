@@ -2963,12 +2963,6 @@ const coverageRouteCommand: Command = {
       description: 'Disable enhanced local coverage routing',
       type: 'boolean',
       default: false
-    },
-    {
-      name: 'no-ruvector',
-      description: 'Deprecated alias for --no-hivector',
-      type: 'boolean',
-      default: false
     }
   ],
   examples: [
@@ -2978,7 +2972,7 @@ const coverageRouteCommand: Command = {
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const task = ctx.args[0] || ctx.flags.task as string;
     const threshold = ctx.flags.threshold as number || 80;
-    const useHivector = !ctx.flags['no-hivector'] && !ctx.flags['no-ruvector'];
+    const useHivector = !ctx.flags['no-hivector'];
 
     if (!task) {
       output.printError('Task description is required. Use --task or -t flag.');
@@ -3850,7 +3844,7 @@ const tokenOptimizeCommand: Command = {
       cacheMisses: 0,
       memoriesRetrieved: 0,
     };
-    const agenticFlowAvailable = false;
+    const localOptimizerAvailable = true;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const reasoningBank: any = null;
 
@@ -3921,7 +3915,7 @@ const tokenOptimizeCommand: Command = {
             { metric: 'Cache Hit Rate', value: `${hitRate}%` },
             { metric: 'Memories Retrieved', value: String(stats.memoriesRetrieved) },
             { metric: 'Est. Monthly Savings', value: `$${savings}` },
-            { metric: 'Agentic-Flow Active', value: agenticFlowAvailable ? '✓' : '✗' },
+            { metric: 'Local Optimizer Active', value: localOptimizerAvailable ? '✓' : '✗' },
           ],
         });
       }
@@ -3941,10 +3935,10 @@ const tokenOptimizeCommand: Command = {
 | Cache Hit Rate | ${hitRate}% |
 | Memories Retrieved | ${stats.memoriesRetrieved} |
 | Est. Monthly Savings | $${savings} |
-| Agentic-Flow Active | ${agenticFlowAvailable ? '✓' : '✗'} |`);
+| Local Optimizer Active | ${localOptimizerAvailable ? '✓' : '✗'} |`);
       }
 
-      return { success: true, data: { config, stats: { ...stats, agenticFlowAvailable } } };
+      return { success: true, data: { config, stats: { ...stats, localOptimizerAvailable } } };
     } catch (error) {
       spinner.fail('TokenOptimizer failed');
       const err = error as Error;
@@ -4526,7 +4520,7 @@ export const hooksCommand: Command = {
     output.printList([
       '🧠 ReasoningBank adaptive learning',
       '⚡ Local attention coordination',
-      '🔍 AgentDB-compatible local search',
+      '🔍 HiveMemory-compatible local search',
       '📊 SWE-Bench evaluation claims removed',
       '🎯 32.3% token reduction',
       '🚀 2.8-4.4x speed improvement',

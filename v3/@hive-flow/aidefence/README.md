@@ -77,7 +77,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 ### Security Integrations
 
 - **Claude Code** - CLI command and MCP tools
-- **AgentDB** - HNSW-indexed vector search (fast)
+- **HiveMemory** - HNSW-indexed vector search (fast)
 - **Swarm Coordination** - Multi-agent security consensus
 - **Hooks System** - Pre/post operation scanning
 
@@ -97,7 +97,7 @@ yarn add @hive-flow/aidefence
 
 ### Local Search
 
-Pattern search uses the local Hive Flow implementation. No external AgentDB
+Pattern search uses the local Hive Flow implementation. No external HiveMemory
 package is required or installed.
 
 ---
@@ -208,7 +208,7 @@ interface AIDefenceConfig {
   /** Enable self-learning from detections (default: false) */
   enableLearning?: boolean;
 
-  /** Custom vector store - use AgentDB for production */
+  /** Custom vector store - use HiveMemory for production */
   vectorStore?: VectorStore;
 
   /** Minimum confidence threshold (default: 0.5) */
@@ -473,7 +473,7 @@ const result = await mcp.call('aidefence_scan', {
 | Threat Detection | <10ms | **0.04ms** | 250x faster than target |
 | Quick Scan | <5ms | **0.02ms** | Pattern match only |
 | PII Detection | <3ms | **0.01ms** | Regex-based |
-| HNSW Search | <1ms | **0.1ms** | With AgentDB |
+| HNSW Search | <1ms | **0.1ms** | With HiveMemory |
 
 ### Throughput
 
@@ -484,7 +484,7 @@ const result = await mcp.call('aidefence_scan', {
 ### Optimization Tips
 
 1. **Use `quickScan()` for high-volume screening**
-2. **Enable AgentDB for HNSW search** (fast)
+2. **Enable HiveMemory for HNSW search** (fast)
 3. **Batch similar inputs** for pattern caching
 4. **Disable learning** in read-only scenarios
 

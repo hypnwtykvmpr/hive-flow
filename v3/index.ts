@@ -27,7 +27,7 @@
  *
  * Performance Targets:
  * - Flash Attention: optimization enabled
- * - AgentDB Search: HNSW indexing improvements
+ * - HiveMemory Search: HNSW indexing improvements
  * - Memory Reduction: 50-75%
  * - Code Reduction: <5,000 lines (vs 15,000+)
  * - Startup Time: <500ms
@@ -47,7 +47,7 @@
 export * as security from './@hive-flow/security/src/index.js';
 
 /**
- * Memory module - AgentDB, HNSW indexing, vector search
+ * Memory module - HiveMemory, HNSW indexing, vector search
  * @see {@link @hive-flow/memory}
  */
 export * as memory from './@hive-flow/memory/src/index.js';
@@ -190,7 +190,7 @@ export const V3_INFO = {
     node: '>=20.0.0'
   },
   features: [
-    'agentic-flow integration (ADR-001)',
+    'local Hive Flow integration',
     'Domain-Driven Design (ADR-002)',
     'Single coordination engine (ADR-003)',
     'Plugin architecture (ADR-004)',

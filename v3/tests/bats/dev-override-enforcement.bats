@@ -13,7 +13,7 @@ setup() {
   export HIVE_FLOW_PROJECT_ROOT="$PROJECT_DIR"
   export CLAUDE_PROJECT_DIR="$PROJECT_DIR"
   unset CLAUDE_SESSION_ID
-  unset AGENTIC_FLOW_AGENT_ID
+  unset HIVE_FLOW_AGENT_ID
   unset CLAUDE_AGENT_ID
   unset CLAUDE_PARENT_AGENT_ID
   unset HIVE_FLOW_DEV_OVERRIDE_TOKEN
@@ -22,7 +22,7 @@ setup() {
 teardown() {
   rm -rf "$PROJECT_DIR"
   unset CLAUDE_SESSION_ID
-  unset AGENTIC_FLOW_AGENT_ID
+  unset HIVE_FLOW_AGENT_ID
   unset CLAUDE_AGENT_ID
   unset CLAUDE_PARENT_AGENT_ID
   unset HIVE_FLOW_DEV_OVERRIDE_TOKEN
@@ -166,7 +166,7 @@ JSON
 @test "dev override CLI hook keeps subagents blocked" {
   enable_dev_override
   issue_root_override_token
-  export AGENTIC_FLOW_AGENT_ID="worker-bats"
+  export HIVE_FLOW_AGENT_ID="worker-bats"
 
   run node "$SCRIPT" <<'JSON'
 {"tool_name":"Write","tool_input":{"file_path":".claude/settings.json"}}
@@ -291,7 +291,7 @@ JSON
 }
 
 @test "subagent trip leaves coordinator benign in-project writes allowed" {
-  export AGENTIC_FLOW_AGENT_ID="grep-worker-bats"
+  export HIVE_FLOW_AGENT_ID="grep-worker-bats"
 
   run node "$SCRIPT" <<'JSON'
 {"tool_name":"Bash","tool_input":{"command":"grep 'enforcement-reset' v3/docs/design/notes.md"}}
@@ -300,7 +300,7 @@ JSON
   [ "$status" -eq 0 ]
   [[ "$output" == *'"permissionDecision":"deny"'* ]]
 
-  unset AGENTIC_FLOW_AGENT_ID
+  unset HIVE_FLOW_AGENT_ID
 
   run node "$SCRIPT" <<'JSON'
 {"tool_name":"Write","tool_input":{"file_path":"v3/docs/design/benign-plan.md"}}

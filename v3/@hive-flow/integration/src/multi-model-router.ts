@@ -1,7 +1,7 @@
 /**
  * Multi-Model Router
  *
- * Cost-optimized routing across multiple LLM providers from agentic-flow@alpha:
+ * Cost-optimized routing across multiple LLM providers from Hive Flow@alpha:
  * - anthropic: Claude models
  * - openai: GPT models
  * - openrouter: 100+ models, 85-99% cost savings

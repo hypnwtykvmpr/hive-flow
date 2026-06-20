@@ -20,7 +20,7 @@ hooks:
     echo "👑 V3 Queen Coordinator starting 15-agent swarm orchestration..."
 
     # Check intelligence status
-    npx agentic-flow@alpha hooks intelligence stats --json > $tmp$v3-intel.json 2>$dev$null || echo '{"initialized":false}' > $tmp$v3-intel.json
+    hive-flow hooks intelligence stats --json > $tmp$v3-intel.json 2>$dev$null || echo '{"initialized":false}' > $tmp$v3-intel.json
     echo "🧠 Hivector: $(cat $tmp$v3-intel.json | jq -r '.initialized // false')"
 
     # GitHub integration check
@@ -37,7 +37,7 @@ hooks:
     echo "👑 V3 Queen coordination complete"
 
     # Store coordination patterns
-    npx agentic-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "v3-queen-$(date +%s)" \
       --task "V3 Orchestration: $TASK" \
       --agent "v3-queen-coordinator" \
@@ -78,13 +78,13 @@ Lead the hierarchical mesh coordination of 15 specialized agents to implement al
 - **Agents #5-6**: Core architecture DDD design, type modernization
 
 ### Phase 2: Core Systems (Week 3-6)
-- **Agent #7**: Memory unification (AgentDB HNSW indexing improvement)
+- **Agent #7**: Memory unification (HiveMemory HNSW indexing improvement)
 - **Agent #8**: Swarm coordination (merge 4 systems)
 - **Agent #9**: MCP server optimization
 - **Agent #13**: TDD London School implementation
 
 ### Phase 3: Integration (Week 7-10)
-- **Agent #10**: agentic-flow@alpha deep integration
+- **Agent #10**: hive-flow deep integration
 - **Agent #11**: CLI modernization + hooks
 - **Agent #12**: Neural/SONA integration
 - **Agent #14**: Performance benchmarking
@@ -97,7 +97,7 @@ Lead the hierarchical mesh coordination of 15 specialized agents to implement al
 
 - **Parallel Efficiency**: >85% agent utilization
 - **Performance**: Flash Attention optimization
-- **Search**: HNSW-indexed AgentDB improvement
+- **Search**: HNSW-indexed HiveMemory improvement
 - **Memory**: 50-75% reduction
 - **Code**: <5,000 lines (vs 15,000+)
 - **Timeline**: 14-week delivery

@@ -3,7 +3,7 @@
  *
  * CLI bridge modules for Gas Town (gt) and Beads (bd) integration.
  * Provides secure command execution with input validation and
- * AgentDB synchronization.
+ * HiveMemory synchronization.
  *
  * @module v3/plugins/gastown-bridge/bridges
  */
@@ -63,17 +63,17 @@ export {
   type ConflictStrategy,
   type SyncDirection as CliSyncDirection,
   type SyncStatus,
-  type AgentDBEntry,
+  type HiveMemoryEntry,
   type SyncBridgeConfig,
   type SyncResult as CliSyncResult,
   type SyncConflict,
   type SyncState,
-  type IAgentDBService,
+  type IHiveMemoryService,
   type SyncLogger,
   type SyncErrorCode,
   // Schemas - renamed to avoid conflicts
   ConflictStrategySchema,
   SyncDirectionSchema as CliSyncDirectionSchema,
   SyncStatusSchema,
-  AgentDBEntrySchema,
+  HiveMemoryEntrySchema,
 } from './sync-bridge.js';

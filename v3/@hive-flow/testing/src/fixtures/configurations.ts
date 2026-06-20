@@ -37,7 +37,7 @@ export interface SecurityConfig {
  * Memory configuration interface
  */
 export interface MemoryConfig {
-  backend: 'agentdb' | 'sqlite' | 'memory' | 'hybrid';
+  backend: 'hivememory' | 'sqlite' | 'memory' | 'hybrid';
   vectorDimensions: number;
   hnswConfig: {
     M: number;
@@ -99,7 +99,7 @@ export interface MCPConfig {
 export interface PerformanceConfig {
   targets: {
     flashAttentionSpeedup: [number, number]; // [min, max]
-    agentDBSearchImprovement: [number, number];
+    hiveMemorySearchImprovement: [number, number];
     memoryReduction: number;
     startupTime: number;
   };
@@ -196,8 +196,8 @@ export const securityConfigs: Record<string, SecurityConfig> = {
  * Pre-defined memory configurations for testing
  */
 export const memoryConfigs: Record<string, MemoryConfig> = {
-  agentDB: {
-    backend: 'agentdb',
+  hiveMemory: {
+    backend: 'hivememory',
     vectorDimensions: 384,
     hnswConfig: {
       M: 16,
@@ -367,7 +367,7 @@ export const performanceConfigs: Record<string, PerformanceConfig> = {
   v3Targets: {
     targets: {
       flashAttentionSpeedup: [2.49, 7.47],
-      agentDBSearchImprovement: [150, 12500],
+      hiveMemorySearchImprovement: [150, 12500],
       memoryReduction: 0.50,
       startupTime: 500,
     },
@@ -386,7 +386,7 @@ export const performanceConfigs: Record<string, PerformanceConfig> = {
   minimal: {
     targets: {
       flashAttentionSpeedup: [1.0, 2.0],
-      agentDBSearchImprovement: [10, 100],
+      hiveMemorySearchImprovement: [10, 100],
       memoryReduction: 0.25,
       startupTime: 2000,
     },
@@ -478,8 +478,8 @@ export const invalidConfigs = {
   },
 
   memory: {
-    zeroDimensions: createMemoryConfig('agentDB', { vectorDimensions: 0 }),
-    invalidQuantization: createMemoryConfig('agentDB', { quantization: { enabled: true, bits: 16 as 4 | 8 } }),
+    zeroDimensions: createMemoryConfig('hiveMemory', { vectorDimensions: 0 }),
+    invalidQuantization: createMemoryConfig('hiveMemory', { quantization: { enabled: true, bits: 16 as 4 | 8 } }),
   },
 
   swarm: {

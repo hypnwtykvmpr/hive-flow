@@ -47,7 +47,7 @@ The QE domain shares the Memory domain's infrastructure for vector storage, HNSW
 
 | V3 Component | QE Usage | Namespace |
 |--------------|----------|-----------|
-| AgentDB Adapter | Test pattern storage | `aqe/v3/test-patterns` |
+| HiveMemory Adapter | Test pattern storage | `aqe/v3/test-patterns` |
 | HNSW Index | Coverage gap search | `aqe/v3/coverage-data` |
 | Embeddings Service | Code semantic search | `aqe/v3/code-knowledge` |
 | ReasoningBank | Learning trajectories | `aqe/v3/learning-trajectories` |

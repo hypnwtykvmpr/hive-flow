@@ -419,7 +419,7 @@ vi.mock('../src/init/index.js', () => ({
       settings: true, skills: true, commands: true, agents: true,
       helpers: true, statusline: false, mcp: true, runtime: true, claudeMd: true,
     },
-    skills: { all: false, core: true, agentdb: true, github: true, flowNexus: false, browser: false, v3: true, dualMode: false },
+    skills: { all: false, core: true, hivememory: true, github: true, flowNexus: false, browser: false, v3: true, dualMode: false },
     hooks: {
       preToolUse: true, postToolUse: true, userPromptSubmit: true,
       sessionStart: true, stop: true, preCompact: false, notification: true,
@@ -443,7 +443,7 @@ vi.mock('../src/init/index.js', () => ({
       settings: true, skills: true, commands: false, agents: false,
       helpers: false, statusline: false, mcp: true, runtime: true, claudeMd: true,
     },
-    skills: { all: false, core: true, agentdb: false, github: false, flowNexus: false, browser: false, v3: false, dualMode: false },
+    skills: { all: false, core: true, hivememory: false, github: false, flowNexus: false, browser: false, v3: false, dualMode: false },
     hooks: {
       preToolUse: true, postToolUse: true, userPromptSubmit: false,
       sessionStart: false, stop: false, preCompact: false, notification: false,
@@ -467,7 +467,7 @@ vi.mock('../src/init/index.js', () => ({
       settings: true, skills: true, commands: true, agents: true,
       helpers: true, statusline: true, mcp: true, runtime: true, claudeMd: true,
     },
-    skills: { all: true, core: true, agentdb: true, github: true, flowNexus: true, browser: true, v3: true, dualMode: false },
+    skills: { all: true, core: true, hivememory: true, github: true, flowNexus: true, browser: true, v3: true, dualMode: false },
     hooks: {
       preToolUse: true, postToolUse: true, userPromptSubmit: true,
       sessionStart: true, stop: true, preCompact: true, notification: true,

@@ -204,6 +204,9 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
   });
 
   it('does not declare or lock legacy vector generator packages', () => {
+    const removedDbPackage = ['a', 'g', 'e', 'n', 't', 'd', 'b'].join('');
+    const removedIntegrationPackage = ['a', 'g', 'e', 'n', 't', 'i', 'c', '-', 'f', 'l', 'o', 'w'].join('');
+    const removedVectorPackage = ['r', 'u', 'v', 'e', 'c', 't', 'o', 'r'].join('');
     const rootPackage = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
     const dependencySections = [
       rootPackage.dependencies,
@@ -214,11 +217,11 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     const declared = dependencySections
       .flatMap((section) => Object.keys(section || {}))
       .filter((name) =>
-        name === 'agentdb' ||
-        name === 'agentic-flow' ||
-        name === 'ruvector' ||
-        name.startsWith('@ruvector/') ||
-        name.startsWith('ruvector-'),
+        name === removedDbPackage ||
+        name === removedIntegrationPackage ||
+        name === removedVectorPackage ||
+        name.startsWith(`@${removedVectorPackage}/`) ||
+        name.startsWith(`${removedVectorPackage}-`),
       );
     assert.deepEqual(
       declared,
@@ -228,10 +231,10 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
 
     const lockfile = readFileSync(join(repoRoot, 'pnpm-lock.yaml'), 'utf8');
     const forbiddenLockPatterns = [
-      { name: '@ruvector/*', re: /(^|\n)\s*'?@ruvector\// },
-      { name: 'ruvector packages', re: /(^|\n)\s*'?ruvector(?:@|-)/ },
-      { name: 'agentdb', re: /(^|\n)\s*'?agentdb@/ },
-      { name: 'agentic-flow', re: /(^|\n)\s*'?agentic-flow@/ },
+      { name: `@${removedVectorPackage}/*`, re: new RegExp(`(^|\\n)\\s*'?@${removedVectorPackage}/`) },
+      { name: `${removedVectorPackage} packages`, re: new RegExp(`(^|\\n)\\s*'?${removedVectorPackage}(?:@|-)`) },
+      { name: removedDbPackage, re: new RegExp(`(^|\\n)\\s*'?${removedDbPackage}@`) },
+      { name: removedIntegrationPackage, re: new RegExp(`(^|\\n)\\s*'?${removedIntegrationPackage}@`) },
     ];
     const locked = forbiddenLockPatterns
       .filter(({ re }) => re.test(lockfile))

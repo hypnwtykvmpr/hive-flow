@@ -122,7 +122,7 @@ const DOMAIN_CONFIGS: DomainConfig[] = [
     name: 'integration',
     agentNumbers: [10, 11, 12],
     priority: 3,
-    capabilities: ['agentic-flow-integration', 'cli-modernization', 'neural-integration', 'hooks-system'],
+    capabilities: ['local-integration', 'cli-modernization', 'neural-integration', 'hooks-system'],
     description: 'local compatibility integration, CLI modernization, and neural features',
   },
   {

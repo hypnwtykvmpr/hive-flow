@@ -2,7 +2,7 @@
  * Worker Integration Module
  *
  * Provides comprehensive worker capabilities for plugin development.
- * Integrates with agentic-flow worker pools and task execution.
+ * Provides local worker pools and bounded task execution.
  */
 
 import { EventEmitter } from 'node:events';
@@ -152,7 +152,6 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
     const startTime = Date.now();
 
     try {
-      // Execute task via agentic-flow task runner
       const result = await this.executeTask(task);
 
       const duration = Date.now() - startTime;
@@ -194,8 +193,7 @@ export class WorkerInstance extends EventEmitter implements IWorkerInstance {
     tokensUsed?: number;
     metadata?: Record<string, unknown>;
   }> {
-    // Task execution handler - delegates to agentic-flow task runners
-    // Timeout enforcement ensures bounded execution
+    // Timeout enforcement ensures bounded local execution.
     const timeout = task.timeout ?? this.definition.timeout ?? 30000;
 
     return new Promise((resolve, reject) => {

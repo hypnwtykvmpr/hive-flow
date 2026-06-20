@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 ### 🚀 Major Changes
 
 #### Architecture Overhaul (10 ADRs)
-- **ADR-001**: Adopted agentic-flow@alpha as core foundation, eliminating 10,000+ duplicate lines
+- **ADR-001**: Adopted hive-flow as core foundation, eliminating 10,000+ duplicate lines
 - **ADR-002**: Implemented Domain-Driven Design with bounded contexts and modular architecture
 - **ADR-003**: Unified to single SwarmCoordinator, removing 6 redundant implementations
 - **ADR-004**: Plugin-based microkernel architecture with dynamic extension points
@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
 - **ADR-006**: Unified memory service replacing 6+ fragmented systems
 - **ADR-007**: Event sourcing for critical state changes with full audit trail
 - **ADR-008**: Migrated from Jest to Vitest (10x faster test execution)
-- **ADR-009**: Hybrid memory backend (SQLite + AgentDB) as default
+- **ADR-009**: Hybrid memory backend (SQLite + HiveMemory) as default
 - **ADR-010**: Removed Deno support, focused on Node.js 20+ LTS
 
 #### Module Constellation
@@ -42,7 +42,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Continuous learning from all agent interactions
 - SWE-Bench evaluation claims removed improvement
 
-#### AgentDB Vector Search
+#### HiveMemory Vector Search
 - **fast HNSW-indexed** search with HNSW indexing
 - Unified memory backend replacing 6+ fragmented systems
 - Quantization support (4-32x memory reduction)
@@ -65,7 +65,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Cross-platform ACL/keychain integration
 
 #### 2. `@hive-flow/memory` - Memory Unification
-- AgentDB as primary backend
+- HiveMemory as primary backend
 - HNSW vector indexing (fast)
 - Hybrid SQLite + vector storage
 - Cross-session persistence
@@ -73,7 +73,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - 4-32x quantization support
 
 #### 3. `@hive-flow/integration` - Agentic Flow Integration
-- Deep integration with agentic-flow@alpha
+- Deep integration with hive-flow
 - Eliminates 10,000+ duplicate lines
 - Extends rather than reimplements
 - Shared swarm coordination
@@ -142,7 +142,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - **226,606 lines removed** from codebase
 - **24MB storage reclaimed**
 - Eliminated 6+ duplicate swarm implementations
-- Removed 10,000+ duplicate lines via agentic-flow integration
+- Removed 10,000+ duplicate lines via hive-flow integration
 - Consolidated 6+ memory system fragments
 
 #### Dependency Consolidation
@@ -172,8 +172,8 @@ Complete restructure into 10 independent @hive-flow modules:
 #### Core Dependencies
 ```json
 {
-  "agentic-flow": "2.0.1-alpha.74",
-  "agentdb": "3.0.0-alpha.9",
+  "hive-flow": "2.0.1-alpha.74",
+  "hivememory": "3.0.0-alpha.9",
   "@hive-flow/attention": "0.1.3",
   "@hive-flow/sona": "0.1.5",
   "vitest": "^2.1.8",
@@ -206,7 +206,7 @@ Complete restructure into 10 independent @hive-flow modules:
 #### Removed Features
 - **Deno support** (ADR-010): Node.js 20+ only
 - **Jest**: Replaced with Vitest (ADR-008)
-- **Legacy memory systems**: Consolidated into AgentDB (ADR-006)
+- **Legacy memory systems**: Consolidated into HiveMemory (ADR-006)
 - **Multiple coordinators**: Unified to single SwarmCoordinator (ADR-003)
 - **v2 CLI**: Complete CLI modernization (backward incompatible)
 
@@ -243,8 +243,8 @@ Complete restructure into 10 independent @hive-flow modules:
 - **Bundle Size**: 3.2MB (down from 12.8MB)
 
 ### 🙏 Acknowledgments
-- Built on agentic-flow@alpha by the Anthropic community
-- AgentDB integration for unified memory
+- Built on hive-flow by the Anthropic community
+- HiveMemory integration for unified memory
 - Hivector for Flash Attention and SONA learning
 - Community feedback and testing
 
@@ -272,13 +272,13 @@ Complete restructure into 10 independent @hive-flow modules:
 ### Getting Started
 ```bash
 # Initialize v3
-npx agentic-flow@3.0.0-alpha.1 init --v3
+hive-flow init --v3
 
 # Run security audit
 npx @hive-flow/security audit
 
 # Start with unified memory
-npx @hive-flow/memory unify --backend agentdb
+npx @hive-flow/memory unify --backend hivememory
 
 # Spawn v3 swarm
 npx @hive-flow/swarm coordinate --agents 15

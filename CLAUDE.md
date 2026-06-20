@@ -161,7 +161,7 @@ Automated watcher system that monitors hive worker progress without polling.
 | `@hive-flow/codex` | `v3/@hive-flow/codex/` | Dual-mode Claude + Codex collaboration |
 | `@hive-flow/guidance` | `v3/@hive-flow/guidance/` | Governance control plane |
 | `@hive-flow/hooks` | `v3/@hive-flow/hooks/` | 17 hooks + 12 workers |
-| `@hive-flow/memory` | `v3/@hive-flow/memory/` | AgentDB + HNSW search |
+| `@hive-flow/memory` | `v3/@hive-flow/memory/` | HiveMemory + HNSW search |
 | `@hive-flow/security` | `v3/@hive-flow/security/` | Input validation, CVE remediation |
 
 ## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
@@ -507,7 +507,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 - **Max Agents**: 8 (smaller team = less drift)
 - **Strategy**: specialized (clear roles, no overlap)
 - **Consensus**: raft (leader maintains authoritative state)
-- **Memory Backend**: hybrid (SQLite + AgentDB)
+- **Memory Backend**: hybrid (SQLite + HiveMemory)
 - **HNSW Indexing**: Enabled (fast HNSW-indexed)
 - **Neural Learning**: Enabled (SONA)
 
@@ -520,7 +520,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 | `init` | 4 | Project initialization with wizard, presets, skills, hooks |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | AgentDB memory with vector search (fast HNSW-indexed) |
+| `memory` | 11 | HiveMemory memory with vector search (fast HNSW-indexed) |
 | `mcp` | 9 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 7 | Session state management and persistence |
@@ -620,7 +620,7 @@ CVE remediation, input validation, path security:
 - `TokenGenerator` — Secure token generation
 
 ### Token Optimizer (Agent Booster)
-Integrates agentic-flow optimizations for 30-50% token reduction:
+Integrates local Hive Flow optimizations for 30-50% token reduction:
 ```typescript
 import { getTokenOptimizer } from '@hive-flow/integration';
 const optimizer = await getTokenOptimizer();

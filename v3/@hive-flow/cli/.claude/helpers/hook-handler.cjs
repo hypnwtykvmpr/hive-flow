@@ -675,7 +675,7 @@ const handlers = {
     // BUG-06: Auto-set advocate role on SessionStart for root (human) sessions
     try {
       if (!process.env.CLAUDE_PARENT_AGENT_ID) {
-        const agentId = process.env.AGENTIC_FLOW_AGENT_ID
+        const agentId = process.env.HIVE_FLOW_AGENT_ID
           || process.env.CLAUDE_SESSION_ID
           || process.env.CLAUDE_AGENT_ID;
         if (agentId) {
@@ -956,7 +956,7 @@ const handlers = {
   },
 
   'role-reinforce': () => {
-    const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
+    const agentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
     if (!agentId) { console.log(JSON.stringify({})); return; }
     try {
       const roleEnf = require('./role-enforcement.cjs');
@@ -986,7 +986,7 @@ const handlers = {
     if (!match) { console.log(JSON.stringify({})); return; }
 
     const roleType = match[1].toLowerCase();
-    const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
+    const agentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
     if (!agentId) { console.log(JSON.stringify({})); return; }
 
     try {
@@ -1040,7 +1040,7 @@ const handlers = {
       return;
     }
 
-    const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
+    const agentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || null;
     if (!agentId) { console.log(JSON.stringify({})); return; }
 
     try {

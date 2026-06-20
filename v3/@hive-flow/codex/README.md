@@ -297,7 +297,7 @@ hive-flow init --codex --full
 - GitHub integration
 - Security scanning
 - Performance optimization
-- AgentDB vector search
+- HiveMemory vector search
 - Neural pattern training
 
 </details>
@@ -359,7 +359,7 @@ $performance-optimization
 | Skill | Syntax | Description |
 |-------|--------|-------------|
 | V3 Security Overhaul | `$v3-security-overhaul` | Complete security architecture with CVE remediation |
-| V3 Memory Unification | `$v3-memory-unification` | Unify 6+ memory systems into AgentDB with HNSW |
+| V3 Memory Unification | `$v3-memory-unification` | Unify 6+ memory systems into HiveMemory with HNSW |
 | V3 Integration Deep | `$v3-integration-deep` | Deep local compatibility API integration (ADR-001) |
 | V3 Performance Optimization | `$v3-performance-optimization` | Achieve Flash Attention optimization targets |
 | V3 Swarm Coordination | `$v3-swarm-coordination` | 15-agent hierarchical mesh coordination |
@@ -368,23 +368,23 @@ $performance-optimization
 | V3 MCP Optimization | `$v3-mcp-optimization` | MCP server optimization and transport |
 | V3 CLI Modernization | `$v3-cli-modernization` | CLI modernization and hooks enhancement |
 
-#### AgentDB & Memory Skills
+#### HiveMemory & Memory Skills
 
 | Skill | Syntax | Description |
 |-------|--------|-------------|
-| AgentDB Advanced | `$agentdb-advanced` | Advanced QUIC sync, distributed coordination |
-| AgentDB Memory Patterns | `$agentdb-memory-patterns` | Persistent memory patterns for AI agents |
-| AgentDB Learning | `$agentdb-learning` | AI learning plugins with AgentDB |
-| AgentDB Optimization | `$agentdb-optimization` | Quantization (4-32bit), performance tuning |
-| AgentDB Vector Search | `$agentdb-vector-search` | Semantic vector search with HNSW |
-| ReasoningBank AgentDB | `$reasoningbank-agentdb` | ReasoningBank with AgentDB integration |
+| HiveMemory Advanced | `$hivememory-advanced` | Advanced QUIC sync, distributed coordination |
+| HiveMemory Memory Patterns | `$hivememory-memory-patterns` | Persistent memory patterns for AI agents |
+| HiveMemory Learning | `$hivememory-learning` | AI learning plugins with HiveMemory |
+| HiveMemory Optimization | `$hivememory-optimization` | Quantization (4-32bit), performance tuning |
+| HiveMemory Vector Search | `$hivememory-vector-search` | Semantic vector search with HNSW |
+| ReasoningBank HiveMemory | `$reasoningbank-hivememory` | ReasoningBank with HiveMemory integration |
 | ReasoningBank Intelligence | `$reasoningbank-intelligence` | Adaptive learning with ReasoningBank |
 
 #### Swarm & Coordination Skills
 
 | Skill | Syntax | Description |
 |-------|--------|-------------|
-| Swarm Orchestration | `$swarm-orchestration` | Multi-agent swarms with agentic-flow |
+| Swarm Orchestration | `$swarm-orchestration` | Multi-agent swarms with hive-flow |
 | Swarm Advanced | `$swarm-advanced` | Advanced swarm patterns for research/analysis |
 | Hive Mind Advanced | `$hive-mind-advanced` | Collective intelligence system |
 | Stream Chain | `$stream-chain` | Stream-JSON chaining for multi-agent pipelines |

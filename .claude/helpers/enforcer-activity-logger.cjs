@@ -79,7 +79,7 @@ function readStdin() {
 
 function main() {
   const agentId =
-    process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || '';
+    process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_SESSION_ID || process.env.CLAUDE_AGENT_ID || '';
   let input = {};
   try {
     input = JSON.parse(readStdin() || '{}');

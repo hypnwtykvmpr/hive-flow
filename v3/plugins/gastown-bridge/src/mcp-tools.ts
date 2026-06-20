@@ -8,7 +8,7 @@
  *   2. gt_beads_ready - List ready beads (no blockers)
  *   3. gt_beads_show - Show bead details
  *   4. gt_beads_dep - Manage bead dependencies
- *   5. gt_beads_sync - Sync beads with AgentDB
+ *   5. gt_beads_sync - Sync beads with HiveMemory
  *
  * Convoy Operations (3 tools) - CLI Bridge:
  *   6. gt_convoy_create - Create a convoy (work order)
@@ -196,8 +196,8 @@ export const BeadsSyncInputSchema = z.object({
   direction: z.enum(['pull', 'push', 'both']).default('both').describe('Sync direction'),
   /** Filter by rig */
   rig: z.string().max(100).optional().describe('Filter by rig (repository)'),
-  /** AgentDB namespace for sync */
-  namespace: z.string().max(100).default('gastown:beads').describe('AgentDB namespace'),
+  /** HiveMemory namespace for sync */
+  namespace: z.string().max(100).default('gastown:beads').describe('HiveMemory namespace'),
 });
 
 export type BeadsSyncInput = z.infer<typeof BeadsSyncInputSchema>;
@@ -874,11 +874,11 @@ export const beadsDepTool: MCPTool<BeadsDepInput, BeadDepResult> = {
 /**
  * MCP Tool: gt_beads_sync
  *
- * Sync beads with AgentDB (bidirectional)
+ * Sync beads with HiveMemory (bidirectional)
  */
 export const beadsSyncTool: MCPTool<BeadsSyncInput, BeadsSyncResult> = {
   name: 'gt_beads_sync',
-  description: 'Synchronize beads between Gas Town and Hive Flow AgentDB',
+  description: 'Synchronize beads between Gas Town and Hive Flow HiveMemory',
   category: 'gastown-bridge',
   version: '0.1.0',
   layer: 'hybrid',

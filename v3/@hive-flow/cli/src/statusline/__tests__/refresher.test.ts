@@ -280,10 +280,10 @@ describe('refreshStatuslineSnapshot', () => {
     writeFileSync(
       paths.memoryStats,
       JSON.stringify({
-        embeddings: { count: 12, source: 'agentdb', observedAt },
-        memories: { count: 34, source: 'agentdb', observedAt },
+        embeddings: { count: 12, source: 'hivememory', observedAt },
+        memories: { count: 34, source: 'hivememory', observedAt },
         dbSizeBytes: 4096,
-        sourceDescription: 'agentdb',
+        sourceDescription: 'hivememory',
       }),
       'utf8',
     );

@@ -571,7 +571,7 @@ export async function recordStep(step: TrajectoryStep): Promise<boolean> {
 
   try {
     // Generate embedding if not provided
-    // ADR-053: Try AgentDB v3 bridge embedder first
+    // ADR-053: Try HiveMemory v3 bridge embedder first
     let embedding = step.embedding;
     if (!embedding) {
       try {
@@ -664,7 +664,7 @@ export async function findSimilarPatterns(
   }
 
   try {
-    // ADR-053: Try AgentDB v3 bridge embedder first
+    // ADR-053: Try HiveMemory v3 bridge embedder first
     let queryEmbedding: number[] | null = null;
     try {
       const bridge = await import('./memory-bridge.js');

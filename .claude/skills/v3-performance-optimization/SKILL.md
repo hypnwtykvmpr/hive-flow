@@ -7,7 +7,7 @@ description: "Achieve aggressive v3 performance targets: Flash Attention optimiz
 
 ## What This Skill Does
 
-Validates and optimizes hive-flow v3 to achieve industry-leading performance through Flash Attention, AgentDB HNSW indexing, and comprehensive system optimization with continuous benchmarking.
+Validates and optimizes hive-flow v3 to achieve industry-leading performance through Flash Attention, HiveMemory HNSW indexing, and comprehensive system optimization with continuous benchmarking.
 
 ## Quick Start
 
@@ -83,7 +83,7 @@ class MemoryBenchmarks {
 
     // Target: HNSW search
     const hnswTime = await this.timeOperation(() =>
-      this.agentDBMemory.hnswSearchAll(queries)
+      this.hiveMemoryMemory.hnswSearchAll(queries)
     );
 
     const improvement = baselineTime / hnswTime;
@@ -368,7 +368,7 @@ class PerformanceGates {
 
 ## Related V3 Skills
 
-- `v3-integration-deep` - Performance integration with agentic-flow
+- `v3-integration-deep` - Performance integration with hive-flow
 - `v3-memory-unification` - Memory performance optimization
 - `v3-swarm-coordination` - Swarm performance coordination
 - `v3-security-overhaul` - Secure performance patterns
@@ -382,7 +382,7 @@ npm run benchmark:v3
 
 # Specific target validation
 npm run benchmark:flash-attention
-npm run benchmark:agentdb-search
+npm run benchmark:hivememory-search
 npm run benchmark:memory-optimization
 
 # Continuous monitoring

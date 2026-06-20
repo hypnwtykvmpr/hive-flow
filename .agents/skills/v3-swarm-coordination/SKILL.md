@@ -21,8 +21,8 @@ Task("CVE remediation", "Fix CVE-1, CVE-2, CVE-3 vulnerabilities", "security-aud
 Task("Security testing", "Implement TDD security framework", "test-architect")
 
 # Core domain (Phase 2 - Parallel execution)
-Task("Memory unification", "Implement AgentDB HNSW indexing improvement", "v3-memory-specialist")
-Task("Integration architecture", "Deep agentic-flow@alpha integration", "v3-integration-architect")
+Task("Memory unification", "Implement HiveMemory HNSW indexing improvement", "v3-memory-specialist")
+Task("Integration architecture", "Deep hive-flow integration", "v3-integration-architect")
 Task("Performance validation", "Validate Flash Attention targets", "v3-performance-engineer")
 ```
 
@@ -55,10 +55,10 @@ Task("Performance validation", "Validate Flash Attention targets", "v3-performan
 | 4 | Security Tester | Security | Foundation | TDD security testing |
 | 5 | Core Architect | Core | Systems | DDD architecture, coordination |
 | 6 | Core Implementer | Core | Systems | Core module implementation |
-| 7 | Memory Specialist | Core | Systems | AgentDB unification |
+| 7 | Memory Specialist | Core | Systems | HiveMemory unification |
 | 8 | Swarm Specialist | Core | Systems | Unified coordination engine |
 | 9 | MCP Specialist | Core | Systems | MCP server optimization |
-| 10 | Integration Architect | Integration | Integration | agentic-flow@alpha deep integration |
+| 10 | Integration Architect | Integration | Integration | hive-flow deep integration |
 | 11 | CLI/Hooks Developer | Integration | Integration | CLI modernization |
 | 12 | Neural/Learning Dev | Integration | Integration | SONA integration |
 | 13 | TDD Test Engineer | Quality | All | London School TDD |
@@ -93,7 +93,7 @@ const phase1 = async () => {
 const phase2 = async () => {
   // Parallel core system implementation
   await Promise.all([
-    Task("Memory unification", "Implement AgentDB with HNSW indexing improvements", "v3-memory-specialist"),
+    Task("Memory unification", "Implement HiveMemory with HNSW indexing improvements", "v3-memory-specialist"),
     Task("Swarm coordination", "Merge 4 coordination systems into unified engine", "swarm-specialist"),
     Task("MCP optimization", "Optimize MCP server performance", "mcp-specialist"),
     Task("Core implementation", "Implement DDD modular architecture", "core-implementer"),
@@ -108,7 +108,7 @@ const phase2 = async () => {
 const phase3 = async () => {
   // Parallel integration and optimization
   await Promise.all([
-    Task("agentic-flow integration", "Eliminate 10,000+ duplicate lines", "v3-integration-architect"),
+    Task("hive-flow integration", "Eliminate 10,000+ duplicate lines", "v3-integration-architect"),
     Task("CLI modernization", "Enhance CLI with hooks system", "cli-hooks-developer"),
     Task("SONA integration", "Implement low-latency learning adaptation", "neural-learning-developer"),
     Task("Performance benchmarking", "Validate Flash Attention targets", "v3-performance-engineer"),
@@ -187,8 +187,8 @@ class GitHubCoordination {
   async createEpicIssues(): Promise<void> {
     const epics = [
       { title: 'Security Overhaul (CVE-1,2,3)', agents: [2, 3, 4] },
-      { title: 'Memory Unification (AgentDB)', agents: [7] },
-      { title: 'agentic-flow Integration', agents: [10] },
+      { title: 'Memory Unification (HiveMemory)', agents: [7] },
+      { title: 'hive-flow Integration', agents: [10] },
       { title: 'Performance Optimization', agents: [14] },
       { title: 'DDD Architecture', agents: [5, 6] }
     ];
@@ -303,7 +303,7 @@ class SwarmLoadBalancer {
 ### Implementation Targets
 - [ ] **ADR Coverage**: All 10 ADRs implemented successfully
 - [ ] **Performance**: Flash Attention optimization achieved
-- [ ] **Search**: HNSW-indexed AgentDB improvement validated
+- [ ] **Search**: HNSW-indexed HiveMemory improvement validated
 - [ ] **Code Reduction**: <5,000 lines (vs 15,000+)
 - [ ] **Security**: 90/100 security score achieved
 

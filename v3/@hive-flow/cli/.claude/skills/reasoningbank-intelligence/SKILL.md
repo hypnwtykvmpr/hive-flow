@@ -11,20 +11,20 @@ Implements ReasoningBank's adaptive learning system for AI agents to learn from 
 
 ## Prerequisites
 
-- agentic-flow v1.5.11+
-- AgentDB v1.0.4+ (for persistence)
+- hive-flow v1.5.11+
+- HiveMemory v1.0.4+ (for persistence)
 - Node.js 18+
 
 ## Quick Start
 
 ```typescript
-import { ReasoningBank } from 'agentic-flow/reasoningbank';
+import { ReasoningBank } from 'hive-flow/reasoningbank';
 
 // Initialize ReasoningBank
 const rb = new ReasoningBank({
   persist: true,
   learningRate: 0.1,
-  adapter: 'agentdb' // Use AgentDB for storage
+  adapter: 'hivememory' // Use HiveMemory for storage
 });
 
 // Record task outcome
@@ -140,13 +140,13 @@ class AdaptiveAgent {
 }
 ```
 
-## Integration with AgentDB
+## Integration with HiveMemory
 
 ```typescript
 // Persist ReasoningBank data
 await rb.configure({
   storage: {
-    type: 'agentdb',
+    type: 'hivememory',
     options: {
       database: './reasoning-bank.db',
       enableVectorSearch: true
@@ -189,13 +189,13 @@ console.log(`
 **Solution**: Ensure sufficient training data (100+ experiences per task type)
 
 ### Issue: Slow pattern matching
-**Solution**: Enable vector indexing in AgentDB
+**Solution**: Enable vector indexing in HiveMemory
 
 ### Issue: Memory growing large
 **Solution**: Set TTL for old experiences or enable pruning
 
 ## Learn More
 
-- ReasoningBank Guide: agentic-flow/src/reasoningbank/README.md
-- AgentDB Integration: packages/agentdb/docs/reasoningbank.md
+- ReasoningBank Guide: hive-flow/src/reasoningbank/README.md
+- HiveMemory Integration: packages/hivememory/docs/reasoningbank.md
 - Pattern Learning: docs/reasoning/patterns.md

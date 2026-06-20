@@ -115,7 +115,7 @@ function writeScopedState(scopeType: string, scopeId: string, state: Record<stri
 }
 
 function clearAgentEnv(): void {
-  delete process.env.AGENTIC_FLOW_AGENT_ID;
+  delete process.env.HIVE_FLOW_AGENT_ID;
   delete process.env.CLAUDE_AGENT_ID;
   delete process.env.CLAUDE_SESSION_ID;
   delete process.env.HIVE_FLOW_AGENT_TOKEN;
@@ -439,7 +439,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('denies ordinary agent protected-workflow writes without escalation', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'agent-a';
+    process.env.HIVE_FLOW_AGENT_ID = 'agent-a';
 
     const result = enf.processPreToolUse({
       tool_name: 'Write',
@@ -639,7 +639,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('denies first protected substrate mutations without escalating and records the ledger', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'tier1-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'tier1-agent';
 
     const result = enf.processPreToolUse({
       tool_name: 'Write',
@@ -660,7 +660,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('escalates protected mutations only after a cross-channel repeat on the same actor and target', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'tier2-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'tier2-agent';
 
     const first = enf.processPreToolUse({
       tool_name: 'Write',
@@ -680,7 +680,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('does not escalate same-channel protected mutation repeats', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'same-channel-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'same-channel-agent';
 
     const first = enf.processPreToolUse({
       tool_name: 'Write',
@@ -757,7 +757,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('keeps substrate attacks global even for trusted subagents', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'agent-b';
+    process.env.HIVE_FLOW_AGENT_ID = 'agent-b';
 
     enf.processPreToolUse({
       tool_name: 'Write',
@@ -1098,7 +1098,7 @@ describe('enforcement security property contracts', () => {
         'spoofed-agent': { config: { _spawnToken: 'stored-token' } },
       },
     }));
-    process.env.AGENTIC_FLOW_AGENT_ID = 'spoofed-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'spoofed-agent';
 
     const result = enf.processPreToolUse({
       tool_name: 'Write',
@@ -1183,7 +1183,7 @@ describe('enforcement security property contracts', () => {
       resetModule();
       resetEnforcementStoresForTest();
       const agentId = `global-protected-agent-${index}`;
-      process.env.AGENTIC_FLOW_AGENT_ID = agentId;
+      process.env.HIVE_FLOW_AGENT_ID = agentId;
 
       const result = enf.processPreToolUse({
         tool_name: 'Write',
@@ -1199,7 +1199,7 @@ describe('enforcement security property contracts', () => {
     clearAgentEnv();
     resetModule();
     resetEnforcementStoresForTest();
-    process.env.AGENTIC_FLOW_AGENT_ID = 'global-protected-repeat-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'global-protected-repeat-agent';
 
     enf.processPreToolUse({
       tool_name: 'Write',
@@ -1218,7 +1218,7 @@ describe('enforcement security property contracts', () => {
     clearAgentEnv();
     resetModule();
     resetEnforcementStoresForTest();
-    process.env.AGENTIC_FLOW_AGENT_ID = 'project-workflow-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'project-workflow-agent';
 
     const workflowResult = enf.processPreToolUse({
       tool_name: 'Write',
@@ -1231,7 +1231,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('E2E: RESTRICTED scoped state blocks write tools before execution', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'restricted-agent';
     writeScopedState('agent', 'restricted-agent', {
       level: enf.LEVELS.RESTRICTED,
       violations: 2,
@@ -1268,7 +1268,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('E2E: subagent reset-term grep does not escalate and leaves coordinator benign writes allowed', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'grep-worker';
+    process.env.HIVE_FLOW_AGENT_ID = 'grep-worker';
 
     const agentTrip = enf.processPreToolUse({
       tool_name: 'Bash',
@@ -1316,7 +1316,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('E2E: RESTRICTED offending agent remains fail-closed for writes', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-writer';
+    process.env.HIVE_FLOW_AGENT_ID = 'restricted-writer';
     writeScopedState('agent', 'restricted-writer', {
       level: enf.LEVELS.RESTRICTED,
       violations: 2,
@@ -1369,7 +1369,7 @@ describe('enforcement security property contracts', () => {
       restricted,
     ).circumvention).toBe(false);
 
-    process.env.AGENTIC_FLOW_AGENT_ID = 'restricted-script-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'restricted-script-agent';
     writeScopedState('agent', 'restricted-script-agent', {
       level: enf.LEVELS.RESTRICTED,
       violations: 2,
@@ -1601,7 +1601,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('keeps subagent protected config writes blocked when dev override is active', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'worker-agent';
+    process.env.HIVE_FLOW_AGENT_ID = 'worker-agent';
     enableDevOverride();
 
     const result = enf.processPreToolUse({
@@ -1842,7 +1842,7 @@ describe('enforcement security property contracts', () => {
 
   it('accepts a valid root override token only when no subagent identity is present', () => {
     const envField = fc.option(
-      fc.constantFrom('AGENTIC_FLOW_AGENT_ID', 'CLAUDE_AGENT_ID', 'CLAUDE_PARENT_AGENT_ID'),
+      fc.constantFrom('HIVE_FLOW_AGENT_ID', 'CLAUDE_AGENT_ID', 'CLAUDE_PARENT_AGENT_ID'),
       { nil: null },
     );
     const hookField = fc.option(fc.constantFrom('agent_id', 'agentId'), { nil: null });
@@ -1920,7 +1920,7 @@ describe('enforcement security property contracts', () => {
         clearAgentEnv();
         resetModule();
         resetEnforcementStoresForTest();
-        process.env.AGENTIC_FLOW_AGENT_ID = agentId;
+        process.env.HIVE_FLOW_AGENT_ID = agentId;
         const scopedAgentId = enf.getAgentId({});
 
         const result = enf.processPreToolUse({
@@ -2108,7 +2108,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('denies inline interpreter eval without escalating the effective scope', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'inline-eval-worker';
+    process.env.HIVE_FLOW_AGENT_ID = 'inline-eval-worker';
 
     for (const command of [
       'bash -c "node --eval \\"console.log(1)\\""',
@@ -2235,7 +2235,7 @@ describe('enforcement security property contracts', () => {
   });
 
   it('continues denying bare interpreter program stdin through the .cjs gate', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'bare-stdin-inline-worker';
+    process.env.HIVE_FLOW_AGENT_ID = 'bare-stdin-inline-worker';
 
     for (const command of [
       'echo "console.log(1)" | node',

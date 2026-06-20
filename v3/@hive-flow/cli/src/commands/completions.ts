@@ -149,7 +149,7 @@ _hive_flow() {
         'task:Task creation and management'
         'session:Session management'
         'config:Configuration management'
-        'memory:Memory operations with AgentDB'
+        'memory:Memory operations with HiveMemory'
         'workflow:Workflow automation'
         'hive-mind:Queen-led consensus coordination'
         'hooks:Self-learning automation hooks'

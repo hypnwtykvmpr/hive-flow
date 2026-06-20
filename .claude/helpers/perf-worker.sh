@@ -112,7 +112,7 @@ run_benchmarks() {
   date +%s > "$LAST_RUN_FILE"
 }
 
-# Spawn agentic-flow performance agent for deep analysis
+# Spawn local Hive Flow performance agent for deep analysis
 run_deep_benchmark() {
   echo "[$(date +%H:%M:%S)] Spawning perf-analyzer agent..."
 

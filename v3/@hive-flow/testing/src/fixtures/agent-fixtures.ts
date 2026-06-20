@@ -153,7 +153,7 @@ export const agentCapabilities: Record<V3AgentType, string[]> = {
   ],
   'memory-specialist': [
     'memory-optimization',
-    'agentdb-integration',
+    'hivememory-integration',
     'caching',
     'vector-search',
     'hnsw-indexing',
@@ -170,7 +170,7 @@ export const agentCapabilities: Record<V3AgentType, string[]> = {
     'api-design',
     'system-integration',
     'compatibility',
-    'agentic-flow-bridge',
+    'hive-flow-bridge',
     'mcp-integration',
   ],
   'performance-engineer': [
@@ -276,7 +276,7 @@ export const agentConfigs: Record<string, AgentConfig> = {
     name: 'Memory Specialist',
     capabilities: agentCapabilities['memory-specialist'],
     priority: 85,
-    metadata: { backend: 'agentdb', domain: 'memory' },
+    metadata: { backend: 'hivememory', domain: 'memory' },
     maxConcurrentTasks: 5,
   },
 

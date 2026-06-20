@@ -57,7 +57,7 @@ flowchart TB
     end
 
     subgraph RESOURCES["📦 Resources"]
-        MEM[(Memory<br/>AgentDB)]
+        MEM[(Memory<br/>HiveMemory)]
         PROV[Providers<br/>Claude/GPT/Gemini/Ollama]
         WORK[Workers - 12<br/>ultralearn/audit/optimize]
     end
@@ -159,7 +159,7 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| Memory | HNSW, AgentDB, Cache | Stores and retrieves patterns with vector search |
+| Memory | HNSW, HiveMemory, Cache | Stores and retrieves patterns with vector search |
 | Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
 | Self-Learning | LearningBridge, SONA, ReasoningBank | Triggers learning from insights, confidence lifecycle (ADR-049) |
 | Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
@@ -252,7 +252,7 @@ When you see these in hook output, the system is telling you how to optimize:
 <details>
 <summary>💰 <strong>Token Optimizer</strong> — 30-50% token reduction</summary>
 
-The Token Optimizer can use optional agentic-flow optimizations to reduce API costs by compressing context and caching results.
+The Token Optimizer can use optional hive-flow optimizations to reduce API costs by compressing context and caching results.
 
 **Savings Breakdown:**
 
@@ -335,7 +335,7 @@ swarm_init({
 | **Coordination** | Manual orchestration between tasks | Queen-led hierarchy with 5 consensus algorithms (Raft, Byzantine, Gossip) |
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
-| **Memory** | Session-only, no persistence | AgentDB vector memory with HNSW support + knowledge graph |
+| **Memory** | Session-only, no persistence | HiveMemory vector memory with HNSW support + knowledge graph |
 | **Vector Database** | ⛔ No native support | ⛔ No native vector DB |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
@@ -569,7 +569,7 @@ The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each ses
 | Category | Examples |
 |----------|----------|
 | **V3 Core** | `$v3-security-overhaul`, `$v3-memory-unification`, `$v3-performance-optimization` |
-| **AgentDB** | `$agentdb-vector-search`, `$agentdb-optimization`, `$agentdb-learning` |
+| **HiveMemory** | `$hivememory-vector-search`, `$hivememory-optimization`, `$hivememory-learning` |
 | **Swarm** | `$swarm-orchestration`, `$swarm-advanced`, `$hive-mind-advanced` |
 | **GitHub** | `$github-code-review`, `$github-workflow-automation`, `$github-multi-repo` |
 | **SPARC** | `$sparc-methodology`, `$sparc:architect`, `$sparc:coder`, `$sparc:tester` |
@@ -657,14 +657,14 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 
 | Feature | Hive Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **Vector Memory** | ✅ AgentDB + HNSW support | ⛔ | Via plugins | ⛔ | ⛔ |
+| **Vector Memory** | ✅ HiveMemory + HNSW support | ⛔ | Via plugins | ⛔ | ⛔ |
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **PostgreSQL Vector DB** | ⛔ | ⛔ | pgvector only | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Persistent Memory** | ✅ SQLite + AgentDB + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
+| **Persistent Memory** | ✅ SQLite + HiveMemory + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
 | **GNN/Attention in SQL** | ✅ 39 attention mechanisms | ⛔ | ⛔ | ⛔ | ⛔ |
 
@@ -775,7 +775,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 ```
 ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
 │    Core     │  │   Memory    │  │  Security   │
-│  Agents,    │  │  AgentDB,   │  │  AIDefence, │
+│  Agents,    │  │  HiveMemory,   │  │  AIDefence, │
 │  Swarms,    │  │  HNSW,      │  │  Validation │
 │  Tasks      │  │  Cache      │  │  CVE Fixes  │
 └─────────────┘  └─────────────┘  └─────────────┘
@@ -787,12 +787,12 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 ```
 
 **Key ADRs:**
-- **ADR-001**: optional agentic-flow@alpha integration (avoids duplicating shared capabilities)
-- **ADR-006**: Unified Memory Service with AgentDB
+- **ADR-001**: optional hive-flow integration (avoids duplicating shared capabilities)
+- **ADR-006**: Unified Memory Service with HiveMemory
 - **ADR-008**: Vitest testing framework (10x faster than Jest)
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
 - **ADR-026**: Intelligent 3-tier model routing
-- **ADR-048**: Auto Memory Bridge (Claude Code ↔ AgentDB bidirectional sync)
+- **ADR-048**: Auto Memory Bridge (Claude Code ↔ HiveMemory bidirectional sync)
 - **ADR-049**: Self-Learning Memory with GNN (LearningBridge, MemoryGraph, AgentMemoryScope)
 
 </details>
@@ -908,7 +908,7 @@ flowchart LR
     subgraph Storage["💾 Storage"]
         HNSW[(HNSW Index<br/>vector search)]
         SQLite[(SQLite Cache)]
-        AgentDB[(AgentDB)]
+        HiveMemory[(HiveMemory)]
         Graph[MemoryGraph<br/>PageRank + Communities]
     end
 
@@ -924,11 +924,11 @@ flowchart LR
     Normalize --> HNSW
     Normalize --> SQLite
     Insight --> Learn
-    Learn --> AgentDB
-    AgentDB --> Graph
+    Learn --> HiveMemory
+    HiveMemory --> Graph
     HNSW --> Vector
     SQLite --> Vector
-    AgentDB --> Semantic
+    HiveMemory --> Semantic
     Vector --> Rank
     Semantic --> Rank
     Graph --> Rank
@@ -941,30 +941,30 @@ flowchart LR
 | **LearningBridge** | Connects insights to SONA/ReasoningBank neural pipeline | 0.12 ms/insight |
 | **MemoryGraph** | PageRank + label propagation knowledge graph | 2.78 ms build (1k nodes) |
 | **AgentMemoryScope** | 3-scope agent memory (project/local/user) with cross-agent transfer | 1.25 ms transfer |
-| **AutoMemoryBridge** | Bidirectional sync: Claude Code auto memory files ↔ AgentDB | ADR-048 |
+| **AutoMemoryBridge** | Bidirectional sync: Claude Code auto memory files ↔ HiveMemory | ADR-048 |
 
 </details>
 
 <details>
-<summary>🧠 <strong>AgentDB v3 Controllers</strong> — 20+ intelligent memory controllers</summary>
+<summary>🧠 <strong>HiveMemory v3 Controllers</strong> — 20+ intelligent memory controllers</summary>
 
-Hive Flow V3 integrates AgentDB v3 (3.0.0-alpha.9) providing 20+ memory controllers accessible via MCP tools and the CLI.
+Hive Flow V3 integrates HiveMemory v3 (3.0.0-alpha.9) providing 20+ memory controllers accessible via MCP tools and the CLI.
 
 **Core Memory:**
 
 | Controller | MCP Tool | Description |
 |-----------|----------|-------------|
-| HierarchicalMemory | `agentdb_hierarchical-store/recall` | Working → short-term → long-term memory tiers with automatic promotion and retention decay |
-| MemoryConsolidation | `agentdb_consolidate` | Automatic clustering and merging of related memories into semantic summaries |
-| BatchOperations | `agentdb_batch` | Bulk insert/update/delete operations for high-throughput memory management |
-| ReasoningBank | `agentdb_pattern-store/search` | Pattern storage with BM25+semantic hybrid search |
+| HierarchicalMemory | `hivememory_hierarchical-store/recall` | Working → short-term → long-term memory tiers with automatic promotion and retention decay |
+| MemoryConsolidation | `hivememory_consolidate` | Automatic clustering and merging of related memories into semantic summaries |
+| BatchOperations | `hivememory_batch` | Bulk insert/update/delete operations for high-throughput memory management |
+| ReasoningBank | `hivememory_pattern-store/search` | Pattern storage with BM25+semantic hybrid search |
 
 **Intelligence:**
 
 | Controller | MCP Tool | Description |
 |-----------|----------|-------------|
-| SemanticRouter | `agentdb_semantic-route` | Route tasks to agents using vector similarity instead of manual rules |
-| ContextSynthesizer | `agentdb_context-synthesize` | Auto-generate context summaries from memory entries |
+| SemanticRouter | `hivememory_semantic-route` | Route tasks to agents using vector similarity instead of manual rules |
+| ContextSynthesizer | `hivememory_context-synthesize` | Auto-generate context summaries from memory entries |
 | GNNService | — | Graph neural network for intent classification and skill recommendation |
 | SonaTrajectoryService | — | Record and predict learning trajectories for agents |
 | GraphTransformerService | — | Sublinear attention, causal attention, Granger causality extraction |
@@ -973,7 +973,7 @@ Hive Flow V3 integrates AgentDB v3 (3.0.0-alpha.9) providing 20+ memory controll
 
 | Controller | MCP Tool | Description |
 |-----------|----------|-------------|
-| CausalRecall | `agentdb_causal-edge` | Recall with causal re-ranking and utility scoring |
+| CausalRecall | `hivememory_causal-edge` | Recall with causal re-ranking and utility scoring |
 | ExplainableRecall | — | Certificates proving *why* a memory was recalled |
 | CausalMemoryGraph | — | Directed causal relationships between memory entries |
 | MMRDiversityRanker | — | Maximal Marginal Relevance for diverse search results |
@@ -990,22 +990,22 @@ Hive Flow V3 integrates AgentDB v3 (3.0.0-alpha.9) providing 20+ memory controll
 **MCP Tool Examples:**
 ```bash
 # Store to hierarchical memory
-agentdb_hierarchical-store --key "auth-pattern" --value "JWT refresh" --tier "longTerm"
+hivememory_hierarchical-store --key "auth-pattern" --value "JWT refresh" --tier "longTerm"
 
 # Recall from memory tiers
-agentdb_hierarchical-recall --query "authentication" --topK 5
+hivememory_hierarchical-recall --query "authentication" --topK 5
 
 # Run memory consolidation
-agentdb_consolidate
+hivememory_consolidate
 
 # Batch insert
-agentdb_batch --operation insert --entries '[{"key":"k1","value":"v1"}]'
+hivememory_batch --operation insert --entries '[{"key":"k1","value":"v1"}]'
 
 # Synthesize context
-agentdb_context-synthesize --query "error handling patterns"
+hivememory_context-synthesize --query "error handling patterns"
 
 # Semantic routing
-agentdb_semantic-route --input "fix auth bug in login"
+hivememory_semantic-route --input "fix auth bug in login"
 ```
 
 **Hierarchical Memory Tiers:**
@@ -1682,7 +1682,7 @@ Build custom plugins with the fluent builder API. Create MCP tools, hooks, worke
 | **HookBuilder** | Build hooks with conditions and transformers | Priorities, conditional execution |
 | **WorkerPool** | Managed worker pool with auto-scaling | Min/max workers, task queuing |
 | **ProviderRegistry** | LLM provider management with fallback | Cost optimization, automatic failover |
-| **AgentDBBridge** | Vector storage with HNSW indexing | Vector search, batch operations |
+| **HiveMemoryBridge** | Vector storage with HNSW indexing | Vector search, batch operations |
 
 **Plugin Performance:** Load <20ms, Hook execution <0.5ms, Worker spawn <50ms
 
@@ -1832,8 +1832,8 @@ hive-flow worker status
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **Optional Provider** | `provider: 'auto'` uses agentic-flow when available | Zero config |
-| **Smart Fallback** | agentic-flow → transformers → mock chain | Works without agentic-flow |
+| **Optional Provider** | `provider: 'auto'` uses hive-flow when available | Zero config |
+| **Smart Fallback** | hive-flow → transformers → mock chain | Works without hive-flow |
 | **75x Faster** | Agentic-flow ONNX vs Transformers.js | 3ms vs 230ms |
 | **LRU Caching** | Intelligent cache with hit rate tracking | <1ms cache hits |
 | **Batch Processing** | Efficient batch embedding with partial cache | 10 items <100ms |
@@ -1937,11 +1937,11 @@ hive-flow worker status
 </details>
 
 <details>
-<summary>🔗 <strong>Integration</strong> — optional agentic-flow bridge with runtime auto-detection</summary>
+<summary>🔗 <strong>Integration</strong> — optional hive-flow bridge with runtime auto-detection</summary>
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **AgenticFlowBridge** | Optional agentic-flow@alpha integration | ADR-001 compliant |
+| **HiveFlowBridge** | Optional hive-flow integration | ADR-001 compliant |
 | **SONA Adapter** | Learning system integration | Low-latency adaptation |
 | **Flash Attention** | Attention mechanism coordinator | Local attention path |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
@@ -2020,7 +2020,7 @@ hive-flow worker status
 | **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
 | **Similarity Metrics** | Cosine, Euclidean, Dot product, Hyperbolic distance | Task-specific matching |
-| **Neural Substrate** | Drift detection, memory physics, swarm coordination | optional agentic-flow integration |
+| **Neural Substrate** | Drift detection, memory physics, swarm coordination | optional hive-flow integration |
 | **LRU + SQLite Cache** | Persistent cross-session caching | <1ms cache hits |
 
 ```bash
@@ -2083,18 +2083,18 @@ hive-flow hive-mind status                                  # Check status
 </details>
 
 <details>
-<summary>🔌 <strong>agentic-flow Integration</strong> — optional ADR-001 bridge</summary>
+<summary>🔌 <strong>hive-flow Integration</strong> — optional ADR-001 bridge</summary>
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **ADR-001 Compliance** | Reuse agentic-flow when available | Avoids duplicating shared capabilities |
-| **Optional Bridge** | Use agentic-flow as an optional layer | Local fallback remains available |
+| **ADR-001 Compliance** | Reuse hive-flow when available | Avoids duplicating shared capabilities |
+| **Optional Bridge** | Use hive-flow as an optional layer | Local fallback remains available |
 | **SONA Integration** | Seamless learning system connection | Low-latency adaptation |
 | **Flash Attention** | Optimized attention mechanisms | Local attention support |
-| **AgentDB Bridge** | Vector storage integration | Vector search |
+| **HiveMemory Bridge** | Vector storage integration | Vector search |
 | **Feature Flags** | Dynamic capability management | 9 configurable features |
 | **Runtime Detection** | NAPI/WASM/JS auto-selection | Optimal performance per platform |
-| **Graceful Fallback** | Works with or without agentic-flow | Always functional |
+| **Graceful Fallback** | Works with or without hive-flow | Always functional |
 
 </details>
 
@@ -2184,7 +2184,7 @@ hive-flow hive-mind status                                  # Check status
 <details>
 <summary>📊 <strong>V3 Statusline</strong> — Real-time development status for Claude Code</summary>
 
-Real-time development status display integrated directly into Claude Code's status bar. Shows DDD progress, swarm activity, security status, AgentDB metrics, and live session data (model, context usage, cost).
+Real-time development status display integrated directly into Claude Code's status bar. Shows DDD progress, swarm activity, security status, HiveMemory metrics, and live session data (model, context usage, cost).
 
 **How It Works:**
 
@@ -2193,7 +2193,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 **Output Format:**
 ```
 ▊ Hive Flow V3 ● hive-flow  │  ⎇ main  │  Opus 4.6  | ●42% ctx  | $0.15
-🏗️ DDD [●●●●○] 4/5  ⚡ Vector search  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 AgentDB ●1.2K vectors
+🏗️ DDD [●●●●○] 4/5  ⚡ Vector search  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 HiveMemory ●1.2K vectors
 ```
 
 | Indicator | Description | Source |
@@ -2205,14 +2205,14 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 | `●42% ctx` | Context window usage | Stdin JSON `context_window.used_percentage` |
 | `$0.15` | Session cost | Stdin JSON `cost.total_cost_usd` |
 | `[●●●●○]` | DDD domain progress bar | `.hive-flow/metrics/v3-progress.json` |
-| `⚡ Vector search` | Vector search status | AgentDB file stats |
+| `⚡ Vector search` | Vector search status | HiveMemory file stats |
 | `◉/○` | Swarm coordination status | Process detection |
 | `[12/8]` | Active agents / max agents | `ps aux` process count |
 | `👥 3` | Sub-agents spawned | Task tool agent count |
 | `🟢 CVE 3/3` | Security CVE remediation | `.hive-flow/security/audit-status.json` |
 | `💾 512MB` | Memory usage | Node.js process RSS |
-| `🧠 15%` | Intelligence score | Pattern count from AgentDB |
-| `📦 AgentDB ●1.2K` | AgentDB vector count | File size estimate (`size / 2KB`) |
+| `🧠 15%` | Intelligence score | Pattern count from HiveMemory |
+| `📦 HiveMemory ●1.2K` | HiveMemory vector count | File size estimate (`size / 2KB`) |
 
 **Setup (Automatic):**
 
@@ -2259,7 +2259,7 @@ The statusline script reads stdin synchronously, falls back to local detection w
 - `.hive-flow/metrics/v3-progress.json` — DDD domain progress
 - `.hive-flow/metrics/swarm-activity.json` — Active agent counts
 - `.hive-flow/security/audit-status.json` — CVE remediation status
-- **AgentDB files** — Vector count (estimated from file size), HNSW index status
+- **HiveMemory files** — Vector count (estimated from file size), HNSW index status
 - Process detection via `ps aux` — Real-time memory and agent counts
 - Git branch via `git branch --show-current`
 - GitHub user via `gh api user`
@@ -2379,7 +2379,7 @@ Complete command-line interface for all Hive Flow operations.
 | `init` | 4 | Project initialization with wizard, presets, skills, hooks |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | AgentDB memory with vector search |
+| `memory` | 11 | HiveMemory memory with vector search |
 | `mcp` | 9 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 7 | Session state management and persistence |
@@ -2401,7 +2401,7 @@ Complete command-line interface for all Hive Flow operations.
 | `providers` | 5 | AI providers (list, add, remove, test, configure) |
 | `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
 | `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) with optional agentic-flow provider |
+| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) with optional hive-flow provider |
 | `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
 | `migrate` | 5 | V2 to V3 migration with rollback support |
 | `process` | 4 | Background process management |
@@ -2504,7 +2504,7 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 | **Document chunking** | Configurable overlap and size | Handles large documents |
 | **Normalization** | L2, L1, min-max, z-score | 4 normalization methods |
 | **Hyperbolic embeddings** | Poincaré ball model | Better hierarchical representation |
-| **agentic-flow ONNX** | Optional ONNX runtime | Faster local embeddings when available |
+| **hive-flow ONNX** | Optional ONNX runtime | Faster local embeddings when available |
 | **Neural substrate** | Local TypeScript learning services | Full learning pipeline |
 
 **Models Available:**
@@ -2694,7 +2694,7 @@ The statusline shows live context metrics read from `autopilot-state.json`:
 | Tier | Backend | Storage | Features |
 |------|---------|---------|----------|
 | 1 | **SQLite** (default) | `.hive-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
-| 2 | **AgentDB + HNSW** | In-memory + persist | Semantic search and learning memory |
+| 2 | **HiveMemory + HNSW** | In-memory + persist | Semantic search and learning memory |
 | 3 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
 
 ### Configuration
@@ -3669,19 +3669,19 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 ### All 42 Skills by Category
 
 <details open>
-<summary>🧠 <strong>AgentDB & Memory Skills</strong> — Vector search, learning, optimization</summary>
+<summary>🧠 <strong>HiveMemory & Memory Skills</strong> — Vector search, learning, optimization</summary>
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
-| `agentdb-vector-search` | Semantic vector search | Building RAG systems, knowledge bases |
-| `agentdb-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
-| `agentdb-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
-| `agentdb-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
-| `agentdb-advanced` | QUIC sync, multi-database, custom distance metrics | Distributed AI systems |
+| `hivememory-vector-search` | Semantic vector search | Building RAG systems, knowledge bases |
+| `hivememory-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
+| `hivememory-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
+| `hivememory-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
+| `hivememory-advanced` | QUIC sync, multi-database, custom distance metrics | Distributed AI systems |
 
 ```bash
 # Example: Initialize vector search
-/agentdb-vector-search
+/hivememory-vector-search
 ```
 
 </details>
@@ -3725,7 +3725,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
-| `reasoningbank-agentdb` | Trajectory tracking, verdict judgment, memory distillation | Experience replay systems |
+| `reasoningbank-hivememory` | Trajectory tracking, verdict judgment, memory distillation | Experience replay systems |
 | `reasoningbank-intelligence` | Adaptive learning, pattern optimization, meta-cognition | Self-improving agents |
 | `hive-mind-advanced` | Queen-led collective intelligence with consensus | Complex multi-agent coordination |
 
@@ -3743,12 +3743,12 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 |-------|--------------|-------------|
 | `v3-ddd-architecture` | Bounded contexts, modular design, clean architecture | Large-scale refactoring |
 | `v3-security-overhaul` | CVE fixes, secure-by-default patterns | Security hardening |
-| `v3-memory-unification` | AgentDB unification and vector search improvements | Memory optimization |
+| `v3-memory-unification` | HiveMemory unification and vector search improvements | Memory optimization |
 | `v3-performance-optimization` | Attention, memory, and benchmark optimization | Performance tuning |
 | `v3-swarm-coordination` | 15-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
 | `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
 | `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
-| `v3-integration-deep` | agentic-flow@alpha deep integration | Framework integration |
+| `v3-integration-deep` | hive-flow deep integration | Framework integration |
 | `v3-cli-modernization` | Interactive prompts, enhanced hooks | CLI enhancement |
 
 ```bash
@@ -3769,7 +3769,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | `skill-builder` | Create new skills with YAML frontmatter | Extending the system |
 | `hooks-automation` | Pre/post hooks, Git integration, memory coordination | Workflow automation |
 | `sparc-methodology` | Specification, Pseudocode, Architecture, Refinement, Completion | Structured development |
-| `swarm-orchestration` | Multi-agent orchestration with agentic-flow | Complex task coordination |
+| `swarm-orchestration` | Multi-agent orchestration with hive-flow | Complex task coordination |
 | `swarm-advanced` | Research, development, testing workflows | Specialized swarms |
 | `performance-analysis` | Bottleneck detection, optimization recommendations | Performance debugging |
 
@@ -4077,10 +4077,10 @@ Use Hive Flow packages directly in your TypeScript/JavaScript applications.
 <summary>🧠 <strong>Memory & Vector Search</strong></summary>
 
 ```typescript
-import { AgentDB } from '@hive-flow/memory';
+import { HiveMemory } from '@hive-flow/memory';
 
 // Initialize with HNSW indexing
-const db = new AgentDB({
+const db = new HiveMemory({
   path: './data/memory',
   hnsw: { m: 16, efConstruction: 200 }
 });
@@ -4202,10 +4202,10 @@ await aidefence.learnFromDetection(userInput, analysis, {
 ```typescript
 import { createEmbeddingService, cosineSimilarity } from '@hive-flow/embeddings';
 
-// Auto-selects best available provider (agentic-flow ONNX if installed)
+// Auto-selects best available provider (hive-flow ONNX if installed)
 const embeddings = await createEmbeddingService({
-  provider: 'auto',        // agentic-flow → transformers → mock
-  autoInstall: false,      // Do not require agentic-flow
+  provider: 'auto',        // hive-flow → transformers → mock
+  autoInstall: false,      // Do not require hive-flow
   dimensions: 384,
   cache: { enabled: true, maxSize: 10000 }
 });
@@ -4432,7 +4432,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 
 | Package | Purpose | Main Exports |
 |---------|---------|--------------|
-| `@hive-flow/memory` | Vector storage, HNSW, self-learning graph | `AgentDB`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
+| `@hive-flow/memory` | Vector storage, HNSW, self-learning graph | `HiveMemory`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
 | `@hive-flow/swarm` | Agent coordination | `createSwarm`, `Swarm` |
 | `@hive-flow/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
@@ -4442,7 +4442,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
 | `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
-AgentDB may retain internal vector-search transitive dependencies, but Hive Flow no longer exposes standalone external-vector CLI, MCP, or PostgreSQL surfaces.
+HiveMemory may retain internal vector-search transitive dependencies, but Hive Flow no longer exposes standalone external-vector CLI, MCP, or PostgreSQL surfaces.
 
 </details>
 
@@ -4463,13 +4463,13 @@ Core infrastructure packages powering Hive Flow's intelligence layer.
 # Install globally
 
 # Or run directly with npx
-npx agentic-flow --help
+hive-flow --help
 
 # Start MCP server
-npx agentic-flow mcp start
+hive-flow mcp start
 
 # Add to Claude Code
-claude mcp add agentic-flow -- npx agentic-flow mcp start
+claude mcp add hive-flow -- hive-flow mcp start
 ```
 
 ### Core Components
@@ -4498,19 +4498,19 @@ Agent Booster performs mechanical code edits without calling LLM APIs:
 
 ```bash
 # Single file edit
-npx agentic-flow agent-booster edit \
+hive-flow agent-booster edit \
   --file src/api.ts \
   --instructions "Add error handling" \
   --code 'try { ... } catch (error) { ... }'
 
 # Batch rename across codebase
-npx agentic-flow agent-booster batch-rename \
+hive-flow agent-booster batch-rename \
   --pattern "getUserData" \
   --replacement "fetchUserProfile" \
   --glob "src/**/*.ts"
 
 # Parse LLM markdown output
-npx agentic-flow agent-booster parse-md response.md
+hive-flow agent-booster parse-md response.md
 ```
 
 **Use Cases:**
@@ -4530,7 +4530,7 @@ npx agentic-flow agent-booster parse-md response.md
 ReasoningBank stores successful patterns for future retrieval:
 
 ```typescript
-import { ReasoningBank } from 'agentic-flow/reasoningbank';
+import { ReasoningBank } from 'hive-flow/reasoningbank';
 
 const bank = new ReasoningBank();
 
@@ -4566,7 +4566,7 @@ await bank.consolidate();  // Prevent forgetting (EWC++)
 Generate embeddings locally without API calls:
 
 ```typescript
-import { getOptimizedEmbedder, cosineSimilarity } from 'agentic-flow/embeddings';
+import { getOptimizedEmbedder, cosineSimilarity } from 'hive-flow/embeddings';
 
 const embedder = getOptimizedEmbedder();
 await embedder.init();
@@ -4600,7 +4600,7 @@ Advanced patterns treating embeddings as geometric control surfaces:
 
 **Semantic Drift Detection:**
 ```typescript
-import { getOptimizedEmbedder, cosineSimilarity } from 'agentic-flow/embeddings';
+import { getOptimizedEmbedder, cosineSimilarity } from 'hive-flow/embeddings';
 
 const embedder = getOptimizedEmbedder();
 let baseline: Float32Array;
@@ -4650,7 +4650,7 @@ if (result.anomalyScore > 1.5) {
 Route tasks to optimal models based on complexity:
 
 ```typescript
-import { ModelRouter } from 'agentic-flow/router';
+import { ModelRouter } from 'hive-flow/router';
 
 const router = new ModelRouter();
 
@@ -4681,33 +4681,33 @@ const result2 = await router.route({
 </details>
 
 <details>
-<summary>🚀 <strong>CLI Commands</strong> — Full agentic-flow CLI</summary>
+<summary>🚀 <strong>CLI Commands</strong> — Full hive-flow CLI</summary>
 
 ```bash
 # Agent Booster
-npx agentic-flow agent-booster edit --file <file> --instructions "<instr>" --code '<code>'
-npx agentic-flow agent-booster batch --config batch-edits.json
-npx agentic-flow agent-booster batch-rename --pattern <old> --replacement <new> --glob "**/*.ts"
-npx agentic-flow agent-booster parse-md response.md
+hive-flow agent-booster edit --file <file> --instructions "<instr>" --code '<code>'
+hive-flow agent-booster batch --config batch-edits.json
+hive-flow agent-booster batch-rename --pattern <old> --replacement <new> --glob "**/*.ts"
+hive-flow agent-booster parse-md response.md
 
 # ReasoningBank
-npx agentic-flow reasoningbank retrieve "query" --k 5
-npx agentic-flow reasoningbank record --task "task" --outcome "outcome" --success
-npx agentic-flow reasoningbank distill
-npx agentic-flow reasoningbank consolidate
+hive-flow reasoningbank retrieve "query" --k 5
+hive-flow reasoningbank record --task "task" --outcome "outcome" --success
+hive-flow reasoningbank distill
+hive-flow reasoningbank consolidate
 
 # Embeddings
-npx agentic-flow embeddings embed "text"
-npx agentic-flow embeddings batch documents.txt -o vectors.json
-npx agentic-flow embeddings search "query" --index ./vectors
+hive-flow embeddings embed "text"
+hive-flow embeddings batch documents.txt -o vectors.json
+hive-flow embeddings search "query" --index ./vectors
 
 # Model Router
-npx agentic-flow router route "task description"
-npx agentic-flow router stats
+hive-flow router route "task description"
+hive-flow router stats
 
 # MCP Server
-npx agentic-flow mcp start
-npx agentic-flow mcp stdio
+hive-flow mcp start
+hive-flow mcp stdio
 ```
 
 </details>
@@ -4729,17 +4729,17 @@ Agentic-flow exposes 213+ MCP tools for integration:
 
 ```bash
 # Start MCP server
-npx agentic-flow mcp start
+hive-flow mcp start
 
 # Add to Claude Code
-claude mcp add agentic-flow -- npx agentic-flow mcp start
+claude mcp add hive-flow -- hive-flow mcp start
 ```
 
 </details>
 
 ### Integration with Hive Flow
 
-When configured, Hive Flow can leverage agentic-flow for:
+When configured, Hive Flow can leverage hive-flow for:
 
 | Feature | How It's Used |
 |---------|---------------|
@@ -4750,7 +4750,7 @@ When configured, Hive Flow can leverage agentic-flow for:
 | **Embedding Search** | HNSW-indexed vector search |
 
 ```typescript
-// Hive Flow can use agentic-flow optimizations when configured
+// Hive Flow can use hive-flow optimizations when configured
 import { getTokenOptimizer } from '@hive-flow/integration';
 
 const optimizer = await getTokenOptimizer();
@@ -5122,7 +5122,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 | **Threat Detection** | <10ms | **0.04ms** | 250x faster |
 | **Quick Scan** | <5ms | **0.02ms** | Pattern-only |
 | **PII Detection** | <3ms | **0.01ms** | Regex-based |
-| **Vector Search** | indexed lookup | AgentDB-backed | With HNSW support |
+| **Vector Search** | indexed lookup | HiveMemory-backed | With HNSW support |
 | **Single-threaded** | - | - | >12,000 req/s |
 | **With Learning** | - | - | >8,000 req/s |
 
@@ -5277,7 +5277,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@hive-flow/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
-| `@hive-flow/memory` | Unified vector storage | AgentDB, RVF binary format, HnswLite, BinaryMigrator, SONA persistence, LearningBridge, MemoryGraph |
+| `@hive-flow/memory` | Unified vector storage | HiveMemory, RVF binary format, HnswLite, BinaryMigrator, SONA persistence, LearningBridge, MemoryGraph |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
@@ -6152,7 +6152,7 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 | `HIVE_FLOW_ENV` | Environment name for test/dev isolation | - |
 | `HIVE_FLOW_DATA_DIR` | Root data directory | `./data` |
 | `HIVE_FLOW_MEMORY_PATH` | Directory for persistent memory storage | `./data` |
-| `HIVE_FLOW_MEMORY_TYPE` | Memory backend type (`json`, `sqlite`, `agentdb`, `hybrid`) | `hybrid` |
+| `HIVE_FLOW_MEMORY_TYPE` | Memory backend type (`json`, `sqlite`, `hivememory`, `hybrid`) | `hybrid` |
 | `HIVE_FLOW_SECURITY_MODE` | Security level (`strict`, `standard`, `permissive`) | `standard` |
 | `HIVE_FLOW_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`) | `info` |
 | `HIVE_FLOW_CONFIG` | Path to configuration file | `./hive-flow.config.json` |
@@ -6606,7 +6606,7 @@ export HIVE_FLOW_HNSW_EF=100
 ┌─────────────────────────────────────────────────────────────┐
 │                    V2 → V3 IMPROVEMENTS                     │
 ├───────────────────────┬─────────────────────────────────────┤
-│ Memory Search         │ AgentDB vector search with HNSW     │
+│ Memory Search         │ HiveMemory vector search with HNSW     │
 │ Pattern Matching      │ Self-learning (ReasoningBank)       │
 │ Security              │ CVE remediation + strict validation │
 │ Modular Architecture  │ 18 @hive-flow/* packages          │
@@ -6620,7 +6620,7 @@ export HIVE_FLOW_HNSW_EF=100
 | Change | V2 | V3 | Impact |
 |--------|----|----|--------|
 | **Package Structure** | `hive-flow` | `@hive-flow/*` (scoped) | Update imports |
-| **Memory Backend** | JSON files | AgentDB + HNSW | Faster search |
+| **Memory Backend** | JSON files | HiveMemory + HNSW | Faster search |
 | **Hooks System** | Basic patterns | ReasoningBank + SONA | Self-learning |
 | **Security** | Manual validation | Automatic strict mode | More secure |
 | **CLI Commands** | Flat structure | Nested subcommands | New syntax |
@@ -6658,7 +6658,7 @@ hive-flow doctor --fix
 | `hive-flow init` | `hive-flow init --wizard` | Interactive mode |
 | `hive-flow spawn <type>` | `hive-flow agent spawn -t <type>` | Nested under `agent` |
 | `hive-flow swarm create` | `hive-flow swarm init --topology mesh` | Explicit topology |
-| `--pattern-store path` | `--memory-backend agentdb` | Backend selection |
+| `--pattern-store path` | `--memory-backend hivememory` | Backend selection |
 | `hooks record` | `hooks post-edit --success true` | Explicit success flag |
 | `memory get <key>` | `memory retrieve --key <key>` | Explicit flag |
 | `memory set <key> <value>` | `memory store --key <key> --value <value>` | Explicit flags |
@@ -6703,7 +6703,7 @@ import { hiveFlow, Agent, Memory } from 'hive-flow';
 
 // V3 (new)
 import { hiveFlowClient } from '@hive-flow/cli';
-import { AgentDB } from '@hive-flow/memory';
+import { HiveMemory } from '@hive-flow/memory';
 import { ThreatDetector } from '@hive-flow/security';
 import { HNSWIndex } from '@hive-flow/embeddings';
 ```
@@ -6757,7 +6757,7 @@ cp -r ./data-backup-v2 ./data
 |--------|-------------|------|
 | `@hive-flow/plugins` | Plugin SDK with workers, hooks, providers, security | [README](./v3/@hive-flow/plugins/README.md) |
 | `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/hooks/) |
-| `@hive-flow/memory` | AgentDB unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
+| `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
 | `@hive-flow/swarm` | 15-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
@@ -6766,7 +6766,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](./v3/@hive-flow/providers/) |
-| `@hive-flow/integration` | Optional agentic-flow@alpha integration | [Source](./v3/@hive-flow/integration/) |
+| `@hive-flow/integration` | Optional hive-flow integration | [Source](./v3/@hive-flow/integration/) |
 | `@hive-flow/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/performance/) |
 | `@hive-flow/deployment` | Release & CI/CD | [Source](./v3/@hive-flow/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |

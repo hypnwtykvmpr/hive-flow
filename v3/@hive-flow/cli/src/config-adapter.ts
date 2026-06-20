@@ -38,8 +38,8 @@ export function systemConfigToV3Config(systemConfig: SystemConfig): V3Config {
       backend: normalizeMemoryBackend(systemConfig.memory?.type),
       persistPath: systemConfig.memory?.path || './data/memory',
       cacheSize: systemConfig.memory?.maxSize ?? 1000000,
-      enableHNSW: systemConfig.memory?.agentdb?.indexType === 'hnsw',
-      vectorDimension: systemConfig.memory?.agentdb?.dimensions ?? 1536,
+      enableHNSW: systemConfig.memory?.hivememory?.indexType === 'hnsw',
+      vectorDimension: systemConfig.memory?.hivememory?.dimensions ?? 1536,
     },
 
     // MCP configuration
@@ -123,7 +123,7 @@ export function v3ConfigToSystemConfig(v3Config: V3Config): Partial<SystemConfig
       type: denormalizeMemoryBackend(v3Config.memory.backend),
       path: v3Config.memory.persistPath,
       maxSize: v3Config.memory.cacheSize,
-      agentdb: {
+      hivememory: {
         dimensions: v3Config.memory.vectorDimension,
         indexType: v3Config.memory.enableHNSW ? 'hnsw' : 'flat',
         efConstruction: 200,
@@ -188,11 +188,11 @@ function denormalizeTopology(
  */
 function normalizeMemoryBackend(
   backend: string | undefined
-): 'memory' | 'sqlite' | 'agentdb' | 'hybrid' {
+): 'memory' | 'sqlite' | 'hivememory' | 'hybrid' {
   switch (backend) {
     case 'memory':
     case 'sqlite':
-    case 'agentdb':
+    case 'hivememory':
     case 'hybrid':
       return backend;
     case 'redis':
@@ -206,7 +206,7 @@ function normalizeMemoryBackend(
  * Denormalize memory backend from V3Config to SystemConfig
  */
 function denormalizeMemoryBackend(
-  backend: 'memory' | 'sqlite' | 'agentdb' | 'hybrid'
-): 'memory' | 'sqlite' | 'agentdb' | 'hybrid' | 'redis' {
+  backend: 'memory' | 'sqlite' | 'hivememory' | 'hybrid'
+): 'memory' | 'sqlite' | 'hivememory' | 'hybrid' | 'redis' {
   return backend;
 }

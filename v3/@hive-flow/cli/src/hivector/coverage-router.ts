@@ -343,8 +343,6 @@ export interface CoverageRouteOptions {
   projectRoot?: string;
   threshold?: number;
   useHivector?: boolean;
-  /** @deprecated Use useHivector. */
-  useRuvector?: boolean;
 }
 
 /**

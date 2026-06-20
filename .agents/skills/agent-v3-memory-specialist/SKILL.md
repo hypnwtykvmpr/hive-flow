@@ -7,7 +7,7 @@ description: Agent skill for v3-memory-specialist - invoke with $agent-v3-memory
 name: v3-memory-specialist
 version: "3.0.0-alpha"
 updated: "2026-01-04"
-description: V3 Memory Specialist for unifying 6+ memory systems into AgentDB with HNSW indexing. Implements ADR-006 (Unified Memory Service) and ADR-009 (Hybrid Memory Backend) to achieve HNSW indexing improvements.
+description: V3 Memory Specialist for unifying 6+ memory systems into HiveMemory with HNSW indexing. Implements ADR-006 (Unified Memory Service) and ADR-009 (Hybrid Memory Backend) to achieve HNSW indexing improvements.
 color: cyan
 metadata:
   v3_role: "specialist"
@@ -29,8 +29,8 @@ hooks:
     echo "  - MarkdownBackend"
     echo "  - HybridBackend"
 
-    # Check AgentDB integration status
-    npx agentic-flow@alpha --version 2>$dev$null | head -1 || echo "⚠️ agentic-flow@alpha not detected"
+    # Check HiveMemory integration status
+    hive-flow --version 2>$dev$null | head -1 || echo "⚠️ hive-flow not detected"
 
     echo "🎯 Target: HNSW indexing improvements via HNSW"
     echo "🔄 Strategy: Gradual migration with backward compatibility"
@@ -39,7 +39,7 @@ hooks:
     echo "🧠 Memory unification milestone complete"
 
     # Store memory patterns
-    npx agentic-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "v3-memory-$(date +%s)" \
       --task "Memory Unification: $TASK" \
       --agent "v3-memory-specialist" \
@@ -48,11 +48,11 @@ hooks:
 
 # V3 Memory Specialist
 
-**🧠 Memory System Unification & AgentDB Integration Expert**
+**🧠 Memory System Unification & HiveMemory Integration Expert**
 
 ## Mission: Memory System Convergence
 
-Unify 7 disparate memory systems into a single, high-performance AgentDB-based solution with HNSW indexing, achieving HNSW-indexed search performance improvements while maintaining backward compatibility.
+Unify 7 disparate memory systems into a single, high-performance HiveMemory-based solution with HNSW indexing, achieving HNSW-indexed search performance improvements while maintaining backward compatibility.
 
 ## Systems to Unify
 
@@ -73,7 +73,7 @@ Unify 7 disparate memory systems into a single, high-performance AgentDB-based s
 ┌─────────────────────────────────────────┐
 │            V3 UNIFIED SYSTEM            │
 ├─────────────────────────────────────────┤
-│       🚀 AgentDB with HNSW             │
+│       🚀 HiveMemory with HNSW             │
 │  • fast HNSW-indexed search          │
 │  • Unified query interface             │
 │  • Cross-agent memory sharing          │
@@ -82,7 +82,7 @@ Unify 7 disparate memory systems into a single, high-performance AgentDB-based s
 └─────────────────────────────────────────┘
 ```
 
-## AgentDB Integration Architecture
+## HiveMemory Integration Architecture
 
 ### **Core Components**
 
@@ -90,15 +90,15 @@ Unify 7 disparate memory systems into a single, high-performance AgentDB-based s
 ```typescript
 class UnifiedMemoryService implements IMemoryBackend {
   constructor(
-    private agentdb: AgentDBAdapter,
+    private hivememory: HiveMemoryAdapter,
     private cache: MemoryCache,
     private indexer: HNSWIndexer,
     private migrator: DataMigrator
   ) {}
 
   async store(entry: MemoryEntry): Promise<void> {
-    // Store in AgentDB with HNSW indexing
-    await this.agentdb.store(entry);
+    // Store in HiveMemory with HNSW indexing
+    await this.hivememory.store(entry);
     await this.indexer.index(entry);
   }
 
@@ -108,7 +108,7 @@ class UnifiedMemoryService implements IMemoryBackend {
       return this.indexer.search(query);
     } else {
       // Use structured query
-      return this.agentdb.query(query);
+      return this.hivememory.query(query);
     }
   }
 }
@@ -145,8 +145,8 @@ class HNSWIndexer {
 
 ### **Phase 1: Foundation Setup**
 ```bash
-# Week 3: AgentDB adapter creation
-- Create AgentDBAdapter implementing IMemoryBackend
+# Week 3: HiveMemory adapter creation
+- Create HiveMemoryAdapter implementing IMemoryBackend
 - Setup HNSW indexing infrastructure
 - Establish embedding generation pipeline
 - Create unified query interface
@@ -155,8 +155,8 @@ class HNSWIndexer {
 ### **Phase 2: Gradual Migration**
 ```bash
 # Week 4-5: System-by-system migration
-- SQLiteBackend → AgentDB (structured data)
-- MarkdownBackend → AgentDB (document storage)
+- SQLiteBackend → HiveMemory (structured data)
+- MarkdownBackend → HiveMemory (document storage)
 - MemoryManager → Unified interface
 - DistributedMemorySystem → Cross-agent sharing
 ```
@@ -213,7 +213,7 @@ await memory.query({
 ```typescript
 class SONAMemoryIntegration {
   async storePattern(pattern: LearningPattern): Promise<void> {
-    // Store in AgentDB with SONA metadata
+    // Store in HiveMemory with SONA metadata
     await this.memory.store({
       id: pattern.id,
       content: pattern.data,
@@ -241,26 +241,26 @@ class SONAMemoryIntegration {
 
 ## Data Migration Plan
 
-### **SQLite → AgentDB Migration**
+### **SQLite → HiveMemory Migration**
 ```sql
 -- Extract existing data
 SELECT id, content, metadata, created_at, agent_id
 FROM memory_entries
 ORDER BY created_at;
 
--- Migrate to AgentDB with embeddings
-INSERT INTO agentdb_memories (id, content, embedding, metadata)
+-- Migrate to HiveMemory with embeddings
+INSERT INTO hivememory_memories (id, content, embedding, metadata)
 VALUES (?, ?, generate_embedding(?), ?);
 ```
 
-### **Markdown → AgentDB Migration**
+### **Markdown → HiveMemory Migration**
 ```typescript
 // Process markdown files
 for (const file of markdownFiles) {
   const content = await fs.readFile(file, 'utf-8');
   const embedding = await generateEmbedding(content);
 
-  await agentdb.store({
+  await hivememory.store({
     id: generateId(),
     content,
     embedding,
@@ -308,7 +308,7 @@ class MemoryBenchmarks {
 ## Coordination Points
 
 ### **Integration Architect (Agent #10)**
-- AgentDB integration with agentic-flow@alpha
+- HiveMemory integration with hive-flow
 - SONA learning mode configuration
 - Performance optimization coordination
 

@@ -186,7 +186,7 @@ describe('hook-handler.cjs', () => {
         script,
         env: {
           HIVE_FLOW_HOME: hiveHome,
-          AGENTIC_FLOW_AGENT_ID: agentId,
+          HIVE_FLOW_AGENT_ID: agentId,
         },
         stdinData: JSON.stringify({ user_prompt: '/set-role queen' }),
       });
@@ -232,7 +232,7 @@ describe('hook-handler.cjs', () => {
         script,
         env: {
           HIVE_FLOW_HOME: hiveHome,
-          AGENTIC_FLOW_AGENT_ID: agentId,
+          HIVE_FLOW_AGENT_ID: agentId,
         },
         stdinData: JSON.stringify({ hook_event_name: 'UserPromptSubmit', user_prompt: '/set-role queen' }),
       });
@@ -245,7 +245,7 @@ describe('hook-handler.cjs', () => {
         script,
         env: {
           HIVE_FLOW_HOME: hiveHome,
-          AGENTIC_FLOW_AGENT_ID: agentId,
+          HIVE_FLOW_AGENT_ID: agentId,
         },
         stdinData: JSON.stringify({ user_prompt: '/clear-role' }),
       });
@@ -267,7 +267,7 @@ describe('hook-handler.cjs', () => {
         script,
         env: {
           HIVE_FLOW_HOME: hiveHome,
-          AGENTIC_FLOW_AGENT_ID: agentId,
+          HIVE_FLOW_AGENT_ID: agentId,
         },
         stdinData: JSON.stringify({ hook_event_name: 'UserPromptSubmit', user_prompt: '/set-role queen' }),
       });
@@ -280,7 +280,7 @@ describe('hook-handler.cjs', () => {
         script,
         env: {
           HIVE_FLOW_HOME: hiveHome,
-          AGENTIC_FLOW_AGENT_ID: agentId,
+          HIVE_FLOW_AGENT_ID: agentId,
         },
         stdinData: JSON.stringify({ hook_event_name: 'UserPromptSubmit', user_prompt: '/clear-role' }),
       });
@@ -430,7 +430,7 @@ describe('hook-handler.cjs', () => {
         script,
         env: {
           HIVE_FLOW_HOME: hiveHome,
-          AGENTIC_FLOW_AGENT_ID: agentId,
+          HIVE_FLOW_AGENT_ID: agentId,
         },
       });
 

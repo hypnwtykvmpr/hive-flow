@@ -366,7 +366,7 @@ export interface TestScope {
 }
 
 /**
- * Database test helper for memory/agentdb testing
+ * Database test helper for memory/hivememory testing
  */
 export interface DatabaseTestHelper {
   setup(): Promise<void>;

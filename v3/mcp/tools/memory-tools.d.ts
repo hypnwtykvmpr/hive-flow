@@ -7,7 +7,7 @@
  * - memory/list - List memory entries
  *
  * Implements ADR-005: MCP-First API Design
- * Implements ADR-006: Unified Memory Service (AgentDB integration)
+ * Implements ADR-006: Unified Memory Service (HiveMemory integration)
  */
 import { MCPTool } from '../types.js';
 /**

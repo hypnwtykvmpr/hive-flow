@@ -1,30 +1,30 @@
 ---
 name: "V3 Memory Unification"
-description: "Unify 6+ memory systems into AgentDB with HNSW indexing for HNSW indexing improvements. Implements ADR-006 (Unified Memory Service) and ADR-009 (Hybrid Memory Backend)."
+description: "Unify 6+ memory systems into HiveMemory with HNSW indexing for HNSW indexing improvements. Implements ADR-006 (Unified Memory Service) and ADR-009 (Hybrid Memory Backend)."
 ---
 
 # V3 Memory Unification
 
 ## What This Skill Does
 
-Consolidates disparate memory systems into unified AgentDB backend with HNSW vector search, achieving HNSW-indexed search performance improvements while maintaining backward compatibility.
+Consolidates disparate memory systems into unified HiveMemory backend with HNSW vector search, achieving HNSW-indexed search performance improvements while maintaining backward compatibility.
 
 ## Quick Start
 
 ```bash
 # Initialize memory unification
-Task("Memory architecture", "Design AgentDB unification strategy", "v3-memory-specialist")
+Task("Memory architecture", "Design HiveMemory unification strategy", "v3-memory-specialist")
 
-# AgentDB integration
-Task("AgentDB setup", "Configure HNSW indexing and vector search", "v3-memory-specialist")
+# HiveMemory integration
+Task("HiveMemory setup", "Configure HNSW indexing and vector search", "v3-memory-specialist")
 
 # Data migration
-Task("Memory migration", "Migrate SQLite/Markdown to AgentDB", "v3-memory-specialist")
+Task("Memory migration", "Migrate SQLite/Markdown to HiveMemory", "v3-memory-specialist")
 ```
 
 ## Systems to Unify
 
-### Legacy Systems → AgentDB
+### Legacy Systems → HiveMemory
 ```
 ┌─────────────────────────────────────────┐
 │  • MemoryManager (basic operations)     │
@@ -37,7 +37,7 @@ Task("Memory migration", "Migrate SQLite/Markdown to AgentDB", "v3-memory-specia
 └─────────────────────────────────────────┘
                     ↓
 ┌─────────────────────────────────────────┐
-│       🚀 AgentDB with HNSW             │
+│       🚀 HiveMemory with HNSW             │
 │  • fast HNSW-indexed search          │
 │  • Unified query interface             │
 │  • Cross-agent memory sharing          │
@@ -51,13 +51,13 @@ Task("Memory migration", "Migrate SQLite/Markdown to AgentDB", "v3-memory-specia
 ```typescript
 class UnifiedMemoryService implements IMemoryBackend {
   constructor(
-    private agentdb: AgentDBAdapter,
+    private hivememory: HiveMemoryAdapter,
     private indexer: HNSWIndexer,
     private migrator: DataMigrator
   ) {}
 
   async store(entry: MemoryEntry): Promise<void> {
-    await this.agentdb.store(entry);
+    await this.hivememory.store(entry);
     await this.indexer.index(entry);
   }
 
@@ -65,7 +65,7 @@ class UnifiedMemoryService implements IMemoryBackend {
     if (query.semantic) {
       return this.indexer.search(query); // fast HNSW-indexed
     }
-    return this.agentdb.query(query);
+    return this.hivememory.query(query);
   }
 }
 ```
@@ -94,8 +94,8 @@ class HNSWIndexer {
 
 ### Phase 1: Foundation
 ```typescript
-// AgentDB adapter setup
-const agentdb = new AgentDBAdapter({
+// HiveMemory adapter setup
+const hivememory = new HiveMemoryAdapter({
   dimensions: 1536,
   indexType: 'HNSW',
   speedupTarget: 'HNSW-indexed'
@@ -104,21 +104,21 @@ const agentdb = new AgentDBAdapter({
 
 ### Phase 2: Data Migration
 ```typescript
-// SQLite → AgentDB
+// SQLite → HiveMemory
 const migrateFromSQLite = async () => {
   const entries = await sqlite.getAll();
   for (const entry of entries) {
     const embedding = await generateEmbedding(entry.content);
-    await agentdb.store({ ...entry, embedding });
+    await hivememory.store({ ...entry, embedding });
   }
 };
 
-// Markdown → AgentDB
+// Markdown → HiveMemory
 const migrateFromMarkdown = async () => {
   const files = await glob('**/*.md');
   for (const file of files) {
     const content = await fs.readFile(file, 'utf-8');
-    await agentdb.store({
+    await hivememory.store({
       id: generateId(),
       content,
       embedding: await generateEmbedding(content),
@@ -166,7 +166,7 @@ class SONAMemoryIntegration {
 
 ## Success Metrics
 
-- [ ] All 7 legacy memory systems migrated to AgentDB
+- [ ] All 7 legacy memory systems migrated to HiveMemory
 - [ ] HNSW-indexed search performance validated
 - [ ] 50-75% memory usage reduction achieved
 - [ ] Backward compatibility maintained

@@ -1,7 +1,7 @@
 {
   "name": "@hive-flow/embeddings",
   "version": "3.0.0-alpha.12",
-  "description": "V3 Embedding Service - OpenAI, Transformers.js, Agentic-Flow (ONNX), Mock providers with hyperbolic embeddings, normalization, and chunking",
+  "description": "V3 Embedding Service - OpenAI, Transformers.js, RVF, and mock providers with hyperbolic embeddings, normalization, and chunking",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -47,14 +47,6 @@
   },
   "devDependencies": {
     "vitest": "^4.0.16"
-  },
-  "peerDependencies": {
-    "agentic-flow": "^2.0.0"
-  },
-  "peerDependenciesMeta": {
-    "agentic-flow": {
-      "optional": true
-    }
   },
   "engines": {
     "node": ">=20.0.0"

@@ -47,7 +47,7 @@ writeEnvelope(root, key, 0);
 try {
   process.chdir(root);
   process.env.CLAUDE_PROJECT_DIR = root;
-  process.env.AGENTIC_FLOW_AGENT_ID = '';
+  process.env.HIVE_FLOW_AGENT_ID = '';
   process.env.CLAUDE_AGENT_ID = '';
   process.env.HIVE_FLOW_HIVE_ID = '';
   delete process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;

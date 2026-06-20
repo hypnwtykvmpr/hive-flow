@@ -321,7 +321,7 @@ hive-flow mcp tools
 |------|---------|---------|
 | \`swarm_init\` | Initialize swarm coordination | \`swarm_init({topology: "hierarchical"})\` |
 | \`agent_spawn\` | Spawn new agents | \`agent_spawn({type: "coder", name: "dev-1"})\` |
-| \`memory_store\` | Store in AgentDB | \`memory_store({key: "pattern", value: "..."})\` |
+| \`memory_store\` | Store in HiveMemory | \`memory_store({key: "pattern", value: "..."})\` |
 | \`memory_search\` | Semantic search | \`memory_search({query: "auth patterns"})\` |
 | \`task_orchestrate\` | Task coordination | \`task_orchestrate({task: "implement feature"})\` |
 | \`neural_train\` | Train neural patterns | \`neural_train({iterations: 10})\` |
@@ -500,7 +500,7 @@ hive-flow logs export --format json --output audit.json
 #### GDPR Data Handling
 - PII detection and masking in logs
 - Data minimization in memory storage
-- Right to erasure support in AgentDB
+- Right to erasure support in HiveMemory
 - Cross-border transfer controls
 
 #### PCI-DSS (if applicable)

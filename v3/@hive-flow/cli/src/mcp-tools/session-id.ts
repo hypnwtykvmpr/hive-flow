@@ -19,7 +19,7 @@ export function resolveSessionId(
     asNonEmptyString(input?.session_id)
     ?? asNonEmptyString(input?.sessionId)
     ?? asNonEmptyString(env.CLAUDE_SESSION_ID)
-    ?? asNonEmptyString(env.AGENTIC_FLOW_SESSION_ID);
+    ?? asNonEmptyString(env.HIVE_FLOW_SESSION_ID);
 
   return source ? sanitizeSessionId(source) : null;
 }

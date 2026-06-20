@@ -94,7 +94,7 @@ const initCommand: Command = {
 
     if (v3) {
       output.writeln(output.dim('  Enabling V3 multi-agent coordination...'));
-      output.writeln(output.dim('  Configuring AgentDB integration...'));
+      output.writeln(output.dim('  Configuring HiveMemory integration...'));
       output.writeln(output.dim('  Setting up Flash Attention optimization...'));
     }
 
@@ -217,7 +217,7 @@ const setCommand: Command = {
   ],
   examples: [
     { command: 'hive-flow config set swarm.maxAgents 20', description: 'Set max agents' },
-    { command: 'hive-flow config set -k memory.backend -v agentdb', description: 'Set memory backend' }
+    { command: 'hive-flow config set -k memory.backend -v hivememory', description: 'Set memory backend' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const key = ctx.flags.key as string || ctx.args[0];

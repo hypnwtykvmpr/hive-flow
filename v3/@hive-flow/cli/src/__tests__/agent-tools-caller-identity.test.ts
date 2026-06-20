@@ -41,7 +41,7 @@ describe('d3-003: callerAgentId fallback chain', () => {
     expect(callerAssignment).not.toContain('CLAUDE_SESSION_ID');
 
     // Must still use the real agent-id env vars
-    expect(callerAssignment).toContain('AGENTIC_FLOW_AGENT_ID');
+    expect(callerAssignment).toContain('HIVE_FLOW_AGENT_ID');
     expect(callerAssignment).toContain('CLAUDE_AGENT_ID');
   });
 
@@ -114,7 +114,7 @@ describe('agent_task bridge env includes non-secret notification routing keys', 
     'HIVE_FLOW_CLIENT_KIND',
     'CLAUDE_SESSION_ID',
     'CODEX_SESSION_ID',
-    'AGENTIC_FLOW_SESSION_ID',
+    'HIVE_FLOW_SESSION_ID',
   ] as const;
 
   it('preserves session/home routing env for detached bridge completion notifications', () => {

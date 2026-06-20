@@ -444,7 +444,7 @@ function formatMigrationStatus(status: string): string {
 function getMigrationSteps(target: string): Array<{ name: string; description: string; source: string; dest: string }> {
   const allSteps = [
     { name: 'Configuration Files', description: 'Migrate config schema to V3 format', source: './hive-flow.json', dest: './hive-flow.config.json' },
-    { name: 'Memory Backend', description: 'Upgrade to hybrid backend with AgentDB', source: './.hive-flow/memory', dest: './data/memory' },
+    { name: 'Memory Backend', description: 'Upgrade to hybrid backend with HiveMemory', source: './.hive-flow/memory', dest: './data/memory' },
     { name: 'Agent Definitions', description: 'Convert agent configs to V3 format', source: './.hive-flow/agents', dest: './v3/agents' },
     { name: 'Hook Registry', description: 'Migrate hooks to V3 hook system', source: './src/hooks', dest: './v3/hooks' },
     { name: 'Workflow Definitions', description: 'Convert workflows to event-sourced format', source: './.hive-flow/workflows', dest: './data/workflows' },

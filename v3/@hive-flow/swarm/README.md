@@ -564,11 +564,11 @@ implementations. It does not require external local compatibility delegates or s
 
 ```typescript
 import { createUnifiedSwarmCoordinator } from '@hive-flow/swarm';
-import { AgenticFlowBridge } from '@hive-flow/integration';
+import { HiveFlowBridge } from '@hive-flow/integration';
 
 // Connect local compatibility features through the Hive Flow bridge
-const bridge = new AgenticFlowBridge({
-  agenticFlow: { version: 'alpha' },
+const bridge = new HiveFlowBridge({
+  hiveFlow: { version: 'alpha' },
 });
 
 const coordinator = createUnifiedSwarmCoordinator({

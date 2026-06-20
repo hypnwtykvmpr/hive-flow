@@ -19,7 +19,6 @@ import type {
   OpenAIEmbeddingConfig,
   TransformersEmbeddingConfig,
   MockEmbeddingConfig,
-  AgenticFlowEmbeddingConfig,
   RvfEmbeddingConfig,
   EmbeddingResult,
   BatchEmbeddingResult,
@@ -610,112 +609,6 @@ export class MockEmbeddingService extends BaseEmbeddingService {
 }
 
 // ============================================================================
-// Legacy Agentic-Flow Embedding Service Alias
-// ============================================================================
-
-/**
- * Backward-compatible provider name for historical `agentic-flow` configs.
- * It intentionally never imports the external package; all embeddings are
- * generated locally with deterministic hash vectors.
- */
-export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
-  readonly provider: EmbeddingProvider = 'agentic-flow';
-  private readonly dimensions: number;
-
-  constructor(config: AgenticFlowEmbeddingConfig) {
-    super(config);
-    this.dimensions = config.dimensions ?? 384;
-  }
-
-  async embed(text: string): Promise<EmbeddingResult> {
-    const cached = this.cache.get(text);
-    if (cached) {
-      this.emitEvent({ type: 'cache_hit', text });
-      return {
-        embedding: cached,
-        latencyMs: 0,
-        cached: true,
-      };
-    }
-
-    this.emitEvent({ type: 'embed_start', text });
-    const startTime = performance.now();
-
-    const embedding = this.hashEmbedding(text);
-    this.cache.set(text, embedding);
-
-    const latencyMs = performance.now() - startTime;
-    this.emitEvent({ type: 'embed_complete', text, latencyMs });
-
-    return {
-      embedding,
-      latencyMs,
-    };
-  }
-
-  async embedBatch(texts: string[]): Promise<BatchEmbeddingResult> {
-    this.emitEvent({ type: 'batch_start', count: texts.length });
-    const startTime = performance.now();
-
-    const embeddings: Float32Array[] = [];
-    let cacheHits = 0;
-
-    for (const text of texts) {
-      const cached = this.cache.get(text);
-      if (cached) {
-        embeddings.push(cached);
-        cacheHits++;
-        this.emitEvent({ type: 'cache_hit', text });
-      } else {
-        const embedding = this.hashEmbedding(text);
-        this.cache.set(text, embedding);
-        embeddings.push(embedding);
-      }
-    }
-
-    const totalLatencyMs = performance.now() - startTime;
-    this.emitEvent({ type: 'batch_complete', count: texts.length, latencyMs: totalLatencyMs });
-
-    return {
-      embeddings,
-      totalLatencyMs,
-      avgLatencyMs: totalLatencyMs / texts.length,
-      cacheStats: {
-        hits: cacheHits,
-        misses: texts.length - cacheHits,
-      },
-    };
-  }
-
-  /**
-   * Generate deterministic hash-based embedding.
-   */
-  private hashEmbedding(text: string): Float32Array {
-    const embedding = new Float32Array(this.dimensions);
-
-    let hash = 2166136261;
-    for (let i = 0; i < text.length; i++) {
-      hash ^= text.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-
-    for (let i = 0; i < this.dimensions; i++) {
-      hash ^= i + 0x9e3779b9;
-      hash = Math.imul(hash, 16777619);
-      embedding[i] = ((hash >>> 0) / 0xffffffff) * 2 - 1;
-    }
-
-    const norm = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0));
-    if (norm > 0) {
-      for (let i = 0; i < this.dimensions; i++) {
-        embedding[i] /= norm;
-      }
-    }
-    return this.applyNormalization(embedding);
-  }
-}
-
-// ============================================================================
 // Factory Functions
 // ============================================================================
 
@@ -731,8 +624,6 @@ export function createEmbeddingService(config: EmbeddingConfig): IEmbeddingServi
       return new TransformersEmbeddingService(config as TransformersEmbeddingConfig);
     case 'mock':
       return new MockEmbeddingService(config as MockEmbeddingConfig);
-    case 'agentic-flow':
-      return new AgenticFlowEmbeddingService(config as AgenticFlowEmbeddingConfig);
     case 'rvf':
       return new RvfEmbeddingService(config as RvfEmbeddingConfig);
     default:
@@ -751,8 +642,6 @@ export interface AutoEmbeddingConfig {
   fallback?: EmbeddingProvider;
   /** Reserved for backward compatibility; no packages are installed automatically. */
   autoInstall?: boolean;
-  /** Historical model ID field retained for config compatibility. */
-  modelId?: string;
   /** Model name for transformers */
   model?: string;
   /** Dimensions */
@@ -774,12 +663,6 @@ export interface AutoEmbeddingConfig {
  * @example
  * // Auto-select best provider
  * const service = await createEmbeddingServiceAsync({ provider: 'auto' });
- *
- * // Historical provider name, backed by local deterministic embeddings
- * const service = await createEmbeddingServiceAsync({
- *   provider: 'agentic-flow',
- *   fallback: 'transformers'
- * });
  */
 export async function createEmbeddingServiceAsync(
   config: AutoEmbeddingConfig
@@ -798,9 +681,6 @@ export async function createEmbeddingServiceAsync(
       await service.embed('test');
       return service;
     } catch { /* fall through */ }
-
-    // Historical agentic-flow provider is detached; auto stays local-first
-    // (it is never available, so no detection branch is needed here).
 
     // Try transformers (good quality, built-in)
     try {
@@ -827,13 +707,6 @@ export async function createEmbeddingServiceAsync(
   // Specific provider with optional fallback
   const createPrimary = (): IEmbeddingService => {
     switch (provider) {
-      case 'agentic-flow':
-        return new AgenticFlowEmbeddingService({
-          provider: 'agentic-flow',
-          modelId: rest.modelId ?? 'all-MiniLM-L6-v2',
-          dimensions: rest.dimensions ?? 384,
-          cacheSize: rest.cacheSize,
-        });
       case 'transformers':
         return new TransformersEmbeddingService({
           provider: 'transformers',

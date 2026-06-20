@@ -516,7 +516,7 @@ export class EnhancedModelRouter {
     context?: { filePath?: string; originalCode?: string }
   ): Promise<{ success: boolean; confidence: number; output?: string }> {
     try {
-      // Try to import and use agentic-flow's agent-booster
+      // Try to use the local edit accelerator command.
       const { execFileSync } = await import('child_process');
 
       const filePath = intent.filePath || context?.filePath;

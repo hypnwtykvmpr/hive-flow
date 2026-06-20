@@ -1,14 +1,14 @@
 {
-  "syncedAt": "2026-06-18T03:30:30.782Z",
+  "syncedAt": "2026-06-20T21:58:05.056Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
       "name": "enforcement.cjs",
-      "sha256": "43fb128387f3eb9a8f5f32d08643104d9290ec9f0097056805544f1a70ec7063"
+      "sha256": "05d66787d4444cf8b3ee056b2c4af25e4b9001af6ae5be8aed6e602a9407cfb9"
     },
     {
       "name": "role-enforcement.cjs",
-      "sha256": "cd62f698ce6b5f1eb956bab627e8bf0187c1bbf2dcd1443d15c6b660e6f87563"
+      "sha256": "7b57479f6058f7aa3e0176a1700a4dbcad4aced86cc7ef411bf07116f831ce5a"
     },
     {
       "name": "hive-composition-gate.cjs",
@@ -16,7 +16,7 @@
     },
     {
       "name": "hook-handler.cjs",
-      "sha256": "0059fd8db38def9966bcb6615907df05a15a93c380b042b70b424331ffad1b4d"
+      "sha256": "5e138d42e4dd7151e51a857343bb7b0263ef9ee232e05611a56c9db1e54c41b5"
     },
     {
       "name": "settings-reconciler.cjs",
@@ -28,11 +28,11 @@
     },
     {
       "name": "session-id.cjs",
-      "sha256": "a0cfa3c876013ca9b3ade9139394961cda23523e6f2063e552b819a614306737"
+      "sha256": "31e11a26020a4eda9ced58bc48b9c560ce0ec151e448894c6b099892fd0aceab"
     },
     {
       "name": "protected-paths.cjs",
-      "sha256": "479a19185ab1eb5defc626acfccd8a4546c353ff1487bd846c823896544f8e3d"
+      "sha256": "0da8b98da3799e81fa939840d4db74c2a2157693e9f32cbb053a3265c6419dde"
     },
     {
       "name": "protected-paths.policy.json",

@@ -61,9 +61,9 @@ export const agentConfigs: Record<string, AgentConfig> = {
   memorySpecialist: {
     type: 'memory-specialist',
     name: 'Memory Specialist',
-    capabilities: ['memory-optimization', 'agentdb-integration', 'caching'],
+    capabilities: ['memory-optimization', 'hivememory-integration', 'caching'],
     priority: 80,
-    metadata: { backend: 'agentdb' },
+    metadata: { backend: 'hivememory' },
   },
 
   swarmSpecialist: {

@@ -629,7 +629,7 @@ async function withDevOverrideRoot(enabled: boolean, fn: (root: string, rootToke
 
 describe('dev override self-protection gate', () => {
   const originalSession = process.env.CLAUDE_SESSION_ID;
-  const originalAgent = process.env.AGENTIC_FLOW_AGENT_ID;
+  const originalAgent = process.env.HIVE_FLOW_AGENT_ID;
   const originalClaudeAgent = process.env.CLAUDE_AGENT_ID;
   const originalParent = process.env.CLAUDE_PARENT_AGENT_ID;
   const originalDevOverrideToken = process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN;
@@ -637,8 +637,8 @@ describe('dev override self-protection gate', () => {
   function restoreIdentityEnv(): void {
     if (originalSession === undefined) delete process.env.CLAUDE_SESSION_ID;
     else process.env.CLAUDE_SESSION_ID = originalSession;
-    if (originalAgent === undefined) delete process.env.AGENTIC_FLOW_AGENT_ID;
-    else process.env.AGENTIC_FLOW_AGENT_ID = originalAgent;
+    if (originalAgent === undefined) delete process.env.HIVE_FLOW_AGENT_ID;
+    else process.env.HIVE_FLOW_AGENT_ID = originalAgent;
     if (originalClaudeAgent === undefined) delete process.env.CLAUDE_AGENT_ID;
     else process.env.CLAUDE_AGENT_ID = originalClaudeAgent;
     if (originalParent === undefined) delete process.env.CLAUDE_PARENT_AGENT_ID;
@@ -922,7 +922,7 @@ describe('dev override self-protection gate', () => {
       writeSignedSettingsPresets(root);
       process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createRootOverrideToken(root);
       delete process.env.CLAUDE_SESSION_ID;
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       delete process.env.CLAUDE_AGENT_ID;
       delete process.env.CLAUDE_PARENT_AGENT_ID;
       try {
@@ -949,7 +949,7 @@ describe('dev override self-protection gate', () => {
     await withDevOverrideRoot(true, async (root) => {
       process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN = createRootOverrideToken(root);
       delete process.env.CLAUDE_SESSION_ID;
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
       delete process.env.CLAUDE_AGENT_ID;
       delete process.env.CLAUDE_PARENT_AGENT_ID;
       try {

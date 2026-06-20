@@ -219,7 +219,7 @@ export * from './fixtures/index.js';
 
 // Mocks - Service mock implementations (explicit to avoid duplicates)
 export {
-  MockAgentDB,
+  MockHiveMemory,
   MockSwarmCoordinator,
   MockSwarmAgent,
   MockMemoryService,

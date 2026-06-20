@@ -10,10 +10,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const mod = await import('../.claude/helpers/context-persistence-hook.mjs');
 const {
   SQLiteBackend,
-  RuVectorBackend,
+  PostgresVectorBackend,
   JsonFileBackend,
   resolveBackend,
-  getRuVectorConfig,
+  getPostgresVectorConfig,
   createHashEmbedding,
   hashContent,
   parseTranscript,
@@ -769,37 +769,37 @@ describe('no-op conditions', () => {
 });
 
 // ============================================================================
-// RuVector Config Tests
+// PostgresVector Config Tests
 // ============================================================================
 
-describe('getRuVectorConfig', () => {
+describe('getPostgresVectorConfig', () => {
   it('should return null when no env vars set', () => {
     // Save and clear env vars
     const saved = { ...process.env };
-    delete process.env.RUVECTOR_HOST;
-    delete process.env.RUVECTOR_DATABASE;
-    delete process.env.RUVECTOR_USER;
+    delete process.env.HIVE_VECTOR_HOST;
+    delete process.env.HIVE_VECTOR_DATABASE;
+    delete process.env.HIVE_VECTOR_USER;
     delete process.env.PGHOST;
     delete process.env.PGDATABASE;
     delete process.env.PGUSER;
 
-    const config = getRuVectorConfig();
+    const config = getPostgresVectorConfig();
     assert.equal(config, null);
 
     // Restore env
     Object.assign(process.env, saved);
   });
 
-  it('should parse config from RUVECTOR_* env vars', () => {
+  it('should parse config from HIVE_VECTOR_* env vars', () => {
     const saved = { ...process.env };
-    process.env.RUVECTOR_HOST = 'pg.example.com';
-    process.env.RUVECTOR_PORT = '5433';
-    process.env.RUVECTOR_DATABASE = 'hive_flow';
-    process.env.RUVECTOR_USER = 'admin';
-    process.env.RUVECTOR_PASSWORD = 'secret123';
-    process.env.RUVECTOR_SSL = 'true';
+    process.env.HIVE_VECTOR_HOST = 'pg.example.com';
+    process.env.HIVE_VECTOR_PORT = '5433';
+    process.env.HIVE_VECTOR_DATABASE = 'hive_flow';
+    process.env.HIVE_VECTOR_USER = 'admin';
+    process.env.HIVE_VECTOR_PASSWORD = 'secret123';
+    process.env.HIVE_VECTOR_SSL = 'true';
 
-    const config = getRuVectorConfig();
+    const config = getPostgresVectorConfig();
     assert.ok(config);
     assert.equal(config.host, 'pg.example.com');
     assert.equal(config.port, 5433);
@@ -809,26 +809,26 @@ describe('getRuVectorConfig', () => {
     assert.equal(config.ssl, true);
 
     // Cleanup
-    delete process.env.RUVECTOR_HOST;
-    delete process.env.RUVECTOR_PORT;
-    delete process.env.RUVECTOR_DATABASE;
-    delete process.env.RUVECTOR_USER;
-    delete process.env.RUVECTOR_PASSWORD;
-    delete process.env.RUVECTOR_SSL;
+    delete process.env.HIVE_VECTOR_HOST;
+    delete process.env.HIVE_VECTOR_PORT;
+    delete process.env.HIVE_VECTOR_DATABASE;
+    delete process.env.HIVE_VECTOR_USER;
+    delete process.env.HIVE_VECTOR_PASSWORD;
+    delete process.env.HIVE_VECTOR_SSL;
     Object.assign(process.env, saved);
   });
 
   it('should fall back to PG* env vars', () => {
     const saved = { ...process.env };
-    delete process.env.RUVECTOR_HOST;
-    delete process.env.RUVECTOR_DATABASE;
-    delete process.env.RUVECTOR_USER;
+    delete process.env.HIVE_VECTOR_HOST;
+    delete process.env.HIVE_VECTOR_DATABASE;
+    delete process.env.HIVE_VECTOR_USER;
     process.env.PGHOST = 'localhost';
     process.env.PGDATABASE = 'testdb';
     process.env.PGUSER = 'testuser';
     process.env.PGPORT = '5434';
 
-    const config = getRuVectorConfig();
+    const config = getPostgresVectorConfig();
     assert.ok(config);
     assert.equal(config.host, 'localhost');
     assert.equal(config.port, 5434);
@@ -844,13 +844,13 @@ describe('getRuVectorConfig', () => {
 });
 
 // ============================================================================
-// RuVectorBackend Class Tests (mock-based, no real PostgreSQL)
+// PostgresVectorBackend Class Tests (mock-based, no real PostgreSQL)
 // ============================================================================
 
-describe('RuVectorBackend', () => {
+describe('PostgresVectorBackend', () => {
   it('should be exported and constructable', () => {
-    assert.ok(RuVectorBackend);
-    const backend = new RuVectorBackend({
+    assert.ok(PostgresVectorBackend);
+    const backend = new PostgresVectorBackend({
       host: 'localhost', port: 5432, database: 'test', user: 'test', password: 'test',
     });
     assert.ok(backend);
@@ -858,7 +858,7 @@ describe('RuVectorBackend', () => {
   });
 
   it('hashExists should return false (async-only for pg)', () => {
-    const backend = new RuVectorBackend({
+    const backend = new PostgresVectorBackend({
       host: 'localhost', port: 5432, database: 'test', user: 'test', password: 'test',
     });
     // Synchronous hashExists always returns false for pg (uses ON CONFLICT for dedup)
@@ -1577,8 +1577,8 @@ describe('resolveBackend priority', () => {
     await backend.shutdown();
   });
 
-  it('should not resolve ruvector when env vars are absent', () => {
-    const config = getRuVectorConfig();
+  it('should not resolve postgres when env vars are absent', () => {
+    const config = getPostgresVectorConfig();
     assert.equal(config, null);
   });
 });
@@ -1908,7 +1908,7 @@ describe('autoOptimize', () => {
     const result = await autoOptimize(backend, 'sqlite');
 
     assert.equal(result.pruned, 1);
-    assert.equal(result.synced, 0); // No RuVector configured
+    assert.equal(result.synced, 0); // No PostgresVector configured
 
     const remaining = await backend.count(NAMESPACE);
     assert.equal(remaining, 1);

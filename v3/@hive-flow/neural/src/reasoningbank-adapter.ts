@@ -22,7 +22,7 @@ import type {
 import { createPatternLearner, PatternLearner } from './pattern-learner.js';
 
 // ============================================================================
-// ReasoningBank Types (agentic-flow compatible)
+// ReasoningBank Types (hive-flow compatible)
 // ============================================================================
 
 /**

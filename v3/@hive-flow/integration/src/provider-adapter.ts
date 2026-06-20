@@ -13,7 +13,7 @@
  * - Cost tracking and optimization
  * - Provider health monitoring
  *
- * Compatible with agentic-flow's provider manager patterns.
+ * Compatible with Hive Flow's provider manager patterns.
  *
  * @module v3/integration/provider-adapter
  * @version 3.0.0-alpha.1

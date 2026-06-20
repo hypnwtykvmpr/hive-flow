@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hive Flow V3 - Performance Benchmark Worker
-# Runs periodic benchmarks and updates metrics using agentic-flow agents
+# Runs periodic benchmarks and updates metrics using local Hive Flow agents
 
 set -euo pipefail
 
@@ -132,7 +132,7 @@ run_benchmarks() {
   date +%s > "$LAST_RUN_FILE"
 }
 
-# Spawn agentic-flow performance agent for deep analysis
+# Spawn local Hive Flow performance agent for deep analysis
 run_deep_benchmark() {
   echo "[$(date +%H:%M:%S)] Spawning performance-benchmarker agent..."
 
@@ -172,7 +172,7 @@ case "${1:-check}" in
   *)
     echo "Usage: perf-worker.sh [run|deep|check|force|status]"
     echo "  run    - Run quick benchmarks"
-    echo "  deep   - Spawn agentic-flow agent for deep analysis"
+    echo "  deep   - Spawn local Hive Flow agent for deep analysis"
     echo "  check  - Run if throttle allows (default)"
     echo "  force  - Force run ignoring throttle"
     echo "  status - Show current metrics"

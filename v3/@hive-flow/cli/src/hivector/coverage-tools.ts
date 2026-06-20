@@ -45,10 +45,6 @@ export const hooksCoverageRoute: MCPTool = {
         type: 'boolean',
         description: 'Use enhanced local coverage routing if available (default: true)',
       },
-      useRuvector: {
-        type: 'boolean',
-        description: 'Deprecated alias for useHivector',
-      },
     },
     required: ['task'],
   },
@@ -56,7 +52,7 @@ export const hooksCoverageRoute: MCPTool = {
     const task = params.task as string;
     const projectRoot = params.projectRoot as string | undefined;
     const threshold = params.threshold as number | undefined;
-    const useHivector = (params.useHivector ?? params.useRuvector) as boolean | undefined;
+    const useHivector = params.useHivector as boolean | undefined;
 
     return coverageRoute(task, {
       projectRoot,
@@ -100,10 +96,6 @@ export const hooksCoverageSuggest: MCPTool = {
         type: 'boolean',
         description: 'Use enhanced local routing if available (default: true)',
       },
-      useRuvector: {
-        type: 'boolean',
-        description: 'Deprecated alias for useHivector',
-      },
     },
     required: ['path'],
   },
@@ -112,7 +104,7 @@ export const hooksCoverageSuggest: MCPTool = {
     const projectRoot = params.projectRoot as string | undefined;
     const threshold = params.threshold as number | undefined;
     const limit = params.limit as number | undefined;
-    const useHivector = (params.useHivector ?? params.useRuvector) as boolean | undefined;
+    const useHivector = params.useHivector as boolean | undefined;
 
     return coverageSuggest(path, {
       projectRoot,
@@ -152,17 +144,13 @@ export const hooksCoverageGaps: MCPTool = {
         type: 'boolean',
         description: 'Use enhanced local routing if available (default: true)',
       },
-      useRuvector: {
-        type: 'boolean',
-        description: 'Deprecated alias for useHivector',
-      },
     },
   },
   handler: async (params: Record<string, unknown>): Promise<CoverageGapsResult> => {
     const projectRoot = params.projectRoot as string | undefined;
     const threshold = params.threshold as number | undefined;
     const groupByAgent = params.groupByAgent as boolean | undefined;
-    const useHivector = (params.useHivector ?? params.useRuvector) as boolean | undefined;
+    const useHivector = params.useHivector as boolean | undefined;
 
     return coverageGaps({
       projectRoot,

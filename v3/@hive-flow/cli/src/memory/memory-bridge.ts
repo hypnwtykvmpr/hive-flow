@@ -1,18 +1,18 @@
 /**
- * Memory Bridge — Routes CLI memory operations through ControllerRegistry + AgentDB v3
+ * Memory Bridge — Routes CLI memory operations through ControllerRegistry
  *
  * Per ADR-053 Phases 1-6: Full controller activation pipeline.
- * CLI → ControllerRegistry → AgentDB v3 controllers.
+ * CLI → ControllerRegistry → local memory controllers.
  *
  * Phase 1: Core CRUD + embeddings + HNSW + controller access (complete)
  * Phase 2: BM25 hybrid search, TieredCache read/write, MutationGuard validation
  * Phase 3: ReasoningBank pattern store, recordFeedback, CausalMemoryGraph edges
  * Phase 4: SkillLibrary promotion, ExplainableRecall provenance, AttestationLog
  * Phase 5: ReflexionMemory session lifecycle, WitnessChain attestation
- * Phase 6: AgentDB MCP tools (separate file), COW branching
+ * Phase 6: HiveMemory MCP tools (separate file), COW branching
  *
  * Uses better-sqlite3 API (synchronous .all()/.get()/.run()) since that's
- * what AgentDB v3 uses internally.
+ * what the local memory controllers use internally.
  *
  * @module v3/cli/memory-bridge
  */
@@ -48,7 +48,7 @@ async function getRegistry(dbPath?: string): Promise<any | null> {
         // Suppress noisy console.log during init using a scoped flag
         // instead of replacing the global console.log (avoids race condition
         // with concurrent async code that also uses console.log).
-        const suppressPatterns = ['Transformers.js', 'better-sqlite3', '[AgentDB]', '[HNSWLibBackend]', 'local graph'];
+        const suppressPatterns = ['Transformers.js', 'better-sqlite3', '[HiveMemory]', '[HNSWLibBackend]', 'local graph'];
         let suppressInit = true;
         const origLog = console.log;
         const scopedLog = (...args: unknown[]) => {
@@ -243,14 +243,15 @@ async function logAttestation(
 }
 
 /**
- * Get the AgentDB database handle and ensure memory_entries table exists.
+ * Get the local memory database handle and ensure memory_entries table exists.
  * Returns null if not available.
  */
 function getDb(registry: any): any | null {
-  const agentdb = registry.getAgentDB();
-  if (!agentdb?.database) return null;
+  const backend = typeof registry.getBackend === 'function' ? registry.getBackend() : null;
+  const database = backend?.database ?? backend?.db ?? null;
+  if (!database) return null;
 
-  const db = agentdb.database;
+  const db = database;
 
   // Ensure memory_entries table exists (idempotent)
   try {
@@ -282,13 +283,13 @@ function getDb(registry: any): any | null {
     // Table already exists or db is read-only — that's fine
   }
 
-  return { db, agentdb };
+  return { db, backend };
 }
 
 // ===== Bridge functions — match memory-initializer.ts signatures =====
 
 /**
- * Store an entry via AgentDB v3.
+ * Store an entry via the local memory controller bridge.
  * Phase 2-5: Routes through MutationGuard → TieredCache → DB → AttestationLog.
  * Returns null to signal fallback to sql.js.
  */
@@ -327,14 +328,14 @@ export async function bridgeStoreEntry(options: {
       return { success: false, id, error: `MutationGuard rejected: ${guardResult.reason}` };
     }
 
-    // Generate embedding via AgentDB's embedder
+    // Generate embedding via the local memory backend when one is available.
     let embeddingJson: string | null = null;
     let dimensions = 0;
     let model = 'local';
 
     if (options.generateEmbeddingFlag !== false && value.length > 0) {
       try {
-        const embedder = ctx.agentdb.embedder;
+        const embedder = ctx.backend?.embedder;
         if (embedder) {
           const emb = await embedder.embed(value);
           if (emb) {
@@ -392,7 +393,7 @@ export async function bridgeStoreEntry(options: {
 }
 
 /**
- * Search entries via AgentDB v3.
+ * Search entries via the local memory controller bridge.
  * Phase 2: BM25 hybrid scoring replaces naive String.includes() keyword fallback.
  * Combines cosine similarity (semantic) with BM25 (lexical) via reciprocal rank fusion.
  */
@@ -429,7 +430,7 @@ export async function bridgeSearchEntries(options: {
     // Generate query embedding
     let queryEmbedding: number[] | null = null;
     try {
-      const embedder = ctx.agentdb.embedder;
+      const embedder = ctx.backend?.embedder;
       if (embedder) {
         const emb = await embedder.embed(queryStr);
         queryEmbedding = Array.from(emb);
@@ -521,7 +522,7 @@ export async function bridgeSearchEntries(options: {
 }
 
 /**
- * List entries via AgentDB v3.
+ * List entries via the local memory controller bridge.
  */
 export async function bridgeListEntries(options: {
   namespace?: string;
@@ -601,7 +602,7 @@ export async function bridgeListEntries(options: {
 }
 
 /**
- * Get a specific entry via AgentDB v3.
+ * Get a specific entry via the local memory controller bridge.
  * Phase 2: TieredCache consulted before DB hit.
  */
 export async function bridgeGetEntry(options: {
@@ -709,7 +710,7 @@ export async function bridgeGetEntry(options: {
 }
 
 /**
- * Delete an entry via AgentDB v3.
+ * Delete an entry via the local memory controller bridge.
  * Phase 5: MutationGuard validation, cache invalidation, attestation logging.
  */
 export async function bridgeDeleteEntry(options: {
@@ -785,7 +786,7 @@ export async function bridgeDeleteEntry(options: {
 // ===== Phase 2: Embedding bridge =====
 
 /**
- * Generate embedding via AgentDB v3's embedder.
+ * Generate embedding via the local memory backend's embedder.
  * Returns null if bridge unavailable — caller falls back to own ONNX/hash.
  */
 export async function bridgeGenerateEmbedding(
@@ -796,8 +797,8 @@ export async function bridgeGenerateEmbedding(
   if (!registry) return null;
 
   try {
-    const agentdb = registry.getAgentDB();
-    const embedder = agentdb?.embedder;
+    const backend = typeof registry.getBackend === 'function' ? registry.getBackend() : null;
+    const embedder = backend?.embedder;
     if (!embedder) return null;
 
     const emb = await embedder.embed(text);
@@ -814,7 +815,7 @@ export async function bridgeGenerateEmbedding(
 }
 
 /**
- * Load embedding model via AgentDB v3 (it loads on init).
+ * Load the local embedding model when the backend exposes one.
  * Returns null if unavailable.
  */
 export async function bridgeLoadEmbeddingModel(
@@ -830,8 +831,8 @@ export async function bridgeLoadEmbeddingModel(
   if (!registry) return null;
 
   try {
-    const agentdb = registry.getAgentDB();
-    const embedder = agentdb?.embedder;
+    const backend = typeof registry.getBackend === 'function' ? registry.getBackend() : null;
+    const embedder = backend?.embedder;
     if (!embedder) return null;
 
     // Verify embedder works by generating a test embedding
@@ -852,7 +853,7 @@ export async function bridgeLoadEmbeddingModel(
 // ===== Phase 3: HNSW bridge =====
 
 /**
- * Get HNSW status from AgentDB v3's vector backend or HNSW index.
+ * Get HNSW status from the local vector backend or HNSW index.
  * Returns null if unavailable.
  */
 export async function bridgeGetHNSWStatus(
@@ -893,7 +894,7 @@ export async function bridgeGetHNSWStatus(
 }
 
 /**
- * Search using AgentDB v3's embedder + SQLite entries.
+ * Search using the local embedder plus SQLite entries.
  * This is the HNSW-equivalent search through the bridge.
  * Returns null if unavailable.
  */
@@ -1006,7 +1007,7 @@ export async function bridgeAddToHNSW(
 // ===== Phase 4: Controller access =====
 
 /**
- * Get a named controller from AgentDB v3 via ControllerRegistry.
+ * Get a named controller via ControllerRegistry.
  * Returns null if unavailable.
  */
 export async function bridgeGetController(
@@ -1058,7 +1059,7 @@ export async function bridgeListControllers(
 }
 
 /**
- * Check if the AgentDB v3 bridge is available.
+ * Check if the local memory controller bridge is available.
  */
 export async function isBridgeAvailable(dbPath?: string): Promise<boolean> {
   if (bridgeAvailable !== null) return bridgeAvailable;
@@ -1448,7 +1449,7 @@ export async function bridgeSessionEnd(options: {
 // ===== Phase 5: SemanticRouter bridge =====
 
 /**
- * Route a task via AgentDB's SemanticRouter.
+ * Route a task via the local SemanticRouter controller.
  * Returns null to fall back to the local router.
  */
 export async function bridgeRouteTask(options: {
@@ -1465,7 +1466,7 @@ export async function bridgeRouteTask(options: {
   if (!registry) return null;
 
   try {
-    // Try AgentDB's SemanticRouter
+    // Try the local SemanticRouter controller
     const semanticRouter = registry.get('semanticRouter');
     if (semanticRouter && typeof semanticRouter.route === 'function') {
       const result = await semanticRouter.route(options.task, { context: options.context });

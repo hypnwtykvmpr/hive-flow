@@ -803,10 +803,10 @@ describe('collectInlineSnapshot — materialized-summary probes', () => {
     const root = setupRoot();
     try {
       writeSummary(root, 'memory', 'stats.json', {
-        embeddings: { count: 290, source: 'agentdb', observedAt: '2026-06-01T00:00:00Z' },
-        memories: { count: 41_100, source: 'agentdb', observedAt: '2026-06-01T00:00:00Z' },
+        embeddings: { count: 290, source: 'hivememory', observedAt: '2026-06-01T00:00:00Z' },
+        memories: { count: 41_100, source: 'hivememory', observedAt: '2026-06-01T00:00:00Z' },
         dbSizeBytes: 340_000,
-        sourceDescription: 'agentdb',
+        sourceDescription: 'hivememory',
       });
       const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
       expect(snap.memory?.embeddings?.count).toBe(290);
@@ -820,7 +820,7 @@ describe('collectInlineSnapshot — materialized-summary probes', () => {
   it('omits memory when all counters are absent (OMIT > FAKE)', async () => {
     const root = setupRoot();
     try {
-      writeSummary(root, 'memory', 'stats.json', { sourceDescription: 'agentdb' });
+      writeSummary(root, 'memory', 'stats.json', { sourceDescription: 'hivememory' });
       const snap = await collectInlineSnapshot({ projectRoot: root, deadlineMs: 500 });
       expect(snap.memory).toBeUndefined();
     } finally {

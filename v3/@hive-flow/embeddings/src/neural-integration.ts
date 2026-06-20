@@ -1,7 +1,7 @@
 /**
  * Neural Substrate Integration
  *
- * Integrates agentic-flow's neural embedding features:
+ * Local neural embedding substrate hooks:
  * - Semantic drift detection
  * - Memory physics (hippocampal dynamics)
  * - Embedding state machine
@@ -11,15 +11,7 @@
  * These features treat embeddings as a synthetic nervous system.
  */
 
-// Neutral local stand-in for the historical optional embeddings subpath.
-// The external package is no longer available, so this always reports absence
-// and callers fall back to their local implementations.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function loadAgenticFlowSubpath(_subpath: string): Promise<any | null> {
-  return null;
-}
-
-// Types from the historical embeddings substrate
+// Types for the local embeddings substrate
 export interface DriftResult {
   distance: number;
   velocity: number;
@@ -72,9 +64,7 @@ export interface NeuralSubstrateConfig {
 }
 
 /**
- * Lazy-loaded Neural Substrate wrapper
- *
- * Wraps agentic-flow's NeuralSubstrate with graceful fallback
+ * Neural substrate wrapper.
  */
 export class NeuralEmbeddingService {
   private substrate: any = null;
@@ -90,12 +80,7 @@ export class NeuralEmbeddingService {
     if (this.initialized) return this.available;
 
     try {
-      const embeddingsModule = await loadAgenticFlowSubpath('embeddings');
-      if (!embeddingsModule) throw new Error('agentic-flow/embeddings not available');
-      const { getNeuralSubstrate } = embeddingsModule;
-      this.substrate = await getNeuralSubstrate(this.config);
-      await this.substrate.init();
-      this.available = true;
+      throw new Error('local neural substrate not configured');
     } catch (error) {
       console.warn('[neural] Neural substrate not available:', error instanceof Error ? error.message : error);
       this.available = false;
@@ -262,7 +247,7 @@ export function createNeuralService(config: NeuralSubstrateConfig = {}): NeuralE
  * Check if neural features are available
  */
 export async function isNeuralAvailable(): Promise<boolean> {
-  return (await loadAgenticFlowSubpath('embeddings')) != null;
+  return false;
 }
 
 /**
@@ -276,12 +261,8 @@ export async function listEmbeddingModels(): Promise<Array<{
   downloaded: boolean;
 }>> {
   try {
-    const embeddingsModule = await loadAgenticFlowSubpath('embeddings');
-    if (!embeddingsModule) throw new Error('not available');
-    const { listAvailableModels } = embeddingsModule;
-    return listAvailableModels();
+    throw new Error('local model registry not configured');
   } catch {
-    // Return default models if agentic-flow not available
     return [
       { id: 'all-MiniLM-L6-v2', dimension: 384, size: '23MB', quantized: false, downloaded: false },
       { id: 'all-mpnet-base-v2', dimension: 768, size: '110MB', quantized: false, downloaded: false },
@@ -297,8 +278,7 @@ export async function downloadEmbeddingModel(
   targetDir?: string,
   onProgress?: (progress: { percent: number; bytesDownloaded: number; totalBytes: number }) => void
 ): Promise<string> {
-  const embeddingsModule = await loadAgenticFlowSubpath('embeddings');
-  if (!embeddingsModule) throw new Error('agentic-flow/embeddings not available');
-  const { downloadModel } = embeddingsModule;
-  return downloadModel(modelId, targetDir ?? '.models', onProgress);
+  void targetDir;
+  void onProgress;
+  throw new Error(`Local model download is not configured for ${modelId}`);
 }

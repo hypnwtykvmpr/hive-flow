@@ -54,7 +54,7 @@ case "$COMMAND" in
         [[ -z "$TASK" ]] && exit 0
         if [[ "$TASK" =~ (security|CVE|vulnerability) ]]; then
             echo -e "${DIM}[Route] security-architect${RESET}"
-        elif [[ "$TASK" =~ (memory|AgentDB|HNSW|vector) ]]; then
+        elif [[ "$TASK" =~ (memory|HiveMemory|HNSW|vector) ]]; then
             echo -e "${DIM}[Route] memory-specialist${RESET}"
         elif [[ "$TASK" =~ (performance|optimize|benchmark) ]]; then
             echo -e "${DIM}[Route] performance-engineer${RESET}"
@@ -78,7 +78,7 @@ case "$COMMAND" in
 **Active Patterns**:
 - Use TDD London School (mock-first)
 - Event sourcing for state changes
-- agentic-flow@alpha as core foundation
+- local Hive Flow as core foundation
 - Bounded contexts with clear interfaces
 
 **Code Quality Rules**:

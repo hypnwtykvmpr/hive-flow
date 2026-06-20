@@ -47,13 +47,13 @@ const SKILLS_MAP: Record<string, string[]> = {
   ],
   browser: ['browser'],  // agent-browser integration
   dualMode: ['dual-mode'],  // Claude Code + Codex hybrid execution
-  agentdb: [
-    'agentdb-advanced',
-    'agentdb-learning',
-    'agentdb-memory-patterns',
-    'agentdb-optimization',
-    'agentdb-vector-search',
-    'reasoningbank-agentdb',
+  hivememory: [
+    'hivememory-advanced',
+    'hivememory-learning',
+    'hivememory-memory-patterns',
+    'hivememory-optimization',
+    'hivememory-vector-search',
+    'reasoningbank-hivememory',
     'reasoningbank-intelligence',
   ],
   github: [
@@ -525,9 +525,9 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
     if (!fs.existsSync(activityPath)) {
       const activity = {
         timestamp: new Date().toISOString(),
-        processes: { agentic_flow: 0, mcp_server: 0, estimated_agents: 0 },
+        processes: { hive_flow: 0, mcp_server: 0, estimated_agents: 0 },
         swarm: { active: false, agent_count: 0, coordination_active: false },
-        integration: { agentic_flow_active: false, mcp_active: false },
+        integration: { hive_flow_active: false, mcp_active: false },
         _initialized: true
       };
       fs.writeFileSync(activityPath, JSON.stringify(activity, null, 2), 'utf-8');
@@ -890,7 +890,7 @@ async function copySkills(
     Object.values(SKILLS_MAP).forEach(skills => skillsToCopy.push(...skills));
   } else {
     if (skillsConfig.core) skillsToCopy.push(...SKILLS_MAP.core);
-    if (skillsConfig.agentdb) skillsToCopy.push(...SKILLS_MAP.agentdb);
+    if (skillsConfig.hivememory) skillsToCopy.push(...SKILLS_MAP.hivememory);
     if (skillsConfig.github) skillsToCopy.push(...SKILLS_MAP.github);
     if (skillsConfig.flowNexus) skillsToCopy.push(...SKILLS_MAP.flowNexus);
     if (skillsConfig.browser) skillsToCopy.push(...SKILLS_MAP.browser);
@@ -1408,7 +1408,7 @@ async function writeInitialMetrics(
     const activity = {
       timestamp: new Date().toISOString(),
       processes: {
-        agentic_flow: 0,
+        hive_flow: 0,
         mcp_server: 0,
         estimated_agents: 0
       },
@@ -1418,7 +1418,7 @@ async function writeInitialMetrics(
         coordination_active: false
       },
       integration: {
-        agentic_flow_active: false,
+        hive_flow_active: false,
         mcp_active: false
       },
       _initialized: true
@@ -1604,7 +1604,7 @@ hive-flow swarm monitor
 | \`init\` | 4 | Project initialization |
 | \`agent\` | 8 | Agent lifecycle management |
 | \`swarm\` | 6 | Multi-agent coordination |
-| \`memory\` | 11 | AgentDB with HNSW search |
+| \`memory\` | 11 | HiveMemory with HNSW search |
 | \`mcp\` | 9 | MCP server management |
 | \`task\` | 6 | Task assignment |
 | \`session\` | 7 | Session persistence |
@@ -1819,8 +1819,8 @@ hive-flow hive-mind consensus --propose "task"
 ### Integrated Packages
 | Package | Version | Purpose |
 |---------|---------|---------|
-| agentic-flow | 2.0.1-alpha | Core coordination |
-| agentdb | 3.0.0-alpha.9 | Vector database |
+| hive-flow | built-in | Core coordination |
+| hivememory | built-in | Vector database |
 | Local attention kernels | built-in | Flash-compatible attention |
 | Local SONA coordinator | built-in | Neural learning |
 

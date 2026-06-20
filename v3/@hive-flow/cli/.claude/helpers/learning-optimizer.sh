@@ -114,7 +114,7 @@ EOF
 run_sona_training() {
   echo "[$(date +%H:%M:%S)] Spawning SONA learning agent..."
 
-  # Use agentic-flow for deep learning optimization
+  # Use local Hive Flow for deep learning optimization
   hf_cli hooks intelligence 2>/dev/null || true
 
   echo "[$(date +%H:%M:%S)] ✓ SONA training triggered"

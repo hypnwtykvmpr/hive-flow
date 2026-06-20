@@ -556,7 +556,7 @@ export class SwarmHub implements ISwarmHub {
       activeAgents: ['agent-1', 'agent-5', 'agent-6', 'agent-7', 'agent-8', 'agent-9', 'agent-13'],
       goals: [
         'Complete core module implementation',
-        'Unify memory system with AgentDB (HNSW indexing improvement)',
+        'Unify memory system with HiveMemory (HNSW indexing improvement)',
         'Merge 4 coordination systems into single SwarmCoordinator',
         'Optimize MCP server',
         'Implement TDD London School tests'
@@ -592,7 +592,7 @@ export class SwarmHub implements ISwarmHub {
       ],
       goals: [
         'Achieve Flash Attention optimization',
-        'Verify HNSW-indexed AgentDB search improvement',
+        'Verify HNSW-indexed HiveMemory search improvement',
         'Complete deployment pipeline',
         'Final test coverage push (>90%)',
         'Release v3.0.0'
@@ -633,9 +633,9 @@ export class SwarmHub implements ISwarmHub {
       {
         id: 'ms-memory-unification',
         name: 'Memory Unification Complete',
-        description: 'Single memory service with AgentDB backend achieving HNSW indexing improvement',
+        description: 'Single memory service with HiveMemory backend achieving HNSW indexing improvement',
         criteria: [
-          { description: 'AgentDB integrated', met: false, evidence: null },
+          { description: 'HiveMemory integrated', met: false, evidence: null },
           { description: 'HNSW-indexed search improvement verified', met: false, evidence: null },
           { description: 'Hybrid backend working', met: false, evidence: null }
         ],
@@ -655,12 +655,12 @@ export class SwarmHub implements ISwarmHub {
         completedAt: null
       },
       {
-        id: 'ms-agentic-integration',
-        name: 'agentic-flow Integration Complete',
+        id: 'ms-local-integration',
+        name: 'Local Integration Complete',
         description: 'Deep integration with local compatibility API eliminating duplicate code',
         criteria: [
-          { description: 'Agent class extends agentic-flow', met: false, evidence: null },
-          { description: 'Swarm uses agentic-flow system', met: false, evidence: null },
+          { description: 'Agent class uses local Hive Flow runtime', met: false, evidence: null },
+          { description: 'Swarm uses local Hive Flow coordination system', met: false, evidence: null },
           { description: '<5,000 lines of orchestration code', met: false, evidence: null }
         ],
         status: 'pending',
@@ -672,7 +672,7 @@ export class SwarmHub implements ISwarmHub {
         description: 'All performance targets achieved and verified',
         criteria: [
           { description: 'Flash Attention optimization', met: false, evidence: null },
-          { description: 'HNSW-indexed AgentDB search', met: false, evidence: null },
+          { description: 'HNSW-indexed HiveMemory search', met: false, evidence: null },
           { description: '50-75% memory reduction', met: false, evidence: null },
           { description: '<500ms startup time', met: false, evidence: null }
         ],

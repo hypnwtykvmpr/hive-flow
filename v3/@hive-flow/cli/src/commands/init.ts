@@ -581,7 +581,7 @@ const wizardCommand: Command = {
             message: 'Select skill sets:',
             options: [
               { value: 'core', label: 'Core', hint: 'Swarm, memory, SPARC skills', selected: true },
-              { value: 'agentdb', label: 'AgentDB', hint: 'Vector database skills', selected: true },
+              { value: 'hivememory', label: 'HiveMemory', hint: 'Vector database skills', selected: true },
               { value: 'github', label: 'GitHub', hint: 'GitHub integration skills', selected: true },
               { value: 'flowNexus', label: 'Flow Nexus', hint: 'Cloud platform skills', selected: false },
               { value: 'v3', label: 'V3', hint: 'V3 implementation skills', selected: true },
@@ -589,7 +589,7 @@ const wizardCommand: Command = {
           });
 
           options.skills.core = skillSets.includes('core');
-          options.skills.agentdb = skillSets.includes('agentdb');
+          options.skills.hivememory = skillSets.includes('hivememory');
           options.skills.github = skillSets.includes('github');
           options.skills.flowNexus = skillSets.includes('flowNexus');
           options.skills.v3 = skillSets.includes('v3');
@@ -646,8 +646,8 @@ const wizardCommand: Command = {
       const memoryBackend = await select({
         message: 'Select memory backend:',
         options: [
-          { value: 'hybrid', label: 'Hybrid', hint: 'SQLite + AgentDB (recommended)' },
-          { value: 'agentdb', label: 'AgentDB', hint: 'fast vector search' },
+          { value: 'hybrid', label: 'Hybrid', hint: 'SQLite + HiveMemory (recommended)' },
+          { value: 'hivememory', label: 'HiveMemory', hint: 'fast vector search' },
           { value: 'sqlite', label: 'SQLite', hint: 'Standard SQL storage' },
           { value: 'memory', label: 'In-Memory', hint: 'Fast but non-persistent' },
         ],
@@ -655,7 +655,7 @@ const wizardCommand: Command = {
       options.runtime.memoryBackend = memoryBackend as InitOptions['runtime']['memoryBackend'];
 
       // HNSW indexing
-      if (memoryBackend === 'agentdb' || memoryBackend === 'hybrid') {
+      if (memoryBackend === 'hivememory' || memoryBackend === 'hybrid') {
         const enableHNSW = await confirm({
           message: 'Enable HNSW indexing for faster vector search?',
           default: true,
@@ -671,7 +671,7 @@ const wizardCommand: Command = {
       options.runtime.enableNeural = enableNeural;
 
       // ADR-049: Self-Learning Memory capabilities
-      if (memoryBackend === 'agentdb' || memoryBackend === 'hybrid') {
+      if (memoryBackend === 'hivememory' || memoryBackend === 'hybrid') {
         const enableSelfLearning = await confirm({
           message: 'Enable self-learning memory? (LearningBridge + Knowledge Graph + Agent Scopes)',
           default: true,
@@ -819,7 +819,7 @@ const skillsCommand: Command = {
   options: [
     { name: 'all', description: 'Install all skills', type: 'boolean', default: false },
     { name: 'core', description: 'Install core skills', type: 'boolean', default: true },
-    { name: 'agentdb', description: 'Install AgentDB skills', type: 'boolean', default: false },
+    { name: 'hivememory', description: 'Install HiveMemory skills', type: 'boolean', default: false },
     { name: 'github', description: 'Install GitHub skills', type: 'boolean', default: false },
     { name: 'v3', description: 'Install V3 skills', type: 'boolean', default: false },
   ],
@@ -842,7 +842,7 @@ const skillsCommand: Command = {
       skills: {
         all: ctx.flags.all as boolean,
         core: ctx.flags.core as boolean,
-        agentdb: ctx.flags.agentdb as boolean,
+        hivememory: ctx.flags.hivememory as boolean,
         github: ctx.flags.github as boolean,
         flowNexus: false,
         browser: false,

@@ -5,7 +5,7 @@
  *
  * Features:
  * - 50+ prompt injection patterns
- * - HNSW-indexed threat pattern search (fast HNSW-indexed with AgentDB)
+ * - HNSW-indexed threat pattern search (fast HNSW-indexed with HiveMemory)
  * - ReasoningBank-style pattern learning
  * - Adaptive mitigation with effectiveness tracking
  * - Strange-loop meta-learning integration
@@ -20,7 +20,7 @@
  * const result = await aidefence.detect('Ignore all previous instructions');
  * console.log(result.safe); // false
  *
- * // Search similar patterns (uses HNSW when connected to AgentDB)
+ * // Search similar patterns (uses HNSW when connected to HiveMemory)
  * const similar = await aidefence.searchSimilarThreats('system prompt injection');
  *
  * // Learn from feedback
@@ -68,7 +68,7 @@ import type { LearnedThreatPattern, MitigationStrategy, VectorStore } from './do
 export interface AIDefenceConfig {
   /** Enable self-learning from detections */
   enableLearning?: boolean;
-  /** Custom vector store (defaults to in-memory, use AgentDB for production) */
+  /** Custom vector store (defaults to in-memory, use HiveMemory for production) */
   vectorStore?: VectorStore;
   /** Minimum confidence threshold for threats */
   confidenceThreshold?: number;
@@ -97,7 +97,7 @@ export interface AIDefence {
 
   /**
    * Search for similar threat patterns using HNSW
-   * Achieves HNSW-indexed speedup when connected to AgentDB
+   * Achieves HNSW-indexed speedup when connected to HiveMemory
    */
   searchSimilarThreats(
     query: string,
@@ -278,7 +278,7 @@ export function checkThreats(input: string) {
 }
 
 /**
- * Integration with agentic-flow attention mechanisms
+ * Integration with hive-flow attention mechanisms
  * Use for multi-agent security consensus
  */
 export interface AttentionContext {

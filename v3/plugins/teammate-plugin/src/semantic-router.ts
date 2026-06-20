@@ -1,29 +1,14 @@
 /**
- * Semantic Router - Neural BMSSP-powered intelligent routing
+ * Semantic Router - local intelligent routing
  *
- * Uses WebAssembly-accelerated neural pathfinding with embeddings
- * to match tasks to the best-suited teammates based on semantic similarity.
+ * Uses deterministic local embeddings to match tasks to the best-suited
+ * teammates based on semantic similarity.
  *
  * @module @hive-flow/teammate-plugin/semantic
  * @version 1.0.0-alpha.1
  */
 
 import type { TeammateInfo, TeamState } from './types.js';
-
-// Dynamic import for Neural BMSSP
-let WasmNeuralBMSSP: any = null;
-
-async function loadNeuralBMSSP(): Promise<void> {
-  if (WasmNeuralBMSSP) return;
-
-  try {
-    const bmssp = await import('@ruvnet/bmssp');
-    await bmssp.default(); // Initialize WASM
-    WasmNeuralBMSSP = bmssp.WasmNeuralBMSSP;
-  } catch (error) {
-    console.warn('[SemanticRouter] Neural BMSSP not available, using fallback');
-  }
-}
 
 // ============================================================================
 // Types
@@ -149,21 +134,10 @@ export class SemanticRouter {
    * Initialize the router with WASM support
    */
   async initialize(): Promise<boolean> {
-    try {
-      await loadNeuralBMSSP();
-      this.initialized = true;
-      this.useFallback = !WasmNeuralBMSSP;
-
-      if (!this.useFallback) {
-        this.neuralGraph = new WasmNeuralBMSSP(100, this.config.embeddingDim);
-      }
-
-      return !this.useFallback;
-    } catch {
-      this.useFallback = true;
-      this.initialized = true;
-      return false;
-    }
+    this.neuralGraph = null;
+    this.useFallback = true;
+    this.initialized = true;
+    return false;
   }
 
   /**

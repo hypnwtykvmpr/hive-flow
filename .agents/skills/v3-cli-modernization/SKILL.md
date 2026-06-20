@@ -456,21 +456,21 @@ export class CLIHooksManager {
 // src$cli$hooks$learning-hooks-integration.ts
 export class LearningHooksIntegration {
   constructor(
-    private agenticFlowHooks: AgenticFlowHooksClient,
-    private agentDBLearning: AgentDBLearningClient
+    private hiveFlowHooks: HiveFlowHooksClient,
+    private hiveMemoryLearning: HiveMemoryLearningClient
   ) {}
 
   async recordCommandStart(event: CLIHookEvent): Promise<void> {
     // Start trajectory tracking
-    await this.agenticFlowHooks.trajectoryStart({
+    await this.hiveFlowHooks.trajectoryStart({
       sessionId: event.context.sessionId,
       command: event.command,
       args: event.args,
       context: event.context
     });
 
-    // Record experience in AgentDB
-    await this.agentDBLearning.recordExperience({
+    // Record experience in HiveMemory
+    await this.hiveMemoryLearning.recordExperience({
       type: 'command_execution',
       state: this.encodeCommandState(event),
       action: event.command,
@@ -483,7 +483,7 @@ export class LearningHooksIntegration {
     const reward = this.calculateReward(event, executionTime, true);
 
     // Complete trajectory
-    await this.agenticFlowHooks.trajectoryEnd({
+    await this.hiveFlowHooks.trajectoryEnd({
       sessionId: event.context.sessionId,
       success: true,
       reward,
@@ -491,7 +491,7 @@ export class LearningHooksIntegration {
     });
 
     // Submit feedback to learning system
-    await this.agentDBLearning.submitFeedback({
+    await this.hiveMemoryLearning.submitFeedback({
       sessionId: event.context.learningSessionId,
       reward,
       success: true,
@@ -500,7 +500,7 @@ export class LearningHooksIntegration {
 
     // Store successful pattern
     if (reward > 0.8) {
-      await this.agenticFlowHooks.storePattern({
+      await this.hiveFlowHooks.storePattern({
         pattern: event.command,
         solution: event.context.result,
         confidence: reward
@@ -513,7 +513,7 @@ export class LearningHooksIntegration {
     const reward = this.calculateReward(event, executionTime, false);
 
     // Complete trajectory with error
-    await this.agenticFlowHooks.trajectoryEnd({
+    await this.hiveFlowHooks.trajectoryEnd({
       sessionId: event.context.sessionId,
       success: false,
       reward,
@@ -522,7 +522,7 @@ export class LearningHooksIntegration {
     });
 
     // Learn from failure
-    await this.agentDBLearning.submitFeedback({
+    await this.hiveMemoryLearning.submitFeedback({
       sessionId: event.context.learningSessionId,
       reward,
       success: false,

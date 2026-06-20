@@ -232,22 +232,22 @@ export {
 // ============================================================================
 
 export {
-  // Agentic Flow
-  AgenticFlowBridge,
-  getAgenticFlowBridge,
-  AGENTIC_FLOW_EVENTS,
-  type AgenticFlowConfig,
+  // Hive Integration
+  HiveIntegrationBridge,
+  getHiveIntegrationBridge,
+  HIVE_INTEGRATION_EVENTS,
+  type HiveIntegrationConfig,
   type SwarmTopology,
   type AgentSpawnOptions,
   type SpawnedAgent,
   type TaskOrchestrationOptions,
   type OrchestrationResult,
-  type AgenticFlowEvent,
-  // AgentDB
-  AgentDBBridge,
-  getAgentDBBridge,
+  type HiveIntegrationEvent,
+  // HiveMemory
+  HiveMemoryBridge,
+  getHiveMemoryBridge,
   resetBridges,
-  type AgentDBConfig,
+  type HiveMemoryConfig,
   type VectorEntry,
   type VectorSearchOptions,
   type VectorSearchResult,

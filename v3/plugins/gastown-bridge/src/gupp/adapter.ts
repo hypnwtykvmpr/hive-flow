@@ -20,14 +20,14 @@ import {
   type HookedWorkItem,
   type SessionInfo,
   type WorkItemStatus,
-  type AgentDBInterface,
+  type HiveMemoryInterface,
   createEmptyState,
   createSession,
   createHookedWorkItem,
   saveState,
   loadState,
-  saveStateToAgentDB,
-  loadStateFromAgentDB,
+  saveStateToHiveMemory,
+  loadStateFromHiveMemory,
   mergeStates,
   getPendingWork,
   getWorkNeedingResumption,
@@ -78,10 +78,10 @@ export type WorkCompleteCallback = (
 export interface GuppAdapterConfig {
   /** Path to state file for disk persistence */
   statePath?: string;
-  /** Enable AgentDB persistence */
-  useAgentDB?: boolean;
-  /** AgentDB interface */
-  agentDB?: AgentDBInterface;
+  /** Enable HiveMemory persistence */
+  useHiveMemory?: boolean;
+  /** HiveMemory interface */
+  hiveMemory?: HiveMemoryInterface;
   /** Auto-resume work on session restore */
   autoResume?: boolean;
   /** Check interval for crashed sessions (ms) */
@@ -117,7 +117,7 @@ export interface ResumptionResult {
  * ```typescript
  * const adapter = new GuppAdapter(sessionManager, gtBridge, {
  *   autoResume: true,
- *   useAgentDB: true,
+ *   useHiveMemory: true,
  * });
  *
  * await adapter.registerHooks();
@@ -158,8 +158,8 @@ export class GuppAdapter {
     this.gtBridge = gtBridge;
     this.config = {
       statePath: config?.statePath ?? DEFAULT_STATE_PATH,
-      useAgentDB: config?.useAgentDB ?? false,
-      agentDB: config?.agentDB ?? undefined as unknown as AgentDBInterface,
+      useHiveMemory: config?.useHiveMemory ?? false,
+      hiveMemory: config?.hiveMemory ?? undefined as unknown as HiveMemoryInterface,
       autoResume: config?.autoResume ?? true,
       crashCheckInterval: config?.crashCheckInterval ?? 30000,
       sessionTimeout: config?.sessionTimeout ?? 60000,
@@ -263,9 +263,9 @@ export class GuppAdapter {
     // Always save to disk
     await saveState(state, this.config.statePath);
 
-    // Optionally save to AgentDB
-    if (this.config.useAgentDB && this.config.agentDB) {
-      await saveStateToAgentDB(state, this.config.agentDB);
+    // Optionally save to HiveMemory
+    if (this.config.useHiveMemory && this.config.hiveMemory) {
+      await saveStateToHiveMemory(state, this.config.hiveMemory);
     }
   }
 
@@ -276,10 +276,10 @@ export class GuppAdapter {
     // Load from disk
     const diskState = await loadState(this.config.statePath);
 
-    // If AgentDB is enabled, merge with AgentDB state
-    if (this.config.useAgentDB && this.config.agentDB) {
-      const agentDBState = await loadStateFromAgentDB(this.config.agentDB);
-      return mergeStates(diskState, agentDBState);
+    // If HiveMemory is enabled, merge with HiveMemory state
+    if (this.config.useHiveMemory && this.config.hiveMemory) {
+      const hiveMemoryState = await loadStateFromHiveMemory(this.config.hiveMemory);
+      return mergeStates(diskState, hiveMemoryState);
     }
 
     return diskState;

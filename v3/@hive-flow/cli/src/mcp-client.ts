@@ -35,8 +35,8 @@ import { githubTools } from './mcp-tools/github-tools.js';
 import { daaTools } from './mcp-tools/daa-tools.js';
 import { coordinationTools } from './mcp-tools/coordination-tools.js';
 import { browserTools } from './mcp-tools/browser-tools.js';
-// Phase 6: AgentDB v3 controller tools
-import { agentdbTools } from './mcp-tools/agentdb-tools.js';
+// Phase 6: HiveMemory v3 controller tools
+import { hivememoryTools } from './mcp-tools/hivememory-tools.js';
 // First-class provider tools: Cursor, Codex, Gemini
 import { providerTools } from './mcp-tools/provider-tools.js';
 import { verificationGateTools } from './mcp-tools/verification-gate.js';
@@ -92,8 +92,8 @@ registerTools([
   ...daaTools,
   ...coordinationTools,
   ...browserTools,
-  // Phase 6: AgentDB v3 controller tools
-  ...agentdbTools,
+  // Phase 6: HiveMemory v3 controller tools
+  ...hivememoryTools,
   // First-class provider tools: Cursor, Codex, Gemini
   ...providerTools,
   // Verification workflow tools

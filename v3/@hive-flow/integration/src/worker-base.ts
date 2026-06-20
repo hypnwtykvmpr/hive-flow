@@ -2,7 +2,7 @@
  * WorkerBase - Abstract Base Worker Class
  *
  * Provides the foundation for all worker patterns in Hive Flow v3,
- * aligned with agentic-flow@alpha's worker architecture.
+ * aligned with Hive Flow@alpha's worker architecture.
  *
  * Key Features:
  * - Specialization embeddings for intelligent task routing
@@ -10,7 +10,7 @@
  * - Capability-based task matching
  * - Memory and coordination integration
  *
- * This implements ADR-001 by building on agentic-flow patterns
+ * This implements ADR-001 by building on Hive Flow patterns
  * while providing Hive Flow-specific extensions.
  *
  * @module v3/integration/worker-base
@@ -113,7 +113,7 @@ export interface WorkerProviderConfig {
 }
 
 /**
- * Agent output interface (compatible with agentic-flow)
+ * Agent output interface (compatible with Hive Flow)
  */
 export interface AgentOutput {
   /** Output content */

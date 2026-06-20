@@ -64,18 +64,18 @@ export async function updateMemoryStats(
   const counts = await Promise.resolve(openDb(dbPath)).catch(() => undefined);
   const observedAt = options.observedAt ?? options.now?.() ?? new Date().toISOString();
   const summary: MemorySummary = {
-    sourceDescription: 'agentdb',
+    sourceDescription: 'hivememory',
     dbSizeBytes: dbStat.size,
     ...(counts !== undefined
       ? {
           memories: {
             count: counts.memories,
-            source: 'agentdb',
+            source: 'hivememory',
             observedAt,
           },
           embeddings: {
             count: counts.embeddings,
-            source: 'agentdb',
+            source: 'hivememory',
             observedAt,
           },
         }

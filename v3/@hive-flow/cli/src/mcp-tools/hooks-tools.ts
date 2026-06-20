@@ -690,36 +690,36 @@ export const hooksRoute: MCPTool = {
     const context = params.context as string | undefined;
     const useSemanticRouter = params.useSemanticRouter !== false;
 
-    // Phase 5: Try AgentDB's SemanticRouter / LearningSystem first
+    // Phase 5: Try HiveMemory's SemanticRouter / LearningSystem first.
     if (useSemanticRouter) {
       try {
         const bridge = await import('../memory/memory-bridge.js');
-        const agentdbRoute = await bridge.bridgeRouteTask({ task, context });
-        if (agentdbRoute && agentdbRoute.confidence > 0.5) {
-          const agents = agentdbRoute.agents.length > 0 ? agentdbRoute.agents : ['coder', 'researcher'];
+        const hiveMemoryRoute = await bridge.bridgeRouteTask({ task, context });
+        if (hiveMemoryRoute && hiveMemoryRoute.confidence > 0.5) {
+          const agents = hiveMemoryRoute.agents.length > 0 ? hiveMemoryRoute.agents : ['coder', 'researcher'];
           const complexity = task.length > 200 ? 'high' : task.length < 50 ? 'low' : 'medium';
           return {
             task,
             routing: {
-              method: `agentdb-${agentdbRoute.controller}`,
-              backend: agentdbRoute.controller,
+              method: `hivememory-${hiveMemoryRoute.controller}`,
+              backend: hiveMemoryRoute.controller,
               latencyMs: 0,
               throughput: 'N/A',
             },
-            matchedPattern: agentdbRoute.route,
-            semanticMatches: [{ pattern: agentdbRoute.route, score: agentdbRoute.confidence }],
+            matchedPattern: hiveMemoryRoute.route,
+            semanticMatches: [{ pattern: hiveMemoryRoute.route, score: hiveMemoryRoute.confidence }],
             primaryAgent: {
               type: agents[0],
-              confidence: Math.round(agentdbRoute.confidence * 100) / 100,
-              reason: `AgentDB ${agentdbRoute.controller}: "${agentdbRoute.route}" (${Math.round(agentdbRoute.confidence * 100)}%)`,
+              confidence: Math.round(hiveMemoryRoute.confidence * 100) / 100,
+              reason: `HiveMemory ${hiveMemoryRoute.controller}: "${hiveMemoryRoute.route}" (${Math.round(hiveMemoryRoute.confidence * 100)}%)`,
             },
             alternativeAgents: agents.slice(1).map((agent, i) => ({
               type: agent,
-              confidence: Math.round((agentdbRoute.confidence - (0.1 * (i + 1))) * 100) / 100,
-              reason: `Alternative from ${agentdbRoute.controller}`,
+              confidence: Math.round((hiveMemoryRoute.confidence - (0.1 * (i + 1))) * 100) / 100,
+              reason: `Alternative from ${hiveMemoryRoute.controller}`,
             })),
             estimatedMetrics: {
-              successProbability: Math.round(agentdbRoute.confidence * 100) / 100,
+              successProbability: Math.round(hiveMemoryRoute.confidence * 100) / 100,
               estimatedDuration: complexity === 'high' ? '2-4 hours' : complexity === 'medium' ? '30-60 min' : '10-30 min',
               complexity,
             },
@@ -727,7 +727,7 @@ export const hooksRoute: MCPTool = {
           };
         }
       } catch {
-        // AgentDB router not available — fall through to local routing
+        // HiveMemory router not available — fall through to local routing.
       }
     }
 

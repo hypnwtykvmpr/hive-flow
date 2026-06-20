@@ -1,42 +1,42 @@
 # @hive-flow/integration
 
 
-> Deep agentic-flow@alpha integration module for Hive Flow V3 - ADR-001 compliance, code deduplication, SONA adapter, and Flash Attention coordinator.
+> Deep hive-flow integration module for Hive Flow V3 - ADR-001 compliance, code deduplication, SONA adapter, and Flash Attention coordinator.
 
 ## Features
 
-- **ADR-001 Compliance** - Eliminates 10,000+ duplicate lines by building on agentic-flow
+- **ADR-001 Compliance** - Eliminates 10,000+ duplicate lines by building on hive-flow
 - **SONA Adapter** - Seamless integration with SONA learning systems
 - **Flash Attention** - Flash Attention optimization with attention coordination
 - **SDK Bridge** - Version negotiation and API compatibility layer
 - **Feature Flags** - Dynamic feature enabling/disabling
 - **Runtime Detection** - Auto-select optimal runtime (NAPI, WASM, JS)
-- **Graceful Fallback** - Works with or without agentic-flow installed
+- **Graceful Fallback** - Works with or without hive-flow installed
 
 ## Installation
 
 ```bash
 
-# Optional: Install agentic-flow for optimal performance
+# Optional: Install hive-flow for optimal performance
 ```
 
 ## Quick Start
 
 ```typescript
-import { AgenticFlowBridge, createAgenticFlowBridge } from '@hive-flow/integration';
+import { HiveFlowBridge, createHiveFlowBridge } from '@hive-flow/integration';
 
 // Create and initialize bridge
-const bridge = await createAgenticFlowBridge({
+const bridge = await createHiveFlowBridge({
   features: {
     enableSONA: true,
     enableFlashAttention: true,
-    enableAgentDB: true
+    enableHiveMemory: true
   }
 });
 
-// Check if agentic-flow is connected
-if (bridge.isAgenticFlowConnected()) {
-  console.log('Using optimized agentic-flow implementation');
+// Check if hive-flow is connected
+if (bridge.isHiveFlowConnected()) {
+  console.log('Using optimized hive-flow implementation');
 } else {
   console.log('Using local fallback implementation');
 }
@@ -52,12 +52,12 @@ const result = await attention.compute({ query, key, value });
 
 ## API Reference
 
-### AgenticFlowBridge
+### HiveFlowBridge
 
 ```typescript
-import { AgenticFlowBridge } from '@hive-flow/integration';
+import { HiveFlowBridge } from '@hive-flow/integration';
 
-const bridge = new AgenticFlowBridge({
+const bridge = new HiveFlowBridge({
   sona: {
     mode: 'balanced',
     learningRate: 0.001,
@@ -68,7 +68,7 @@ const bridge = new AgenticFlowBridge({
     numHeads: 8,
     flashOptLevel: 2
   },
-  agentdb: {
+  hivememory: {
     dimension: 1536,
     indexType: 'hnsw',
     metric: 'cosine'
@@ -76,7 +76,7 @@ const bridge = new AgenticFlowBridge({
   features: {
     enableSONA: true,
     enableFlashAttention: true,
-    enableAgentDB: true
+    enableHiveMemory: true
   },
   runtimePreference: ['napi', 'wasm', 'js'],
   lazyLoad: true,
@@ -93,15 +93,15 @@ const sdk = await bridge.getSDKBridge();
 // Feature management
 bridge.isFeatureEnabled('enableSONA');
 await bridge.enableFeature('enableFlashAttention');
-await bridge.disableFeature('enableAgentDB');
+await bridge.disableFeature('enableHiveMemory');
 
 // Health & status
 const status = bridge.getStatus();
 const health = await bridge.healthCheck();
 const flags = bridge.getFeatureFlags();
 
-// Direct agentic-flow access (when available)
-const core = bridge.getAgenticFlowCore();
+// Direct hive-flow access (when available)
+const core = bridge.getHiveFlowCore();
 if (core) {
   const patterns = await core.sona.findPatterns(query);
 }
@@ -176,7 +176,7 @@ const flags = bridge.getFeatureFlags();
 {
   enableSONA: true,              // SONA learning integration
   enableFlashAttention: true,    // Flash Attention optimization
-  enableAgentDB: true,           // AgentDB vector storage
+  enableHiveMemory: true,           // HiveMemory vector storage
   enableTrajectoryTracking: true,// Trajectory recording
   enableGNN: true,               // Graph Neural Network
   enableIntelligenceBridge: true,// Intelligence bridge
@@ -205,15 +205,15 @@ console.log(status.runtime);
 ## Event System
 
 ```typescript
-bridge.on('initialized', ({ duration, components, agenticFlowConnected }) => {
+bridge.on('initialized', ({ duration, components, hiveFlowConnected }) => {
   console.log(`Initialized in ${duration}ms`);
 });
 
-bridge.on('agentic-flow:connected', ({ version, features }) => {
-  console.log(`Connected to agentic-flow ${version}`);
+bridge.on('hive-flow:connected', ({ version, features }) => {
+  console.log(`Connected to hive-flow ${version}`);
 });
 
-bridge.on('agentic-flow:fallback', ({ reason }) => {
+bridge.on('hive-flow:fallback', ({ reason }) => {
   console.log(`Using fallback: ${reason}`);
 });
 
@@ -231,7 +231,7 @@ bridge.on('health-check', ({ results }) => {
 | Metric | Target |
 |--------|--------|
 | Flash Attention speedup | Flash Attention optimization |
-| AgentDB search | fast HNSW-indexed |
+| HiveMemory search | fast HNSW-indexed |
 | SONA adaptation | low-latency |
 | Memory reduction | 50-75% |
 
@@ -244,18 +244,18 @@ import type {
   RuntimeInfo,
   ComponentHealth,
   FeatureFlags,
-  AgenticFlowCore
+  HiveFlowCore
 } from '@hive-flow/integration';
 ```
 
 ## Peer Dependencies
 
-- `agentic-flow@^0.1.0` (optional, for optimal performance)
+- `hive-flow@^0.1.0` (optional, for optimal performance)
 
 ## Related Packages
 
 - [@hive-flow/neural](../neural) - SONA learning module
-- [@hive-flow/memory](../memory) - AgentDB memory
+- [@hive-flow/memory](../memory) - HiveMemory memory
 - [@hive-flow/performance](../performance) - Benchmarking
 
 ## License

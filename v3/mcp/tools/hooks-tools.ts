@@ -42,7 +42,7 @@ async function getReasoningBank(): Promise<ReasoningBank> {
       distillationThreshold: 0.6,
       retrievalK: 5,
       mmrLambda: 0.7,
-      enableAgentDB: true,
+      enableHiveMemory: true,
       namespace: 'hooks-learning',
     });
 
@@ -912,7 +912,7 @@ async function handleMetrics(
   if (input.includeDetailedStats) {
     result.detailedStats = {
       ...stats,
-      agentdbEnabled: stats.agentdbEnabled === 1,
+      hivememoryEnabled: stats.hivememoryEnabled === 1,
       avgRetrievalTimeMs: stats.avgRetrievalTimeMs,
       avgDistillationTimeMs: stats.avgDistillationTimeMs,
       avgJudgeTimeMs: stats.avgJudgeTimeMs,
@@ -977,7 +977,7 @@ async function handleListHooks(
       priority: 100,
       executionCount: stats.trajectoryCount,
       lastExecuted: new Date(Date.now() - 120000).toISOString(),
-      metadata: { version: '1.0.0', reasoningBankEnabled: true, agentdbEnabled: stats.agentdbEnabled === 1 },
+      metadata: { version: '1.0.0', reasoningBankEnabled: true, hivememoryEnabled: stats.hivememoryEnabled === 1 },
     },
   ];
 

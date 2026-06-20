@@ -379,7 +379,7 @@ function readDevOverrideConfigToken(projectRoot) {
 
 function hasSubagentIdentity(input = null, env = process.env) {
   if (env.CLAUDE_PARENT_AGENT_ID) return true;
-  if (env.AGENTIC_FLOW_AGENT_ID || env.CLAUDE_AGENT_ID) return true;
+  if (env.HIVE_FLOW_AGENT_ID || env.CLAUDE_AGENT_ID) return true;
   const hookAgentId = (input && (input.agent_id || input.agentId)) || '';
   return typeof hookAgentId === 'string' && hookAgentId.trim().length > 0;
 }

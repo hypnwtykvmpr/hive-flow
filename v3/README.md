@@ -22,7 +22,7 @@ V3 represents a complete architectural overhaul:
 - **Plugin Architecture** - Microkernel pattern for extensibility
 - **MCP-First API** - Consistent interfaces across all modules
 - **Event Sourcing** - Full audit trail for state changes
-- **Hybrid Memory Backend** - SQLite + AgentDB for optimal performance
+- **Hybrid Memory Backend** - SQLite + HiveMemory for optimal performance
 
 ### Security
 
@@ -40,7 +40,7 @@ V3 represents a complete architectural overhaul:
 | Map Lookup (100k gets) | <20ms | ~16ms |
 | Array.find vs Map O(1) | N/A | 978x speedup |
 | Flash Attention | Flash Attention optimization | Validated |
-| AgentDB Search | HNSW-indexed | HNSW indexed |
+| HiveMemory Search | HNSW-indexed | HNSW indexed |
 
 ## Architecture
 
@@ -48,12 +48,12 @@ V3 represents a complete architectural overhaul:
 
 | ADR | Decision |
 |-----|----------|
-| ADR-001 | Adopt agentic-flow as core foundation |
+| ADR-001 | Adopt hive-flow as core foundation |
 | ADR-002 | Domain-Driven Design structure |
 | ADR-003 | Single coordination engine (UnifiedSwarmCoordinator) |
 | ADR-004 | Plugin-based architecture (microkernel) |
 | ADR-005 | MCP-first API design |
-| ADR-006 | Unified memory service (AgentDB) |
+| ADR-006 | Unified memory service (HiveMemory) |
 | ADR-007 | Event sourcing for state changes |
 | ADR-008 | Vitest over Jest (10x faster) |
 | ADR-009 | Hybrid memory backend default |
@@ -68,13 +68,13 @@ V3 represents a complete architectural overhaul:
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
 │  │   security   │  │    memory    │  │    swarm     │          │
-│  │  CVE fixes   │  │   AgentDB    │  │ 15-agent     │          │
+│  │  CVE fixes   │  │   HiveMemory    │  │ 15-agent     │          │
 │  │  validation  │  │   HNSW       │  │ coordination │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
 │  │ integration  │  │  performance │  │    neural    │          │
-│  │ agentic-flow │  │ Flash Attn   │  │   SONA       │          │
+│  │ hive-flow │  │ Flash Attn   │  │   SONA       │          │
 │  │  bridge      │  │ benchmarks   │  │  learning    │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │                                                                 │
@@ -104,9 +104,9 @@ v3/
 │   │
 │   ├── memory/                      # Memory module
 │   │   ├── src/
-│   │   │   ├── agentdb-backend.ts   # AgentDB integration
+│   │   │   ├── hivememory-backend.ts   # HiveMemory integration
 │   │   │   ├── hnsw-index.ts        # HNSW vector indexing
-│   │   │   ├── hybrid-backend.ts    # SQLite + AgentDB
+│   │   │   ├── hybrid-backend.ts    # SQLite + HiveMemory
 │   │   │   ├── sqlite-backend.ts    # SQLite backend
 │   │   │   ├── cache-manager.ts     # Caching layer
 │   │   │   └── domain/              # DDD entities
@@ -120,9 +120,9 @@ v3/
 │   │       ├── consensus/              # Consensus protocols
 │   │       └── domain/                 # DDD entities
 │   │
-│   ├── integration/                 # agentic-flow integration
+│   ├── integration/                 # hive-flow integration
 │   │   └── src/
-│   │       ├── agentic-flow-bridge.ts  # Core bridge
+│   │       ├── hive-flow-bridge.ts  # Core bridge
 │   │       ├── agent-adapter.ts        # Agent adaptation
 │   │       └── sona-adapter.ts         # SONA learning
 │   │
@@ -215,13 +215,13 @@ const valid = await hasher.verify('password', hash);
 ```
 
 ### @hive-flow/memory
-Unified memory service with AgentDB, HNSW indexing, and fast HNSW-indexed search.
+Unified memory service with HiveMemory, HNSW indexing, and fast HNSW-indexed search.
 
 ```typescript
 import { HybridMemoryRepository, HNSWIndex } from '@hive-flow/memory';
 
 const memory = new HybridMemoryRepository({
-  backend: 'agentdb',
+  backend: 'hivememory',
   vectorSearch: true
 });
 
@@ -248,9 +248,9 @@ await coordinator.spawnAgent({ type: 'queen-coordinator' });
 Local compatibility adapters per ADR-001. External package delegation is detached.
 
 ```typescript
-import { AgenticFlowBridge } from '@hive-flow/integration';
+import { HiveFlowBridge } from '@hive-flow/integration';
 
-const bridge = new AgenticFlowBridge();
+const bridge = new HiveFlowBridge();
 await bridge.initialize();
 const agent = await bridge.createAgent({ type: 'coder' });
 ```
@@ -431,7 +431,7 @@ pnpm test:coverage
 
 | Category | Metric | Target |
 |----------|--------|--------|
-| **Search** | AgentDB HNSW | fast HNSW-indexed |
+| **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | 50-75% |
 | **Code** | Total lines | <5,000 |
@@ -456,7 +456,7 @@ pnpm test:coverage
 - [@hive-flow/deployment](./@hive-flow/deployment/)
 
 ### Examples
-- [AgentDB Example](./@hive-flow/memory/examples/agentdb-example.ts)
+- [HiveMemory Example](./@hive-flow/memory/examples/hivememory-example.ts)
 - [Cross-Platform Usage](./@hive-flow/memory/examples/cross-platform-usage.ts)
 
 ### MCP Tools

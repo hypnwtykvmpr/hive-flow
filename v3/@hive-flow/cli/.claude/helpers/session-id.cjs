@@ -43,7 +43,7 @@ function resolveSessionId(input = null, env = process.env) {
     asNonEmptyString(input && input.session_id)
     || asNonEmptyString(input && input.sessionId)
     || asNonEmptyString(env && env.CLAUDE_SESSION_ID)
-    || asNonEmptyString(env && env.AGENTIC_FLOW_SESSION_ID);
+    || asNonEmptyString(env && env.HIVE_FLOW_SESSION_ID);
 
   return source ? sanitizeSessionId(source) : null;
 }

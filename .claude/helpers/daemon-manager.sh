@@ -181,12 +181,12 @@ show_status() {
         echo -e "  ${YELLOW}○${RESET} MCP Server       ${YELLOW}NOT DETECTED${RESET}"
     fi
 
-    # Agentic Flow
-    local af_count=$(ps aux 2>/dev/null | grep -E "agentic-flow" | grep -v grep | grep -v "daemon-manager" | wc -l)
+    # Hive Flow
+    local af_count=$(ps aux 2>/dev/null | grep -E "hive-flow" | grep -v grep | grep -v "daemon-manager" | wc -l)
     if [ "$af_count" -gt 0 ]; then
-        echo -e "  ${GREEN}●${RESET} Agentic Flow     ${GREEN}ACTIVE${RESET} ($af_count processes)"
+        echo -e "  ${GREEN}●${RESET} Hive Flow     ${GREEN}ACTIVE${RESET} ($af_count processes)"
     else
-        echo -e "  ${YELLOW}○${RESET} Agentic Flow     ${YELLOW}IDLE${RESET}"
+        echo -e "  ${YELLOW}○${RESET} Hive Flow     ${YELLOW}IDLE${RESET}"
     fi
 
     echo ""

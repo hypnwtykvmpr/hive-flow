@@ -19,7 +19,7 @@ teardown() {
   unset HIVE_FLOW_PROJECT_ROOT
   unset CLAUDE_PROJECT_DIR
   unset HIVE_FLOW_HOME
-  unset AGENTIC_FLOW_AGENT_ID
+  unset HIVE_FLOW_AGENT_ID
 }
 
 write_restricted_state() {

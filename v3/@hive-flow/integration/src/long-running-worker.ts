@@ -11,7 +11,7 @@
  * - Timeout management with graceful handling
  * - Resource cleanup on completion or failure
  *
- * Compatible with agentic-flow's long-running agent patterns.
+ * Compatible with Hive Flow's long-running agent patterns.
  *
  * @module v3/integration/long-running-worker
  * @version 3.0.0-alpha.1

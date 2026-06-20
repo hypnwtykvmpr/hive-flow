@@ -64,8 +64,7 @@
     }
   },
   "dependencies": {
-    "eventemitter3": "^5.0.1",
-    "@ruvnet/bmssp": "^1.0.0"
+    "eventemitter3": "^5.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

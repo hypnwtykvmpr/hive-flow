@@ -63,7 +63,7 @@ const originalCwd = process.cwd();
 const originalEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
-  AGENTIC_FLOW_SESSION_ID: process.env.AGENTIC_FLOW_SESSION_ID,
+  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
 };
 
 let root = '';
@@ -152,7 +152,7 @@ beforeEach(() => {
   process.chdir(root);
   process.env.CLAUDE_PROJECT_DIR = root;
   process.env.CLAUDE_SESSION_ID = 'env-session';
-  process.env.AGENTIC_FLOW_SESSION_ID = 'provider-session';
+  process.env.HIVE_FLOW_SESSION_ID = 'provider-session';
   resetAgentStore();
   setWorkflowHookDispatcher(null);
 });
@@ -179,17 +179,17 @@ describe('R-sid multi-session enabler', () => {
     }> = [
       {
         input: { session_id: 'payload-session' },
-        env: { CLAUDE_SESSION_ID: 'env-session', AGENTIC_FLOW_SESSION_ID: 'provider-session' },
+        env: { CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
         expected: 'payload-session',
       },
       {
         input: {},
-        env: { CLAUDE_SESSION_ID: 'env-session', AGENTIC_FLOW_SESSION_ID: 'provider-session' },
+        env: { CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
         expected: 'env-session',
       },
       {
         input: null,
-        env: { AGENTIC_FLOW_SESSION_ID: 'provider-session' },
+        env: { HIVE_FLOW_SESSION_ID: 'provider-session' },
         expected: 'provider-session',
       },
       {

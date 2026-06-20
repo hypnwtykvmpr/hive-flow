@@ -1,9 +1,8 @@
 /**
  * SONA (Self-Optimizing Neural Architecture) Adapter
  *
- * Provides integration with agentic-flow's SONA learning system,
- * enabling real-time adaptation, pattern recognition, and
- * continuous learning capabilities.
+ * Provides local real-time adaptation, pattern recognition, and continuous
+ * learning capabilities.
  *
  * Performance Targets:
  * - Real-time mode: ~low-latency adaptation
@@ -25,40 +24,6 @@ import type {
   DEFAULT_SONA_CONFIG,
 } from './types.js';
 import { clamp } from '@hive-flow/shared';
-
-/**
- * Interface for agentic-flow SONA reference (for delegation)
- * This allows the adapter to delegate to agentic-flow when available
- */
-interface AgenticFlowSONAReference {
-  setMode(mode: string): Promise<void>;
-  storePattern(params: {
-    pattern: string;
-    solution: string;
-    category: string;
-    confidence: number;
-    metadata?: Record<string, unknown>;
-  }): Promise<string>;
-  findPatterns(query: string, options?: {
-    category?: string;
-    topK?: number;
-    threshold?: number;
-  }): Promise<Array<{
-    id: string;
-    pattern: string;
-    solution: string;
-    category: string;
-    confidence: number;
-    usageCount: number;
-    createdAt: number;
-    lastUsedAt: number;
-    metadata: Record<string, unknown>;
-  }>>;
-  getStats(): Promise<unknown>;
-  beginTrajectory?(params: unknown): Promise<string>;
-  recordStep?(params: unknown): Promise<void>;
-  endTrajectory?(params: unknown): Promise<unknown>;
-}
 
 /**
  * Mode-specific configurations for SONA learning
@@ -99,8 +64,7 @@ const MODE_CONFIGS: Record<SONALearningMode, Partial<SONAConfiguration>> = {
 /**
  * SONAAdapter - SONA Learning System Integration
  *
- * This adapter provides a clean interface to agentic-flow's SONA
- * learning capabilities, including:
+ * This adapter provides a clean interface to SONA learning capabilities:
  * - Learning mode selection and auto-switching
  * - Trajectory tracking for experience replay
  * - Pattern storage and retrieval
@@ -115,43 +79,10 @@ export class SONAAdapter extends EventEmitter {
   private consolidationTimer: NodeJS.Timeout | null = null;
   private learningCycleCount: number = 0;
 
-  /**
-   * Reference to agentic-flow SONA for delegation (ADR-001)
-   * When set, methods delegate to agentic-flow instead of local implementation
-   */
-  private agenticFlowSona: AgenticFlowSONAReference | null = null;
-
-  /**
-   * Indicates if delegation to agentic-flow is active
-   */
-  private delegationEnabled: boolean = false;
-
   constructor(config: Partial<SONAConfiguration> = {}) {
     super();
     this.config = this.mergeConfig(config);
     this.stats = this.initializeStats();
-  }
-
-  /**
-   * Set reference to agentic-flow SONA for delegation
-   *
-   * This implements ADR-001: Adopt agentic-flow as Core Foundation
-   * When a reference is provided, pattern storage and retrieval
-   * delegate to agentic-flow's optimized implementations.
-   *
-   * @param sonaRef - The agentic-flow SONA interface reference
-   */
-  setAgenticFlowReference(sonaRef: AgenticFlowSONAReference): void {
-    this.agenticFlowSona = sonaRef;
-    this.delegationEnabled = true;
-    this.emit('delegation-enabled', { target: 'agentic-flow' });
-  }
-
-  /**
-   * Check if delegation to agentic-flow is enabled
-   */
-  isDelegationEnabled(): boolean {
-    return this.delegationEnabled && this.agenticFlowSona !== null;
   }
 
   /**
@@ -335,11 +266,7 @@ export class SONAAdapter extends EventEmitter {
   }
 
   /**
-   * Store a learned pattern
-   *
-   * ADR-001: When agentic-flow is available, delegates to its optimized
-   * pattern storage which uses AgentDB with HNSW indexing for
-   * fast HNSW-indexed similarity search.
+   * Store a learned pattern.
    */
   async storePattern(params: {
     pattern: string;
@@ -350,37 +277,6 @@ export class SONAAdapter extends EventEmitter {
   }): Promise<string> {
     this.ensureInitialized();
 
-    // ADR-001: Delegate to agentic-flow when available
-    if (this.isDelegationEnabled() && this.agenticFlowSona) {
-      try {
-        const patternId = await this.agenticFlowSona.storePattern({
-          pattern: params.pattern,
-          solution: params.solution,
-          category: params.category,
-          confidence: clamp(params.confidence, 0, 1),
-          metadata: params.metadata,
-        });
-
-        this.stats.totalPatterns++;
-        this.emit('pattern-stored', {
-          patternId,
-          delegated: true,
-          target: 'agentic-flow',
-        });
-
-        return patternId;
-      } catch (error) {
-        // Log delegation failure and fall back to local implementation
-        this.emit('delegation-failed', {
-          method: 'storePattern',
-          error: (error as Error).message,
-          fallback: 'local',
-        });
-        // Continue with local implementation below
-      }
-    }
-
-    // Local implementation (fallback or when agentic-flow not available)
     const patternId = this.generateId('pat');
     const storedPattern: SONAPattern = {
       id: patternId,
@@ -408,10 +304,7 @@ export class SONAAdapter extends EventEmitter {
   }
 
   /**
-   * Find similar patterns to a query
-   *
-   * ADR-001: When agentic-flow is available, delegates to its optimized
-   * HNSW-indexed search for fast HNSW-indexed retrieval.
+   * Find similar patterns to a query.
    */
   async findSimilarPatterns(params: {
     query: string;
@@ -424,48 +317,6 @@ export class SONAAdapter extends EventEmitter {
     const topK = params.topK || 5;
     const threshold = params.threshold ?? this.config.similarityThreshold;
 
-    // ADR-001: Delegate to agentic-flow when available for optimized search
-    if (this.isDelegationEnabled() && this.agenticFlowSona) {
-      try {
-        const results = await this.agenticFlowSona.findPatterns(params.query, {
-          category: params.category,
-          topK,
-          threshold,
-        });
-
-        // Map results to SONAPattern format
-        const patterns: SONAPattern[] = results.map(r => ({
-          id: r.id,
-          pattern: r.pattern,
-          solution: r.solution,
-          category: r.category,
-          confidence: r.confidence,
-          usageCount: r.usageCount,
-          createdAt: r.createdAt,
-          lastUsedAt: r.lastUsedAt,
-          metadata: r.metadata,
-        }));
-
-        this.emit('patterns-retrieved', {
-          query: params.query,
-          count: patterns.length,
-          delegated: true,
-          target: 'agentic-flow',
-        });
-
-        return patterns;
-      } catch (error) {
-        // Log delegation failure and fall back to local implementation
-        this.emit('delegation-failed', {
-          method: 'findSimilarPatterns',
-          error: (error as Error).message,
-          fallback: 'local',
-        });
-        // Continue with local implementation below
-      }
-    }
-
-    // Local implementation (fallback or when agentic-flow not available)
     const results: Array<{ pattern: SONAPattern; score: number }> = [];
 
     for (const pattern of this.patterns.values()) {

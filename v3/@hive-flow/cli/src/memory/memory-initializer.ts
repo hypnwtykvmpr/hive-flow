@@ -3,7 +3,7 @@
  * Properly initializes the memory database with sql.js (WASM SQLite)
  * Includes pattern tables, vector embeddings, migration state tracking
  *
- * ADR-053: Routes through ControllerRegistry → AgentDB v3 when available,
+ * ADR-053: Routes through ControllerRegistry → HiveMemory v3 when available,
  * falls back to raw sql.js for backwards compatibility.
  *
  * @module v3/cli/memory-initializer
@@ -12,7 +12,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-// ADR-053: Lazy import of AgentDB v3 bridge
+// ADR-053: Lazy import of HiveMemory v3 bridge
 let _bridge: typeof import('./memory-bridge.js') | null | undefined;
 async function getBridge(): Promise<typeof import('./memory-bridge.js') | null> {
   if (_bridge === null) return null;
@@ -323,7 +323,7 @@ CREATE TABLE IF NOT EXISTS metadata (
 
 // ============================================================================
 // VECTOR INDEX SINGLETON
-// Uses an internal pure TypeScript vector index with AgentDB bridge fallback.
+// Uses an internal pure TypeScript vector index with HiveMemory bridge fallback.
 // ============================================================================
 
 interface HNSWEntry {
@@ -551,7 +551,7 @@ export async function addToHNSWIndex(
   embedding: number[],
   entry: HNSWEntry
 ): Promise<boolean> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeAddToHNSW(id, embedding, entry);
@@ -588,7 +588,7 @@ export async function searchHNSWIndex(
     namespace?: string;
   }
 ): Promise<Array<{ id: string; key: string; content: string; score: number; namespace: string }> | null> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeSearchHNSW(queryEmbedding, options);
@@ -650,7 +650,7 @@ export function getHNSWStatus(): {
 } {
   // ADR-053: If bridge was previously loaded, report availability
   if (_bridge && _bridge !== null) {
-    // Bridge is loaded — HNSW-equivalent is available via AgentDB v3
+    // Bridge is loaded — HNSW-equivalent is available via HiveMemory v3
     return {
       available: true,
       initialized: true,
@@ -1484,7 +1484,7 @@ export async function loadEmbeddingModel(options?: {
     };
   }
 
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeLoadEmbeddingModel();
@@ -1561,7 +1561,7 @@ export async function generateEmbedding(text: string): Promise<{
   dimensions: number;
   model: string;
 }> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeGenerateEmbedding(text);
@@ -1917,7 +1917,7 @@ export async function storeEntry(options: {
   embedding?: { dimensions: number; model: string };
   error?: string;
 }> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeStoreEntry(options);
@@ -2048,7 +2048,7 @@ export async function searchEntries(options: {
   searchTime: number;
   error?: string;
 }> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeSearchEntries(options);
@@ -2214,7 +2214,7 @@ export async function listEntries(options: {
   total: number;
   error?: string;
 }> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeListEntries(options);
@@ -2330,7 +2330,7 @@ export async function getEntry(options: {
   };
   error?: string;
 }> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeGetEntry(options);
@@ -2442,7 +2442,7 @@ export async function deleteEntry(options: {
   remainingEntries: number;
   error?: string;
 }> {
-  // ADR-053: Try AgentDB v3 bridge first
+  // ADR-053: Try HiveMemory v3 bridge first
   const bridge = await getBridge();
   if (bridge) {
     const bridgeResult = await bridge.bridgeDeleteEntry(options);

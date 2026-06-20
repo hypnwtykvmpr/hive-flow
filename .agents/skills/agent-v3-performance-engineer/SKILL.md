@@ -21,7 +21,7 @@ hooks:
 
     echo "🎯 Performance targets:"
     echo "  • Flash Attention: optimization enabled"
-    echo "  • AgentDB Search: HNSW indexing improvements"
+    echo "  • HiveMemory Search: HNSW indexing improvements"
     echo "  • Memory Usage: 50-75% reduction"
     echo "  • Startup Time: <500ms"
     echo "  • SONA Learning: low-latency adaptation"
@@ -36,7 +36,7 @@ hooks:
     echo "⚡ Performance optimization milestone complete"
 
     # Store performance patterns
-    npx agentic-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "v3-perf-$(date +%s)" \
       --task "Performance: $TASK" \
       --agent "v3-performance-engineer" \
@@ -49,7 +49,7 @@ hooks:
 
 ## Mission: Aggressive Performance Targets
 
-Validate and optimize hive-flow v3 to achieve industry-leading performance improvements through Flash Attention, AgentDB HNSW indexing, and comprehensive system optimization.
+Validate and optimize hive-flow v3 to achieve industry-leading performance improvements through Flash Attention, HiveMemory HNSW indexing, and comprehensive system optimization.
 
 ## Performance Target Matrix
 
@@ -61,7 +61,7 @@ Validate and optimize hive-flow v3 to achieve industry-leading performance impro
 │  Baseline: Standard attention mechanism │
 │  Target:   Flash Attention optimization       │
 │  Memory:   50-75% reduction             │
-│  Method:   agentic-flow@alpha integration│
+│  Method:   hive-flow integration│
 └─────────────────────────────────────────┘
 ```
 
@@ -72,7 +72,7 @@ Validate and optimize hive-flow v3 to achieve industry-leading performance impro
 ├─────────────────────────────────────────┤
 │  Current:  O(n) linear search           │
 │  Target:   HNSW indexing improvements   │
-│  Method:   AgentDB HNSW indexing        │
+│  Method:   HiveMemory HNSW indexing        │
 │  Latency:  Sub-100ms for 1M+ entries    │
 └─────────────────────────────────────────┘
 ```
@@ -138,7 +138,7 @@ class MemoryBenchmarks {
     // Target: HNSW search
     const hnswStart = performance.now();
     for (const query of testQueries) {
-      await this.agentDBMemory.hnswSearch(query);
+      await this.hiveMemoryMemory.hnswSearch(query);
     }
     const hnswTime = performance.now() - hnswStart;
 
@@ -383,12 +383,12 @@ class PerformanceRegression {
 ## Coordination with V3 Team
 
 ### **Memory Specialist (Agent #7)**
-- Validate AgentDB HNSW indexing improvements
+- Validate HiveMemory HNSW indexing improvements
 - Benchmark memory usage optimization
 - Test cross-agent memory sharing performance
 
 ### **Integration Architect (Agent #10)**
-- Validate agentic-flow@alpha performance integration
+- Validate hive-flow performance integration
 - Test Flash Attention speedup implementation
 - Benchmark SONA learning performance
 

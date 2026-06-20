@@ -151,7 +151,7 @@ function resolvePolicyRoot(hookInput: Partial<HookInput>, cwd: string): string {
 
 function hasSubagentIdentity(hookInput: Partial<HookInput>): boolean {
   if (process.env.CLAUDE_PARENT_AGENT_ID) return true;
-  if (process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID) return true;
+  if (process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID) return true;
   const hookAgentId = (hookInput as Record<string, unknown>).agent_id
     || (hookInput as Record<string, unknown>).agentId;
   return typeof hookAgentId === 'string' && hookAgentId.trim().length > 0;

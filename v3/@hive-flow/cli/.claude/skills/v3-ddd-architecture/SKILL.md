@@ -421,7 +421,7 @@ describe('Task Entity', () => {
 ## Related V3 Skills
 
 - `v3-core-implementation` - Implementation of DDD domains
-- `v3-memory-unification` - AgentDB integration within bounded contexts
+- `v3-memory-unification` - HiveMemory integration within bounded contexts
 - `v3-swarm-coordination` - Swarm coordination as domain plugin
 - `v3-performance-optimization` - Performance optimization across domains
 

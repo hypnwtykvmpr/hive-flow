@@ -94,7 +94,7 @@ export function setupLearningHooks() {
 
       console.log(`📚 Searching for similar edits to ${filePath}...`);
 
-      // Example ReasoningBank search results (replace with actual agentic-flow call)
+      // Example ReasoningBank search results (replace with actual local Hive Flow call)
       const similarEdits = [
         { task: `Edit ${filePath}`, reward: 0.92, critique: 'Good test coverage' },
         { task: `Edit ${filePath}`, reward: 0.88, critique: 'Could improve error handling' },
@@ -130,7 +130,7 @@ export function setupLearningHooks() {
 
       console.log(`💾 Storing edit pattern for ${filePath} (success: ${success})`);
 
-      // Example ReasoningBank storage (replace with actual agentic-flow call)
+      // Example ReasoningBank storage (replace with actual local Hive Flow call)
       const pattern = {
         task: `Edit ${filePath}`,
         reward: success ? 0.9 : 0.3,

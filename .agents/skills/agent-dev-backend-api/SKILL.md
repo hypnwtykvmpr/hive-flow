@@ -231,7 +231,7 @@ const graphContext = {
   nodeLabels: ['AuthController', 'UserService', 'Database', 'Middleware']
 };
 
-const relevantEndpoints = await agentDB.gnnEnhancedSearch(
+const relevantEndpoints = await hiveMemory.gnnEnhancedSearch(
   taskEmbedding,
   {
     k: 10,
@@ -248,7 +248,7 @@ console.log(`Context accuracy improved by ${relevantEndpoints.improvementPercent
 ```typescript
 // Process large API schemas 4-7x faster
 if (schemaSize > 1024) {
-  const result = await agentDB.flashAttention(
+  const result = await hiveMemory.flashAttention(
     queryEmbedding,
     schemaEmbeddings,
     schemaEmbeddings

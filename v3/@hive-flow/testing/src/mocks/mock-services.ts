@@ -8,9 +8,9 @@ import { vi, type Mock } from 'vitest';
 import type { V3AgentType } from '../fixtures/agent-fixtures.js';
 
 /**
- * Mock AgentDB - Vector database mock with HNSW simulation
+ * Mock HiveMemory - Vector database mock with HNSW simulation
  */
-export class MockAgentDB {
+export class MockHiveMemory {
   private vectors = new Map<string, { embedding: number[]; metadata: Record<string, unknown> }>();
   private indexConfig = {
     M: 16,
@@ -762,7 +762,7 @@ const agentCapabilities: Record<V3AgentType, string[]> = {
  */
 export function createMockServices(): MockServiceBundle {
   return {
-    agentDB: new MockAgentDB(),
+    hiveMemory: new MockHiveMemory(),
     swarmCoordinator: new MockSwarmCoordinator(),
     memoryService: new MockMemoryService(),
     eventBus: new MockEventBus(),
@@ -774,7 +774,7 @@ export function createMockServices(): MockServiceBundle {
  * Mock service bundle interface
  */
 export interface MockServiceBundle {
-  agentDB: MockAgentDB;
+  hiveMemory: MockHiveMemory;
   swarmCoordinator: MockSwarmCoordinator;
   memoryService: MockMemoryService;
   eventBus: MockEventBus;
@@ -785,7 +785,7 @@ export interface MockServiceBundle {
  * Reset all mock services
  */
 export function resetMockServices(services: MockServiceBundle): void {
-  services.agentDB.clear();
+  services.hiveMemory.clear();
   services.swarmCoordinator.reset();
   services.memoryService.reset();
   services.eventBus.reset();

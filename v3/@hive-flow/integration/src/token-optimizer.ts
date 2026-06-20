@@ -1,18 +1,16 @@
 /**
- * Token Optimizer - Integrates agentic-flow Agent Booster capabilities
+ * Token Optimizer - local cache and prompt budget helpers
  *
  * Combines:
- * - Optional Agent Booster code-edit acceleration when available
- * - ReasoningBank (32% token reduction via semantic retrieval)
- * - Configuration Tuning (batch/cache/topology optimization)
+ * - Local short-lived cache for repeated lookups
+ * - Conservative swarm configuration defaults
+ * - Token savings accounting
  *
  * @module v3/integration/token-optimizer
  */
 
 import { EventEmitter } from 'events';
-import { loadAgenticFlow, loadAgenticFlowSubpath } from './agentic-flow-loader.js';
 
-// Types for agentic-flow integration
 interface TokenStats {
   saved: number;
   baseline: number;
@@ -30,11 +28,11 @@ interface MemoryContext {
 interface EditOptimization {
   speedupFactor: number;
   executionMs: number;
-  method: 'agent-booster' | 'traditional';
+  method: 'traditional';
 }
 
 /**
- * Token Optimizer - Reduces token usage via agentic-flow integration
+ * Token Optimizer - Reduces repeated work via local accounting and caching.
  */
 export class TokenOptimizer extends EventEmitter {
   private stats = {
@@ -45,48 +43,11 @@ export class TokenOptimizer extends EventEmitter {
     memoriesRetrieved: 0,
   };
 
-  private agenticFlowAvailable = false;
-  private reasoningBank: any = null;
-  private agentBooster: any = null;
-  private configTuning: any = null;
   private localCache = new Map<string, { data: any; timestamp: number }>();
 
   async initialize(): Promise<void> {
-    try {
-      // Dynamic import of agentic-flow main module
-      const af = await loadAgenticFlow();
-
-      if (af) {
-        this.agenticFlowAvailable = true;
-
-        // Load ReasoningBank (exported path)
-        const rb = await loadAgenticFlowSubpath('reasoningbank');
-        if (rb && rb.retrieveMemories) {
-          this.reasoningBank = rb;
-        }
-
-        // Load Agent Booster (exported path)
-        const ab = await loadAgenticFlowSubpath('agent-booster');
-        if (ab) {
-          // Agent booster may export different API
-          this.agentBooster = ab.agentBooster || ab.AgentBooster || ab;
-        }
-
-        // Config tuning is part of main module or agent-booster
-        // Use our fallback with anti-drift defaults
-        if (af.configTuning) {
-          this.configTuning = af.configTuning;
-        }
-      }
-    } catch {
-      this.agenticFlowAvailable = false;
-    }
-
     this.emit('initialized', {
-      agenticFlowAvailable: this.agenticFlowAvailable,
-      reasoningBank: !!this.reasoningBank,
-      agentBooster: !!this.agentBooster,
-      configTuning: !!this.configTuning,
+      localCache: true,
     });
   }
 
@@ -101,41 +62,16 @@ export class TokenOptimizer extends EventEmitter {
     const limit = options?.limit ?? 5;
     const threshold = options?.threshold ?? 0.7;
 
-    if (!this.reasoningBank) {
-      // Fallback: return empty context
-      return {
-        query,
-        memories: [],
-        compactPrompt: '',
-        tokensSaved: 0,
-      };
-    }
-
-    const memories = await this.reasoningBank.retrieveMemories(query, {
-      limit,
-      threshold,
-    });
-
-    const compactPrompt = this.reasoningBank.formatMemoriesForPrompt(memories);
-
-    // Estimate tokens saved (baseline ~1000 tokens for full context)
-    const baseline = 1000;
-    const used = Math.ceil(compactPrompt.length / 4); // ~4 chars per token
-    const saved = Math.max(0, baseline - used);
-
-    this.stats.totalTokensSaved += saved;
-    this.stats.memoriesRetrieved += memories.length;
-
     return {
       query,
-      memories,
-      compactPrompt,
-      tokensSaved: saved,
+      memories: [],
+      compactPrompt: '',
+      tokensSaved: 0,
     };
   }
 
   /**
-   * Optimized code edit using Agent Booster when available.
+   * Code edit accounting hook.
    */
   async optimizedEdit(
     filePath: string,
@@ -143,34 +79,14 @@ export class TokenOptimizer extends EventEmitter {
     newContent: string,
     language: string
   ): Promise<EditOptimization> {
-    if (!this.agentBooster) {
-      // Fallback: return unoptimized result
-      return {
-        speedupFactor: 1,
-        executionMs: 352, // baseline
-        method: 'traditional',
-      };
-    }
-
-    const result = await this.agentBooster.editCode({
-      filePath,
-      oldContent,
-      newContent,
-      language,
-    });
-
-    this.stats.editsOptimized++;
-
-    // Each 350ms saved prevents potential timeout/retry
-    // Estimate 50 tokens saved per optimized edit
-    if (result.method === 'agent-booster') {
-      this.stats.totalTokensSaved += 50;
-    }
-
+    void filePath;
+    void oldContent;
+    void newContent;
+    void language;
     return {
-      speedupFactor: result.speedupFactor,
-      executionMs: result.executionTimeMs,
-      method: result.method,
+      speedupFactor: 1,
+      executionMs: 352,
+      method: 'traditional',
     };
   }
 
@@ -184,25 +100,12 @@ export class TokenOptimizer extends EventEmitter {
     topology: string;
     expectedSuccessRate: number;
   } {
-    if (!this.configTuning) {
-      // Anti-drift defaults
-      return {
-        batchSize: 4,
-        cacheSizeMB: 50,
-        topology: 'hierarchical',
-        expectedSuccessRate: 0.95,
-      };
-    }
-
-    const batch = this.configTuning.getOptimalBatchSize();
-    const cache = this.configTuning.getOptimalCacheConfig();
-    const topo = this.configTuning.selectTopology(agentCount);
-
+    void agentCount;
     return {
-      batchSize: batch.size,
-      cacheSizeMB: cache.sizeMB,
-      topology: topo.topology,
-      expectedSuccessRate: batch.expectedSuccessRate,
+      batchSize: 4,
+      cacheSizeMB: 50,
+      topology: 'hierarchical',
+      expectedSuccessRate: 0.95,
     };
   }
 
@@ -219,24 +122,10 @@ export class TokenOptimizer extends EventEmitter {
       return cacheEntry.data as T;
     }
 
-    if (this.configTuning) {
-      const cached = await this.configTuning.cacheGet(key);
-      if (cached) {
-        this.stats.cacheHits++;
-        this.stats.totalTokensSaved += 100;
-        return cached as T;
-      }
-    }
-
     this.stats.cacheMisses++;
     const result = await generator();
 
-    // Store in local cache
     this.localCache.set(key, { data: result, timestamp: Date.now() });
-
-    if (this.configTuning) {
-      await this.configTuning.cacheSet(key, result);
-    }
 
     return result;
   }
@@ -245,7 +134,6 @@ export class TokenOptimizer extends EventEmitter {
    * Get optimization statistics
    */
   getStats(): typeof this.stats & {
-    agenticFlowAvailable: boolean;
     cacheHitRate: string;
     estimatedMonthlySavings: string;
   } {
@@ -257,7 +145,6 @@ export class TokenOptimizer extends EventEmitter {
 
     return {
       ...this.stats,
-      agenticFlowAvailable: this.agenticFlowAvailable,
       cacheHitRate: `${hitRate}%`,
       estimatedMonthlySavings: `$${savings}`,
     };
@@ -278,7 +165,6 @@ export class TokenOptimizer extends EventEmitter {
 | Cache Hit Rate | ${stats.cacheHitRate} |
 | Memories Retrieved | ${stats.memoriesRetrieved} |
 | Est. Monthly Savings | ${stats.estimatedMonthlySavings} |
-| Agentic-Flow Active | ${stats.agenticFlowAvailable ? '✓' : '✗'} |
 `.trim();
   }
 }

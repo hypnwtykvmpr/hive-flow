@@ -6,7 +6,7 @@
 v3/mcp/tools/
 ├── agent-tools.ts      # Agent lifecycle: spawn, list, terminate, status
 ├── swarm-tools.ts      # Swarm coordination: init, status, scale
-├── memory-tools.ts     # Memory/AgentDB: store, search, list
+├── memory-tools.ts     # Memory/HiveMemory: store, search, list
 ├── config-tools.ts     # Configuration: load, save, validate
 ├── index.ts            # Central exports and utility functions
 ├── README.md           # Comprehensive documentation
@@ -284,7 +284,7 @@ await handler({
 
 - **agent** (4 tools) - Agent lifecycle management
 - **swarm** (3 tools) - Swarm coordination
-- **memory** (3 tools) - Memory/AgentDB operations
+- **memory** (3 tools) - Memory/HiveMemory operations
 - **config** (3 tools) - Configuration management
 - **system** (4 tools) - System information (built-in)
 

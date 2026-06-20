@@ -1,12 +1,7 @@
 /**
- * SwarmAdapter - Bridge between V3 Swarm and agentic-flow@alpha Patterns
+ * SwarmAdapter - local V3 swarm coordination helpers
  *
- * Provides bidirectional conversion and delegation patterns between:
- * - Hive Flow v3 UnifiedSwarmCoordinator
- * - agentic-flow's AttentionCoordinator, SwarmTopology, and Expert routing
- *
- * This implements ADR-001: Adopt agentic-flow as Core Foundation
- * by aligning V3 swarm patterns with agentic-flow's coordination mechanisms.
+ * Provides conversion and routing helpers for Hive Flow v3 swarm state.
  *
  * Key Alignments:
  * - Topology: mesh, hierarchical, ring, star (maps V3's centralized -> star)
@@ -20,22 +15,20 @@
  */
 
 import { EventEmitter } from 'events';
-import { loadAgenticFlow } from './agentic-flow-loader.js';
 
 // ============================================================================
-// agentic-flow Pattern Types (Target Interface)
+// Hive Flow Swarm Pattern Types
 // ============================================================================
 
 /**
- * agentic-flow SwarmTopology types
- * V3's 'centralized' maps to 'star', 'hybrid' is represented as 'mesh' with hierarchical overlay
+ * V3's 'centralized' maps to 'star', 'hybrid' is represented as 'mesh' with hierarchical overlay.
  */
-export type AgenticFlowTopology = 'mesh' | 'hierarchical' | 'ring' | 'star';
+export type HiveTopology = 'mesh' | 'hierarchical' | 'ring' | 'star';
 
 /**
- * agentic-flow Attention mechanism types
+ * Attention mechanism types
  */
-export type AgenticFlowAttentionMechanism =
+export type HiveAttentionMechanism =
   | 'flash'       // Flash Attention - fastest, 75% memory reduction
   | 'linear'      // Linear attention for long sequences
   | 'hyperbolic'  // Hyperbolic attention for hierarchical data
@@ -43,10 +36,9 @@ export type AgenticFlowAttentionMechanism =
   | 'multi-head'; // Standard multi-head attention
 
 /**
- * agentic-flow AgentOutput interface
- * This is the expected output format from agents in agentic-flow swarms
+ * Agent output interface used by Hive Flow swarms.
  */
-export interface AgenticFlowAgentOutput {
+export interface HiveAgentOutput {
   /** Agent identifier */
   agentId: string;
   /** Agent type/role */
@@ -62,10 +54,9 @@ export interface AgenticFlowAgentOutput {
 }
 
 /**
- * agentic-flow SpecializedAgent interface
  * Represents an expert agent with specific capabilities
  */
-export interface AgenticFlowSpecializedAgent {
+export interface HiveSpecializedAgent {
   /** Agent identifier */
   id: string;
   /** Agent type */
@@ -83,11 +74,11 @@ export interface AgenticFlowSpecializedAgent {
 }
 
 /**
- * agentic-flow Expert routing result
+ * Expert routing result
  */
-export interface AgenticFlowExpertRoute {
+export interface HiveExpertRoute {
   /** Selected expert IDs */
-  selectedExperts: AgenticFlowSpecializedAgent[];
+  selectedExperts: HiveSpecializedAgent[];
   /** Routing scores for each expert */
   scores: Map<string, number>;
   /** Routing mechanism used */
@@ -97,9 +88,9 @@ export interface AgenticFlowExpertRoute {
 }
 
 /**
- * agentic-flow Attention coordination result
+ * Attention coordination result
  */
-export interface AgenticFlowAttentionResult {
+export interface HiveAttentionResult {
   /** Consensus output */
   consensus: unknown;
   /** Attention weights for each agent */
@@ -107,7 +98,7 @@ export interface AgenticFlowAttentionResult {
   /** Top contributing agents */
   topAgents: Array<{ id: string; name: string; weight: number }>;
   /** Coordination mechanism used */
-  mechanism: AgenticFlowAttentionMechanism;
+  mechanism: HiveAttentionMechanism;
   /** Execution time in ms */
   executionTimeMs: number;
 }
@@ -208,15 +199,11 @@ export interface SwarmAdapterConfig {
   /** Enable GraphRoPE topology awareness */
   enableGraphRoPE: boolean;
   /** Default attention mechanism */
-  defaultAttentionMechanism: AgenticFlowAttentionMechanism;
+  defaultAttentionMechanism: HiveAttentionMechanism;
   /** Number of experts for MoE routing */
   moeTopK: number;
   /** GraphRoPE dimension */
   ropeDimension: number;
-  /** Enable delegation to agentic-flow when available */
-  enableDelegation: boolean;
-  /** Fallback on delegation failure */
-  fallbackOnError: boolean;
   /** Debug mode */
   debug: boolean;
 }
@@ -231,8 +218,6 @@ const DEFAULT_CONFIG: SwarmAdapterConfig = {
   defaultAttentionMechanism: 'flash',
   moeTopK: 3,
   ropeDimension: 64,
-  enableDelegation: true,
-  fallbackOnError: true,
   debug: false,
 };
 
@@ -241,10 +226,10 @@ const DEFAULT_CONFIG: SwarmAdapterConfig = {
 // ============================================================================
 
 /**
- * SwarmAdapter - Bridges V3 Swarm with agentic-flow patterns
+ * SwarmAdapter - local V3 swarm routing and coordination utilities.
  *
  * Key Features:
- * - Topology conversion (V3 <-> agentic-flow)
+ * - Topology conversion
  * - Agent output format conversion
  * - Specialized agent wrapping
  * - MoE expert routing integration
@@ -260,7 +245,7 @@ const DEFAULT_CONFIG: SwarmAdapterConfig = {
  *   enableMoERouting: true,
  * });
  *
- * // Convert V3 agents to agentic-flow format
+ * // Convert V3 agents to specialized format
  * const specializedAgents = adapter.toSpecializedAgents(v3Agents);
  *
  * // Route task to experts using MoE
@@ -273,16 +258,6 @@ const DEFAULT_CONFIG: SwarmAdapterConfig = {
 export class SwarmAdapter extends EventEmitter {
   private config: SwarmAdapterConfig;
   private initialized: boolean = false;
-
-  /**
-   * Reference to agentic-flow core for delegation
-   */
-  private agenticFlowCore: any = null;
-
-  /**
-   * Reference to agentic-flow AttentionCoordinator
-   */
-  private attentionCoordinator: any = null;
 
   /**
    * GraphRoPE context for topology-aware coordination
@@ -314,11 +289,6 @@ export class SwarmAdapter extends EventEmitter {
     this.emit('initializing');
 
     try {
-      // Attempt to connect to agentic-flow for delegation
-      if (this.config.enableDelegation) {
-        await this.connectToAgenticFlow();
-      }
-
       // Initialize GraphRoPE context if enabled
       if (this.config.enableGraphRoPE) {
         this.graphRoPEContext = {
@@ -331,8 +301,7 @@ export class SwarmAdapter extends EventEmitter {
 
       this.initialized = true;
       this.emit('initialized', {
-        agenticFlowAvailable: this.agenticFlowCore !== null,
-        attentionAvailable: this.attentionCoordinator !== null,
+        attentionCoordination: this.config.enableAttentionCoordination,
       });
     } catch (error) {
       this.emit('initialization-failed', { error });
@@ -346,8 +315,6 @@ export class SwarmAdapter extends EventEmitter {
   async shutdown(): Promise<void> {
     this.topologyCache.clear();
     this.graphRoPEContext = null;
-    this.agenticFlowCore = null;
-    this.attentionCoordinator = null;
     this.initialized = false;
     this.emit('shutdown');
   }
@@ -357,16 +324,16 @@ export class SwarmAdapter extends EventEmitter {
   // ==========================================================================
 
   /**
-   * Convert V3 topology type to agentic-flow topology
+   * Convert V3 topology type to Hive Flow topology
    *
    * Mapping:
    * - mesh -> mesh
    * - hierarchical -> hierarchical
-   * - centralized -> star (agentic-flow uses 'star' for central coordinator pattern)
+   * - centralized -> star (Hive Flow uses 'star' for central coordinator pattern)
    * - hybrid -> mesh (treated as mesh with additional hierarchical overlay)
    */
-  convertTopology(v3Topology: V3TopologyType): AgenticFlowTopology {
-    const mapping: Record<V3TopologyType, AgenticFlowTopology> = {
+  convertTopology(v3Topology: V3TopologyType): HiveTopology {
+    const mapping: Record<V3TopologyType, HiveTopology> = {
       mesh: 'mesh',
       hierarchical: 'hierarchical',
       centralized: 'star',
@@ -377,10 +344,10 @@ export class SwarmAdapter extends EventEmitter {
   }
 
   /**
-   * Convert agentic-flow topology to V3 topology type
+   * Convert Hive Flow topology to V3 topology type
    */
-  convertTopologyFromAgenticFlow(topology: AgenticFlowTopology): V3TopologyType {
-    const mapping: Record<AgenticFlowTopology, V3TopologyType> = {
+  convertTopologyToV3(topology: HiveTopology): V3TopologyType {
+    const mapping: Record<HiveTopology, V3TopologyType> = {
       mesh: 'mesh',
       hierarchical: 'hierarchical',
       ring: 'mesh', // Ring is treated as mesh in V3
@@ -395,16 +362,16 @@ export class SwarmAdapter extends EventEmitter {
   // ==========================================================================
 
   /**
-   * Convert V3 Agent to agentic-flow AgentOutput format
+   * Convert V3 Agent to Hive Flow AgentOutput format
    *
    * Creates the embedding from agent capabilities and produces
-   * the standardized AgentOutput interface expected by agentic-flow.
+   * the standardized AgentOutput interface expected by Hive Flow.
    */
   toAgentOutput(
     agent: V3AgentState,
     value: unknown,
     confidence?: number
-  ): AgenticFlowAgentOutput {
+  ): HiveAgentOutput {
     // Generate embedding from agent capabilities
     const embedding = this.generateAgentEmbedding(agent);
 
@@ -428,11 +395,11 @@ export class SwarmAdapter extends EventEmitter {
   }
 
   /**
-   * Convert V3 Agent to agentic-flow SpecializedAgent format
+   * Convert V3 Agent to Hive Flow SpecializedAgent format
    *
    * Creates an expert representation suitable for MoE routing
    */
-  toSpecializedAgent(agent: V3AgentState): AgenticFlowSpecializedAgent {
+  toSpecializedAgent(agent: V3AgentState): HiveSpecializedAgent {
     const embedding = this.generateAgentEmbedding(agent);
 
     // Determine specialization from capabilities
@@ -455,16 +422,16 @@ export class SwarmAdapter extends EventEmitter {
   /**
    * Convert multiple V3 agents to SpecializedAgents
    */
-  toSpecializedAgents(agents: V3AgentState[]): AgenticFlowSpecializedAgent[] {
+  toSpecializedAgents(agents: V3AgentState[]): HiveSpecializedAgent[] {
     return agents.map((agent) => this.toSpecializedAgent(agent));
   }
 
   /**
-   * Convert agentic-flow SpecializedAgent back to partial V3 format
+   * Convert Hive Flow SpecializedAgent back to partial V3 format
    * (for updates/sync)
    */
   fromSpecializedAgent(
-    specializedAgent: AgenticFlowSpecializedAgent
+    specializedAgent: HiveSpecializedAgent
   ): Partial<V3AgentState> {
     return {
       id: {
@@ -504,47 +471,16 @@ export class SwarmAdapter extends EventEmitter {
   /**
    * Route a task to the best experts using MoE attention
    *
-   * Implements agentic-flow's expert routing pattern for task assignment.
    * Uses cosine similarity with load balancing for optimal routing.
    */
   async routeToExperts(
     taskEmbedding: number[],
-    experts: AgenticFlowSpecializedAgent[],
+    experts: HiveSpecializedAgent[],
     topK?: number
-  ): Promise<AgenticFlowExpertRoute> {
+  ): Promise<HiveExpertRoute> {
     this.ensureInitialized();
     const startTime = performance.now();
     const k = topK ?? this.config.moeTopK;
-
-    // If delegation is available and enabled, use agentic-flow's MoE
-    if (this.config.enableMoERouting && this.agenticFlowCore?.moe) {
-      try {
-        const result = await this.agenticFlowCore.moe.route({
-          query: taskEmbedding,
-          experts: experts.map((e) => ({
-            id: e.id,
-            embedding: e.embedding,
-            load: e.load,
-          })),
-          topK: k,
-        });
-
-        return {
-          selectedExperts: experts.filter((e) =>
-            result.selected.includes(e.id)
-          ),
-          scores: new Map(Object.entries(result.scores)),
-          mechanism: 'moe',
-          latencyMs: performance.now() - startTime,
-        };
-      } catch (error) {
-        this.emit('delegation-failed', {
-          method: 'routeToExperts',
-          error: (error as Error).message,
-        });
-        if (!this.config.fallbackOnError) throw error;
-      }
-    }
 
     // Local implementation: similarity + load balancing
     const scores = new Map<string, number>();
@@ -590,53 +526,15 @@ export class SwarmAdapter extends EventEmitter {
   /**
    * Coordinate agent outputs using attention mechanisms
    *
-   * Implements agentic-flow's attention-based consensus pattern
-   * for multi-agent coordination.
+   * Local attention-weighted consensus for multi-agent coordination.
    */
   async coordinateWithAttention(
-    agentOutputs: AgenticFlowAgentOutput[],
-    mechanism?: AgenticFlowAttentionMechanism
-  ): Promise<AgenticFlowAttentionResult> {
+    agentOutputs: HiveAgentOutput[],
+    mechanism?: HiveAttentionMechanism
+  ): Promise<HiveAttentionResult> {
     this.ensureInitialized();
     const startTime = performance.now();
     const useMechanism = mechanism ?? this.config.defaultAttentionMechanism;
-
-    // If delegation is available, use agentic-flow's AttentionCoordinator
-    if (
-      this.config.enableAttentionCoordination &&
-      this.attentionCoordinator
-    ) {
-      try {
-        const result = await this.attentionCoordinator.coordinateAgents({
-          outputs: agentOutputs.map((o) => o.value),
-          embeddings: agentOutputs.map((o) =>
-            Array.isArray(o.embedding)
-              ? o.embedding
-              : Array.from(o.embedding)
-          ),
-          mechanism: useMechanism,
-        });
-
-        const attentionWeights = new Map<string, number>();
-        for (let i = 0; i < agentOutputs.length; i++) {
-          attentionWeights.set(agentOutputs[i].agentId, result.weights[i] ?? 0);
-        }
-
-        return {
-          consensus: result.consensus,
-          attentionWeights,
-          topAgents: this.extractTopAgents(agentOutputs, attentionWeights),
-          mechanism: useMechanism,
-          executionTimeMs: performance.now() - startTime,
-        };
-      } catch (error) {
-        this.emit('delegation-failed', {
-          method: 'coordinateWithAttention',
-          error: (error as Error).message,
-        });
-        if (!this.config.fallbackOnError) throw error;
-      }
-    }
 
     // Local implementation: weighted consensus based on confidence
     const attentionWeights = new Map<string, number>();
@@ -773,7 +671,7 @@ export class SwarmAdapter extends EventEmitter {
   // ==========================================================================
 
   /**
-   * Map V3 domain to agentic-flow specialization
+   * Map V3 domain to Hive Flow specialization
    */
   mapDomainToSpecialization(domain: V3AgentDomain): string {
     const mapping: Record<V3AgentDomain, string> = {
@@ -788,7 +686,7 @@ export class SwarmAdapter extends EventEmitter {
   }
 
   /**
-   * Map agentic-flow specialization to V3 domain
+   * Map Hive Flow specialization to V3 domain
    */
   mapSpecializationToDomain(specialization: string): V3AgentDomain {
     const lower = specialization.toLowerCase();
@@ -821,13 +719,6 @@ export class SwarmAdapter extends EventEmitter {
   // ==========================================================================
 
   /**
-   * Check if delegation to agentic-flow is available
-   */
-  isDelegationAvailable(): boolean {
-    return this.agenticFlowCore !== null;
-  }
-
-  /**
    * Get adapter configuration
    */
   getConfig(): SwarmAdapterConfig {
@@ -846,48 +737,8 @@ export class SwarmAdapter extends EventEmitter {
   // Private Methods
   // ==========================================================================
 
-  private async connectToAgenticFlow(): Promise<void> {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const agenticFlowModule: any = await loadAgenticFlow();
-
-      if (
-        agenticFlowModule &&
-        typeof agenticFlowModule.createAgenticFlow === 'function'
-      ) {
-        this.agenticFlowCore = await agenticFlowModule.createAgenticFlow({});
-
-        // Check for AttentionCoordinator
-        if (this.agenticFlowCore.attention) {
-          this.attentionCoordinator = this.agenticFlowCore.attention;
-        }
-
-        this.emit('agentic-flow-connected', {
-          version: this.agenticFlowCore.version,
-          hasAttention: !!this.attentionCoordinator,
-          hasMoE: !!this.agenticFlowCore.moe,
-        });
-
-        this.logDebug('Connected to agentic-flow', {
-          version: this.agenticFlowCore.version,
-        });
-      } else {
-        this.agenticFlowCore = null;
-        this.emit('agentic-flow-unavailable', {
-          reason: 'package not found or incompatible',
-        });
-      }
-    } catch (error) {
-      this.agenticFlowCore = null;
-      this.emit('agentic-flow-connection-failed', {
-        error: (error as Error).message,
-      });
-    }
-  }
-
   private generateAgentEmbedding(agent: V3AgentState): number[] {
     // Generate hash-based embedding from agent properties
-    // For ML embeddings, use: import('agentic-flow').computeEmbedding
     const embedding = new Array(128).fill(0);
 
     // Encode agent type
@@ -983,7 +834,7 @@ export class SwarmAdapter extends EventEmitter {
   }
 
   private extractTopAgents(
-    outputs: AgenticFlowAgentOutput[],
+    outputs: HiveAgentOutput[],
     weights: Map<string, number>
   ): Array<{ id: string; name: string; weight: number }> {
     return outputs

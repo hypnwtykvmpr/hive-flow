@@ -11,7 +11,7 @@
  * - Health monitoring and auto-recovery
  * - Type-safe worker registry
  *
- * Compatible with agentic-flow's worker pool patterns.
+ * Compatible with Hive Flow's worker pool patterns.
  *
  * @module v3/integration/worker-pool
  * @version 3.0.0-alpha.1

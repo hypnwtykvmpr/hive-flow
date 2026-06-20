@@ -7,7 +7,7 @@
  * - memory/list - List memory entries
  *
  * Implements ADR-005: MCP-First API Design
- * Implements ADR-006: Unified Memory Service (AgentDB integration)
+ * Implements ADR-006: Unified Memory Service (HiveMemory integration)
  */
 
 import { z } from 'zod';
@@ -414,7 +414,7 @@ export const storeMemoryTool: MCPTool = {
     return handleStoreMemory(validated, context);
   },
   category: 'memory',
-  tags: ['memory', 'storage', 'agentdb'],
+  tags: ['memory', 'storage', 'hivememory'],
   version: '1.0.0',
 };
 
@@ -479,7 +479,7 @@ export const searchMemoryTool: MCPTool = {
     return handleSearchMemory(validated, context);
   },
   category: 'memory',
-  tags: ['memory', 'search', 'agentdb', 'semantic'],
+  tags: ['memory', 'search', 'hivememory', 'semantic'],
   version: '1.0.0',
   cacheable: true,
   cacheTTL: 5000,
@@ -546,7 +546,7 @@ export const listMemoryTool: MCPTool = {
     return handleListMemory(validated, context);
   },
   category: 'memory',
-  tags: ['memory', 'list', 'agentdb'],
+  tags: ['memory', 'list', 'hivememory'],
   version: '1.0.0',
   cacheable: true,
   cacheTTL: 3000,

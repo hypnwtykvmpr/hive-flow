@@ -415,7 +415,7 @@ export interface GasTownConfig {
   /** Path to Gas Town installation */
   readonly townRoot: string;
 
-  /** Enable Beads sync with AgentDB */
+  /** Enable Beads sync with HiveMemory */
   readonly enableBeadsSync: boolean;
   /** Sync interval in milliseconds */
   readonly syncInterval: number;

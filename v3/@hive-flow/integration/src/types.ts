@@ -1,8 +1,8 @@
 /**
  * V3 Integration Module Types
  *
- * Type definitions for deep integration with agentic-flow@alpha.
- * Implements ADR-001: Adopt agentic-flow as Core Foundation
+ * Type definitions for deep integration with Hive Flow@alpha.
+ * Implements ADR-001: Adopt Hive Flow as Core Foundation
  *
  * @module v3/integration/types
  * @version 3.0.0-alpha.1
@@ -117,7 +117,7 @@ export interface SONALearningStats {
 // ===== Flash Attention Types =====
 
 /**
- * Attention mechanism types supported by agentic-flow.
+ * Attention mechanism types supported by Hive Flow.
  * Flash Attention provides Flash Attention optimization with 50-75% memory reduction.
  */
 export type AttentionMechanism =
@@ -179,12 +179,12 @@ export interface AttentionMetrics {
   speedupFactor: number;
 }
 
-// ===== AgentDB Types =====
+// ===== HiveMemory Types =====
 
 /**
- * AgentDB provides fast HNSW-indexed search via HNSW indexing.
+ * HiveMemory provides fast HNSW-indexed search via HNSW indexing.
  */
-export interface AgentDBConfiguration {
+export interface HiveMemoryConfiguration {
   /** Vector dimension */
   dimension: number;
   /** Index type */
@@ -207,7 +207,7 @@ export interface AgentDBConfiguration {
   enableWAL: boolean;
 }
 
-export interface AgentDBVector {
+export interface HiveMemoryVector {
   /** Vector identifier */
   id: string;
   /** Vector data */
@@ -222,7 +222,7 @@ export interface AgentDBVector {
   updatedAt: number;
 }
 
-export interface AgentDBSearchResult {
+export interface HiveMemorySearchResult {
   /** Vector identifier */
   id: string;
   /** Similarity score (0.0 - 1.0 for cosine) */
@@ -235,7 +235,7 @@ export interface AgentDBSearchResult {
   vector?: number[];
 }
 
-export interface AgentDBStats {
+export interface HiveMemoryStats {
   /** Total vectors stored */
   totalVectors: number;
   /** Index size in bytes */
@@ -259,8 +259,8 @@ export interface IntegrationConfig {
   sona: Partial<SONAConfiguration>;
   /** Attention configuration */
   attention: Partial<AttentionConfiguration>;
-  /** AgentDB configuration */
-  agentdb: Partial<AgentDBConfiguration>;
+  /** HiveMemory configuration */
+  hivememory: Partial<HiveMemoryConfiguration>;
   /** Feature flags */
   features: FeatureFlags;
   /** Runtime preference (auto-detection order) */
@@ -276,8 +276,8 @@ export interface FeatureFlags {
   enableSONA: boolean;
   /** Enable Flash Attention */
   enableFlashAttention: boolean;
-  /** Enable AgentDB vector search */
-  enableAgentDB: boolean;
+  /** Enable HiveMemory vector search */
+  enableHiveMemory: boolean;
   /** Enable trajectory tracking */
   enableTrajectoryTracking: boolean;
   /** Enable GNN query refinement (+12.4% recall) */
@@ -459,7 +459,7 @@ export const DEFAULT_ATTENTION_CONFIG: AttentionConfiguration = {
   memoryOptimization: 'moderate',
 };
 
-export const DEFAULT_AGENTDB_CONFIG: AgentDBConfiguration = {
+export const DEFAULT_HIVEMEMORY_CONFIG: HiveMemoryConfiguration = {
   dimension: 1536, // OpenAI embedding dimension
   indexType: 'hnsw',
   hnswM: 16,
@@ -474,7 +474,7 @@ export const DEFAULT_AGENTDB_CONFIG: AgentDBConfiguration = {
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   enableSONA: true,
   enableFlashAttention: true,
-  enableAgentDB: true,
+  enableHiveMemory: true,
   enableTrajectoryTracking: true,
   enableGNN: true,
   enableIntelligenceBridge: true,
@@ -486,7 +486,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 export const DEFAULT_INTEGRATION_CONFIG: IntegrationConfig = {
   sona: DEFAULT_SONA_CONFIG,
   attention: DEFAULT_ATTENTION_CONFIG,
-  agentdb: DEFAULT_AGENTDB_CONFIG,
+  hivememory: DEFAULT_HIVEMEMORY_CONFIG,
   features: DEFAULT_FEATURE_FLAGS,
   runtimePreference: ['napi', 'wasm', 'js'],
   lazyLoad: true,

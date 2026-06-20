@@ -3,7 +3,7 @@ name: worker-benchmarks
 description: Run comprehensive worker system benchmarks and performance analysis
 version: 1.0.0
 invocable: true
-author: agentic-flow
+author: hive-flow
 capabilities:
   - performance_testing
   - metrics_collection
@@ -12,19 +12,19 @@ capabilities:
 
 # Worker Benchmarks Skill
 
-Run comprehensive performance benchmarks for the agentic-flow worker system.
+Run comprehensive performance benchmarks for the hive-flow worker system.
 
 ## Quick Start
 
 ```bash
 # Run full benchmark suite
-npx agentic-flow workers benchmark
+hive-flow workers benchmark
 
 # Run specific benchmark
-npx agentic-flow workers benchmark --type trigger-detection
-npx agentic-flow workers benchmark --type registry
-npx agentic-flow workers benchmark --type agent-selection
-npx agentic-flow workers benchmark --type concurrent
+hive-flow workers benchmark --type trigger-detection
+hive-flow workers benchmark --type registry
+hive-flow workers benchmark --type agent-selection
+hive-flow workers benchmark --type concurrent
 ```
 
 ## Benchmark Types
@@ -116,7 +116,7 @@ Benchmark thresholds are configured in `.claude/settings.json`:
 ## Programmatic Usage
 
 ```typescript
-import { workerBenchmarks, runBenchmarks } from 'agentic-flow/workers/worker-benchmarks';
+import { workerBenchmarks, runBenchmarks } from 'hive-flow/workers/worker-benchmarks';
 
 // Run full suite
 const suite = await runBenchmarks();

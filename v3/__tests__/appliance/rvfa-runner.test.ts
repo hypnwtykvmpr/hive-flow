@@ -42,12 +42,21 @@ describe('RvfaRunner CLI section compatibility', () => {
     assert.equal(result.stdout.trim(), 'runner-section-ok');
   });
 
-  it('boots a legacy appliance with the old CLI section id', async () => {
+  it('boots a legacy appliance with the old CLI section id and current local provider', async () => {
     const result = await RvfaRunner
-      .fromBuffer(buildRunnableAppliance('ruflo', 'ruvllm'))
+      .fromBuffer(buildRunnableAppliance('ruflo', 'local-llm'))
       .runNative({ mode: 'cli', isolation: 'native' });
 
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(result.stdout.trim(), 'runner-section-ok');
+  });
+
+  it('rejects removed legacy local model provider names', async () => {
+    assert.throws(
+      () => RvfaRunner.fromBuffer(
+        buildRunnableAppliance('hive-flow', ['r', 'u', 'v', 'l', 'l', 'm'].join('') as RvfaModelConfig['provider']),
+      ),
+      /RVFA header failed validation/,
+    );
   });
 });

@@ -125,7 +125,7 @@ interface StepAnalysis {
 // ============================================================================
 
 /**
- * ReasoningBank - Trajectory storage and learning pipeline with AgentDB
+ * ReasoningBank - Trajectory storage and learning pipeline with HiveMemory
  *
  * This class implements a complete learning pipeline for AI agents:
  * - Store and retrieve trajectories using vector similarity
@@ -186,7 +186,7 @@ export class ReasoningBank {
   /**
    * Retrieve relevant memories using Maximal Marginal Relevance (MMR)
    *
-   * Uses AgentDB HNSW index for fast retrieval when available.
+   * Uses HiveMemory HNSW index for fast retrieval when available.
    *
    * @param queryEmbedding - Query vector for similarity search
    * @param k - Number of results to return (default: config.retrievalK)

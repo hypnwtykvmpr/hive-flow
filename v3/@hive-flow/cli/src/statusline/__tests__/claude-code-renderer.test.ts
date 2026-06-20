@@ -221,10 +221,10 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         executingQueens: 1,
       },
       memory: {
-        embeddings: { count: 290, source: 'agentdb', observedAt: new Date().toISOString() },
-        memories: { count: 41_100, source: 'agentdb', observedAt: new Date().toISOString() },
+        embeddings: { count: 290, source: 'hivememory', observedAt: new Date().toISOString() },
+        memories: { count: 41_100, source: 'hivememory', observedAt: new Date().toISOString() },
         dbSizeBytes: 340_000,
-        sourceDescription: 'agentdb',
+        sourceDescription: 'hivememory',
       },
       tests: {
         suite: {

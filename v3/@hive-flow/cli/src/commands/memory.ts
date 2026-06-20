@@ -1,6 +1,6 @@
 /**
  * V3 CLI Memory Command
- * Memory operations for AgentDB integration
+ * Memory operations for HiveMemory integration
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
@@ -10,9 +10,9 @@ import { callMCPTool, MCPClientError } from '../mcp-client.js';
 
 // Memory backends
 const BACKENDS = [
-  { value: 'agentdb', label: 'AgentDB', hint: 'Vector database with HNSW-indexed search' },
+  { value: 'hivememory', label: 'HiveMemory', hint: 'Vector database with HNSW-indexed search' },
   { value: 'sqlite', label: 'SQLite', hint: 'Lightweight local storage' },
-  { value: 'hybrid', label: 'Hybrid', hint: 'SQLite + AgentDB (recommended)' },
+  { value: 'hybrid', label: 'Hybrid', hint: 'SQLite + HiveMemory (recommended)' },
   { value: 'memory', label: 'In-Memory', hint: 'Fast but non-persistent' }
 ];
 
@@ -1204,7 +1204,7 @@ const initMemoryCommand: Command = {
     {
       name: 'backend',
       short: 'b',
-      description: 'Backend type: hybrid (default), sqlite, or agentdb',
+      description: 'Backend type: hybrid (default), sqlite, or hivememory',
       type: 'string',
       default: 'hybrid'
     },
@@ -1242,7 +1242,7 @@ const initMemoryCommand: Command = {
   ],
   examples: [
     { command: 'hive-flow memory init', description: 'Initialize hybrid backend with all features' },
-    { command: 'hive-flow memory init -b agentdb', description: 'Initialize AgentDB backend' },
+    { command: 'hive-flow memory init -b hivememory', description: 'Initialize HiveMemory backend' },
     { command: 'hive-flow memory init -p ./data/memory.db --force', description: 'Reinitialize at custom path' },
     { command: 'hive-flow memory init --verbose --verify', description: 'Initialize with full verification' }
   ],

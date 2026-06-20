@@ -63,8 +63,8 @@ export interface HooksConfig {
 export interface SkillsConfig {
   /** Include core skills (swarm, memory, sparc) */
   core: boolean;
-  /** Include AgentDB skills */
-  agentdb: boolean;
+  /** Include HiveMemory skills */
+  hivememory: boolean;
   /** Include GitHub integration skills */
   github: boolean;
   /** Include Flow Nexus skills */
@@ -176,7 +176,7 @@ export interface RuntimeConfig {
   /** Maximum agents */
   maxAgents: number;
   /** Memory backend */
-  memoryBackend: 'memory' | 'sqlite' | 'agentdb' | 'hybrid';
+  memoryBackend: 'memory' | 'sqlite' | 'hivememory' | 'hybrid';
   /** Enable HNSW indexing */
   enableHNSW: boolean;
   /** Enable neural learning */
@@ -336,7 +336,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
   },
   skills: {
     core: true,
-    agentdb: true,
+    hivememory: true,
     github: true,
     flowNexus: false,
     browser: true,
@@ -429,7 +429,7 @@ export const MINIMAL_INIT_OPTIONS: InitOptions = {
   },
   skills: {
     core: true,
-    agentdb: false,
+    hivememory: false,
     github: false,
     flowNexus: false,
     browser: false,
@@ -490,7 +490,7 @@ export const FULL_INIT_OPTIONS: InitOptions = {
   },
   skills: {
     core: true,
-    agentdb: true,
+    hivememory: true,
     github: true,
     flowNexus: true,
     browser: true,

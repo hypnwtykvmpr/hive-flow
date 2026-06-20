@@ -2,7 +2,7 @@
  * @hive-flow/testing - Memory Fixtures
  *
  * Comprehensive mock memory entries and backend configurations for testing.
- * Supports AgentDB, HNSW indexing, vector search, and ReasoningBank patterns.
+ * Supports HiveMemory, HNSW indexing, vector search, and ReasoningBank patterns.
  *
  * Based on ADR-006 (Unified Memory Service) and ADR-009 (Hybrid Memory Backend).
  */
@@ -16,7 +16,7 @@ export type MemoryType = 'short-term' | 'long-term' | 'semantic' | 'episodic' | 
 /**
  * Memory backend types
  */
-export type MemoryBackendType = 'sqlite' | 'agentdb' | 'hybrid' | 'redis' | 'memory';
+export type MemoryBackendType = 'sqlite' | 'hivememory' | 'hybrid' | 'redis' | 'memory';
 
 /**
  * Memory entry interface
@@ -267,7 +267,7 @@ export const memoryEntries: Record<string, MemoryEntry> = {
     metadata: {
       type: 'procedural',
       tags: ['index', 'hnsw', 'vector', 'search'],
-      source: 'agentdb',
+      source: 'hivememory',
     },
     createdAt: new Date('2024-01-01T00:00:00Z'),
     updatedAt: new Date('2024-01-15T00:00:00Z'),
@@ -480,8 +480,8 @@ export const quantizationConfigs: Record<string, QuantizationConfig> = {
  * Pre-defined memory backend configurations
  */
 export const memoryBackendConfigs: Record<string, MemoryBackendConfig> = {
-  agentDB: {
-    type: 'agentdb',
+  hiveMemory: {
+    type: 'hivememory',
     vectorDimensions: 384,
     hnswConfig: hnswConfigs.default,
     quantization: quantizationConfigs.scalar8bit,
@@ -607,7 +607,7 @@ export function createHNSWConfig(
  * Factory function to create memory backend config
  */
 export function createMemoryBackendConfig(
-  base: keyof typeof memoryBackendConfigs = 'agentDB',
+  base: keyof typeof memoryBackendConfigs = 'hiveMemory',
   overrides?: Partial<MemoryBackendConfig>
 ): MemoryBackendConfig {
   return {
@@ -724,9 +724,9 @@ export function createMockMemoryService(): MockMemoryService {
 }
 
 /**
- * Mock AgentDB interface
+ * Mock HiveMemory interface
  */
-export interface MockAgentDB {
+export interface MockHiveMemory {
   insert: Mock<(id: string, embedding: number[], metadata?: unknown) => Promise<void>>;
   search: Mock<(embedding: number[], k: number) => Promise<SearchResult[]>>;
   delete: Mock<(id: string) => Promise<void>>;
@@ -736,9 +736,9 @@ export interface MockAgentDB {
 }
 
 /**
- * Create a mock AgentDB instance
+ * Create a mock HiveMemory instance
  */
-export function createMockAgentDB(): MockAgentDB {
+export function createMockHiveMemory(): MockHiveMemory {
   return {
     insert: vi.fn().mockResolvedValue(undefined),
     search: vi.fn().mockResolvedValue([]),

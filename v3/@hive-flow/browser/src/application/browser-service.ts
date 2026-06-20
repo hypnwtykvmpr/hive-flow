@@ -1,6 +1,6 @@
 /**
  * @hive-flow/browser - Browser Service
- * Core application service integrating agent-browser with agentic-flow
+ * Core application service integrating agent-browser with hive-flow
  */
 
 import { AgentBrowserAdapter } from '../infrastructure/agent-browser-adapter.js';

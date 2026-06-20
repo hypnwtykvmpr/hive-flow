@@ -1,6 +1,5 @@
 /**
  * Token Optimizer Integration Tests
- * Validates agentic-flow Agent Booster integration
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -20,13 +19,11 @@ describe('TokenOptimizer', () => {
 
       const stats = newOptimizer.getStats();
       expect(stats).toBeDefined();
-      expect(typeof stats.agenticFlowAvailable).toBe('boolean');
     });
 
-    it('should detect agentic-flow availability', async () => {
+    it('should initialize with local accounting only', async () => {
       const stats = optimizer.getStats();
-      // agentic-flow is an optional peer dependency; availability depends on install state
-      expect(typeof stats.agenticFlowAvailable).toBe('boolean');
+      expect(stats.cacheHitRate).toBe('0%');
     });
   });
 
@@ -63,7 +60,7 @@ describe('TokenOptimizer', () => {
       expect(result).toHaveProperty('speedupFactor');
       expect(result).toHaveProperty('executionMs');
       expect(result).toHaveProperty('method');
-      expect(['agent-booster', 'traditional']).toContain(result.method);
+      expect(result.method).toBe('traditional');
     });
 
     it('should track edits optimized', async () => {
@@ -138,7 +135,6 @@ describe('TokenOptimizer', () => {
       expect(stats).toHaveProperty('cacheHits');
       expect(stats).toHaveProperty('cacheMisses');
       expect(stats).toHaveProperty('memoriesRetrieved');
-      expect(stats).toHaveProperty('agenticFlowAvailable');
       expect(stats).toHaveProperty('cacheHitRate');
       expect(stats).toHaveProperty('estimatedMonthlySavings');
     });

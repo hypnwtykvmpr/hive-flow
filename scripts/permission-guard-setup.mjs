@@ -308,7 +308,7 @@ function hasActiveOverride() {
 function hasSubagentIdentity(env = process.env) {
   return Boolean(
     env.CLAUDE_PARENT_AGENT_ID ||
-    env.AGENTIC_FLOW_AGENT_ID ||
+    env.HIVE_FLOW_AGENT_ID ||
     env.CLAUDE_AGENT_ID,
   );
 }

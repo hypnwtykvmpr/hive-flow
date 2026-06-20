@@ -77,12 +77,12 @@ describe('statusline R7 swarm session tag', () => {
     originalNoColor = process.env.NO_COLOR;
     originalForceColor = process.env.FORCE_COLOR;
     originalClaudeSession = process.env.CLAUDE_SESSION_ID;
-    originalAgenticSession = process.env.AGENTIC_FLOW_SESSION_ID;
+    originalAgenticSession = process.env.HIVE_FLOW_SESSION_ID;
     process.env.HIVE_FLOW_HOME = home;
     process.env.FORCE_COLOR = '0';
     process.env.NO_COLOR = '1';
     delete process.env.CLAUDE_SESSION_ID;
-    delete process.env.AGENTIC_FLOW_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
   });
 
   afterEach(() => {
@@ -96,8 +96,8 @@ describe('statusline R7 swarm session tag', () => {
     else process.env.FORCE_COLOR = originalForceColor;
     if (originalClaudeSession === undefined) delete process.env.CLAUDE_SESSION_ID;
     else process.env.CLAUDE_SESSION_ID = originalClaudeSession;
-    if (originalAgenticSession === undefined) delete process.env.AGENTIC_FLOW_SESSION_ID;
-    else process.env.AGENTIC_FLOW_SESSION_ID = originalAgenticSession;
+    if (originalAgenticSession === undefined) delete process.env.HIVE_FLOW_SESSION_ID;
+    else process.env.HIVE_FLOW_SESSION_ID = originalAgenticSession;
   });
 
   it('annotates active hives split between the current session and other sessions', async () => {

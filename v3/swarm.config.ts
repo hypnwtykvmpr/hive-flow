@@ -277,7 +277,7 @@ export const agentRoleMapping = {
     domain: 'core' as AgentDomain,
     responsibilities: [
       'Memory system unification',
-      'AgentDB integration (HNSW-indexed)',
+      'HiveMemory integration (HNSW-indexed)',
       'Hybrid backend implementation'
     ]
   },

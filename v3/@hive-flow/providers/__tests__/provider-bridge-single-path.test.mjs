@@ -68,7 +68,7 @@ function childEnv(root, extra = {}) {
     HOME: process.env.HOME ?? tmpdir(),
     TMPDIR: process.env.TMPDIR ?? tmpdir(),
     CLAUDE_PROJECT_DIR: root,
-    AGENTIC_FLOW_AGENT_ID: '',
+    HIVE_FLOW_AGENT_ID: '',
     CLAUDE_AGENT_ID: '',
     HIVE_FLOW_HIVE_ID: '',
     ...extra,

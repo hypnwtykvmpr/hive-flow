@@ -6,7 +6,7 @@
  *
  * This module provides:
  * - State interfaces for tracking active work
- * - Disk/AgentDB persistence for crash recovery
+ * - Disk/HiveMemory persistence for crash recovery
  * - State merging for conflict resolution
  *
  * @module gastown-bridge/gupp/state
@@ -28,9 +28,9 @@ import type { Convoy, Formula, ConvoyProgress, ConvoyStatus } from '../types.js'
 export const DEFAULT_STATE_PATH = '.gupp/state.json';
 
 /**
- * AgentDB namespace for GUPP state
+ * HiveMemory namespace for GUPP state
  */
-export const AGENTDB_NAMESPACE = 'gupp:state';
+export const HIVEMEMORY_NAMESPACE = 'gupp:state';
 
 // ============================================================================
 // Type Definitions
@@ -424,28 +424,28 @@ export async function deleteState(
 }
 
 // ============================================================================
-// State Persistence - AgentDB
+// State Persistence - HiveMemory
 // ============================================================================
 
 /**
- * AgentDB interface for state storage
+ * HiveMemory interface for state storage
  */
-export interface AgentDBInterface {
+export interface HiveMemoryInterface {
   store(namespace: string, key: string, value: unknown): Promise<void>;
   retrieve(namespace: string, key: string): Promise<unknown | null>;
   delete(namespace: string, key: string): Promise<void>;
 }
 
 /**
- * Save state to AgentDB
+ * Save state to HiveMemory
  *
  * @param state - State to save
- * @param agentDB - AgentDB interface
+ * @param hiveMemory - HiveMemory interface
  * @param key - Storage key (default: 'current')
  */
-export async function saveStateToAgentDB(
+export async function saveStateToHiveMemory(
   state: GuppState,
-  agentDB: AgentDBInterface,
+  hiveMemory: HiveMemoryInterface,
   key: string = 'current'
 ): Promise<void> {
   const stateToSave: GuppState = {
@@ -454,22 +454,22 @@ export async function saveStateToAgentDB(
     checksum: calculateChecksum(state),
   };
 
-  await agentDB.store(AGENTDB_NAMESPACE, key, stateToSave);
+  await hiveMemory.store(HIVEMEMORY_NAMESPACE, key, stateToSave);
 }
 
 /**
- * Load state from AgentDB
+ * Load state from HiveMemory
  *
- * @param agentDB - AgentDB interface
+ * @param hiveMemory - HiveMemory interface
  * @param key - Storage key (default: 'current')
  * @returns Loaded state or empty state if not found
  */
-export async function loadStateFromAgentDB(
-  agentDB: AgentDBInterface,
+export async function loadStateFromHiveMemory(
+  hiveMemory: HiveMemoryInterface,
   key: string = 'current'
 ): Promise<GuppState> {
   try {
-    const state = await agentDB.retrieve(AGENTDB_NAMESPACE, key);
+    const state = await hiveMemory.retrieve(HIVEMEMORY_NAMESPACE, key);
 
     if (!state) {
       return createEmptyState();
@@ -478,7 +478,7 @@ export async function loadStateFromAgentDB(
     const validated = GuppStateSchema.parse(state);
     return validated as GuppState;
   } catch (error) {
-    console.error('[GUPP] Failed to load state from AgentDB:', error);
+    console.error('[GUPP] Failed to load state from HiveMemory:', error);
     return createEmptyState();
   }
 }

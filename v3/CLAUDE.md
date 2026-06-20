@@ -15,7 +15,7 @@ This directory contains the V3 monorepo packages. Root CLAUDE.md rules apply her
 | `@hive-flow/cli` | `@hive-flow/cli/` | CLI entry point (26 commands, 140+ subcommands) |
 | `@hive-flow/guidance` | `@hive-flow/guidance/` | Governance control plane (compile, enforce, prove, evolve) |
 | `@hive-flow/hooks` | `@hive-flow/hooks/` | 17 hooks + 12 background workers |
-| `@hive-flow/memory` | `@hive-flow/memory/` | AgentDB + HNSW vector search |
+| `@hive-flow/memory` | `@hive-flow/memory/` | HiveMemory + HNSW vector search |
 | `@hive-flow/shared` | `@hive-flow/shared/` | Shared types and utilities |
 | `@hive-flow/security` | `@hive-flow/security/` | Input validation, path security, CVE remediation |
 

@@ -1,7 +1,7 @@
 ---
 name: memory-management
 description: >
-  AgentDB memory system with HNSW vector search. Provides fast HNSW-indexed pattern retrieval, persistent storage, and semantic search capabilities for learning and knowledge management.
+  HiveMemory memory system with HNSW vector search. Provides fast HNSW-indexed pattern retrieval, persistent storage, and semantic search capabilities for learning and knowledge management.
   Use when: need to store successful patterns, searching for similar solutions, semantic lookup of past work, learning from previous tasks, sharing knowledge between agents, building knowledge base.
   Skip when: no learning needed, ephemeral one-off tasks, external data sources available, read-only exploration.
 ---
@@ -9,7 +9,7 @@ description: >
 # Memory Management Skill
 
 ## Purpose
-AgentDB memory system with HNSW vector search. Provides fast HNSW-indexed pattern retrieval, persistent storage, and semantic search capabilities for learning and knowledge management.
+HiveMemory memory system with HNSW vector search. Provides fast HNSW-indexed pattern retrieval, persistent storage, and semantic search capabilities for learning and knowledge management.
 
 ## When to Trigger
 - need to store successful patterns

@@ -230,7 +230,7 @@ function getHookAgentId(input) {
 
 // Per-agent state isolation (WP-60)
 function getAgentId(input = null) {
-  return sanitizeScopeId(process.env.AGENTIC_FLOW_AGENT_ID || '')
+  return sanitizeScopeId(process.env.HIVE_FLOW_AGENT_ID || '')
     || getHookAgentId(input)
     || sanitizeScopeId(process.env.CLAUDE_AGENT_ID || '')
     || null;
@@ -713,7 +713,7 @@ function resolveSessionScopeId(input = null) {
     || input?.sessionId
     || process.env.CLAUDE_SESSION_ID
     || process.env.HIVE_FLOW_SESSION_ID
-    || process.env.AGENTIC_FLOW_SESSION_ID
+    || process.env.HIVE_FLOW_SESSION_ID
     || '';
   return sanitizeScopeId(raw || '');
 }

@@ -52,9 +52,9 @@ const FEATURE_FLAG_DEFINITIONS: Record<keyof FeatureFlags, FeatureFlagInfo> = {
     performanceImpact: 'none',
     dependencies: [],
   },
-  enableAgentDB: {
-    name: 'enableAgentDB',
-    description: 'Enable AgentDB vector search with HNSW indexing',
+  enableHiveMemory: {
+    name: 'enableHiveMemory',
+    description: 'Enable HiveMemory vector search with HNSW indexing',
     defaultValue: true,
     experimental: false,
     performanceImpact: 'low',
@@ -74,7 +74,7 @@ const FEATURE_FLAG_DEFINITIONS: Record<keyof FeatureFlags, FeatureFlagInfo> = {
     defaultValue: true,
     experimental: false,
     performanceImpact: 'medium',
-    dependencies: ['enableAgentDB'],
+    dependencies: ['enableHiveMemory'],
     minSDKVersion: '2.0.0',
   },
   enableIntelligenceBridge: {
@@ -357,7 +357,7 @@ export class FeatureFlagManager extends EventEmitter {
       minimal: {
         enableSONA: false,
         enableFlashAttention: true,
-        enableAgentDB: true,
+        enableHiveMemory: true,
         enableTrajectoryTracking: false,
         enableGNN: false,
         enableIntelligenceBridge: false,
@@ -368,7 +368,7 @@ export class FeatureFlagManager extends EventEmitter {
       standard: {
         enableSONA: true,
         enableFlashAttention: true,
-        enableAgentDB: true,
+        enableHiveMemory: true,
         enableTrajectoryTracking: true,
         enableGNN: true,
         enableIntelligenceBridge: true,
@@ -379,7 +379,7 @@ export class FeatureFlagManager extends EventEmitter {
       full: {
         enableSONA: true,
         enableFlashAttention: true,
-        enableAgentDB: true,
+        enableHiveMemory: true,
         enableTrajectoryTracking: true,
         enableGNN: true,
         enableIntelligenceBridge: true,
@@ -390,7 +390,7 @@ export class FeatureFlagManager extends EventEmitter {
       experimental: {
         enableSONA: true,
         enableFlashAttention: true,
-        enableAgentDB: true,
+        enableHiveMemory: true,
         enableTrajectoryTracking: true,
         enableGNN: true,
         enableIntelligenceBridge: true,

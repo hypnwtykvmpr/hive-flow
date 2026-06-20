@@ -102,7 +102,7 @@ function runBridgeTool({ projectRoot, hiveHome, toolName, toolArgs }) {
       // under projectRoot. The bridge must honor HIVE_FLOW_HOME instead.
       CLAUDE_PROJECT_DIR: projectRoot,
       HIVE_FLOW_PROJECT_ROOT: projectRoot,
-      AGENTIC_FLOW_AGENT_ID: '',
+      HIVE_FLOW_AGENT_ID: '',
       CLAUDE_AGENT_ID: '',
       HIVE_FLOW_HIVE_ID: '',
     },
@@ -281,7 +281,7 @@ describe('provider bridge reads enforcement state from HIVE_FLOW_HOME (external-
         HIVE_FLOW_HOME: hiveHome,
         CLAUDE_PROJECT_DIR: projectRoot,
         HIVE_FLOW_PROJECT_ROOT: projectRoot,
-        AGENTIC_FLOW_AGENT_ID: 'agent-x',
+        HIVE_FLOW_AGENT_ID: 'agent-x',
         CLAUDE_AGENT_ID: 'agent-x',
         HIVE_FLOW_HIVE_ID: '',
       },

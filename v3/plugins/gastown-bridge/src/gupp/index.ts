@@ -45,9 +45,9 @@ export {
   saveState,
   loadState,
   deleteState,
-  // AgentDB persistence
-  saveStateToAgentDB,
-  loadStateFromAgentDB,
+  // HiveMemory persistence
+  saveStateToHiveMemory,
+  loadStateFromHiveMemory,
   // State merging
   mergeStates,
   // State utilities
@@ -58,7 +58,7 @@ export {
   endSession,
   // Constants
   DEFAULT_STATE_PATH,
-  AGENTDB_NAMESPACE,
+  HIVEMEMORY_NAMESPACE,
   // Schemas
   GuppStateSchema,
   HookedWorkItemSchema,
@@ -70,5 +70,5 @@ export {
   type SessionInfo,
   type WorkItemStatus,
   type MergeStrategy,
-  type AgentDBInterface,
+  type HiveMemoryInterface,
 } from './state.js';

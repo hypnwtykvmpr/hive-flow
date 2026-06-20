@@ -3,7 +3,7 @@ name: worker-integration
 description: Worker-Agent integration for intelligent task dispatch and performance tracking
 version: 1.0.0
 invocable: true
-author: agentic-flow
+author: hive-flow
 capabilities:
   - agent_selection
   - performance_tracking
@@ -19,14 +19,14 @@ Intelligent coordination between background workers and specialized agents.
 
 ```bash
 # View agent recommendations for a trigger
-npx agentic-flow workers agents ultralearn
-npx agentic-flow workers agents optimize
+hive-flow workers agents ultralearn
+hive-flow workers agents optimize
 
 # View performance metrics
-npx agentic-flow workers metrics
+hive-flow workers metrics
 
 # View integration stats
-npx agentic-flow workers stats --integration
+hive-flow workers stats --integration
 ```
 
 ## Agent Mappings
@@ -101,7 +101,7 @@ Agents are monitored against performance thresholds:
 Workers provide feedback for continuous improvement:
 
 ```typescript
-import { workerAgentIntegration } from 'agentic-flow/workers/worker-agent-integration';
+import { workerAgentIntegration } from 'hive-flow/workers/worker-agent-integration';
 
 // Record execution feedback
 workerAgentIntegration.recordFeedback(
@@ -119,7 +119,7 @@ const { compliant, violations } = workerAgentIntegration.checkBenchmarkComplianc
 ## Integration Statistics
 
 ```bash
-$ npx agentic-flow workers stats --integration
+$ hive-flow workers stats --integration
 
 Worker-Agent Integration Stats
 ══════════════════════════════

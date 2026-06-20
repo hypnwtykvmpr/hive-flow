@@ -7,8 +7,8 @@
 
 ### Core Embedding
 - **Multiple Providers** - Agentic-Flow (ONNX), OpenAI, Transformers.js, and Mock
-- **Auto-Install** - Automatically installs agentic-flow when using `provider: 'auto'`
-- **Smart Fallback** - Graceful fallback chain: agentic-flow → transformers → mock
+- **Auto-Install** - Automatically installs hive-flow when using `provider: 'auto'`
+- **Smart Fallback** - Graceful fallback chain: hive-flow → transformers → mock
 - **LRU + Disk Caching** - In-memory LRU + SQLite persistent cache with TTL
 - **Batch Processing** - Efficient batch embedding with partial cache hits
 - **Similarity Functions** - Cosine, Euclidean, and dot product metrics
@@ -73,8 +73,8 @@ hive-flow embeddings batch documents.txt -o embeddings.json
 # Similarity search
 hive-flow embeddings search "query" --index ./vectors
 
-# Initialize agentic-flow model
-hive-flow embeddings init --provider agentic-flow
+# Initialize hive-flow model
+hive-flow embeddings init --provider hive-flow
 ```
 
 ## API Reference
@@ -97,8 +97,8 @@ const service = createEmbeddingService({
 
 // Async: Auto-select best provider with fallback
 const autoService = await createEmbeddingServiceAsync({
-  provider: 'auto',       // agentic-flow → transformers → mock
-  autoInstall: true,      // Install agentic-flow if missing
+  provider: 'auto',       // hive-flow → transformers → mock
+  autoInstall: true,      // Install hive-flow if missing
   fallback: 'transformers', // Custom fallback
 });
 
@@ -131,10 +131,10 @@ console.log('Tokens used:', result.usage?.totalTokens);
 ### Historical Agentic-Flow Provider Alias
 
 ```typescript
-import { AgenticFlowEmbeddingService } from '@hive-flow/embeddings';
+import { HiveFlowEmbeddingService } from '@hive-flow/embeddings';
 
-const service = new AgenticFlowEmbeddingService({
-  provider: 'agentic-flow',
+const service = new HiveFlowEmbeddingService({
+  provider: 'hive-flow',
   cacheSize: 256,
 });
 
@@ -143,7 +143,7 @@ console.log(`Local deterministic embedding in ${result.latencyMs}ms`);
 ```
 
 The provider name is retained for config compatibility, but no external
-`agentic-flow` package is installed or imported.
+`hive-flow` package is installed or imported.
 
 ### Transformers.js Provider (Local)
 
@@ -316,7 +316,7 @@ import type {
   EmbeddingConfig,
   OpenAIEmbeddingConfig,
   TransformersEmbeddingConfig,
-  AgenticFlowEmbeddingConfig,
+  HiveFlowEmbeddingConfig,
   MockEmbeddingConfig,
   AutoEmbeddingConfig,
 

@@ -19,7 +19,7 @@
 /**
  * Supported embedding providers
  */
-export type EmbeddingProvider = 'openai' | 'transformers' | 'mock' | 'agentic-flow' | 'rvf';
+export type EmbeddingProvider = 'openai' | 'transformers' | 'mock' | 'rvf';
 
 /**
  * Normalization type for embeddings
@@ -118,31 +118,6 @@ export interface MockEmbeddingConfig extends EmbeddingBaseConfig {
 }
 
 /**
- * Historical agentic-flow provider configuration.
- *
- * The provider name is retained for config compatibility, but it is backed by
- * local deterministic embeddings and never imports the external package.
- */
-export interface AgenticFlowEmbeddingConfig extends EmbeddingBaseConfig {
-  provider: 'agentic-flow';
-
-  /** Model ID (default: all-MiniLM-L6-v2) */
-  modelId?: string;
-
-  /** Embedding dimensions (default: 384) */
-  dimensions?: number;
-
-  /** Internal cache size for embedder (default: 256) */
-  embedderCacheSize?: number;
-
-  /** Model directory path */
-  modelDir?: string;
-
-  /** Auto-download model if not present */
-  autoDownload?: boolean;
-}
-
-/**
  * RVF provider configuration
  * Lightweight hash-based embeddings (no neural model, sub-ms latency)
  */
@@ -166,7 +141,6 @@ export type EmbeddingConfig =
   | OpenAIEmbeddingConfig
   | TransformersEmbeddingConfig
   | MockEmbeddingConfig
-  | AgenticFlowEmbeddingConfig
   | RvfEmbeddingConfig;
 
 // ============================================================================

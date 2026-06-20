@@ -67,7 +67,7 @@ ZYSgT8UURlLqP06Iq5eAxcQoDw==
 
 const previousEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
-  AGENTIC_FLOW_AGENT_ID: process.env.AGENTIC_FLOW_AGENT_ID,
+  HIVE_FLOW_AGENT_ID: process.env.HIVE_FLOW_AGENT_ID,
   CLAUDE_AGENT_ID: process.env.CLAUDE_AGENT_ID,
   HIVE_FLOW_HIVE_ID: process.env.HIVE_FLOW_HIVE_ID,
 };
@@ -126,7 +126,7 @@ async function importBridgeForRoot(root) {
   const uncaughtExceptionListeners = process.listeners('uncaughtException');
   process.chdir(root);
   process.env.CLAUDE_PROJECT_DIR = root;
-  process.env.AGENTIC_FLOW_AGENT_ID = '';
+  process.env.HIVE_FLOW_AGENT_ID = '';
   process.env.CLAUDE_AGENT_ID = '';
   process.env.HIVE_FLOW_HIVE_ID = '';
   try {

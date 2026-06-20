@@ -93,7 +93,7 @@ Quality Engineering Domain
 │ Domain (V3)   │          │ Domain (V3)   │          │ Domain (V3)   │
 ├───────────────┤          ├───────────────┤          ├───────────────┤
 │ Conformist    │          │ Shared Kernel │          │ Shared Kernel │
-│ (Security     │          │ (AgentDB/HNSW │          │ (Hive Mind    │
+│ (Security     │          │ (HiveMemory/HNSW │          │ (Hive Mind    │
 │  compliance   │          │  memory       │          │  consensus)   │
 │  uses V3)     │          │  sharing)     │          │               │
 └───────────────┘          └───────────────┘          └───────────────┘

@@ -24,7 +24,7 @@ describe('statusline recorders/memory', () => {
     rmSync(projectRoot, { recursive: true, force: true });
   });
 
-  it('materializes agentdb memory stats in the MemorySummary schema consumed by parser and probe', async () => {
+  it('materializes hivememory memory stats in the MemorySummary schema consumed by parser and probe', async () => {
     const dbPath = join(projectRoot, '.swarm', 'memory.db');
     await createMemoryDb(dbPath);
 
@@ -34,16 +34,16 @@ describe('statusline recorders/memory', () => {
     });
 
     expect(summary).toMatchObject<MemorySummary>({
-      sourceDescription: 'agentdb',
+      sourceDescription: 'hivememory',
       dbSizeBytes: statSync(dbPath).size,
       memories: {
         count: 2,
-        source: 'agentdb',
+        source: 'hivememory',
         observedAt: '2026-06-02T12:00:00.000Z',
       },
       embeddings: {
         count: 1,
-        source: 'agentdb',
+        source: 'hivememory',
         observedAt: '2026-06-02T12:00:00.000Z',
       },
     });
@@ -60,10 +60,10 @@ describe('statusline recorders/memory', () => {
       now: Date.parse('2026-06-02T12:00:00.000Z'),
     });
     expect(snapshot.memory).toEqual(summary);
-    expect(snapshot.sources.memory?.reason).toBe('agentdb');
+    expect(snapshot.sources.memory?.reason).toBe('hivememory');
   });
 
-  it('omits stats when no real agentdb memory database exists', async () => {
+  it('omits stats when no real hivememory memory database exists', async () => {
     const summary = await updateMemoryStats(projectRoot);
 
     expect(summary).toBeUndefined();
@@ -81,7 +81,7 @@ describe('statusline recorders/memory', () => {
     });
 
     expect(summary).toEqual<MemorySummary>({
-      sourceDescription: 'agentdb',
+      sourceDescription: 'hivememory',
       dbSizeBytes: statSync(dbPath).size,
     });
     const parsed = parseMemorySummary(

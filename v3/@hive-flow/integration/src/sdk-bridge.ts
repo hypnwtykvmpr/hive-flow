@@ -1,9 +1,8 @@
 /**
- * SDK Bridge for agentic-flow API Compatibility
+ * SDK Bridge for Hive Flow API Compatibility
  *
- * Provides API compatibility layer between hive-flow v3 and
- * agentic-flow@alpha, handling version negotiation, feature
- * detection, and fallback behavior.
+ * Provides local API compatibility checks, feature detection, and fallback
+ * behavior for Hive Flow integration components.
  *
  * Key Responsibilities:
  * - Version negotiation and compatibility checking
@@ -16,7 +15,6 @@
  */
 
 import { EventEmitter } from 'events';
-import { loadAgenticFlow } from './agentic-flow-loader.js';
 import type {
   SDKBridgeConfig,
   SDKVersion,
@@ -29,7 +27,7 @@ import type {
 const FEATURE_MATRIX: Record<string, { minVersion: string; optional: boolean }> = {
   'sona-learning': { minVersion: '2.0.0', optional: false },
   'flash-attention': { minVersion: '2.0.0', optional: false },
-  'agentdb-hnsw': { minVersion: '2.0.0', optional: false },
+  'hivememory-hnsw': { minVersion: '2.0.0', optional: false },
   'gnn-refinement': { minVersion: '2.0.0', optional: true },
   'trajectory-tracking': { minVersion: '2.0.0', optional: false },
   'intelligence-bridge': { minVersion: '2.0.1', optional: false },
@@ -51,10 +49,10 @@ const DEPRECATED_API_MAP: Record<string, {
     replacement: 'HybridReasoningBank.initialize',
     since: '2.0.0',
   },
-  'AgentDB.store': {
-    replacement: 'AgentDBFast.store',
+  'MemoryStore.store': {
+    replacement: 'HiveMemory.store',
     since: '2.0.0',
-    transformer: (args) => args, // Same signature
+    transformer: (args) => args,
   },
   'computeEmbedding': {
     replacement: 'EmbeddingService.compute',
@@ -66,7 +64,7 @@ const DEPRECATED_API_MAP: Record<string, {
  * SDKBridge - API Compatibility Layer
  *
  * This bridge handles version compatibility, feature detection,
- * and API translation between hive-flow and agentic-flow.
+ * and API translation inside Hive Flow.
  */
 export class SDKBridge extends EventEmitter {
   private config: SDKBridgeConfig;
@@ -254,7 +252,7 @@ export class SDKBridge extends EventEmitter {
         optional: [],
       },
       'search': {
-        required: ['agentdb-hnsw'],
+        required: ['hivememory-hnsw'],
         optional: ['gnn-refinement'],
       },
       'coordination': {
@@ -335,16 +333,6 @@ export class SDKBridge extends EventEmitter {
   }
 
   private async detectVersion(): Promise<SDKVersion> {
-    // Detect agentic-flow version dynamically
-    try {
-      const af = await loadAgenticFlow();
-      const version = (af as Record<string, unknown>)?.['VERSION'] as string | undefined;
-      if (version) {
-        return this.parseVersion(version);
-      }
-    } catch {
-      // agentic-flow not available, use fallback version
-    }
     return this.parseVersion('2.0.1-alpha.50');
   }
 

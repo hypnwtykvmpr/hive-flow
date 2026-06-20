@@ -59,15 +59,15 @@ async function evaluateWithLog(
 }
 
 async function evaluateAsSubagent(input: HookInput): Promise<GateRun> {
-  const previousAgentId = process.env.AGENTIC_FLOW_AGENT_ID;
-  process.env.AGENTIC_FLOW_AGENT_ID = 'worker-checkout';
+  const previousAgentId = process.env.HIVE_FLOW_AGENT_ID;
+  process.env.HIVE_FLOW_AGENT_ID = 'worker-checkout';
   try {
     return await evaluateWithLog(input);
   } finally {
     if (previousAgentId === undefined) {
-      delete process.env.AGENTIC_FLOW_AGENT_ID;
+      delete process.env.HIVE_FLOW_AGENT_ID;
     } else {
-      process.env.AGENTIC_FLOW_AGENT_ID = previousAgentId;
+      process.env.HIVE_FLOW_AGENT_ID = previousAgentId;
     }
   }
 }

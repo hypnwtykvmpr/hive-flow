@@ -1,7 +1,7 @@
 /**
  * V3 Hive-Flow Memory Entry Fixtures
  *
- * Test data for memory and AgentDB testing
+ * Test data for memory and HiveMemory testing
  * Following London School principle of explicit test data
  */
 
@@ -299,9 +299,9 @@ export const invalidMemoryEntries = {
 };
 
 /**
- * AgentDB specific test data
+ * HiveMemory specific test data
  */
-export const agentDBTestData = {
+export const hiveMemoryTestData = {
   // HNSW index configuration
   hnswConfig: {
     M: 16,

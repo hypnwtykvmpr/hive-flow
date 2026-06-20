@@ -9,7 +9,7 @@
  * ─────────────────────────────────────────────────────
  * 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ 1.0x → Flash Attention optimization
  * 🤖 Swarm  ◉ [58/15]  👥 0    🟢 CVE 3/3    💾 22282MB    📂  47%    🧠  10%
- * 🔧 Architecture    DDD ● 98%  │  Security ●CLEAN  │  Memory ●AgentDB  │  Integration ●
+ * 🔧 Architecture    DDD ● 98%  │  Security ●CLEAN  │  Memory ●HiveMemory  │  Integration ●
  */
 
 import type {
@@ -227,7 +227,7 @@ export class StatuslineGenerator {
       `${c.brightPurple}🔧 Architecture${c.reset}    ` +
       `${c.cyan}DDD${c.reset} ${dddColor}●${dddDisplay}%${c.reset}  ${c.dim}│${c.reset}  ` +
       `${c.cyan}Security${c.reset} ${securityColor}●${data.security.status}${c.reset}  ${c.dim}│${c.reset}  ` +
-      `${c.cyan}Memory${c.reset} ${c.brightGreen}●AgentDB${c.reset}  ${c.dim}│${c.reset}  ` +
+      `${c.cyan}Memory${c.reset} ${c.brightGreen}●HiveMemory${c.reset}  ${c.dim}│${c.reset}  ` +
       `${c.cyan}Integration${c.reset} ${integrationColor}●${c.reset}`
     );
 
@@ -362,7 +362,7 @@ export class StatuslineGenerator {
       `${c.brightPurple}🔧 Architecture${c.reset}    ` +
       `${c.cyan}DDD${c.reset} ${dddColor}●${dddDisplay}%${c.reset}  ${c.dim}│${c.reset}  ` +
       `${c.cyan}Security${c.reset} ${securityColor}●${data.security.status}${c.reset}  ${c.dim}│${c.reset}  ` +
-      `${c.cyan}Memory${c.reset} ${c.brightGreen}●AgentDB${c.reset}  ${c.dim}│${c.reset}  ` +
+      `${c.cyan}Memory${c.reset} ${c.brightGreen}●HiveMemory${c.reset}  ${c.dim}│${c.reset}  ` +
       `${c.cyan}Integration${c.reset} ${integrationColor}●${c.reset}`
     );
 
@@ -465,7 +465,7 @@ export class StatuslineGenerator {
 
     try {
       const ps = execSync('ps aux 2>/dev/null || echo ""', { encoding: 'utf-8' });
-      const agenticCount = (ps.match(/agentic-flow/g) || []).length;
+      const agenticCount = (ps.match(/hive-flow/g) || []).length;
       const mcpCount = (ps.match(/mcp.*start/g) || []).length;
 
       if (agenticCount > 0 || mcpCount > 0) {

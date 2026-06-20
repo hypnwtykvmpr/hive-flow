@@ -78,9 +78,9 @@ describe('statusline golden render from materialized producer files', () => {
       },
     });
     writeJson(paths.memoryStats, {
-      sourceDescription: 'agentdb',
-      embeddings: { count: 12, source: 'agentdb', observedAt },
-      memories: { count: 34, source: 'agentdb', observedAt },
+      sourceDescription: 'hivememory',
+      embeddings: { count: 12, source: 'hivememory', observedAt },
+      memories: { count: 34, source: 'hivememory', observedAt },
       dbSizeBytes: 8192,
     });
     writeJson(paths.testsCurrent, {

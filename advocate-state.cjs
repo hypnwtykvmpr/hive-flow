@@ -435,7 +435,7 @@ if (require.main === module) {
         throw new Error('Missing newState argument');
       }
       
-      const agentId = process.env.AGENTIC_FLOW_AGENT_ID || 
+      const agentId = process.env.HIVE_FLOW_AGENT_ID ||
                      process.env.CLAUDE_SESSION_ID || 
                      process.env.CLAUDE_AGENT_ID || '';
       

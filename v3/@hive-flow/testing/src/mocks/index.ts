@@ -6,7 +6,7 @@
 
 // Mock services
 export {
-  MockAgentDB,
+  MockHiveMemory,
   MockSwarmCoordinator,
   MockSwarmAgent,
   MockMemoryService,

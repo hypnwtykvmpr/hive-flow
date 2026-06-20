@@ -3,7 +3,7 @@ import { assertSubagentIdentityMarker, hasSubagentIdentityMarker } from '../suba
 
 describe('subagent marker invariant', () => {
   it('accepts every hook-derived subagent marker', () => {
-    for (const marker of ['AGENTIC_FLOW_AGENT_ID', 'CLAUDE_AGENT_ID', 'CLAUDE_PARENT_AGENT_ID'] as const) {
+    for (const marker of ['HIVE_FLOW_AGENT_ID', 'CLAUDE_AGENT_ID', 'CLAUDE_PARENT_AGENT_ID'] as const) {
       expect(hasSubagentIdentityMarker({ [marker]: 'worker-1' }), marker).toBe(true);
     }
   });

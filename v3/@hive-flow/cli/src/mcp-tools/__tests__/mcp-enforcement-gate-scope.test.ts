@@ -83,19 +83,19 @@ beforeEach(() => {
   originalHiveFlowHome = process.env.HIVE_FLOW_HOME;
   originalHiveFlowProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT;
   originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
-  originalAgentId = process.env.AGENTIC_FLOW_AGENT_ID;
+  originalAgentId = process.env.HIVE_FLOW_AGENT_ID;
   originalCcAgentId = process.env.CLAUDE_AGENT_ID;
   originalHiveId = process.env.HIVE_FLOW_HIVE_ID;
   originalSessionId = process.env.CLAUDE_SESSION_ID;
   originalHfSessionId = process.env.HIVE_FLOW_SESSION_ID;
-  originalAfSessionId = process.env.AGENTIC_FLOW_SESSION_ID;
+  originalAfSessionId = process.env.HIVE_FLOW_SESSION_ID;
   // Default: clear scope-id env so only the project + global scopes apply.
-  delete process.env.AGENTIC_FLOW_AGENT_ID;
+  delete process.env.HIVE_FLOW_AGENT_ID;
   delete process.env.CLAUDE_AGENT_ID;
   delete process.env.HIVE_FLOW_HIVE_ID;
   delete process.env.CLAUDE_SESSION_ID;
   delete process.env.HIVE_FLOW_SESSION_ID;
-  delete process.env.AGENTIC_FLOW_SESSION_ID;
+  delete process.env.HIVE_FLOW_SESSION_ID;
 });
 
 function restore(name: string, value: string | undefined): void {
@@ -107,12 +107,12 @@ afterEach(() => {
   restore('HIVE_FLOW_HOME', originalHiveFlowHome);
   restore('HIVE_FLOW_PROJECT_ROOT', originalHiveFlowProjectRoot);
   restore('CLAUDE_PROJECT_DIR', originalProjectDir);
-  restore('AGENTIC_FLOW_AGENT_ID', originalAgentId);
+  restore('HIVE_FLOW_AGENT_ID', originalAgentId);
   restore('CLAUDE_AGENT_ID', originalCcAgentId);
   restore('HIVE_FLOW_HIVE_ID', originalHiveId);
   restore('CLAUDE_SESSION_ID', originalSessionId);
   restore('HIVE_FLOW_SESSION_ID', originalHfSessionId);
-  restore('AGENTIC_FLOW_SESSION_ID', originalAfSessionId);
+  restore('HIVE_FLOW_SESSION_ID', originalAfSessionId);
 
   while (createdRoots.length > 0) {
     const root = createdRoots.pop()!;
@@ -308,7 +308,7 @@ describe('getEnforcementLevel — scope-aware (security regression)', () => {
   it('agent scope HALT(3) at correct hiveHome path -> 3', () => {
     const sb = makeSandbox();
     writeGlobalState(sb, 0);
-    process.env.AGENTIC_FLOW_AGENT_ID = 'agent-xyz789';
+    process.env.HIVE_FLOW_AGENT_ID = 'agent-xyz789';
     writeScopeState(sb, 'agents', 'agent-xyz789', 3);
     expect(getEnforcementLevel()).toBe(3);
   });

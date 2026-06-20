@@ -1,24 +1,24 @@
 ---
 name: "V3 Deep Integration"
-description: "Deep agentic-flow@alpha integration implementing ADR-001. Eliminates 10,000+ duplicate lines by building hive-flow as specialized extension rather than parallel implementation."
+description: "Deep hive-flow integration implementing ADR-001. Eliminates 10,000+ duplicate lines by building hive-flow as specialized extension rather than parallel implementation."
 ---
 
 # V3 Deep Integration
 
 ## What This Skill Does
 
-Transforms hive-flow from parallel implementation to specialized extension of agentic-flow@alpha, eliminating massive code duplication while achieving performance improvements and feature parity.
+Transforms hive-flow from parallel implementation to specialized extension of hive-flow, eliminating massive code duplication while achieving performance improvements and feature parity.
 
 ## Quick Start
 
 ```bash
 # Initialize deep integration
-Task("Integration architecture", "Design agentic-flow@alpha adapter layer", "v3-integration-architect")
+Task("Integration architecture", "Design hive-flow adapter layer", "v3-integration-architect")
 
 # Feature integration (parallel)
 Task("SONA integration", "Integrate 5 SONA learning modes", "v3-integration-architect")
 Task("Flash Attention", "Implement Flash Attention optimization", "v3-integration-architect")
-Task("AgentDB coordination", "Setup HNSW-indexed search", "v3-integration-architect")
+Task("HiveMemory coordination", "Setup HNSW-indexed search", "v3-integration-architect")
 ```
 
 ## Code Deduplication Strategy
@@ -26,7 +26,7 @@ Task("AgentDB coordination", "Setup HNSW-indexed search", "v3-integration-archit
 ### Current Overlap → Integration
 ```
 ┌─────────────────────────────────────────┐
-│  hive-flow          agentic-flow      │
+│  hive-flow          hive-flow      │
 ├─────────────────────────────────────────┤
 │ SwarmCoordinator  →   Swarm System      │ 80% overlap (eliminate)
 │ AgentManager      →   Agent Lifecycle   │ 70% overlap (eliminate)
@@ -37,7 +37,7 @@ Task("AgentDB coordination", "Setup HNSW-indexed search", "v3-integration-archit
 TARGET: <5,000 lines (vs 15,000+ currently)
 ```
 
-## agentic-flow@alpha Feature Integration
+## hive-flow Feature Integration
 
 ### SONA Learning Modes
 ```typescript
@@ -50,7 +50,7 @@ class SONAIntegration {
       case 'edge':        // resource-constrained
       case 'batch':       // high-throughput
     }
-    await this.agenticFlow.sona.setMode(mode);
+    await this.hiveFlow.sona.setMode(mode);
   }
 }
 ```
@@ -59,7 +59,7 @@ class SONAIntegration {
 ```typescript
 class FlashAttentionIntegration {
   async optimizeAttention(): Promise<AttentionResult> {
-    return this.agenticFlow.attention.flashAttention({
+    return this.hiveFlow.attention.flashAttention({
       speedupTarget: 'Flash Attention optimization',
       memoryReduction: '50-75%',
       mechanisms: ['multi-head', 'linear', 'local', 'global']
@@ -68,11 +68,11 @@ class FlashAttentionIntegration {
 }
 ```
 
-### AgentDB Coordination
+### HiveMemory Coordination
 ```typescript
-class AgentDBIntegration {
+class HiveMemoryIntegration {
   async setupCrossAgentMemory(): Promise<void> {
-    await this.agentdb.enableCrossAgentSharing({
+    await this.hivememory.enableCrossAgentSharing({
       indexType: 'HNSW',
       speedupTarget: 'HNSW-indexed',
       dimensions: 1536
@@ -86,11 +86,11 @@ class AgentDBIntegration {
 class MCPToolsIntegration {
   async integrateBuiltinTools(): Promise<void> {
     // Leverage 213 pre-built tools
-    const tools = await this.agenticFlow.mcp.getAvailableTools();
+    const tools = await this.hiveFlow.mcp.getAvailableTools();
     await this.registerHiveFlowSpecificTools(tools);
 
     // Use 19 hook types
-    const hookTypes = await this.agenticFlow.hooks.getTypes();
+    const hookTypes = await this.hiveFlow.hooks.getTypes();
     await this.configureHiveFlowHooks(hookTypes);
   }
 }
@@ -100,9 +100,9 @@ class MCPToolsIntegration {
 
 ### Phase 1: Adapter Layer
 ```typescript
-import { Agent as AgenticFlowAgent } from 'agentic-flow@alpha';
+import { Agent as HiveFlowAgent } from 'hive-flow';
 
-export class HiveFlowAgent extends AgenticFlowAgent {
+export class HiveFlowAgent extends HiveFlowAgent {
   async handleHiveFlowTask(task: ClaudeTask): Promise<TaskResult> {
     return this.executeWithSONA(task);
   }
@@ -118,23 +118,23 @@ export class HiveFlowAgent extends AgenticFlowAgent {
 ```typescript
 class SystemMigration {
   async migrateSwarmCoordination(): Promise<void> {
-    // Replace SwarmCoordinator (800+ lines) with agentic-flow Swarm
+    // Replace SwarmCoordinator (800+ lines) with hive-flow Swarm
     const swarmConfig = await this.extractSwarmConfig();
-    await this.agenticFlow.swarm.initialize(swarmConfig);
+    await this.hiveFlow.swarm.initialize(swarmConfig);
   }
 
   async migrateAgentManagement(): Promise<void> {
-    // Replace AgentManager (1,736+ lines) with agentic-flow lifecycle
+    // Replace AgentManager (1,736+ lines) with hive-flow lifecycle
     const agents = await this.extractActiveAgents();
     for (const agent of agents) {
-      await this.agenticFlow.agent.create(agent);
+      await this.hiveFlow.agent.create(agent);
     }
   }
 
   async migrateTaskExecution(): Promise<void> {
-    // Replace TaskScheduler with agentic-flow task graph
+    // Replace TaskScheduler with hive-flow task graph
     const tasks = await this.extractTasks();
-    await this.agenticFlow.task.executeGraph(this.buildTaskGraph(tasks));
+    await this.hiveFlow.task.executeGraph(this.buildTaskGraph(tasks));
   }
 }
 ```
@@ -164,7 +164,7 @@ class RLIntegration {
 
   async optimizeAgentBehavior(): Promise<void> {
     for (const algorithm of this.algorithms) {
-      await this.agenticFlow.rl.train(algorithm, {
+      await this.hiveFlow.rl.train(algorithm, {
         episodes: 1000,
         rewardFunction: this.hiveFlowRewardFunction
       });
@@ -181,16 +181,16 @@ const attentionBenchmark = {
   baseline: 'current attention mechanism',
   target: 'Flash Attention improvements',
   memoryReduction: '50-75%',
-  implementation: 'agentic-flow@alpha Flash Attention'
+  implementation: 'hive-flow Flash Attention'
 };
 ```
 
-### AgentDB Search Performance
+### HiveMemory Search Performance
 ```typescript
 const searchBenchmark = {
   baseline: 'linear search in current systems',
   target: 'HNSW-indexed via HNSW indexing',
-  implementation: 'agentic-flow@alpha AgentDB'
+  implementation: 'hive-flow HiveMemory'
 };
 ```
 
@@ -227,7 +227,7 @@ class BackwardCompatibility {
 
 - **Code Reduction**: <5,000 lines orchestration (vs 15,000+)
 - **Performance**: Flash Attention optimization
-- **Search**: HNSW-indexed AgentDB improvement
+- **Search**: HNSW-indexed HiveMemory improvement
 - **Memory**: 50-75% usage reduction
 - **Feature Parity**: 100% v2 functionality maintained
 - **SONA**: low-latency adaptation time

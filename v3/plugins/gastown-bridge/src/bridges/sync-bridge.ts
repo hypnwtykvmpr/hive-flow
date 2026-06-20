@@ -1,12 +1,12 @@
 /**
- * Beads-AgentDB Sync Bridge
+ * Beads-HiveMemory Sync Bridge
  *
  * Provides bidirectional synchronization between Beads (bd)
- * and AgentDB. Implements conflict resolution strategies
+ * and HiveMemory. Implements conflict resolution strategies
  * and maintains consistency between the two systems.
  *
  * Features:
- * - Bidirectional sync (Beads <-> AgentDB)
+ * - Bidirectional sync (Beads <-> HiveMemory)
  * - Conflict resolution strategies
  * - Incremental sync support
  * - Transaction-safe operations
@@ -27,8 +27,8 @@ import {
 // Performance Caches
 // ============================================================================
 
-/** Cache for AgentDB lookups during sync */
-const agentDBLookupCache = new LRUCache<string, AgentDBEntry | null>({
+/** Cache for HiveMemory lookups during sync */
+const hiveMemoryLookupCache = new LRUCache<string, HiveMemoryEntry | null>({
   maxEntries: 500,
   ttlMs: 30 * 1000, // 30 sec TTL
 });
@@ -66,7 +66,7 @@ function hashKey(parts: string[]): string {
  */
 const ConflictStrategySchema = z.enum([
   'beads-wins',      // Beads data takes precedence
-  'agentdb-wins',    // AgentDB data takes precedence
+  'hivememory-wins',    // HiveMemory data takes precedence
   'newest-wins',     // Most recent timestamp wins
   'merge',           // Attempt to merge fields
   'manual',          // Flag for manual resolution
@@ -76,8 +76,8 @@ const ConflictStrategySchema = z.enum([
  * Sync direction
  */
 const SyncDirectionSchema = z.enum([
-  'to-agentdb',      // Beads -> AgentDB
-  'from-agentdb',    // AgentDB -> Beads
+  'to-hivememory',      // Beads -> HiveMemory
+  'from-hivememory',    // HiveMemory -> Beads
   'bidirectional',   // Both directions
 ]);
 
@@ -93,9 +93,9 @@ const SyncStatusSchema = z.enum([
 ]);
 
 /**
- * AgentDB entry schema (compatible with hive-flow memory)
+ * HiveMemory entry schema (compatible with hive-flow memory)
  */
-const AgentDBEntrySchema = z.object({
+const HiveMemoryEntrySchema = z.object({
   key: z.string(),
   value: z.unknown(),
   namespace: z.string().optional(),
@@ -126,9 +126,9 @@ export type SyncDirection = z.infer<typeof SyncDirectionSchema>;
 export type SyncStatus = z.infer<typeof SyncStatusSchema>;
 
 /**
- * AgentDB entry type
+ * HiveMemory entry type
  */
-export type AgentDBEntry = z.infer<typeof AgentDBEntrySchema>;
+export type HiveMemoryEntry = z.infer<typeof HiveMemoryEntrySchema>;
 
 /**
  * Sync bridge configuration
@@ -140,10 +140,10 @@ export interface SyncBridgeConfig {
   beadsBridge?: BdBridgeConfig;
 
   /**
-   * AgentDB namespace for beads
+   * HiveMemory namespace for beads
    * Default: 'beads'
    */
-  agentdbNamespace?: string;
+  hivememoryNamespace?: string;
 
   /**
    * Conflict resolution strategy
@@ -192,9 +192,9 @@ export interface SyncResult {
 export interface SyncConflict {
   beadId: string;
   beadData: Bead;
-  agentdbData: AgentDBEntry;
+  hivememoryData: HiveMemoryEntry;
   conflictType: 'update' | 'delete' | 'create';
-  resolution?: 'beads' | 'agentdb' | 'merged' | 'pending';
+  resolution?: 'beads' | 'hivememory' | 'merged' | 'pending';
   resolvedAt?: string;
 }
 
@@ -204,19 +204,19 @@ export interface SyncConflict {
 export interface SyncState {
   lastSyncTime: string;
   lastBeadId?: string;
-  lastAgentDBKey?: string;
+  lastHiveMemoryKey?: string;
   pendingConflicts: string[];
   version: number;
 }
 
 /**
- * AgentDB interface (to be provided by hive-flow)
+ * HiveMemory interface (to be provided by hive-flow)
  */
-export interface IAgentDBService {
+export interface IHiveMemoryService {
   store(key: string, value: unknown, namespace?: string, metadata?: Record<string, unknown>): Promise<void>;
-  retrieve(key: string, namespace?: string): Promise<AgentDBEntry | null>;
-  search(query: string, namespace?: string, limit?: number): Promise<AgentDBEntry[]>;
-  list(namespace?: string, limit?: number, offset?: number): Promise<AgentDBEntry[]>;
+  retrieve(key: string, namespace?: string): Promise<HiveMemoryEntry | null>;
+  search(query: string, namespace?: string, limit?: number): Promise<HiveMemoryEntry[]>;
+  list(namespace?: string, limit?: number, offset?: number): Promise<HiveMemoryEntry[]>;
   delete(key: string, namespace?: string): Promise<void>;
   getNamespaceStats(namespace: string): Promise<{ count: number; lastUpdated?: string }>;
 }
@@ -242,7 +242,7 @@ export type SyncErrorCode =
   | 'NOT_INITIALIZED'
   | 'SYNC_FAILED'
   | 'CONFLICT_UNRESOLVED'
-  | 'AGENTDB_ERROR'
+  | 'HIVEMEMORY_ERROR'
   | 'BEADS_ERROR'
   | 'VALIDATION_ERROR'
   | 'TRANSACTION_FAILED';
@@ -278,29 +278,29 @@ const defaultLogger: SyncLogger = {
 // ============================================================================
 
 /**
- * Beads-AgentDB Sync Bridge
+ * Beads-HiveMemory Sync Bridge
  *
- * Provides bidirectional synchronization between Beads and AgentDB
+ * Provides bidirectional synchronization between Beads and HiveMemory
  * with configurable conflict resolution.
  *
  * @example
  * ```typescript
- * const syncBridge = new SyncBridge(agentDB, {
+ * const syncBridge = new SyncBridge(hiveMemory, {
  *   conflictStrategy: 'newest-wins',
- *   agentdbNamespace: 'conversation-beads',
+ *   hivememoryNamespace: 'conversation-beads',
  * });
  * await syncBridge.initialize();
  *
- * // Sync beads to AgentDB
- * const result = await syncBridge.syncToAgentDB(beads);
+ * // Sync beads to HiveMemory
+ * const result = await syncBridge.syncToHiveMemory(beads);
  *
- * // Sync from AgentDB back to beads
- * const beads = await syncBridge.syncFromAgentDB();
+ * // Sync from HiveMemory back to beads
+ * const beads = await syncBridge.syncFromHiveMemory();
  * ```
  */
 export class SyncBridge {
   private bdBridge: BdBridge;
-  private agentDB: IAgentDBService;
+  private hiveMemory: IHiveMemoryService;
   private config: Required<SyncBridgeConfig>;
   private logger: SyncLogger;
   private initialized = false;
@@ -308,14 +308,14 @@ export class SyncBridge {
   private conflicts: Map<string, SyncConflict> = new Map();
 
   constructor(
-    agentDB: IAgentDBService,
+    hiveMemory: IHiveMemoryService,
     config?: SyncBridgeConfig,
     logger?: SyncLogger
   ) {
-    this.agentDB = agentDB;
+    this.hiveMemory = hiveMemory;
     this.config = {
       beadsBridge: config?.beadsBridge ?? {},
-      agentdbNamespace: config?.agentdbNamespace ?? 'beads',
+      hivememoryNamespace: config?.hivememoryNamespace ?? 'beads',
       conflictStrategy: config?.conflictStrategy ?? 'newest-wins',
       batchSize: config?.batchSize ?? 100,
       preserveEmbeddings: config?.preserveEmbeddings ?? true,
@@ -342,10 +342,10 @@ export class SyncBridge {
     try {
       await this.bdBridge.initialize();
 
-      // Load sync state from AgentDB if exists
-      const savedState = await this.agentDB.retrieve(
+      // Load sync state from HiveMemory if exists
+      const savedState = await this.hiveMemory.retrieve(
         '_sync_state',
-        this.config.agentdbNamespace
+        this.config.hivememoryNamespace
       );
 
       if (savedState?.value) {
@@ -353,7 +353,7 @@ export class SyncBridge {
         this.syncState = {
           lastSyncTime: parsed.lastSyncTime ?? new Date(0).toISOString(),
           lastBeadId: parsed.lastBeadId,
-          lastAgentDBKey: parsed.lastAgentDBKey,
+          lastHiveMemoryKey: parsed.lastHiveMemoryKey,
           pendingConflicts: parsed.pendingConflicts ?? [],
           version: (parsed.version ?? 0) + 1,
         };
@@ -361,7 +361,7 @@ export class SyncBridge {
 
       this.initialized = true;
       this.logger.info('Sync bridge initialized', {
-        namespace: this.config.agentdbNamespace,
+        namespace: this.config.hivememoryNamespace,
         conflictStrategy: this.config.conflictStrategy,
         syncState: this.syncState,
       });
@@ -376,15 +376,15 @@ export class SyncBridge {
   }
 
   /**
-   * Sync beads to AgentDB
+   * Sync beads to HiveMemory
    */
-  async syncToAgentDB(beads: Bead[]): Promise<SyncResult> {
+  async syncToHiveMemory(beads: Bead[]): Promise<SyncResult> {
     this.ensureInitialized();
 
     const startTime = Date.now();
     const result: SyncResult = {
       success: true,
-      direction: 'to-agentdb',
+      direction: 'to-hivememory',
       synced: 0,
       created: 0,
       updated: 0,
@@ -395,7 +395,7 @@ export class SyncBridge {
       timestamp: new Date().toISOString(),
     };
 
-    this.logger.info(`Starting sync to AgentDB: ${beads.length} beads`);
+    this.logger.info(`Starting sync to HiveMemory: ${beads.length} beads`);
 
     // Process in batches with parallel lookups
     for (let i = 0; i < beads.length; i += this.config.batchSize) {
@@ -404,15 +404,15 @@ export class SyncBridge {
       // Parallel lookup for all beads in batch
       const lookupPromises = batch.map(async (bead) => {
         const key = this.beadToKey(bead);
-        const cacheKey = hashKey([key, this.config.agentdbNamespace]);
+        const cacheKey = hashKey([key, this.config.hivememoryNamespace]);
 
         // Check cache first
-        if (agentDBLookupCache.has(cacheKey)) {
-          return { bead, key, existing: agentDBLookupCache.get(cacheKey) };
+        if (hiveMemoryLookupCache.has(cacheKey)) {
+          return { bead, key, existing: hiveMemoryLookupCache.get(cacheKey) };
         }
 
-        const existing = await this.agentDB.retrieve(key, this.config.agentdbNamespace);
-        agentDBLookupCache.set(cacheKey, existing);
+        const existing = await this.hiveMemory.retrieve(key, this.config.hivememoryNamespace);
+        hiveMemoryLookupCache.set(cacheKey, existing);
         return { bead, key, existing };
       });
 
@@ -443,17 +443,17 @@ export class SyncBridge {
             result.created++;
           }
 
-          // Store bead in AgentDB
-          await this.agentDB.store(
+          // Store bead in HiveMemory
+          await this.hiveMemory.store(
             key,
-            this.beadToAgentDBValue(bead),
-            this.config.agentdbNamespace,
+            this.beadToHiveMemoryValue(bead),
+            this.config.hivememoryNamespace,
             this.buildMetadata(bead)
           );
 
           // Invalidate lookup cache for this key
-          const cacheKey = hashKey([key, this.config.agentdbNamespace]);
-          agentDBLookupCache.delete(cacheKey);
+          const cacheKey = hashKey([key, this.config.hivememoryNamespace]);
+          hiveMemoryLookupCache.delete(cacheKey);
 
           result.synced++;
         } catch (error) {
@@ -476,7 +476,7 @@ export class SyncBridge {
     result.durationMs = Date.now() - startTime;
     result.success = result.errors.length === 0 && result.conflicts === 0;
 
-    this.logger.info('Sync to AgentDB complete', {
+    this.logger.info('Sync to HiveMemory complete', {
       synced: result.synced,
       created: result.created,
       updated: result.updated,
@@ -489,24 +489,24 @@ export class SyncBridge {
   }
 
   /**
-   * Sync from AgentDB to Beads
+   * Sync from HiveMemory to Beads
    */
-  async syncFromAgentDB(): Promise<Bead[]> {
+  async syncFromHiveMemory(): Promise<Bead[]> {
     this.ensureInitialized();
 
     const startTime = Date.now();
     const beads: Bead[] = [];
 
-    this.logger.info('Starting sync from AgentDB');
+    this.logger.info('Starting sync from HiveMemory');
 
     try {
-      // Get all entries from AgentDB namespace
+      // Get all entries from HiveMemory namespace
       let offset = 0;
       let hasMore = true;
 
       while (hasMore) {
-        const entries = await this.agentDB.list(
-          this.config.agentdbNamespace,
+        const entries = await this.hiveMemory.list(
+          this.config.hivememoryNamespace,
           this.config.batchSize,
           offset
         );
@@ -521,12 +521,12 @@ export class SyncBridge {
           if (entry.key === '_sync_state') continue;
 
           try {
-            const bead = this.agentDBToBead(entry);
+            const bead = this.hiveMemoryToBead(entry);
             if (bead) {
               beads.push(bead);
             }
           } catch (error) {
-            this.logger.warn(`Failed to convert AgentDB entry to bead: ${entry.key}`, {
+            this.logger.warn(`Failed to convert HiveMemory entry to bead: ${entry.key}`, {
               error: error instanceof Error ? error.message : String(error),
             });
           }
@@ -541,7 +541,7 @@ export class SyncBridge {
       await this.saveSyncState();
 
       const durationMs = Date.now() - startTime;
-      this.logger.info('Sync from AgentDB complete', {
+      this.logger.info('Sync from HiveMemory complete', {
         beads: beads.length,
         durationMs,
       });
@@ -549,7 +549,7 @@ export class SyncBridge {
       return beads;
     } catch (error) {
       throw new SyncBridgeError(
-        'Failed to sync from AgentDB',
+        'Failed to sync from HiveMemory',
         'SYNC_FAILED',
         undefined,
         error as Error
@@ -561,26 +561,26 @@ export class SyncBridge {
    * Perform full bidirectional sync
    */
   async syncBidirectional(): Promise<{
-    toAgentDB: SyncResult;
-    fromAgentDB: Bead[];
+    toHiveMemory: SyncResult;
+    fromHiveMemory: Bead[];
   }> {
     this.ensureInitialized();
 
     this.logger.info('Starting bidirectional sync');
 
-    // First sync from beads to AgentDB
+    // First sync from beads to HiveMemory
     const allBeads = await this.bdBridge.listBeads({
       after: this.syncState.lastSyncTime,
     });
 
-    const toAgentDBResult = await this.syncToAgentDB(allBeads);
+    const toHiveMemoryResult = await this.syncToHiveMemory(allBeads);
 
-    // Then sync from AgentDB to beads
-    const fromAgentDBBeads = await this.syncFromAgentDB();
+    // Then sync from HiveMemory to beads
+    const fromHiveMemoryBeads = await this.syncFromHiveMemory();
 
     return {
-      toAgentDB: toAgentDBResult,
-      fromAgentDB: fromAgentDBBeads,
+      toHiveMemory: toHiveMemoryResult,
+      fromHiveMemory: fromHiveMemoryBeads,
     };
   }
 
@@ -598,7 +598,7 @@ export class SyncBridge {
    */
   async resolveConflictManually(
     beadId: string,
-    resolution: 'beads' | 'agentdb' | 'merged',
+    resolution: 'beads' | 'hivememory' | 'merged',
     mergedData?: Partial<Bead>
   ): Promise<void> {
     const conflict = this.conflicts.get(beadId);
@@ -613,16 +613,16 @@ export class SyncBridge {
 
     switch (resolution) {
       case 'beads':
-        await this.agentDB.store(
+        await this.hiveMemory.store(
           key,
-          this.beadToAgentDBValue(conflict.beadData),
-          this.config.agentdbNamespace,
+          this.beadToHiveMemoryValue(conflict.beadData),
+          this.config.hivememoryNamespace,
           this.buildMetadata(conflict.beadData)
         );
         break;
 
-      case 'agentdb':
-        // AgentDB data is already stored, nothing to do
+      case 'hivememory':
+        // HiveMemory data is already stored, nothing to do
         break;
 
       case 'merged':
@@ -633,10 +633,10 @@ export class SyncBridge {
           );
         }
         const merged = { ...conflict.beadData, ...mergedData };
-        await this.agentDB.store(
+        await this.hiveMemory.store(
           key,
-          this.beadToAgentDBValue(merged as Bead),
-          this.config.agentdbNamespace,
+          this.beadToHiveMemoryValue(merged as Bead),
+          this.config.hivememoryNamespace,
           this.buildMetadata(merged as Bead)
         );
         break;
@@ -666,17 +666,17 @@ export class SyncBridge {
    * Get sync statistics
    */
   async getSyncStats(): Promise<{
-    agentdbCount: number;
+    hivememoryCount: number;
     lastSyncTime: string;
     pendingConflicts: number;
     syncVersion: number;
   }> {
     this.ensureInitialized();
 
-    const stats = await this.agentDB.getNamespaceStats(this.config.agentdbNamespace);
+    const stats = await this.hiveMemory.getNamespaceStats(this.config.hivememoryNamespace);
 
     return {
-      agentdbCount: stats.count,
+      hivememoryCount: stats.count,
       lastSyncTime: this.syncState.lastSyncTime,
       pendingConflicts: this.syncState.pendingConflicts.length,
       syncVersion: this.syncState.version,
@@ -688,16 +688,16 @@ export class SyncBridge {
   // ============================================================================
 
   /**
-   * Convert bead to AgentDB key
+   * Convert bead to HiveMemory key
    */
   private beadToKey(bead: Bead): string {
     return `bead:${bead.id}`;
   }
 
   /**
-   * Convert bead to AgentDB value
+   * Convert bead to HiveMemory value
    */
-  private beadToAgentDBValue(bead: Bead): Record<string, unknown> {
+  private beadToHiveMemoryValue(bead: Bead): Record<string, unknown> {
     const value: Record<string, unknown> = {
       id: bead.id,
       type: bead.type,
@@ -722,7 +722,7 @@ export class SyncBridge {
   }
 
   /**
-   * Build metadata for AgentDB entry
+   * Build metadata for HiveMemory entry
    */
   private buildMetadata(bead: Bead): Record<string, unknown> {
     return {
@@ -735,9 +735,9 @@ export class SyncBridge {
   }
 
   /**
-   * Convert AgentDB entry to Bead
+   * Convert HiveMemory entry to Bead
    */
-  private agentDBToBead(entry: AgentDBEntry): Bead | null {
+  private hiveMemoryToBead(entry: HiveMemoryEntry): Bead | null {
     if (!entry.value || typeof entry.value !== 'object') {
       return null;
     }
@@ -765,9 +765,9 @@ export class SyncBridge {
   }
 
   /**
-   * Detect if there's a conflict between bead and AgentDB entry
+   * Detect if there's a conflict between bead and HiveMemory entry
    */
-  private async detectConflict(bead: Bead, entry: AgentDBEntry): Promise<boolean> {
+  private async detectConflict(bead: Bead, entry: HiveMemoryEntry): Promise<boolean> {
     if (!entry.value || typeof entry.value !== 'object') {
       return false;
     }
@@ -788,7 +788,7 @@ export class SyncBridge {
       return false;
     }
 
-    // If AgentDB is newer and content differs, conflict
+    // If HiveMemory is newer and content differs, conflict
     if (entryTime > beadTime && data.content !== bead.content) {
       return true;
     }
@@ -799,11 +799,11 @@ export class SyncBridge {
   /**
    * Resolve conflict based on strategy
    */
-  private async resolveConflict(bead: Bead, entry: AgentDBEntry): Promise<boolean> {
+  private async resolveConflict(bead: Bead, entry: HiveMemoryEntry): Promise<boolean> {
     const conflict: SyncConflict = {
       beadId: bead.id,
       beadData: bead,
-      agentdbData: entry,
+      hivememoryData: entry,
       conflictType: 'update',
     };
 
@@ -813,10 +813,10 @@ export class SyncBridge {
         this.conflicts.set(bead.id, conflict);
         return true;
 
-      case 'agentdb-wins':
-        conflict.resolution = 'agentdb';
+      case 'hivememory-wins':
+        conflict.resolution = 'hivememory';
         this.conflicts.set(bead.id, conflict);
-        return false; // Don't update AgentDB
+        return false; // Don't update HiveMemory
 
       case 'newest-wins': {
         const beadTime = bead.timestamp ? new Date(bead.timestamp).getTime() : 0;
@@ -827,7 +827,7 @@ export class SyncBridge {
           this.conflicts.set(bead.id, conflict);
           return true;
         } else {
-          conflict.resolution = 'agentdb';
+          conflict.resolution = 'hivememory';
           this.conflicts.set(bead.id, conflict);
           return false;
         }
@@ -863,14 +863,14 @@ export class SyncBridge {
   }
 
   /**
-   * Save sync state to AgentDB
+   * Save sync state to HiveMemory
    */
   private async saveSyncState(): Promise<void> {
     try {
-      await this.agentDB.store(
+      await this.hiveMemory.store(
         '_sync_state',
         this.syncState,
-        this.config.agentdbNamespace,
+        this.config.hivememoryNamespace,
         { type: 'sync-state' }
       );
     } catch (error) {
@@ -910,11 +910,11 @@ export class SyncBridge {
    * Get cache statistics for performance monitoring
    */
   getCacheStats(): {
-    agentDBLookupCache: { entries: number; sizeBytes: number };
+    hiveMemoryLookupCache: { entries: number; sizeBytes: number };
     conflictCache: { entries: number; sizeBytes: number };
   } {
     return {
-      agentDBLookupCache: agentDBLookupCache.stats(),
+      hiveMemoryLookupCache: hiveMemoryLookupCache.stats(),
       conflictCache: conflictCache.stats(),
     };
   }
@@ -923,7 +923,7 @@ export class SyncBridge {
    * Clear all sync caches
    */
   clearCaches(): void {
-    agentDBLookupCache.clear();
+    hiveMemoryLookupCache.clear();
     conflictCache.clear();
   }
 }
@@ -932,11 +932,11 @@ export class SyncBridge {
  * Create a new sync bridge instance
  */
 export function createSyncBridge(
-  agentDB: IAgentDBService,
+  hiveMemory: IHiveMemoryService,
   config?: SyncBridgeConfig,
   logger?: SyncLogger
 ): SyncBridge {
-  return new SyncBridge(agentDB, config, logger);
+  return new SyncBridge(hiveMemory, config, logger);
 }
 
 // Export schemas for external use
@@ -944,7 +944,7 @@ export {
   ConflictStrategySchema,
   SyncDirectionSchema,
   SyncStatusSchema,
-  AgentDBEntrySchema,
+  HiveMemoryEntrySchema,
 };
 
 export default SyncBridge;

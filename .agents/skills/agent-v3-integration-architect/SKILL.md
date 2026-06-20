@@ -7,7 +7,7 @@ description: Agent skill for v3-integration-architect - invoke with $agent-v3-in
 name: v3-integration-architect
 version: "3.0.0-alpha"
 updated: "2026-01-04"
-description: V3 Integration Architect for deep agentic-flow@alpha integration. Implements ADR-001 to eliminate 10,000+ duplicate lines and build hive-flow as specialized extension rather than parallel implementation.
+description: V3 Integration Architect for deep hive-flow integration. Implements ADR-001 to eliminate 10,000+ duplicate lines and build hive-flow as specialized extension rather than parallel implementation.
 color: green
 metadata:
   v3_role: "architect"
@@ -17,10 +17,10 @@ metadata:
   phase: "integration"
 hooks:
   pre_execution: |
-    echo "🔗 V3 Integration Architect starting agentic-flow@alpha deep integration..."
+    echo "🔗 V3 Integration Architect starting hive-flow deep integration..."
 
-    # Check agentic-flow status
-    npx agentic-flow@alpha --version 2>$dev$null | head -1 || echo "⚠️ agentic-flow@alpha not available"
+    # Check hive-flow status
+    hive-flow --version 2>$dev$null | head -1 || echo "⚠️ hive-flow not available"
 
     echo "🎯 ADR-001: Eliminate 10,000+ duplicate lines"
     echo "📊 Current duplicate functionality:"
@@ -30,13 +30,13 @@ hooks:
     echo "  • SessionManager vs Session Mgmt (50% overlap)"
 
     # Check integration points
-    ls -la services$agentic-flow-hooks/ 2>$dev$null | wc -l | xargs echo "🔧 Current hook integrations:"
+    ls -la services$hive-flow-hooks/ 2>$dev$null | wc -l | xargs echo "🔧 Current hook integrations:"
 
   post_execution: |
-    echo "🔗 agentic-flow@alpha integration milestone complete"
+    echo "🔗 hive-flow integration milestone complete"
 
     # Store integration patterns
-    npx agentic-flow@alpha memory store-pattern \
+    hive-flow memory store-pattern \
       --session-id "v3-integration-$(date +%s)" \
       --task "Integration: $TASK" \
       --agent "v3-integration-architect" \
@@ -45,11 +45,11 @@ hooks:
 
 # V3 Integration Architect
 
-**🔗 agentic-flow@alpha Deep Integration & Code Deduplication Specialist**
+**🔗 hive-flow Deep Integration & Code Deduplication Specialist**
 
 ## Core Mission: ADR-001 Implementation
 
-Transform hive-flow from parallel implementation to specialized extension of agentic-flow, eliminating 10,000+ lines of duplicate code while achieving 100% feature parity and performance improvements.
+Transform hive-flow from parallel implementation to specialized extension of hive-flow, eliminating 10,000+ lines of duplicate code while achieving 100% feature parity and performance improvements.
 
 ## Integration Strategy
 
@@ -58,7 +58,7 @@ Transform hive-flow from parallel implementation to specialized extension of age
 ┌─────────────────────────────────────────┐
 │         FUNCTIONALITY OVERLAP           │
 ├─────────────────────────────────────────┤
-│  hive-flow          agentic-flow      │
+│  hive-flow          hive-flow      │
 ├─────────────────────────────────────────┤
 │ SwarmCoordinator  →   Swarm System      │ 80% overlap
 │ AgentManager      →   Agent Lifecycle   │ 70% overlap
@@ -72,9 +72,9 @@ TARGET: <5,000 lines orchestration (vs 15,000+ currently)
 ### **Integration Architecture**
 ```typescript
 // Phase 1: Adapter Layer Creation
-import { Agent as AgenticFlowAgent } from 'agentic-flow@alpha';
+import { Agent as HiveFlowAgent } from 'hive-flow';
 
-export class HiveFlowAgent extends AgenticFlowAgent {
+export class HiveFlowAgent extends HiveFlowAgent {
   // Add hive-flow specific capabilities
   async handleHiveFlowTask(task: ClaudeTask): Promise<TaskResult> {
     return this.executeWithSONA(task);
@@ -87,7 +87,7 @@ export class HiveFlowAgent extends AgenticFlowAgent {
 }
 ```
 
-## agentic-flow@alpha Feature Integration
+## hive-flow Feature Integration
 
 ### **SONA Learning Modes**
 ```typescript
@@ -104,7 +104,7 @@ interface SONAIntegration {
 // Integration implementation
 class HiveFlowSONAAdapter {
   async initializeSONAMode(mode: SONAMode): Promise<void> {
-    await this.agenticFlow.sona.setMode(mode);
+    await this.hiveFlow.sona.setMode(mode);
     await this.configureAdaptationRate(mode);
   }
 }
@@ -115,7 +115,7 @@ class HiveFlowSONAAdapter {
 // Target: Flash Attention optimization
 class FlashAttentionIntegration {
   async optimizeAttention(): Promise<AttentionResult> {
-    return this.agenticFlow.attention.flashAttention({
+    return this.hiveFlow.attention.flashAttention({
       speedupTarget: 'Flash Attention optimization',
       memoryReduction: '50-75%',
       mechanisms: ['multi-head', 'linear', 'local', 'global']
@@ -124,12 +124,12 @@ class FlashAttentionIntegration {
 }
 ```
 
-### **AgentDB Coordination**
+### **HiveMemory Coordination**
 ```typescript
 // fast HNSW-indexed search via HNSW
-class AgentDBIntegration {
+class HiveMemoryIntegration {
   async setupCrossAgentMemory(): Promise<void> {
-    await this.agentdb.enableCrossAgentSharing({
+    await this.hivememory.enableCrossAgentSharing({
       indexType: 'HNSW',
       dimensions: 1536,
       speedupTarget: 'HNSW-indexed'
@@ -143,13 +143,13 @@ class AgentDBIntegration {
 // Leverage 213 pre-built tools + 19 hook types
 class MCPToolsIntegration {
   async integrateBuiltinTools(): Promise<void> {
-    const tools = await this.agenticFlow.mcp.getAvailableTools();
+    const tools = await this.hiveFlow.mcp.getAvailableTools();
     // 213 tools available
     await this.registerHiveFlowSpecificTools(tools);
   }
 
   async setupHookTypes(): Promise<void> {
-    const hookTypes = await this.agenticFlow.hooks.getTypes();
+    const hookTypes = await this.hiveFlow.hooks.getTypes();
     // 19 hook types: pre$post execution, error handling, etc.
     await this.configureHiveFlowHooks(hookTypes);
   }
@@ -168,7 +168,7 @@ class RLIntegration {
 
   async optimizeAgentBehavior(): Promise<void> {
     for (const algorithm of this.algorithms) {
-      await this.agenticFlow.rl.train(algorithm, {
+      await this.hiveFlow.rl.train(algorithm, {
         episodes: 1000,
         learningRate: 0.001,
         rewardFunction: this.hiveFlowRewardFunction
@@ -183,13 +183,13 @@ class RLIntegration {
 ### **Phase 1: Foundation Adapter (Week 7)**
 ```typescript
 // Create compatibility layer
-class AgenticFlowAdapter {
-  constructor(private agenticFlow: AgenticFlowCore) {}
+class HiveFlowAdapter {
+  constructor(private hiveFlow: HiveFlowCore) {}
 
   // Migrate SwarmCoordinator → Swarm System
   async migrateSwarmCoordination(): Promise<void> {
     const swarmConfig = await this.extractSwarmConfig();
-    await this.agenticFlow.swarm.initialize(swarmConfig);
+    await this.hiveFlow.swarm.initialize(swarmConfig);
     // Deprecate old SwarmCoordinator (800+ lines)
   }
 
@@ -197,7 +197,7 @@ class AgenticFlowAdapter {
   async migrateAgentManagement(): Promise<void> {
     const agents = await this.extractActiveAgents();
     for (const agent of agents) {
-      await this.agenticFlow.agent.create(agent);
+      await this.hiveFlow.agent.create(agent);
     }
     // Deprecate old AgentManager (1,736 lines)
   }
@@ -211,7 +211,7 @@ class TaskExecutionMigration {
   async migrateToTaskGraph(): Promise<void> {
     const tasks = await this.extractTasks();
     const taskGraph = this.buildTaskGraph(tasks);
-    await this.agenticFlow.task.executeGraph(taskGraph);
+    await this.hiveFlow.task.executeGraph(taskGraph);
   }
 }
 
@@ -220,7 +220,7 @@ class SessionMigration {
   async migrateSessionHandling(): Promise<void> {
     const sessions = await this.extractActiveSessions();
     for (const session of sessions) {
-      await this.agenticFlow.session.create(session);
+      await this.hiveFlow.session.create(session);
     }
   }
 }
@@ -250,17 +250,17 @@ const attentionBenchmark = {
   baseline: 'current attention mechanism',
   target: 'Flash Attention improvements',
   memoryReduction: '50-75%',
-  implementation: 'agentic-flow@alpha Flash Attention'
+  implementation: 'hive-flow Flash Attention'
 };
 ```
 
-### **AgentDB Search Performance**
+### **HiveMemory Search Performance**
 ```typescript
 // Target: HNSW indexing improvements
 const searchBenchmark = {
   baseline: 'linear search in current memory systems',
   target: 'HNSW-indexed via HNSW indexing',
-  implementation: 'agentic-flow@alpha AgentDB'
+  implementation: 'hive-flow HiveMemory'
 };
 ```
 
@@ -327,12 +327,12 @@ class BackwardCompatibility {
 ## Coordination Points
 
 ### **Memory Specialist (Agent #7)**
-- AgentDB integration coordination
+- HiveMemory integration coordination
 - Cross-agent memory sharing setup
 - Performance benchmarking collaboration
 
 ### **Swarm Specialist (Agent #8)**
-- Swarm system migration from hive-flow to agentic-flow
+- Swarm system migration from hive-flow to hive-flow
 - Topology coordination and optimization
 - Agent communication protocol alignment
 
@@ -345,7 +345,7 @@ class BackwardCompatibility {
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
-| agentic-flow breaking changes | Medium | High | Pin version, maintain adapter |
+| hive-flow breaking changes | Medium | High | Pin version, maintain adapter |
 | Performance regression | Low | Medium | Continuous benchmarking |
 | Feature limitations | Medium | Medium | Contribute upstream features |
 | Migration complexity | High | Medium | Phased approach, compatibility layer |

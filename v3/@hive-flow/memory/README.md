@@ -1,13 +1,13 @@
 # @hive-flow/memory
 
 
-> High-performance memory module for Hive Flow V3 - AgentDB unification, HNSW indexing, vector search, self-learning knowledge graph, and hybrid SQLite+AgentDB backend (ADR-009).
+> High-performance memory module for Hive Flow V3 - HiveMemory unification, HNSW indexing, vector search, self-learning knowledge graph, and hybrid SQLite+HiveMemory backend (ADR-009).
 
 ## Features
 
 - **fast HNSW-indexed Search** - HNSW (Hierarchical Navigable Small World) vector index for ultra-fast similarity search
-- **Hybrid Backend** - SQLite for structured data + AgentDB for vectors (ADR-009)
-- **Auto Memory Bridge** - Bidirectional sync between Claude Code auto memory and AgentDB (ADR-048)
+- **Hybrid Backend** - SQLite for structured data + HiveMemory for vectors (ADR-009)
+- **Auto Memory Bridge** - Bidirectional sync between Claude Code auto memory and HiveMemory (ADR-048)
 - **Self-Learning** - LearningBridge connects insights to SONA/ReasoningBank neural pipeline (ADR-049)
 - **Knowledge Graph** - PageRank + label propagation community detection over memory entries (ADR-049)
 - **Agent-Scoped Memory** - 3-scope agent memory (project/local/user) with cross-agent knowledge transfer (ADR-049)
@@ -25,7 +25,7 @@
 ## Quick Start
 
 ```typescript
-import { HNSWIndex, AgentDBAdapter, CacheManager } from '@hive-flow/memory';
+import { HNSWIndex, HiveMemoryAdapter, CacheManager } from '@hive-flow/memory';
 
 // Create HNSW index for vector search
 const index = new HNSWIndex({
@@ -88,12 +88,12 @@ const stats = index.getStats();
 // { vectorCount, memoryUsage, avgSearchTime, compressionRatio }
 ```
 
-### AgentDB Adapter
+### HiveMemory Adapter
 
 ```typescript
-import { AgentDBAdapter } from '@hive-flow/memory';
+import { HiveMemoryAdapter } from '@hive-flow/memory';
 
-const adapter = new AgentDBAdapter({
+const adapter = new HiveMemoryAdapter({
   dimension: 1536,
   indexType: 'hnsw',
   metric: 'cosine',
@@ -222,7 +222,7 @@ const bridge = new AutoMemoryBridge(memoryBackend, {
   pruneStrategy: 'confidence-weighted', // 'confidence-weighted' | 'fifo' | 'lru'
 });
 
-// Record an insight (stores in AgentDB + optionally writes to files)
+// Record an insight (stores in HiveMemory + optionally writes to files)
 await bridge.recordInsight({
   category: 'debugging',
   summary: 'HNSW index requires initialization before search',
@@ -233,7 +233,7 @@ await bridge.recordInsight({
 // Sync buffered insights to auto memory files
 const syncResult = await bridge.syncToAutoMemory();
 
-// Import existing auto memory files into AgentDB (on session start)
+// Import existing auto memory files into HiveMemory (on session start)
 const importResult = await bridge.importFromAutoMemory();
 
 // Curate MEMORY.md index (stays under 200-line limit)
@@ -564,7 +564,7 @@ import type {
 
 ## Dependencies
 
-- `agentdb` - Vector database engine
+- `hivememory` - Vector database engine
 - `better-sqlite3` - SQLite driver (native)
 - `sql.js` - SQLite driver (WASM fallback)
 - `@hive-flow/neural` - **Optional peer dependency** for self-learning (graceful fallback when unavailable)

@@ -2,7 +2,7 @@
  * RVFA Appliance Builder -- Constructs self-contained .rvf appliance files.
  *
  * Creates a single binary containing kernel, runtime, Hive Flow CLI, models/keys,
- * AgentDB data, and the verification suite. See ADR-058.
+ * HiveMemory data, and the verification suite. See ADR-058.
  */
 
 import {
@@ -128,7 +128,7 @@ export class RvfaBuilder {
       { id: 'runtime', raw: this.buildRuntimeSection(), label: 'Runtime (Node.js + Claude Code)' },
       { id: 'hive-flow', raw: this.buildHiveFlowSection(), label: 'Hive Flow CLI' },
       { id: 'models',  raw: this.buildModelsSection(),  label: `Models (${this.opts.profile})` },
-      { id: 'data',    raw: this.buildDataSection(),    label: 'Data (AgentDB)' },
+      { id: 'data',    raw: this.buildDataSection(),    label: 'Data (HiveMemory)' },
       { id: 'verify',  raw: this.buildVerifySection(),  label: 'Verify (test suite)' },
     ];
 
@@ -312,7 +312,7 @@ export class RvfaBuilder {
 
   private buildHeaderPartial(): Partial<RvfaHeader> {
     const providerMap: Record<string, RvfaModelConfig['provider']> = { cloud: 'api-vault', hybrid: 'hybrid', offline: 'local-llm' };
-    const caps = ['cli-26-commands', 'agents-60-plus', 'hooks-17', 'workers-12', 'mcp-215-tools', 'agentdb-rvf', 'hnsw-search', 'sona-patterns', 'security-scanning', 'performance-profiling', 'hive-mind-consensus', 'plugin-registry'];
+    const caps = ['cli-26-commands', 'agents-60-plus', 'hooks-17', 'workers-12', 'mcp-215-tools', 'hivememory-rvf', 'hnsw-search', 'sona-patterns', 'security-scanning', 'performance-profiling', 'hive-mind-consensus', 'plugin-registry'];
     if (this.opts.profile !== 'cloud') caps.push('local-inference-local-llm');
     if (this.opts.profile !== 'offline') caps.push('cloud-api-vault');
 

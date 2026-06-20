@@ -146,7 +146,7 @@ function bridgeSessionValue(env = process.env) {
   return bridgeStringValue(env.HIVE_FLOW_SESSION_ID)
     || bridgeStringValue(env.CLAUDE_SESSION_ID)
     || bridgeStringValue(env.CODEX_SESSION_ID)
-    || bridgeStringValue(env.AGENTIC_FLOW_SESSION_ID);
+    || bridgeStringValue(env.HIVE_FLOW_SESSION_ID);
 }
 
 function bridgeClientKind(env = process.env) {
@@ -1760,7 +1760,7 @@ function checkEnforcementState() {
     readScopedEnforcementSnapshot('global', '', FAIL_CLOSED_ENFORCEMENT_LEVEL),
   ];
 
-  const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
+  const agentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
   if (agentId) {
     const agentSnapshot = readScopedEnforcementSnapshot('agent', agentId, 0);
     if (agentSnapshot) snapshots.push(agentSnapshot);

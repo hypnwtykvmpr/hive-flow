@@ -40,7 +40,7 @@ function runRoleHook(input, env) {
       CLAUDE_PROJECT_DIR: env.projectDir,
       HIVE_FLOW_PROJECT_ROOT: env.projectDir,
       CLAUDE_AGENT_ID: env.agentId,
-      AGENTIC_FLOW_AGENT_ID: '',
+      HIVE_FLOW_AGENT_ID: '',
       CLAUDE_SESSION_ID: '',
       HIVE_FLOW_AGENT_TOKEN: '',
       HIVE_FLOW_DEV_OVERRIDE: '',

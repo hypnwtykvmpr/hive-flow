@@ -466,7 +466,7 @@ export class WorkerManager extends EventEmitter {
   }
 
   // =========================================================================
-  // Persistence Methods (using AgentDB-compatible JSON storage)
+  // Persistence Methods (using HiveMemory-compatible JSON storage)
   // =========================================================================
 
   /**

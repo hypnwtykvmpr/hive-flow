@@ -426,7 +426,7 @@ export class AgentRegistry implements IAgentRegistry {
         id: 'agent-7',
         role: 'memory-specialist',
         domain: 'core',
-        description: 'Memory system unification with AgentDB (HNSW indexing improvements)',
+        description: 'Memory system unification with HiveMemory (HNSW indexing improvements)',
         capabilities: [
           { name: 'memory-optimization', description: 'Optimize memory systems', supportedTaskTypes: ['memory-optimization', 'implementation'] }
         ],
@@ -461,7 +461,7 @@ export class AgentRegistry implements IAgentRegistry {
         domain: 'integration',
         description: 'local compatibility API deep integration',
         capabilities: [
-          { name: 'integration', description: 'Integrate with agentic-flow', supportedTaskTypes: ['integration', 'architecture-design'] }
+          { name: 'integration', description: 'Integrate with local Hive Flow runtime', supportedTaskTypes: ['integration', 'architecture-design'] }
         ],
         dependencies: ['agent-5', 'agent-7', 'agent-8', 'agent-9'],
         priority: 5

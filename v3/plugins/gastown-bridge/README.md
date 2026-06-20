@@ -70,12 +70,12 @@ Gas Town is a 75,000-line Go codebase that implements:
 
 ### 🔄 Bidirectional Sync
 
-Seamlessly sync between Gas Town's Beads and Hive Flow's AgentDB:
+Seamlessly sync between Gas Town's Beads and Hive Flow's HiveMemory:
 
 ```
 ┌──────────────┐     SyncBridge      ┌──────────────┐
 │              │  ←───────────────→  │              │
-│    Beads     │   Conflict Res.     │   AgentDB    │
+│    Beads     │   Conflict Res.     │   HiveMemory    │
 │   (JSONL)    │   • beads-wins      │   (SQLite)   │
 │              │   • newest-wins     │              │
 │              │   • merge           │              │
@@ -88,7 +88,7 @@ Seamlessly sync between Gas Town's Beads and Hive Flow's AgentDB:
 
 | Feature | Gas Town | Hive Flow V3 | With This Plugin |
 |---------|----------|----------------|------------------|
-| **Issue Tracking** | Beads (Git-backed) | AgentDB | Unified sync |
+| **Issue Tracking** | Beads (Git-backed) | HiveMemory | Unified sync |
 | **Workflows** | TOML Formulas | TypeScript | Both supported |
 | **Agent Roles** | Mayor, Polecats, Crew | Hierarchical swarm | Interoperable |
 | **Crash Recovery** | GUPP hooks | Session persistence | Combined |
@@ -215,17 +215,17 @@ const matches = await plugin.tools.gt_wasm_match_pattern({
 });
 ```
 
-### Sync Between Beads and AgentDB
+### Sync Between Beads and HiveMemory
 
 ```typescript
-// Sync beads to AgentDB
+// Sync beads to HiveMemory
 await plugin.tools.gt_beads_sync({
   direction: 'push',
   rig: 'main',
   namespace: 'project-x',
 });
 
-// Pull from AgentDB to Beads
+// Pull from HiveMemory to Beads
 await plugin.tools.gt_beads_sync({
   direction: 'pull',
   conflictStrategy: 'newest-wins',
@@ -461,22 +461,22 @@ agents.forEach(agent => {
 </details>
 
 <details>
-<summary><strong>📖 Tutorial 5: Beads-AgentDB Synchronization</strong></summary>
+<summary><strong>📖 Tutorial 5: Beads-HiveMemory Synchronization</strong></summary>
 
 ### Sync Strategies
 
 | Strategy | Use Case |
 |----------|----------|
-| `push` | Export beads to AgentDB |
-| `pull` | Import from AgentDB to Beads |
+| `push` | Export beads to HiveMemory |
+| `pull` | Import from HiveMemory to Beads |
 | `both` | Bidirectional sync |
 
 ### Conflict Resolution
 
 | Resolution | Behavior |
 |------------|----------|
-| `beads-wins` | Beads data overwrites AgentDB |
-| `agentdb-wins` | AgentDB data overwrites Beads |
+| `beads-wins` | Beads data overwrites HiveMemory |
+| `hivememory-wins` | HiveMemory data overwrites Beads |
 | `newest-wins` | Most recent modification wins |
 | `merge` | Combine non-conflicting fields |
 | `manual` | Queue conflicts for manual resolution |
@@ -484,7 +484,7 @@ agents.forEach(agent => {
 ### Example: Production Sync Workflow
 
 ```typescript
-// Morning: Pull overnight changes from shared AgentDB
+// Morning: Pull overnight changes from shared HiveMemory
 await hiveFlow.mcp.call('gt_beads_sync', {
   direction: 'pull',
   rig: 'production',
@@ -573,7 +573,7 @@ interface GasTownBridgeConfig {
   defaultRig?: string;
 
   /** Sync conflict resolution strategy */
-  conflictStrategy?: 'beads-wins' | 'agentdb-wins' | 'newest-wins' | 'merge' | 'manual';
+  conflictStrategy?: 'beads-wins' | 'hivememory-wins' | 'newest-wins' | 'merge' | 'manual';
 
   /** CLI execution timeout in ms (default: 30000) */
   timeout?: number;

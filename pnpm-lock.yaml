@@ -337,10 +337,6 @@ importers:
       '@hive-flow/shared':
         specifier: workspace:*
         version: link:../shared
-    optionalDependencies:
-      agent-booster:
-        specifier: ^0.2.2
-        version: 0.2.2
     devDependencies:
       vitest:
         specifier: ^4.0.16
@@ -804,9 +800,6 @@ importers:
 
   v3/plugins/teammate-plugin:
     dependencies:
-      '@ruvnet/bmssp':
-        specifier: ^1.0.0
-        version: 1.0.0
       eventemitter3:
         specifier: ^5.0.1
         version: 5.0.4
@@ -1416,10 +1409,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@ruvnet/bmssp@1.0.0':
-    resolution: {integrity: sha512-u3BqKqPS9q8LBU2u7hefWH5v2d1h2Cfm27Xk+25hD+4azeC9/zQfVxp4yLZTGEZLJ3lgzFSH9mbBIkP278jX3Q==}
-    engines: {node: '>=14.0.0'}
-
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
 
@@ -1708,11 +1697,6 @@ packages:
   agent-base@9.0.0:
     resolution: {integrity: sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA==}
     engines: {node: '>= 20'}
-
-  agent-booster@0.2.2:
-    resolution: {integrity: sha512-9X8vNsx/Qnr7Bo6NrNji7Ccy9gUr5r0vTAm07dNYod/fefBy0HD/kyBFECST/sdbE6Kha5e/N3FOV9sTy22XCw==}
-    engines: {node: '>=16.0.0'}
-    hasBin: true
 
   agent-browser@0.6.0:
     resolution: {integrity: sha512-C4Mtxfvyi/m04hyD2XdUNKc878RPZqbhXFIPEUJElZW6RhZJ1QG1/L5PSgIAhRSi4TF/EkB8iq4IAWoecMvGdg==}
@@ -4526,8 +4510,6 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.59.0':
     optional: true
 
-  '@ruvnet/bmssp@1.0.0': {}
-
   '@sec-ant/readable-stream@0.4.1': {}
 
   '@semantic-release/commit-analyzer@13.0.1(semantic-release@25.0.5(typescript@5.9.3))':
@@ -4928,13 +4910,6 @@ snapshots:
   acorn@8.16.0: {}
 
   agent-base@9.0.0: {}
-
-  agent-booster@0.2.2:
-    dependencies:
-      express: 5.2.1
-    transitivePeerDependencies:
-      - supports-color
-    optional: true
 
   agent-browser@0.6.0:
     dependencies:

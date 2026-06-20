@@ -282,7 +282,7 @@ const initCommand: Command = {
 
       if (v3Mode) {
         output.writeln(output.dim('  Enabling Flash Attention optimization...'));
-        output.writeln(output.dim('  Configuring AgentDB integration (fast)...'));
+        output.writeln(output.dim('  Configuring HiveMemory integration (fast)...'));
         output.writeln(output.dim('  Initializing SONA learning system...'));
       }
 
@@ -722,7 +722,7 @@ const coordinateCommand: Command = {
     output.printInfo('Performance Targets:');
     output.printList([
       `Flash Attention: ${output.success('Flash Attention optimization')}`,
-      `AgentDB Search: ${output.success('HNSW indexing improvements')}`,
+      `HiveMemory Search: ${output.success('HNSW indexing improvements')}`,
       `Memory Reduction: ${output.success('50-75%')}`,
       `Code Reduction: ${output.success('<5,000 lines')}`
     ]);

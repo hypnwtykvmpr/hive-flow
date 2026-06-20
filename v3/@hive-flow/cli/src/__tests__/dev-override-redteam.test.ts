@@ -43,7 +43,7 @@ function resetModule(): void {
 }
 
 function clearIdentityEnv(): void {
-  delete process.env.AGENTIC_FLOW_AGENT_ID;
+  delete process.env.HIVE_FLOW_AGENT_ID;
   delete process.env.CLAUDE_AGENT_ID;
   delete process.env.CLAUDE_SESSION_ID;
   delete process.env.CLAUDE_PARENT_AGENT_ID;
@@ -136,7 +136,7 @@ describe('dev override self-red-team probes', () => {
   });
 
   it('does not let agent environment identities ride the root session override', () => {
-    for (const envName of ['AGENTIC_FLOW_AGENT_ID', 'CLAUDE_AGENT_ID'] as const) {
+    for (const envName of ['HIVE_FLOW_AGENT_ID', 'CLAUDE_AGENT_ID'] as const) {
       process.env[envName] = `${envName.toLowerCase()}-worker`;
       const result = enf.processPreToolUse({
         tool_name: 'Write',
@@ -213,7 +213,7 @@ describe('dev override self-red-team probes', () => {
   });
 
   it('does not let a subagent wield inherited env and config dev-override tokens', () => {
-    process.env.AGENTIC_FLOW_AGENT_ID = 'subagent-with-leaked-token';
+    process.env.HIVE_FLOW_AGENT_ID = 'subagent-with-leaked-token';
     writeRootOverrideTokenToConfig();
 
     const result = enf.processPreToolUse({

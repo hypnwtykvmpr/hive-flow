@@ -67,7 +67,7 @@ console.log(`Swarm initialized: ${result.swarmId}`);
 
 ### 3. Memory Tools (`memory-tools.ts`)
 
-MCP tools for memory operations (AgentDB integration):
+MCP tools for memory operations (HiveMemory integration):
 
 | Tool | Description | Category |
 |------|-------------|----------|
@@ -167,7 +167,7 @@ Get tools by tag:
 import { getToolsByTag } from './mcp/tools/index.js';
 
 const lifecycleTools = getToolsByTag('lifecycle');
-const agentdbTools = getToolsByTag('agentdb');
+const hivememoryTools = getToolsByTag('hivememory');
 ```
 
 ### `getToolStats()`
@@ -372,7 +372,7 @@ When implementing actual services:
 This implementation follows:
 
 - **ADR-005**: MCP-First API Design
-- **ADR-006**: Unified Memory Service (memory tools integrate with AgentDB)
+- **ADR-006**: Unified Memory Service (memory tools integrate with HiveMemory)
 - **ADR-002**: Domain-Driven Design (tools organized by domain)
 - **ADR-007**: Event Sourcing (tool calls can be tracked)
 

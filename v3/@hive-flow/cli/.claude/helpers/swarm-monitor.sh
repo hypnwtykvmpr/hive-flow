@@ -35,12 +35,12 @@ success() {
 
 # Function to count active processes
 count_active_processes() {
-    local agentic_flow_count=0
+    local hive_flow_count=0
     local mcp_count=0
     local agent_count=0
 
-    # Count agentic-flow processes
-    agentic_flow_count=$(ps aux 2>/dev/null | grep -E "agentic-flow" | grep -v grep | grep -v "swarm-monitor" | wc -l)
+    # Count local Hive Flow processes
+    hive_flow_count=$(ps aux 2>/dev/null | grep -E "hive-flow" | grep -v grep | grep -v "swarm-monitor" | wc -l)
 
     # Count MCP server processes
     mcp_count=$(ps aux 2>/dev/null | grep -E "mcp.*start" | grep -v grep | wc -l)
@@ -50,20 +50,20 @@ count_active_processes() {
 
     # Calculate total active "agents" using heuristic
     local total_agents=0
-    if [ "$agentic_flow_count" -gt 0 ]; then
+    if [ "$hive_flow_count" -gt 0 ]; then
         # Use agent count if available, otherwise estimate from processes
         if [ "$agent_count" -gt 0 ]; then
             total_agents="$agent_count"
         else
             # Heuristic: some processes are management, some are agents
-            total_agents=$((agentic_flow_count / 2))
-            if [ "$total_agents" -eq 0 ] && [ "$agentic_flow_count" -gt 0 ]; then
+            total_agents=$((hive_flow_count / 2))
+            if [ "$total_agents" -eq 0 ] && [ "$hive_flow_count" -gt 0 ]; then
                 total_agents=1
             fi
         fi
     fi
 
-    echo "agentic:$agentic_flow_count mcp:$mcp_count agents:$total_agents"
+    echo "agentic:$hive_flow_count mcp:$mcp_count agents:$total_agents"
 }
 
 # Function to update metrics based on detected activity
@@ -90,7 +90,7 @@ update_activity_metrics() {
 {
   "timestamp": "$(date -Iseconds)",
   "processes": {
-    "agentic_flow": $agentic_count,
+    "hive_flow": $agentic_count,
     "mcp_server": $mcp_count,
     "estimated_agents": $agent_count
   },
@@ -100,7 +100,7 @@ update_activity_metrics() {
     "coordination_active": $([ "$agentic_count" -gt 0 ] && echo "true" || echo "false")
   },
   "integration": {
-    "agentic_flow_active": $integration_status,
+    "hive_flow_active": $integration_status,
     "mcp_active": $([ "$mcp_count" -gt 0 ] && echo "true" || echo "false")
   }
 }
@@ -153,7 +153,7 @@ check_once() {
     local mcp_count=$(echo "$process_info" | cut -d' ' -f2 | cut -d':' -f2)
 
     log "Process Detection Results:"
-    log "  Agentic Flow processes: $agentic_count"
+    log "  Hive Flow processes: $agentic_count"
     log "  MCP Server processes: $mcp_count"
     log "  Estimated agents: $agent_count"
 

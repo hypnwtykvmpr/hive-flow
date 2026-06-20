@@ -237,7 +237,7 @@ EOF
 vote_async() {
   local consensus_id="${1:-}"
   local vote="${2:-}"
-  local agent_id="${AGENTIC_FLOW_AGENT_ID:-anonymous}"
+  local agent_id="${HIVE_FLOW_AGENT_ID:-anonymous}"
 
   (
     local file="$SWARM_DIR/consensus/$consensus_id.json"

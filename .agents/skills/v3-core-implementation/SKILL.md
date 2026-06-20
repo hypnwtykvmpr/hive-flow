@@ -775,7 +775,7 @@ export class EntityCache<T extends Entity<any>> {
 
 - `v3-ddd-architecture` - DDD architectural design
 - `v3-mcp-optimization` - MCP server integration
-- `v3-memory-unification` - AgentDB repository integration
+- `v3-memory-unification` - HiveMemory repository integration
 - `v3-swarm-coordination` - Swarm domain implementation
 
 ## Usage Examples

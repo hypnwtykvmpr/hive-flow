@@ -175,10 +175,10 @@ const response = await registry.execute({
 ### 🔗 Agentic Flow Integration
 
 ```typescript
-import { AgenticFlowBridge, AgentDBBridge } from '@hive-flow/plugins';
+import { HiveFlowBridge, HiveMemoryBridge } from '@hive-flow/plugins';
 
 // Swarm coordination
-const agentic = new AgenticFlowBridge({ maxConcurrentAgents: 15 });
+const agentic = new HiveFlowBridge({ maxConcurrentAgents: 15 });
 await agentic.initializeSwarm({ type: 'hierarchical', maxAgents: 15 });
 
 const agent = await agentic.spawnAgent({
@@ -192,12 +192,12 @@ const result = await agentic.orchestrateTask({
   agentId: agent.id
 });
 
-// Vector storage with AgentDB
-const agentdb = new AgentDBBridge({ dimensions: 1536, indexType: 'hnsw' });
-await agentdb.initialize();
+// Vector storage with HiveMemory
+const hivememory = new HiveMemoryBridge({ dimensions: 1536, indexType: 'hnsw' });
+await hivememory.initialize();
 
-await agentdb.store('doc-1', embeddings, { type: 'document' });
-const similar = await agentdb.search(queryVector, { limit: 10 });
+await hivememory.store('doc-1', embeddings, { type: 'document' });
+const similar = await hivememory.search(queryVector, { limit: 10 });
 ```
 
 ### 🔒 Security Utilities
@@ -289,8 +289,8 @@ const result = await resourceLimiter.enforce(async () => {
 
 | Export | Description |
 |--------|-------------|
-| `AgenticFlowBridge` | local compatibility API integration |
-| `AgentDBBridge` | AgentDB vector storage |
+| `HiveFlowBridge` | local compatibility API integration |
+| `HiveMemoryBridge` | HiveMemory vector storage |
 
 ### Security
 

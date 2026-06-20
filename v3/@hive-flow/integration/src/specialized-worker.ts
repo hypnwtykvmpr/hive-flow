@@ -10,7 +10,7 @@
  * - Capability verification and scoring
  * - Domain-specific execution strategies
  *
- * Compatible with agentic-flow's SpecializedAgent pattern.
+ * Compatible with Hive Flow's SpecializedAgent pattern.
  *
  * @module v3/integration/specialized-worker
  * @version 3.0.0-alpha.1

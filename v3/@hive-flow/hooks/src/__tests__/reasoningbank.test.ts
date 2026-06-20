@@ -32,7 +32,7 @@ describe('ReasoningBank', () => {
 
       expect(stats.shortTermCount).toBe(0);
       expect(stats.longTermCount).toBe(0);
-      // Note: useRealBackend is true when AgentDB is available (even with mock embeddings)
+      // Note: useRealBackend is true when HiveMemory is available (even with mock embeddings)
       expect(typeof stats.useRealBackend).toBe('boolean');
     });
 
