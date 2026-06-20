@@ -105,3 +105,28 @@ describe('d4-004: BRIDGE_BASE_ENV_KEYS includes proxy env vars', () => {
     }
   });
 });
+
+describe('agent_task bridge env includes non-secret notification routing keys', () => {
+  const REQUIRED_ROUTING_KEYS = [
+    'HIVE_FLOW_HOME',
+    'HIVE_FLOW_PROJECT_ROOT',
+    'HIVE_FLOW_SESSION_ID',
+    'HIVE_FLOW_CLIENT_KIND',
+    'CLAUDE_SESSION_ID',
+    'CODEX_SESSION_ID',
+    'AGENTIC_FLOW_SESSION_ID',
+  ] as const;
+
+  it('preserves session/home routing env for detached bridge completion notifications', () => {
+    const setStart = src.indexOf('const BRIDGE_BASE_ENV_KEYS = new Set([');
+    expect(setStart).toBeGreaterThan(-1);
+
+    const setEnd = src.indexOf(']);', setStart);
+    expect(setEnd).toBeGreaterThan(-1);
+
+    const setLiteral = src.slice(setStart, setEnd + ']);'.length);
+    for (const key of REQUIRED_ROUTING_KEYS) {
+      expect(setLiteral, `BRIDGE_BASE_ENV_KEYS must contain '${key}'`).toContain(`'${key}'`);
+    }
+  });
+});

@@ -421,13 +421,17 @@ describe('resolveProviderModel', () => {
       expect(resolveProviderModel('openrouter', ' Xiaomi/MIMO-V2.5-PRO ')).toBe('xiaomi/mimo-v2.5-pro');
     });
 
-    it('DO-NOT-REVERT: OpenRouter default and Qwen model pins stay on current human-selected slugs', () => {
+    it('DO-NOT-REVERT: OpenRouter default and human-selected model pins stay on current slugs', () => {
       expect(PROVIDER_DEFAULTS.openrouter).toBe('minimax/minimax-m3');
       expect(KNOWN_PROVIDER_MODELS.openrouter.has('minimax/minimax-m3')).toBe(true);
       expect(KNOWN_PROVIDER_MODELS.openrouter.has('x-ai/grok-4.3')).toBe(true);
       expect(KNOWN_PROVIDER_MODELS.openrouter.has('qwen/qwen3.7-plus')).toBe(true);
+      expect(KNOWN_PROVIDER_MODELS.openrouter.has('z-ai/glm-5.2')).toBe(true);
+      expect(KNOWN_PROVIDER_MODELS.openrouter.has('z-ai/glm-5.1')).toBe(false);
       expect(KNOWN_PROVIDER_MODELS.openrouter.has('qwen/qwen3.7-max')).toBe(false);
       expect(resolveProviderModel('openrouter', 'qwen/qwen3.7-plus')).toBe('qwen/qwen3.7-plus');
+      expect(resolveProviderModel('openrouter', 'z-ai/glm-5.2')).toBe('z-ai/glm-5.2');
+      expect(resolveProviderModel('openrouter', 'z-ai/glm-5.1')).toBeUndefined();
     });
 
     // Undefined model for each CLI provider

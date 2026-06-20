@@ -105,7 +105,7 @@ describe('Dynamic context window lookup', () => {
         'minimax/minimax-m3',
         'moonshotai/kimi-k2.6',
         'qwen/qwen3.7-plus',
-        'z-ai/glm-5.1',
+        'z-ai/glm-5.2',
         'qwen/qwen3.6-plus',
         'nvidia/nemotron-3-super-120b-a12b:free',
         'deepseek/deepseek-v4-flash',
@@ -132,9 +132,36 @@ describe('Dynamic context window lookup', () => {
     it('qwen/qwen3.7-plus has 1000000 context', () => {
       expect(OR_DEFAULT_CONTEXT_WINDOWS['qwen/qwen3.7-plus']).toBe(1000000);
     });
+
+    it('z-ai/glm-5.2 has 1000000 context', () => {
+      expect(OR_DEFAULT_CONTEXT_WINDOWS['z-ai/glm-5.2']).toBe(1000000);
+      expect(OR_DEFAULT_CONTEXT_WINDOWS).not.toHaveProperty('z-ai/glm-5.1');
+    });
   });
 
   describe('config contextWindows field', () => {
+    it('normalizes deprecated OpenRouter GLM 5.1 config entries to GLM 5.2 defaults', () => {
+      mockConfigFile({
+        openrouter: {
+          tiers: {
+            opus: DEFAULT_CONFIG.tiers.opus,
+            sonnet: ['moonshotai/kimi-k2.6', 'z-ai/glm-5.1'],
+            haiku: DEFAULT_CONFIG.tiers.haiku,
+          },
+          allowedModels: ['moonshotai/kimi-k2.6', 'z-ai/glm-5.1'],
+          contextWindows: { 'z-ai/glm-5.1': 202752 },
+        },
+      }, 7);
+
+      const config = loadOpenRouterConfig();
+      expect(config.tiers.sonnet).toContain('z-ai/glm-5.2');
+      expect(config.tiers.sonnet).not.toContain('z-ai/glm-5.1');
+      expect(config.allowedModels).toContain('z-ai/glm-5.2');
+      expect(config.allowedModels).not.toContain('z-ai/glm-5.1');
+      expect(config.contextWindows?.['z-ai/glm-5.2']).toBe(1000000);
+      expect(config.contextWindows).not.toHaveProperty('z-ai/glm-5.1');
+    });
+
     it('loadOpenRouterConfig includes contextWindows when present in config', () => {
       mockConfigFile({
         openrouter: {

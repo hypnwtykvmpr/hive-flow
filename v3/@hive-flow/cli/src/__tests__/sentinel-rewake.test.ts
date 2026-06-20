@@ -83,6 +83,41 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
+  it('mirrors agent task completion into the global wake session queue', () => {
+    const root = makeTempProject();
+    const home = makeTempProject();
+    try {
+      const taskId = 'task-global-rewake';
+      writeResult(root, taskId, { success: true, result: { agentId: 'agent-b', content: 'done' } });
+
+      const result = agentRewake.notifyCompletedTaskIfReady(root, taskId, {
+        sessionInput: {
+          session_id: 'codex-session-a',
+          client_kind: 'codex',
+        },
+        env: {
+          HIVE_FLOW_HOME: home,
+        },
+      });
+
+      expect(result.notified).toBe(true);
+
+      const localPending = join(root, '.hive-flow', 'data', 'pending-notifications.jsonl');
+      const globalPending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor({ session_id: 'codex-session-a', client_kind: 'codex' }, {}),
+        'pending-notifications.jsonl',
+      );
+      expect(readFileSync(localPending, 'utf8')).toContain(taskId);
+      expect(readFileSync(globalPending, 'utf8')).toContain(taskId);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('drains pending notifications once and recovers previous draining files', () => {
     const root = makeTempProject();
     try {

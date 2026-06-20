@@ -35,11 +35,32 @@ export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   'minimax/minimax-m3': 1048576,
   'moonshotai/kimi-k2.6': 262144,
   'qwen/qwen3.7-plus': 1000000,
-  'z-ai/glm-5.1': 202752,
+  'z-ai/glm-5.2': 1000000,
   'qwen/qwen3.6-plus': 1000000,
   'nvidia/nemotron-3-super-120b-a12b:free': 262144,
   'deepseek/deepseek-v4-flash': 1000000,
 };
+
+const DEPRECATED_MODEL_SLUGS: Record<string, string> = {
+  'z-ai/glm-5.1': 'z-ai/glm-5.2',
+};
+
+export function normalizeOpenRouterModelSlug(model: string): string {
+  const trimmed = model.trim();
+  return DEPRECATED_MODEL_SLUGS[trimmed.toLowerCase()] || trimmed;
+}
+
+function uniqueModels(models: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const model of models) {
+    const key = model.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(model);
+  }
+  return out;
+}
 
 /** Default config used when no `.hive-flow/config.json` exists or is malformed */
 export const DEFAULT_CONFIG: OpenRouterModelConfig = {
@@ -47,12 +68,12 @@ export const DEFAULT_CONFIG: OpenRouterModelConfig = {
     // DO-NOT-REVERT: human-selected OpenRouter default tier starts with
     // MiniMax M3; Qwen entries in this pack use qwen/qwen3.7-plus.
     opus: ['minimax/minimax-m3', 'x-ai/grok-4.3', 'xiaomi/mimo-v2.5-pro'],
-    sonnet: ['moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.1'],
+    sonnet: ['moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.2'],
     haiku: ['qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash'],
   },
   allowedModels: [
     'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
-    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.1',
+    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.2',
     'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
   ],
 };
@@ -73,8 +94,16 @@ function sanitizeContextWindows(raw: unknown): Record<string, number> | undefine
   if (!raw || typeof raw !== 'object') return undefined;
   const out: Record<string, number> = {};
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const normalizedKey = normalizeOpenRouterModelSlug(k);
+    if (normalizedKey !== k.trim()) {
+      const defaultValue = DEFAULT_CONTEXT_WINDOWS[normalizedKey];
+      if (typeof defaultValue === 'number' && out[normalizedKey] === undefined) {
+        out[normalizedKey] = defaultValue;
+      }
+      continue;
+    }
     if (typeof v === 'number' && Number.isFinite(v) && v > 0) {
-      out[k] = v;
+      out[normalizedKey] = v;
     } else {
       console.warn(`[openrouter-config] Ignoring invalid contextWindows entry: ${k} = ${String(v)}`);
     }
@@ -91,8 +120,8 @@ function sanitizeTier(raw: unknown, defaultTier: string[]): string[] {
   if (!Array.isArray(raw) || raw.length === 0) return defaultTier;
   const filtered = raw
     .filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
-    .map((m) => m.trim());
-  return filtered.length > 0 ? filtered : defaultTier;
+    .map((m) => normalizeOpenRouterModelSlug(m));
+  return filtered.length > 0 ? uniqueModels(filtered) : defaultTier;
 }
 
 /**
@@ -163,9 +192,9 @@ export function loadOpenRouterConfig(projectDir?: string): OpenRouterModelConfig
         haiku: sanitizeTier(orConfig.tiers?.haiku, DEFAULT_CONFIG.tiers.haiku),
       },
       allowedModels: Array.isArray(orConfig.allowedModels)
-        ? orConfig.allowedModels
+        ? uniqueModels(orConfig.allowedModels
           .filter((m: unknown): m is string => typeof m === 'string' && m.trim().length > 0)
-          .map((m: string) => m.trim())
+          .map((m: string) => normalizeOpenRouterModelSlug(m)))
         : DEFAULT_CONFIG.allowedModels,
       ...(sanitizedContextWindows ? { contextWindows: sanitizedContextWindows } : {}),
     };

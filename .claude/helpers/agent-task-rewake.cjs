@@ -35,6 +35,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { wakeSessionPaths } = require('./wake-paths.cjs');
 
 const DEFAULT_MAX_WAIT_MS = 30 * 60 * 1000;
 const DEFAULT_POLL_MS = 1500;
@@ -120,6 +121,27 @@ function appendPending(dataDir, line) {
   }
 }
 
+function targetAgentFromInputOrEnv(sessionInput = null, env = process.env) {
+  const fromInput = sessionInput && typeof sessionInput === 'object' && !Array.isArray(sessionInput)
+    ? (sessionInput.clientKind || sessionInput.client_kind)
+    : null;
+  const raw = String(
+    fromInput ||
+    env.HIVE_FLOW_CLIENT_KIND ||
+    env.CLAUDE_CODE_ENTRYPOINT ||
+    '',
+  ).toLowerCase();
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude';
+  return null;
+}
+
+function pendingDataDirs(projectRoot, sessionInput = null, env = process.env) {
+  const localDataDir = path.join(projectRoot, '.hive-flow', 'data');
+  const wake = wakeSessionPaths(sessionInput, env);
+  return wake?.sessionDir ? [localDataDir, wake.sessionDir] : [localDataDir];
+}
+
 function timeoutSummary(taskId) {
   return `[TASK CHECK DUE: ${taskId}] Background agent task is still pending after ${Math.round(MAX_WAIT_MS / 60000)} minute(s). Call agent_task_result({taskId:"${taskId}"}). If status is running, continue waiting; the PostToolUse hook will restart this monitor.`;
 }
@@ -197,10 +219,36 @@ function releaseNotifiedMarker(notifiedMarker) {
   try { fs.unlinkSync(notifiedMarker); } catch { /* noop */ }
 }
 
-function notifyCompletedTaskIfReady(projectRoot, taskId) {
-  const dataDir = path.join(projectRoot, '.hive-flow', 'data');
-  const resultPath = path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+function appendTaskCompletionPendingOnce(dataDir, taskId, line) {
   const notifiedMarker = path.join(dataDir, `task-${taskId}.notified`);
+  if (!claimNotifiedMarker(notifiedMarker)) {
+    return { appended: false, reason: 'already-notified' };
+  }
+  const appended = appendPending(dataDir, line);
+  if (!appended) {
+    releaseNotifiedMarker(notifiedMarker);
+    return { appended: false, reason: 'append-failed' };
+  }
+  return { appended: true };
+}
+
+function extractSessionInput(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      session_id: parsed?.session_id || parsed?.sessionId,
+      transcript_path: parsed?.transcript_path || parsed?.transcriptPath,
+      client_kind: parsed?.client_kind || parsed?.clientKind,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function notifyCompletedTaskIfReady(projectRoot, taskId, options = {}) {
+  const resultPath = path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+  const env = options.env || process.env;
+  const sessionInput = options.sessionInput || null;
 
   let done = false;
   try {
@@ -210,21 +258,25 @@ function notifyCompletedTaskIfReady(projectRoot, taskId) {
   }
   if (!done) return { notified: false, reason: 'pending' };
 
-  if (!claimNotifiedMarker(notifiedMarker)) {
-    return { notified: false, reason: 'already-notified' };
-  }
-
   const summary = summarizeResult(resultPath, taskId);
-  const appended = appendPending(
-    dataDir,
-    JSON.stringify({ kind: 'task', taskId, ts: new Date().toISOString(), summary }),
-  );
-  if (!appended) {
-    releaseNotifiedMarker(notifiedMarker);
-    return { notified: false, reason: 'append-failed' };
+  const targetAgent = targetAgentFromInputOrEnv(sessionInput, env);
+  const line = JSON.stringify({
+    kind: 'task',
+    taskId,
+    ts: new Date().toISOString(),
+    summary,
+    ...(targetAgent ? { targetAgent } : {}),
+  });
+  let appendedAny = false;
+  let appendFailed = false;
+  for (const dataDir of pendingDataDirs(projectRoot, sessionInput, env)) {
+    const result = appendTaskCompletionPendingOnce(dataDir, taskId, line);
+    if (result.appended) appendedAny = true;
+    if (result.reason === 'append-failed') appendFailed = true;
   }
 
-  return { notified: true, summary };
+  if (appendedAny) return { notified: true, summary };
+  return { notified: false, reason: appendFailed ? 'append-failed' : 'already-notified' };
 }
 
 async function importJournalModule(projectRoot) {
@@ -278,10 +330,11 @@ async function main() {
   if (isAgentTaskResultPayload(raw)) {
     clearTimeoutCheck(dataDir, taskId);
   }
+  const sessionInput = extractSessionInput(raw);
 
   const deadline = Date.now() + MAX_WAIT_MS;
   while (Date.now() < deadline) {
-    const result = notifyCompletedTaskIfReady(dir, taskId);
+    const result = notifyCompletedTaskIfReady(dir, taskId, { sessionInput, env: process.env });
     if (result.notified) {
       await appendRewakeJournalEvent(dir, taskId, { reason: 'completed' });
       // Layer 3: async-rewake attempt — stderr summary + exit 2.
@@ -313,6 +366,8 @@ module.exports = {
   extractTaskId,
   summarizeResult,
   appendPending,
+  targetAgentFromInputOrEnv,
+  pendingDataDirs,
   timeoutSummary,
   timeoutCheckPath,
   clearTimeoutCheck,
@@ -320,6 +375,8 @@ module.exports = {
   appendTimeoutCheckOnce,
   claimNotifiedMarker,
   releaseNotifiedMarker,
+  appendTaskCompletionPendingOnce,
+  extractSessionInput,
   notifyCompletedTaskIfReady,
   importJournalModule,
   appendRewakeJournalEvent,

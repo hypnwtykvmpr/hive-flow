@@ -1,0 +1,113 @@
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const bridgePath = resolve(here, '../scripts/provider-agent-bridge.mjs');
+const tempRoots = [];
+
+const previousEnv = {
+  HIVE_FLOW_HOME: process.env.HIVE_FLOW_HOME,
+  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
+  HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
+  HIVE_FLOW_DEV_OVERRIDE_TOKEN: process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN,
+  HIVE_FLOW_DEV_OVERRIDE: process.env.HIVE_FLOW_DEV_OVERRIDE,
+};
+
+let bridge;
+
+function restoreEnv() {
+  for (const [key, value] of Object.entries(previousEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+}
+
+function restoreProcessListeners(event, preserved) {
+  const keep = new Set(preserved);
+  for (const listener of process.listeners(event)) {
+    if (!keep.has(listener)) process.off(event, listener);
+  }
+}
+
+function tempDir(prefix) {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempRoots.push(dir);
+  return dir;
+}
+
+function sessionKeyFor(clientKind, sessionId) {
+  return `s_${createHash('sha256').update(`${clientKind}\0${sessionId}`).digest('hex').slice(0, 32)}`;
+}
+
+beforeAll(async () => {
+  const sigtermListeners = process.listeners('SIGTERM');
+  const uncaughtExceptionListeners = process.listeners('uncaughtException');
+  try {
+    bridge = await import(`${pathToFileURL(bridgePath).href}?notifications=${Date.now()}-${Math.random()}`);
+  } finally {
+    restoreEnv();
+    restoreProcessListeners('SIGTERM', sigtermListeners);
+    restoreProcessListeners('uncaughtException', uncaughtExceptionListeners);
+  }
+});
+
+afterEach(() => {
+  restoreEnv();
+  for (const dir of tempRoots.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+describe('provider bridge task completion notifications', () => {
+  it('writes project-local and owning-session pending notifications from a result file exactly once', () => {
+    const projectRoot = tempDir('hf-bridge-notify-project-');
+    const hiveHome = tempDir('hf-bridge-notify-home-');
+    const taskId = 'task-provider-bridge-notify';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+    writeFileSync(resultFile, JSON.stringify({
+      success: true,
+      result: {
+        success: true,
+        agentId: 'agent-openrouter-1',
+        content: 'finished diagnostic task',
+      },
+    }), 'utf8');
+
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.HIVE_FLOW_SESSION_ID = 'codex-session-bridge-notify';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+
+    expect(bridge.notifyTaskCompletionFromResultFile(resultFile)).toBe(true);
+    expect(bridge.notifyTaskCompletionFromResultFile(resultFile)).toBe(false);
+
+    const localDataDir = join(projectRoot, '.hive-flow', 'data');
+    const sessionDir = join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('codex', 'codex-session-bridge-notify'),
+    );
+    const localPending = join(localDataDir, 'pending-notifications.jsonl');
+    const sessionPending = join(sessionDir, 'pending-notifications.jsonl');
+
+    expect(readFileSync(localPending, 'utf8')).toContain(taskId);
+    expect(readFileSync(sessionPending, 'utf8')).toContain(taskId);
+    expect(readFileSync(sessionPending, 'utf8')).toContain('"targetAgent":"codex"');
+    expect(existsSync(join(localDataDir, `task-${taskId}.notified`))).toBe(true);
+    expect(existsSync(join(sessionDir, `task-${taskId}.notified`))).toBe(true);
+    expect(readFileSync(localPending, 'utf8').trim().split('\n')).toHaveLength(1);
+    expect(readFileSync(sessionPending, 'utf8').trim().split('\n')).toHaveLength(1);
+  });
+});

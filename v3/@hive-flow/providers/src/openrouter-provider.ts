@@ -63,7 +63,7 @@ interface OpenRouterStreamChunk {
 
 const DEFAULT_MODELS: LLMModel[] = [
   'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
-  'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.1',
+  'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.2',
   'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
 ];
 
@@ -79,7 +79,7 @@ const DEFAULT_PRICING: Record<string, { promptCostPer1k: number; completionCostP
   'minimax/minimax-m3':                      p(0.0004, 0.0016),
   'moonshotai/kimi-k2.6':                   p(0.0005, 0.0025),
   'qwen/qwen3.7-plus':                       p(0.0005, 0.002),
-  'z-ai/glm-5.1':                            p(0.0003, 0.0012),
+  'z-ai/glm-5.2':                            p(0.0012, 0.0041),
   'qwen/qwen3.6-plus':                       p(0.0005, 0.002),
   'nvidia/nemotron-3-super-120b-a12b:free':  p(0,      0),
   'deepseek/deepseek-v4-flash':              p(0.00014, 0.00028),
@@ -91,12 +91,12 @@ export class OpenRouterProvider extends BaseProvider {
     supportedModels: [...DEFAULT_MODELS],
     maxContextLength: {
       'xiaomi/mimo-v2.5-pro': 1048576, 'x-ai/grok-4.3': 1000000, 'minimax/minimax-m3': 1048576,
-      'moonshotai/kimi-k2.6': 262144, 'qwen/qwen3.7-plus': 1000000, 'z-ai/glm-5.1': 202752,
+      'moonshotai/kimi-k2.6': 262144, 'qwen/qwen3.7-plus': 1000000, 'z-ai/glm-5.2': 1000000,
       'qwen/qwen3.6-plus': 1000000, 'nvidia/nemotron-3-super-120b-a12b:free': 262144, 'deepseek/deepseek-v4-flash': 1000000,
     },
     maxOutputTokens: {
       'xiaomi/mimo-v2.5-pro': 32768, 'x-ai/grok-4.3': 32768, 'minimax/minimax-m3': 32768,
-      'moonshotai/kimi-k2.6': 32768, 'qwen/qwen3.7-plus': 32768, 'z-ai/glm-5.1': 32768,
+      'moonshotai/kimi-k2.6': 32768, 'qwen/qwen3.7-plus': 32768, 'z-ai/glm-5.2': 32768,
       'qwen/qwen3.6-plus': 32768, 'nvidia/nemotron-3-super-120b-a12b:free': 32768, 'deepseek/deepseek-v4-flash': 32768,
     },
     supportsStreaming: true,

@@ -239,6 +239,7 @@ describe('OpenRouter provider hardening with mocked fetch', () => {
       'minimax/minimax-m3',
       'moonshotai/kimi-k2.6',
       'deepseek/deepseek-v4-flash',
+      'z-ai/glm-5.2',
     ];
     for (const model of paidModels) {
       expect(pricing[model], `pricing missing for ${model}`).toBeDefined();
@@ -248,5 +249,8 @@ describe('OpenRouter provider hardening with mocked fetch', () => {
     // Free model should have zero pricing
     expect(pricing['nvidia/nemotron-3-super-120b-a12b:free']).toBeDefined();
     expect(pricing['nvidia/nemotron-3-super-120b-a12b:free'].promptCostPer1k).toBe(0);
+    // OpenRouter publishes GLM 5.2 as $1.20 input / $4.10 output per 1M tokens.
+    expect(pricing['z-ai/glm-5.2'].promptCostPer1k).toBeCloseTo(0.0012);
+    expect(pricing['z-ai/glm-5.2'].completionCostPer1k).toBeCloseTo(0.0041);
   });
 });

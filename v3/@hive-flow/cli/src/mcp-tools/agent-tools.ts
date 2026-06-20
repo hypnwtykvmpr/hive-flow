@@ -470,6 +470,16 @@ const BRIDGE_BASE_ENV_KEYS = new Set([
   'XDG_CONFIG_HOME',
   'XDG_CACHE_HOME',
   'CLAUDE_PROJECT_DIR',
+  // Non-secret routing scope required by detached provider bridges so completed
+  // agent_task runs can notify the owning Codex/Claude session instead of
+  // silently leaving only a result file behind. Do not add provider API keys here.
+  'HIVE_FLOW_HOME',
+  'HIVE_FLOW_PROJECT_ROOT',
+  'HIVE_FLOW_SESSION_ID',
+  'HIVE_FLOW_CLIENT_KIND',
+  'CLAUDE_SESSION_ID',
+  'CODEX_SESSION_ID',
+  'AGENTIC_FLOW_SESSION_ID',
   'HIVE_FLOW_CONFIG',
   'HIVE_FLOW_LOG_LEVEL',
   // Proxy configuration — required for CLI providers in proxied/corporate networks

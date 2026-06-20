@@ -61,4 +61,11 @@ describe('provider-agent bridge security wiring', () => {
     expect(bridgeSource).not.toContain('JSON.stringify(errorResponse, null, 2) +');
     expect(bridgeSource).not.toContain("return typeof result === 'string' ? result : JSON.stringify(result)");
   });
+
+  it('emits task completion notifications from every result-file write path', () => {
+    expect(bridgeSource).toContain('function notifyTaskCompletionFromResultFile');
+    const resultWriteCount = (bridgeSource.match(/event: 'result_written'/g) || []).length;
+    const notificationCallCount = (bridgeSource.match(/notifyTaskCompletionFromResultFile\(/g) || []).length - 1;
+    expect(notificationCallCount).toBe(resultWriteCount);
+  });
 });

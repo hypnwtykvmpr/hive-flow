@@ -32,7 +32,7 @@ import { join, dirname, basename, isAbsolute, resolve, relative, sep } from 'pat
 import { homedir } from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { lookup as dnsLookup } from 'dns/promises';
 import { createConnection, isIP } from 'net';
 import { createRequire } from 'module';
@@ -130,6 +130,141 @@ function taskIdFromResultFile(resultFile) {
   return file.endsWith('.result.json') ? file.slice(0, -'.result.json'.length) : '';
 }
 
+function bridgeStringValue(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function bridgeResolveHiveHome(env = process.env) {
+  const configured = bridgeStringValue(env.HIVE_FLOW_HOME);
+  if (configured && isAbsolute(configured)) return resolve(configured);
+  return join(homedir(), '.hive-flow');
+}
+
+function bridgeSessionValue(env = process.env) {
+  return bridgeStringValue(env.HIVE_FLOW_SESSION_ID)
+    || bridgeStringValue(env.CLAUDE_SESSION_ID)
+    || bridgeStringValue(env.CODEX_SESSION_ID)
+    || bridgeStringValue(env.AGENTIC_FLOW_SESSION_ID);
+}
+
+function bridgeClientKind(env = process.env) {
+  return bridgeStringValue(env.HIVE_FLOW_CLIENT_KIND)
+    || bridgeStringValue(env.CLAUDE_CODE_ENTRYPOINT)
+    || 'provider-bridge';
+}
+
+function bridgeTargetAgent(env = process.env) {
+  const raw = bridgeClientKind(env).toLowerCase();
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude';
+  return null;
+}
+
+function bridgeSessionKeyFor(env = process.env) {
+  const session = bridgeSessionValue(env);
+  if (!session) return null;
+  const clientKind = bridgeClientKind(env);
+  return `s_${createHash('sha256').update(`${clientKind}\0${session}`).digest('hex').slice(0, 32)}`;
+}
+
+function bridgeTaskNotificationDataDirs(projectRoot, env = process.env) {
+  const localDataDir = join(projectRoot, '.hive-flow', 'data');
+  const sessionKey = bridgeSessionKeyFor(env);
+  if (!sessionKey) return [localDataDir];
+  return [
+    localDataDir,
+    join(bridgeResolveHiveHome(env), 'wake', 'sessions', sessionKey),
+  ];
+}
+
+function summarizeBridgeResultFile(resultFile, taskId) {
+  try {
+    const record = JSON.parse(readFileSync(resultFile, 'utf8'));
+    const inner = record?.result || record;
+    const ok = inner?.success !== false && record?.success !== false;
+    const status = ok ? 'completed' : 'failed';
+    const agentId = inner?.agentId || record?.agentId || 'unknown';
+    let detail = '';
+    if (!ok) {
+      const err = inner?.error || record?.error || '';
+      detail = err ? ` error="${String(err).slice(0, 160)}"` : '';
+    } else {
+      const content = inner?.content || '';
+      const len = typeof content === 'string' ? content.length : 0;
+      detail = len ? ` resultChars=${len}` : '';
+    }
+    return `[TASK COMPLETE: ${taskId}] agent=${agentId} status=${status}${detail}. Call agent_task_result({taskId:"${taskId}"}) for the full payload.`;
+  } catch {
+    return `[TASK COMPLETE: ${taskId}] result file present. Call agent_task_result({taskId:"${taskId}"}) for the full payload.`;
+  }
+}
+
+function projectRootFromResultFile(resultFile) {
+  try {
+    const tasksDir = dirname(resultFile);
+    const hiveDir = dirname(tasksDir);
+    if (basename(hiveDir) === '.hive-flow' && basename(tasksDir) === 'tasks') {
+      return dirname(hiveDir);
+    }
+  } catch {
+    /* fall through */
+  }
+  return process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+}
+
+function appendTaskNotificationOnce(dataDir, taskId, line) {
+  const markerPath = join(dataDir, `task-${taskId}.notified`);
+  let fd = null;
+  let markerCreated = false;
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    fd = openSync(markerPath, 'wx', 0o600);
+    markerCreated = true;
+    appendFileSync(join(dataDir, 'pending-notifications.jsonl'), line + '\n', 'utf8');
+    writeFileSync(fd, JSON.stringify({
+      claimedAt: new Date().toISOString(),
+      pid: process.pid,
+      source: 'provider-agent-bridge',
+    }, null, 2) + '\n', 'utf8');
+    return true;
+  } catch {
+    try { if (fd !== null) closeSync(fd); } catch { /* ignore */ }
+    if (markerCreated) {
+      try { unlinkSync(markerPath); } catch { /* ignore */ }
+    }
+    return false;
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* ignore */ }
+    }
+  }
+}
+
+export function notifyTaskCompletionFromResultFile(resultFile) {
+  try {
+    const taskId = taskIdFromResultFile(resultFile);
+    if (!taskId) return false;
+    const projectRoot = projectRootFromResultFile(resultFile);
+    const targetAgent = bridgeTargetAgent(process.env);
+    const line = safeBridgeJsonStringify({
+      kind: 'task',
+      taskId,
+      ts: new Date().toISOString(),
+      summary: summarizeBridgeResultFile(resultFile, taskId),
+      ...(targetAgent ? { targetAgent } : {}),
+    });
+    let wrote = false;
+    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env)) {
+      if (appendTaskNotificationOnce(dataDir, taskId, line)) wrote = true;
+    }
+    return wrote;
+  } catch {
+    return false;
+  }
+}
+
 function appendBridgeJournalEvent({
   event,
   resultFile,
@@ -208,6 +343,7 @@ process.on('SIGTERM', () => {
           status: 'failed',
         },
       });
+      notifyTaskCompletionFromResultFile(resultFile);
     } catch {
       // File write failed — fall back to stdout
       process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
@@ -377,7 +513,7 @@ const MODEL_LIMITS = {
   'minimax/minimax-m3':                         { maxTokens: 1048576, maxEntries: 100 },
   'moonshotai/kimi-k2.6':                       { maxTokens: 262144,  maxEntries: 50 },
   'qwen/qwen3.7-plus':                          { maxTokens: 1000000, maxEntries: 100 },
-  'z-ai/glm-5.1':                               { maxTokens: 202752,  maxEntries: 50 },
+  'z-ai/glm-5.2':                               { maxTokens: 1000000, maxEntries: 100 },
   'qwen/qwen3.6-plus':                          { maxTokens: 1000000, maxEntries: 100 },
   'nvidia/nemotron-3-super-120b-a12b:free':     { maxTokens: 262144,  maxEntries: 50 },
   'deepseek/deepseek-v4-flash':                 { maxTokens: 1000000, maxEntries: 100 },
@@ -4269,6 +4405,7 @@ async function main() {
                 status: 'failed',
               },
             });
+            notifyTaskCompletionFromResultFile(resultFile);
           } catch (writeErr) {
             bridgeLog('error', 'Failed to write termination result file', { agentId, error: writeErr.message });
           }
@@ -4943,6 +5080,7 @@ async function main() {
         historyLength: result.historyLength,
       },
     });
+    notifyTaskCompletionFromResultFile(resultFile);
   } else {
     process.stdout.write(safeBridgeJsonStringify(result, 2) + '\n');
   }
@@ -5047,6 +5185,7 @@ async function handleMainError(err) {
           status: 'failed',
         },
       });
+      notifyTaskCompletionFromResultFile(resultFile);
     } catch {
       // File write failed — fall back to stdout
       process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');

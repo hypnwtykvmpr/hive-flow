@@ -125,7 +125,7 @@ export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
   ]),
   'openrouter': new Set([
     'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
-    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.1',
+    'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.2',
     'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
   ]),
 };
