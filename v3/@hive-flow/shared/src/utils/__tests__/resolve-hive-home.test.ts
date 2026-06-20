@@ -122,6 +122,15 @@ describe('sessionKeyFor', () => {
     const codex = sessionKeyFor({ sessionId: 'same-id', clientKind: 'codex' }, {});
     expect(claude).not.toBe(codex);
   });
+
+  it('defaults ownerless session keys to Claude rather than an unknown bucket', () => {
+    expect(sessionKeyFor({ sessionId: 'default-owner' }, {})).toBe(
+      sessionKeyFor({ sessionId: 'default-owner', clientKind: 'claude-code' }, {}),
+    );
+    expect(sessionKeyFor({ sessionId: 'codex-owner' }, { CODEX_SESSION_ID: 'codex-owner' })).toBe(
+      sessionKeyFor({ sessionId: 'codex-owner', clientKind: 'codex' }, {}),
+    );
+  });
 });
 
 describe('public shared exports', () => {

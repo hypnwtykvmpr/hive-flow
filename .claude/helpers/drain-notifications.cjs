@@ -39,6 +39,32 @@ function pendingFiles(projectRoot, sessionInput = null, env = process.env) {
   return files;
 }
 
+function currentTargetAgent(sessionInput = null, env = process.env) {
+  const explicit = sessionInput && typeof sessionInput === 'object' && !Array.isArray(sessionInput)
+    ? (sessionInput.clientKind || sessionInput.client_kind)
+    : null;
+  const raw = String(
+    explicit ||
+    env.HIVE_FLOW_CLIENT_KIND ||
+    env.CLAUDE_CODE_ENTRYPOINT ||
+    '',
+  ).toLowerCase();
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude';
+  if (env.CODEX_SESSION_ID) return 'codex';
+  return 'claude';
+}
+
+function notificationTargetsAgent(obj, targetAgent) {
+  if (!targetAgent) return true;
+  const explicit = String(obj?.targetAgent || obj?.target_agent || '').trim().toLowerCase();
+  if (explicit) return explicit === targetAgent;
+  const kind = String(obj?.clientKind || obj?.client_kind || obj?.ownerClientKind || obj?.owner_client_kind || '').toLowerCase();
+  if (kind.includes('codex')) return targetAgent === 'codex';
+  if (kind.includes('claude')) return targetAgent === 'claude';
+  return true;
+}
+
 function collectDrainFiles(file) {
   const dir = path.dirname(file);
   const base = path.basename(file);
@@ -69,11 +95,12 @@ function collectDrainFiles(file) {
   return files;
 }
 
-function parseSummariesFromLines(lines) {
+function parseSummariesFromLines(lines, targetAgent = null) {
   const summaries = new Map();
   for (const line of lines) {
     try {
       const obj = JSON.parse(line);
+      if (!notificationTargetsAgent(obj, targetAgent)) continue;
       if (obj && obj.summary) {
         const key = obj.taskId || obj.hiveId || obj.summary;
         const kind = typeof obj.kind === 'string' ? obj.kind : '';
@@ -113,7 +140,7 @@ function drainNotifications(projectRoot = projectDir(), sessionInput = null) {
     }
   }
 
-  const summaries = parseSummariesFromLines(lines);
+  const summaries = parseSummariesFromLines(lines, currentTargetAgent(sessionInput, process.env));
 
   // Remove only after parsing; an interruption before this point leaves a
   // .draining-* file that the next run recovers.
@@ -147,6 +174,8 @@ module.exports = {
   emptyOutput,
   pendingFile,
   pendingFiles,
+  currentTargetAgent,
+  notificationTargetsAgent,
   collectDrainFiles,
   parseSummariesFromLines,
   supersedesCheckDue,

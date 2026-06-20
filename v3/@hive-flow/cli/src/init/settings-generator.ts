@@ -293,11 +293,14 @@ export function generateSettings(options: InitOptions): object {
  */
 function generateStatusLineConfig(_options: InitOptions): object {
   // Claude Code pipes JSON session data to the script via stdin.
-  // Valid fields: type, command, padding (optional).
-  // The script runs after each assistant message (debounced 300ms).
+  // Valid fields: type, command, padding (optional), refreshInterval (seconds).
+  // Use the minimum supported interval so live swarm rows do not lag behind
+  // background agent state changes.
   return {
     type: 'command',
     command: 'node .claude/helpers/statusline.cjs',
+    padding: 0,
+    refreshInterval: 1,
   };
 }
 

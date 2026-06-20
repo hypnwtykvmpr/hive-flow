@@ -365,7 +365,7 @@ function mergeSettingsForUpgrade(existing: Record<string, unknown>): Record<stri
   // Their configuration lives in hiveFlow.agentTeams.hooks instead.
 
   // 3. Fix statusLine config (remove invalid fields, ensure correct format)
-  // Claude Code only supports: type, command, padding
+  // Claude Code supports type, command, padding, and refreshInterval.
   const existingStatusLine = existing.statusLine as Record<string, unknown> | undefined;
   if (existingStatusLine) {
     merged.statusLine = {
@@ -486,7 +486,7 @@ export async function executeUpgrade(targetDir: string, upgradeSettings = false)
       force: true,
       statusline: {
         ...DEFAULT_INIT_OPTIONS.statusline,
-        refreshInterval: 5000,
+        refreshInterval: 1000,
       },
     };
     const statuslineContent = generateStatuslineScript(upgradeOptions);

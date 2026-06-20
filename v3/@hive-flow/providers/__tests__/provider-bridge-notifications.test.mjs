@@ -20,6 +20,10 @@ const previousEnv = {
   HIVE_FLOW_HOME: process.env.HIVE_FLOW_HOME,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
   HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
+  CLAUDE_CODE_ENTRYPOINT: process.env.CLAUDE_CODE_ENTRYPOINT,
+  CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
+  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
   HIVE_FLOW_DEV_OVERRIDE_TOKEN: process.env.HIVE_FLOW_DEV_OVERRIDE_TOKEN,
   HIVE_FLOW_DEV_OVERRIDE: process.env.HIVE_FLOW_DEV_OVERRIDE,
 };
@@ -112,5 +116,81 @@ describe('provider bridge task completion notifications', () => {
     expect(existsSync(join(sessionDir, `task-${taskId}.notified`))).toBe(true);
     expect(localPendingText.trim().split('\n')).toHaveLength(1);
     expect(sessionPendingText.trim().split('\n')).toHaveLength(1);
+  });
+
+  it('defaults ownerless provider bridge completions to Claude ownership', () => {
+    const projectRoot = tempDir('hf-bridge-default-owner-project-');
+    const hiveHome = tempDir('hf-bridge-default-owner-home-');
+    const taskId = 'task-default-claude-owner';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+    writeFileSync(resultFile, JSON.stringify({
+      success: true,
+      result: {
+        success: true,
+        agentId: 'agent-default-owner',
+        content: 'finished',
+      },
+    }), 'utf8');
+
+    delete process.env.HIVE_FLOW_CLIENT_KIND;
+    delete process.env.CLAUDE_CODE_ENTRYPOINT;
+    delete process.env.CLAUDE_PROJECT_DIR;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.CODEX_SESSION_ID;
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.HIVE_FLOW_SESSION_ID = 'default-owner-session';
+
+    expect(bridge.notifyTaskCompletionFromResultFile(resultFile)).toBe(true);
+
+    const localPending = readFileSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'), 'utf8');
+    const sessionPending = readFileSync(join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('claude-code', 'default-owner-session'),
+      'pending-notifications.jsonl',
+    ), 'utf8');
+    expect(localPending).toContain('"targetAgent":"claude"');
+    expect(sessionPending).toContain('"targetAgent":"claude"');
+  });
+
+  it('escalates denied privileged run_command attempts to the owning operator', async () => {
+    const projectRoot = tempDir('hf-bridge-permission-project-');
+    const hiveHome = tempDir('hf-bridge-permission-home-');
+    const taskId = 'task-permission-escalation';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.HIVE_FLOW_SESSION_ID = 'permission-owner-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+
+    const denied = JSON.parse(await bridge.executeBridgeTool('run_command', {
+      argv: ['git', 'mv', 'old-name', 'new-name'],
+    }, {
+      agentId: 'agent-needs-permission',
+      resultFile,
+      source: 'test',
+    }));
+
+    expect(denied).toMatchObject({
+      status: 'denied',
+      denyReason: 'read-only-command-denied',
+    });
+
+    const localPending = readFileSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'), 'utf8');
+    const sessionPending = readFileSync(join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('codex', 'permission-owner-session'),
+      'pending-notifications.jsonl',
+    ), 'utf8');
+
+    expect(localPending).toContain('"kind":"permission-request"');
+    expect(localPending).toContain('"targetAgent":"codex"');
+    expect(localPending).toContain('git subcommand');
+    expect(sessionPending).toContain('[PERMISSION REQUEST: task-permission-escalation]');
   });
 });

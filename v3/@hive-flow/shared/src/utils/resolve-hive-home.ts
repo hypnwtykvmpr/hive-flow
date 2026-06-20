@@ -101,6 +101,12 @@ function stringValue(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function defaultClientKind(env: NodeJS.ProcessEnv): string {
+  if (stringValue(env.CODEX_SESSION_ID)) return 'codex';
+  if (stringValue(env.CLAUDE_SESSION_ID) || stringValue(env.CLAUDE_PROJECT_DIR)) return 'claude-code';
+  return 'claude-code';
+}
+
 function sessionInputValue(input: unknown): { value?: string; clientKind?: string } {
   if (typeof input === 'string') return { value: stringValue(input) };
   if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
@@ -131,6 +137,6 @@ export function sessionKeyFor(
     fromInput.clientKind ??
     stringValue(env.HIVE_FLOW_CLIENT_KIND) ??
     stringValue(env.CLAUDE_CODE_ENTRYPOINT) ??
-    'unknown';
+    defaultClientKind(env);
   return `s_${sha256Hex(`${clientKind}\0${rawSession}`).slice(0, 32)}`;
 }

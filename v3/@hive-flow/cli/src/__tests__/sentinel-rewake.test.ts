@@ -76,7 +76,7 @@ describe('sentinel agent task rewake', () => {
         .trim()
         .split('\n');
       expect(pending).toHaveLength(1);
-      expect(JSON.parse(pending[0])).toMatchObject({ kind: 'task', taskId });
+      expect(JSON.parse(pending[0])).toMatchObject({ kind: 'task', taskId, targetAgent: 'claude' });
       expect(existsSync(join(root, '.hive-flow', 'data', 'task-task-demo-123.notified'))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -118,6 +118,38 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
+  it('defaults Claude hook ownership and wake session keys to Claude when client kind is absent', () => {
+    const root = makeTempProject();
+    const home = makeTempProject();
+    try {
+      const taskId = 'task-claude-default-owner';
+      writeResult(root, taskId, { success: true, result: { agentId: 'agent-c', content: 'done' } });
+
+      const result = agentRewake.notifyCompletedTaskIfReady(root, taskId, {
+        sessionInput: { session_id: 'claude-session-default-owner' },
+        env: { HIVE_FLOW_HOME: home },
+      });
+
+      expect(result.notified).toBe(true);
+
+      const localPending = join(root, '.hive-flow', 'data', 'pending-notifications.jsonl');
+      const globalPending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor({ session_id: 'claude-session-default-owner', client_kind: 'claude-code' }, {}),
+        'pending-notifications.jsonl',
+      );
+      const local = readFileSync(localPending, 'utf8');
+      expect(local).toContain(taskId);
+      expect(local).toContain('"targetAgent":"claude"');
+      expect(readFileSync(globalPending, 'utf8')).toContain(taskId);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('drains pending notifications once and recovers previous draining files', () => {
     const root = makeTempProject();
     try {
@@ -140,6 +172,38 @@ describe('sentinel agent task rewake', () => {
       expect(context).toContain('task-b');
 
       expect(drain.drainNotifications(root)).toEqual({});
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not let Claude drain Codex-targeted repo fallback notifications', () => {
+    const root = makeTempProject();
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      writeFileSync(
+        join(dataDir, 'pending-notifications.jsonl'),
+        [
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-codex-owned',
+            targetAgent: 'codex',
+            summary: '[TASK COMPLETE: task-codex-owned] done',
+          }),
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-claude-owned',
+            targetAgent: 'claude',
+            summary: '[TASK COMPLETE: task-claude-owned] done',
+          }),
+        ].join('\n') + '\n',
+      );
+
+      const output = drain.drainNotifications(root, { client_kind: 'claude-code' });
+      const context = output.hookSpecificOutput.additionalContext;
+      expect(context).toContain('task-claude-owned');
+      expect(context).not.toContain('task-codex-owned');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -133,7 +133,8 @@ function targetAgentFromInputOrEnv(sessionInput = null, env = process.env) {
   ).toLowerCase();
   if (raw.includes('codex')) return 'codex';
   if (raw.includes('claude')) return 'claude';
-  return null;
+  if (env.CODEX_SESSION_ID) return 'codex';
+  return 'claude';
 }
 
 function pendingDataDirs(projectRoot, sessionInput = null, env = process.env) {
@@ -238,10 +239,10 @@ function extractSessionInput(raw) {
     return {
       session_id: parsed?.session_id || parsed?.sessionId,
       transcript_path: parsed?.transcript_path || parsed?.transcriptPath,
-      client_kind: parsed?.client_kind || parsed?.clientKind,
+      client_kind: parsed?.client_kind || parsed?.clientKind || 'claude-code',
     };
   } catch {
-    return null;
+    return { client_kind: 'claude-code' };
   }
 }
 

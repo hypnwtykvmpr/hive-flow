@@ -616,7 +616,7 @@
     "type": "command",
     "command": "node \"$CLAUDE_PROJECT_DIR\"/v3/@hive-flow/cli/bin/statusline.js",
     "padding": 0,
-    "refreshInterval": 5
+    "refreshInterval": 1
   },
   "permissions": {
     "allow": [

@@ -152,7 +152,9 @@ function bridgeSessionValue(env = process.env) {
 function bridgeClientKind(env = process.env) {
   return bridgeStringValue(env.HIVE_FLOW_CLIENT_KIND)
     || bridgeStringValue(env.CLAUDE_CODE_ENTRYPOINT)
-    || 'provider-bridge';
+    || (bridgeStringValue(env.CODEX_SESSION_ID) ? 'codex' : null)
+    || (bridgeStringValue(env.CLAUDE_SESSION_ID) || bridgeStringValue(env.CLAUDE_PROJECT_DIR) ? 'claude-code' : null)
+    || 'claude-code';
 }
 
 function bridgeTargetAgent(env = process.env) {
@@ -242,6 +244,38 @@ function appendTaskNotificationOnce(dataDir, taskId, line) {
   }
 }
 
+function appendPermissionNotificationOnce(dataDir, taskId, markerKey, line) {
+  const safeMarker = String(markerKey || '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'permission-request';
+  const markerPath = join(dataDir, `task-${taskId}.${safeMarker}.notified`);
+  let fd = null;
+  let markerCreated = false;
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    fd = openSync(markerPath, 'wx', 0o600);
+    markerCreated = true;
+    appendFileSync(join(dataDir, 'pending-notifications.jsonl'), line + '\n', 'utf8');
+    writeFileSync(fd, JSON.stringify({
+      claimedAt: new Date().toISOString(),
+      pid: process.pid,
+      source: 'provider-agent-bridge:permission-request',
+    }, null, 2) + '\n', 'utf8');
+    return true;
+  } catch {
+    try { if (fd !== null) closeSync(fd); } catch { /* ignore */ }
+    if (markerCreated) {
+      try { unlinkSync(markerPath); } catch { /* ignore */ }
+    }
+    return false;
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* ignore */ }
+    }
+  }
+}
+
 export function notifyTaskCompletionFromResultFile(resultFile) {
   try {
     const taskId = taskIdFromResultFile(resultFile);
@@ -258,6 +292,41 @@ export function notifyTaskCompletionFromResultFile(resultFile) {
     let wrote = false;
     for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env)) {
       if (appendTaskNotificationOnce(dataDir, taskId, line)) wrote = true;
+    }
+    return wrote;
+  } catch {
+    return false;
+  }
+}
+
+function notifyPermissionEscalationFromDeniedTool(toolName, denied, ctx = {}) {
+  try {
+    const resultFile = typeof ctx.resultFile === 'string' ? ctx.resultFile : '';
+    const taskId = taskIdFromResultFile(resultFile);
+    if (!taskId) return false;
+    const projectRoot = projectRootFromResultFile(resultFile);
+    const targetAgent = bridgeTargetAgent(process.env);
+    const denyReason = String(denied?.error || denied?.message || denied?.denyReason || 'permission-denied').slice(0, 180);
+    const denyCode = String(denied?.denyReason || 'permission-denied').slice(0, 80);
+    const markerHash = createHash('sha256')
+      .update(`${toolName}\0${denyReason}`)
+      .digest('hex')
+      .slice(0, 16);
+    const summary = `[PERMISSION REQUEST: ${taskId}] provider agent ${ctx.agentId || 'unknown'} could not use ${toolName}: ${denyReason}. Owning operator should run an equivalent privileged action or adjust policy if appropriate.`;
+    const line = JSON.stringify({
+      kind: 'permission-request',
+      taskId,
+      ts: new Date().toISOString(),
+      summary,
+      tool: toolName,
+      denyReason,
+      denyCode,
+      ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
+      ...(targetAgent ? { targetAgent } : {}),
+    });
+    let wrote = false;
+    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env)) {
+      if (appendPermissionNotificationOnce(dataDir, taskId, `permission-${markerHash}`, line)) wrote = true;
     }
     return wrote;
   } catch {
@@ -3514,6 +3583,14 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
 
   try {
     const result = await handler(parseBridgeToolArgs(toolArgs), ctx);
+    if (
+      result &&
+      typeof result === 'object' &&
+      result.status === 'denied' &&
+      (toolName === 'run_command' || toolName === 'run_shell')
+    ) {
+      notifyPermissionEscalationFromDeniedTool(toolName, result, ctx);
+    }
     return typeof result === 'string' ? redactBridgeString(result) : safeBridgeJsonStringify(result);
   } catch (err) {
     stderrLogger.error(`Tool execution failed: ${toolName}`, err.message || err);
@@ -4762,6 +4839,7 @@ async function main() {
             });
             return executeBridgeTool(tc.function.name, tc.function.arguments, {
               agentId,
+              resultFile,
               source: 'response-loop',
             })
               .then((result) => {

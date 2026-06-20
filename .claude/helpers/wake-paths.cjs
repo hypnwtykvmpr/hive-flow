@@ -46,6 +46,12 @@ function sessionValue(input, env = process.env) {
   );
 }
 
+function defaultClientKind(env = process.env) {
+  if (stringValue(env.CODEX_SESSION_ID)) return 'codex';
+  if (stringValue(env.CLAUDE_SESSION_ID) || stringValue(env.CLAUDE_PROJECT_DIR)) return 'claude-code';
+  return 'claude-code';
+}
+
 function sessionKeyFor(input, env = process.env) {
   const fromInput = sessionInputValue(input);
   const rawSession = sessionValue(input, env) || `pid:${process.pid}`;
@@ -53,7 +59,7 @@ function sessionKeyFor(input, env = process.env) {
     fromInput.clientKind ||
     stringValue(env.HIVE_FLOW_CLIENT_KIND) ||
     stringValue(env.CLAUDE_CODE_ENTRYPOINT) ||
-    'unknown';
+    defaultClientKind(env);
   return `s_${crypto.createHash('sha256').update(`${clientKind}\0${rawSession}`).digest('hex').slice(0, 32)}`;
 }
 
@@ -85,6 +91,7 @@ module.exports = {
   stringValue,
   resolveHiveHome,
   sessionValue,
+  defaultClientKind,
   sessionKeyFor,
   flatId,
   wakeSessionPaths,

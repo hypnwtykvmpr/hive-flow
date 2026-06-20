@@ -376,7 +376,7 @@ export const DEFAULT_INIT_OPTIONS: InitOptions = {
     showSwarm: true,
     showHooks: true,
     showPerformance: true,
-    refreshInterval: 5000,
+    refreshInterval: 1000,
   },
   mcp: {
     hiveFlow: true,

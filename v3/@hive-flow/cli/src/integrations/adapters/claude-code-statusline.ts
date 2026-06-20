@@ -48,9 +48,9 @@ function buildValue(ctx: AdapterCtx): Record<string, unknown> {
     command: commandForClaudeSettings(ctx.statuslineLauncherPath),
     padding: 0,
     // Official Claude Code docs define refreshInterval as seconds; minimum is 1.
-    // Five seconds keeps background swarm changes visible without constant
-    // process churn.
-    refreshInterval: 5,
+    // Live swarm visibility depends on this row updating promptly while agents
+    // start, finish, or fail.
+    refreshInterval: 1,
   };
 }
 

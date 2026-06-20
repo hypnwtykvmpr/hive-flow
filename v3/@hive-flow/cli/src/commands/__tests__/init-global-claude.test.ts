@@ -252,7 +252,7 @@ describe('init --global --claude-code', () => {
     expect(installed.statusLine).toMatchObject({
       type: 'command',
       padding: 0,
-      refreshInterval: 5,
+      refreshInterval: 1,
     });
     expect(installed.statusLine.command).toContain('claude-code-statusline');
     expect(installed.statusLine.command).not.toContain('statusline-wrapper.sh');
