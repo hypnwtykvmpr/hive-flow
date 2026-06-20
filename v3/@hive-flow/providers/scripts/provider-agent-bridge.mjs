@@ -189,7 +189,7 @@ function summarizeBridgeResultFile(resultFile, taskId) {
     let detail = '';
     if (!ok) {
       const err = inner?.error || record?.error || '';
-      detail = err ? ` error="${String(err).slice(0, 160)}"` : '';
+      detail = err ? ` error="${redactBridgeString(String(err)).slice(0, 160)}"` : '';
     } else {
       const content = inner?.content || '';
       const len = typeof content === 'string' ? content.length : 0;
@@ -248,7 +248,7 @@ export function notifyTaskCompletionFromResultFile(resultFile) {
     if (!taskId) return false;
     const projectRoot = projectRootFromResultFile(resultFile);
     const targetAgent = bridgeTargetAgent(process.env);
-    const line = safeBridgeJsonStringify({
+    const line = JSON.stringify({
       kind: 'task',
       taskId,
       ts: new Date().toISOString(),

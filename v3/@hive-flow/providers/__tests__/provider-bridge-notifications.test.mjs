@@ -73,7 +73,7 @@ describe('provider bridge task completion notifications', () => {
   it('writes project-local and owning-session pending notifications from a result file exactly once', () => {
     const projectRoot = tempDir('hf-bridge-notify-project-');
     const hiveHome = tempDir('hf-bridge-notify-home-');
-    const taskId = 'task-provider-bridge-notify';
+    const taskId = 'task-751e11dc-f54e-4a6f-a096-78a4dce0576d';
     const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
     mkdirSync(dirname(resultFile), { recursive: true });
     writeFileSync(resultFile, JSON.stringify({
@@ -102,12 +102,15 @@ describe('provider bridge task completion notifications', () => {
     const localPending = join(localDataDir, 'pending-notifications.jsonl');
     const sessionPending = join(sessionDir, 'pending-notifications.jsonl');
 
-    expect(readFileSync(localPending, 'utf8')).toContain(taskId);
-    expect(readFileSync(sessionPending, 'utf8')).toContain(taskId);
-    expect(readFileSync(sessionPending, 'utf8')).toContain('"targetAgent":"codex"');
+    const localPendingText = readFileSync(localPending, 'utf8');
+    const sessionPendingText = readFileSync(sessionPending, 'utf8');
+    expect(localPendingText).toContain(taskId);
+    expect(sessionPendingText).toContain(taskId);
+    expect(sessionPendingText).toContain('"targetAgent":"codex"');
+    expect(sessionPendingText).not.toContain('[REDACTED]');
     expect(existsSync(join(localDataDir, `task-${taskId}.notified`))).toBe(true);
     expect(existsSync(join(sessionDir, `task-${taskId}.notified`))).toBe(true);
-    expect(readFileSync(localPending, 'utf8').trim().split('\n')).toHaveLength(1);
-    expect(readFileSync(sessionPending, 'utf8').trim().split('\n')).toHaveLength(1);
+    expect(localPendingText.trim().split('\n')).toHaveLength(1);
+    expect(sessionPendingText.trim().split('\n')).toHaveLength(1);
   });
 });
