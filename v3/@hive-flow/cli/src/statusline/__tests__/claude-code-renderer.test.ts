@@ -296,7 +296,9 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
     const plain = stripAnsi(output);
     expect(plain).toContain('Swarm');
-    expect(plain).toContain('Swarm ◉');
+    // idle-only swarm (activeAgents=0, total=5) => hollow ○ indicator (teal), not filled ◉.
+    expect(plain).toContain('Swarm ○');
+    expect(plain).not.toContain('Swarm ◉');
     expect(plain).toMatch(/\[\s*5\/50\]/);
     expect(plain).not.toMatch(/\[\s*0\/50\]/);
     expect(plain).not.toContain('agents off');
@@ -464,7 +466,9 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     );
     const plain = stripAnsi(output);
 
-    expect(plain).toContain('Swarm ◉');
+    // mine-busy has no pid => non-executing => hollow ○ indicator.
+    expect(plain).toContain('Swarm ○');
+    expect(plain).not.toContain('Swarm ◉');
     expect(plain).toMatch(/\[\s*4\/50\]/);
     expect(plain).not.toMatch(/\[\s*2\/50\]/);
     expect(plain).not.toMatch(/\[\s*5\/50\]/);

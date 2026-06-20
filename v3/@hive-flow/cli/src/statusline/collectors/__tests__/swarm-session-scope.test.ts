@@ -45,12 +45,25 @@ describe('collectSwarm session scoping', () => {
   });
 
   it('counts current-session and unowned live records when sessionId is present', async () => {
+    // A positive currentTaskPid is required for a busy agent to count as
+    // executing (phantom-activity fix). Use process.pid (always alive) for the
+    // four busy fixtures that should register as executing.
+    const livePid = process.pid;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+      pid: number,
+      signal?: string | number,
+    ) => {
+      if (signal === 0 && pid === livePid) return true;
+      return true;
+    }) as typeof process.kill);
+
     writeStoreDict(fix.storePath, {
       mineBusy: {
         agentId: 'mine-busy',
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: 'session-a',
+        currentTaskPid: livePid,
       },
       mineIdle: {
         agentId: 'mine-idle',
@@ -63,28 +76,33 @@ describe('collectSwarm session scoping', () => {
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: 'session-b',
+        currentTaskPid: livePid,
       },
       unownedBusy: {
         agentId: 'unowned-busy',
         agentType: 'coder',
         status: 'busy',
+        currentTaskPid: livePid,
       },
       emptyOwnerBusy: {
         agentId: 'empty-owner-busy',
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: '',
+        currentTaskPid: livePid,
       },
       nullOwnerBusy: {
         agentId: 'null-owner-busy',
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: null,
+        currentTaskPid: livePid,
       },
     });
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-a' });
 
+    expect(killSpy).toHaveBeenCalled();
     expect(result.workersAlive).toBe(5);
     expect(result.workersExecuting).toBe(4);
     expect(result.agents.map((agent) => agent.id)).toEqual([
@@ -98,6 +116,7 @@ describe('collectSwarm session scoping', () => {
 
   it('combines session scoping with dead-pid exclusion', async () => {
     const deadPid = 424242;
+    const livePid = process.pid;
     const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
       pid: number,
       signal?: string | number,
@@ -116,6 +135,7 @@ describe('collectSwarm session scoping', () => {
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: 'session-a',
+        currentTaskPid: livePid,
       },
       mineDead: {
         agentId: 'mine-dead',
@@ -129,11 +149,13 @@ describe('collectSwarm session scoping', () => {
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: 'session-b',
+        currentTaskPid: livePid,
       },
       unownedBusy: {
         agentId: 'unowned-busy',
         agentType: 'coder',
         status: 'busy',
+        currentTaskPid: livePid,
       },
     });
 
@@ -146,12 +168,16 @@ describe('collectSwarm session scoping', () => {
   });
 
   it('keeps count-all behavior when no sessionId is available', async () => {
+    const livePid = process.pid;
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
     writeStoreDict(fix.storePath, {
       owned: {
         agentId: 'owned',
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: 'session-a',
+        currentTaskPid: livePid,
       },
       other: {
         agentId: 'other',

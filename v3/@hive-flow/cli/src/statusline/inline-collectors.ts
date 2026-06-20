@@ -514,7 +514,15 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
         ? rec.agentId
         : `agent-${rows.length}`;
 
-    const row: NormalizedAgentRow = { id, role, status };
+    // Busy without a valid (positive-integer) currentTaskPid means the agent
+    // has not yet attached a real OS process — demote its row status to 'idle'
+    // so the Active sub-row (which checks row.status === 'busy') and the slot
+    // symbol (which checks activeAgents) agree. The record still counts as alive.
+    const isExecuting = status === 'busy' && isPositiveInteger(rec.currentTaskPid);
+    const effectiveStatus: NormalizedAgentRow['status'] =
+      status === 'busy' && !isExecuting ? 'idle' : status;
+
+    const row: NormalizedAgentRow = { id, role, status: effectiveStatus };
     if (typeof rec.provider === 'string' && rec.provider.length > 0) {
       (row as { provider?: string }).provider = rec.provider;
     }
@@ -527,11 +535,11 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
 
     if (isQueen) {
       activeQueens++;
-      if (status === 'busy') executingQueens++;
+      if (isExecuting) executingQueens++;
     } else {
-      if (status === 'busy') activeAgents++;
-      else if (status === 'idle' || status === 'stale') idleAgents++;
-      else if (status === 'queued') queuedAgents++;
+      if (isExecuting) activeAgents++;
+      else if (effectiveStatus === 'idle' || effectiveStatus === 'stale') idleAgents++;
+      else if (effectiveStatus === 'queued') queuedAgents++;
     }
   }
 

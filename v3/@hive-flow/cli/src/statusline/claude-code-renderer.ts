@@ -915,10 +915,15 @@ function renderSwarm(
   if (total <= 0 && swarm.activeQueens <= 0) return undefined;
 
   const executing = swarm.activeAgents > 0;
-  // Tri-state indicator per locked visual design.
-  const indicator = total > 0
-    ? `${executing ? p.active : p.memory}◉${p.reset}`
-    : `${p.dim}○${p.reset}`;
+  // Tri-state indicator per locked visual design:
+  //   activeAgents > 0           => ◉ bright-green (executing)
+  //   total > 0, no executing    => ○ teal (idle workers present)
+  //   total == 0 (queens-only)   => ○ dim
+  const indicator = executing
+    ? `${p.active}◉${p.reset}`
+    : total > 0
+      ? `${p.memory}○${p.reset}`
+      : `${p.dim}○${p.reset}`;
 
   const numberColor = executing ? p.active : total > 0 ? p.memory : p.dim;
   const slot = `[${numberColor}${String(total).padStart(2, ' ')}${p.reset}${p.gray}/${p.reset}${p.number}${swarm.maxAgents}${p.reset}]`;

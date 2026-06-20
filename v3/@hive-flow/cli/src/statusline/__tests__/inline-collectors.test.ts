@@ -185,7 +185,8 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
 
     expect(snap.git).toBeUndefined();
     expect(snap.swarm).toBeDefined();
-    expect(snap.swarm?.activeAgents).toBe(1);
+    // agent-1 is busy but has no pid => alive but not active (phantom-activity fix).
+    expect(snap.swarm?.activeAgents).toBe(0);
     expect(snap.daemon).toBeDefined();
     expect(snap.daemon?.running).toBe(true);
   });
@@ -216,16 +217,18 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
       sessionId: 'session-a',
       deadlineMs: 1000,
     });
-    expect(scoped.swarm?.activeAgents).toBe(1);
-    expect(scoped.swarm?.idleAgents).toBe(1);
+    // mine-busy has no pid => not active (phantom-activity fix); goes to idleAgents.
+    expect(scoped.swarm?.activeAgents).toBe(0);
+    expect(scoped.swarm?.idleAgents).toBe(2);
     expect(scoped.swarm?.agents?.map((agent) => agent.id)).toEqual(['mine-busy', 'unowned-idle']);
 
     const unscoped = await collectInlineSnapshot({
       projectRoot: fix.projectRoot,
       deadlineMs: 1000,
     });
-    expect(unscoped.swarm?.activeAgents).toBe(2);
-    expect(unscoped.swarm?.idleAgents).toBe(1);
+    // both busy workers have no pid => idleAgents; unownedIdle => idleAgents.
+    expect(unscoped.swarm?.activeAgents).toBe(0);
+    expect(unscoped.swarm?.idleAgents).toBe(3);
   });
 
   it('excludes only inline busy agents whose currentTaskPid is proven dead', async () => {
@@ -263,7 +266,9 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(killSpy).toHaveBeenCalledWith(deadPid, 0);
     expect(killSpy).toHaveBeenCalledWith(process.pid, 0);
     expect(killSpy).toHaveBeenCalledWith(epermPid, 0);
-    expect(snap.swarm?.activeAgents).toBe(3);
+    // `dead` is excluded (ESRCH). `live` and `eperm` have valid pids => executing (activeAgents).
+    // `legacy` has no pid => alive but NOT active (phantom-activity fix).
+    expect(snap.swarm?.activeAgents).toBe(2);
     expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual(['live', 'eperm', 'legacy']);
   });
 
@@ -454,15 +459,15 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     });
 
     expect(snap.swarm).toBeDefined();
-    // workers: busy1 + legacy1 (running→busy) = 2 active workers.
-    expect(snap.swarm?.activeAgents).toBe(2);
-    // idle workers: idle1
-    expect(snap.swarm?.idleAgents).toBe(1);
+    // workers: busy1 + legacy1 (running→busy) have no pid => NOT active (phantom-activity fix).
+    expect(snap.swarm?.activeAgents).toBe(0);
+    // idle workers: idle1 + busy1 (no pid) + legacy1 (no pid) = 3.
+    expect(snap.swarm?.idleAgents).toBe(3);
     // queued workers: spawning1 (normalizer maps 'spawning' → 'queued')
     expect(snap.swarm?.queuedAgents).toBe(1);
-    // queens: 1 alive, 1 executing.
+    // queens: 1 alive, but no pid => non-executing.
     expect(snap.swarm?.activeQueens).toBe(1);
-    expect(snap.swarm?.executingQueens).toBe(1);
+    expect(snap.swarm?.executingQueens).toBe(0);
     // term1 is dropped (terminal status).
     expect(snap.swarm?.agents?.some((a) => a.id === 'term1')).toBe(false);
     // 5 live rows total (6 - 1 terminated).

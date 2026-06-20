@@ -258,14 +258,22 @@ function materializedEightRowFixture(projectRoot: string): void {
     lastUpdatedAt: observedAt,
   });
 
+  // Busy workers and queens require a positive currentTaskPid to count as
+  // executing (phantom-activity fix). process.pid is always alive.
   writeJsonFixture(join(projectRoot, '.hive-flow', 'agents', 'store.json'), {
     version: '1.0',
     agents: Object.fromEntries([
       ...Array.from({ length: 7 }, (_, i) => [
         `worker-${i + 1}`,
-        { agentId: `worker-${i + 1}`, agentType: 'worker', status: 'busy', provider: 'codex' },
+        {
+          agentId: `worker-${i + 1}`,
+          agentType: 'worker',
+          status: 'busy',
+          provider: 'codex',
+          currentTaskPid: process.pid,
+        },
       ]),
-      ['queen-1', { agentId: 'queen-1', agentType: 'queen', status: 'busy', provider: 'claude' }],
+      ['queen-1', { agentId: 'queen-1', agentType: 'queen', status: 'busy', provider: 'claude', currentTaskPid: process.pid }],
       ['queen-2', { agentId: 'queen-2', agentType: 'queen', status: 'idle', provider: 'claude' }],
     ]),
   });

@@ -385,13 +385,25 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
       && isPidDefinitelyDead(rec.currentTaskPid)) {
       continue;
     }
-    agents.push(built.row);
+    // Busy without a valid (positive-integer) currentTaskPid means the agent
+    // has not yet attached a real OS process — demote its row status to 'idle'
+    // so the Active sub-row (which checks row.status === 'busy') and the slot
+    // symbol (which checks workersExecuting) agree. The record still counts as
+    // alive; only the executing counter is withheld.
+    // Only demote when the normalized status is 'busy'; preserve 'queued',
+    // 'idle', 'stale', and all other statuses as-is.
+    const isExecuting =
+      built.row.status === 'busy' && isPositiveInteger(rec.currentTaskPid);
+    const row = (built.row.status === 'busy' && !isExecuting)
+      ? { ...built.row, status: 'idle' as const }
+      : built.row;
+    agents.push(row);
     if (built.isQueen) {
       queensAlive++;
-      if (built.row.status === 'busy') queensExecuting++;
+      if (isExecuting) queensExecuting++;
     } else {
       workersAlive++;
-      if (built.row.status === 'busy') workersExecuting++;
+      if (isExecuting) workersExecuting++;
     }
   }
 
