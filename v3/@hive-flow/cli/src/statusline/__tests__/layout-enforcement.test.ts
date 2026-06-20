@@ -322,7 +322,7 @@ function materializedEightRowFixture(projectRoot: string): void {
 
   writeJsonFixture(join(projectRoot, '.hive-flow', 'daemon-state.json'), {
     running: true,
-    pid: 12345,
+    pid: process.pid,
   });
 }
 

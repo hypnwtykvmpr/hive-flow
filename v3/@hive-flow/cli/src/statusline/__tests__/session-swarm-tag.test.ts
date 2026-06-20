@@ -110,6 +110,25 @@ describe('statusline R7 swarm session tag', () => {
     expect(row).toContain('hives 1 this/1 other');
   });
 
+  it('surfaces unowned active hives in the session tag', async () => {
+    writeSwarmStore(projectRoot, 'sid-current');
+    writeHive(projectRoot, 'hive-current', 'sid-current');
+    writeHive(projectRoot, 'hive-unowned', undefined);
+
+    const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
+
+    expect(row).toContain('hives 1 this/1 unowned');
+  });
+
+  it('surfaces unowned hives even when no owned hives belong to another session', async () => {
+    writeSwarmStore(projectRoot);
+    writeHive(projectRoot, 'hive-unowned', undefined);
+
+    const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
+
+    expect(row).toContain('hives 0 this/1 unowned');
+  });
+
   it('leaves the swarm row unchanged when there is no current session id', async () => {
     writeSwarmStore(projectRoot);
     const baseline = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot), projectRoot));

@@ -174,7 +174,7 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     });
     writeFileSync(
       fix.daemonStatePath,
-      JSON.stringify({ running: true, pid: 12345 }),
+      JSON.stringify({ running: true, pid: process.pid }),
       { mode: 0o600 },
     );
 
@@ -476,7 +476,7 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     // 7a. Happy path: running=true with pid.
     writeFileSync(
       fix.daemonStatePath,
-      JSON.stringify({ running: true, pid: 4242 }),
+      JSON.stringify({ running: true, pid: process.pid }),
       { mode: 0o600 },
     );
     const happy = await collectInlineSnapshot({
@@ -485,7 +485,7 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     });
     expect(happy.daemon).toBeDefined();
     expect(happy.daemon?.running).toBe(true);
-    expect(happy.daemon?.pid).toBe(4242);
+    expect(happy.daemon?.pid).toBe(process.pid);
     expect(happy.daemon?.health).toBe('healthy');
 
     // 7b. Absent: delete and re-collect.
@@ -511,6 +511,38 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(corrupt.daemon?.health).toBe('unknown');
   });
 
+  it('does not report daemon on when daemon-state.json has a dead pid', async () => {
+    const deadPid = 424242;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+      pid: number,
+      signal?: string | number,
+    ) => {
+      if (signal === 0 && pid === deadPid) {
+        const err = new Error('dead process') as NodeJS.ErrnoException;
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return true;
+    }) as typeof process.kill);
+
+    writeFileSync(
+      fix.daemonStatePath,
+      JSON.stringify({ running: true, pid: deadPid }),
+      { mode: 0o600 },
+    );
+
+    const snap = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+
+    expect(killSpy).toHaveBeenCalledWith(deadPid, 0);
+    expect(snap.daemon).toBeDefined();
+    expect(snap.daemon?.running).toBe(false);
+    expect(snap.daemon?.pid).toBe(deadPid);
+    expect(snap.daemon?.health).toBe('stopped');
+  });
+
   // -------------------------------------------------------------------------
   // 7d. Producer-path wiring: the probe MUST read the worker daemon's actual
   // write path (`.hive-flow/daemon-state.json`), NOT a `data/` subdir. A file
@@ -530,7 +562,11 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(fromWrong.daemon?.running).toBe(false);
 
     // Now write at the producer's real path; the daemon must read as running.
-    writeFileSync(fix.daemonStatePath, JSON.stringify({ running: true }), { mode: 0o600 });
+    writeFileSync(
+      fix.daemonStatePath,
+      JSON.stringify({ running: true, pid: process.pid }),
+      { mode: 0o600 },
+    );
     const fromRight = await collectInlineSnapshot({
       projectRoot: fix.projectRoot,
       deadlineMs: 500,

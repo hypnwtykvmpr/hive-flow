@@ -956,9 +956,16 @@ function maybeRenderHiveSessionTag(
   for (const [ownerSessionId, count] of Object.entries(activeHives.byOwnerSessionId)) {
     if (ownerSessionId !== currentSessionId) other += count;
   }
-  if (other <= 0) return undefined;
+  const unowned = activeHives.unknownOwner ?? 0;
+  if (other <= 0 && unowned <= 0) return undefined;
 
-  return `${p.gray}hives ${p.reset}${p.number}${current}${p.reset}${p.gray} this/${p.reset}${p.number}${other}${p.reset}${p.gray} other${p.reset}`;
+  const parts = [
+    `${p.number}${current}${p.reset}${p.gray} this`,
+    ...(other > 0 ? [`${p.number}${other}${p.reset}${p.gray} other`] : []),
+    ...(unowned > 0 ? [`${p.number}${unowned}${p.reset}${p.gray} unowned`] : []),
+  ];
+
+  return `${p.gray}hives ${p.reset}${parts.join(`${p.gray}/${p.reset}`)}${p.reset}`;
 }
 
 function maybeRenderActive(

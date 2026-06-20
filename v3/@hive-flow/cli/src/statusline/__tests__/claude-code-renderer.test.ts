@@ -441,6 +441,18 @@ describe('claude-code statusline renderer (Phase 12)', () => {
             agentType: 'tester',
             status: 'idle',
           },
+          emptyOwner: {
+            agentId: 'empty-owner',
+            agentType: 'tester',
+            status: 'idle',
+            ownerSessionId: '',
+          },
+          nullOwner: {
+            agentId: 'null-owner',
+            agentType: 'tester',
+            status: 'idle',
+            ownerSessionId: null,
+          },
         },
       }),
       'utf8',
@@ -453,8 +465,9 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const plain = stripAnsi(output);
 
     expect(plain).toContain('Swarm ◉');
-    expect(plain).toMatch(/\[\s*2\/50\]/);
-    expect(plain).not.toMatch(/\[\s*3\/50\]/);
+    expect(plain).toMatch(/\[\s*4\/50\]/);
+    expect(plain).not.toMatch(/\[\s*2\/50\]/);
+    expect(plain).not.toMatch(/\[\s*5\/50\]/);
   });
 
   // -------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -14,7 +14,8 @@ interface AgentLike {
   agentId: string;
   agentType: string;
   status: string;
-  ownerSessionId?: string;
+  ownerSessionId?: unknown;
+  currentTaskPid?: number;
 }
 
 function setupFixture(): Fixture {
@@ -40,6 +41,7 @@ describe('collectSwarm session scoping', () => {
 
   afterEach(() => {
     rmSync(fix.projectRoot, { recursive: true, force: true });
+    vi.restoreAllMocks();
   });
 
   it('counts current-session and unowned live records when sessionId is present', async () => {
@@ -73,18 +75,74 @@ describe('collectSwarm session scoping', () => {
         status: 'busy',
         ownerSessionId: '',
       },
+      nullOwnerBusy: {
+        agentId: 'null-owner-busy',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: null,
+      },
     });
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-a' });
 
-    expect(result.workersAlive).toBe(4);
-    expect(result.workersExecuting).toBe(3);
+    expect(result.workersAlive).toBe(5);
+    expect(result.workersExecuting).toBe(4);
     expect(result.agents.map((agent) => agent.id)).toEqual([
       'mine-busy',
       'mine-idle',
       'unowned-busy',
       'empty-owner-busy',
+      'null-owner-busy',
     ]);
+  });
+
+  it('combines session scoping with dead-pid exclusion', async () => {
+    const deadPid = 424242;
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+      pid: number,
+      signal?: string | number,
+    ) => {
+      if (signal === 0 && pid === deadPid) {
+        const err = new Error('dead process') as NodeJS.ErrnoException;
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return true;
+    }) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      mineBusy: {
+        agentId: 'mine-busy',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+      },
+      mineDead: {
+        agentId: 'mine-dead',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: deadPid,
+      },
+      otherBusy: {
+        agentId: 'other-busy',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-b',
+      },
+      unownedBusy: {
+        agentId: 'unowned-busy',
+        agentType: 'coder',
+        status: 'busy',
+      },
+    });
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-a' });
+
+    expect(killSpy).toHaveBeenCalledWith(deadPid, 0);
+    expect(result.workersAlive).toBe(2);
+    expect(result.workersExecuting).toBe(2);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['mine-busy', 'unowned-busy']);
   });
 
   it('keeps count-all behavior when no sessionId is available', async () => {

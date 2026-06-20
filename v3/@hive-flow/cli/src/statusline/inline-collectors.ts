@@ -587,9 +587,10 @@ async function probeDaemon(
   const running = raw.running === true;
   const pid =
     typeof raw.pid === 'number' && Number.isFinite(raw.pid) && raw.pid > 0 ? raw.pid : undefined;
+  const runningNow = running && pid !== undefined && isPidDefinitelyDead(pid) ? false : running;
   const summary: DaemonSummary = {
-    running,
-    health: running ? 'healthy' : 'stopped',
+    running: runningNow,
+    health: runningNow ? 'healthy' : 'stopped',
     observedAt,
   };
   if (pid !== undefined) {
