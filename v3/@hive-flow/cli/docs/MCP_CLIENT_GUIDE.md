@@ -605,7 +605,6 @@ When adding new CLI commands:
 
 ## Related Documentation
 
-- [REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md) - Overview of refactoring
 - [ADR-005: MCP-First API Design](/workspaces/hive-flow/docs/adr/ADR-005-mcp-first-api.md) - Architecture decision
 - [MCP Tool Implementations](/workspaces/hive-flow/v3/mcp/tools/) - Tool source code
 

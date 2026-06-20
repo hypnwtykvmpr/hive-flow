@@ -11,13 +11,6 @@ interface ClassifiedSuspect {
 
 const CLASSIFIED_SUSPECTS: ReadonlyMap<string, ClassifiedSuspect> = new Map([
   [
-    'package.json:content:suspect legacy ru-prefixed token',
-    {
-      classification: 'migration-deferred',
-      reason: 'Root optional @ruvector dependencies remain load-bearing until the dependency replacement plan lands.',
-    },
-  ],
-  [
     'v3/@hive-flow/cli/package.json:content:suspect legacy ru-prefixed token',
     {
       classification: 'compatibility-alias',

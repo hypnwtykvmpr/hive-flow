@@ -203,6 +203,46 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     assertNoJunk(files, 'root');
   });
 
+  it('does not declare or lock legacy vector generator packages', () => {
+    const rootPackage = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
+    const dependencySections = [
+      rootPackage.dependencies,
+      rootPackage.optionalDependencies,
+      rootPackage.peerDependencies,
+      rootPackage.devDependencies,
+    ];
+    const declared = dependencySections
+      .flatMap((section) => Object.keys(section || {}))
+      .filter((name) =>
+        name === 'agentdb' ||
+        name === 'agentic-flow' ||
+        name === 'ruvector' ||
+        name.startsWith('@ruvector/') ||
+        name.startsWith('ruvector-'),
+      );
+    assert.deepEqual(
+      declared,
+      [],
+      `root package must not install legacy vector generators:\n  ${declared.join('\n  ')}`,
+    );
+
+    const lockfile = readFileSync(join(repoRoot, 'pnpm-lock.yaml'), 'utf8');
+    const forbiddenLockPatterns = [
+      { name: '@ruvector/*', re: /(^|\n)\s*'?@ruvector\// },
+      { name: 'ruvector packages', re: /(^|\n)\s*'?ruvector(?:@|-)/ },
+      { name: 'agentdb', re: /(^|\n)\s*'?agentdb@/ },
+      { name: 'agentic-flow', re: /(^|\n)\s*'?agentic-flow@/ },
+    ];
+    const locked = forbiddenLockPatterns
+      .filter(({ re }) => re.test(lockfile))
+      .map(({ name }) => name);
+    assert.deepEqual(
+      locked,
+      [],
+      `root lockfile must not resolve legacy vector generators:\n  ${locked.join('\n  ')}`,
+    );
+  });
+
   it('ships the nested canonical CLI payload (templates + agents + helpers)', () => {
     const has = (re) => files.some((p) => re.test(p));
     assert.ok(has(/^v3\/@hive-flow\/cli\/\.claude\/commands\//), 'missing nested cli .claude/commands');
