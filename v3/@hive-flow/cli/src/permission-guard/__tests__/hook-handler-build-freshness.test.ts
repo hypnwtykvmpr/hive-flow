@@ -72,10 +72,13 @@ function writeDistGate(root: string, body: string): void {
   writeFileSync(join(distDir, 'gate.js'), body, 'utf8');
 }
 
-function runPermissionGuard(root: string): { status: number | null; stdout: string; stderr: string } {
+function runPermissionGuard(
+  root: string,
+  input: Record<string, unknown> = { tool_name: 'Bash', tool_input: { command: 'echo ok' }, cwd: root },
+): { status: number | null; stdout: string; stderr: string } {
   const result = spawnSync(process.execPath, [join(root, '.claude', 'helpers', 'hook-handler.cjs'), 'permission-guard'], {
     cwd: root,
-    input: JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'echo ok' }, cwd: root }),
+    input: JSON.stringify(input),
     encoding: 'utf8',
   });
   return {
@@ -143,6 +146,63 @@ describe('hook-handler permission-guard build freshness', () => {
     }
   });
 
+  it('allows exactly the project-local rebuild command when compiled gate stamp is stale', () => {
+    const root = makeHookProject();
+    try {
+      writeSourceStamp(root, 'source-stamp');
+      writeDistGate(root, [
+        "export const PERMISSION_GUARD_BUILD_STAMP = 'old-stamp';",
+        "export async function evaluateHookInput() { return { decision: 'allow' }; }",
+      ].join('\n'));
+
+      const result = runPermissionGuard(root, {
+        tool_name: 'Bash',
+        tool_input: { command: 'corepack pnpm --dir v3/@hive-flow/cli build' },
+        cwd: root,
+      });
+      const parsed = parseDecision(result.stdout);
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('allow');
+      expect(parsed.hookSpecificOutput?.permissionDecisionReason).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps stale-gate rebuild escape hatch closed for shell composition and wrong targets', () => {
+    const root = makeHookProject();
+    try {
+      writeSourceStamp(root, 'source-stamp');
+      writeDistGate(root, [
+        "export const PERMISSION_GUARD_BUILD_STAMP = 'old-stamp';",
+        "export async function evaluateHookInput() { return { decision: 'allow' }; }",
+      ].join('\n'));
+
+      const commands = [
+        'corepack pnpm --dir v3/@hive-flow/cli build | tail -20',
+        'corepack pnpm --dir v3/@hive-flow/cli build 2>&1',
+        'corepack pnpm --dir . build',
+        'echo ok',
+      ];
+
+      for (const command of commands) {
+        const result = runPermissionGuard(root, {
+          tool_name: 'Bash',
+          tool_input: { command },
+          cwd: root,
+        });
+        const parsed = parseDecision(result.stdout);
+        expect(result.status, command).toBe(0);
+        expect(result.stderr, command).toBe('');
+        expect(parsed.hookSpecificOutput?.permissionDecision, command).toBe('deny');
+        expect(parsed.hookSpecificOutput?.permissionDecisionReason, command).toMatch(/stale|compiled|safety|blocked/i);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('fails closed with valid JSON when compiled gate exists but throws on load', () => {
     const root = makeHookProject();
     try {
@@ -155,6 +215,27 @@ describe('hook-handler permission-guard build freshness', () => {
       expect(result.stderr).toBe('');
       expect(parsed.hookSpecificOutput?.permissionDecision).toBe('deny');
       expect(parsed.hookSpecificOutput?.permissionDecisionReason).toMatch(/permission guard|compiled|failed/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('allows npm run build from the CLI directory when compiled gate throws on load', () => {
+    const root = makeHookProject();
+    try {
+      writeSourceStamp(root, 'source-stamp');
+      writeDistGate(root, "throw new Error('compiled gate boom');\n");
+      const cliDir = join(root, 'v3', '@hive-flow', 'cli');
+
+      const result = runPermissionGuard(root, {
+        tool_name: 'Bash',
+        tool_input: { command: 'npm run build' },
+        cwd: cliDir,
+      });
+      const parsed = parseDecision(result.stdout);
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(parsed.hookSpecificOutput?.permissionDecision).toBe('allow');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

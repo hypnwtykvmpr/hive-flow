@@ -189,6 +189,69 @@ function assertPermissionGuardBuildFresh(gate, gateRoot = PROJECT_DIR) {
   }
 }
 
+function normalizePermissionGuardRebuildPath(candidate) {
+  if (typeof candidate !== 'string' || !candidate.trim()) return '';
+  try {
+    return protectedPathPolicy.casefoldPath(protectedPathPolicy.resolveRealPathForPolicy(candidate, PROJECT_DIR));
+  } catch {
+    return path.resolve(candidate).replace(/\\/g, '/').toLowerCase();
+  }
+}
+
+function resolvePermissionGuardCommandPath(cwd, value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  return normalizePermissionGuardRebuildPath(path.resolve(cwd, value));
+}
+
+function isPermissionGuardRebuildCommand(input) {
+  if (!input || input.tool_name !== 'Bash') return false;
+
+  const command = input.tool_input?.command;
+  if (typeof command !== 'string') return false;
+
+  const trimmed = command.trim();
+  if (!trimmed) return false;
+
+  // The stale-gate escape hatch is only for one simple rebuild command. Keep
+  // shell composition outside the bypass so redirects/pipes/chains still fail
+  // closed and get routed back as explicit, reviewable commands.
+  if (/[|;&<>`$()\n\r]/.test(trimmed)) return false;
+
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  const cwd = path.resolve(input.cwd || input.tool_input?.cwd || PROJECT_DIR);
+  const cliDir = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli');
+  const cliDirKey = normalizePermissionGuardRebuildPath(cliDir);
+  const inCliDir = normalizePermissionGuardRebuildPath(cwd) === cliDirKey;
+
+  if (
+    inCliDir &&
+    (
+      tokens.join(' ') === 'npm run build' ||
+      tokens.join(' ') === 'pnpm build' ||
+      tokens.join(' ') === 'corepack pnpm build'
+    )
+  ) {
+    return true;
+  }
+
+  const pnpmArgs = tokens[0] === 'corepack' && tokens[1] === 'pnpm'
+    ? tokens.slice(2)
+    : tokens[0] === 'pnpm'
+      ? tokens.slice(1)
+      : null;
+  if (!pnpmArgs) return false;
+
+  if (
+    pnpmArgs.length === 3 &&
+    (pnpmArgs[0] === '--dir' || pnpmArgs[0] === '-C') &&
+    pnpmArgs[2] === 'build'
+  ) {
+    return resolvePermissionGuardCommandPath(cwd, pnpmArgs[1]) === cliDirKey;
+  }
+
+  return false;
+}
+
 // Safe require with stdout suppression - the helper modules have CLI
 // sections that run unconditionally on require(), so we mute console
 // during the require to prevent noisy output.
@@ -1568,7 +1631,11 @@ const handlers = {
       } catch (gateErr) {
         // Compiled gate exists but is stale or broken: fail closed with valid JSON.
         // NOTE: Do NOT write to stderr — Claude Code treats any stderr as hook error
-        console.log(permissionGuardDeny('[PERMISSION GUARD] Compiled gate is stale or failed to load. Tool blocked for safety; run npm run build in v3/@hive-flow/cli.'));
+        if (isPermissionGuardRebuildCommand(input)) {
+          console.log(permissionGuardAllow('[PERMISSION GUARD] Compiled gate is stale or failed to load. Allowing the project-local permission-guard rebuild command only.'));
+          return;
+        }
+        console.log(permissionGuardDeny('[PERMISSION GUARD] Compiled gate is stale or failed to load. Tool blocked for safety; run `corepack pnpm --dir v3/@hive-flow/cli build` without pipes, redirects, or chained commands.'));
         process.exit(0);
       }
 
