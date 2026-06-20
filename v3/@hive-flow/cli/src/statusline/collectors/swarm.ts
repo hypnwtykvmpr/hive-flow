@@ -33,7 +33,10 @@
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { collectActiveHiveOwnership } from '../hive-ownership.js';
+import {
+  collectActiveHiveRuntimeState,
+  type ActiveHiveRuntimeState,
+} from '../hive-ownership.js';
 import { readJsonFile } from '../storage.js';
 import {
   type ActiveHiveOwnershipSummary,
@@ -134,6 +137,8 @@ interface RawAgentRecord {
   resolvedModel?: unknown;
   ownerSessionId?: unknown;
   currentTaskPid?: unknown;
+  config?: unknown;
+  lastResult?: unknown;
 }
 
 interface RawStoreShape {
@@ -198,11 +203,49 @@ function extractRecords(raw: unknown): RawAgentRecord[] {
  * an older store layout still classify correctly.
  */
 function isQueenRecord(rec: RawAgentRecord): boolean {
+  if (typeof rec.agentId === 'string' && rec.agentId.startsWith('queen-')) return true;
   const typeFields: ReadonlyArray<unknown> = [rec.agentType, rec.type, rec.role];
   for (const field of typeFields) {
     if (typeof field === 'string' && field.toLowerCase() === 'queen') return true;
   }
   return false;
+}
+
+function rawAgentHiveId(rec: RawAgentRecord): string {
+  if (!rec.config || typeof rec.config !== 'object' || Array.isArray(rec.config)) return '';
+  const hiveId = (rec.config as { hiveId?: unknown }).hiveId;
+  return typeof hiveId === 'string' && hiveId.trim() ? hiveId.trim() : '';
+}
+
+function shouldKeepRuntimeAgent(
+  rec: RawAgentRecord,
+  agentId: string,
+  runtimeState: ActiveHiveRuntimeState | undefined,
+): boolean {
+  const hiveId = rawAgentHiveId(rec);
+  if (runtimeState === undefined || runtimeState.inspected <= 0) return true;
+  if (hiveId === '') {
+    return !runtimeState.hiveAgentIds.has(agentId) || runtimeState.activeAgentIds.has(agentId);
+  }
+  return runtimeState.activeHiveIds.has(hiveId) && runtimeState.activeAgentIds.has(agentId);
+}
+
+function hasCompletedLastResult(rec: RawAgentRecord): boolean {
+  if (!rec.lastResult || typeof rec.lastResult !== 'object' || Array.isArray(rec.lastResult)) {
+    return false;
+  }
+  const result = rec.lastResult as { completedAt?: unknown; status?: unknown };
+  if (typeof result.completedAt === 'string' && result.completedAt.trim()) return true;
+  if (typeof result.status !== 'string') return false;
+  return ['cancelled', 'canceled', 'complete', 'completed', 'done', 'failed', 'terminated'].includes(
+    result.status.trim().toLowerCase(),
+  );
+}
+
+function isCompletedDirectAgent(rec: RawAgentRecord, row: NormalizedAgentRow): boolean {
+  if (rawAgentHiveId(rec) !== '') return false;
+  if (!hasCompletedLastResult(rec)) return false;
+  return !(row.status === 'busy' && isPositiveInteger(rec.currentTaskPid));
 }
 
 function isPositiveInteger(value: unknown): value is number {
@@ -334,12 +377,13 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
   // Stat first so we can classify even when `readJsonFile` succeeds. Reading
   // the advocate state in parallel keeps the collector cheap (two small JSON
   // files, both bounded by storage.ts caps).
-  const [freshnessClass, advocateState, rawStore, activeHives] = await Promise.all([
+  const [freshnessClass, advocateState, rawStore, runtimeState] = await Promise.all([
     classifyFreshness(storePath, now),
     readAdvocateState(projectRoot),
     readJsonFile<unknown>(storePath).catch(() => undefined),
-    collectActiveHiveOwnership(projectRoot).catch(() => undefined),
+    collectActiveHiveRuntimeState(projectRoot).catch(() => undefined),
   ]);
+  const activeHives = runtimeState?.activeHives;
 
   if (freshnessClass === undefined && rawStore === undefined) {
     return emptySummary(
@@ -380,6 +424,8 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
     const built = buildRow(rec, `agent-${index}`);
     index++;
     if (built === undefined) continue;
+    if (!shouldKeepRuntimeAgent(rec, built.row.id, runtimeState)) continue;
+    if (isCompletedDirectAgent(rec, built.row)) continue;
     if (built.row.status === 'busy'
       && isPositiveInteger(rec.currentTaskPid)
       && isPidDefinitelyDead(rec.currentTaskPid)) {

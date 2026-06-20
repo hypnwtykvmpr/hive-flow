@@ -55,6 +55,8 @@ interface AgentLike {
   resolvedModel?: string;
   model?: string;
   currentTaskPid?: number;
+  config?: Record<string, unknown>;
+  lastResult?: Record<string, unknown>;
 }
 
 function writeStoreDict(storePath: string, agents: Record<string, AgentLike>): void {
@@ -63,6 +65,31 @@ function writeStoreDict(storePath: string, agents: Record<string, AgentLike>): v
 
 function writeStoreArray(storePath: string, agents: AgentLike[]): void {
   writeFileSync(storePath, JSON.stringify({ version: '1.0', agents }), { mode: 0o600 });
+}
+
+function writeHive(
+  projectRoot: string,
+  hiveId: string,
+  workers: Array<Record<string, unknown>>,
+  queenId?: string,
+): void {
+  const hiveRoot = join(projectRoot, '.hive-flow', 'hives', hiveId);
+  mkdirSync(hiveRoot, { recursive: true });
+  writeFileSync(
+    join(hiveRoot, 'hive.json'),
+    JSON.stringify({ hiveId, status: 'active', queenId, workers }),
+    { mode: 0o600 },
+  );
+}
+
+function writeTaskResult(projectRoot: string, taskId: string): void {
+  const tasksRoot = join(projectRoot, '.hive-flow', 'tasks');
+  mkdirSync(tasksRoot, { recursive: true });
+  writeFileSync(
+    join(tasksRoot, `${taskId}.result.json`),
+    JSON.stringify({ status: 'completed' }),
+    { mode: 0o600 },
+  );
 }
 
 function makeStoreFresh(storePath: string): void {
@@ -250,6 +277,92 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     expect(result.queensExecuting).toBe(0);
     expect(result.workersAlive).toBe(1);
     expect(result.workersExecuting).toBe(0);
+  });
+
+  it('drops hived agent records whose worker tasks already have result files', async () => {
+    writeStoreDict(fix.storePath, {
+      doneQueen: {
+        agentId: 'queen-done',
+        agentType: 'coordinator',
+        status: 'idle',
+      },
+      done: {
+        agentId: 'done-agent',
+        agentType: 'investigator',
+        status: 'idle',
+        config: { hiveId: 'done-hive' },
+      },
+      activeQueen: {
+        agentId: 'queen-active',
+        agentType: 'coordinator',
+        status: 'idle',
+      },
+      active: {
+        agentId: 'active-agent',
+        agentType: 'investigator',
+        status: 'idle',
+        config: { hiveId: 'active-hive' },
+      },
+      standalone: {
+        agentId: 'standalone-agent',
+        agentType: 'researcher',
+        status: 'idle',
+      },
+    });
+    writeHive(fix.projectRoot, 'done-hive', [
+      { agentId: 'done-agent', workerId: 'done-agent', status: 'idle', taskId: 'task-done' },
+    ], 'queen-done');
+    writeTaskResult(fix.projectRoot, 'task-done');
+    writeHive(fix.projectRoot, 'active-hive', [
+      { agentId: 'active-agent', workerId: 'active-agent', status: 'idle', taskId: 'task-open' },
+    ], 'queen-active');
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.agents.map((agent) => agent.id)).toEqual([
+      'queen-active',
+      'active-agent',
+      'standalone-agent',
+    ]);
+    expect(result.workersAlive).toBe(2);
+    expect(result.queensAlive).toBe(1);
+    expect(result.activeHives).toEqual({
+      active: 1,
+      unknownOwner: 1,
+      byOwnerSessionId: {},
+    });
+  });
+
+  it('drops completed direct provider agents that have no live task process', async () => {
+    writeStoreDict(fix.storePath, {
+      completeDirect: {
+        agentId: 'complete-direct',
+        agentType: 'investigator',
+        status: 'idle',
+        lastResult: { completedAt: '2026-06-20T19:38:09.227Z' },
+      },
+      pendingDirect: {
+        agentId: 'pending-direct',
+        agentType: 'investigator',
+        status: 'idle',
+      },
+      executingDirect: {
+        agentId: 'executing-direct',
+        agentType: 'investigator',
+        status: 'busy',
+        currentTaskPid: process.pid,
+        lastResult: { completedAt: '2026-06-20T19:00:00.000Z' },
+      },
+    });
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.agents.map((agent) => agent.id)).toEqual([
+      'pending-direct',
+      'executing-direct',
+    ]);
+    expect(result.workersAlive).toBe(2);
+    expect(result.workersExecuting).toBe(1);
   });
 
   // -------------------------------------------------------------------------

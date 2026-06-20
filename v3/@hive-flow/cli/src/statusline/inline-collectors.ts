@@ -41,7 +41,10 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { collectActiveHiveOwnership } from './hive-ownership.js';
+import {
+  collectActiveHiveRuntimeState,
+  type ActiveHiveRuntimeState,
+} from './hive-ownership.js';
 import { statuslinePaths } from './paths.js';
 import { readJsonFile } from './storage.js';
 import {
@@ -426,6 +429,8 @@ interface RawAgentRecord {
   resolvedModel?: unknown;
   ownerSessionId?: unknown;
   currentTaskPid?: unknown;
+  config?: unknown;
+  lastResult?: unknown;
 }
 
 /**
@@ -449,14 +454,52 @@ function isPidDefinitelyDead(pid: number): boolean {
   }
 }
 
+function rawAgentHiveId(rec: RawAgentRecord): string {
+  if (!rec.config || typeof rec.config !== 'object' || Array.isArray(rec.config)) return '';
+  const hiveId = (rec.config as { hiveId?: unknown }).hiveId;
+  return typeof hiveId === 'string' && hiveId.trim() ? hiveId.trim() : '';
+}
+
+function shouldKeepRuntimeAgent(
+  rec: RawAgentRecord,
+  agentId: string,
+  runtimeState: ActiveHiveRuntimeState | undefined,
+): boolean {
+  const hiveId = rawAgentHiveId(rec);
+  if (runtimeState === undefined || runtimeState.inspected <= 0) return true;
+  if (hiveId === '') {
+    return !runtimeState.hiveAgentIds.has(agentId) || runtimeState.activeAgentIds.has(agentId);
+  }
+  return runtimeState.activeHiveIds.has(hiveId) && runtimeState.activeAgentIds.has(agentId);
+}
+
+function hasCompletedLastResult(rec: RawAgentRecord): boolean {
+  if (!rec.lastResult || typeof rec.lastResult !== 'object' || Array.isArray(rec.lastResult)) {
+    return false;
+  }
+  const result = rec.lastResult as { completedAt?: unknown; status?: unknown };
+  if (typeof result.completedAt === 'string' && result.completedAt.trim()) return true;
+  if (typeof result.status !== 'string') return false;
+  return ['cancelled', 'canceled', 'complete', 'completed', 'done', 'failed', 'terminated'].includes(
+    result.status.trim().toLowerCase(),
+  );
+}
+
+function isCompletedDirectAgent(rec: RawAgentRecord, status: NormalizedAgentRow['status']): boolean {
+  if (rawAgentHiveId(rec) !== '') return false;
+  if (!hasCompletedLastResult(rec)) return false;
+  return !(status === 'busy' && isPositiveInteger(rec.currentTaskPid));
+}
+
 async function probeSwarm(projectRoot: string, sessionId?: string): Promise<SwarmSummary | undefined> {
   const storePath = join(projectRoot, '.hive-flow', 'agents', 'store.json');
-  const [raw, activeHives] = await Promise.all([
+  const [raw, runtimeState] = await Promise.all([
     readJsonFile<RawStoreShape>(storePath, MAX_INLINE_JSON_BYTES).catch(
       () => undefined,
     ),
-    collectActiveHiveOwnership(projectRoot).catch(() => undefined),
+    collectActiveHiveRuntimeState(projectRoot).catch(() => undefined),
   ]);
+  const activeHives = runtimeState?.activeHives;
   if (raw === undefined || raw === null || typeof raw !== 'object') return undefined;
 
   // Extract records: dict shape (canonical) OR array shape (legacy). Drop
@@ -492,12 +535,19 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
     const rawStatus = typeof rec.status === 'string' ? rec.status : undefined;
     const status = normalizeAgentStatus(rawStatus);
     if (status === undefined) continue;
+    const id =
+      typeof rec.agentId === 'string' && rec.agentId.length > 0
+        ? rec.agentId
+        : `agent-${rows.length}`;
+    if (!shouldKeepRuntimeAgent(rec, id, runtimeState)) continue;
+    if (isCompletedDirectAgent(rec, status)) continue;
     if (status === 'busy'
       && isPositiveInteger(rec.currentTaskPid)
       && isPidDefinitelyDead(rec.currentTaskPid)) {
       continue;
     }
     const isQueen =
+      (typeof rec.agentId === 'string' && rec.agentId.startsWith('queen-')) ||
       (typeof rec.agentType === 'string' && rec.agentType.toLowerCase() === 'queen') ||
       (typeof rec.type === 'string' && rec.type.toLowerCase() === 'queen') ||
       (typeof rec.role === 'string' && rec.role.toLowerCase() === 'queen');
@@ -508,11 +558,6 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
         (typeof rec.type === 'string' && rec.type) ||
         (typeof rec.role === 'string' && rec.role) ||
         'worker';
-
-    const id =
-      typeof rec.agentId === 'string' && rec.agentId.length > 0
-        ? rec.agentId
-        : `agent-${rows.length}`;
 
     // Busy without a valid (positive-integer) currentTaskPid means the agent
     // has not yet attached a real OS process — demote its row status to 'idle'
