@@ -417,7 +417,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(record?.mode).toBe('inline-collector');
   });
 
-  it('inline-collector mode scopes swarm counts to the current session before rendering', async () => {
+  it('inline-collector mode renders current-session plus unowned live agents before rendering', async () => {
     mkdirSync(join(fix.projectRoot, '.hive-flow', 'agents'), { recursive: true });
     writeFileSync(
       join(fix.projectRoot, '.hive-flow', 'agents', 'store.json'),
@@ -453,7 +453,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const plain = stripAnsi(output);
 
     expect(plain).toContain('Swarm ◉');
-    expect(plain).toMatch(/\[\s*1\/50\]/);
+    expect(plain).toMatch(/\[\s*2\/50\]/);
     expect(plain).not.toMatch(/\[\s*3\/50\]/);
   });
 

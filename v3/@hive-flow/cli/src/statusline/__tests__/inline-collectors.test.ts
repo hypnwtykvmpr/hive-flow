@@ -190,7 +190,7 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(snap.daemon?.running).toBe(true);
   });
 
-  it('strictly scopes inline swarm counts to the current session when sessionId is present', async () => {
+  it('scopes inline swarm counts to current-session plus unowned live agents when sessionId is present', async () => {
     writeStoreDict(fix.storePath, {
       mineBusy: {
         agentId: 'mine-busy',
@@ -217,8 +217,8 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
       deadlineMs: 1000,
     });
     expect(scoped.swarm?.activeAgents).toBe(1);
-    expect(scoped.swarm?.idleAgents).toBe(0);
-    expect(scoped.swarm?.agents?.map((agent) => agent.id)).toEqual(['mine-busy']);
+    expect(scoped.swarm?.idleAgents).toBe(1);
+    expect(scoped.swarm?.agents?.map((agent) => agent.id)).toEqual(['mine-busy', 'unowned-idle']);
 
     const unscoped = await collectInlineSnapshot({
       projectRoot: fix.projectRoot,

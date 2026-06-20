@@ -487,7 +487,8 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
   const rows: NormalizedAgentRow[] = [];
 
   for (const rec of records) {
-    if (sessionId !== undefined && rec.ownerSessionId !== sessionId) continue;
+    const ownerSessionId = typeof rec.ownerSessionId === 'string' ? rec.ownerSessionId.trim() : '';
+    if (sessionId !== undefined && ownerSessionId !== '' && ownerSessionId !== sessionId) continue;
     const rawStatus = typeof rec.status === 'string' ? rec.status : undefined;
     const status = normalizeAgentStatus(rawStatus);
     if (status === undefined) continue;

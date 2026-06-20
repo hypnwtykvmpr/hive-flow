@@ -42,7 +42,7 @@ describe('collectSwarm session scoping', () => {
     rmSync(fix.projectRoot, { recursive: true, force: true });
   });
 
-  it('strictly counts only records owned by the current session when sessionId is present', async () => {
+  it('counts current-session and unowned live records when sessionId is present', async () => {
     writeStoreDict(fix.storePath, {
       mineBusy: {
         agentId: 'mine-busy',
@@ -77,9 +77,14 @@ describe('collectSwarm session scoping', () => {
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-a' });
 
-    expect(result.workersAlive).toBe(2);
-    expect(result.workersExecuting).toBe(1);
-    expect(result.agents.map((agent) => agent.id)).toEqual(['mine-busy', 'mine-idle']);
+    expect(result.workersAlive).toBe(4);
+    expect(result.workersExecuting).toBe(3);
+    expect(result.agents.map((agent) => agent.id)).toEqual([
+      'mine-busy',
+      'mine-idle',
+      'unowned-busy',
+      'empty-owner-busy',
+    ]);
   });
 
   it('keeps count-all behavior when no sessionId is available', async () => {

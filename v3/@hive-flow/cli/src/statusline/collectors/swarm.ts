@@ -375,7 +375,8 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
   const agents: NormalizedAgentRow[] = [];
   let index = 0;
   for (const rec of records) {
-    if (opts.sessionId !== undefined && rec.ownerSessionId !== opts.sessionId) continue;
+    const ownerSessionId = typeof rec.ownerSessionId === 'string' ? rec.ownerSessionId.trim() : '';
+    if (opts.sessionId !== undefined && ownerSessionId !== '' && ownerSessionId !== opts.sessionId) continue;
     const built = buildRow(rec, `agent-${index}`);
     index++;
     if (built === undefined) continue;
