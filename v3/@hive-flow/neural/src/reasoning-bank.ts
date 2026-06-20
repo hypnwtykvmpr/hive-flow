@@ -22,22 +22,6 @@ import type {
 } from './types.js';
 
 // ============================================================================
-// AgentDB Integration
-// ============================================================================
-
-let AgentDB: any;
-let agentdbImportPromise: Promise<void> | undefined;
-
-async function ensureAgentDBImport(): Promise<void> {
-  if (!agentdbImportPromise) {
-    agentdbImportPromise = Promise.resolve().then(() => {
-      AgentDB = undefined;
-    });
-  }
-  return agentdbImportPromise;
-}
-
-// ============================================================================
 // Configuration
 // ============================================================================
 
@@ -72,11 +56,8 @@ export interface ReasoningBankConfig {
   /** Vector dimension for embeddings */
   vectorDimension: number;
 
-  /** Namespace for AgentDB storage */
+  /** Namespace for in-process pattern storage */
   namespace: string;
-
-  /** Enable AgentDB vector storage */
-  enableAgentDB: boolean;
 }
 
 /**
@@ -93,7 +74,6 @@ const DEFAULT_CONFIG: ReasoningBankConfig = {
   dbPath: undefined,
   vectorDimension: 768,
   namespace: 'reasoning-bank',
-  enableAgentDB: true,
 };
 
 // ============================================================================
@@ -160,9 +140,6 @@ export class ReasoningBank {
   private patterns: Map<string, Pattern> = new Map();
   private eventListeners: Set<NeuralEventListener> = new Set();
 
-  // AgentDB instance for vector storage
-  private agentdb: any = null;
-  private agentdbAvailable: boolean = false;
   private initialized: boolean = false;
 
   // Performance tracking
@@ -184,33 +161,14 @@ export class ReasoningBank {
   // ==========================================================================
 
   /**
-   * Initialize ReasoningBank with AgentDB
+   * Initialize ReasoningBank.
+   *
+   * Uses the in-process Map store with brute-force cosine retrieval. The
+   * historical external vector backend is no longer available, so there is no
+   * async setup beyond marking the bank ready.
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
-
-    if (this.config.enableAgentDB) {
-      await ensureAgentDBImport();
-      this.agentdbAvailable = AgentDB !== undefined;
-
-      if (this.agentdbAvailable) {
-        try {
-          this.agentdb = new AgentDB({
-            dbPath: this.config.dbPath || ':memory:',
-            namespace: this.config.namespace,
-            vectorDimension: this.config.vectorDimension,
-            vectorBackend: 'auto',
-          });
-
-          await this.agentdb.initialize();
-          this.emitEvent({ type: 'memory_consolidated', memoriesCount: 0 });
-        } catch (error) {
-          console.warn('AgentDB initialization failed, using fallback:', error);
-          this.agentdbAvailable = false;
-        }
-      }
-    }
-
     this.initialized = true;
   }
 
@@ -218,9 +176,6 @@ export class ReasoningBank {
    * Shutdown and cleanup resources
    */
   async shutdown(): Promise<void> {
-    if (this.agentdb) {
-      await this.agentdb.close?.();
-    }
     this.initialized = false;
   }
 
@@ -245,31 +200,14 @@ export class ReasoningBank {
       return [];
     }
 
-    let candidates: Array<{ entry: MemoryEntry; relevance: number }> = [];
+    const candidates: Array<{ entry: MemoryEntry; relevance: number }> = [];
 
-    // Try AgentDB HNSW search first
-    if (this.agentdb && this.agentdbAvailable) {
-      try {
-        const results = await this.searchWithAgentDB(queryEmbedding, retrieveK * 3);
-        candidates = results
-          .map(r => {
-            const entry = this.memories.get(r.id);
-            return entry ? { entry, relevance: r.similarity } : null;
-          })
-          .filter((c): c is { entry: MemoryEntry; relevance: number } => c !== null);
-      } catch {
-        // Fall through to brute-force
-      }
+    // Brute-force cosine similarity over the in-process memory store.
+    for (const entry of this.memories.values()) {
+      const relevance = this.cosineSimilarity(queryEmbedding, entry.memory.embedding);
+      candidates.push({ entry, relevance });
     }
-
-    // Fallback: brute-force search
-    if (candidates.length === 0) {
-      for (const entry of this.memories.values()) {
-        const relevance = this.cosineSimilarity(queryEmbedding, entry.memory.embedding);
-        candidates.push({ entry, relevance });
-      }
-      candidates.sort((a, b) => b.relevance - a.relevance);
-    }
+    candidates.sort((a, b) => b.relevance - a.relevance);
 
     // Apply MMR for diversity
     const results: RetrievalResult[] = [];
@@ -471,11 +409,6 @@ export class ReasoningBank {
       consolidated: false,
     };
     this.memories.set(memory.memoryId, entry);
-
-    // Store in AgentDB for vector search
-    if (this.agentdb && this.agentdbAvailable) {
-      await this.storeInAgentDB(memory);
-    }
 
     // Also store trajectory reference
     trajectory.distilledMemory = memory;
@@ -720,7 +653,6 @@ export class ReasoningBank {
         .filter(e => e.consolidated).length,
       successfulTrajectories: this.getSuccessfulTrajectories().length,
       failedTrajectories: this.getFailedTrajectories().length,
-      agentdbEnabled: this.agentdbAvailable ? 1 : 0,
       retrievalCount: this.retrievalCount,
       distillationCount: this.distillationCount,
       judgeCount: this.judgeCount,
@@ -808,80 +740,6 @@ export class ReasoningBank {
       } catch (error) {
         console.error('Error in ReasoningBank event listener:', error);
       }
-    }
-  }
-
-  // ==========================================================================
-  // AgentDB Integration Helpers
-  // ==========================================================================
-
-  /**
-   * Store memory in AgentDB for vector search
-   */
-  private async storeInAgentDB(memory: DistilledMemory): Promise<void> {
-    if (!this.agentdb) return;
-
-    try {
-      if (typeof this.agentdb.store === 'function') {
-        await this.agentdb.store(memory.memoryId, {
-          content: memory.strategy,
-          embedding: memory.embedding,
-          metadata: {
-            trajectoryId: memory.trajectoryId,
-            quality: memory.quality,
-            keyLearnings: memory.keyLearnings,
-            usageCount: memory.usageCount,
-            lastUsed: memory.lastUsed,
-          },
-        });
-      }
-    } catch (error) {
-      console.warn('Failed to store in AgentDB:', error);
-    }
-  }
-
-  /**
-   * Search using AgentDB HNSW index
-   */
-  private async searchWithAgentDB(
-    queryEmbedding: Float32Array,
-    k: number
-  ): Promise<Array<{ id: string; similarity: number }>> {
-    if (!this.agentdb) return [];
-
-    try {
-      if (typeof this.agentdb.search === 'function') {
-        return await this.agentdb.search(queryEmbedding, k);
-      }
-
-      // Try HNSW controller if available
-      const hnsw = this.agentdb.getController?.('hnsw');
-      if (hnsw) {
-        const results = await hnsw.search(queryEmbedding, k);
-        return results.map((r: any) => ({
-          id: String(r.id),
-          similarity: r.similarity || 1 - r.distance,
-        }));
-      }
-    } catch {
-      // Fall through to return empty
-    }
-
-    return [];
-  }
-
-  /**
-   * Delete from AgentDB
-   */
-  private async deleteFromAgentDB(memoryId: string): Promise<void> {
-    if (!this.agentdb) return;
-
-    try {
-      if (typeof this.agentdb.delete === 'function') {
-        await this.agentdb.delete(memoryId);
-      }
-    } catch {
-      // Ignore deletion errors
     }
   }
 
@@ -1092,10 +950,8 @@ export class ReasoningBank {
           // Keep the higher quality one
           if (entries[i][1].memory.quality >= entries[j][1].memory.quality) {
             this.memories.delete(entries[j][0]);
-            await this.deleteFromAgentDB(entries[j][0]);
           } else {
             this.memories.delete(entries[i][0]);
-            await this.deleteFromAgentDB(entries[i][0]);
           }
           removed++;
         }
@@ -1233,13 +1089,6 @@ export class ReasoningBank {
     if (delta > 0.05) return 'improvement';
     if (delta < -0.1) return 'prune';
     return 'improvement';
-  }
-
-  /**
-   * Check if AgentDB is available and initialized
-   */
-  isAgentDBAvailable(): boolean {
-    return this.agentdbAvailable;
   }
 }
 

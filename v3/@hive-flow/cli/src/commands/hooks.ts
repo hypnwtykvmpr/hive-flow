@@ -9,7 +9,6 @@ import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { storeCommand } from './transfer-store.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
-import { loadAgenticFlow, loadAgenticFlowSubpath } from '@hive-flow/integration';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -3851,23 +3850,14 @@ const tokenOptimizeCommand: Command = {
       cacheMisses: 0,
       memoriesRetrieved: 0,
     };
-    let agenticFlowAvailable = false;
+    const agenticFlowAvailable = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let reasoningBank: any = null;
+    const reasoningBank: any = null;
 
     try {
-      // Check if a compatibility delegate is registered
-      const af = await loadAgenticFlow();
-      if (af) {
-        agenticFlowAvailable = true;
-        // Try to load ReasoningBank
-        const rb = await loadAgenticFlowSubpath('reasoningbank');
-        if (rb && typeof rb.retrieveMemories === 'function') {
-          reasoningBank = rb;
-        }
-      }
-
-      spinner.succeed(agenticFlowAvailable ? 'local compatibility delegate detected' : 'local compatibility fallback active');
+      // The historical external optimization delegate is no longer available;
+      // the local compatibility fallback is always active.
+      spinner.succeed('local compatibility fallback active');
       output.writeln();
 
       // Anti-drift config (hardcoded optimal values from research)

@@ -23,7 +23,7 @@ import {
   AgentOutput,
   WorkerArtifact,
 } from './worker-base.js';
-import type { Task } from './agentic-flow-agent.js';
+import type { Task } from './worker-task-types.js';
 
 /**
  * Checkpoint data structure

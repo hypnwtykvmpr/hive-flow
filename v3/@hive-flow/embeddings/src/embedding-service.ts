@@ -720,13 +720,6 @@ export class AgenticFlowEmbeddingService extends BaseEmbeddingService {
 // ============================================================================
 
 /**
- * Check whether the historical external provider is available.
- */
-async function isAgenticFlowAvailable(): Promise<boolean> {
-  return false;
-}
-
-/**
  * Create embedding service based on configuration (sync version)
  * Note: For 'auto' provider or smart fallback, use createEmbeddingServiceAsync
  */
@@ -806,24 +799,8 @@ export async function createEmbeddingServiceAsync(
       return service;
     } catch { /* fall through */ }
 
-    // Historical agentic-flow provider is detached; keep auto local-first.
-    let agenticFlowAvailable = await isAgenticFlowAvailable();
-
-    if (agenticFlowAvailable) {
-      try {
-        const service = new AgenticFlowEmbeddingService({
-          provider: 'agentic-flow',
-          modelId: rest.modelId ?? 'all-MiniLM-L6-v2',
-          dimensions: rest.dimensions ?? 384,
-          cacheSize: rest.cacheSize,
-        });
-        // Validate it can initialize
-        await service.embed('test');
-        return service;
-      } catch {
-        // Fall through to next option
-      }
-    }
+    // Historical agentic-flow provider is detached; auto stays local-first
+    // (it is never available, so no detection branch is needed here).
 
     // Try transformers (good quality, built-in)
     try {

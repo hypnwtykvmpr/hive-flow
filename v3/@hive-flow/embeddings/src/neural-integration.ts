@@ -11,9 +11,15 @@
  * These features treat embeddings as a synthetic nervous system.
  */
 
-import { loadAgenticFlowSubpath } from '@hive-flow/integration';
+// Neutral local stand-in for the historical optional embeddings subpath.
+// The external package is no longer available, so this always reports absence
+// and callers fall back to their local implementations.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function loadAgenticFlowSubpath(_subpath: string): Promise<any | null> {
+  return null;
+}
 
-// Types from agentic-flow/embeddings
+// Types from the historical embeddings substrate
 export interface DriftResult {
   distance: number;
   velocity: number;

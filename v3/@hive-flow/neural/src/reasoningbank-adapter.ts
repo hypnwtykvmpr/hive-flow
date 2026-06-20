@@ -133,7 +133,7 @@ export class ReasoningBankAdapter {
 
   constructor(config?: ReasoningBankConfig) {
     this.config = {
-      dbPath: config?.dbPath || '.agentdb/reasoningbank.db',
+      dbPath: config?.dbPath || '',
       enableLearning: config?.enableLearning ?? true,
       enableReasoning: config?.enableReasoning ?? true,
       sonaMode: config?.sonaMode || 'balanced',

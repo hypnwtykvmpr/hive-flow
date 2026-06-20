@@ -27,7 +27,7 @@ import {
 } from './worker-base.js';
 import { SpecializedWorker, SpecializedWorkerConfig } from './specialized-worker.js';
 import { LongRunningWorker, LongRunningWorkerConfig } from './long-running-worker.js';
-import type { Task, TaskResult } from './agentic-flow-agent.js';
+import type { Task, TaskResult } from './worker-task-types.js';
 
 /**
  * Worker pool configuration

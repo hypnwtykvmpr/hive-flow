@@ -18,7 +18,7 @@
  */
 
 import { EventEmitter } from 'events';
-import type { Task, TaskResult, AgentStatus, Message } from './agentic-flow-agent.js';
+import type { Task, TaskResult, AgentStatus, Message } from './worker-task-types.js';
 import { clamp } from '@hive-flow/shared';
 
 /**

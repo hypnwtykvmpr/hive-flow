@@ -132,18 +132,22 @@ export type {
   SDKBridgeConfig,
 } from './types.js';
 
+// ===== Worker Task Contracts (neutral module) =====
+export type {
+  AgentStatus,
+  Task,
+  TaskResult,
+  Message,
+} from './worker-task-types.js';
+
 // ===== Agent Integration Types =====
 export type {
   // Core agent interfaces
   IAgent,
   IAgentConfig,
   IAgentSession,
-  AgentStatus,
   AgentType,
-  // Task and execution
-  Task,
-  TaskResult,
-  Message,
+  // Execution
   AgentHealth,
   AgentConfig,
 } from './agentic-flow-agent.js';
