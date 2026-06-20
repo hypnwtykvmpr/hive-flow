@@ -29,6 +29,7 @@
 
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, renameSync, existsSync, rmdirSync, statSync, lstatSync, unlinkSync, readdirSync, openSync, readSync, closeSync, realpathSync, readlinkSync } from 'fs';
 import { join, dirname, basename, isAbsolute, resolve, relative, sep } from 'path';
+import { homedir } from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFileSync } from 'child_process';
 import { createHmac, timingSafeEqual } from 'crypto';
@@ -1346,6 +1347,30 @@ async function createProviderConfig(providerName, model, timeoutMs, agentToken) 
 const PROJECT_ROOT = resolve(process.cwd());
 const FAIL_CLOSED_ENFORCEMENT_LEVEL = 2;
 
+// Enforcement state/home layout — MUST mirror `.claude/helpers/enforcement.cjs`
+// resolveHiveHome(): when HIVE_FLOW_HOME is set AND absolute, the canonical
+// enforcement tree lives at `<HIVE_FLOW_HOME>/enforcement` (state under
+// `enforcement/global/state.json`, key at `enforcement/.hmac-key`). When it is
+// not set, enforcement.cjs falls back to `<homedir>/.hive-flow/enforcement`.
+//
+// The bridge historically only read the legacy project-local layout
+// (`<PROJECT_ROOT>/.hive-flow/enforcement/state.json` + sibling `.hmac-key`),
+// which fail-closes whenever the live signed state is written to the
+// HIVE_FLOW_HOME layout (e.g. external-temp fixtures). We resolve the canonical
+// home first and fall back to the legacy project-local layout so existing
+// installs and the project-rooted parity fixtures stay green. Fail-closed
+// tamper behavior, HMAC verification, and path sandboxing are preserved — only
+// WHICH home/key the bridge reads from is corrected.
+function resolveEnforcementHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && isAbsolute(configured)) return resolve(configured);
+  return join(homedir(), '.hive-flow');
+}
+
+const ENFORCEMENT_HOME = resolveEnforcementHome();
+const CANONICAL_ENFORCEMENT_DIR = join(ENFORCEMENT_HOME, 'enforcement');
+const LEGACY_ENFORCEMENT_DIR = resolve(PROJECT_ROOT, '.hive-flow', 'enforcement');
+
 function validateFilePath(filePath) {
   if (typeof filePath !== 'string' || filePath.trim() === '') {
     throw new Error('Missing required file path');
@@ -1372,17 +1397,25 @@ function assertReadableByBridge(filePath, operation) {
   }
 }
 
-function readBridgeHmacKey() {
+function readEnforcementHmacKeyFromDir(enforcementDir) {
   try {
-    const key = readFileSync(resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', '.hmac-key'), 'utf8').trim();
+    const key = readFileSync(join(enforcementDir, '.hmac-key'), 'utf8').trim();
     return key || null;
   } catch {
     return null;
   }
 }
 
-function readVerifiedEnforcementLevel(statePath, missingLevel = 0) {
-  return readVerifiedEnforcementState(statePath, missingLevel).level;
+// Back-compat helper: prefer the canonical (HIVE_FLOW_HOME) key, then the
+// legacy project-local key. Retained for any external callers/tests that import
+// the bridge and expect a key getter.
+function readBridgeHmacKey() {
+  return readEnforcementHmacKeyFromDir(CANONICAL_ENFORCEMENT_DIR)
+    ?? readEnforcementHmacKeyFromDir(LEGACY_ENFORCEMENT_DIR);
+}
+
+function readVerifiedEnforcementLevel(statePath, missingLevel = 0, keyDir) {
+  return readVerifiedEnforcementState(statePath, missingLevel, keyDir).level;
 }
 
 function normalizedRestrictedGroups(state, level) {
@@ -1409,10 +1442,13 @@ function missingEnforcementState(missingLevel) {
   };
 }
 
-function readVerifiedEnforcementState(statePath, missingLevel = 0) {
+function readVerifiedEnforcementState(statePath, missingLevel = 0, keyDir) {
   try {
     if (!existsSync(statePath)) return missingEnforcementState(missingLevel);
-    const key = readBridgeHmacKey();
+    // The key MUST come from the same enforcement home that signed this state.
+    // When a keyDir is supplied (scoped resolution below) read exactly that
+    // home's key; otherwise fall back to canonical-then-legacy for back-compat.
+    const key = keyDir ? readEnforcementHmacKeyFromDir(keyDir) : readBridgeHmacKey();
     if (!key) return failClosedEnforcementState();
     const envelope = JSON.parse(readFileSync(statePath, 'utf-8'));
     if (!envelope?.state || typeof envelope.hmac !== 'string') {
@@ -1437,25 +1473,99 @@ function readVerifiedEnforcementState(statePath, missingLevel = 0) {
   }
 }
 
-function scopedStatePath(scopeType, scopeId) {
+// Build the state-file path for a scope within a given enforcement dir.
+// Global state lives at `<dir>/global/state.json` in the canonical
+// HIVE_FLOW_HOME layout, but at `<dir>/state.json` in the legacy project-local
+// layout — the caller selects the correct filename via `globalFile`.
+function enforcementStatePathFor(enforcementDir, scopeType, scopeId, globalFile) {
+  if (scopeType === 'global') return join(enforcementDir, globalFile);
   const sanitized = protectedPathPolicy.sanitizeScopeId(scopeId, '', 64);
   if (!sanitized) return null;
-  if (scopeType === 'agent') return resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'agents', sanitized, 'state.json');
-  if (scopeType === 'hive') return resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'hives', sanitized, 'state.json');
+  if (scopeType === 'agent') return join(enforcementDir, 'agents', sanitized, 'state.json');
+  if (scopeType === 'hive') return join(enforcementDir, 'hives', sanitized, 'state.json');
   return null;
+}
+
+// Ordered enforcement-home candidates. Each candidate pairs the enforcement dir
+// (whose sibling `.hmac-key` signs its states) with the global state filename
+// used in that layout.
+//
+// Ordering rule (preserves prior fail-closed behavior + fixes the
+// HIVE_FLOW_HOME bug):
+//  - The canonical home is authoritative ONLY when HIVE_FLOW_HOME is set AND
+//    ABSOLUTE — exactly matching `resolveEnforcementHome()` semantics (and
+//    enforcement.cjs `resolveHiveHome()`). It is where enforcement.cjs and the
+//    live diagnostic write the signed state. The legacy project-local layout is
+//    consulted only as a fallback for in-flight installs that still keep state
+//    under PROJECT_ROOT.
+//  - When HIVE_FLOW_HOME is NOT set OR is RELATIVE, use ONLY the legacy
+//    project-local layout — exactly the pre-fix behavior. We deliberately do
+//    NOT fall back to the homedir canonical layout here: a project-local
+//    context with a MISSING global state must fail closed (per the enforcement
+//    parity oracle), not silently inherit an unrelated machine-global
+//    `~/.hive-flow` state. A RELATIVE HIVE_FLOW_HOME must likewise NOT promote
+//    `~/.hive-flow` to canonical.
+//
+// SAME-ROOT (HIVE_FLOW_HOME === PROJECT_ROOT/.hive-flow): canonical and legacy
+// share the SAME `dir`, but they are NOT equivalent candidates — the canonical
+// global state lives at `global/state.json` while legacy lives at `state.json`.
+// We therefore dedupe by FULL state-path identity (`dir` + `globalFile`), NEVER
+// by `dir` alone. Collapsing on `dir` would skip the canonical state and
+// re-introduce the fail-closed bug.
+function enforcementHomeCandidates() {
+  const legacy = { dir: LEGACY_ENFORCEMENT_DIR, globalFile: 'state.json' };
+  // Canonical is authoritative ONLY when HIVE_FLOW_HOME is set AND absolute —
+  // mirrors resolveEnforcementHome(): a relative value does NOT introduce
+  // ~/.hive-flow as canonical.
+  const configuredHome = String(process.env.HIVE_FLOW_HOME || '').trim();
+  const canonicalAuthoritative = Boolean(configuredHome) && isAbsolute(configuredHome);
+  if (!canonicalAuthoritative) return [legacy];
+
+  const canonical = { dir: CANONICAL_ENFORCEMENT_DIR, globalFile: join('global', 'state.json') };
+  // Canonical FIRST, legacy fallback. Dedupe by full state-path identity
+  // (dir + globalFile) — NOT by dir alone — so the same-root case keeps BOTH.
+  const candidates = [canonical, legacy];
+  const seen = new Set();
+  const deduped = [];
+  for (const candidate of candidates) {
+    const identity = join(candidate.dir, candidate.globalFile);
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    deduped.push(candidate);
+  }
+  return deduped;
+}
+
+// Resolve a scope's enforcement snapshot by trying each home candidate in order
+// and using the FIRST whose state file exists (each verified with that home's
+// own key). If no candidate has a state file, return the missing-state result.
+function readScopedEnforcementSnapshot(scopeType, scopeId, missingLevel) {
+  for (const candidate of enforcementHomeCandidates()) {
+    const statePath = enforcementStatePathFor(candidate.dir, scopeType, scopeId, candidate.globalFile);
+    if (!statePath) return null;
+    if (existsSync(statePath)) {
+      return readVerifiedEnforcementState(statePath, missingLevel, candidate.dir);
+    }
+  }
+  return missingEnforcementState(missingLevel);
 }
 
 function checkEnforcementState() {
   const snapshots = [
-    readVerifiedEnforcementState(resolve(PROJECT_ROOT, '.hive-flow', 'enforcement', 'state.json'), FAIL_CLOSED_ENFORCEMENT_LEVEL),
+    readScopedEnforcementSnapshot('global', '', FAIL_CLOSED_ENFORCEMENT_LEVEL),
   ];
 
   const agentId = process.env.AGENTIC_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
-  const agentState = scopedStatePath('agent', agentId);
-  if (agentState) snapshots.push(readVerifiedEnforcementState(agentState, 0));
+  if (agentId) {
+    const agentSnapshot = readScopedEnforcementSnapshot('agent', agentId, 0);
+    if (agentSnapshot) snapshots.push(agentSnapshot);
+  }
 
-  const hiveState = scopedStatePath('hive', process.env.HIVE_FLOW_HIVE_ID || '');
-  if (hiveState) snapshots.push(readVerifiedEnforcementState(hiveState, 0));
+  const hiveId = process.env.HIVE_FLOW_HIVE_ID || '';
+  if (hiveId) {
+    const hiveSnapshot = readScopedEnforcementSnapshot('hive', hiveId, 0);
+    if (hiveSnapshot) snapshots.push(hiveSnapshot);
+  }
 
   return {
     level: Math.max(...snapshots.map((snapshot) => snapshot.level)),
@@ -3279,15 +3389,54 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
   }
 }
 
+/**
+ * Decide whether a bridge tool result counts as a SUCCESSFUL grounded execution.
+ *
+ * A successful result is one that produced real grounded output. Denied/error
+ * results MUST NOT count toward grounding, otherwise UNGROUNDED_TOOL_TASK can
+ * falsely pass when the model only ever triggered blocked/failed tool calls.
+ *
+ * Result shapes (from evaluateToolCall):
+ *  - string  → success (evaluateToolCall stringifies object handler results, but a
+ *              plain handler string result is the success path). NOTE: denied results
+ *              are objects that get JSON-stringified by evaluateToolCall, so a string
+ *              that parses to {status:'denied'|'error'} must NOT count.
+ *  - object {status:'denied'} → NOT successful
+ *  - object {status:'error'}  → NOT successful
+ *  - any other object         → successful
+ */
+export function isSuccessfulBridgeToolResult(result) {
+  if (result === null || result === undefined) return false;
+  if (typeof result === 'string') {
+    // evaluateToolCall JSON-stringifies object handler results (incl. denied/error),
+    // so a string may actually encode a non-success status. Parse defensively.
+    const trimmed = result.trim();
+    if (trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed === 'object' &&
+            (parsed.status === 'denied' || parsed.status === 'error')) {
+          return false;
+        }
+      } catch { /* not JSON — treat as a plain successful string result */ }
+    }
+    return true;
+  }
+  if (typeof result === 'object') {
+    return result.status !== 'denied' && result.status !== 'error';
+  }
+  return false;
+}
+
 export async function executeBridgeTool(toolName, toolArgs, ctx = {}) {
   bridgeLog('info', 'Bridge tool dispatch', {
     ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
     tool: toolName,
     source: ctx.source || 'provider-response',
   });
-  if (typeof ctx.recordExecution === 'function') {
-    try { ctx.recordExecution(toolName); } catch { /* test hooks must not break execution */ }
-  }
+  // MUST-FIX-1: Do NOT count executions here. Denied/error tool calls must never
+  // count toward grounding. Callers append to executedTools ONLY after checking
+  // isSuccessfulBridgeToolResult on the resolved result.
   return evaluateToolCall(toolName, toolArgs, ctx);
 }
 
@@ -3432,18 +3581,106 @@ function trackProviderUsage(providerName, usage, startTime) {
   }
 }
 
-function taskRequiresBridgeToolGrounding(task) {
+export function taskRequiresBridgeToolGrounding(task) {
   const text = String(task || '').toLowerCase();
   const asksToInspect = /\b(read|inspect|open|list|grep|search|find|check|verify|call)\b/.test(text) ||
     /read_file|list_directory|run_command/.test(text);
-  const namesLocalSurface = /\b(file|directory|folder|workspace|repo|repository|path|contents?)\b/.test(text) ||
+  const namesLocalSurface = /\b(file|directory|folder|workspace|repo|repository|path|contents?|codebase)\b/.test(text) ||
     /package\.json|tsconfig|readme|git status|exact version/.test(text);
-  const asksForWebGrounding = /\b(web|online|internet|browser|fetch|url|search|lookup|current|latest)\b/.test(text) ||
+  // MUST-FIX-3: Do NOT treat the bare word "search"/"lookup"/"current"/"latest" as a web
+  // signal — those trip on local grep/find tasks ("search the repo for X", "find the latest
+  // commit") and wrongly classify them as web-grounding. Require an UNAMBIGUOUS web signal:
+  // an explicit URL, "on the web"/"online"/"internet", a web surface noun (website/webpage),
+  // a browser/fetch verb, or the literal web_fetch/web_search tool names.
+  const hasExplicitWebSignal = /\b(online|internet|website|webpage|browser)\b/.test(text) ||
+    /\bon the web\b/.test(text) ||
+    /\bweb (search|page|site|lookup|browse|fetch|request)\b/.test(text) ||
     /https?:\/\//.test(text) ||
     /web_fetch|web_search/.test(text);
-  const namesWebSurface = /\b(url|website|webpage|site|online|internet|http|https|search|lookup|current|latest)\b/.test(text) ||
-    /https?:\/\//.test(text);
-  return (asksToInspect && namesLocalSurface) || (asksForWebGrounding && namesWebSurface);
+  // "fetch <url>" / "fetch a url" without the literal http prefix still counts as web.
+  const asksForWebGrounding = hasExplicitWebSignal ||
+    /\bfetch\b.*\b(url|http|https|web|page|site)\b/.test(text) ||
+    /\burl\b/.test(text);
+  const namesWebSurface = hasExplicitWebSignal || /\b(url|http|https)\b/.test(text);
+  // Freshness/external signals: tasks asking for latest/current/recent/news/release/version
+  // data must be grounded even without an explicit web surface or local file surface, because
+  // strict providers must not answer from priors when the user needs up-to-date information.
+  const hasFreshnessSignal = /\b(latest|current|recent|today|news|release|version|package)\b/.test(text);
+  return (asksToInspect && namesLocalSurface) || (asksForWebGrounding && namesWebSurface) || hasFreshnessSignal;
+}
+
+// Exactly-one marker invariant: the grounding mandate is identified by this literal.
+// We assert it appears AT MOST once in the system message (index 0, trim-protected).
+export const GROUNDING_MANDATE_MARKER = '[BRIDGE ENFORCEMENT]';
+
+// Hard-prompt grounding mandate appended ONCE to the system message (preserved slot,
+// never trimmed by prepareForProvider). Addresses non-deterministic tool skipping and
+// the write_file trailing-newline argument-fidelity miss.
+export const GROUNDING_MANDATE_SYSTEM_SUFFIX =
+  '\n\n' + GROUNDING_MANDATE_MARKER + ' For ALL tasks requiring file or web operations: ' +
+  'you MUST respond with a tool call as your first action. ' +
+  'Do NOT produce any assistant text before the tool call. ' +
+  'BYTE-EXACT ARGUMENT FIDELITY: Reproduce every tool-call string argument byte-for-byte ' +
+  'EXACTLY as provided. If an argument value ends with a newline character (\\n) or contains ' +
+  'leading/trailing whitespace, your emitted argument MUST preserve it exactly. ' +
+  'NEVER trim, strip, normalize, or "clean up" trailing newlines or whitespace in arguments. ' +
+  'Copy every argument verbatim — do NOT infer, paraphrase, omit, add, or repair any part. ' +
+  'Do NOT answer from memory or model priors. Only tool calls are acceptable.';
+
+// Providers that support {type:'function',function:{name}} tool_choice but NOT 'required'.
+// DeepSeek thinking-mode rejects BOTH forms (HTTP 400) so it is excluded — it gets the
+// hard-prompt mandate only, no toolChoice of any kind.
+export const SPECIFIC_FUNCTION_SAFE = new Set(['openrouter']);
+
+/**
+ * Compute the tool_choice value for a strict-API provider on a grounding-required task.
+ * Pure function so the forcing matrix is unit-testable.
+ *
+ * Returns:
+ *  - 'required' when the provider accepts it (not in TOOL_CHOICE_REQUIRED_UNSUPPORTED).
+ *  - {type:'function',function:{name}} ONLY when the provider is SPECIFIC_FUNCTION_SAFE
+ *    AND exactly one strict tool name appears verbatim in the task text.
+ *  - undefined otherwise (incl. ALL DeepSeek paths — DeepSeek never gets any toolChoice).
+ */
+export function computeStrictGroundingToolChoice({ providerName, task, strictApiToolNames }) {
+  const isUnsupportedForcing = TOOL_CHOICE_REQUIRED_UNSUPPORTED.has(providerName);
+  if (!isUnsupportedForcing) {
+    return 'required';
+  }
+  // Unsupported-forcing provider (openrouter, deepseek): never send 'required'.
+  if (!SPECIFIC_FUNCTION_SAFE.has(providerName)) {
+    // DeepSeek and any other unsupported-forcing provider: NO toolChoice at all.
+    return undefined;
+  }
+  const names = Array.isArray(strictApiToolNames) ? strictApiToolNames : [];
+  const lower = String(task || '');
+  const found = names.filter((name) => {
+    // Whole-word / bare-identifier match — avoids 'file' matching 'read_file'.
+    const re = new RegExp(`(^|[^a-zA-Z0-9_])${name}($|[^a-zA-Z0-9_])`, 'i');
+    return re.test(lower);
+  });
+  if (found.length === 1) {
+    return { type: 'function', function: { name: found[0] } };
+  }
+  return undefined;
+}
+
+/**
+ * Inject the grounding mandate into the system message exactly once.
+ * Invariant: the marker appears AT MOST once. Mutates `messages` in place and returns it.
+ */
+export function injectGroundingMandate(messages) {
+  const list = Array.isArray(messages) ? messages : [];
+  const firstMsg = list[0];
+  if (firstMsg && firstMsg.role === 'system') {
+    const existing = String(firstMsg.content || '');
+    if (!existing.includes(GROUNDING_MANDATE_MARKER)) {
+      list[0] = { ...firstMsg, content: existing + GROUNDING_MANDATE_SYSTEM_SUFFIX };
+    }
+  } else {
+    list.unshift({ role: 'system', content: GROUNDING_MANDATE_SYSTEM_SUFFIX.trimStart() });
+  }
+  return list;
 }
 
 function ungroundedToolTaskError(providerName) {
@@ -3452,6 +3689,237 @@ function ungroundedToolTaskError(providerName) {
   );
   error.code = 'UNGROUNDED_TOOL_TASK';
   return error;
+}
+
+// ===== Exact-args fidelity enforcement =====
+//
+// When a diagnostic task carries the machine-readable block:
+//   'Your FIRST response MUST be a tool call to the bridge tool named "<tool>".'
+//   'Use these exact arguments: <JSON object>.'
+// AND exactly ONE strict tool name appears in the task, the bridge validates
+// the model's emitted arguments BEFORE executing the tool, retries with a
+// precise nudge on mismatch (bounded), and fails closed if still wrong.
+//
+// ONLY fires when both signals are present. Inert for all other tasks.
+
+const EXACT_ARGS_BLOCK_RE = /Use these exact arguments:\s*(\{[\s\S]*?\})\s*\./;
+const EXACT_TOOL_NAME_RE = /bridge tool named\s+"([^"]+)"/;
+const MAX_ARG_FIDELITY_RETRIES = 2;
+
+/**
+ * Parse the exact-args context from a diagnostic task string.
+ * Returns { toolName, expectedArgs } when the task carries the machine-readable
+ * exact-args block AND names exactly one strict tool; returns null otherwise.
+ *
+ * @param {string} task
+ * @param {string[]} strictApiToolNames
+ * @returns {{ toolName: string, expectedArgs: Record<string,unknown> } | null}
+ */
+export function parseExactArgsContext(task, strictApiToolNames) {
+  if (typeof task !== 'string') return null;
+
+  const argsMatch = EXACT_ARGS_BLOCK_RE.exec(task);
+  if (!argsMatch) return null;
+
+  let expectedArgs;
+  try {
+    expectedArgs = JSON.parse(argsMatch[1]);
+  } catch {
+    return null;
+  }
+  if (!expectedArgs || typeof expectedArgs !== 'object' || Array.isArray(expectedArgs)) return null;
+
+  const toolMatch = EXACT_TOOL_NAME_RE.exec(task);
+  if (!toolMatch) return null;
+  const toolName = toolMatch[1];
+
+  const names = Array.isArray(strictApiToolNames) ? strictApiToolNames : [];
+  if (!names.includes(toolName)) return null;
+
+  return { toolName, expectedArgs };
+}
+
+/**
+ * Deep, canonical JSON-value equality.
+ *
+ * FIX 1 (Codex bounce): the previous `exactArgsMatch` used strict `!==` on each
+ * value, so array/object arguments (run_command argv, edit_file/grep nested args)
+ * compared by reference identity and could NEVER match. This implements
+ * structural equality with BYTE-EXACT string leaves:
+ *   - strings: strict `===` (trailing newline matters; NO normalization).
+ *   - numbers/booleans/null: strict `===` (NaN treated as unequal, like JSON).
+ *   - arrays: same length + element-wise deep-equal.
+ *   - objects: identical key set (no extra/missing) + deep-equal values.
+ *   - type mismatch (e.g. array vs object): not equal.
+ *
+ * @param {unknown} a
+ * @param {unknown} b
+ * @returns {boolean}
+ */
+export function deepJsonEqual(a, b) {
+  if (a === b) return true; // fast path for identical primitives/refs
+
+  // Null / non-object primitives: only equal via the strict === above.
+  if (a === null || b === null) return false;
+  if (typeof a !== 'object' || typeof b !== 'object') return false;
+
+  const aIsArray = Array.isArray(a);
+  const bIsArray = Array.isArray(b);
+  if (aIsArray !== bIsArray) return false; // array vs object never match
+
+  if (aIsArray) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (!deepJsonEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
+    if (!deepJsonEqual(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+/**
+ * Compare emitted args against expected for byte-exact, deep fidelity.
+ * Returns true only when the top-level arg objects are structurally identical
+ * (same key set) AND every leaf value deep-matches (strings byte-identical,
+ * including trailing newlines; arrays/objects recursively equal).
+ *
+ * @param {unknown} emittedArgs
+ * @param {Record<string,unknown>} expectedArgs
+ * @returns {boolean}
+ */
+export function exactArgsMatch(emittedArgs, expectedArgs) {
+  if (!emittedArgs || typeof emittedArgs !== 'object' || Array.isArray(emittedArgs)) return false;
+  if (!expectedArgs || typeof expectedArgs !== 'object' || Array.isArray(expectedArgs)) return false;
+  return deepJsonEqual(emittedArgs, expectedArgs);
+}
+
+// Trailing-whitespace run that a model may drop when tokenizing a string value.
+// Repair only ever ADDS BACK whitespace/newline bytes the expected value already
+// ended with; it never alters interior or non-whitespace content.
+const TRAILING_WHITESPACE_RE = /[ \t\r\n\f\v]+$/;
+
+/**
+ * Decide whether `emitted` differs from `expected` ONLY by a missing/truncated
+ * trailing whitespace/newline run on one or more STRING leaves, with everything
+ * else (structure, key sets, non-string leaves, interior content) byte-identical.
+ *
+ * Returns true ONLY when:
+ *   - both are objects (not arrays/null) with identical structure at every node;
+ *   - every non-string leaf deep-equals;
+ *   - every string leaf is either identical, OR the expected leaf equals the
+ *     emitted leaf plus a PURE trailing-whitespace run (expected === emitted + ws,
+ *     where `ws` is non-empty and only whitespace, AND the emitted leaf does not
+ *     itself already end in whitespace that was changed — interior or differing
+ *     trailing whitespace is rejected);
+ *   - at least one string leaf actually needed the trailing-whitespace repair
+ *     (a pure exact match would not reach here — callers gate on !exactArgsMatch);
+ *   - ALLOWLIST (default-deny): a repair is permitted ONLY when the differing
+ *     string leaf's nearest ancestor object key is one of the content-bearing
+ *     keys: `content`, `old_string`, `new_string`. Every other key — including
+ *     `path`, `pattern`, `query`, `url`, and any element nested under `argv` —
+ *     is NOT repairable. This prevents silently altering semantically meaningful
+ *     path/pattern/argv values that happen to differ only by trailing whitespace.
+ *
+ * Anything else (substantive content change, interior whitespace change, missing
+ * key, type change, shape change, disallowed leaf key) returns false.
+ *
+ * @param {unknown} emitted
+ * @param {unknown} expected
+ * @returns {boolean} true when expected can be reconstructed from emitted by
+ *   appending only trailing whitespace to one or more allowlisted string leaves
+ */
+
+/** Keys whose string leaves may be trailing-whitespace-repaired (default-deny). */
+const REPAIR_ALLOWLIST = new Set(['content', 'old_string', 'new_string']);
+
+export function isTrailingWhitespaceArtifact(emitted, expected) {
+  let repairedAny = false;
+
+  /**
+   * @param {unknown} em
+   * @param {unknown} ex
+   * @param {string|null} leafKey  The nearest ancestor object key, or null at
+   *   the root.  Array elements inherit the key of their containing array
+   *   property (e.g. argv[0] → leafKey='argv'), so they remain disallowed.
+   */
+  function walk(em, ex, leafKey) {
+    if (typeof ex === 'string') {
+      if (typeof em !== 'string') return false;
+      if (em === ex) return true;
+      // Disallow repair for keys not in the content-bearing allowlist.
+      if (!REPAIR_ALLOWLIST.has(leafKey)) return false;
+      // expected must equal emitted + a non-empty PURE trailing-whitespace run.
+      if (!ex.startsWith(em)) return false; // emitted must be a strict prefix
+      const suffix = ex.slice(em.length);
+      if (suffix.length === 0) return false;
+      if (!/^[ \t\r\n\f\v]+$/.test(suffix)) return false; // only whitespace may be added back
+      // Reject CHANGED (not merely truncated) trailing whitespace: the emitted
+      // leaf must NOT itself end in trailing whitespace, otherwise the model
+      // altered the existing whitespace rather than dropping a clean suffix.
+      if (TRAILING_WHITESPACE_RE.test(em)) return false;
+      repairedAny = true;
+      return true;
+    }
+    if (ex === null || typeof ex !== 'object') {
+      // non-string primitive leaf: must be strictly equal
+      return em === ex;
+    }
+    // object/array node: structures must match exactly, recurse
+    const exIsArray = Array.isArray(ex);
+    const emIsArray = Array.isArray(em);
+    if (em === null || typeof em !== 'object' || exIsArray !== emIsArray) return false;
+    if (exIsArray) {
+      if (em.length !== ex.length) return false;
+      for (let i = 0; i < ex.length; i += 1) {
+        // Array elements inherit the parent object key so argv[*] → disallowed.
+        if (!walk(em[i], ex[i], leafKey)) return false;
+      }
+      return true;
+    }
+    const exKeys = Object.keys(ex);
+    const emKeys = Object.keys(em);
+    if (exKeys.length !== emKeys.length) return false;
+    for (const key of exKeys) {
+      if (!Object.prototype.hasOwnProperty.call(em, key)) return false;
+      if (!walk(em[key], ex[key], key)) return false;
+    }
+    return true;
+  }
+
+  if (!emitted || typeof emitted !== 'object' || Array.isArray(emitted)) return false;
+  if (!expected || typeof expected !== 'object' || Array.isArray(expected)) return false;
+  const ok = walk(emitted, expected, null);
+  return ok && repairedAny;
+}
+
+/**
+ * Parse tool-call arguments — handles pre-parsed objects and JSON strings.
+ *
+ * @param {string|object|undefined} rawArguments
+ * @returns {object|null}
+ */
+export function parseToolCallArguments(rawArguments) {
+  if (rawArguments === null || rawArguments === undefined) return {};
+  if (typeof rawArguments === 'object' && !Array.isArray(rawArguments)) return rawArguments;
+  if (typeof rawArguments === 'string') {
+    const trimmed = rawArguments.trim();
+    if (trimmed === '' || trimmed === '{}') return {};
+    try {
+      const parsed = JSON.parse(rawArguments);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch {
+      // fall through
+    }
+  }
+  return null;
 }
 
 // ===== Main =====
@@ -3608,11 +4076,43 @@ async function main() {
     const isBashNative = BASH_NATIVE_PROVIDERS.has(providerName);
     const isStrictApi = STRICT_API_PROVIDERS.has(providerName);
 
+    // Strict-API grounding enforcement uses two complementary mechanisms:
+    //
+    // 1. TOOL_CHOICE (computeStrictGroundingToolChoice):
+    //    - providers that accept 'required' get it directly.
+    //    - openrouter/minimax-m3 (rejects 'required') gets specific-function
+    //      {type:'function',function:{name}} ONLY when exactly one strict tool name appears
+    //      verbatim in the task; otherwise no toolChoice.
+    //    - DeepSeek (rejects ALL toolChoice forms, HTTP 400) gets NO toolChoice at all.
+    //
+    // 2. HARD-PROMPT grounding mandate (injectGroundingMandate): one preserved marker in the
+    //    system message (index 0, trim-protected) — invariant: marker appears at most once.
+    //    Primary fix for the write_file trailing-newline argument-fidelity miss.
+
+    const strictApiToolNames = strictApiReadOnlyTools.map((t) => t.function.name);
+    const requiresGrounding = taskRequiresBridgeToolGrounding(task);
+    const isUnsupportedForcing = TOOL_CHOICE_REQUIRED_UNSUPPORTED.has(providerName);
+
     if (!isBashNative) {
       if (isStrictApi) {
         request.tools = strictApiReadOnlyTools;
-        if (taskRequiresBridgeToolGrounding(task) && !TOOL_CHOICE_REQUIRED_UNSUPPORTED.has(providerName)) {
-          request.toolChoice = 'required';
+        if (requiresGrounding) {
+          const toolChoice = computeStrictGroundingToolChoice({
+            providerName, task, strictApiToolNames,
+          });
+          if (toolChoice !== undefined) {
+            request.toolChoice = toolChoice;
+            bridgeLog('info', 'Strict grounding tool_choice applied', {
+              agentId, provider: providerName,
+              toolChoice: typeof toolChoice === 'string' ? toolChoice : toolChoice.function.name,
+            });
+          }
+          // Inject the hard-prompt grounding mandate for providers that can't be hard-forced
+          // via 'required' (openrouter/minimax-m3, deepseek). This slot is preserved across
+          // prepareForProvider trimming so the mandate persists for all tool-loop iterations.
+          if (isUnsupportedForcing) {
+            injectGroundingMandate(request.messages);
+          }
         }
       } else if (agent.config?.tools && Array.isArray(agent.config.tools)) {
         // Merge: built-in filesystem tools first, then agent-specific tools (deduplicated by name)
@@ -3640,6 +4140,15 @@ async function main() {
     const MAX_TOOL_ITERATIONS = 25;
     const providerStartTime = Date.now();
     const executedTools = [];
+    // FIX 3 (single-path regression): the UNGROUNDED_TOOL_TASK floor must fire ONLY
+    // when the model answered from priors (emitted ZERO tool calls). A tool call that
+    // ran but returned a structured denial (web_fetch denied, web_search unsupported,
+    // unknown/blocked tool) is still grounded — the model DID invoke a bridge tool.
+    // `executedTools` stays success-gated (MUST-FIX-1); `attemptedTools` tracks EVERY
+    // tool call the model actually emitted (denied/error included) and is what the
+    // floor checks. This restores the single-path contract that denied-tool diagnostics
+    // succeed, without un-gating executedTools.
+    const attemptedTools = [];
     const completeProviderRequest = async (requestToSend, meta = {}) => {
       const requestStart = Date.now();
       appendBridgeJournalEvent({
@@ -3698,6 +4207,22 @@ async function main() {
     const toolCallFingerprints = [];
     let consecutiveErrorIterations = 0;
     const MAX_CONSECUTIVE_ERRORS = 3;
+
+    // Exact-args fidelity context: non-null when the task carries the machine-readable
+    // 'Use these exact arguments: {...}' block AND names exactly one strict tool.
+    // When active, the bridge validates the model's emitted args BEFORE executing the
+    // tool; on mismatch it retries with a precise nudge (bounded, fail-closed).
+    const exactArgsCtx = isStrictApi
+      ? parseExactArgsContext(task, strictApiToolNames)
+      : null;
+    let argFidelityRetryCount = 0;
+    // Once the exact-args expected tool has been emitted correctly (or canonically
+    // repaired) and dispatched, the exact-args contract is satisfied. The gate must
+    // then go inert so the model's SUBSEQUENT final text answer (a legitimate no-tool
+    // turn that summarizes the tool result) is not mis-flagged as a no-tool fidelity
+    // violation. This only governs the exact-args gate; the UNGROUNDED floor still
+    // applies via attemptedTools.
+    let exactArgsSatisfied = false;
 
     // Tool-calling loop (no lock held — provider calls can take up to 120s).
     // All structured provider tool calls execute through executeBridgeTool,
@@ -3847,26 +4372,249 @@ async function main() {
         usage: response.usage || null,
       });
 
-      if (response.toolCalls && response.toolCalls.length > 0) {
-        for (const toolCall of response.toolCalls) {
+      // Normalize tool calls so the exact-args fidelity gate (PART 1) can reason
+      // about NO-TOOL responses too. A NO-TOOL exact-args response must reach the
+      // bounded fidelity path (retry / ARG_FIDELITY_EXHAUSTED), NOT the generic
+      // no-tool break that would fail it as UNGROUNDED_TOOL_TASK.
+      const calls = Array.isArray(response.toolCalls) ? response.toolCalls : [];
+
+      // Exact-args fidelity gate: when the task carries a 'Use these exact arguments:'
+      // block for a single named strict tool, validate the response SHAPE BEFORE any
+      // execution AND before the generic no-tool break. FIX 2 (Codex bounce): the gate
+      // rejects wrong-tool and multi-tool responses, not just argument mismatches.
+      // PART 1 (Codex bounce): the gate ALSO handles NO-TOOL responses here — anything
+      // other than exactly one call to the expected tool with deep-matching args is a
+      // fidelity violation that must NOT execute. On any violation: nudge, retry (bounded);
+      // after the bound, attempt a PART 3 trailing-whitespace canonical repair if the last
+      // emitted args differ from expected ONLY by dropped trailing whitespace; otherwise
+      // fail closed with ARG_FIDELITY_EXHAUSTED.
+      //
+      // This path applies ONLY to exact-args tasks (exactArgsCtx !== null). Non-exact
+      // generic no-tool grounding keeps the existing UNGROUNDED_TOOL_TASK floor below.
+      let exactArgsRepaired = false;
+      // EXACT-ARGS ONE-CALL-AND-DONE: capture whether the exact-args contract was
+      // ALREADY satisfied BEFORE this response was evaluated. The satisfying response
+      // (the one that flips the latch in the gate below) must still execute its single
+      // correct call. But any tool calls the model emits on a LATER turn — after the
+      // contract is already satisfied — are REDUNDANT and must be DROPPED from execution
+      // (minimax-m3 emits edit_file x4; the duplicate non-idempotent calls fail
+      // `old_string not found` and corrupt the observed result). This snapshot lets the
+      // execution block below distinguish "satisfied THIS response (run it)" from
+      // "already satisfied earlier (drop these post-satisfaction calls)".
+      const exactArgsSatisfiedBeforeResponse = exactArgsCtx !== null && exactArgsSatisfied;
+      if (exactArgsCtx !== null && !exactArgsSatisfied) {
+        const single = calls.length === 1 ? calls[0] : null;
+        const emittedArgs = single ? parseToolCallArguments(single.function.arguments) : undefined;
+
+        // Shape checks (in order): exactly one call, correct tool name, deep-matching args.
+        const wrongCount = calls.length !== 1;
+        const wrongTool = !wrongCount && single.function.name !== exactArgsCtx.toolName;
+        const wrongArgs = !wrongCount && !wrongTool && !exactArgsMatch(emittedArgs, exactArgsCtx.expectedArgs);
+
+        if (!(wrongCount || wrongTool || wrongArgs)) {
+          // Clean exact-args pass: exactly one correct tool with byte-exact args.
+          // The contract is satisfied; the gate goes inert for subsequent turns so
+          // the model's final text summary is not mis-flagged as a no-tool violation.
+          exactArgsSatisfied = true;
+        }
+
+        if (wrongCount || wrongTool || wrongArgs) {
+          argFidelityRetryCount++;
+          const violation = wrongCount
+            ? (calls.length === 0 ? 'no-tool-call' : 'multi-tool-call')
+            : wrongTool ? 'wrong-tool' : 'arg-mismatch';
+          bridgeLog('warn', 'Exact-args fidelity violation — response shape does not match exact-args contract', {
+            agentId,
+            provider: providerName,
+            toolName: exactArgsCtx.toolName,
+            violation,
+            retry: argFidelityRetryCount,
+            emittedToolNames: calls.map((c) => c?.function?.name).slice(0, 5),
+            emittedArgs: single ? JSON.stringify(emittedArgs).slice(0, 300) : undefined,
+            expectedArgs: JSON.stringify(exactArgsCtx.expectedArgs).slice(0, 300),
+          });
+
+          // No assistant message has been pushed yet — wrong/multi/no-tool calls
+          // never enter the message history and never execute.
+
+          if (argFidelityRetryCount > MAX_ARG_FIDELITY_RETRIES) {
+            // PART 3 (Codex option a): bounded canonical trailing-whitespace repair.
+            // The repair is the FINAL exact-args artifact fallback, attempted ONLY after
+            // the temp=0 retry/nudge path is exhausted. It applies ONLY when the model
+            // emitted exactly one call to the expected tool whose args differ from the
+            // expected args SOLELY by a missing/truncated trailing whitespace/newline run
+            // on one or more string leaves (a deterministic tokenization artifact). Any
+            // other mismatch — wrong tool, multi/no tool, interior-whitespace change,
+            // substantive content change, path/shape change — is NOT repaired and fails
+            // closed with ARG_FIDELITY_EXHAUSTED.
+            const repairable =
+              violation === 'arg-mismatch' &&
+              single !== null &&
+              single.function.name === exactArgsCtx.toolName &&
+              isTrailingWhitespaceArtifact(emittedArgs, exactArgsCtx.expectedArgs);
+
+            if (repairable) {
+              const repairedLeafKeys = Object.entries(exactArgsCtx.expectedArgs)
+                .filter(([k, v]) =>
+                  typeof v === 'string' &&
+                  typeof emittedArgs[k] === 'string' &&
+                  emittedArgs[k] !== v,
+                )
+                .map(([k]) => k);
+              bridgeLog('warn', 'Exact-args trailing-whitespace repair — substituting canonical args', {
+                agentId,
+                provider: providerName,
+                toolName: exactArgsCtx.toolName,
+                repairedLeafKeys,
+                emittedArgs: JSON.stringify(emittedArgs).slice(0, 300),
+                expectedArgs: JSON.stringify(exactArgsCtx.expectedArgs).slice(0, 300),
+              });
+              appendBridgeJournalEvent({
+                event: 'exact_args_trailing_whitespace_repair',
+                resultFile,
+                agentId,
+                provider: providerName,
+                model: request.model || agent.resolvedModel,
+                meta: {
+                  toolName: exactArgsCtx.toolName,
+                  repairedLeafKeys,
+                  retries: MAX_ARG_FIDELITY_RETRIES,
+                },
+              });
+              // Substitute the canonical expected args for execution. We rewrite the
+              // emitted call's arguments to the exact expected JSON so the normal
+              // execution path below runs the repaired call and its success is gated
+              // by isSuccessfulBridgeToolResult exactly like any other grounded call.
+              single.function.arguments = JSON.stringify(exactArgsCtx.expectedArgs);
+              exactArgsRepaired = true;
+              // Contract satisfied via repair — gate goes inert for subsequent turns.
+              exactArgsSatisfied = true;
+              // fall through to execution with the repaired single call
+            } else {
+              const fidelityError = new Error(
+                `Argument fidelity failure: provider '${providerName}' did not reproduce ` +
+                `exactly one '${exactArgsCtx.toolName}' call with the exact arguments after ` +
+                `${MAX_ARG_FIDELITY_RETRIES} retries (last violation: ${violation}). ` +
+                `Expected: ${JSON.stringify(exactArgsCtx.expectedArgs)}`
+              );
+              fidelityError.code = 'ARG_FIDELITY_EXHAUSTED';
+              throw fidelityError;
+            }
+          } else {
+            // FIX 4: explicit, byte-level nudge. Models trim trailing whitespace and
+            // re-showing escaped \n inside JSON is not landing, so spell out, by name,
+            // that any string value ending in a newline MUST keep its FINAL NEWLINE BYTE
+            // inside the emitted JSON string value. Tailor the lead line to the violation.
+            const expectedJson = JSON.stringify(exactArgsCtx.expectedArgs);
+            const trailingNewlineKeys = Object.entries(exactArgsCtx.expectedArgs)
+              .filter(([, v]) => typeof v === 'string' && v.endsWith('\n'))
+              .map(([k]) => k);
+            const shapeLead =
+              violation === 'wrong-tool'
+                ? `You called the wrong tool. You MUST call ONLY "${exactArgsCtx.toolName}".`
+                : violation === 'multi-tool-call'
+                  ? `You emitted multiple tool calls. You MUST emit EXACTLY ONE call to "${exactArgsCtx.toolName}" and nothing else.`
+                  : violation === 'no-tool-call'
+                    ? `You produced no tool call. You MUST call "${exactArgsCtx.toolName}" now.`
+                    : `Your tool arguments did not match the required values.`;
+            const newlineClause = trailingNewlineKeys.length > 0
+              ? ` IMPORTANT: the value(s) for ${trailingNewlineKeys.map((k) => `"${k}"`).join(', ')} END WITH A FINAL NEWLINE BYTE. ` +
+                `You MUST emit that final newline INSIDE the JSON string value (i.e. the string must end with \\n). ` +
+                `Do NOT trim, strip, or drop the trailing newline — keep the value byte-for-byte identical.`
+              : '';
+            const fidelityNudge =
+              `[BRIDGE ENFORCEMENT — ARGUMENT FIDELITY RETRY ${argFidelityRetryCount}/${MAX_ARG_FIDELITY_RETRIES}] ` +
+              `${shapeLead} ` +
+              `The arguments MUST be EXACTLY ${expectedJson}, reproduced byte-for-byte ` +
+              `including any trailing newline characters or whitespace in string values.` +
+              `${newlineClause} ` +
+              `Call ${exactArgsCtx.toolName} again with exactly these arguments and no other changes.`;
+            request.messages.push({ role: 'user', content: fidelityNudge });
+            request.messages = prepareForProvider(
+              request.messages,
+              dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel),
+            );
+
+            // FIX 4: lower temperature on fidelity retries so the model copies args
+            // verbatim instead of paraphrasing. The OpenRouter provider forwards a
+            // per-request `temperature` cleanly into the API body (openrouter-provider.ts
+            // `complete()`), with no collateral behavior change. Only set it for the
+            // openrouter request shape that supports it; leave other providers untouched.
+            if (providerName === 'openrouter') {
+              request.temperature = 0;
+            }
+            continue;
+          }
+        }
+      }
+
+      // EXACT-ARGS ONE-CALL-AND-DONE (Codex option a): once the expected exact-args
+      // tool call has been satisfied/repaired AND successfully dispatched, the exact-args
+      // contract ("exactly one call to the expected tool with the expected args") is
+      // complete. If the model emits MORE tool calls on a subsequent turn, they are
+      // redundant follow-ons that must NOT execute — for non-idempotent edit_file the
+      // first call succeeds and the duplicates fail `old_string not found`, and the
+      // diagnostic evaluates the LAST result, flipping ok:true -> ok:false. We DROP the
+      // post-satisfaction calls from EXECUTION (and from accounting), never push them into
+      // the message history, and break to drive the model to its final text summary built
+      // from the already-successful result. This applies ONLY to exact-args tasks after
+      // satisfaction; non-exact tasks (and the satisfying response itself) are unaffected.
+      if (calls.length > 0 && exactArgsSatisfiedBeforeResponse) {
+        bridgeLog('warn', 'Exact-args one-call-and-done — dropping redundant post-satisfaction tool calls', {
+          agentId,
+          provider: providerName,
+          toolName: exactArgsCtx.toolName,
+          droppedToolNames: calls.map((c) => c?.function?.name).slice(0, 5),
+          droppedCount: calls.length,
+          iteration: iterations,
+        });
+        appendBridgeJournalEvent({
+          event: 'exact_args_redundant_call_dropped',
+          resultFile,
+          agentId,
+          provider: providerName,
+          model: request.model || agent.resolvedModel,
+          meta: {
+            toolName: exactArgsCtx.toolName,
+            droppedCount: calls.length,
+            iteration: iterations,
+          },
+        });
+        // Do NOT execute the dropped calls, do NOT count them in attemptedTools /
+        // executedTools, and do NOT append an assistant tool-call message (which would
+        // require matching tool results). Stop the loop; the post-loop summary path
+        // synthesizes the final answer from the already-successful tool result.
+        break;
+      }
+
+      if (calls.length > 0) {
+        for (const toolCall of calls) {
           bridgeLog('info', `Tool call: ${toolCall.function.name}`, {
             agentId,
             tool: toolCall.function.name,
             args: (toolCall.function.arguments || '').slice(0, 300),
             iteration: iterations,
+            ...(exactArgsRepaired ? { exactArgsRepaired: true } : {}),
           });
         }
 
         request.messages.push({
           role: 'assistant',
           content: response.content || '',
-          toolCalls: response.toolCalls,
+          toolCalls: calls,
           ...(response.reasoningContent ? { reasoningContent: response.reasoningContent } : {}),
         });
 
         const toolResults = await Promise.all(
-          response.toolCalls.map((tc) => {
+          calls.map((tc) => {
             const toolStart = Date.now();
+            // FIX 3: a tool the model actually invoked counts as a grounding ATTEMPT
+            // (the model did not answer from priors), regardless of whether the result
+            // is a success or a structured denial/error. This is distinct from the
+            // success-gated `executedTools` (MUST-FIX-1) and is what the UNGROUNDED floor
+            // checks. We reach this map ONLY past the exact-args shape gate, so wrong-tool
+            // / multi-tool responses never get here.
+            attemptedTools.push(tc.function.name);
             appendBridgeJournalEvent({
               event: 'tool_exec_start',
               resultFile,
@@ -3878,9 +4626,15 @@ async function main() {
             return executeBridgeTool(tc.function.name, tc.function.arguments, {
               agentId,
               source: 'response-loop',
-              recordExecution: (toolName) => executedTools.push(toolName),
             })
               .then((result) => {
+                // MUST-FIX-1: count toward grounding ONLY when the tool produced a
+                // successful (non-denied, non-error) result. Denied/error calls must
+                // not satisfy the UNGROUNDED_TOOL_TASK floor.
+                const grounded = isSuccessfulBridgeToolResult(result);
+                if (grounded) {
+                  executedTools.push(tc.function.name);
+                }
                 appendBridgeJournalEvent({
                   event: 'tool_exec_end',
                   resultFile,
@@ -3891,7 +4645,7 @@ async function main() {
                     toolName: tc.function.name,
                     iteration: iterations,
                     durationMs: Date.now() - toolStart,
-                    success: true,
+                    success: grounded,
                   },
                 });
                 return { id: tc.id, name: tc.function.name, result };
@@ -3957,9 +4711,9 @@ async function main() {
         request.messages = prepareForProvider(request.messages, limits);
 
         // Stuck detection: fingerprint + error counter
-        if (response.toolCalls && response.toolCalls.length > 0) {
+        if (calls.length > 0) {
           const fingerprint = JSON.stringify(
-            response.toolCalls.map((tc) => ({ n: tc.function.name, a: tc.function.arguments }))
+            calls.map((tc) => ({ n: tc.function.name, a: tc.function.arguments }))
           );
           toolCallFingerprints.push(fingerprint);
           if (toolCallFingerprints.length > STUCK_WINDOW) toolCallFingerprints.shift();
@@ -3990,10 +4744,32 @@ async function main() {
           }
         }
 
-        if (response.finishReason !== 'tool_calls') {
-          break;
-        }
+        // MUST-FIX-5: Do NOT break here on finishReason. We are inside the
+        // `calls.length > 0` branch — the model just issued tool calls that
+        // we executed and appended results for. Some upstreams (incl. minimax-m3 via
+        // OpenRouter) return finish_reason:'stop' (or 'length'/null) WHILE also returning
+        // tool_calls. Breaking on `finishReason !== 'tool_calls'` would discard the tool
+        // results without letting the model produce a final answer grounded on them.
+        // Always continue the loop when tool calls were processed; termination is bounded
+        // by MAX_TOOL_ITERATIONS, the stuck-fingerprint guard, and the consecutive-error
+        // guard above. We only stop via the `else` branch below (genuine final text answer
+        // with no pending tool calls).
+        // (intentionally fall through to the next loop iteration)
       } else {
+        // Model returned no tool calls — a genuine final text answer. Stop the loop.
+        //
+        // PART 1: an exact-args NO-TOOL response never reaches here — the exact-args
+        // fidelity gate above intercepts it (exactArgsCtx !== null) and either retries
+        // (bounded) or fails closed with ARG_FIDELITY_EXHAUSTED. So this branch only
+        // runs for NON-exact tasks, where grounding is enforced by the post-loop
+        // UNGROUNDED_TOOL_TASK floor (which checks attemptedTools).
+        //
+        // FIX 3 (single-path regression): the previous in-loop grounding retry
+        // (MAX_GROUNDING_RETRIES) re-nudged the model and continued here, turning a
+        // single fail-closed turn into 3 provider requests and breaking the established
+        // "fail closed at exactly one request" contract (single-path web-ungrounded +
+        // strict-ungrounded tests). No test required that retry. Re-nudging here is both
+        // unnecessary and contract-breaking.
         break;
       }
     }
@@ -4044,14 +4820,31 @@ async function main() {
       }
     }
 
+    // RETRY-ON-UNGROUNDED removed (Codex blocker #2): the previous post-loop
+    // grounding-retry path (bounded by MAX_GROUNDING_RETRIES, same model, no reroll,
+    // re-nudge) was REMOVED entirely — it no longer exists. There is now no in-loop
+    // re-nudge for ungrounded no-tool answers; the post-loop UNGROUNDED_TOOL_TASK floor
+    // below is the sole fail-closed safety net when no tool was attempted. (Exact-args
+    // fidelity has its own bounded retry path inside the loop, separate from this.)
+
     const toolUse = {
       iterations,
-      tools: [...executedTools],
+      // FIX 3 / PART 2: `tools` reports EVERY tool the model ATTEMPTED to invoke
+      // (including denied/error results), so diagnostics that legitimately exercise a
+      // denied tool (web_fetch/web_search/unknown/blocked) still surface `tools: [<tool>]`.
+      // `successfulTools` reports ONLY tools that produced a successful grounded result
+      // (success-gated via isSuccessfulBridgeToolResult), so consumers do NOT confuse
+      // attempted calls with successful grounded execution.
+      tools: [...attemptedTools],
+      successfulTools: [...executedTools],
     };
 
+    // UNGROUNDED_TOOL_TASK floor: fail closed ONLY when the model answered from priors
+    // (emitted ZERO tool calls). A tool that ran but was denied/unsupported is still a
+    // grounded attempt — the model did call a bridge tool — so it must NOT trip the floor.
     if (
       STRICT_API_PROVIDERS.has(providerName) &&
-      executedTools.length === 0 &&
+      attemptedTools.length === 0 &&
       taskRequiresBridgeToolGrounding(task)
     ) {
       throw ungroundedToolTaskError(providerName);

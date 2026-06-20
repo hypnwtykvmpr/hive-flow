@@ -126,16 +126,10 @@ const spawnCommand: Command = {
     try {
       // Call MCP tool to spawn agent. `agent_spawn` reads provider/model/task
       // from top-level fields; config is reserved for provider-specific knobs.
-      const result = await callMCPTool<{
-        agentId: string;
-        agentType: string;
-        status: string;
-        createdAt: string;
-        provider?: string;
-        model?: string;
-        resolvedModel?: string;
-        modelRoutedBy?: string;
-      }>('agent_spawn', {
+      // The handler returns a plain object — it does NOT throw on logical failure;
+      // it returns { success: false, error: "..." } instead.  We must inspect the
+      // envelope BEFORE rendering any output.
+      const rawResult = await callMCPTool<Record<string, unknown>>('agent_spawn', {
         agentType,
         agentId: agentName,
         provider: ctx.flags.provider || 'anthropic',
@@ -151,6 +145,32 @@ const spawnCommand: Command = {
           capabilities: getAgentCapabilities(agentType),
         },
       });
+
+      // Detect failure envelope: success===false OR no agentId present
+      if (rawResult.success === false || !rawResult.agentId) {
+        const errMsg = typeof rawResult.error === 'string'
+          ? rawResult.error
+          : 'agent_spawn returned a failure envelope with no error message';
+        output.printError(`Failed to spawn agent: ${errMsg}`);
+
+        if (ctx.flags.format === 'json') {
+          output.printJson(rawResult);
+        }
+
+        return { success: false, exitCode: 1, data: rawResult };
+      }
+
+      // Successful spawn — rawResult has the expected agent fields
+      const result = rawResult as {
+        agentId: string;
+        agentType: string;
+        status: string;
+        createdAt: string;
+        provider?: string;
+        model?: string;
+        resolvedModel?: string;
+        modelRoutedBy?: string;
+      };
 
       output.writeln();
       output.printTable({

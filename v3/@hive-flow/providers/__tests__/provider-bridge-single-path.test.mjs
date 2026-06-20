@@ -206,6 +206,118 @@ async function startFixtureServer(toolName, toolArgs, options = {}) {
         }));
         return;
       }
+      // PART 1: an exact-args task where the model NEVER emits a tool call. The bridge's
+      // exact-args fidelity gate must intercept this (no-tool-call violation), retry the
+      // bounded number of times, then fail closed with ARG_FIDELITY_EXHAUSTED — NOT
+      // UNGROUNDED_TOOL_TASK. Always answer from priors (no tool call) on every request.
+      if (options.exactArgsNoTool) {
+        res.end(JSON.stringify({
+          id: 'single-path-exact-args-no-tool',
+          choices: [{
+            message: { content: 'I already know the answer; no tool needed.' },
+            finish_reason: 'stop',
+          }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }));
+        return;
+      }
+      // EXACT-ARGS ONE-CALL-AND-DONE: the model emits the correct single tool call on the
+      // first turn (no tool message yet) — which satisfies the exact-args contract and
+      // executes successfully. On the SECOND turn (a successful tool result is now in
+      // history) the model emits a REDUNDANT follow-on call to the SAME tool with the SAME
+      // args. For non-idempotent edit_file the duplicate would fail `old_string not found`;
+      // the bridge MUST drop it (never execute) and drive to the final summary instead.
+      if (options.redundantCallAfterSatisfaction) {
+        if (!toolMessage) {
+          // First turn — emit the single correct, satisfying call.
+          res.end(JSON.stringify({
+            id: 'single-path-exact-args-first-call',
+            choices: [{
+              message: {
+                content: null,
+                tool_calls: [{
+                  id: 'call_satisfying',
+                  type: 'function',
+                  function: { name: toolName, arguments: JSON.stringify(toolArgs) },
+                }],
+              },
+              finish_reason: 'tool_calls',
+            }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }));
+          return;
+        }
+        // The successful tool result is in history. If the result is the edit-success
+        // marker, emit a REDUNDANT follow-on call (must be dropped). After the drop the
+        // bridge breaks and requests a final text summary; on that summary turn we still
+        // see the (same) tool message, so emit redundant calls only while content empty —
+        // the bridge's drop path makes content irrelevant. To terminate the loop we emit
+        // a SECOND redundant call once, then the bridge breaks; the post-loop summary
+        // request (which carries the summary user prompt) returns final text below.
+        const lastMsg = [...(body.messages ?? [])].at(-1);
+        const isSummaryTurn = lastMsg?.role === 'user'
+          && typeof lastMsg.content === 'string'
+          && lastMsg.content.startsWith('Summarize what you found');
+        if (!isSummaryTurn) {
+          res.end(JSON.stringify({
+            id: 'single-path-exact-args-redundant-call',
+            choices: [{
+              message: {
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_redundant_1',
+                    type: 'function',
+                    function: { name: toolName, arguments: JSON.stringify(toolArgs) },
+                  },
+                  {
+                    id: 'call_redundant_2',
+                    type: 'function',
+                    function: { name: toolName, arguments: JSON.stringify(toolArgs) },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            }],
+            usage: { prompt_tokens: 12, completion_tokens: 6, total_tokens: 18 },
+          }));
+          return;
+        }
+        res.end(JSON.stringify({
+          id: 'single-path-exact-args-redundant-summary',
+          choices: [{
+            message: { content: `done:${toolMessage.content}` },
+            finish_reason: 'stop',
+          }],
+          usage: { prompt_tokens: 15, completion_tokens: 5, total_tokens: 20 },
+        }));
+        return;
+      }
+      // PART 3: an exact-args task where the model emits the correct tool with the correct
+      // args EXCEPT a dropped trailing newline on `content`. The bridge retries the bounded
+      // number of times (model keeps trimming), then performs the canonical trailing-
+      // whitespace repair and executes the repaired (canonical) call. `toolArgs.content`
+      // is expected to END with '\n'; we emit it trimmed on every tool turn.
+      if (options.trimTrailingNewline && !toolMessage) {
+        const trimmed = { ...toolArgs };
+        if (typeof trimmed.content === 'string') trimmed.content = trimmed.content.replace(/\s+$/, '');
+        res.end(JSON.stringify({
+          id: 'single-path-trimmed-args',
+          choices: [{
+            message: {
+              content: null,
+              tool_calls: [{
+                id: 'call_trimmed',
+                type: 'function',
+                function: { name: toolName, arguments: JSON.stringify(trimmed) },
+              }],
+            },
+            finish_reason: 'tool_calls',
+          }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }));
+        return;
+      }
       if (!toolMessage) {
         res.end(JSON.stringify({
           id: 'single-path-tool-call',
@@ -842,6 +954,194 @@ describe('provider bridge single tool execution path', () => {
       expect(result.error).not.toMatch(/holder-fixture-key|secret/i);
       await holder.close();
       await fixture.close();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  // Build the machine-readable exact-args diagnostic task that parseExactArgsContext
+  // recognizes (names exactly one strict tool + carries a 'Use these exact arguments:'
+  // JSON block). The trailing-newline on `content` is the tokenization artifact under test.
+  function exactArgsTask(tool, args) {
+    return [
+      'Live Hive Flow strict-provider diagnostic.',
+      `Your FIRST response MUST be a tool call to the bridge tool named ${JSON.stringify(tool)}.`,
+      'Do not write any assistant text before the tool call.',
+      `Use these exact arguments: ${JSON.stringify(args)}.`,
+      'Do not change, infer, paraphrase, omit, or repair the arguments.',
+      'Do not answer from memory or model priors.',
+    ].join('\n');
+  }
+
+  it('PART 1: an exact-args NO-TOOL response fails closed as ARG_FIDELITY_EXHAUSTED, not UNGROUNDED_TOOL_TASK', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-exact-args-no-tool-');
+    try {
+      const target = join(root, 'src', 'exact-write.txt');
+      const expectedArgs = { path: target, content: 'exact write\n' };
+
+      const { result, requests } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'write_file',
+        toolArgs: expectedArgs,
+        provider: 'openrouter',
+        resolvedModel: 'minimax/minimax-m3',
+        taskText: exactArgsTask('write_file', expectedArgs),
+        fixtureOptions: { exactArgsNoTool: true },
+        allowFailure: true,
+      });
+
+      // Bounded fidelity retries occurred (more than the single ungrounded request),
+      // and the failure is the exact-args path — NOT the ungrounded floor.
+      expect(requests.length).toBeGreaterThanOrEqual(2);
+      expect(result).toMatchObject({ success: false, code: 'ARG_FIDELITY_EXHAUSTED' });
+      expect(result.code).not.toBe('UNGROUNDED_TOOL_TASK');
+      // The repaired file must NOT exist — no tool ever executed.
+      expect(existsSync(target)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('PART 3: a dropped trailing newline is canonically repaired and the canonical args execute', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-exact-args-repair-');
+    try {
+      const target = join(root, 'src', 'repair-write.txt');
+      const expectedArgs = { path: target, content: 'canonical repair output\n' };
+
+      const { result, requests, bridgeLog } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'write_file',
+        toolArgs: expectedArgs,
+        provider: 'openrouter',
+        resolvedModel: 'minimax/minimax-m3',
+        taskText: exactArgsTask('write_file', expectedArgs),
+        fixtureOptions: { trimTrailingNewline: true },
+      });
+
+      // Retries were exhausted (model kept trimming), then the canonical repair ran and
+      // executed the expected args. The file content must be the CANONICAL value (with the
+      // trailing newline restored), proving the repaired args — not the trimmed ones — ran.
+      expect(requests.length).toBeGreaterThanOrEqual(2);
+      expect(result.success).toBe(true);
+      expect(readFileSync(target, 'utf8')).toBe('canonical repair output\n');
+      expect(result.toolUse).toMatchObject({ tools: ['write_file'], successfulTools: ['write_file'] });
+      // The repair is logged to bridge.log (human-readable) and journaled to the task
+      // journal (machine event `exact_args_trailing_whitespace_repair`).
+      expect(bridgeLog).toContain('Exact-args trailing-whitespace repair');
+      const journalPath = join(root, '.hive-flow', 'tasks', 'single-path.events.jsonl');
+      expect(existsSync(journalPath)).toBe(true);
+      expect(readFileSync(journalPath, 'utf8')).toContain('exact_args_trailing_whitespace_repair');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('ONE-CALL-AND-DONE: exact-args edit_file executes once; redundant post-satisfaction calls are dropped, never executed', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-exact-args-one-call-');
+    try {
+      const target = join(root, 'src', 'one-call-edit.txt');
+      // Non-idempotent: after the first edit, `old_string` is gone, so a second
+      // edit_file with the same args would fail `old_string not found`.
+      writeFileSync(target, 'before one-call edit\n', 'utf8');
+      const expectedArgs = {
+        path: target,
+        old_string: 'before one-call edit',
+        new_string: 'after one-call edit',
+      };
+
+      const { result, requests, bridgeLog } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'edit_file',
+        toolArgs: expectedArgs,
+        provider: 'openrouter',
+        resolvedModel: 'minimax/minimax-m3',
+        taskText: exactArgsTask('edit_file', expectedArgs),
+        fixtureOptions: { redundantCallAfterSatisfaction: true },
+      });
+
+      // The first (satisfying) edit_file ran successfully; the redundant follow-on
+      // calls were DROPPED before execution. The observed result is the success path,
+      // never a duplicate `old_string not found`.
+      expect(result.success).toBe(true);
+      // Final file content is the single applied edit — not corrupted, not double-applied.
+      expect(readFileSync(target, 'utf8')).toBe('after one-call edit\n');
+      // Exactly ONE attempted/successful tool — the dropped redundant calls are NOT
+      // counted in attempted or successful tools.
+      expect(result.toolUse.tools).toEqual(['edit_file']);
+      expect(result.toolUse.successfulTools).toEqual(['edit_file']);
+      // A duplicate `old_string not found` must NEVER surface as the observed result.
+      expect(JSON.stringify(result)).not.toMatch(/old_string not found/i);
+      // The drop is logged and journaled.
+      expect(bridgeLog).toContain('Exact-args one-call-and-done');
+      const journalPath = join(root, '.hive-flow', 'tasks', 'single-path.events.jsonl');
+      expect(existsSync(journalPath)).toBe(true);
+      const journal = readFileSync(journalPath, 'utf8');
+      expect(journal).toContain('exact_args_redundant_call_dropped');
+      // edit_file executed exactly once (one tool_exec_start for edit_file).
+      const editExecStarts = journal
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => { try { return JSON.parse(line); } catch { return null; } })
+        .filter((e) => e && e.event === 'tool_exec_start' && e.meta?.toolName === 'edit_file');
+      expect(editExecStarts.length).toBe(1);
+      // More than one provider request occurred (satisfying turn + redundant turn + summary).
+      expect(requests.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('ONE-CALL-AND-DONE: redundant WRONG-tool and MULTI-tool calls after satisfaction are dropped, never executed', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-exact-args-drop-wrong-');
+    try {
+      const target = join(root, 'src', 'drop-wrong-edit.txt');
+      writeFileSync(target, 'before drop-wrong edit\n', 'utf8');
+      const expectedArgs = {
+        path: target,
+        old_string: 'before drop-wrong edit',
+        new_string: 'after drop-wrong edit',
+      };
+
+      const { result, bridgeLog } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'edit_file',
+        toolArgs: expectedArgs,
+        provider: 'openrouter',
+        resolvedModel: 'minimax/minimax-m3',
+        taskText: exactArgsTask('edit_file', expectedArgs),
+        // The redundant follow-on turn emits TWO calls (multi-tool) to the same tool —
+        // a post-satisfaction multi-call must be dropped wholesale, never executed.
+        fixtureOptions: { redundantCallAfterSatisfaction: true },
+      });
+
+      expect(result.success).toBe(true);
+      // Only the satisfying call ran — the multi-call follow-on was dropped wholesale.
+      expect(result.toolUse.tools).toEqual(['edit_file']);
+      expect(result.toolUse.successfulTools).toEqual(['edit_file']);
+      expect(readFileSync(target, 'utf8')).toBe('after drop-wrong edit\n');
+      expect(bridgeLog).toContain('Exact-args one-call-and-done');
+      const journalPath = join(root, '.hive-flow', 'tasks', 'single-path.events.jsonl');
+      const journal = readFileSync(journalPath, 'utf8');
+      const droppedEvents = journal
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => { try { return JSON.parse(line); } catch { return null; } })
+        .filter((e) => e && e.event === 'exact_args_redundant_call_dropped');
+      expect(droppedEvents.length).toBeGreaterThanOrEqual(1);
+      // The dropped event records the number of dropped calls (2 from the multi-call turn).
+      expect(droppedEvents[0].meta?.droppedCount).toBe(2);
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(layout.installRoot, { recursive: true, force: true });
