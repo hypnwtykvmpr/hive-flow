@@ -2,12 +2,12 @@
 /**
  * Hive Flow V3 - Persistent Learning Service
  *
- * Connects ReasoningBank to AgentDB with HNSW indexing and ONNX embeddings.
+ * Connects ReasoningBank to HiveMemory with HNSW indexing and local embeddings.
  *
  * Features:
- * - Persistent pattern storage via AgentDB
+ * - Persistent pattern storage via HiveMemory
  * - HNSW indexing for fast HNSW-indexed search
- * - ONNX embeddings via agentic-flow@alpha
+ * - Local deterministic embeddings
  * - Session-level pattern loading and consolidation
  * - Short-term → Long-term pattern promotion
  *
@@ -444,7 +444,7 @@ class HNSWIndex {
 }
 
 // =============================================================================
-// Embedding Service (ONNX via agentic-flow@alpha OptimizedEmbedder)
+// Embedding Service (local deterministic fallback)
 // =============================================================================
 
 class EmbeddingService {
@@ -460,29 +460,11 @@ class EmbeddingService {
     if (this.initialized) return;
 
     try {
-      // Dynamically import agentic-flow OptimizedEmbedder
-      const agenticFlowPath = join(PROJECT_ROOT, 'node_modules/agentic-flow/dist/embeddings/optimized-embedder.js');
-
-      if (existsSync(agenticFlowPath)) {
-        const { getOptimizedEmbedder } = await import(agenticFlowPath);
-        this.embedder = getOptimizedEmbedder({
-          modelId: 'all-MiniLM-L6-v2',
-          dimension: this.config.embedding.dimension,
-          cacheSize: 256,
-          autoDownload: false,  // Model should already be downloaded
-        });
-
-        await this.embedder.init();
-        this.useAgenticFlow = true;
-        console.log('[Embedding] Initialized: agentic-flow OptimizedEmbedder (ONNX)');
-      } else {
-        this.useAgenticFlow = false;
-        console.log('[Embedding] agentic-flow not found, using fallback hash embeddings');
-      }
-
+      this.useExternalEmbedder = false;
+      console.log('[Embedding] Using local fallback hash embeddings');
       this.initialized = true;
     } catch (e) {
-      this.useAgenticFlow = false;
+      this.useExternalEmbedder = false;
       this.initialized = true;
       console.log(`[Embedding] Using fallback hash-based embeddings: ${e.message}`);
     }
@@ -499,9 +481,9 @@ class EmbeddingService {
 
     let embedding;
 
-    if (this.useAgenticFlow && this.embedder) {
+    if (this.useExternalEmbedder && this.embedder) {
       try {
-        // Use agentic-flow OptimizedEmbedder
+        // Use an explicitly configured external embedder.
         embedding = await this.embedder.embed(text.slice(0, 500));
       } catch (e) {
         console.log(`[Embedding] ONNX failed, using fallback: ${e.message}`);
@@ -522,7 +504,7 @@ class EmbeddingService {
   }
 
   async embedBatch(texts) {
-    if (this.useAgenticFlow && this.embedder) {
+    if (this.useExternalEmbedder && this.embedder) {
       try {
         return await this.embedder.embedBatch(texts.map(t => t.slice(0, 500)));
       } catch (e) {

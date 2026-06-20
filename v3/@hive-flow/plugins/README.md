@@ -172,7 +172,7 @@ const response = await registry.execute({
 });
 ```
 
-### 🔗 Agentic Flow Integration
+### 🔗 Hive Flow Integration
 
 ```typescript
 import { HiveFlowBridge, HiveMemoryBridge } from '@hive-flow/plugins';

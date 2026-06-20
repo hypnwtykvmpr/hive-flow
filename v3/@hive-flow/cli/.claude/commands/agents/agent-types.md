@@ -24,7 +24,7 @@ Complete guide to all 87 available agent types in Hive Flow V3.
 |-------|-------------|----------|
 | `security-architect` | Security architecture | Threat modeling, design |
 | `security-auditor` | CVE remediation | Vulnerability scanning |
-| `memory-specialist` | AgentDB unification | HNSW-indexed search |
+| `memory-specialist` | HiveMemory unification | HNSW-indexed search |
 | `performance-engineer` | Optimization targets | Flash Attention optimization |
 | `core-architect` | DDD restructure | Domain modeling |
 | `adr-architect` | Architecture decisions | ADR documentation |

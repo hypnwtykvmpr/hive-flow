@@ -1,7 +1,7 @@
 ---
 name: memory-management
 description: >
-  AgentDB memory system with HNSW vector search.
+  HiveMemory memory system with HNSW vector search.
   Use when: need to store patterns, search for solutions, semantic lookup.
   Skip when: no learning needed, ephemeral tasks.
 ---
@@ -9,7 +9,7 @@ description: >
 # Memory Management Skill
 
 ## Purpose
-AgentDB memory system with HNSW vector search.
+HiveMemory memory system with HNSW vector search.
 
 ## When to Trigger
 - need to store patterns

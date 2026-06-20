@@ -1,48 +1,61 @@
 #!/usr/bin/env node
 /**
- * Hive Flow V3 Statusline Generator
+ * Hive Flow V3 Statusline Generator (Optimized)
  * Displays real-time V3 implementation progress and system status
  *
- * Usage: node statusline.cjs [options]
+ * Usage: node statusline.cjs [--json] [--compact]
  *
- * Options:
- *   (default)   Safe multi-line output with collision zone avoidance
- *   --single    Single-line output (completely avoids collision)
- *   --unsafe    Legacy multi-line without collision avoidance
- *   --legacy    Alias for --unsafe
- *   --json      JSON output with pretty printing
- *   --compact   JSON output without formatting
- *
- * Collision Zone Fix (Issue #985):
- * Claude Code writes its internal status (e.g., "7s • 1p") at absolute
- * terminal coordinates (columns 15-25 on second-to-last line). The safe
- * mode pads the collision line with spaces to push content past column 25.
- *
- * IMPORTANT: This file uses .cjs extension to work in ES module projects.
- * The require() syntax is intentional for CommonJS compatibility.
+ * Performance notes:
+ * - Single git execSync call (combines branch + status + upstream)
+ * - No recursive file reading (only stat/readdir, never read test contents)
+ * - No ps aux calls (uses process.memoryUsage() + file-based metrics)
+ * - Strict 2s timeout on all execSync calls
+ * - Shared settings cache across functions
  */
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const os = require('os');
+const crypto = require('crypto');
 
 // Configuration
+// keep in sync with @hive-flow/shared/core/config/defaults (DEFAULT_MAX_AGENTS=50, DEFAULT_QUEUE_DEPTH=10).
+// Long-term: replace with a runtime import once this .cjs migrates to ESM.
 const CONFIG = {
-  enabled: true,
-  showProgress: true,
-  showSecurity: true,
-  showSwarm: true,
-  showHooks: true,
-  showPerformance: true,
-  refreshInterval: 5000,
-  maxAgents: 15,
-  topology: 'hierarchical-mesh',
+  maxAgents: 50,
+  queueDepth: 10,
 };
 
-// Cross-platform helpers
-const isWindows = process.platform === 'win32';
-const nullDevice = isWindows ? 'NUL' : '/dev/null';
+const CWD = process.cwd();
+function resolveHiveHome() {
+  const configured = String(process.env.HIVE_FLOW_HOME || '').trim();
+  if (configured && path.isAbsolute(configured)) return path.resolve(configured);
+  return path.join(os.homedir(), '.hive-flow');
+}
+const HIVE_HOME = resolveHiveHome();
+/** Resolved from repo root — same layout as context-persistence-hook.mjs (`PROJECT_ROOT/.hive-flow/data`). */
+const AUTOPILOT_STATE_PATH = path.join(__dirname, '..', '..', '.hive-flow', 'data', 'autopilot-state.json');
+
+let _stdinData = undefined;
+function getStdinData() {
+  if (_stdinData !== undefined) return _stdinData;
+  try {
+    if (process.stdin.isTTY) { _stdinData = null; return null; }
+    const chunks = [];
+    const buf = Buffer.alloc(4096);
+    try {
+      let bytesRead;
+      while ((bytesRead = fs.readSync(0, buf, 0, buf.length, null)) > 0) {
+        chunks.push(buf.slice(0, bytesRead));
+      }
+    } catch { /* EOF */ }
+    const raw = Buffer.concat(chunks).toString('utf-8').trim();
+    _stdinData = (raw && raw.startsWith('{')) ? JSON.parse(raw) : null;
+  } catch { _stdinData = null; }
+  return _stdinData;
+}
 
 // ANSI colors
 const c = {
@@ -64,446 +77,1127 @@ const c = {
   brightWhite: '\x1b[1;37m',
 };
 
-// Get user info
-function getUserInfo() {
-  let name = 'user';
-  let gitBranch = '';
-  let modelName = 'Unknown';
-
+// Safe execSync with strict timeout (returns empty string on failure)
+function safeExec(cmd, timeoutMs = 2000) {
   try {
-    const gitUserCmd = isWindows
-      ? 'git config user.name 2>NUL || echo user'
-      : 'git config user.name 2>/dev/null || echo "user"';
-    const gitBranchCmd = isWindows
-      ? 'git branch --show-current 2>NUL || echo.'
-      : 'git branch --show-current 2>/dev/null || echo ""';
-    name = execSync(gitUserCmd, { encoding: 'utf-8' }).trim();
-    gitBranch = execSync(gitBranchCmd, { encoding: 'utf-8' }).trim();
-    if (gitBranch === '.') gitBranch = ''; // Windows echo. outputs a dot
-  } catch (e) {
-    // Ignore errors
+    return execSync(cmd, {
+      encoding: 'utf-8',
+      timeout: timeoutMs,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+// Safe JSON file reader (returns null on failure)
+function readJSON(filePath) {
+  try {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+// Safe file stat (returns null on failure)
+function safeStat(filePath) {
+  try {
+    return fs.statSync(filePath);
+  } catch { /* ignore */ }
+  return null;
+}
+
+// Shared settings cache — read once, used by multiple functions
+let _settingsCache = undefined;
+function getSettings() {
+  if (_settingsCache !== undefined) return _settingsCache;
+  _settingsCache = readJSON(path.join(CWD, '.claude', 'settings.json'))
+                || readJSON(path.join(CWD, '.claude', 'settings.local.json'))
+                || null;
+  return _settingsCache;
+}
+
+// ─── Data Collection (all pure-Node.js or single-exec) ──────────
+
+// Get all git info in ONE shell call
+function getGitInfo() {
+  const result = {
+    name: 'user', gitBranch: '', modified: 0, untracked: 0,
+    staged: 0, ahead: 0, behind: 0,
+  };
+
+  // Single shell: get user.name, branch, porcelain status, and upstream diff
+  const script = [
+    'git config user.name 2>/dev/null || echo user',
+    'echo "---SEP---"',
+    'git branch --show-current 2>/dev/null',
+    'echo "---SEP---"',
+    'git status --porcelain 2>/dev/null',
+    'echo "---SEP---"',
+    'git rev-list --left-right --count HEAD...@{upstream} 2>/dev/null || echo "0 0"',
+  ].join('; ');
+
+  const raw = safeExec(`sh -c '${script}'`, 3000);
+  if (!raw) return result;
+
+  const parts = raw.split('---SEP---').map(s => s.trim());
+  if (parts.length >= 4) {
+    result.name = parts[0] || 'user';
+    result.gitBranch = parts[1] || '';
+
+    // Parse porcelain status
+    if (parts[2]) {
+      for (const line of parts[2].split('\n')) {
+        if (!line || line.length < 2) continue;
+        const x = line[0], y = line[1];
+        if (x === '?' && y === '?') { result.untracked++; continue; }
+        if (x !== ' ' && x !== '?') result.staged++;
+        if (y !== ' ' && y !== '?') result.modified++;
+      }
+    }
+
+    // Parse ahead/behind
+    const ab = (parts[3] || '0 0').split(/\s+/);
+    result.ahead = parseInt(ab[0]) || 0;
+    result.behind = parseInt(ab[1]) || 0;
   }
 
-  // Auto-detect model from Claude Code's config
+  return result;
+}
+
+// Detect model name. Stdin-first (Claude Code passes the live model); falls back to
+// version-less family names from tracked usage / settings. Version-pinning strings like
+// "Sonnet 4.6" were removed — they go stale on every model release and contradict the
+// model-display.ts contract (never emit a hardcoded fallback version).
+function getModelName() {
+  // Primary: stdin.model.display_name (always current, fresh per turn).
+  const stdin = getStdinData();
+  if (stdin?.model) {
+    const display = String(stdin.model.display_name || '').trim();
+    if (display) {
+      const id = String(stdin.model.id || '');
+      // Append " 1M" for the 1M-context variant when the id is tagged [1m] and the display
+      // doesn't already include the suffix.
+      if (/\[1m\]/i.test(id) && !/\b1M\b/.test(display)) return `${display} 1M`;
+      return display;
+    }
+  }
+
+  // Tracked usage fallback — version-less family only.
   try {
-    const homedir = require('os').homedir();
-    const claudeConfigPath = path.join(homedir, '.claude.json');
-    if (fs.existsSync(claudeConfigPath)) {
-      const claudeConfig = JSON.parse(fs.readFileSync(claudeConfigPath, 'utf-8'));
-      // Try to find lastModelUsage - check current dir and parent dirs
-      let lastModelUsage = null;
-      const cwd = process.cwd();
-      if (claudeConfig.projects) {
-        // Try exact match first, then check if cwd starts with any project path
-        for (const [projectPath, projectConfig] of Object.entries(claudeConfig.projects)) {
-          if (cwd === projectPath || cwd.startsWith(projectPath + '/')) {
-            lastModelUsage = projectConfig.lastModelUsage;
-            break;
-          }
-        }
-      }
-      if (lastModelUsage) {
-        const modelIds = Object.keys(lastModelUsage);
-        if (modelIds.length > 0) {
-          // Take the last model (most recently added to the object)
-          // Or find the one with most tokens (most actively used this session)
-          let modelId = modelIds[modelIds.length - 1];
-          if (modelIds.length > 1) {
-            // If multiple models, pick the one with most total tokens
-            let maxTokens = 0;
-            for (const id of modelIds) {
-              const usage = lastModelUsage[id];
-              const total = (usage.inputTokens || 0) + (usage.outputTokens || 0);
-              if (total > maxTokens) {
-                maxTokens = total;
-                modelId = id;
+    const claudeConfig = readJSON(path.join(os.homedir(), '.claude.json'));
+    if (claudeConfig?.projects) {
+      for (const [projectPath, projectConfig] of Object.entries(claudeConfig.projects)) {
+        if (CWD === projectPath || CWD.startsWith(projectPath + '/')) {
+          const usage = projectConfig.lastModelUsage;
+          if (usage) {
+            const ids = Object.keys(usage);
+            if (ids.length > 0) {
+              let modelId = ids[ids.length - 1];
+              let latest = 0;
+              for (const id of ids) {
+                const ts = usage[id]?.lastUsedAt ? new Date(usage[id].lastUsedAt).getTime() : 0;
+                if (ts > latest) { latest = ts; modelId = id; }
               }
+              if (modelId.includes('opus')) return 'Opus';
+              if (modelId.includes('sonnet')) return 'Sonnet';
+              if (modelId.includes('haiku')) return 'Haiku';
+              return modelId.split('-').slice(1, 3).join(' ');
             }
           }
-          // Parse model ID to human-readable name
-          if (modelId.includes('opus')) modelName = 'Opus 4.5';
-          else if (modelId.includes('sonnet')) modelName = 'Sonnet 4';
-          else if (modelId.includes('haiku')) modelName = 'Haiku 4.5';
-          else modelName = modelId.split('-').slice(1, 3).join(' ');
+          break;
         }
       }
     }
-  } catch (e) {
-    // Fallback to Unknown if can't read config
+  } catch { /* ignore */ }
+
+  // settings.json model field — version-less family.
+  const settings = getSettings();
+  if (settings?.model) {
+    const m = settings.model;
+    if (m.includes('opus')) return 'Opus';
+    if (m.includes('sonnet')) return 'Sonnet';
+    if (m.includes('haiku')) return 'Haiku';
   }
 
-  return { name, gitBranch, modelName };
+  // Project-level hiveFlow.modelPreferences.default — version-less family.
+  const projSettings = readJSON(path.join(CWD, '.claude', 'settings.json'));
+  if (projSettings?.hiveFlow?.modelPreferences?.default) {
+    const m = projSettings.hiveFlow.modelPreferences.default;
+    if (m.includes('opus')) return 'Opus';
+    if (m.includes('sonnet')) return 'Sonnet';
+    if (m.includes('haiku')) return 'Haiku';
+  }
+
+  return 'Claude Code';
 }
 
-// Get learning stats from memory database
+// Get learning stats from memory database (pure stat calls)
 function getLearningStats() {
   const memoryPaths = [
-    path.join(process.cwd(), '.swarm', 'memory.db'),
-    path.join(process.cwd(), '.claude', 'memory.db'),
-    path.join(process.cwd(), 'data', 'memory.db'),
+    path.join(CWD, '.swarm', 'memory.db'),
+    path.join(CWD, '.hive-flow', 'memory.db'),
+    path.join(CWD, '.claude', 'memory.db'),
+    path.join(CWD, 'data', 'memory.db'),
+    path.join(CWD, '.hivememory', 'memory.db'),
   ];
 
-  let patterns = 0;
-  let sessions = 0;
-  let trajectories = 0;
-
-  // Try to read from sqlite database
   for (const dbPath of memoryPaths) {
-    if (fs.existsSync(dbPath)) {
-      try {
-        // Count entries in memory file (rough estimate from file size)
-        const stats = fs.statSync(dbPath);
-        const sizeKB = stats.size / 1024;
-        // Estimate: ~2KB per pattern on average
-        patterns = Math.floor(sizeKB / 2);
-        sessions = Math.max(1, Math.floor(patterns / 10));
-        trajectories = Math.floor(patterns / 5);
-        break;
-      } catch (e) {
-        // Ignore
-      }
+    const stat = safeStat(dbPath);
+    if (stat) {
+      const sizeKB = stat.size / 1024;
+      const patterns = Math.floor(sizeKB / 2);
+      return {
+        patterns,
+        sessions: Math.max(1, Math.floor(patterns / 10)),
+      };
     }
   }
 
-  // Also check for session files
-  const sessionsPath = path.join(process.cwd(), '.claude', 'sessions');
-  if (fs.existsSync(sessionsPath)) {
-    try {
-      const sessionFiles = fs.readdirSync(sessionsPath).filter(f => f.endsWith('.json'));
-      sessions = Math.max(sessions, sessionFiles.length);
-    } catch (e) {
-      // Ignore
+  // Check session files count
+  let sessions = 0;
+  try {
+    const sessDir = path.join(CWD, '.claude', 'sessions');
+    if (fs.existsSync(sessDir)) {
+      sessions = fs.readdirSync(sessDir).filter(f => f.endsWith('.json')).length;
     }
-  }
+  } catch { /* ignore */ }
 
-  return { patterns, sessions, trajectories };
+  return { patterns: 0, sessions };
 }
 
-// Get V3 progress from learning state (grows as system learns)
+// V3 progress from metrics files (pure file reads)
 function getV3Progress() {
   const learning = getLearningStats();
-
-  // DDD progress based on actual learned patterns
-  // New install: 0 patterns = 0/5 domains, 0% DDD
-  // As patterns grow: 10+ patterns = 1 domain, 50+ = 2, 100+ = 3, 200+ = 4, 500+ = 5
-  let domainsCompleted = 0;
-  if (learning.patterns >= 500) domainsCompleted = 5;
-  else if (learning.patterns >= 200) domainsCompleted = 4;
-  else if (learning.patterns >= 100) domainsCompleted = 3;
-  else if (learning.patterns >= 50) domainsCompleted = 2;
-  else if (learning.patterns >= 10) domainsCompleted = 1;
-
   const totalDomains = 5;
-  const dddProgress = Math.min(100, Math.floor((domainsCompleted / totalDomains) * 100));
+
+  const dddData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'ddd-progress.json'));
+  let dddProgress = dddData?.progress || 0;
+  let domainsCompleted = Math.min(5, Math.floor(dddProgress / 20));
+
+  if (dddProgress === 0 && learning.patterns > 0) {
+    if (learning.patterns >= 500) domainsCompleted = 5;
+    else if (learning.patterns >= 200) domainsCompleted = 4;
+    else if (learning.patterns >= 100) domainsCompleted = 3;
+    else if (learning.patterns >= 50) domainsCompleted = 2;
+    else if (learning.patterns >= 10) domainsCompleted = 1;
+    dddProgress = Math.floor((domainsCompleted / totalDomains) * 100);
+  }
 
   return {
-    domainsCompleted,
-    totalDomains,
-    dddProgress,
+    domainsCompleted, totalDomains, dddProgress,
     patternsLearned: learning.patterns,
-    sessionsCompleted: learning.sessions
+    sessionsCompleted: learning.sessions,
   };
 }
 
-// Get security status based on actual scans
+// Security status (pure file reads)
 function getSecurityStatus() {
-  // Check for security scan results in memory
-  const scanResultsPath = path.join(process.cwd(), '.claude', 'security-scans');
-  let cvesFixed = 0;
   const totalCves = 3;
-
-  if (fs.existsSync(scanResultsPath)) {
-    try {
-      const scans = fs.readdirSync(scanResultsPath).filter(f => f.endsWith('.json'));
-      // Each successful scan file = 1 CVE addressed
-      cvesFixed = Math.min(totalCves, scans.length);
-    } catch (e) {
-      // Ignore
-    }
+  const auditData = readJSON(path.join(CWD, '.hive-flow', 'security', 'audit-status.json'));
+  if (auditData) {
+    return {
+      status: auditData.status || 'PENDING',
+      cvesFixed: auditData.cvesFixed || 0,
+      totalCves: auditData.totalCves || 3,
+    };
   }
 
-  // Also check .swarm/security for audit results
-  const auditPath = path.join(process.cwd(), '.swarm', 'security');
-  if (fs.existsSync(auditPath)) {
-    try {
-      const audits = fs.readdirSync(auditPath).filter(f => f.includes('audit'));
-      cvesFixed = Math.min(totalCves, Math.max(cvesFixed, audits.length));
-    } catch (e) {
-      // Ignore
+  let cvesFixed = 0;
+  try {
+    const scanDir = path.join(CWD, '.claude', 'security-scans');
+    if (fs.existsSync(scanDir)) {
+      cvesFixed = Math.min(totalCves, fs.readdirSync(scanDir).filter(f => f.endsWith('.json')).length);
     }
-  }
-
-  const status = cvesFixed >= totalCves ? 'CLEAN' : cvesFixed > 0 ? 'IN_PROGRESS' : 'PENDING';
+  } catch { /* ignore */ }
 
   return {
-    status,
+    status: cvesFixed >= totalCves ? 'CLEAN' : cvesFixed > 0 ? 'IN_PROGRESS' : 'PENDING',
     cvesFixed,
     totalCves,
   };
 }
 
-// Get swarm status
+// Read agent store and split into workers and queens. Queens are control-plane
+// orchestrators — they do not consume worker slots, so the [N/50] bracket
+// counts workers only and queens render as a separate ♛N segment.
+//
+// Returned buckets:
+//   - activeAgents:    non-terminated/failed workers (workers only, NO queens)
+//   - executingAgents: workers currently 'running'/'busy' (drives bright-green)
+//   - activeQueens:    non-terminated/failed queens (renders separately)
+//   - executingQueens: queens currently 'running'/'busy' (drives queen color)
+//   - agents:          all live (non-terminated) records — used by provider tracking
+//
+// Shape priority (live MCP write path → legacy fallbacks):
+//   1. Modern dict: { agents: { <id>: { status, agentType, ... }, ... }, version: 1 }
+//   2. Legacy array: { agents: [...] } | { entries: [...] } | top-level array
+//   3. Top-level dict-of-records (very old): { <id>: { status, ... }, ... }
+function getAgentStoreCount() {
+  try {
+    const storePath = path.join(CWD, '.hive-flow', 'agents', 'store.json');
+    if (fs.existsSync(storePath)) {
+      const store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+      let all = [];
+
+      if (store?.agents && typeof store.agents === 'object' && !Array.isArray(store.agents)) {
+        all = Object.values(store.agents).filter(v => v && typeof v === 'object');
+      } else if (Array.isArray(store?.agents)) {
+        all = store.agents;
+      } else if (Array.isArray(store?.entries)) {
+        all = store.entries;
+      } else if (Array.isArray(store)) {
+        all = store;
+      } else if (typeof store === 'object' && store !== null) {
+        all = Object.values(store).filter(v => v && typeof v === 'object' && 'status' in v);
+      }
+
+      if (all.length > 0) {
+        const live = all.filter(a => a.status !== 'terminated' && a.status !== 'failed');
+        const isQueen = (a) => a.agentType === 'queen';
+        const workers = live.filter(a => !isQueen(a));
+        const queens = live.filter(isQueen);
+        const workersExecuting = workers.filter(a => a.status === 'running' || a.status === 'busy');
+        const queensExecuting = queens.filter(a => a.status === 'running' || a.status === 'busy');
+        return {
+          activeAgents: workers.length,
+          executingAgents: workersExecuting.length,
+          activeQueens: queens.length,
+          executingQueens: queensExecuting.length,
+          agents: live,
+        };
+      }
+    }
+  } catch { /* store.json doesn't exist or is invalid -- fall through */ }
+  return { activeAgents: 0, executingAgents: 0, activeQueens: 0, executingQueens: 0, agents: [] };
+}
+
+// Swarm status (pure file reads, NO ps aux).
+// Read order: store.json (live, no staleness window) → swarm-activity.json
+// → v3-progress.json (both gated by 10-min freshness). Previous order put the
+// stale metrics files first, so a multi-day-old v3-progress.json with
+// activeAgents:0 would short-circuit a live hive's store.json (CLAUDE-LF-002).
+const SWARM_FRESHNESS_MS = 10 * 60 * 1000;
+
 function getSwarmStatus() {
-  let activeAgents = 0;
-  let coordinationActive = false;
-
-  try {
-    if (isWindows) {
-      // Windows: use tasklist and findstr
-      const ps = execSync('tasklist 2>NUL | findstr /I "agentic-flow" 2>NUL | find /C /V "" 2>NUL || echo 0', { encoding: 'utf-8' });
-      activeAgents = Math.max(0, parseInt(ps.trim()) || 0);
-    } else {
-      const ps = execSync('ps aux 2>/dev/null | grep -c agentic-flow || echo "0"', { encoding: 'utf-8' });
-      activeAgents = Math.max(0, parseInt(ps.trim()) - 1);
-    }
-    coordinationActive = activeAgents > 0;
-  } catch (e) {
-    // Ignore errors - default to 0 agents
+  // PRIMARY: live agent store. Always current — written by MCP agent_spawn /
+  // queen_mission_assign. Returns workers (active/executing) AND queens
+  // (active/executing) separately so the renderer can color and place them
+  // independently. Queens don't count against the worker cap.
+  const storeData = getAgentStoreCount();
+  if (storeData.activeAgents > 0 || storeData.activeQueens > 0) {
+    return {
+      activeAgents: storeData.activeAgents,
+      executingAgents: storeData.executingAgents,
+      activeQueens: storeData.activeQueens,
+      executingQueens: storeData.executingQueens,
+      maxAgents: CONFIG.maxAgents,
+      coordinationActive: true,
+    };
   }
 
-  return {
-    activeAgents,
-    maxAgents: CONFIG.maxAgents,
-    coordinationActive,
-  };
+  // FALLBACK 1: swarm-activity.json — fresh-only. Legacy collector doesn't
+  // differentiate executing from active or queens from workers; treat the count
+  // as workers and assume reported agents are executing.
+  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
+  if (activityData?.swarm) {
+    const updated = activityData.lastUpdated ? Date.parse(activityData.lastUpdated) : 0;
+    if (!updated || Date.now() - updated < SWARM_FRESHNESS_MS) {
+      const count = activityData.swarm.agent_count || 0;
+      return {
+        activeAgents: count,
+        executingAgents: count,
+        activeQueens: 0,
+        executingQueens: 0,
+        maxAgents: CONFIG.maxAgents,
+        coordinationActive: activityData.swarm.coordination_active || activityData.swarm.active || false,
+      };
+    }
+  }
+
+  // FALLBACK 2: v3-progress.json — fresh-only. Stale writes (older than 10 min)
+  // are ignored so they cannot mask an active live store.
+  const progressData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'v3-progress.json'));
+  if (progressData?.swarm) {
+    const updated = progressData.lastUpdated ? Date.parse(progressData.lastUpdated) : 0;
+    if (updated && Date.now() - updated < SWARM_FRESHNESS_MS) {
+      const count = progressData.swarm.activeAgents || progressData.swarm.agent_count || 0;
+      return {
+        activeAgents: count,
+        executingAgents: count,
+        activeQueens: 0,
+        executingQueens: 0,
+        maxAgents: progressData.swarm.totalAgents || CONFIG.maxAgents,
+        coordinationActive: progressData.swarm.active || (progressData.swarm.activeAgents > 0),
+      };
+    }
+  }
+
+  return { activeAgents: 0, executingAgents: 0, activeQueens: 0, executingQueens: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false };
 }
 
-// Get system metrics (dynamic based on actual state)
+// System metrics (uses process.memoryUsage() — no shell spawn)
 function getSystemMetrics() {
-  let memoryMB = 0;
-  let subAgents = 0;
-
-  try {
-    if (isWindows) {
-      // Windows: use tasklist for memory info, fallback to process.memoryUsage
-      // tasklist memory column is complex to parse, use Node.js API instead
-      memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
-    } else {
-      const mem = execSync('ps aux | grep -E "(node|agentic|claude)" | grep -v grep | awk \'{sum += $6} END {print int(sum/1024)}\'', { encoding: 'utf-8' });
-      memoryMB = parseInt(mem.trim()) || 0;
-    }
-  } catch (e) {
-    // Fallback
-    memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
-  }
-
-  // Get learning stats for intelligence %
+  const memoryMB = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
   const learning = getLearningStats();
+  const hivememory = getHiveMemoryStats();
 
-  // Intelligence % based on learned patterns (0 patterns = 0%, 1000+ = 100%)
-  const intelligencePct = Math.min(100, Math.floor((learning.patterns / 10) * 1));
+  // Intelligence from learning.json
+  const learningData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'learning.json'));
+  let intelligencePct = 0;
+  let contextPct = 0;
 
-  // Context % based on session history (0 sessions = 0%, grows with usage)
-  const contextPct = Math.min(100, Math.floor(learning.sessions * 5));
-
-  // Count active sub-agents from process list
-  try {
-    if (isWindows) {
-      // Windows: use tasklist and findstr for agent counting
-      const agents = execSync('tasklist 2>NUL | findstr /I "hive-flow" 2>NUL | find /C /V "" 2>NUL || echo 0', { encoding: 'utf-8' });
-      subAgents = Math.max(0, parseInt(agents.trim()) || 0);
-    } else {
-      const agents = execSync('ps aux 2>/dev/null | grep -c "hive-flow.*agent" || echo "0"', { encoding: 'utf-8' });
-      subAgents = Math.max(0, parseInt(agents.trim()) - 1);
-    }
-  } catch (e) {
-    // Ignore - default to 0
+  if (learningData?.intelligence?.score !== undefined) {
+    intelligencePct = Math.min(100, Math.floor(learningData.intelligence.score));
+  } else {
+    const fromPatterns = learning.patterns > 0 ? Math.min(100, Math.floor(learning.patterns / 10)) : 0;
+    const fromVectors = hivememory.vectorCount > 0 ? Math.min(100, Math.floor(hivememory.vectorCount / 100)) : 0;
+    intelligencePct = Math.max(fromPatterns, fromVectors);
   }
 
-  return {
-    memoryMB,
-    contextPct,
-    intelligencePct,
-    subAgents,
-  };
+  // Maturity fallback (pure fs checks, no git exec)
+  if (intelligencePct === 0) {
+    let score = 0;
+    if (fs.existsSync(path.join(CWD, '.claude'))) score += 15;
+    const srcDirs = ['src', 'lib', 'app', 'packages', 'v3'];
+    for (const d of srcDirs) { if (fs.existsSync(path.join(CWD, d))) { score += 15; break; } }
+    const testDirs = ['tests', 'test', '__tests__', 'spec'];
+    for (const d of testDirs) { if (fs.existsSync(path.join(CWD, d))) { score += 10; break; } }
+    const cfgFiles = ['package.json', 'tsconfig.json', 'pyproject.toml', 'Cargo.toml', 'go.mod'];
+    for (const f of cfgFiles) { if (fs.existsSync(path.join(CWD, f))) { score += 5; break; } }
+    intelligencePct = Math.min(100, score);
+  }
+
+  if (learningData?.sessions?.total !== undefined) {
+    contextPct = Math.min(100, learningData.sessions.total * 5);
+  } else {
+    contextPct = Math.min(100, Math.floor(learning.sessions * 5));
+  }
+
+  // Sub-agents from file metrics (no ps aux)
+  let subAgents = 0;
+  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
+  if (activityData?.processes?.estimated_agents) {
+    subAgents = activityData.processes.estimated_agents;
+  }
+
+  return { memoryMB, contextPct, intelligencePct, subAgents };
 }
 
-// Generate progress bar
+// ADR status (count files only — don't read contents)
+function getADRStatus() {
+  const complianceData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'adr-compliance.json'));
+  if (complianceData) {
+    const checks = complianceData.checks || {};
+    const total = Object.keys(checks).length;
+    const impl = Object.values(checks).filter(c => c.compliant).length;
+    return { count: total, implemented: impl, compliance: complianceData.compliance || 0 };
+  }
+
+  // Fallback: just count ADR files (don't read them)
+  const adrPaths = [
+    path.join(CWD, 'v3', 'implementation', 'adrs'),
+    path.join(CWD, 'docs', 'adrs'),
+    path.join(CWD, '.hive-flow', 'adrs'),
+  ];
+
+  for (const adrPath of adrPaths) {
+    try {
+      if (fs.existsSync(adrPath)) {
+        const files = fs.readdirSync(adrPath).filter(f =>
+          f.endsWith('.md') && (f.startsWith('ADR-') || f.startsWith('adr-') || /^\d{4}-/.test(f))
+        );
+        // Estimate: ~70% implemented in mature projects
+        const implemented = Math.floor(files.length * 0.7);
+        const compliance = files.length > 0 ? Math.floor((implemented / files.length) * 100) : 0;
+        return { count: files.length, implemented, compliance };
+      }
+    } catch { /* ignore */ }
+  }
+
+  return { count: 0, implemented: 0, compliance: 0 };
+}
+
+// Hooks status — Row 11 REPLACE: parse real category/matcher/command counts from settings.
+// Drops the hardcoded total=17. Returns { categories, matchers, commands }.
+function getHooksStatus() {
+  let categories = 0;
+  let matchers = 0;
+  let commands = 0;
+  const settings = getSettings();
+
+  if (settings?.hooks && typeof settings.hooks === 'object') {
+    for (const [, hookList] of Object.entries(settings.hooks)) {
+      if (!Array.isArray(hookList) || hookList.length === 0) continue;
+      categories++;
+      for (const hook of hookList) {
+        // Each hook entry is a matcher object; its commands[] holds the actual runners.
+        matchers++;
+        const cmds = hook.commands ?? hook.hooks ?? [];
+        commands += Array.isArray(cmds) ? cmds.length : 0;
+      }
+    }
+  }
+
+  return { categories, matchers, commands };
+}
+
+// HiveMemory stats (pure stat calls)
+function getHiveMemoryStats() {
+  let vectorCount = 0;
+  let dbSizeKB = 0;
+  let namespaces = 0;
+  let hasHnsw = false;
+
+  const dbFiles = [
+    path.join(CWD, '.swarm', 'memory.db'),
+    path.join(CWD, '.hive-flow', 'memory.db'),
+    path.join(CWD, '.claude', 'memory.db'),
+    path.join(CWD, 'data', 'memory.db'),
+  ];
+
+  for (const f of dbFiles) {
+    const stat = safeStat(f);
+    if (stat) {
+      dbSizeKB = stat.size / 1024;
+      vectorCount = Math.floor(dbSizeKB / 2);
+      namespaces = 1;
+      break;
+    }
+  }
+
+  if (vectorCount === 0) {
+    const dbDirs = [
+      path.join(CWD, '.hive-flow', 'hivememory'),
+      path.join(CWD, '.swarm', 'hivememory'),
+      path.join(CWD, '.hivememory'),
+    ];
+    for (const dir of dbDirs) {
+      try {
+        if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+          const files = fs.readdirSync(dir);
+          namespaces = files.filter(f => f.endsWith('.db') || f.endsWith('.sqlite')).length;
+          for (const file of files) {
+            const stat = safeStat(path.join(dir, file));
+            if (stat?.isFile()) dbSizeKB += stat.size / 1024;
+          }
+          vectorCount = Math.floor(dbSizeKB / 2);
+          break;
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  const hnswPaths = [
+    path.join(CWD, '.swarm', 'hnsw.index'),
+    path.join(CWD, '.hive-flow', 'hnsw.index'),
+  ];
+  for (const p of hnswPaths) {
+    const stat = safeStat(p);
+    if (stat) {
+      hasHnsw = true;
+      vectorCount = Math.max(vectorCount, Math.floor(stat.size / 512));
+      break;
+    }
+  }
+
+  return { vectorCount, dbSizeKB: Math.floor(dbSizeKB), namespaces, hasHnsw };
+}
+
+// Test stats (count files only — NO reading file contents)
+function getTestStats() {
+  let testFiles = 0;
+
+  function countTestFiles(dir, depth = 0) {
+    if (depth > 2) return; // Shallower recursion limit
+    try {
+      if (!fs.existsSync(dir)) return;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+          countTestFiles(path.join(dir, entry.name), depth + 1);
+        } else if (entry.isFile()) {
+          const n = entry.name;
+          if (n.includes('.test.') || n.includes('.spec.') || n.includes('_test.') || n.includes('_spec.')) {
+            testFiles++;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  for (const d of ['tests', 'test', '__tests__', 'v3/__tests__']) {
+    countTestFiles(path.join(CWD, d));
+  }
+  countTestFiles(path.join(CWD, 'src'));
+
+  // Estimate ~4 test cases per file (avoids reading every file)
+  return { testFiles, testCases: testFiles * 4 };
+}
+
+// Integration status (shared settings + file checks)
+function getIntegrationStatus() {
+  const mcpServers = { total: 0, enabled: 0 };
+  const settings = getSettings();
+
+  if (settings?.mcpServers && typeof settings.mcpServers === 'object') {
+    const servers = Object.keys(settings.mcpServers);
+    mcpServers.total = servers.length;
+    mcpServers.enabled = settings.enabledMcpjsonServers
+      ? settings.enabledMcpjsonServers.filter(s => servers.includes(s)).length
+      : servers.length;
+  }
+
+  // Fallback: .mcp.json
+  if (mcpServers.total === 0) {
+    const mcpConfig = readJSON(path.join(CWD, '.mcp.json'))
+                   || readJSON(path.join(os.homedir(), '.claude', 'mcp.json'));
+    if (mcpConfig?.mcpServers) {
+      const s = Object.keys(mcpConfig.mcpServers);
+      mcpServers.total = s.length;
+      mcpServers.enabled = s.length;
+    }
+  }
+
+  const hasDatabase = ['.swarm/memory.db', '.hive-flow/memory.db', 'data/memory.db']
+    .some(p => fs.existsSync(path.join(CWD, p)));
+  const hasApi = !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY);
+
+  return { mcpServers, hasDatabase, hasApi };
+}
+
+function detectContextWindow() {
+  const stdinData = getStdinData();
+  if (stdinData?.context_window?.context_window_size != null) {
+    const n = Number(stdinData.context_window.context_window_size);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  // Autopilot persistence (ADR-051) — authoritative when present
+  try {
+    if (fs.existsSync(AUTOPILOT_STATE_PATH)) {
+      const state = JSON.parse(fs.readFileSync(AUTOPILOT_STATE_PATH, 'utf-8'));
+      if (state.contextWindow > 0) return state.contextWindow;
+    }
+  } catch { /* ignore */ }
+  const envOverride = process.env.HIVE_FLOW_CONTEXT_WINDOW;
+  if (envOverride) {
+    const n = parseInt(envOverride, 10);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const modelName = (stdinData?.model?.display_name || stdinData?.model?.model_id || getModelName() || '').toLowerCase();
+  if (modelName.includes('1m') || modelName.includes('[1m]')) return 1000000;
+  const claudeModel = (process.env.CLAUDE_MODEL || '').toLowerCase();
+  if (claudeModel.includes('[1m]') || claudeModel.includes('1m')) return 1000000;
+  // Default Anthropic API context window for standard (non-1M) models
+  return 200000;
+}
+
+// Context usage estimate (reads tool call counter from hook handler)
+function getContextUsage() {
+  const stdinData = getStdinData();
+  if (stdinData?.context_window) {
+    const cw = stdinData.context_window;
+    if (cw.used_percentage != null) {
+      const pct = Math.floor(cw.used_percentage);
+      return { calls: -1, pct, nearCompaction: pct >= 70 };
+    }
+    if (cw.remaining_percentage != null) {
+      const pct = Math.floor(100 - cw.remaining_percentage);
+      return { calls: -1, pct, nearCompaction: pct >= 70 };
+    }
+  }
+  const contextWindow = detectContextWindow();
+  const ctxFile = path.join(CWD, '.claude', '.context-tracker.json');
+  try {
+    const data = JSON.parse(fs.readFileSync(ctxFile, 'utf-8'));
+    const calls = data.calls || 0;
+    const estimatedTokens = calls * 1500;
+    const pct = Math.min(99, Math.floor((estimatedTokens / contextWindow) * 100));
+    return { calls, pct, nearCompaction: pct >= 70 };
+  } catch { /* no tracker */ }
+  return { calls: 0, pct: 0, nearCompaction: false };
+}
+
+// Session stats (pure file reads)
+function getSessionStats() {
+  for (const p of ['.hive-flow/session.json', '.claude/session.json']) {
+    const data = readJSON(path.join(CWD, p));
+    if (data?.startTime) {
+      const diffMs = Date.now() - new Date(data.startTime).getTime();
+      const mins = Math.floor(diffMs / 60000);
+      const duration = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h${mins % 60}m`;
+      return { duration };
+    }
+  }
+  return { duration: '' };
+}
+
+// Advocate state
+function getAdvocateState() {
+  const advocateStatePath = path.join(CWD, '.hive-flow', 'data', 'advocate-state.json');
+  const data = readJSON(advocateStatePath);
+
+  if (!data) {
+    return { state: 'none', indicator: '', display: '', color: c.dim };
+  }
+
+  const state = data.state || 'none';
+
+  // Map states to indicators, colors, and display text
+  switch (state) {
+    case 'active':
+      return {
+        state,
+        indicator: 'ADV:ACT',
+        display: 'ADV:ACT',
+        color: c.brightGreen
+      };
+    case 'waiting_human':
+    case 'waiting-for-human':
+      return {
+        state,
+        indicator: 'ADV:W:H',
+        display: 'ADV:W:H',
+        color: c.brightYellow
+      };
+    case 'waiting_hive':
+    case 'waiting-for-hive':
+      return {
+        state,
+        indicator: 'ADV:W:U',
+        display: 'ADV:W:U',
+        color: c.dim
+      };
+    case 'finalized':
+    case 'finished':
+      return {
+        state,
+        indicator: 'ADV:FIN',
+        display: 'ADV:FIN',
+        color: c.brightCyan
+      };
+    default:
+      return {
+        state,
+        indicator: '',
+        display: '',
+        color: c.dim
+      };
+  }
+}
+
+// Daemon status — Row 24 ADD-CONDITIONAL: show `○ daemon off` only when not running.
+// Probes the PID file; if absent or PID dead, daemon is off.
+function getDaemonStatus() {
+  const pidPaths = [
+    path.join(CWD, '.hive-flow', 'daemon.pid'),
+    path.join(CWD, '.claude', 'daemon.pid'),
+  ];
+  for (const pidPath of pidPaths) {
+    try {
+      if (fs.existsSync(pidPath)) {
+        const pid = parseInt(fs.readFileSync(pidPath, 'utf-8').trim(), 10);
+        if (pid > 0) {
+          try {
+            // Signal 0 — existence check, no signal sent.
+            process.kill(pid, 0);
+            return { running: true };
+          } catch { /* PID dead */ }
+        }
+      }
+    } catch { /* file unreadable */ }
+  }
+  return { running: false };
+}
+
+// Enforcement level — Row 25 ADD-CONDITIONAL: show only when ≠ Normal (≠ 0).
+function readEnforcementLevelFile(stateFile) {
+  const data = readJSON(stateFile);
+  if (!data || typeof data !== 'object') return 0;
+  const rawLevel = data.state?.level
+    ?? data.payload?.level
+    ?? data.level
+    ?? data.enforcementLevel
+    ?? 0;
+  const level = Number(rawLevel);
+  return Number.isFinite(level) && level >= 0 ? level : 0;
+}
+
+function sanitizeScopeId(id) {
+  return String(id || '')
+    .replace(/[^A-Za-z0-9_.:-]/g, '_')
+    .slice(0, 64);
+}
+
+function getProjectScopeId() {
+  return `project-${crypto.createHash('sha256').update(CWD).digest('hex').slice(0, 16)}`;
+}
+
+function getEnforcementStateFiles() {
+  const globalEnforcementDir = path.join(HIVE_HOME, 'enforcement');
+  const legacyEnforcementDir = path.join(CWD, '.hive-flow', 'enforcement');
+  const stdin = getStdinData();
+  const sessionId = sanitizeScopeId(stdin?.session_id || stdin?.sessionId || process.env.CLAUDE_SESSION_ID);
+  const agentId = sanitizeScopeId(process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID);
+  const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID);
+  const files = [
+    path.join(globalEnforcementDir, 'global', 'state.json'),
+    path.join(globalEnforcementDir, 'projects', getProjectScopeId(), 'state.json'),
+  ];
+  if (sessionId) files.push(path.join(globalEnforcementDir, 'sessions', sessionId, 'state.json'));
+  if (agentId) files.push(path.join(globalEnforcementDir, 'agents', agentId, 'state.json'));
+  if (hiveId) files.push(path.join(globalEnforcementDir, 'hives', hiveId, 'state.json'));
+
+  files.push(
+    path.join(legacyEnforcementDir, 'state.json'),
+    path.join(legacyEnforcementDir, 'projects', getProjectScopeId(), 'state.json'),
+  );
+  if (sessionId) files.push(path.join(legacyEnforcementDir, 'sessions', sessionId, 'state.json'));
+  if (agentId) files.push(path.join(legacyEnforcementDir, 'agents', agentId, 'state.json'));
+  if (hiveId) files.push(path.join(legacyEnforcementDir, 'hives', hiveId, 'state.json'));
+
+  return [...new Set(files)];
+}
+
+function getEnforcementLevel() {
+  const level = Math.max(0, ...getEnforcementStateFiles().map(readEnforcementLevelFile));
+  const labels = ['Normal', 'Warned', 'Restricted', 'Halted'];
+  return { level, label: labels[level] ?? String(level) };
+}
+
+// Pipeline stage — Row 26 ADD-CONDITIONAL: show only when present.
+function getPipelineStage() {
+  const stateFile = path.join(CWD, '.hive-flow', 'data', 'pipeline-state.json');
+  const data = readJSON(stateFile);
+  if (!data) return { stage: '' };
+  return { stage: data.currentStage ?? data.stage ?? '' };
+}
+
+// ─── Rendering ──────────────────────────────────────────────────
+
 function progressBar(current, total) {
   const width = 5;
   const filled = Math.round((current / total) * width);
-  const empty = width - filled;
-  return '[' + '\u25CF'.repeat(filled) + '\u25CB'.repeat(empty) + ']';
+  return '[' + '\u25CF'.repeat(filled) + '\u25CB'.repeat(width - filled) + ']';
 }
 
-// Generate full statusline
+// Get AI provider usage (pure file reads + agent store supplement)
+function getProviderUsage() {
+  const usagePath = path.join(CWD, '.hive-flow', 'metrics', 'provider-usage.json');
+  const data = readJSON(usagePath);
+  const providers = data?.providers ? { ...data.providers } : {};
+
+  // Ensure default Claude tiers exist
+  ['opus', 'sonnet', 'haiku'].forEach(p => {
+    if (!providers[p]) {
+      providers[p] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+    }
+  });
+
+  // Supplement with model data from store.json agents (captures MCP-spawned agents)
+  try {
+    const storeData = getAgentStoreCount();
+    for (const agent of storeData.agents) {
+      if (agent.status === 'terminated') continue;
+      const model = agent.model || agent.modelId || '';
+      const provider = agent.provider || '';
+      // Map to provider key
+      let key = '';
+      if (model.includes('opus')) key = 'opus';
+      else if (model.includes('sonnet')) key = 'sonnet';
+      else if (model.includes('haiku')) key = 'haiku';
+      else if (provider === 'gemini-cli' || model.includes('gemini')) key = 'gemini';
+      else if (provider === 'codex-cli' || model.includes('gpt') || model.includes('codex')) key = 'codex';
+      else if (provider === 'cursor-cli') key = 'cursor';
+      else if (model) key = model;
+      if (key) {
+        if (!providers[key]) {
+          providers[key] = { calls: 0, tokens: 0, ttfb_avg_ms: 0, last_used: null };
+        }
+        providers[key].calls += 1;
+      }
+    }
+  } catch { /* store.json unavailable -- keep provider-usage.json data only */ }
+
+  return providers;
+}
+
 function generateStatusline() {
-  const user = getUserInfo();
+  // Collect all data (mostly pure Node.js, one git exec)
+  const git = getGitInfo();
+  const modelName = getModelName();
   const progress = getV3Progress();
   const security = getSecurityStatus();
   const swarm = getSwarmStatus();
   const system = getSystemMetrics();
+  const adrs = getADRStatus();
+  const hooks = getHooksStatus();
+  const hivememory = getHiveMemoryStats();
+  const tests = getTestStats();
+  const session = getSessionStats();
+  const integration = getIntegrationStatus();
+  const context = getContextUsage();
+  const advocate = getAdvocateState();
   const lines = [];
 
-  // Header Line
-  let header = `${c.bold}${c.brightPurple}▊ Hive Flow V3 ${c.reset}`;
-  header += `${swarm.coordinationActive ? c.brightCyan : c.dim}● ${c.brightCyan}${user.name}${c.reset}`;
-  if (user.gitBranch) {
-    header += `  ${c.dim}│${c.reset}  ${c.brightBlue}⎇ ${user.gitBranch}${c.reset}`;
+  // Header \u2014 project name resolved from stdin \u2192 package.json \u2192 cwd basename (Codex pass-1 row 1 REPLACE).
+  // Mirrors the contract in v3/@hive-flow/cli/src/statusline/project-identity.ts.
+  const projectName = (() => {
+    const s = getStdinData();
+    if (s?.workspace?.current_dir) {
+      const base = path.basename(String(s.workspace.current_dir));
+      if (base) return base.replace(/[\s_-]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()).trim();
+    }
+    const pkg = readJSON(path.join(CWD, 'package.json'));
+    if (pkg?.name && typeof pkg.name === 'string') {
+      return pkg.name.replace(/^@[^/]+\//, '').replace(/[\s_-]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase()).trim();
+    }
+    return path.basename(CWD) || 'Hive Flow';
+  })();
+  let header = `${c.bold}${c.brightPurple}\u258A ${projectName} ${c.reset}`;
+  header += `${swarm.coordinationActive ? c.brightCyan : c.dim}\u25CF ${c.brightCyan}${git.name}${c.reset}`;
+  if (git.gitBranch) {
+    header += `  ${c.dim}\u2502${c.reset}  ${c.brightBlue}\u23C7 ${git.gitBranch}${c.reset}`;
+    const changes = git.modified + git.staged + git.untracked;
+    if (changes > 0) {
+      let ind = '';
+      if (git.staged > 0) ind += `${c.brightGreen}+${git.staged}${c.reset}`;
+      if (git.modified > 0) ind += `${c.brightYellow}~${git.modified}${c.reset}`;
+      if (git.untracked > 0) ind += `${c.dim}?${git.untracked}${c.reset}`;
+      header += ` ${ind}`;
+    }
+    if (git.ahead > 0) header += ` ${c.brightGreen}\u2191${git.ahead}${c.reset}`;
+    if (git.behind > 0) header += ` ${c.brightRed}\u2193${git.behind}${c.reset}`;
   }
-  header += `  ${c.dim}│${c.reset}  ${c.purple}${user.modelName}${c.reset}`;
+  header += `  ${c.dim}\u2502${c.reset}  ${c.purple}${modelName}${c.reset}`;
+  if (session.duration) header += `  ${c.dim}\u2502${c.reset}  ${c.cyan}\u23F1 ${session.duration}${c.reset}`;
+  // Context usage indicator
+  if (context.pct > 0) {
+    const ctxColor = context.pct >= 75 ? c.brightRed : context.pct >= 50 ? c.brightYellow : c.brightGreen;
+    header += `  ${c.dim}\u2502${c.reset}  ${ctxColor}\uD83D\uDCD6 ${context.pct}% ctx${c.reset}`;
+    if (context.nearCompaction) header += ` ${c.brightRed}\u26A0 compaction soon${c.reset}`;
+  }
   lines.push(header);
 
   // Separator
-  lines.push(`${c.dim}─────────────────────────────────────────────────────${c.reset}`);
+  lines.push(`${c.dim}\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500${c.reset}`);
 
-  // Line 1: DDD Domain Progress
-  const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.yellow : c.red;
-  lines.push(
-    `${c.brightCyan}🏗️  DDD Domains${c.reset}    ${progressBar(progress.domainsCompleted, progress.totalDomains)}  ` +
-    `${domainsColor}${progress.domainsCompleted}${c.reset}/${c.brightWhite}${progress.totalDomains}${c.reset}    ` +
-    `${c.brightYellow}⚡ 1.0x${c.reset} ${c.dim}→${c.reset} ${c.brightYellow}Flash Attention optimization${c.reset}`
+  // Provider Usage — Row 6 REPLACE: only render providers with calls > 0.
+  const providers = getProviderUsage();
+  // All Claude tiers shown only when calls >= 1 (no forced zeros).
+  const claudeNames = ['opus', 'sonnet', 'haiku'].filter(p => (providers[p]?.calls || 0) > 0);
+  const externalNames = Object.keys(providers).filter(
+    p => !['opus', 'sonnet', 'haiku'].includes(p) && providers[p].calls > 0
   );
 
-  // Line 2: Swarm + CVE + Memory + Context + Intelligence
-  const swarmIndicator = swarm.coordinationActive ? `${c.brightGreen}◉${c.reset}` : `${c.dim}○${c.reset}`;
-  const agentsColor = swarm.activeAgents > 0 ? c.brightGreen : c.red;
-  let securityIcon = security.status === 'CLEAN' ? '🟢' : security.status === 'IN_PROGRESS' ? '🟡' : '🔴';
-  let securityColor = security.status === 'CLEAN' ? c.brightGreen : security.status === 'IN_PROGRESS' ? c.brightYellow : c.brightRed;
+  const colorFor = (p) => {
+    if (p.calls <= 0) return c.dim;
+    if (p.ttfb_avg_ms > 0 && p.ttfb_avg_ms < 1000) return c.brightGreen;
+    if (p.ttfb_avg_ms >= 1000 && p.ttfb_avg_ms <= 3000) return c.brightYellow;
+    if (p.ttfb_avg_ms > 3000) return c.brightRed;
+    return c.brightGreen;
+  };
+
+  const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const formatFull = (name) => {
+    const p = providers[name] || { calls: 0, ttfb_avg_ms: 0 };
+    return `${colorFor(p)}${capitalize(name)} ${p.calls}${c.reset}`;
+  };
+  const formatAbbr = (name) => {
+    const p = providers[name] || { calls: 0, ttfb_avg_ms: 0 };
+    return `${colorFor(p)}${capitalize(name).substring(0, 2)}:${p.calls}${c.reset}`;
+  };
+
+  // Only render providers row when at least one provider has calls > 0.
+  const allVisible = [...claudeNames, ...externalNames];
+  if (allVisible.length > 0) {
+    const fullClaude = claudeNames.map(formatFull).join(`${c.dim},${c.reset} `);
+    const fullExternal = externalNames.map(formatFull).join(`${c.dim},${c.reset} `);
+    const fullLine = fullClaude && fullExternal
+      ? `\uD83E\uDD16 ${fullClaude} ${c.dim}|${c.reset} ${fullExternal}`
+      : `\uD83E\uDD16 ${fullClaude || fullExternal}`;
+
+    const stripAnsi = (s) => s.replace(/\x1b\[[0-9;]*m/g, '');
+    if (stripAnsi(fullLine).length <= 70) {
+      lines.push(fullLine);
+    } else {
+      const abbrClaude = claudeNames.map(formatAbbr).join(`${c.dim},${c.reset} `);
+      const abbrExternal = externalNames.map(formatAbbr).join(`${c.dim},${c.reset} `);
+      const abbrLine = abbrClaude && abbrExternal
+        ? `\uD83E\uDD16 ${abbrClaude} ${c.dim}|${c.reset} ${abbrExternal}`
+        : `\uD83E\uDD16 ${abbrClaude || abbrExternal}`;
+      lines.push(abbrLine);
+    }
+  }
+
+  // Row 7 (DDD Domains 0/5) \u2014 OMIT: synthetic, daemon-not-running upstream cause.
+  // Row 8 (\u26A1 target: HNSW-indexed) \u2014 OMIT: marketing placeholder. Both rows removed.
+
+  // Line 2: Swarm + Hooks (Row 11 REPLACE: live c/m/cmd counts) \u2014 subAgents(10)/CVE(12)/heap(13)/intelligence(14) OMITted.
+  // Tri-state coloration:
+  //   bright green \u25C9  \u2014 at least one agent currently running/busy (truly executing)
+  //   bright yellow \u25CB \u2014 agents alive but all idle (swarm present, no active work)
+  //   dim \u25CB           \u2014 no non-terminated agents
+  const swarmExecuting = (swarm.executingAgents ?? 0) > 0;
+  const swarmHasAgents = swarm.activeAgents > 0;
+  const swarmInd = swarmExecuting
+    ? `${c.brightGreen}\u25C9${c.reset}`
+    : swarmHasAgents
+      ? `${c.brightYellow}\u25CB${c.reset}`
+      : `${c.dim}\u25CB${c.reset}`;
+  const agentsColor = swarmExecuting ? c.brightGreen : swarmHasAgents ? c.brightYellow : c.dim;
+
+  // Queen segment — separate from worker [N/50] because queens don't consume
+  // worker slots. Bright cyan when any queen is running/busy, dark yellow
+  // (renders as olive/brown on most terminals) when all queens are idle.
+  // Omitted entirely when no queens are present.
+  let queenSegment = '';
+  const queenCount = swarm.activeQueens ?? 0;
+  if (queenCount > 0) {
+    const queenExecuting = (swarm.executingQueens ?? 0) > 0;
+    const queenColor = queenExecuting ? c.brightCyan : c.yellow;
+    queenSegment = ` ${queenColor}♛${queenCount}${c.reset}`;
+  }
+  const hooksColor = (hooks.categories > 0 || hooks.commands > 0) ? c.brightGreen : c.dim;
+
+  // Advocate indicator (Row 23 KEEP-CONDITIONAL \u2014 already gated by indicator non-empty)
+  const advocateIndicator = advocate.indicator ? ` ${advocate.color}${advocate.indicator}${c.reset}` : '';
+
+  // Hooks display: 12c/28m/75cmd \u2014 omit zero segments gracefully.
+  let hooksDisplay = '';
+  if (hooks.categories > 0 || hooks.matchers > 0 || hooks.commands > 0) {
+    const parts = [];
+    if (hooks.categories > 0) parts.push(`${hooks.categories}c`);
+    if (hooks.matchers > 0) parts.push(`${hooks.matchers}m`);
+    if (hooks.commands > 0) parts.push(`${hooks.commands}cmd`);
+    hooksDisplay = parts.join('/') || '0';
+  } else {
+    hooksDisplay = '0';
+  }
 
   lines.push(
-    `${c.brightYellow}🤖 Swarm${c.reset}  ${swarmIndicator} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]  ` +
-    `${c.brightPurple}👥 ${system.subAgents}${c.reset}    ` +
-    `${securityIcon} ${securityColor}CVE ${security.cvesFixed}${c.reset}/${c.brightWhite}${security.totalCves}${c.reset}    ` +
-    `${c.brightCyan}💾 ${system.memoryMB}MB${c.reset}    ` +
-    `${c.brightGreen}📂 ${String(system.contextPct).padStart(3)}%${c.reset}    ` +
-    `${c.dim}🧠 ${String(system.intelligencePct).padStart(3)}%${c.reset}`
+    `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${queenSegment}${advocateIndicator}  ` +
+    `${c.brightBlue}\uD83E\uDE9D ${hooksColor}${hooksDisplay}${c.reset}`
   );
 
-  // Line 3: Architecture status
-  const dddColor = progress.dddProgress >= 50 ? c.brightGreen : progress.dddProgress > 0 ? c.yellow : c.red;
+  // Line 3: Architecture \u2014 ADRs only. DDD\u25CF%(16) and Security\u25CFPENDING(17) OMITted (synthetic/no live scanner).
+  const adrColor = adrs.count > 0 ? (adrs.implemented === adrs.count ? c.brightGreen : c.yellow) : c.dim;
+  const adrDisplay = adrs.compliance > 0 ? `${adrColor}\u25CF${adrs.compliance}%${c.reset}` : `${adrColor}\u25CF${adrs.implemented}/${adrs.count}${c.reset}`;
+
   lines.push(
-    `${c.brightPurple}🔧 Architecture${c.reset}    ` +
-    `${c.cyan}DDD${c.reset} ${dddColor}●${String(progress.dddProgress).padStart(3)}%${c.reset}  ${c.dim}│${c.reset}  ` +
-    `${c.cyan}Security${c.reset} ${securityColor}●${security.status}${c.reset}  ${c.dim}│${c.reset}  ` +
-    `${c.cyan}Memory${c.reset} ${c.brightGreen}●AgentDB${c.reset}  ${c.dim}│${c.reset}  ` +
-    `${c.cyan}Integration${c.reset} ${swarm.coordinationActive ? c.brightCyan : c.dim}●${c.reset}`
+    `${c.brightPurple}\uD83D\uDD27 Architecture${c.reset}    ` +
+    `${c.cyan}ADRs${c.reset} ${adrDisplay}`
   );
+
+  // Line 4: HiveMemory, Tests, Integration
+  const hnswInd = hivememory.hasHnsw ? `${c.brightGreen}\u26A1${c.reset}` : '';
+  const sizeDisp = hivememory.dbSizeKB >= 1024 ? `${(hivememory.dbSizeKB / 1024).toFixed(1)}MB` : `${hivememory.dbSizeKB}KB`;
+  const vectorColor = hivememory.vectorCount > 0 ? c.brightGreen : c.dim;
+  const testColor = tests.testFiles > 0 ? c.brightGreen : c.dim;
+
+  let integStr = '';
+  if (integration.mcpServers.total > 0) {
+    const mcpCol = integration.mcpServers.enabled === integration.mcpServers.total ? c.brightGreen :
+                   integration.mcpServers.enabled > 0 ? c.brightYellow : c.red;
+    integStr += `${c.cyan}MCP${c.reset} ${mcpCol}\u25CF${integration.mcpServers.enabled}/${integration.mcpServers.total}${c.reset}`;
+  }
+  if (integration.hasDatabase) integStr += (integStr ? '  ' : '') + `${c.brightGreen}\u25C6${c.reset}DB`;
+  if (integration.hasApi) integStr += (integStr ? '  ' : '') + `${c.brightGreen}\u25C6${c.reset}API`;
+  if (!integStr) integStr = `${c.dim}\u25CF none${c.reset}`;
+
+  lines.push(
+    `${c.brightCyan}\uD83D\uDCCA HiveMemory${c.reset}    ` +
+    `${c.cyan}Vectors${c.reset} ${vectorColor}\u25CF${hivememory.vectorCount}${hnswInd}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
+    `${c.cyan}Size${c.reset} ${c.brightWhite}${sizeDisp}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
+    `${c.cyan}Tests${c.reset} ${testColor}\u25CF${tests.testFiles}${c.reset}  ${c.dim}\u2502${c.reset}  ` +
+    integStr
+  );
+
+  // Row 24 ADD-CONDITIONAL: daemon status \u2014 show `\u25CB daemon off` only when not running.
+  const daemon = getDaemonStatus();
+  if (!daemon.running) {
+    lines.push(`${c.dim}\u25CB daemon off${c.reset}`);
+  }
+
+  // Row 25 ADD-CONDITIONAL: enforcement level \u2014 show only when \u2260 Normal (level \u2260 0).
+  const enforcement = getEnforcementLevel();
+  if (enforcement.level !== 0) {
+    const enfColor = enforcement.level >= 3 ? c.brightRed : enforcement.level >= 2 ? c.brightYellow : c.yellow;
+    lines.push(`${enfColor}\u26A0 Enforcement: ${enforcement.label} (L${enforcement.level})${c.reset}`);
+  }
+
+  // Row 26 ADD-CONDITIONAL: pipeline stage \u2014 show only when present.
+  const pipeline = getPipelineStage();
+  if (pipeline.stage) {
+    lines.push(`${c.cyan}\u27F3 Pipeline: ${pipeline.stage}${c.reset}`);
+  }
 
   return lines.join('\n');
 }
 
-// Generate JSON data
+// JSON output — applies runbook §8 OMIT > FAKE: only emit a field when its
+// source is live and verifiable. Synthetic / heuristic-only fields
+// (v3Progress, intelligencePct, fake testCases derived from file-count, etc.)
+// are intentionally OMITTED rather than emitted with stale or fabricated
+// values. Real-source fields (memoryMB from process, dbSizeKB from fs.stat,
+// testFiles from fs.readdir, etc.) are kept.
 function generateJSON() {
-  return {
-    user: getUserInfo(),
-    v3Progress: getV3Progress(),
-    security: getSecurityStatus(),
+  const git = getGitInfo();
+  const security = getSecurityStatus();
+  const hivememory = getHiveMemoryStats();
+  const tests = getTestStats();
+  const system = getSystemMetrics();
+  const adrs = getADRStatus();
+
+  const json = {
+    user: { name: git.name, gitBranch: git.gitBranch, modelName: getModelName() },
+    providers: getProviderUsage(),
     swarm: getSwarmStatus(),
-    system: getSystemMetrics(),
-    performance: {
-      flashAttentionTarget: 'Flash Attention optimization',
-      searchImprovement: 'HNSW-indexed',
-      memoryReduction: '50-75%',
-    },
+    hooks: getHooksStatus(),
+    daemon: getDaemonStatus(),
+    enforcement: getEnforcementLevel(),
+    pipeline: getPipelineStage(),
+    git: { modified: git.modified, untracked: git.untracked, staged: git.staged, ahead: git.ahead, behind: git.behind },
+    context: getContextUsage(),
+    advocate: getAdvocateState(),
     lastUpdated: new Date().toISOString(),
   };
-}
 
-/**
- * Generate single-line output for Claude Code compatibility
- * This avoids the collision zone issue entirely by using one line
- * @see
- */
-function generateSingleLine() {
-  if (!CONFIG.enabled) return '';
-
-  const user = getUserInfo();
-  const progress = getV3Progress();
-  const security = getSecurityStatus();
-  const swarm = getSwarmStatus();
-  const system = getSystemMetrics();
-
-  const swarmIndicator = swarm.coordinationActive ? '●' : '○';
-  const securityStatus = security.status === 'CLEAN' ? '✓' :
-                         security.cvesFixed > 0 ? '~' : '✗';
-
-  return `${c.brightPurple}CF-V3${c.reset} ${c.dim}|${c.reset} ` +
-    `${c.cyan}D:${progress.domainsCompleted}/${progress.totalDomains}${c.reset} ${c.dim}|${c.reset} ` +
-    `${c.yellow}S:${swarmIndicator}${swarm.activeAgents}/${swarm.maxAgents}${c.reset} ${c.dim}|${c.reset} ` +
-    `${security.status === 'CLEAN' ? c.green : c.red}CVE:${securityStatus}${security.cvesFixed}/${security.totalCves}${c.reset} ${c.dim}|${c.reset} ` +
-    `${c.dim}🧠${system.intelligencePct}%${c.reset}`;
-}
-
-/**
- * Generate safe multi-line statusline that avoids Claude Code collision zone
- * The collision zone is columns 15-25 on the second-to-last line.
- * We pad that line with spaces to push content past column 25.
- * @see
- */
-function generateSafeStatusline() {
-  if (!CONFIG.enabled) return '';
-
-  const user = getUserInfo();
-  const progress = getV3Progress();
-  const security = getSecurityStatus();
-  const swarm = getSwarmStatus();
-  const system = getSystemMetrics();
-  const lines = [];
-
-  // Header Line
-  let header = `${c.bold}${c.brightPurple}▊ Hive Flow V3 ${c.reset}`;
-  header += `${swarm.coordinationActive ? c.brightCyan : c.dim}● ${c.brightCyan}${user.name}${c.reset}`;
-  if (user.gitBranch) {
-    header += `  ${c.dim}│${c.reset}  ${c.brightBlue}⎇ ${user.gitBranch}${c.reset}`;
+  // OMIT-on-no-source fields. Each block keeps only the live-derived sub-fields.
+  if (security && (security.cvesFixed > 0 || security.status === 'CLEAN')) {
+    json.security = { status: security.status, cvesFixed: security.cvesFixed, totalCves: security.totalCves };
   }
-  header += `  ${c.dim}│${c.reset}  ${c.purple}${user.modelName}${c.reset}`;
-  lines.push(header);
-
-  // Separator
-  lines.push(`${c.dim}─────────────────────────────────────────────────────${c.reset}`);
-
-  // Line 1: DDD Domain Progress
-  const domainsColor = progress.domainsCompleted >= 3 ? c.brightGreen : progress.domainsCompleted > 0 ? c.yellow : c.red;
-  lines.push(
-    `${c.brightCyan}🏗️  DDD Domains${c.reset}    ${progressBar(progress.domainsCompleted, progress.totalDomains)}  ` +
-    `${domainsColor}${progress.domainsCompleted}${c.reset}/${c.brightWhite}${progress.totalDomains}${c.reset}    ` +
-    `${c.brightYellow}⚡ 1.0x${c.reset} ${c.dim}→${c.reset} ${c.brightYellow}Flash Attention optimization${c.reset}`
-  );
-
-  // Line 2 (COLLISION LINE): Swarm status with 24 spaces padding after emoji
-  // The emoji (🤖) is 2 columns. 24 spaces pushes content to column 26, past the collision zone (15-25)
-  const swarmIndicator = swarm.coordinationActive ? `${c.brightGreen}◉${c.reset}` : `${c.dim}○${c.reset}`;
-  const agentsColor = swarm.activeAgents > 0 ? c.brightGreen : c.red;
-  let securityIcon = security.status === 'CLEAN' ? '🟢' : security.status === 'IN_PROGRESS' ? '🟡' : '🔴';
-  let securityColor = security.status === 'CLEAN' ? c.brightGreen : security.status === 'IN_PROGRESS' ? c.brightYellow : c.brightRed;
-
-  // CRITICAL: 24 spaces after 🤖 (emoji is 2 cols, so 2+24=26, past collision zone cols 15-25)
-  lines.push(
-    `${c.brightYellow}🤖${c.reset}                        ` +  // 24 spaces padding
-    `${swarmIndicator} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]  ` +
-    `${c.brightPurple}👥 ${system.subAgents}${c.reset}  ` +
-    `${securityIcon} ${securityColor}CVE ${security.cvesFixed}${c.reset}/${c.brightWhite}${security.totalCves}${c.reset}  ` +
-    `${c.brightCyan}💾 ${system.memoryMB}MB${c.reset}  ` +
-    `${c.dim}🧠 ${system.intelligencePct}%${c.reset}`
-  );
-
-  // Line 3: Architecture status (this is the last line, not in collision zone)
-  const dddColor = progress.dddProgress >= 50 ? c.brightGreen : progress.dddProgress > 0 ? c.yellow : c.red;
-  lines.push(
-    `${c.brightPurple}🔧 Architecture${c.reset}    ` +
-    `${c.cyan}DDD${c.reset} ${dddColor}●${String(progress.dddProgress).padStart(3)}%${c.reset}  ${c.dim}│${c.reset}  ` +
-    `${c.cyan}Security${c.reset} ${securityColor}●${security.status}${c.reset}  ${c.dim}│${c.reset}  ` +
-    `${c.cyan}Memory${c.reset} ${c.brightGreen}●AgentDB${c.reset}  ${c.dim}│${c.reset}  ` +
-    `${c.cyan}Integration${c.reset} ${swarm.coordinationActive ? c.brightCyan : c.dim}●${c.reset}`
-  );
-
-  return lines.join('\n');
+  if (system) {
+    const sys = {};
+    if (typeof system.memoryMB === 'number' && system.memoryMB >= 0) sys.memoryMB = system.memoryMB;
+    if (typeof system.contextPct === 'number') sys.contextPct = system.contextPct;
+    if (typeof system.subAgents === 'number' && system.subAgents > 0) sys.subAgents = system.subAgents;
+    // intelligencePct intentionally omitted — synthetic fallback, no live source.
+    if (Object.keys(sys).length > 0) json.system = sys;
+  }
+  if (adrs && adrs.count > 0) {
+    json.adrs = { count: adrs.count, implemented: adrs.implemented, compliance: adrs.compliance };
+  }
+  if (hivememory && (hivememory.dbSizeKB > 0 || hivememory.vectorCount > 0)) {
+    // vectorCount is heuristic-derived from file size; emit only dbSizeKB + hasHnsw
+    // which have real sources. Per runbook OMIT > FAKE.
+    json.hivememory = { dbSizeKB: hivememory.dbSizeKB, hasHnsw: hivememory.hasHnsw, namespaces: hivememory.namespaces };
+  }
+  if (tests && tests.testFiles > 0) {
+    // testCases (testFiles * 4) is synthetic — OMITTED. Only the real testFiles count is emitted.
+    json.tests = { testFiles: tests.testFiles };
+  }
+  // v3Progress intentionally OMITTED — synthetic with no live source.
+  return json;
 }
 
-// Main
+// ─── Main ───────────────────────────────────────────────────────
 if (process.argv.includes('--json')) {
   console.log(JSON.stringify(generateJSON(), null, 2));
 } else if (process.argv.includes('--compact')) {
   console.log(JSON.stringify(generateJSON()));
-} else if (process.argv.includes('--single')) {
-  // Single-line mode - completely avoids collision zone
-  console.log(generateSingleLine());
-} else if (process.argv.includes('--unsafe') || process.argv.includes('--legacy')) {
-  // Legacy mode - original multi-line without collision avoidance
-  console.log(generateStatusline());
 } else {
-  // Default: Safe multi-line mode with collision zone avoidance
-  // Use --unsafe or --legacy to get the original behavior
-  console.log(generateSafeStatusline());
+  console.log(generateStatusline());
 }

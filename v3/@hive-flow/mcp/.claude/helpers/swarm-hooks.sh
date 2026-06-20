@@ -4,7 +4,7 @@
 #
 # Integration with:
 # - @hive-flow/hooks SwarmCommunication module
-# - agentic-flow@alpha swarm coordination
+# - local Hive Flow swarm coordination
 # - Local hooks system for real-time agent coordination
 #
 # Key mechanisms:
@@ -25,8 +25,8 @@ AGENTS_FILE="$SWARM_DIR/agents.json"
 STATS_FILE="$SWARM_DIR/stats.json"
 
 # Agent identity
-AGENT_ID="${AGENTIC_FLOW_AGENT_ID:-agent_$(date +%s)_$(head -c 4 /dev/urandom | xxd -p)}"
-AGENT_NAME="${AGENTIC_FLOW_AGENT_NAME:-claude-code}"
+AGENT_ID="${HIVE_FLOW_AGENT_ID:-agent_$(date +%s)_$(head -c 4 /dev/urandom | xxd -p)}"
+AGENT_NAME="${HIVE_FLOW_AGENT_NAME:-claude-code}"
 
 # Initialize directories
 mkdir -p "$MESSAGES_DIR" "$PATTERNS_DIR" "$CONSENSUS_DIR" "$HANDOFFS_DIR"
@@ -750,8 +750,8 @@ Hook Integration:
   post-task <task> [success] Update swarm after task (for hooks)
 
 Environment:
-  AGENTIC_FLOW_AGENT_ID      Agent identifier
-  AGENTIC_FLOW_AGENT_NAME    Agent display name
+  HIVE_FLOW_AGENT_ID      Agent identifier
+  HIVE_FLOW_AGENT_NAME    Agent display name
 EOF
     ;;
   *)

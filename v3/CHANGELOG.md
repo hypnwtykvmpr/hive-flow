@@ -72,7 +72,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - GNN-enhanced retrieval
 - 4-32x quantization support
 
-#### 3. `@hive-flow/integration` - Agentic Flow Integration
+#### 3. `@hive-flow/integration` - Hive Flow Integration
 - Deep integration with hive-flow
 - Eliminates 10,000+ duplicate lines
 - Extends rather than reimplements

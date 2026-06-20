@@ -1,5 +1,5 @@
 /**
- * Agentic Flow Statusline for Claude Code
+ * Hive Flow Statusline for Claude Code
  * Shows model, tokens, cost, swarm status, and memory usage
  */
 
@@ -20,7 +20,7 @@ function getSwarmStatus() {
   }
 
   try {
-    const result = execSync('npx agentic-flow@alpha mcp status 2>/dev/null || echo "idle"', {
+    const result = execSync('hive-flow mcp status 2>/dev/null || echo "idle"', {
       encoding: 'utf-8',
       timeout: 2000
     }).trim();
@@ -64,7 +64,7 @@ function formatCost(cost) {
 export default function statusline(context) {
   const parts = [];
 
-  // Agentic Flow indicator
+  // Hive Flow indicator
   parts.push('🤖');
 
   // Model name (shortened)

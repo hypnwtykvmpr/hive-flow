@@ -1729,7 +1729,7 @@ export const embeddingsCommand: Command = {
     output.writeln('Performance:');
     output.printList([
       'HNSW indexing for fast search',
-      'Agentic Flow: 75x faster than Transformers.js (~3ms)',
+      'Hive Flow: 75x faster than Transformers.js (~3ms)',
       'Persistent cache: SQLite-backed, survives restarts',
       'Hyperbolic: Better hierarchical representation',
     ]);

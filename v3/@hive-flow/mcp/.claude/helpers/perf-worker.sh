@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hive Flow V3 - Performance Benchmark Worker
-# Runs periodic benchmarks and updates metrics using agentic-flow agents
+# Runs periodic benchmarks and updates metrics using hive-flow agents
 
 set -euo pipefail
 
@@ -50,7 +50,7 @@ benchmark_search() {
 
 # Memory efficiency check
 benchmark_memory() {
-  local node_mem=$(ps aux 2>/dev/null | grep -E "(node|agentic)" | grep -v grep | awk '{sum += $6} END {print int(sum/1024)}')
+  local node_mem=$(ps aux 2>/dev/null | grep -E "(node|hive-flow)" | grep -v grep | awk '{sum += $6} END {print int(sum/1024)}')
   local baseline_mem=4000  # 4GB baseline
 
   if [ -n "$node_mem" ] && [ "$node_mem" -gt 0 ]; then
@@ -112,7 +112,7 @@ run_benchmarks() {
   date +%s > "$LAST_RUN_FILE"
 }
 
-# Spawn hive-flow performance agent for deep analysis
+# Spawn local Hive Flow performance agent for deep analysis
 run_deep_benchmark() {
   echo "[$(date +%H:%M:%S)] Spawning perf-analyzer agent..."
 
@@ -152,7 +152,7 @@ case "${1:-check}" in
   *)
     echo "Usage: perf-worker.sh [run|deep|check|force|status]"
     echo "  run    - Run quick benchmarks"
-    echo "  deep   - Spawn agentic-flow agent for deep analysis"
+    echo "  deep   - Spawn hive-flow agent for deep analysis"
     echo "  check  - Run if throttle allows (default)"
     echo "  force  - Force run ignoring throttle"
     echo "  status - Show current metrics"

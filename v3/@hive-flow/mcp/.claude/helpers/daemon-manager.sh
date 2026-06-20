@@ -57,7 +57,7 @@ is_running() {
 
 # Start the swarm monitor daemon
 start_swarm_monitor() {
-    local interval="${1:-3}"
+    local interval="${1:-30}"
 
     if is_running "$SWARM_MONITOR_PID"; then
         log "Swarm monitor already running (PID: $(cat "$SWARM_MONITOR_PID"))"
@@ -78,7 +78,7 @@ start_swarm_monitor() {
 
 # Start the metrics update daemon
 start_metrics_daemon() {
-    local interval="${1:-30}"  # Default 30 seconds for V3 sync
+    local interval="${1:-60}"  # Default 60 seconds - less frequent updates
 
     if is_running "$METRICS_DAEMON_PID"; then
         log "Metrics daemon already running (PID: $(cat "$METRICS_DAEMON_PID"))"
@@ -126,8 +126,8 @@ stop_daemon() {
 # Start all daemons
 start_all() {
     log "Starting all Hive Flow daemons..."
-    start_swarm_monitor "${1:-3}"
-    start_metrics_daemon "${2:-5}"
+    start_swarm_monitor "${1:-30}"
+    start_metrics_daemon "${2:-60}"
 
     # Initial metrics update
     "$SCRIPT_DIR/swarm-monitor.sh" check > /dev/null 2>&1
@@ -181,12 +181,12 @@ show_status() {
         echo -e "  ${YELLOW}○${RESET} MCP Server       ${YELLOW}NOT DETECTED${RESET}"
     fi
 
-    # Agentic Flow
-    local af_count=$(ps aux 2>/dev/null | grep -E "agentic-flow" | grep -v grep | grep -v "daemon-manager" | wc -l)
+    # Hive Flow
+    local af_count=$(ps aux 2>/dev/null | grep -E "hive-flow" | grep -v grep | grep -v "daemon-manager" | wc -l)
     if [ "$af_count" -gt 0 ]; then
-        echo -e "  ${GREEN}●${RESET} Agentic Flow     ${GREEN}ACTIVE${RESET} ($af_count processes)"
+        echo -e "  ${GREEN}●${RESET} Hive Flow     ${GREEN}ACTIVE${RESET} ($af_count processes)"
     else
-        echo -e "  ${YELLOW}○${RESET} Agentic Flow     ${YELLOW}IDLE${RESET}"
+        echo -e "  ${YELLOW}○${RESET} Hive Flow     ${YELLOW}IDLE${RESET}"
     fi
 
     echo ""
@@ -207,22 +207,22 @@ show_status() {
 # Main command handling
 case "${1:-status}" in
     "start")
-        start_all "${2:-3}" "${3:-5}"
+        start_all "${2:-30}" "${3:-60}"
         ;;
     "stop")
         stop_all
         ;;
     "restart")
-        restart_all "${2:-3}" "${3:-5}"
+        restart_all "${2:-30}" "${3:-60}"
         ;;
     "status")
         show_status
         ;;
     "start-swarm")
-        start_swarm_monitor "${2:-3}"
+        start_swarm_monitor "${2:-30}"
         ;;
     "start-metrics")
-        start_metrics_daemon "${2:-5}"
+        start_metrics_daemon "${2:-60}"
         ;;
     "help"|"-h"|"--help")
         echo "Hive Flow V3 Daemon Manager"
@@ -239,8 +239,8 @@ case "${1:-status}" in
         echo "  help                                       Show this help"
         echo ""
         echo "Examples:"
-        echo "  $0 start           # Start with defaults (3s swarm, 5s metrics)"
-        echo "  $0 start 2 3       # Start with 2s swarm, 3s metrics intervals"
+        echo "  $0 start           # Start with defaults (30s swarm, 60s metrics)"
+        echo "  $0 start 10 30     # Start with 10s swarm, 30s metrics intervals"
         echo "  $0 status          # Show current status"
         echo "  $0 stop            # Stop all daemons"
         ;;

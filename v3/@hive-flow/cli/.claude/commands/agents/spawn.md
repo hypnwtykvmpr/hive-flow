@@ -41,7 +41,7 @@ hive-flow agent spawn -t researcher # Research
 ```bash
 hive-flow agent spawn -t security-architect     # Security design
 hive-flow agent spawn -t security-auditor       # CVE remediation
-hive-flow agent spawn -t memory-specialist      # AgentDB (fast HNSW-indexed)
+hive-flow agent spawn -t memory-specialist      # HiveMemory (fast HNSW-indexed)
 hive-flow agent spawn -t performance-engineer   # Flash Attention optimization optimization
 hive-flow agent spawn -t core-architect         # DDD design
 ```

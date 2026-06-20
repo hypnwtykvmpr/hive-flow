@@ -76,10 +76,10 @@ for file in "${required_files[@]}"; do
     # Additional checks for specific files
     case "$file" in
       "package.json")
-        if grep -q "agentic-flow.*alpha" "$file" 2>/dev/null; then
-          log_success "agentic-flow@alpha dependency found"
+        if grep -q "hive-flow" "$file" 2>/dev/null; then
+          log_success "Hive Flow package manifest detected"
         else
-          log_warning "agentic-flow@alpha dependency not found in package.json"
+          log_warning "Hive Flow package identity not found in package.json"
         fi
         ;;
       ".claude/helpers/update-v3-progress.sh")
