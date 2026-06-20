@@ -173,7 +173,6 @@
     "prompt-injection",
     "wasm",
     "ruvbot",
-    "ruv",
     "ai-safety",
     "agent-orchestration",
     "multi-agent",

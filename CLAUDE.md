@@ -254,7 +254,7 @@ mcp__hive-flow__agent_task({ agentId: "agent-id", task: "Review the error handli
 | Tier | Handler | Latency | Cost | Use Cases |
 |------|---------|---------|------|-----------|
 | **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add types, etc.) — **Skip LLM entirely** |
-| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
+| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) — **blocked by enforcement gate for agent tasks** |
 | **3** | Sonnet/Opus | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
 
 - Always check for `[AGENT_BOOSTER_AVAILABLE]` or `[TASK_MODEL_RECOMMENDATION]` before spawning agents
@@ -818,8 +818,8 @@ The 4-step intelligence pipeline:
 ```bash
 # Add MCP servers
 claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
-claude mcp add hive-flow hive-flow mcp start  # Optional
-claude mcp add flow-nexus flow-nexus mcp start  # Optional
+claude mcp add hive-flow -- hive-flow mcp start  # Optional
+claude mcp add flow-nexus -- flow-nexus mcp start  # Optional
 
 # Start daemon
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start

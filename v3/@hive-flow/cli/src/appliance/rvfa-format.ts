@@ -62,6 +62,7 @@ export interface RvfaBootConfig {
 }
 
 export interface RvfaModelConfig {
+  // legacy read-only alias for old RVFA images; new writes emit 'local-llm'
   provider: 'local-llm' | 'ruvllm' | 'api-vault' | 'hybrid';
   engine?: string;
   models?: string[];
@@ -158,6 +159,7 @@ export function validateHeader(header: unknown): header is RvfaHeader {
   if (!oneOf(boot.isolation, ['container', 'microvm', 'native'])) return false;
 
   if (!obj(h.models)) return false;
+  // legacy read-only alias for old RVFA images; new writes emit 'local-llm'
   if (!oneOf((h.models as Record<string, unknown>).provider, ['local-llm', 'ruvllm', 'api-vault', 'hybrid'])) return false;
 
   for (const sec of h.sections as unknown[]) {

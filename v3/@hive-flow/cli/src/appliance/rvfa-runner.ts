@@ -75,6 +75,7 @@ function extractHiveFlowSection(reader: RvfaReader): Buffer | null {
 }
 
 function isLocalOnlyProvider(provider: string): boolean {
+  // legacy read-only alias for old RVFA images; new writes emit 'local-llm'
   return provider === 'local-llm' || provider === 'ruvllm';
 }
 

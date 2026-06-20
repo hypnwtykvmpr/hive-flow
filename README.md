@@ -89,13 +89,11 @@ flowchart TB
 ### Get Started Fast
 
 ```bash
-# One-line install (recommended)
+# Initialize in current project
 hive-flow init
 
-# Or full setup with MCP + diagnostics
-hive-flow init -s -- --full
-
-# Or via hive-flow init --wizard
+# Or with guided setup
+hive-flow init wizard
 ```
 
 ---
@@ -346,7 +344,7 @@ swarm_init({
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
-| **LLM Provider** | Anthropic only | 6 providers with automatic failover and cost-based routing (85% savings) |
+| **LLM Provider** | Anthropic only | Multiple providers with automatic failover and cost-based routing |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
 | **Performance** | Baseline | Task, swarm, and SWE-Bench evaluation metrics require current benchmark evidence |
 
@@ -368,47 +366,46 @@ claude --dangerously-skip-permissions
 
 ### Installation
 
-#### One-Line Install (Recommended)
+#### Install (Recommended)
 
 ```bash
-# curl-style installer with progress display
+# Initialize in the current project
 hive-flow init
 
-# Full setup (global + MCP + diagnostics)
-hive-flow init -s -- --full
+# Install user-level global enforcement hooks
+hive-flow install --global
+
+# Install global Claude Code adapter
+hive-flow init --global --claude-code
 ```
 
 <details>
 <summary><b>Install Options</b></summary>
 
+`hive-flow install` options:
+
 | Option | Description |
 |--------|-------------|
-| `--minimal`, `-m` | Skip optional deps (faster, ~15s) |
-| `--setup-mcp` | Auto-configure MCP server for Claude Code |
-| `--doctor`, `-d` | Run diagnostics after install |
-| `--no-init` | Skip project initialization (init runs by default) |
-| `--full`, `-f` | Full setup: global + MCP + doctor |
-| `--version=X.X.X` | Install specific version |
+| `--global` | Install user-level global enforcement engine |
+| `-y`, `--yes` | Approve non-interactive install prompts |
+| `--engine-only` | Copy only the enforcement engine |
+| `--hooks-only` | Write only Claude Code user hook settings |
+| `--keypair-only` | Enroll only the Permission Guard override keypair |
+| `--credentials` | Create per-machine KEK and empty credential vault |
+| `--degraded` | Allow degraded credential backend (CI/test lanes) |
 
-**Examples:**
-```bash
-# Minimal global install (fastest)
-curl ... | bash -s -- --global --minimal
+`hive-flow init` options:
 
-# With MCP auto-setup
-curl ... | bash -s -- --global --setup-mcp
-
-# Full setup with diagnostics
-curl ... | bash -s -- --full
-```
-
-**Speed:**
-| Mode | Time |
-|------|------|
-| local CLI (warm) | ~3s |
-| local CLI (fresh shell) | ~20s |
-| global | ~35s |
-| --minimal | ~15s |
+| Option | Description |
+|--------|-------------|
+| `-m`, `--minimal` | Create minimal configuration |
+| `--full` | Create full configuration with all components |
+| `-f`, `--force` | Overwrite existing configuration |
+| `--global --claude-code` | Install user-level universal Claude Code gates |
+| `--skip-claude` | Skip `.claude/` directory creation |
+| `--only-claude` | Only create `.claude/` directory |
+| `--codex` | Initialize for OpenAI Codex CLI |
+| `--dual` | Initialize for both Claude Code and Codex |
 
 </details>
 
@@ -429,11 +426,12 @@ hive-flow init --full
 
 | Profile | Size | Use Case |
 |---------|------|----------|
-| `--omit=optional` | ~45MB | Core CLI only (fastest) |
+| `--minimal` | ~45MB | Core CLI only (fastest) |
 | Default | ~340MB | Full install with ML/embeddings |
 
 ```bash
 # Minimal install (skip ML/embeddings)
+hive-flow init --minimal
 ```
 
 <details>
@@ -598,11 +596,11 @@ hive-flow init
 # Start MCP server for Claude Code integration
 hive-flow mcp start
 
-# Run a task with agents
-hive-flow --agent coder --task "Implement user authentication"
+# Spawn a coder agent
+hive-flow agent spawn -t coder --name my-coder
 
 # List available agents
-hive-flow --list
+hive-flow agent list
 ```
 
 ### Upgrading
@@ -1799,11 +1797,11 @@ hive-flow worker status
 </details>
 
 <details>
-<summary>☁️ <strong>LLM Providers</strong> — 6 providers with automatic failover</summary>
+<summary>☁️ <strong>LLM Providers</strong> — Multiple providers with automatic failover</summary>
 
 | Provider | Models (2025-2026) | Features | Cost |
 |----------|--------|----------|------|
-| **Anthropic** | Claude Opus 4.5, Claude Sonnet 4.5, Claude Haiku 4.5 | Native, streaming, tool calling, extended thinking | $1-25/1M tokens |
+| **Anthropic** | claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-20251001 | Native, streaming, tool calling, extended thinking | $1-25/1M tokens |
 | **OpenAI** | GPT-5.2, o3, o3-pro, o4-mini | 400K context, reasoning chains, 100% AIME 2025 | $0.15-60/1M tokens |
 | **Google** | Gemini 3 Pro, Gemini 3 Flash, Gemini 3 Deep Think | 1M+ context, multimodal, Deep Think reasoning | $0.075-7/1M tokens |
 | **xAI** | Grok 4.1, Grok 3 | Truth-seeking, real-time data, 200K H100 training | $2-10/1M tokens |
@@ -2566,18 +2564,18 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow --agent reviewer --task "Review PR #123"` |
-| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `hive-flow --agent tester --task "Write tests for auth module"` |
-| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow --agent coder --task "Refactor user service to use repository pattern"` |
-| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow --agent coder --task "Fix race condition in checkout flow"` |
+| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow agent spawn -t reviewer` |
+| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `hive-flow agent spawn -t tester` |
+| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow agent spawn -t coder` |
+| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow agent spawn -t coder` |
 
 ### 🔒 Security & Compliance
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Security Audit** | Find vulnerabilities before attackers do | `hive-flow --agent security-architect --task "Audit for OWASP Top 10"` |
+| **Security Audit** | Find vulnerabilities before attackers do | `hive-flow agent spawn -t security-architect` |
 | **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `hive-flow security scan --depth full` |
-| **Compliance Check** | Ensure code meets security standards | `hive-flow --agent security-architect --task "Check PCI-DSS compliance"` |
+| **Compliance Check** | Ensure code meets security standards | `hive-flow agent spawn -t security-architect` |
 
 ### 🐝 Multi-Agent Swarms
 
@@ -2591,24 +2589,24 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow --agent perf-analyzer --task "Profile API endpoints"` |
+| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow agent spawn -t perf-analyzer` |
 | **Query Optimization** | Speed up slow database queries | `hive-flow hooks route "Optimize database queries"` |
-| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow --agent perf-analyzer --task "Analyze memory usage patterns"` |
+| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow agent spawn -t perf-analyzer` |
 
 ### 🔄 GitHub & DevOps
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **PR Management** | Review, approve, and merge PRs efficiently | `hive-flow --agent pr-manager --task "Review open PRs"` |
-| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow --agent issue-tracker --task "Triage new issues"` |
-| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow --agent release-manager --task "Prepare v2.0 release"` |
-| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
+| **PR Management** | Review, approve, and merge PRs efficiently | `hive-flow agent spawn -t pr-manager` |
+| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow agent spawn -t issue-tracker` |
+| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow agent spawn -t release-manager` |
+| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow agent spawn -t cicd-engineer` |
 
 ### 📋 Spec-Driven Development
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Generate Specs** | Create complete specifications before coding | `hive-flow --agent architect --task "Create ADR for authentication system"` |
+| **Generate Specs** | Create complete specifications before coding | `hive-flow agent spawn -t architecture` |
 | **Validate Implementation** | Ensure code matches specifications | `hive-flow hooks progress --detailed` |
 | **Track Compliance** | Monitor spec adherence across the team | `hive-flow progress sync` |
 
@@ -2703,13 +2701,13 @@ The statusline shows live context metrics read from `autopilot-state.json`:
 
 ```bash
 # Context Autopilot (all have sensible defaults)
-hive_FLOW_CONTEXT_AUTOPILOT=true        # Enable/disable autopilot (default: true)
-hive_FLOW_CONTEXT_WINDOW=200000         # Context window size in tokens
-hive_FLOW_AUTOPILOT_WARN=0.70           # Warning threshold (70%)
-hive_FLOW_AUTOPILOT_PRUNE=0.85          # Optimization threshold (85%)
-hive_FLOW_COMPACT_RESTORE_BUDGET=4000   # Max chars restored after compaction
-hive_FLOW_RETENTION_DAYS=30             # Auto-prune never-accessed entries
-hive_FLOW_AUTO_OPTIMIZE=true            # Importance ranking + pruning + sync
+HIVE_FLOW_CONTEXT_AUTOPILOT=true        # Enable/disable autopilot (default: true)
+HIVE_FLOW_CONTEXT_WINDOW=200000         # Context window size in tokens
+HIVE_FLOW_AUTOPILOT_WARN=0.70           # Warning threshold (70%)
+HIVE_FLOW_AUTOPILOT_PRUNE=0.85          # Optimization threshold (85%)
+HIVE_FLOW_COMPACT_RESTORE_BUDGET=4000   # Max chars restored after compaction
+HIVE_FLOW_RETENTION_DAYS=30             # Auto-prune never-accessed entries
+HIVE_FLOW_AUTO_OPTIMIZE=true            # Importance ranking + pruning + sync
 ```
 
 ### Commands
@@ -2855,8 +2853,8 @@ RVF validates inputs at every boundary:
 
 ```bash
 # Environment variables
-hive_FLOW_MEMORY_BACKEND=hybrid   # auto-selects RVF
-hive_FLOW_MEMORY_PATH=./data/memory
+HIVE_FLOW_MEMORY_BACKEND=hybrid   # auto-selects RVF
+HIVE_FLOW_MEMORY_PATH=./data/memory
 
 # Or via CLI
 hive-flow memory init --force
@@ -5000,207 +4998,6 @@ npx agentic-jujutsu examples        # Show usage examples
 
 ---
 
-## ☁️ Cloud & Deployment
-
-Cloud platform integration and deployment tools.
-
-<details>
-<summary>☁️ <strong>Flow Nexus</strong> — Cloud Platform Integration</summary>
-
-Flow Nexus is a **cloud platform** for deploying and scaling Hive Flow beyond your local machine.
-
-### What Flow Nexus Provides
-
-| Feature | Local Hive Flow | + Flow Nexus |
-|---------|-------------------|--------------|
-| **Swarm Scale** | 15 agents (local resources) | 100+ agents (cloud resources) |
-| **Neural Training** | Limited by local GPU/CPU | Distributed GPU clusters |
-| **Persistence** | Local SQLite | Cloud-replicated databases |
-| **Collaboration** | Single user | Team workspaces |
-| **Sandboxes** | Local Docker | E2B cloud sandboxes |
-
-### Core Capabilities
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      FLOW NEXUS PLATFORM                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
-│  │   Swarm     │  │   Neural    │  │  Sandboxes  │                 │
-│  │   Cloud     │  │   Training  │  │   (E2B)     │                 │
-│  │             │  │             │  │             │                 │
-│  │ Scale to    │  │ Distributed │  │ Isolated    │                 │
-│  │ 100+ agents │  │ GPU training│  │ code exec   │                 │
-│  └─────────────┘  └─────────────┘  └─────────────┘                 │
-│                                                                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                 │
-│  │   App       │  │  Workflows  │  │ Challenges  │                 │
-│  │   Store     │  │  (Events)   │  │ & Rewards   │                 │
-│  │             │  │             │  │             │                 │
-│  │ Publish &   │  │ Event-driven│  │ Gamified    │                 │
-│  │ discover    │  │ automation  │  │ learning    │                 │
-│  └─────────────┘  └─────────────┘  └─────────────┘                 │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Skills for Flow Nexus
-
-| Skill | What It Does |
-|-------|--------------|
-| `/flow-nexus-platform` | Full platform management (auth, storage, users) |
-| `/flow-nexus-swarm` | Deploy swarms to cloud with event-driven workflows |
-| `/flow-nexus-neural` | Train neural networks on distributed infrastructure |
-
-### Cloud Swarm Deployment
-
-```bash
-# Deploy swarm to Flow Nexus cloud
-/flow-nexus-swarm
-
-# Or via CLI
-hive-flow nexus swarm deploy \
-  --topology hierarchical \
-  --max-agents 50 \
-  --region us-east-1
-```
-
-### E2B Sandboxes
-
-Isolated execution environments for running untrusted code:
-
-```bash
-# Create sandbox
-hive-flow nexus sandbox create --language python
-
-# Execute code safely
-hive-flow nexus sandbox exec --code "print('Hello')"
-
-# Cleanup
-hive-flow nexus sandbox destroy
-```
-
-### Event-Driven Workflows
-
-```yaml
-# workflow.yaml
-name: code-review-pipeline
-triggers:
-  - event: pull_request.opened
-steps:
-  - action: spawn_swarm
-    config:
-      topology: mesh
-      agents: [reviewer, security-architect, tester]
-  - action: run_review
-  - action: post_comments
-  - action: shutdown_swarm
-```
-
-### Getting Started with Flow Nexus
-
-```bash
-# 1. Sign up at flow-nexus.io
-# 2. Get API key
-# 3. Configure
-hive-flow nexus configure --api-key <key>
-
-# 4. Deploy
-hive-flow nexus swarm deploy
-```
-
-</details>
-
----
-
-<details>
-<summary>🔗 <strong>Stream-Chain</strong> — Multi-Agent Pipelines</summary>
-
-Stream-Chain enables **sequential processing** where the output of one agent becomes the input of the next.
-
-### Pipeline Concept
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     STREAM-CHAIN PIPELINE                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  Input ──▶ [Agent 1] ──▶ [Agent 2] ──▶ [Agent 3] ──▶ Output        │
-│            (Research)    (Implement)   (Test)                       │
-│                                                                     │
-│  Each stage transforms and passes data to the next                  │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Creating Pipelines
-
-```bash
-# Via skill
-/stream-chain
-
-# Define pipeline
-hive-flow stream-chain create \
-  --name "feature-pipeline" \
-  --stages "researcher,architect,coder,tester,reviewer"
-```
-
-### Pipeline Definition (YAML)
-
-```yaml
-name: feature-development
-description: End-to-end feature implementation
-
-stages:
-  - name: research
-    agent: researcher
-    input: requirements
-    output: analysis
-
-  - name: design
-    agent: architect
-    input: analysis
-    output: architecture
-
-  - name: implement
-    agent: coder
-    input: architecture
-    output: code
-
-  - name: test
-    agent: tester
-    input: code
-    output: test_results
-
-  - name: review
-    agent: reviewer
-    input: [code, test_results]
-    output: final_review
-```
-
-### Running Pipelines
-
-```bash
-# Run the pipeline
-hive-flow stream-chain run feature-pipeline \
-  --input '{"requirements": "Add user dashboard with analytics"}'
-
-# Monitor progress
-hive-flow stream-chain status feature-pipeline
-```
-
-### Use Cases
-
-| Pipeline | Stages | Output |
-|----------|--------|--------|
-| **Feature Development** | research → design → implement → test → review | Reviewed code |
-| **Security Audit** | scan → analyze → remediate → verify | Security report |
-| **Documentation** | research → outline → write → review | Documentation |
-| **Migration** | analyze → plan → migrate → validate | Migrated code |
-
-</details>
-
 ---
 
 <details>
@@ -6322,22 +6119,22 @@ Environment setup, configuration options, and platform support.
 ### Windows (PowerShell)
 
 ```powershell
-hive-flow security audit --platform windows
-$env:hive_FLOW_MODE = "integration"
+hive-flow security audit
+$env:HIVE_FLOW_MODE = "integration"
 ```
 
 ### macOS (Bash/Zsh)
 
 ```bash
-hive-flow security audit --platform darwin
-export hive_FLOW_SECURITY_MODE="strict"
+hive-flow security audit
+export HIVE_FLOW_SECURITY_MODE="strict"
 ```
 
 ### Linux (Bash)
 
 ```bash
-hive-flow security audit --platform linux
-export hive_FLOW_MEMORY_PATH="./data"
+hive-flow security audit
+export HIVE_FLOW_MEMORY_PATH="./data"
 ```
 
 </details>
@@ -6351,40 +6148,40 @@ export hive_FLOW_MEMORY_PATH="./data"
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `hive_FLOW_MODE` | Operation mode (`development`, `production`, `integration`) | `development` |
-| `hive_FLOW_ENV` | Environment name for test/dev isolation | - |
-| `hive_FLOW_DATA_DIR` | Root data directory | `./data` |
-| `hive_FLOW_MEMORY_PATH` | Directory for persistent memory storage | `./data` |
-| `hive_FLOW_MEMORY_TYPE` | Memory backend type (`json`, `sqlite`, `agentdb`, `hybrid`) | `hybrid` |
-| `hive_FLOW_SECURITY_MODE` | Security level (`strict`, `standard`, `permissive`) | `standard` |
-| `hive_FLOW_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`) | `info` |
-| `hive_FLOW_CONFIG` | Path to configuration file | `./hive-flow.config.json` |
+| `HIVE_FLOW_MODE` | Operation mode (`development`, `production`, `integration`) | `v3` |
+| `HIVE_FLOW_ENV` | Environment name for test/dev isolation | - |
+| `HIVE_FLOW_DATA_DIR` | Root data directory | `./data` |
+| `HIVE_FLOW_MEMORY_PATH` | Directory for persistent memory storage | `./data` |
+| `HIVE_FLOW_MEMORY_TYPE` | Memory backend type (`json`, `sqlite`, `agentdb`, `hybrid`) | `hybrid` |
+| `HIVE_FLOW_SECURITY_MODE` | Security level (`strict`, `standard`, `permissive`) | `standard` |
+| `HIVE_FLOW_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`) | `info` |
+| `HIVE_FLOW_CONFIG` | Path to configuration file | `./hive-flow.config.json` |
 | `NODE_ENV` | Node.js environment (`development`, `production`, `test`) | `development` |
 
 ### Swarm & Agents
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `hive_FLOW_MAX_AGENTS` | Default concurrent agent limit | `15` |
-| `hive_FLOW_TOPOLOGY` | Default swarm topology (`hierarchical`, `mesh`, `ring`, `star`) | `hierarchical` |
-| `hive_FLOW_HEADLESS` | Run in headless mode (no interactive prompts) | `false` |
+| `HIVE_FLOW_MAX_AGENTS` | Default concurrent agent limit | `50` |
+| `HIVE_FLOW_TOPOLOGY` | Default swarm topology (`hierarchical`, `mesh`, `ring`, `star`) | `hierarchical-mesh` |
+| `HIVE_FLOW_HEADLESS` | Run in headless mode (no interactive prompts) | `false` |
 | `hive_CODE_HEADLESS` | Claude Code headless mode compatibility | `false` |
 
 ### MCP Server
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `hive_FLOW_MCP_PORT` | MCP server port | `3000` |
-| `hive_FLOW_MCP_HOST` | MCP server host | `localhost` |
-| `hive_FLOW_MCP_TRANSPORT` | Transport type (`stdio`, `http`, `websocket`) | `stdio` |
+| `HIVE_FLOW_MCP_PORT` | MCP server port | `3000` |
+| `HIVE_FLOW_MCP_HOST` | MCP server host | `localhost` |
+| `HIVE_FLOW_MCP_TRANSPORT` | Transport type (`stdio`, `http`, `websocket`) | `stdio` |
 
 ### Vector Search (HNSW)
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `hive_FLOW_HNSW_M` | HNSW index M parameter (connectivity, higher = more accurate) | `16` |
-| `hive_FLOW_HNSW_EF` | HNSW search ef parameter (accuracy, higher = slower) | `200` |
-| `hive_FLOW_EMBEDDING_DIM` | Vector embedding dimensions | `384` |
+| `HIVE_FLOW_HNSW_M` | HNSW index M parameter (connectivity, higher = more accurate) | `16` |
+| `HIVE_FLOW_HNSW_EF` | HNSW search ef parameter (accuracy, higher = slower) | `200` |
+| `HIVE_FLOW_EMBEDDING_DIM` | Vector embedding dimensions | `384` |
 | `SQLJS_WASM_PATH` | Custom path to sql.js WASM binary | - |
 
 ### AI Provider API Keys
@@ -6421,8 +6218,8 @@ export hive_FLOW_MEMORY_PATH="./data"
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `hive_FLOW_AUTO_UPDATE` | Enable/disable auto-updates | `true` |
-| `hive_FLOW_FORCE_UPDATE` | Force update check | `false` |
+| `HIVE_FLOW_AUTO_UPDATE` | Enable/disable auto-updates | `true` |
+| `HIVE_FLOW_FORCE_UPDATE` | Force update check | `false` |
 | `CI` | CI environment detection (disables updates) | - |
 | `CONTINUOUS_INTEGRATION` | Alternative CI detection | - |
 
@@ -6433,7 +6230,7 @@ export hive_FLOW_MEMORY_PATH="./data"
 | `GITHUB_TOKEN` | GitHub API token for repository operations | Optional |
 | `JWT_SECRET` | JWT secret for authentication | Production |
 | `HMAC_SECRET` | HMAC secret for request signing | Production |
-| `hive_FLOW_TOKEN` | Internal authentication token | Optional |
+| `HIVE_FLOW_TOKEN` | Internal authentication token | Optional |
 
 ### Output Formatting
 
@@ -6448,25 +6245,25 @@ export hive_FLOW_MEMORY_PATH="./data"
 
 ```bash
 # Core
-hive_FLOW_MODE=development
-hive_FLOW_LOG_LEVEL=info
-hive_FLOW_MAX_AGENTS=15
+HIVE_FLOW_MODE=v3
+HIVE_FLOW_LOG_LEVEL=info
+HIVE_FLOW_MAX_AGENTS=50
 
 # AI Providers
 ANTHROPIC_API_KEY=sk-ant-api03-...
 OPENAI_API_KEY=sk-...
 
 # MCP Server
-hive_FLOW_MCP_PORT=3000
-hive_FLOW_MCP_TRANSPORT=stdio
+HIVE_FLOW_MCP_PORT=3000
+HIVE_FLOW_MCP_TRANSPORT=stdio
 
 # Memory
-hive_FLOW_MEMORY_TYPE=hybrid
-hive_FLOW_MEMORY_PATH=./data
+HIVE_FLOW_MEMORY_TYPE=hybrid
+HIVE_FLOW_MEMORY_PATH=./data
 
 # Vector Search
-hive_FLOW_HNSW_M=16
-hive_FLOW_HNSW_EF=200
+HIVE_FLOW_HNSW_M=16
+HIVE_FLOW_HNSW_EF=200
 
 # Optional: IPFS Storage
 # PINATA_API_KEY=...
@@ -6761,7 +6558,7 @@ hive-flow mcp start
 # Check available memory
 free -m
 # Reduce max agents if memory constrained
-export hive_FLOW_MAX_AGENTS=5
+export HIVE_FLOW_MAX_AGENTS=5
 ```
 
 **Pattern search returning no results**
@@ -6775,9 +6572,9 @@ hive-flow hooks pretrain
 **Windows path issues**
 ```powershell
 # Use forward slashes or escape backslashes
-$env:hive_FLOW_MEMORY_PATH = "./data"
+$env:HIVE_FLOW_MEMORY_PATH = "./data"
 # Or use absolute path
-$env:hive_FLOW_MEMORY_PATH = "C:/Users/name/hive-flow/data"
+$env:HIVE_FLOW_MEMORY_PATH = "C:/Users/name/hive-flow/data"
 ```
 
 **Permission denied errors**
@@ -6792,8 +6589,8 @@ sudo chown -R $(whoami) ~/.npm
 # Enable garbage collection
 node --expose-gc node_modules/.bin/hive-flow
 # Reduce HNSW parameters for lower memory
-export hive_FLOW_HNSW_M=8
-export hive_FLOW_HNSW_EF=100
+export HIVE_FLOW_HNSW_M=8
+export HIVE_FLOW_HNSW_EF=100
 ```
 
 </details>

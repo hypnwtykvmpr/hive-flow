@@ -25,13 +25,6 @@ const CLASSIFIED_SUSPECTS: ReadonlyMap<string, ClassifiedSuspect> = new Map([
     },
   ],
   [
-    'v3/@hive-flow/cli/src/appliance/ruvllm-bridge.ts:path:suspect legacy ru-prefixed token',
-    {
-      classification: 'migration-deferred',
-      reason: 'RVFA/local-LLM appliance naming is deferred to DB-RVFA because it crosses serialized appliance boundaries.',
-    },
-  ],
-  [
     'v3/@hive-flow/cli/src/appliance/rvfa-format.ts:content:suspect legacy ru-prefixed token',
     {
       classification: 'migration-deferred',
