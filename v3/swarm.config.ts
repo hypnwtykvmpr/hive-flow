@@ -15,7 +15,7 @@ export type PhaseId = 'phase-1-foundation' | 'phase-2-core' | 'phase-3-integrati
 
 export interface PerformanceTargets {
   flashAttentionSpeedup: [number, number];
-  agentDbSearchImprovement: [number, number];
+  hivememorySearchImprovement: [number, number];
   memoryReduction: [number, number];
   maxCodeLines: number;
   maxStartupMs: number;
@@ -32,7 +32,7 @@ export interface SwarmConfig {
 
 export const V3_PERFORMANCE_TARGETS: PerformanceTargets = {
   flashAttentionSpeedup: [2.49, 7.47],
-  agentDbSearchImprovement: [150, 12500],
+  hivememorySearchImprovement: [150, 12500],
   memoryReduction: [50, 75],
   maxCodeLines: 5000,
   maxStartupMs: 500,

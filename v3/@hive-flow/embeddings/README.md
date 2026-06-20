@@ -6,7 +6,7 @@
 ## Features
 
 ### Core Embedding
-- **Multiple Providers** - Agentic-Flow (ONNX), OpenAI, Transformers.js, and Mock
+- **Multiple Providers** - ONNX Local, OpenAI, Transformers.js, and Mock
 - **Auto-Install** - Automatically installs hive-flow when using `provider: 'auto'`
 - **Smart Fallback** - Graceful fallback chain: hive-flow → transformers → mock
 - **LRU + Disk Caching** - In-memory LRU + SQLite persistent cache with TTL
@@ -128,7 +128,7 @@ const result = await service.embed('Your text here');
 console.log('Tokens used:', result.usage?.totalTokens);
 ```
 
-### Historical Agentic-Flow Provider Alias
+### Historical local ONNX provider
 
 ```typescript
 import { HiveFlowEmbeddingService } from '@hive-flow/embeddings';
@@ -280,12 +280,12 @@ service.removeEventListener(listener);
 
 | Provider | Latency | Quality | Cost | Offline |
 |----------|---------|---------|------|---------|
-| **Agentic-Flow** | ~3ms | Good | Free | Yes |
+| **ONNX Local** | ~3ms | Good | Free | Yes |
 | **OpenAI** | ~50-100ms | Excellent | $0.02-0.13/1M tokens | No |
 | **Transformers.js** | ~230ms | Good | Free | Yes |
 | **Mock** | <1ms | N/A | Free | Yes |
 
-### Agentic-Flow (Recommended)
+### ONNX Local (Recommended)
 
 | Model | Dimensions | Speed | Best For |
 |-------|------------|-------|----------|

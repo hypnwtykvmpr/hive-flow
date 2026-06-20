@@ -335,7 +335,7 @@ export interface PerformanceTargets {
     minSpeedup: number;
     maxSpeedup: number;
   };
-  agentDbSearch: {
+  hivememorySearch: {
     minSpeedup: number;
     maxSpeedup: number;
   };
@@ -357,7 +357,7 @@ export interface PerformanceTargets {
 
 export const V3_PERFORMANCE_TARGETS: PerformanceTargets = {
   flashAttention: { minSpeedup: 2.49, maxSpeedup: 7.47 },
-  agentDbSearch: { minSpeedup: 150, maxSpeedup: 12500 },
+  hivememorySearch: { minSpeedup: 150, maxSpeedup: 12500 },
   memoryReduction: { minPercent: 50, maxPercent: 75 },
   codeReduction: { targetLines: 5000, currentLines: 15000 },
   startupTime: { targetMs: 500 },

@@ -203,7 +203,7 @@ export const V3_INFO = {
   ],
   performanceTargets: {
     flashAttention: 'Flash Attention optimization',
-    agentDbSearch: 'HNSW indexing improvements',
+    hivememorySearch: 'HNSW indexing improvements',
     memoryReduction: '50-75%',
     codeReduction: '<5,000 lines',
     startupTime: '<500ms'

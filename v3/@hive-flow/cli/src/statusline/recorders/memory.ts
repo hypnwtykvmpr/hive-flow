@@ -10,7 +10,7 @@ export interface UpdateMemoryStatsOptions {
   readonly projectRoot: string;
   readonly observedAt?: string;
   readonly now?: () => string;
-  readonly openDb?: (dbPath: string) => Promise<AgentDbCounts | undefined>;
+  readonly openDb?: (dbPath: string) => Promise<HiveMemoryCounts | undefined>;
 }
 
 interface SqlJsDatabase {
@@ -60,7 +60,7 @@ export async function updateMemoryStats(
     return existing;
   }
 
-  const openDb = options.openDb ?? readAgentDbCounts;
+  const openDb = options.openDb ?? readHiveMemoryCounts;
   const counts = await Promise.resolve(openDb(dbPath)).catch(() => undefined);
   const observedAt = options.observedAt ?? options.now?.() ?? new Date().toISOString();
   const summary: MemorySummary = {
@@ -91,12 +91,12 @@ export async function updateMemoryStats(
   return summary;
 }
 
-interface AgentDbCounts {
+interface HiveMemoryCounts {
   readonly memories: number;
   readonly embeddings: number;
 }
 
-async function readAgentDbCounts(dbPath: string): Promise<AgentDbCounts | undefined> {
+async function readHiveMemoryCounts(dbPath: string): Promise<HiveMemoryCounts | undefined> {
   const bytes = await readFile(dbPath).catch(() => undefined);
   if (bytes === undefined) return undefined;
   const SQL = await initSqlJs();

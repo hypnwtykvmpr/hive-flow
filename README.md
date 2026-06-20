@@ -1825,7 +1825,7 @@ hive-flow worker status
 
 | Provider | Models | Dimensions | Latency | Cost |
 |----------|--------|------------|---------|------|
-| **Agentic-Flow** | ONNX SIMD optimized | 384 | ~3ms | Free (local) |
+| **ONNX Local** | ONNX SIMD optimized | 384 | ~3ms | Free (local) |
 | **OpenAI** | text-embedding-3-small/large, ada-002 | 1536-3072 | ~50-100ms | $0.02-0.13/1M tokens |
 | **Transformers.js** | all-MiniLM-L6-v2, all-mpnet-base-v2, bge-small | 384-768 | ~230ms | Free (local) |
 | **Mock** | Deterministic hash-based | Configurable | <1ms | Free |
@@ -2014,7 +2014,7 @@ hive-flow worker status
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **Multi-Provider** | Agentic-Flow (ONNX), OpenAI, Transformers.js, Mock | 4 providers |
+| **Multi-Provider** | ONNX Local, OpenAI, Transformers.js, Mock | 4 providers |
 | **Auto-Install** | `hive-flow embeddings init` or `createEmbeddingServiceAsync()` | Zero config |
 | **75x Faster** | Agentic-flow ONNX SIMD vs Transformers.js | 3ms vs 230ms |
 | **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
@@ -4192,7 +4192,7 @@ await aidefence.learnFromDetection(userInput, analysis, {
 
 | Provider | Latency | Quality | Cost | Offline | Best For |
 |----------|---------|---------|------|---------|----------|
-| **Agentic-Flow (ONNX)** | ~3ms | Good | Free | ✅ | Production (75x faster) |
+| **ONNX Local** | ~3ms | Good | Free | ✅ | Production (75x faster) |
 | **OpenAI** | ~50-100ms | Excellent | $0.02-0.13/1M | ❌ | Highest quality |
 | **Transformers.js** | ~230ms | Good | Free | ✅ | Local development |
 | **Mock** | <1ms | N/A | Free | ✅ | Testing |
@@ -4388,7 +4388,7 @@ hive-flow embeddings cache clear --older-than 7d
 
 | Provider | Model | Dimensions | Best For |
 |----------|-------|------------|----------|
-| **Agentic-Flow** | default | 384 | General purpose (fastest) |
+| **ONNX Local** | default | 384 | General purpose (fastest) |
 | **OpenAI** | text-embedding-3-small | 1536 | Cost-effective, high quality |
 | **OpenAI** | text-embedding-3-large | 3072 | Highest quality |
 | **Transformers.js** | Xenova/all-MiniLM-L6-v2 | 384 | Fast, offline |
@@ -4453,7 +4453,7 @@ HiveMemory may retain internal vector-search transitive dependencies, but Hive F
 Core infrastructure packages powering Hive Flow's intelligence layer.
 
 <details>
-<summary>⚡ <strong>Agentic-Flow Integration</strong> — Optional AI Infrastructure</summary>
+<summary>⚡ <strong>ONNX Local Integration</strong> — Optional AI Infrastructure</summary>
 
 
 
@@ -4587,7 +4587,7 @@ const similarity = cosineSimilarity(vectors[0], vectors[1]);
 
 | Provider | Latency | Cost | Offline |
 |----------|---------|------|---------|
-| **Agentic-Flow ONNX** | ~3ms | Free | ✅ |
+| **ONNX Local ONNX** | ~3ms | Free | ✅ |
 | Transformers.js | ~230ms | Free | ✅ |
 | OpenAI | ~50-100ms | $0.02-0.13/1M | ❌ |
 
