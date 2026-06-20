@@ -58,7 +58,7 @@
   "author": "Hive Flow Team",
   "license": "MIT",
   "dependencies": {
-    "undici": "^7.26.0"
+    "undici": "^7.28.0"
   },
   "devDependencies": {
     "@hive-flow/testing": "workspace:*",
