@@ -512,7 +512,7 @@ Despite the similarities, there are differences:
 | **Consensus Algorithms** | 4 algorithms (raft, byzantine, gossip, paxos) | Implicit majority |
 | **Topology Graph** | Full graph with edges, weights, partitions | Simpler flat/hierarchical |
 | **Message Priority** | 4 levels with TTL and ACK | Simpler queue |
-| **Performance Targets** | 1000+ msg/sec, <100ms latency | Not specified |
+| **Performance Targets** | High message throughput, <100ms latency | Not specified |
 | **Learning System** | ReasoningBank + SONA + HNSW | Not present |
 | **Neural Features** | Flash Attention, MoE | Not present |
 | **Openness** | Fully documented, open ADRs | Undocumented, feature-gated |

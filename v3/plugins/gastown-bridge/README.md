@@ -31,13 +31,13 @@ Gas Town is a 75,000-line Go codebase that implements:
 
 | Operation | JavaScript | WASM | Speedup |
 |-----------|------------|------|---------|
-| Formula parse (TOML→AST) | 53ms | 0.15ms | **accelerated** |
-| Variable cooking | 35ms | 0.1ms | **accelerated** |
-| Batch cook (10 formulas) | 350ms | 1ms | **accelerated** |
-| DAG topological sort | 75ms | 0.5ms | **optimized** |
-| Cycle detection | 45ms | 0.3ms | **optimized** |
-| Critical path analysis | 120ms | 0.8ms | **optimized** |
-| Pattern search (HNSW) | 5000ms | 5ms | **optimized** |
+| Formula parse (TOML→AST) | baseline | accelerated | **accelerated** |
+| Variable cooking | baseline | accelerated | **accelerated** |
+| Batch cook (10 formulas) | baseline | accelerated | **accelerated** |
+| DAG topological sort | baseline | optimized | **optimized** |
+| Cycle detection | baseline | optimized | **optimized** |
+| Critical path analysis | baseline | optimized | **optimized** |
+| Pattern search (HNSW) | baseline | optimized | **optimized** |
 
 ### 🔗 20 MCP Tools
 
@@ -99,11 +99,11 @@ Seamlessly sync between Gas Town's Beads and Hive Flow's HiveMemory:
 
 | Metric | Pure JavaScript | This Plugin (WASM) | Improvement |
 |--------|-----------------|-------------------|-------------|
-| Formula parse | 53ms | 0.15ms | accelerated |
-| 100-node DAG sort | 75ms | 0.5ms | optimized |
-| Pattern search (10k) | 5000ms | 5ms | accelerated |
-| Memory usage | 48MB | 12MB | lower memory |
-| Startup time | 850ms | 120ms | faster |
+| Formula parse | baseline | accelerated | accelerated |
+| 100-node DAG sort | baseline | optimized | optimized |
+| Pattern search (10k) | baseline | accelerated | accelerated |
+| Memory usage | higher | lower | lower memory |
+| Startup time | slower | faster | faster |
 
 ### Architecture Comparison
 
@@ -549,7 +549,7 @@ const result = await hiveFlow.mcp.call('gt_wasm_parse_formula', {
 });
 
 console.log(`Parse time: ${result.durationMs}ms`);
-// Output: Parse time: 0.14ms
+// Output: Parse time: <fast>
 ```
 
 </details>

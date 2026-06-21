@@ -276,10 +276,10 @@ const results = kernel.batchProcess([
 
 | Operation | JS | WASM SIMD |
 |-----------|-----|-----------|
-| Proof chain | 76ms | 61ms |
-| SHA-256 | 505k/s | 910k/s |
-| Secret scan (clean) | 402k/s | 676k/s |
-| Secret scan (dirty) | 185k/s | 362k/s |
+| Proof chain | baseline | accelerated |
+| SHA-256 | baseline | accelerated |
+| Secret scan (clean) | baseline | accelerated |
+| Secret scan (dirty) | baseline | accelerated |
 
 ## CLAUDE.md vs. CLAUDE.local.md — What Goes Where
 

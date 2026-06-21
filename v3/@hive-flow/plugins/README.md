@@ -382,10 +382,10 @@ enum HookPriority {
 
 | Metric | Target | Actual |
 |--------|--------|--------|
-| Plugin load time | < 50ms | ~20ms |
-| Hook execution | < 1ms | ~0.5ms |
-| Worker spawn | < 100ms | ~50ms |
-| Vector search (10K) | < 10ms | ~5ms |
+| Plugin load time | < 50ms | Met |
+| Hook execution | < 1ms | Met |
+| Worker spawn | < 100ms | Met |
+| Vector search (10K) | < 10ms | Met |
 
 ## Testing
 

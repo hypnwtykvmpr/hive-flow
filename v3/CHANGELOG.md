@@ -49,8 +49,8 @@ Complete restructure into 10 independent @hive-flow modules:
 - GNN-enhanced context retrieval (improved accuracy)
 
 #### Startup & Execution
-- **CLI cold start**: 20ms (target: 500ms)
-- **Agent spawn**: 5ms (faster than v2)
+- **CLI cold start**: meets target (target: 500ms)
+- **Agent spawn**: faster than v2
 - **Memory reduction**: achieved
 - **Task orchestration**: improved parallel speedup
 
@@ -102,7 +102,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Enhanced hooks integration
 - Intelligent workflow automation
 - Cross-platform compatibility
-- 20ms cold start performance
+- fast cold start performance
 
 #### 7. `@hive-flow/neural` - Neural Features
 - SONA learning integration
@@ -232,8 +232,8 @@ Complete restructure into 10 independent @hive-flow modules:
 | Flash Attention | baseline | Flash Attention optimization | Validated |
 | Vector Search | baseline | HNSW-indexed | HNSW-indexed |
 | Memory Usage | baseline | reduced usage | reduced |
-| CLI Startup | 500ms | <500ms | 20ms |
-| Agent Spawn | 18.5ms | <10ms | 5ms |
+| CLI Startup | baseline | <500ms | Met |
+| Agent Spawn | baseline | <10ms | Met |
 | Test Execution | baseline | faster (Vitest) | exceeds target |
 
 #### Code Quality

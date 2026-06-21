@@ -1806,11 +1806,11 @@ hive-flow hive-mind consensus --propose "task"
 | MCP Response | <100ms | ✅ Achieved |
 | CLI Startup | <500ms | ✅ Achieved |
 | SONA Adaptation | low-latency | 🔄 In Progress |
-| Graph Build (1k) | <200ms | ✅ 2.78ms |
-| PageRank (1k) | <100ms | ✅ 12.21ms |
-| Insight Recording | <5ms/each | ✅ 0.12ms |
-| Consolidation | <500ms | ✅ 0.26ms |
-| Knowledge Transfer | <100ms | ✅ 1.25ms |
+| Graph Build (1k) | <200ms | ✅ Met |
+| PageRank (1k) | <100ms | ✅ Met |
+| Insight Recording | <5ms/each | ✅ Met |
+| Consolidation | <500ms | ✅ Met |
+| Knowledge Transfer | <100ms | ✅ Met |
 
 ---
 

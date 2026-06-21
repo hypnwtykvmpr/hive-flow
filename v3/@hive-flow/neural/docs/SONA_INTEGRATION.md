@@ -305,21 +305,21 @@ interface JsLearnedPattern {
 
 ### Learning Performance
 
-| Mode       | Avg Time | Target  | Memory  |
-|------------|----------|---------|---------|
-| Real-time  | ~0.03ms  | low-latency | 100MB   |
-| Balanced   | ~0.04ms  | low-latency | 200MB   |
-| Research   | ~0.08ms  | <0.10ms | 500MB   |
-| Edge       | ~0.02ms  | low-latency | 50MB    |
-| Batch      | ~low-latency  | <0.10ms | 1GB     |
+| Mode       | Avg Time    | Target      | Memory  |
+|------------|-------------|-------------|---------|
+| Real-time  | low-latency | low-latency | 100MB   |
+| Balanced   | low-latency | low-latency | 200MB   |
+| Research   | low-latency | <0.10ms     | 500MB   |
+| Edge       | low-latency | low-latency | 50MB    |
+| Batch      | low-latency | <0.10ms     | 1GB     |
 
 ### Adaptation Performance
 
-| Operation           | Time     |
-|---------------------|----------|
-| Micro-LoRA Apply    | ~0.01ms  |
-| Pattern Search (k=5)| ~low-latency  |
-| Total Adaptation    | ~0.06ms  |
+| Operation           | Time        |
+|---------------------|-------------|
+| Micro-LoRA Apply    | low-latency |
+| Pattern Search (k=5)| low-latency |
+| Total Adaptation    | low-latency |
 
 ## Examples
 

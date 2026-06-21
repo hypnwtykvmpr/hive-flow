@@ -196,10 +196,10 @@ console.log(`JSON: ${available.json ? '✓' : '✗'}`);
 
 | Operation | Performance | Notes |
 |-----------|-------------|-------|
-| **Initialization** | ~100-200ms | WASM loading + schema creation |
-| **Reads** | ~0.5-2ms | In-memory, very fast |
-| **Writes** | ~0.5-2ms | In-memory, batched to disk |
-| **Persistence** | ~10-50ms | Export to buffer + file write |
+| **Initialization** | fast | WASM loading + schema creation |
+| **Reads** | very fast | In-memory, very fast |
+| **Writes** | very fast | In-memory, batched to disk |
+| **Persistence** | batched | Export to buffer + file write |
 | **Memory Usage** | Medium | Entire DB in memory |
 | **Disk I/O** | Low | Only on persist intervals |
 
@@ -208,10 +208,10 @@ console.log(`JSON: ${available.json ? '✓' : '✗'}`);
 ```
 Operation          better-sqlite3    sql.js
 ─────────────────────────────────────────────────────────
-Single Read        0.1ms            0.5ms
-Single Write       0.2ms            0.5ms
-Bulk Insert (1k)   50ms             100ms
-Vector Search (1k) 200ms            250ms
+Single Read        faster           slower (native faster)
+Single Write       faster           slower (native faster)
+Bulk Insert (1k)   faster           slower (native faster)
+Vector Search (1k) faster           slower (native faster)
 Memory Usage       Low              Medium
 ```
 

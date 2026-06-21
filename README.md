@@ -204,7 +204,7 @@ Smart routing skips expensive LLM calls when possible. Simple edits can use WASM
 | Complexity | Handler | Speed |
 |------------|---------|-------|
 | Simple | Agent Booster (WASM) | LLM skipped when available |
-| Medium | Haiku/Sonnet | ~500ms |
+| Medium | Haiku/Sonnet | fast |
 | Complex | Opus + Swarm | 2-5s |
 
 </details>
@@ -751,10 +751,10 @@ Not every task needs the most powerful (and expensive) model. Hive Flow analyzes
 | Tier | Handler | Latency | Cost | Use Cases |
 |------|---------|---------|------|-----------|
 | **1** | Agent Booster (WASM) | local | $0 | Simple transforms: var→const, add-types, remove-console |
-| **2** | Haiku/Sonnet | 500ms-2s | $0.0002-$0.003 | Bug fixes, refactoring, feature implementation |
+| **2** | Haiku/Sonnet | fast to interactive | $0.0002-$0.003 | Bug fixes, refactoring, feature implementation |
 | **3** | Opus | 2-5s | $0.015 | Architecture, security design, distributed systems |
 
-**Benchmark Results:** 0.57ms avg routing decision latency
+**Benchmark Results:** low-latency routing decisions
 
 </details>
 
@@ -950,9 +950,9 @@ flowchart LR
 **Self-Learning Memory (ADR-049):**
 | Component | Purpose | Performance |
 |-----------|---------|-------------|
-| **LearningBridge** | Connects insights to SONA/ReasoningBank neural pipeline | 0.12 ms/insight |
-| **MemoryGraph** | PageRank + label propagation knowledge graph | 2.78 ms build (1k nodes) |
-| **AgentMemoryScope** | 3-scope agent memory (project/local/user) with cross-agent transfer | 1.25 ms transfer |
+| **LearningBridge** | Connects insights to SONA/ReasoningBank neural pipeline | low-latency insight recording |
+| **MemoryGraph** | PageRank + label propagation knowledge graph | fast graph build (1k nodes) |
+| **AgentMemoryScope** | 3-scope agent memory (project/local/user) with cross-agent transfer | fast knowledge transfer |
 | **AutoMemoryBridge** | Bidirectional sync: Claude Code auto memory files ↔ HiveMemory | ADR-048 |
 
 </details>
@@ -1818,13 +1818,13 @@ hive-flow hooks worker status
 </details>
 
 <details>
-<summary>🔢 <strong>Embedding Providers</strong> — 4 providers from 3ms local to cloud APIs</summary>
+<summary>🔢 <strong>Embedding Providers</strong> — 4 providers from local to cloud APIs</summary>
 
 | Provider | Models | Dimensions | Latency | Cost |
 |----------|--------|------------|---------|------|
-| **ONNX Local** | ONNX SIMD optimized | 384 | ~3ms | Free (local) |
-| **OpenAI** | text-embedding-3-small/large, ada-002 | 1536-3072 | ~50-100ms | $0.02-0.13/1M tokens |
-| **Transformers.js** | all-MiniLM-L6-v2, all-mpnet-base-v2, bge-small | 384-768 | ~230ms | Free (local) |
+| **ONNX Local** | ONNX SIMD optimized | 384 | local low latency | Free (local) |
+| **OpenAI** | text-embedding-3-small/large, ada-002 | 1536-3072 | remote API latency | $0.02-0.13/1M tokens |
+| **Transformers.js** | all-MiniLM-L6-v2, all-mpnet-base-v2, bge-small | 384-768 | higher local JS latency | Free (local) |
 | **Mock** | Deterministic hash-based | Configurable | <1ms | Free |
 
 | Feature | Description | Performance |
@@ -1844,11 +1844,11 @@ hive-flow hooks worker status
 
 | Strategy | Algorithm | Fault Tolerance | Latency | Best For |
 |----------|-----------|-----------------|---------|----------|
-| **Byzantine (PBFT)** | Practical Byzantine Fault Tolerance | f < n/3 faulty nodes | ~100ms | Adversarial environments |
-| **Raft** | Leader-based log replication | f < n/2 failures | ~50ms | Strong consistency |
-| **Gossip** | Epidemic protocol dissemination | High partition tolerance | ~200ms | Eventually consistent |
-| **CRDT** | Conflict-free Replicated Data Types | Strong eventual consistency | ~10ms | Concurrent updates |
-| **Quorum** | Configurable read/write quorums | Flexible | ~75ms | Tunable consistency |
+| **Byzantine (PBFT)** | Practical Byzantine Fault Tolerance | f < n/3 faulty nodes | higher | Adversarial environments |
+| **Raft** | Leader-based log replication | f < n/2 failures | low | Strong consistency |
+| **Gossip** | Epidemic protocol dissemination | High partition tolerance | higher | Eventually consistent |
+| **CRDT** | Conflict-free Replicated Data Types | Strong eventual consistency | very low | Concurrent updates |
+| **Quorum** | Configurable read/write quorums | Flexible | moderate | Tunable consistency |
 
 </details>
 
@@ -2459,7 +2459,7 @@ hive-flow doctor --verbose
 ✅ Daemon       Running (PID: 12345)
 ✅ Memory       SQLite healthy, 1.2MB
 ⚠️ API Keys    ANTHROPIC_API_KEY set, OPENAI_API_KEY missing
-✅ MCP Server   Responsive (45ms latency)
+✅ MCP Server   Responsive (low-latency)
 ✅ Disk Space   2.4GB available
 
 Summary: 9/10 checks passed
@@ -2725,7 +2725,7 @@ Previous versions shipped sql.js (18MB WASM blob) for persistent storage. This c
 | | Before (sql.js) | After (RVF) |
 |---|---|---|
 | **Install size** | +18MB WASM | 0 extra deps |
-| **Cold start** | ~2s (WASM compile) | <50ms |
+| **Cold start** | slower (WASM compile) | <50ms |
 | **Platform support** | x86/ARM issues | Runs everywhere |
 | **Native deps** | Optional hnswlib-node | Pure TypeScript fallback |
 
@@ -3398,7 +3398,7 @@ Local TypeScript neural training for pattern learning, contrastive scoring, and 
 |-----------|-------------|-------------|
 | **MicroLoRA** | **<3μs adaptation** | Rank-2 LoRA |
 | **ScopedLoRA** | 17 operators | Per-task-type learning (coordination, security, testing) |
-| **FlashAttention** | 9,127 ops/sec | Memory-efficient attention mechanism |
+| **FlashAttention** | high-throughput | Memory-efficient attention mechanism |
 | **TrajectoryBuffer** | 10k capacity | Success/failure learning from patterns |
 | **InfoNCE Loss** | Contrastive | Temperature-scaled contrastive learning |
 | **AdamW Optimizer** | β1=0.9, β2=0.999 | Weight decay training optimization |
@@ -3430,14 +3430,14 @@ hive-flow neural export --ipfs --sign
 
 ```
 +---------------------+---------------+-------------+
-| Mechanism           | Avg Time (ms) | Ops/sec     |
+| Mechanism           | Latency       | Throughput  |
 +---------------------+---------------+-------------+
-| DotProduct          | 0.1063        | 9,410       |
-| FlashAttention      | 0.1096        | 9,127       |
-| MultiHead (4 heads) | 0.1661        | 6,020       |
-| MicroLoRA           | 0.0026        | 383,901     |
+| DotProduct          | low-latency   | high        |
+| FlashAttention      | low-latency   | high        |
+| MultiHead (4 heads) | low-latency   | moderate    |
+| MicroLoRA           | low-latency   | very high   |
 +---------------------+---------------+-------------+
-MicroLoRA Target (<100μs): ✓ PASS (2.60μs actual)
+MicroLoRA Target (<100μs): ✓ PASS
 ```
 
 #### Training Options
@@ -4143,9 +4143,9 @@ await aidefence.learnFromDetection(userInput, analysis, {
 
 | Provider | Latency | Quality | Cost | Offline | Best For |
 |----------|---------|---------|------|---------|----------|
-| **ONNX Local** | ~3ms | Good | Free | ✅ | Production |
-| **OpenAI** | ~50-100ms | Excellent | $0.02-0.13/1M | ❌ | Highest quality |
-| **Transformers.js** | ~230ms | Good | Free | ✅ | Local development |
+| **ONNX Local** | local low latency | Good | Free | ✅ | Production |
+| **OpenAI** | remote API latency | Excellent | $0.02-0.13/1M | ❌ | Highest quality |
+| **Transformers.js** | higher local JS latency | Good | Free | ✅ | Local development |
 | **Mock** | <1ms | N/A | Free | ✅ | Testing |
 
 ### Basic Usage
@@ -4521,9 +4521,9 @@ const similarity = cosineSimilarity(vectors[0], vectors[1]);
 
 | Provider | Latency | Cost | Offline |
 |----------|---------|------|---------|
-| **Local ONNX** | ~3ms | Free | ✅ |
-| Transformers.js | ~230ms | Free | ✅ |
-| OpenAI | ~50-100ms | $0.02-0.13/1M | ❌ |
+| **Local ONNX** | local low latency | Free | ✅ |
+| Transformers.js | higher local JS latency | Free | ✅ |
+| OpenAI | remote API latency | $0.02-0.13/1M | ❌ |
 
 </details>
 
@@ -4775,7 +4775,7 @@ AI manipulation defense, threat detection, and input validation.
 **AI Manipulation Defense System (AIMDS)** — Protect AI applications from prompt injection, jailbreaks, and data exposure with sub-millisecond detection.
 
 ```
-Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
+low-latency detection | 50+ Patterns | Self-Learning | HNSW Vector Search
 ```
 
 ### Why AIDefence?
@@ -4804,12 +4804,12 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 | Operation | Target | Actual | Throughput |
 |-----------|--------|--------|------------|
-| **Threat Detection** | <10ms | **0.04ms** | ✅ |
-| **Quick Scan** | <5ms | **0.02ms** | Pattern-only |
-| **PII Detection** | <3ms | **0.01ms** | Regex-based |
+| **Threat Detection** | <10ms | ✅ Met | ✅ |
+| **Quick Scan** | <5ms | ✅ Met | Pattern-only |
+| **PII Detection** | <3ms | ✅ Met | Regex-based |
 | **Vector Search** | indexed lookup | HiveMemory-backed | With HNSW support |
-| **Single-threaded** | - | - | >12,000 req/s |
-| **With Learning** | - | - | >8,000 req/s |
+| **Single-threaded** | - | - | high-throughput |
+| **With Learning** | - | - | high-throughput |
 
 ### CLI Commands
 
@@ -4987,19 +4987,19 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 
 | Category | Metric | Target | Measured |
 |----------|--------|--------|----------|
-| **Startup** | CLI cold start | <500ms | ✅ 380ms |
-| **Startup** | MCP server init | <400ms | ✅ 320ms |
-| **Memory** | HNSW search | <1ms | ✅ 0.4ms |
-| **Memory** | Pattern retrieval | <10ms | ✅ 6ms |
-| **Swarm** | Agent spawn | <200ms | ✅ 150ms |
-| **Swarm** | Consensus latency | <100ms | ✅ 75ms |
+| **Startup** | CLI cold start | <500ms | ✅ Met |
+| **Startup** | MCP server init | <400ms | ✅ Met |
+| **Memory** | HNSW search | <1ms | ✅ Met |
+| **Memory** | Pattern retrieval | <10ms | ✅ Met |
+| **Swarm** | Agent spawn | <200ms | ✅ Met |
+| **Swarm** | Consensus latency | <100ms | ✅ Met |
 | **Neural** | SONA adaptation | Low latency | Target tracked |
-| **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms |
-| **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms |
-| **Learning** | Insight recording | <5ms | ✅ 0.12ms |
-| **Learning** | Consolidation | <500ms | ✅ 0.26ms |
-| **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms |
-| **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms |
+| **Graph** | Build (1k nodes) | <200ms | ✅ Met |
+| **Graph** | PageRank (1k nodes) | <100ms | ✅ Met |
+| **Learning** | Insight recording | <5ms | ✅ Met |
+| **Learning** | Consolidation | <500ms | ✅ Met |
+| **Learning** | Confidence decay (1k) | <50ms | ✅ Met |
+| **Transfer** | Knowledge transfer | <100ms | ✅ Met |
 | **Task** | Success rate | High | ✅ Passing |
 
 ### Topology Performance

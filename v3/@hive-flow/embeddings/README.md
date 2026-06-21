@@ -280,16 +280,16 @@ service.removeEventListener(listener);
 
 | Provider | Latency | Quality | Cost | Offline |
 |----------|---------|---------|------|---------|
-| **ONNX Local** | ~3ms | Good | Free | Yes |
-| **OpenAI** | ~50-100ms | Excellent | $0.02-0.13/1M tokens | No |
-| **Transformers.js** | ~230ms | Good | Free | Yes |
-| **Mock** | <1ms | N/A | Free | Yes |
+| **ONNX Local** | local low latency | Good | Free | Yes |
+| **OpenAI** | remote API latency | Excellent | $0.02-0.13/1M tokens | No |
+| **Transformers.js** | higher local JS latency | Good | Free | Yes |
+| **Mock** | negligible (local) | N/A | Free | Yes |
 
 ### ONNX Local (Recommended)
 
 | Model | Dimensions | Speed | Best For |
 |-------|------------|-------|----------|
-| `default` | 384 | 3ms | General purpose, fastest |
+| `default` | 384 | low latency | General purpose, fastest |
 
 ### OpenAI Models
 

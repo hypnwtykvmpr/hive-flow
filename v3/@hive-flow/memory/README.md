@@ -437,12 +437,12 @@ const neighbors = graph.getNeighbors('entry-1', 2); // depth=2
 
 | Operation | Result | Target |
 |-----------|--------|--------|
-| Graph build (1k nodes) | 2.78 ms | <200 ms |
-| PageRank (1k nodes) | 12.21 ms | <100 ms |
-| Community detection (1k) | 19.62 ms | — |
-| `rankWithGraph(10)` | 0.006 ms | — |
-| `getTopNodes(20)` | 0.308 ms | — |
-| `getNeighbors(d=2)` | 0.005 ms | — |
+| Graph build (1k nodes) | Met | <200 ms |
+| PageRank (1k nodes) | Met | <100 ms |
+| Community detection (1k) | low-latency | — |
+| `rankWithGraph(10)` | low-latency | — |
+| `getTopNodes(20)` | low-latency | — |
+| `getNeighbors(d=2)` | low-latency | — |
 
 ## Agent-Scoped Memory (ADR-049)
 
@@ -509,22 +509,22 @@ const scopes = await listAgentScopes('/workspaces/my-project');
 
 | Operation | V2 Performance | V3 Performance |
 |-----------|---------------|----------------|
-| Vector Search | 150ms | <1ms (HNSW-indexed) |
-| Bulk Insert | 500ms | 5ms |
-| Memory Write | 50ms | <5ms |
-| Cache Hit | 5ms | <0.1ms |
-| Index Build | 10s | 800ms |
+| Vector Search | baseline | <1ms (HNSW-indexed) |
+| Bulk Insert | baseline | faster |
+| Memory Write | baseline | <5ms |
+| Cache Hit | baseline | <0.1ms |
+| Index Build | baseline | faster |
 
 ### ADR-049 Benchmarks
 
 | Operation | Actual | Target |
 |-----------|--------|--------|
-| Graph build (1k nodes) | 2.78 ms | <200 ms |
-| PageRank (1k nodes) | 12.21 ms | <100 ms |
-| Insight recording | 0.12 ms/each | <5 ms/each |
-| Consolidation | 0.26 ms | <500 ms |
-| Confidence decay (1k) | 0.23 ms | <50 ms |
-| Knowledge transfer | 1.25 ms | <100 ms |
+| Graph build (1k nodes) | Met | <200 ms |
+| PageRank (1k nodes) | Met | <100 ms |
+| Insight recording | Met | <5 ms/each |
+| Consolidation | Met | <500 ms |
+| Confidence decay (1k) | Met | <50 ms |
+| Knowledge transfer | Met | <100 ms |
 
 ## TypeScript Types
 

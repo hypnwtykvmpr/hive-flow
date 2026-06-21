@@ -24,7 +24,7 @@
 | Tier | Handler | Latency | Cost | Use Cases |
 |------|---------|---------|------|-----------|
 | **1** | Agent Booster | <1ms | $0 | Simple transforms (var→const, add-types, remove-console) |
-| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, bug fixes, low complexity |
+| **2** | Haiku | fast | $0.0002 | Simple tasks, bug fixes, low complexity |
 | **3** | Sonnet/Opus | 2-5s | $0.003-$0.015 | Architecture, security, complex reasoning |
 
 **Before spawning agents, get routing recommendation:**

@@ -78,11 +78,11 @@ createSONALearningEngine('batch', getModeConfig('batch'));
 
 ## Performance Targets
 
-| Operation | Target | Achieved |
-|-----------|--------|----------|
-| Learning  | low-latency | ~0.03ms ✓ |
-| Adaptation | <0.1ms | ~0.06ms ✓ |
-| Pattern search | <1ms | ~low-latency ✓ |
+| Operation      | Target      | Achieved    |
+|----------------|-------------|-------------|
+| Learning       | low-latency | low-latency ✓ |
+| Adaptation     | <0.1ms      | low-latency ✓ |
+| Pattern search | <1ms        | low-latency ✓ |
 
 ## Examples
 

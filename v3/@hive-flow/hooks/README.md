@@ -150,7 +150,7 @@ statusline --help
 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ Flash Attention optimization
 🤖 Swarm Agents    ◉ [ 5/15]      🟢 CVE 3/3    💾 156 patterns
 🔧 Architecture    DDD ●93%  │  Security ●CLEAN  │  Hooks ●ACTIVE
-📊 Routing         accuracy │  Avg 4.2ms │  1547 operations
+📊 Routing         accuracy │  Avg low-latency │  1547 operations
 ─────────────────────────────────────────────────────
 ```
 

@@ -4,7 +4,7 @@
 **AI Manipulation Defense System (AIMDS)** - Protect your AI applications from prompt injection, jailbreak attempts, and sensitive data exposure with sub-millisecond detection.
 
 ```
-Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
+50+ Patterns | Self-Learning | HNSW Vector Search
 ```
 
 ---
@@ -32,7 +32,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 `@hive-flow/aidefence` is a high-performance security library designed to protect AI/LLM applications from manipulation attempts. It provides:
 
-- **Real-time threat detection** with <10ms latency (actual: ~0.04ms)
+- **Real-time threat detection** with <10ms latency
 - **50+ built-in patterns** for prompt injection, jailbreaks, and social engineering
 - **PII detection** for emails, SSNs, API keys, passwords, and credit cards
 - **Self-learning capabilities** using ReasoningBank patterns
@@ -123,7 +123,7 @@ console.log(result);
 //   safe: false,
 //   threats: [{ type: 'jailbreak', severity: 'critical', confidence: 0.98, ... }],
 //   piiFound: false,
-//   detectionTimeMs: 0.04
+//   detectionTimeMs: /* low-latency */
 // }
 ```
 
@@ -421,7 +421,7 @@ Recommended Mitigations:
   instruction_override: block (high effectiveness)
   jailbreak: block (high effectiveness)
 
-Detection time: 0.042ms
+Detection time: low-latency
 ```
 
 ---
@@ -458,7 +458,7 @@ const result = await mcp.call('aidefence_scan', {
     "description": "DAN jailbreak attempt"
   }],
   "piiFound": false,
-  "detectionTimeMs": 0.04
+  "detectionTimeMs": /* low-latency */
 }
 ```
 
@@ -470,15 +470,15 @@ const result = await mcp.call('aidefence_scan', {
 
 | Operation | Target | Actual | Notes |
 |-----------|--------|--------|-------|
-| Threat Detection | <10ms | **0.04ms** | Well within target |
-| Quick Scan | <5ms | **0.02ms** | Pattern match only |
-| PII Detection | <3ms | **0.01ms** | Regex-based |
-| HNSW Search | <1ms | **0.1ms** | With HiveMemory |
+| Threat Detection | <10ms | **Met** | Well within target |
+| Quick Scan | <5ms | **Met** | Pattern match only |
+| PII Detection | <3ms | **Met** | Regex-based |
+| HNSW Search | <1ms | **Met** | With HiveMemory |
 
 ### Throughput
 
-- **Single-threaded**: >12,000 requests/second
-- **With learning**: >8,000 requests/second
+- **Single-threaded**: high throughput
+- **With learning**: high throughput
 - **Memory**: ~50KB per instance
 
 ### Optimization Tips

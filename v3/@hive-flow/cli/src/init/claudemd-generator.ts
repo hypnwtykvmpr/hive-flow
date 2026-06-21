@@ -79,7 +79,7 @@ function swarmOrchestration(): string {
 | Tier | Handler | Latency | Cost | Use Cases |
 |------|---------|---------|------|-----------|
 | **1** | Agent Booster (WASM) | <1ms | $0 | Simple transforms (var→const, add types) — Skip LLM |
-| **2** | Haiku | ~500ms | $0.0002 | Simple tasks, low complexity (<30%) |
+| **2** | Haiku | fast | $0.0002 | Simple tasks, low complexity (<30%) |
 | **3** | Sonnet/Opus | 2-5s | $0.003-0.015 | Complex reasoning, architecture, security (>30%) |
 
 - Always check for \`[AGENT_BOOSTER_AVAILABLE]\` or \`[TASK_MODEL_RECOMMENDATION]\` before spawning agents

@@ -36,8 +36,8 @@ V3 represents a complete architectural overhaul:
 
 | Metric | Target | Achieved |
 |--------|--------|----------|
-| Event Bus (100k events) | <50ms | ~6ms |
-| Map Lookup (100k gets) | <20ms | ~16ms |
+| Event Bus (100k events) | <50ms | Met |
+| Map Lookup (100k gets) | <20ms | Met |
 | Array.find vs Map O(1) | N/A | Map O(1) lookup |
 | Flash Attention | Flash Attention optimization | Validated |
 | HiveMemory Search | HNSW-indexed | HNSW indexed |

@@ -175,10 +175,10 @@ Choose the coordination pattern that fits your needs:
 
 | Topology | Best For | Scalability | Latency |
 |----------|----------|-------------|---------|
-| **Hierarchical** | Queen-led swarms | O(n), up to 100+ | 15-35ms |
-| **Mesh** | Distributed workloads | O(n²), up to 20 | 10-40ms |
-| **Centralized** | Simple coordination | O(n), up to 50 | 10-20ms |
-| **Hybrid** | Large mixed workloads | O(n), up to 200 | 20-50ms |
+| **Hierarchical** | Queen-led swarms | O(n), up to 100+ | low |
+| **Mesh** | Distributed workloads | O(n²), up to 20 | moderate |
+| **Centralized** | Simple coordination | O(n), up to 50 | low |
+| **Hybrid** | Large mixed workloads | O(n), up to 200 | moderate-high |
 
 ### Hierarchical (Default)
 ```typescript
@@ -262,8 +262,8 @@ The coordinator is optimized for V3 performance requirements:
 |--------|--------|--------|
 | Coordination Latency | <100ms | Verified in tests |
 | Consensus Time | <100ms | Verified in tests |
-| Message Throughput | >1000 msgs/sec | Verified in tests |
-| Agent Utilization | >85% | Achieved via parallel execution |
+| Message Throughput | high throughput | Throughput-oriented design |
+| Agent Utilization | high utilization | Designed for parallel execution |
 
 ### Performance Monitoring
 
