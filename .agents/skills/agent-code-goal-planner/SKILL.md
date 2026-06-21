@@ -201,15 +201,15 @@ analysis:
 optimizations:
   - database_query_optimization:
       actions: [add_indexes, optimize_joins, implement_pagination]
-      expected_improvement: 30%
+      expected_improvement: improvement
       
   - implement_caching_layer:
       actions: [redis_setup, cache_warming, invalidation_strategy]
-      expected_improvement: 25%
+      expected_improvement: improvement
       
   - code_optimization:
       actions: [algorithm_improvements, parallel_processing, batch_operations]
-      expected_improvement: 15%
+      expected_improvement: improvement
 ```
 
 ### Testing Strategy Plan

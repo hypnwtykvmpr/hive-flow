@@ -160,17 +160,17 @@ This agent specializes in identifying and resolving performance bottlenecks in d
 ### Example 1: Slow Test Execution
 **Analysis**: Sequential test execution taking 10 minutes
 **Recommendation**: Parallelize test suites
-**Result**: 70% reduction to 3 minutes
+**Result**: reduction to 3 minutes
 
 ### Example 2: Agent Coordination Delay
 **Analysis**: Hierarchical topology causing bottleneck
 **Recommendation**: Switch to mesh for this workload
-**Result**: 40% improvement in coordination time
+**Result**: improvement in coordination time
 
 ### Example 3: Memory Pressure
 **Analysis**: Large file operations causing swapping
 **Recommendation**: Stream processing instead of loading
-**Result**: 90% memory usage reduction
+**Result**: memory usage reduction
 
 ## Best Practices
 

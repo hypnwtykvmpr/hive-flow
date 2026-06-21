@@ -147,7 +147,7 @@ mcp__hive-flow__neural_train coordination --training_data="swarm_performance_his
 mcp__hive-flow__neural_predict --modelId="adaptive-coordinator" --input="{\"workload\":\"high_complexity\",\"agents\":10}"
 
 # Learn from outcomes
-mcp__hive-flow__neural_patterns learn --operation="topology_switch" --outcome="improved_performance_15%" --metadata="{\"from\":\"hierarchical\",\"to\":\"mesh\"}"
+mcp__hive-flow__neural_patterns learn --operation="topology_switch" --outcome="improved_performance" --metadata="{\"from\":\"hierarchical\",\"to\":\"mesh\"}"
 ```
 
 ### Performance Optimization

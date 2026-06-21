@@ -412,7 +412,7 @@ describe('Task Entity', () => {
 ## Success Metrics
 
 - [ ] **God Object Elimination**: orchestrator.ts (1,440 lines) → 5 focused domains (<300 lines each)
-- [ ] **Bounded Context Isolation**: 100% domain independence
+- [ ] **Bounded Context Isolation**: full domain independence
 - [ ] **Plugin Architecture**: Core + optional modules loading
 - [ ] **Clean Architecture**: Dependency inversion maintained
 - [ ] **Event-Driven Communication**: Loose coupling between domains

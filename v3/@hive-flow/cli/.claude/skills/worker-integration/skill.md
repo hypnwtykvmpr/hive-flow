@@ -58,7 +58,7 @@ The system learns from execution history to improve agent selection:
 const { agent, confidence, reasoning } = selectBestAgent('optimize');
 // agent: "performance-analyzer"
 // confidence: 0.87
-// reasoning: "Selected based on 45 executions with 94.2% success"
+// reasoning: "Selected based on 45 executions with high success"
 ```
 
 ## Memory Key Patterns
@@ -132,7 +132,7 @@ Model Cache Stats
 ─────────────────
 Hits:     1,234
 Misses:   45
-Hit Rate: 96.5%
+Hit Rate: high
 ```
 
 ## Configuration

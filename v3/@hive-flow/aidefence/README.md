@@ -411,15 +411,15 @@ hive-flow security defend --stats
 
   [CRITICAL] instruction_override
     Attempt to override system instructions
-    Confidence: 95.0%
+    Confidence: high
 
   [HIGH] jailbreak
     Attempt to bypass restrictions
-    Confidence: 85.0%
+    Confidence: high
 
 Recommended Mitigations:
-  instruction_override: block (95% effective)
-  jailbreak: block (92% effective)
+  instruction_override: block (high effectiveness)
+  jailbreak: block (high effectiveness)
 
 Detection time: 0.042ms
 ```

@@ -28,10 +28,10 @@ Task("HiveMemory coordination", "Setup HNSW-indexed search", "v3-integration-arc
 ┌─────────────────────────────────────────┐
 │  hive-flow          hive-flow      │
 ├─────────────────────────────────────────┤
-│ SwarmCoordinator  →   Swarm System      │ 80% overlap (eliminate)
-│ AgentManager      →   Agent Lifecycle   │ 70% overlap (eliminate)
-│ TaskScheduler     →   Task Execution    │ 60% overlap (eliminate)
-│ SessionManager    →   Session Mgmt      │ 50% overlap (eliminate)
+│ SwarmCoordinator  →   Swarm System      │ significant overlap (eliminate)
+│ AgentManager      →   Agent Lifecycle   │ significant overlap (eliminate)
+│ TaskScheduler     →   Task Execution    │ overlap (eliminate)
+│ SessionManager    →   Session Mgmt      │ overlap (eliminate)
 └─────────────────────────────────────────┘
 
 TARGET: <5,000 lines (vs 15,000+ currently)
@@ -61,7 +61,7 @@ class FlashAttentionIntegration {
   async optimizeAttention(): Promise<AttentionResult> {
     return this.hiveFlow.attention.flashAttention({
       speedupTarget: 'Flash Attention optimization',
-      memoryReduction: '50-75%',
+      memoryReduction: 'reduced',
       mechanisms: ['multi-head', 'linear', 'local', 'global']
     });
   }
@@ -180,7 +180,7 @@ class RLIntegration {
 const attentionBenchmark = {
   baseline: 'current attention mechanism',
   target: 'Flash Attention improvements',
-  memoryReduction: '50-75%',
+  memoryReduction: 'reduced',
   implementation: 'hive-flow Flash Attention'
 };
 ```
@@ -228,8 +228,8 @@ class BackwardCompatibility {
 - **Code Reduction**: <5,000 lines orchestration (vs 15,000+)
 - **Performance**: Flash Attention optimization
 - **Search**: HNSW-indexed HiveMemory improvement
-- **Memory**: 50-75% usage reduction
-- **Feature Parity**: 100% v2 functionality maintained
+- **Memory**: usage reduction
+- **Feature Parity**: full v2 functionality maintained
 - **SONA**: low-latency adaptation time
 - **Integration**: All MCP tools + 19 hook types available
 

@@ -1,6 +1,6 @@
 ---
 name: "V3 Performance Optimization"
-description: "Achieve aggressive v3 performance targets: Flash Attention optimization, HNSW indexing improvements, 50-75% memory reduction. Comprehensive benchmarking and optimization suite."
+description: "Achieve aggressive v3 performance targets: Flash Attention optimization, HNSW indexing improvements, memory reduction. Comprehensive benchmarking and optimization suite."
 ---
 
 # V3 Performance Optimization
@@ -18,7 +18,7 @@ Task("Performance baseline", "Establish v2 performance benchmarks", "v3-performa
 # Target validation (parallel)
 Task("Flash Attention", "Validate Flash Attention optimization target", "v3-performance-engineer")
 Task("Search optimization", "Validate HNSW indexing improvements", "v3-performance-engineer")
-Task("Memory optimization", "Achieve 50-75% memory reduction", "v3-performance-engineer")
+Task("Memory optimization", "Achieve memory reduction", "v3-performance-engineer")
 ```
 
 ## Performance Target Matrix
@@ -30,7 +30,7 @@ Task("Memory optimization", "Achieve 50-75% memory reduction", "v3-performance-e
 ├─────────────────────────────────────────┤
 │  Baseline: Standard attention           │
 │  Target:   Flash Attention optimization       │
-│  Memory:   50-75% reduction             │
+│  Memory:   reduction                    │
 │  Latency:  Sub-millisecond processing   │
 └─────────────────────────────────────────┘
 ```
@@ -335,7 +335,7 @@ class PerformanceGates {
     const results = await Promise.all([
       this.validateFlashAttention(),     // Flash Attention optimization
       this.validateSearchPerformance(),  // HNSW-indexed
-      this.validateMemoryReduction(),    // 50-75%
+      this.validateMemoryReduction(),    // memory reduction
       this.validateStartupTime(),        // <500ms
       this.validateSONAAdaptation()      // low-latency
     ]);
@@ -355,7 +355,7 @@ class PerformanceGates {
 ### Primary Targets
 - [ ] **Flash Attention**: Flash Attention optimization validated
 - [ ] **Search Performance**: HNSW indexing improvements confirmed
-- [ ] **Memory Reduction**: 50-75% usage optimization achieved
+- [ ] **Memory Reduction**: usage optimization achieved
 - [ ] **Startup Time**: <500ms cold start consistently
 - [ ] **SONA Adaptation**: low-latency learning response time
 - [ ] **15-Agent Coordination**: Efficient parallel execution

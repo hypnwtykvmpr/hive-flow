@@ -9,7 +9,7 @@ description: "Implement persistent memory patterns for AI agents using HiveMemor
 
 Provides memory management patterns for AI agents using HiveMemory's persistent storage and ReasoningBank integration. Enables agents to remember conversations, learn from interactions, and maintain context across sessions.
 
-**Performance**: HNSW-indexed vector search with 100% backward compatibility.
+**Performance**: HNSW-indexed vector search with full backward compatibility.
 
 ## Prerequisites
 
@@ -329,7 +329,7 @@ npx hivememory@latest migrate --source .swarm$memory.db
 - **Pattern Retrieval**: <1ms (with cache)
 - **Batch Insert**: 2ms for 100 patterns
 - **Memory Efficiency**: lower memory with quantization
-- **Backward Compatibility**: 100% compatible with ReasoningBank API
+- **Backward Compatibility**: fully compatible with ReasoningBank API
 
 ## Learn More
 

@@ -24,10 +24,10 @@ hooks:
 
     echo "🎯 ADR-001: Eliminate 10,000+ duplicate lines"
     echo "📊 Current duplicate functionality:"
-    echo "  • SwarmCoordinator vs Swarm System (80% overlap)"
-    echo "  • AgentManager vs Agent Lifecycle (70% overlap)"
-    echo "  • TaskScheduler vs Task Execution (60% overlap)"
-    echo "  • SessionManager vs Session Mgmt (50% overlap)"
+    echo "  • SwarmCoordinator vs Swarm System (significant overlap)"
+    echo "  • AgentManager vs Agent Lifecycle (significant overlap)"
+    echo "  • TaskScheduler vs Task Execution (overlap)"
+    echo "  • SessionManager vs Session Mgmt (overlap)"
 
     # Check integration points
     ls -la services$hive-flow-hooks/ 2>$dev$null | wc -l | xargs echo "🔧 Current hook integrations:"
@@ -49,7 +49,7 @@ hooks:
 
 ## Core Mission: ADR-001 Implementation
 
-Transform hive-flow from parallel implementation to specialized extension of hive-flow, eliminating 10,000+ lines of duplicate code while achieving 100% feature parity and performance improvements.
+Transform hive-flow from parallel implementation to specialized extension of hive-flow, eliminating 10,000+ lines of duplicate code while achieving full feature parity and performance improvements.
 
 ## Integration Strategy
 
@@ -60,10 +60,10 @@ Transform hive-flow from parallel implementation to specialized extension of hiv
 ├─────────────────────────────────────────┤
 │  hive-flow          hive-flow      │
 ├─────────────────────────────────────────┤
-│ SwarmCoordinator  →   Swarm System      │ 80% overlap
-│ AgentManager      →   Agent Lifecycle   │ 70% overlap
-│ TaskScheduler     →   Task Execution    │ 60% overlap
-│ SessionManager    →   Session Mgmt      │ 50% overlap
+│ SwarmCoordinator  →   Swarm System      │ significant overlap
+│ AgentManager      →   Agent Lifecycle   │ significant overlap
+│ TaskScheduler     →   Task Execution    │ overlap
+│ SessionManager    →   Session Mgmt      │ overlap
 └─────────────────────────────────────────┘
 
 TARGET: <5,000 lines orchestration (vs 15,000+ currently)
@@ -117,7 +117,7 @@ class FlashAttentionIntegration {
   async optimizeAttention(): Promise<AttentionResult> {
     return this.hiveFlow.attention.flashAttention({
       speedupTarget: 'Flash Attention optimization',
-      memoryReduction: '50-75%',
+      memoryReduction: 'reduced',
       mechanisms: ['multi-head', 'linear', 'local', 'global']
     });
   }
@@ -249,7 +249,7 @@ class CompatibilityCleanup {
 const attentionBenchmark = {
   baseline: 'current attention mechanism',
   target: 'Flash Attention improvements',
-  memoryReduction: '50-75%',
+  memoryReduction: 'reduced',
   implementation: 'hive-flow Flash Attention'
 };
 ```
@@ -315,11 +315,11 @@ class BackwardCompatibility {
 ### **Performance Targets**
 - [ ] **Flash Attention**: Flash Attention optimization validated
 - [ ] **Search Performance**: HNSW indexing improvements
-- [ ] **Memory Usage**: 50-75% reduction
+- [ ] **Memory Usage**: reduction
 - [ ] **SONA Adaptation**: low-latency response time
 
 ### **Feature Parity**
-- [ ] **100% Feature Compatibility**: All v2 features available
+- [ ] **Full Feature Compatibility**: All v2 features available
 - [ ] **API Compatibility**: Backward compatible interfaces
 - [ ] **Performance**: No regression, ideally improvement
 - [ ] **Documentation**: Migration guide complete

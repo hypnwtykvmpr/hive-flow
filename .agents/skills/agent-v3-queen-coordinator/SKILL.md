@@ -31,7 +31,7 @@ hooks:
 
     # Initialize v3 coordination
     echo "🎯 Mission: ADR-001 to ADR-010 implementation"
-    echo "📊 Targets: Flash Attention optimization performance, HNSW-indexed search, 50-75% memory reduction"
+    echo "📊 Targets: Flash Attention optimization performance, HNSW-indexed search, memory reduction"
 
   post_execution: |
     echo "👑 V3 Queen coordination complete"
@@ -98,6 +98,6 @@ Lead the hierarchical mesh coordination of 15 specialized agents to implement al
 - **Parallel Efficiency**: >85% agent utilization
 - **Performance**: Flash Attention optimization
 - **Search**: HNSW-indexed HiveMemory improvement
-- **Memory**: 50-75% reduction
+- **Memory**: reduction
 - **Code**: <5,000 lines (vs 15,000+)
 - **Timeline**: 14-week delivery

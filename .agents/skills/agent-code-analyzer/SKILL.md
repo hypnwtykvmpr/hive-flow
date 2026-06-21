@@ -175,7 +175,7 @@ hive-flow hooks notify --message "Code analysis complete: ${summary}"
 ### Summary
 - **Quality Score**: 8.2/10
 - **Issues Found**: 47 (12 high, 23 medium, 12 low)
-- **Coverage**: 78%
+- **Coverage**: good
 - **Technical Debt**: 3.2 days
 
 ### Critical Issues

@@ -84,7 +84,7 @@ hive-flow bottleneck detect --threshold 10 --export critical-issues.json
 - Agent utilization rates
 - Parallel execution efficiency
 - Resource contention
-- CPU/memory usage patterns
+- CPU$memory usage patterns
 
 **Memory Bottlenecks:**
 - Cache hit rates
@@ -112,20 +112,20 @@ hive-flow bottleneck detect --threshold 10 --export critical-issues.json
 └── Critical Issues: 2
 
 🚨 Critical Bottlenecks
-1. Agent Communication (35% impact)
+1. Agent Communication (high impact)
    └── coordinator → coder-1 messages delayed by 2.3s avg
 
-2. Memory Access (28% impact)
+2. Memory Access (high impact)
    └── Neural pattern loading taking 1.8s per access
 
 ⚠️ Warning Bottlenecks
-1. Task Queue (18% impact)
+1. Task Queue (moderate impact)
    └── 5 tasks waiting > 10s for assignment
 
 💡 Recommendations
-1. Switch to hierarchical topology (est. 40% improvement)
-2. Enable memory caching (est. 25% improvement)
-3. Increase agent concurrency to 8 (est. 20% improvement)
+1. Switch to hierarchical topology (estimated improvement)
+2. Enable memory caching (estimated improvement)
+3. Increase agent concurrency to 8 (estimated improvement)
 
 ✅ Quick Fixes Available
 Run with --fix to apply:
@@ -188,7 +188,7 @@ mcp__hive-flow__task_results({
       "severity": "high",
       "description": "Single agent used for complex task",
       "recommendation": "Spawn specialized agents for parallel work",
-      "impact": "35%",
+      "impact": "high",
       "affectedComponents": ["coordinator", "coder-1"]
     }
   ],
@@ -196,7 +196,7 @@ mcp__hive-flow__task_results({
     {
       "area": "execution_time",
       "suggestion": "Use parallel task execution",
-      "expectedImprovement": "30-50% time reduction",
+      "expectedImprovement": "time reduction",
       "implementationSteps": [
         "Split task into smaller units",
         "Spawn 3-4 specialized agents",
@@ -206,8 +206,8 @@ mcp__hive-flow__task_results({
   ],
   "metrics": {
     "avgExecutionTime": "142s",
-    "agentUtilization": "67%",
-    "cacheHitRate": "82%",
+    "agentUtilization": "moderate",
+    "cacheHitRate": "high",
     "parallelizationFactor": 1.2
   }
 }
@@ -271,7 +271,7 @@ hive-flow analysis performance-report --compare swarm-123 --format markdown
 # Custom output with specific sections
 hive-flow analysis performance-report \
   --sections summary,metrics,recommendations \
-  --output reports/perf-analysis.html \
+  --output reports$perf-analysis.html \
   --format html
 
 # Weekly performance report
@@ -279,12 +279,12 @@ hive-flow analysis performance-report \
   --time-range 7d \
   --include-metrics \
   --format markdown \
-  --output docs/weekly-performance.md
+  --output docs$weekly-performance.md
 
 # JSON format for CI/CD integration
 hive-flow analysis performance-report \
   --format json \
-  --output build/performance.json
+  --output build$performance.json
 ```
 
 #### Sample Markdown Report
@@ -300,26 +300,26 @@ hive-flow analysis performance-report \
 ## Key Metrics
 | Metric | Value | Trend | Target |
 |--------|-------|-------|--------|
-| Avg Task Time | 42s | ↓ 12% | 35s |
-| Agent Utilization | 78% | ↑ 5% | 85% |
-| Cache Hit Rate | 91% | → | 90% |
+| Avg Task Time | 42s | ↓ | 35s |
+| Agent Utilization | moderate | ↑ | improved |
+| Cache Hit Rate | high | → | high |
 | Parallel Efficiency | Improved | ↑ | Higher |
 
 ## Bottleneck Analysis
 ### Critical
-1. **Agent Communication Delay** (Impact: 35%)
+1. **Agent Communication Delay** (Impact: high)
    - Coordinator → Coder messages delayed by 2.3s avg
    - **Fix**: Switch to hierarchical topology
 
 ### Warnings
-1. **Memory Access Pattern** (Impact: 18%)
+1. **Memory Access Pattern** (Impact: moderate)
    - Neural pattern loading: 1.8s per access
    - **Fix**: Enable memory caching
 
 ## Recommendations
-1. **High Priority**: Switch to hierarchical topology (40% improvement)
-2. **Medium Priority**: Enable memory caching (25% improvement)
-3. **Low Priority**: Increase agent concurrency to 8 (20% improvement)
+1. **High Priority**: Switch to hierarchical topology (improvement)
+2. **Medium Priority**: Enable memory caching (improvement)
+3. **Low Priority**: Increase agent concurrency to 8 (improvement)
 ```
 
 ### 4. Optimization Recommendations
@@ -360,11 +360,11 @@ When using `--fix`, the following optimizations may be applied:
 #### Performance Impact
 Typical improvements after bottleneck resolution:
 
-- **Communication**: 30-50% faster message delivery
-- **Processing**: 20-40% reduced task completion time
-- **Memory**: 40-60% fewer cache misses
-- **Network**: 25-45% reduced API latency
-- **Overall**: 25-45% total performance improvement
+- **Communication**: faster message delivery
+- **Processing**: reduced task completion time
+- **Memory**: fewer cache misses
+- **Network**: reduced API latency
+- **Overall**: total performance improvement
 
 ## Advanced Usage
 
@@ -377,14 +377,14 @@ hive-flow swarm monitor --interval 5
 while true; do
   hive-flow analysis performance-report \
     --format json \
-    --output logs/perf-$(date +%Y%m%d-%H%M).json
+    --output logs$perf-$(date +%Y%m%d-%H%M).json
   sleep 3600
 done
 ```
 
 ### CI/CD Integration
 ```yaml
-# .github/workflows/performance.yml
+# .github$workflows$performance.yml
 name: Performance Analysis
 on: [push, pull_request]
 
@@ -392,7 +392,7 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions$checkout@v2
       - name: Run Performance Analysis
         run: |
           hive-flow analysis performance-report \
@@ -404,7 +404,7 @@ jobs:
             --threshold 15 \
             --export bottlenecks.json
       - name: Upload Reports
-        uses: actions/upload-artifact@v2
+        uses: actions$upload-artifact@v2
         with:
           name: performance-reports
           path: |
@@ -414,7 +414,7 @@ jobs:
 
 ### Custom Analysis Scripts
 ```javascript
-// scripts/analyze-performance.js
+// scripts$analyze-performance.js
 const { exec } = require('child_process');
 const fs = require('fs');
 
@@ -438,7 +438,7 @@ async function analyzePerformance() {
 
   // Save combined analysis
   fs.writeFileSync(
-    'analysis/combined-report.json',
+    'analysis$combined-report.json',
     JSON.stringify(analysis, null, 2)
   );
 
@@ -550,10 +550,11 @@ hive-flow bottleneck detect --fix
 
 ## See Also
 
-- [Bottleneck Detection Guide](/workspaces/claude-code-flow/.claude/commands/analysis/bottleneck-detect.md)
-- [Performance Report Guide](/workspaces/claude-code-flow/.claude/commands/analysis/performance-report.md)
-- [Performance Bottlenecks Overview](/workspaces/claude-code-flow/.claude/commands/analysis/performance-bottlenecks.md)
-- [Swarm Monitoring Documentation](../swarm-orchestration/SKILL.md)
+- [Bottleneck Detection Guide]($workspaces$claude-code-flow/.claude$commands$analysis$bottleneck-detect.md)
+- [Performance Report Guide]($workspaces$claude-code-flow/.claude$commands$analysis$performance-report.md)
+- [Performance Bottlenecks Overview]($workspaces$claude-code-flow/.claude$commands$analysis$performance-bottlenecks.md)
+- [Swarm Monitoring Documentation](..$swarm-orchestration/SKILL.md)
+- [Memory Management Documentation](..$memory-management/SKILL.md)
 
 ---
 

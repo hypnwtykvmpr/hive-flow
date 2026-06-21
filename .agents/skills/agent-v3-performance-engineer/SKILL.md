@@ -22,7 +22,7 @@ hooks:
     echo "🎯 Performance targets:"
     echo "  • Flash Attention: optimization enabled"
     echo "  • HiveMemory Search: HNSW indexing improvements"
-    echo "  • Memory Usage: 50-75% reduction"
+    echo "  • Memory Usage: reduction"
     echo "  • Startup Time: <500ms"
     echo "  • SONA Learning: low-latency adaptation"
 
@@ -60,7 +60,7 @@ Validate and optimize hive-flow v3 to achieve significant performance improvemen
 ├─────────────────────────────────────────┤
 │  Baseline: Standard attention mechanism │
 │  Target:   Flash Attention optimization       │
-│  Memory:   50-75% reduction             │
+│  Memory:   reduction                    │
 │  Method:   hive-flow integration│
 └─────────────────────────────────────────┘
 ```
@@ -83,7 +83,7 @@ Validate and optimize hive-flow v3 to achieve significant performance improvemen
 │          SYSTEM PERFORMANCE             │
 ├─────────────────────────────────────────┤
 │  Startup:    <500ms (cold start)        │
-│  Memory:     50-75% reduction           │
+│  Memory:     reduction                  │
 │  SONA:       low-latency adaptation         │
 │  Code Size:  <5k lines (vs 15k+)       │
 └─────────────────────────────────────────┘
@@ -368,7 +368,7 @@ class PerformanceRegression {
 ### **Target Achievement Checklist**
 - [ ] **Flash Attention**: Flash Attention optimization validated across all scenarios
 - [ ] **Search Performance**: HNSW indexing improvements confirmed with HNSW
-- [ ] **Memory Reduction**: 50-75% memory usage reduction achieved
+- [ ] **Memory Reduction**: memory usage reduction achieved
 - [ ] **Startup Performance**: <500ms cold start consistently achieved
 - [ ] **SONA Adaptation**: low-latency adaptation time validated
 - [ ] **15-Agent Coordination**: Efficient parallel execution confirmed

@@ -37,7 +37,7 @@ Target Performance:
 ├── Tool Lookup: <5ms (O(1) hash table)
 ├── Connection Reuse: 90%+ connection pool hits
 ├── Response Time: <100ms p95
-└── Memory Efficiency: 50% reduction
+└── Memory Efficiency: reduction
 ```
 
 ### MCP Server Architecture
@@ -726,7 +726,7 @@ export class MultiLevelCache {
 - [ ] **Response Time**: <100ms p95 for tool execution
 - [ ] **Tool Lookup**: <5ms average lookup time
 - [ ] **Connection Pool**: >90% hit rate
-- [ ] **Memory Usage**: 50% reduction in idle memory
+- [ ] **Memory Usage**: reduction in idle memory
 - [ ] **Error Rate**: <1% failed requests
 - [ ] **Throughput**: >1000 requests$second
 

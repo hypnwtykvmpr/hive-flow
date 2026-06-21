@@ -98,7 +98,7 @@ Example dashboard output:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Overall Truth Score: 0.947 ✅
-Trend: ↗️ +2.3% (7d)
+Trend: ↗️ improving (7d)
 
 Top Performers:
   verification-agent   0.982 ⭐

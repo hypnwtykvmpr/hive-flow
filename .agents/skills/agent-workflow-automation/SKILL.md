@@ -542,7 +542,7 @@ mcp__hive-flow__memory_usage {
     bottlenecks_identified: ["slow_test_suite", "inefficient_caching"],
     optimization_opportunities: ["parallel_matrix", "smart_caching"],
     performance_trends: "improving",
-    cost_optimization_potential: "23%"
+    cost_optimization_potential: "significant"
   }
 }
 ```
@@ -595,8 +595,8 @@ const createIntelligentWorkflow = async (repoContext) => {
       workflow,
       generated_at: Date.now(),
       optimization_level: "high",
-      estimated_performance_gain: "40%",
-      cost_reduction: "25%"
+      estimated_performance_gain: "significant",
+      cost_reduction: "reduced"
     }
   });
 
@@ -622,9 +622,9 @@ mcp__hive-flow__memory_usage {
       "missing_error_recovery"
     ],
     optimization_history: {
-      "build_time_reduction": "45%",
-      "resource_efficiency": "60%",
-      "failure_rate_improvement": "78%"
+      "build_time_reduction": "reduced",
+      "resource_efficiency": "high",
+      "failure_rate_improvement": "improved"
     }
   }
 }

@@ -181,7 +181,7 @@ class HNSWIndexer {
 ### **Memory Efficiency**
 - **Current**: Multiple backend overhead
 - **Target**: Unified storage with compression
-- **Improvement**: 50-75% memory reduction
+- **Improvement**: memory reduction
 - **Benchmark**: <1GB memory usage for large datasets
 
 ### **Query Flexibility**
@@ -303,7 +303,7 @@ class MemoryBenchmarks {
 - [ ] Backward compatibility maintained during transition
 - [ ] SONA integration functional with low-latency adaptation
 - [ ] Cross-agent memory sharing operational
-- [ ] 50-75% memory usage reduction achieved
+- [ ] memory usage reduction achieved
 
 ## Coordination Points
 

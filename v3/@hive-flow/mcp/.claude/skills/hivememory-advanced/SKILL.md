@@ -361,7 +361,7 @@ const result = await adapter.retrieveWithReasoning(queryEmbedding, {
 console.log('Synthesized Context:', result.context);
 // "Based on 10 similar problem-solving attempts, the most effective
 //  approach involves: 1) analyzing root cause, 2) brainstorming solutions,
-//  3) evaluating trade-offs, 4) implementing incrementally. Success rate: 85%"
+//  3) evaluating trade-offs, 4) implementing incrementally. Success rate: high"
 
 console.log('Patterns:', result.patterns);
 // Extracted common patterns across memories

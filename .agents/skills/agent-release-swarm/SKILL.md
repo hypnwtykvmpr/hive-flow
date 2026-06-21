@@ -476,7 +476,7 @@ hive-flow github release-docs \
 # Release v2.0.0
 
 ## 🎉 Highlights
-- Major feature X with 50% performance improvement
+- Major feature X with performance improvement
 - New API endpoints for feature Y
 - Enhanced security with feature Z
 
@@ -495,7 +495,7 @@ Description of the fix...
 - Migration: Update all client calls...
 
 ## 📈 Performance Improvements
-- Reduced memory usage by 30%
+- Reduced memory usage
 - API response time improved by 200ms
 
 ## 🔒 Security Updates

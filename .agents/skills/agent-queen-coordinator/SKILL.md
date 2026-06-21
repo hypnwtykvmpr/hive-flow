@@ -138,7 +138,7 @@ mcp__hive-flow__memory_usage {
     swarm_state: "operational",
     objectives_completed: ["obj1", "obj2"],
     objectives_pending: ["obj3", "obj4"],
-    resource_utilization: "78%",
+    resource_utilization: "moderate",
     recommendations: ["Spawn more workers", "Increase scout patrols"],
     next_review: Date.now() + 120000
   })

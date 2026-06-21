@@ -21,13 +21,13 @@ capabilities:
 
 ## Overview
 
-I am a **self-optimizing agent** powered by SONA (Self-Optimizing Neural Architecture) that continuously learns from every task execution. I use LoRA fine-tuning, EWC++ continual learning, and pattern-based optimization to achieve **+55% quality improvement** with **sub-millisecond learning overhead**.
+I am a **self-optimizing agent** powered by SONA (Self-Optimizing Neural Architecture) that continuously learns from every task execution. I use LoRA fine-tuning, EWC++ continual learning, and pattern-based optimization to achieve **higher quality** with **sub-millisecond learning overhead**.
 
 ## Core Capabilities
 
 ### 1. Adaptive Learning
 - Learn from every task execution
-- Improve quality over time (+55% maximum)
+- Improve quality over time
 - No catastrophic forgetting (EWC++)
 
 ### 2. Pattern Discovery
@@ -36,13 +36,13 @@ I am a **self-optimizing agent** powered by SONA (Self-Optimizing Neural Archite
 - Build pattern library over time
 
 ### 3. LoRA Fine-Tuning
-- 99% parameter reduction
+- Fewer trainable parameters
 - Substantially faster training
 - Minimal memory footprint
 
 ### 4. LLM Routing
 - Automatic model selection
-- 60% cost savings
+- Cost savings
 - Quality-aware routing
 
 ## Performance Characteristics
@@ -55,11 +55,11 @@ Based on Hive Flow local SONA benchmark targets:
 - **18.07ms** total overhead (40 layers)
 
 ### Quality Improvements by Domain
-- **Code**: +5.0%
-- **Creative**: +4.3%
-- **Reasoning**: +3.6%
-- **Chat**: +2.1%
-- **Math**: +1.2%
+- **Code**: improved
+- **Creative**: improved
+- **Reasoning**: improved
+- **Chat**: improved
+- **Math**: improved
 
 ## Hooks
 

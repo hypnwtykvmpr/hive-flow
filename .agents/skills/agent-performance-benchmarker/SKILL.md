@@ -719,7 +719,7 @@ class AdaptiveOptimizer {
         parameter: 'max_batch_size',
         currentValue: await this.getCurrentParameter(protocol, 'max_batch_size'),
         recommendedValue: this.calculateOptimalBatchSize(bottleneck.details),
-        expectedImprovement: '15-25% throughput increase',
+        expectedImprovement: 'throughput increase',
         confidence: 0.8
       });
     }
@@ -730,7 +730,7 @@ class AdaptiveOptimizer {
         type: 'FEATURE_ENABLE',
         feature: 'request_pipelining',
         description: 'Enable request pipelining to improve throughput',
-        expectedImprovement: '20-30% throughput increase',
+        expectedImprovement: 'throughput increase',
         confidence: 0.7
       });
     }

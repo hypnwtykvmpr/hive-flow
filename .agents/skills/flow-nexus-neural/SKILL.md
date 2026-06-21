@@ -478,7 +478,7 @@ mcp__flow-nexus__neural_validation_workflow({
 mcp__flow-nexus__neural_publish_template({
   model_id: "model_abc123",
   name: "High-Accuracy Sentiment Classifier",
-  description: "Fine-tuned BERT model for sentiment analysis with 94% accuracy",
+  description: "Fine-tuned BERT model for sentiment analysis with high accuracy",
   category: "nlp",
   price: 0, // 0 for free, or credits amount
   user_id: "your_user_id"
@@ -491,7 +491,7 @@ mcp__flow-nexus__neural_publish_template({
 mcp__flow-nexus__neural_rate_template({
   template_id: "sentiment-analysis-v2",
   rating: 5,
-  review: "Excellent model! Achieved 95% accuracy on my dataset.",
+  review: "Excellent model! Strong accuracy on my dataset.",
   user_id: "your_user_id"
 })
 ```

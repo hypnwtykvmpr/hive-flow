@@ -99,7 +99,7 @@ mcp__hive-flow__memory_usage {
     tests_run: 45,
     tests_passed: 43,
     tests_failed: 2,
-    coverage: "87%",
+    coverage: "high",
     failure_details: ["test1: timeout", "test2: assertion failed"],
     created_by: "worker-test-1"
   })

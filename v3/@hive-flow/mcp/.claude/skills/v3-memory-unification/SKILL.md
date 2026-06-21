@@ -159,7 +159,7 @@ class SONAMemoryIntegration {
 ## Performance Targets
 
 - **Search Speed**: HNSW indexing improvements via HNSW
-- **Memory Usage**: 50-75% reduction through optimization
+- **Memory Usage**: reduction through optimization
 - **Query Latency**: <100ms for 1M+ entries
 - **Cross-Agent Sharing**: Real-time memory synchronization
 - **SONA Integration**: low-latency adaptation time
@@ -168,7 +168,7 @@ class SONAMemoryIntegration {
 
 - [ ] All 7 legacy memory systems migrated to HiveMemory
 - [ ] HNSW-indexed search performance validated
-- [ ] 50-75% memory usage reduction achieved
+- [ ] Memory usage reduction achieved
 - [ ] Backward compatibility maintained
 - [ ] SONA learning patterns integrated
 - [ ] Cross-agent memory sharing operational

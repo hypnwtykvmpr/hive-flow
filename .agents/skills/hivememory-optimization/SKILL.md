@@ -56,7 +56,7 @@ const adapter = await createHiveMemoryAdapter({
 ### 1. Binary Quantization
 
 **Best For**: Large-scale deployments (1M+ vectors), memory-constrained environments
-**Trade-off**: ~2-5% accuracy loss, lower memory, faster
+**Trade-off**: minimal accuracy loss, lower memory, faster
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
@@ -74,12 +74,12 @@ const adapter = await createHiveMemoryAdapter({
 **Performance**:
 - Memory: lower
 - Search Speed: faster (bit operations)
-- Accuracy: 95-98% of original
+- Accuracy: near-original
 
 ### 2. Scalar Quantization
 
 **Best For**: Balanced performance$accuracy, moderate datasets
-**Trade-off**: ~1-2% accuracy loss, lower memory, faster
+**Trade-off**: minimal accuracy loss, lower memory, faster
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
@@ -97,12 +97,12 @@ const adapter = await createHiveMemoryAdapter({
 **Performance**:
 - Memory: lower
 - Search Speed: faster
-- Accuracy: 98-99% of original
+- Accuracy: near-original
 
 ### 3. Product Quantization
 
 **Best For**: High-dimensional vectors, balanced compression
-**Trade-off**: ~3-7% accuracy loss, lower memory, faster
+**Trade-off**: more accuracy loss, lower memory, faster
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
@@ -120,7 +120,7 @@ const adapter = await createHiveMemoryAdapter({
 **Performance**:
 - Memory: lower
 - Search Speed: faster
-- Accuracy: 93-97% of original
+- Accuracy: near-original
 
 ### 4. No Quantization (Full Precision)
 
@@ -281,7 +281,7 @@ console.log('Optimizations:', result.optimizations);
 // {
 //   consolidated: 15,  // Merged 15 similar patterns
 //   pruned: 3,         // Removed 3 low-quality patterns
-//   improved_quality: 0.12  // 12% quality improvement
+//   improved_quality: 0.12  // quality improvement
 // }
 ```
 
@@ -294,7 +294,7 @@ await adapter.optimize();
 // Get statistics
 const stats = await adapter.getStats();
 console.log('Before:', stats.totalPatterns);
-console.log('After:', stats.totalPatterns);  // Reduced by ~10-30%
+console.log('After:', stats.totalPatterns);  // Reduced
 ```
 
 ### Pruning Strategies
@@ -323,7 +323,7 @@ npx hivememory@latest stats .hivememory$vectors.db
 # Database Size: 47.2 MB (with binary quantization)
 # Avg Confidence: 0.87
 # Domains: 15
-# Cache Hit Rate: 84%
+# Cache Hit Rate: high
 # Index Type: HNSW
 ```
 
@@ -355,7 +355,7 @@ const adapter = await createHiveMemoryAdapter({
   hnswEfSearch: 50,            // Low search quality = faster
 });
 
-// Expected: <50µs search, 90-95% accuracy
+// Expected: <50µs search, near-original accuracy
 ```
 
 ### Recipe 2: Balanced Performance
@@ -368,7 +368,7 @@ const adapter = await createHiveMemoryAdapter({
   hnswEfSearch: 100,           // Balanced quality
 });
 
-// Expected: <100µs search, 98-99% accuracy
+// Expected: <100µs search, near-original accuracy
 ```
 
 ### Recipe 3: Maximum Accuracy

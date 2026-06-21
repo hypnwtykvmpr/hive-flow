@@ -223,7 +223,7 @@ if (failures.length > 0) {
 ### During Implementation: GNN-Enhanced Context Search
 
 ```typescript
-// Use GNN-enhanced search for better API context (+12.4% accuracy)
+// Use GNN-enhanced search for better API context (improved accuracy)
 const graphContext = {
   nodes: [authController, userService, database, middleware],
   edges: [[0, 1], [1, 2], [0, 3]], // Dependency graph
@@ -255,7 +255,7 @@ if (schemaSize > 1024) {
   );
 
   console.log(`Processed ${schemaSize} schema elements in ${result.executionTimeMs}ms`);
-  console.log(`Memory saved: ~50%`);
+  console.log(`Memory saved`);
 }
 ```
 

@@ -833,13 +833,13 @@ $implement React.memo and useMemo
 # You implement with AI guidance
 
 $perf --profile
-> ProductList: 45ms render (90% improvement!) ✅
+> ProductList: 45ms render (improved!) ✅
 
 $implement virtualization with react-window
 > AI implements virtual scrolling
 
 $perf --profile
-> ProductList: 12ms render (97% improvement!) ✅
+> ProductList: 12ms render (improved!) ✅
 > FPS: 60 stable ✅
 
 $commit --message "perf: optimize ProductList with memoization and virtualization"
@@ -951,7 +951,7 @@ Next Switch: in 3 minutes
 ├── Lines Changed: 234
 ├── Files Modified: 5
 ├── Tests Added: 12
-├── Coverage: 87% ↑3%
+├── Coverage: high ↑
 └── Commits: 3
 
 🎯 Focus: Implementation

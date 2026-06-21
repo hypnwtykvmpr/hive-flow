@@ -20,7 +20,7 @@ tools:
 
 # Browser Automation Skill
 
-Web browser automation using agent-browser with AI-optimized snapshots. Reduces context by 93% using element refs (@e1, @e2) instead of full DOM.
+Web browser automation using agent-browser with AI-optimized snapshots. Reduces context using element refs (@e1, @e2) instead of full DOM.
 
 ## Core Workflow
 

@@ -224,9 +224,9 @@ function processOrder(date: Date, config: Config) {
 3. **Documentation**: Update API docs with new endpoints
 
 ### 📊 Metrics
-- Code Coverage: 78% (Target: 80%)
+- Code Coverage: (Target: 80%)
 - Complexity: Average 4.2 (Good)
-- Duplication: 2.3% (Acceptable)
+- Duplication: Acceptable
 
 ### 🎯 Action Items
 - [ ] Fix SQL injection vulnerability
@@ -300,7 +300,7 @@ mcp__hive-flow__memory_usage {
   value: JSON.stringify({
     security_issues: ["SQL injection in auth.js:45"],
     performance_issues: ["N+1 queries in user.service.ts"],
-    code_quality: {score: 7.8, coverage: "78%"},
+    code_quality: {score: 7.8, coverage: "good"},
     action_items: ["Fix SQL injection", "Optimize queries", "Add tests"]
   })
 }

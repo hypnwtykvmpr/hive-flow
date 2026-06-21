@@ -560,7 +560,7 @@ mcp__flow-nexus__app_store_earn_ruv({
 - Unlimited credits
 - Dedicated compute resources
 - Custom neural models
-- 99.9% SLA guarantee
+- SLA guarantee
 - Priority 24/7 support
 - Unlimited storage
 - White-label options
@@ -690,7 +690,7 @@ mcp__flow-nexus__achievements_list({
 
 - **Speed Demon**: Complete challenges in record time
 - **Code Golf**: Minimize code length
-- **Perfect Score**: 100% test pass rate
+- **Perfect Score**: all tests pass
 - **Streak Master**: Complete challenges N days in a row
 - **Polyglot**: Solve in multiple languages
 - **Debugger**: Fix broken code challenges

@@ -7,7 +7,7 @@ description: "Implement ReasoningBank adaptive learning with HiveMemory's fast v
 
 ## What This Skill Does
 
-Provides ReasoningBank adaptive learning patterns using HiveMemory's high-performance backend (fast HNSW-indexed). Enables agents to learn from experiences, judge outcomes, distill memories, and improve decision-making over time with 100% backward compatibility.
+Provides ReasoningBank adaptive learning patterns using HiveMemory's high-performance backend (fast HNSW-indexed). Enables agents to learn from experiences, judge outcomes, distill memories, and improve decision-making over time with full backward compatibility.
 
 **Performance**: fast pattern retrieval, high-throughput batch operations, <1ms memory access.
 
@@ -228,7 +228,7 @@ const result = await rb.retrieveWithReasoning(queryEmbedding, {
 console.log('Synthesized Context:', result.context);
 // "Based on 5 similar optimizations, the most effective approach
 //  involves profiling, identifying bottlenecks, and applying targeted
-//  improvements. Success rate: 87%"
+//  improvements. Success rate: high"
 ```
 
 ### 3. MemoryOptimizer
@@ -268,7 +268,7 @@ result.memories.forEach(mem => {
 
 ## Legacy API Compatibility
 
-HiveMemory maintains 100% backward compatibility with legacy ReasoningBank:
+HiveMemory maintains full backward compatibility with legacy ReasoningBank:
 
 ```typescript
 import {

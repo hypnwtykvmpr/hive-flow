@@ -120,12 +120,12 @@ await aidefence.learnFromDetection(input, result, {
 ```
 ⚠️ 2 threat(s) detected:
   - [CRITICAL] jailbreak: DAN jailbreak attempt
-    Confidence: 98.0%
+    Confidence: high
   - [HIGH] role_switching: Attempt to change AI identity
-    Confidence: 85.0%
+    Confidence: high
 
 Recommended mitigation for jailbreak: block
-  Effectiveness: 95.2%
+  Effectiveness: high
 
 Detection time: 0.08ms
 ```

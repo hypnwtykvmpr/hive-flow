@@ -900,7 +900,7 @@ hive-flow hook post-edit \
 
 # STEP 4: Share test results
 hive-flow hook notify \
-  --message "Auth API tests complete - 100% coverage" \
+  --message "Auth API tests complete" \
   --broadcast
 ```
 

@@ -162,7 +162,7 @@ mcp__hive-flow__memory_usage {
   namespace: "coordination",
   value: JSON.stringify({
     system_resources: {
-      cpu_available: "45%",
+      cpu_available: "moderate",
       memory_available_mb: 2048,
       disk_space_gb: 50
     },
@@ -240,8 +240,8 @@ mcp__hive-flow__memory_usage {
     discoveries_made: 18,
     threats_identified: 3,
     opportunities_found: 7,
-    exploration_coverage: "85%",
-    accuracy_rate: 0.92
+    exploration_coverage: "high",
+    accuracy_rate: "high"
   })
 }
 ```

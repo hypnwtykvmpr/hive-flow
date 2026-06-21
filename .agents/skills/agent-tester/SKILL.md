@@ -283,7 +283,7 @@ mcp__hive-flow__memory_usage {
   value: JSON.stringify({
     passed: 145,
     failed: 2,
-    coverage: "87%",
+    coverage: "high",
     failures: ["auth.test.ts:45", "api.test.ts:123"]
   })
 }
