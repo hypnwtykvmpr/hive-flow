@@ -137,14 +137,14 @@ export class MCPClientError extends Error {
  * ```typescript
  * // Spawn an agent
  * const result = await callMCPTool('agent_spawn', {
- *   agentType: 'coder',
- *   priority: 'normal'
+ *   agentType: 'implementer',
+ *   task: 'Build the feature behind this issue'
  * });
  *
  * // Initialize swarm
  * const swarm = await callMCPTool('swarm_init', {
  *   topology: 'hierarchical-mesh',
- *   maxAgents: 15
+ *   maxAgents: 50
  * });
  * ```
  */

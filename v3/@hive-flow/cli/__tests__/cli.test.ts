@@ -115,7 +115,7 @@ describe('CLI', () => {
 
       const output = consoleOutput.join('');
       expect(output).toContain('V3 FEATURES:');
-      expect(output).toContain('15-agent');
+      expect(output).toContain('50-agent');
       expect(output).toContain('HiveMemory');
       expect(output).toContain('Flash Attention');
     });
