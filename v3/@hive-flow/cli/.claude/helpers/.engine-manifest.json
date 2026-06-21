@@ -1,14 +1,14 @@
 {
-  "syncedAt": "2026-06-21T00:15:23.607Z",
+  "syncedAt": "2026-06-21T01:26:57.278Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
       "name": "enforcement.cjs",
-      "sha256": "05d66787d4444cf8b3ee056b2c4af25e4b9001af6ae5be8aed6e602a9407cfb9"
+      "sha256": "4963279cd457a9d1c9a9910a10d0e4973407261c53872f0e31a130bf1ea3e04a"
     },
     {
       "name": "role-enforcement.cjs",
-      "sha256": "7b57479f6058f7aa3e0176a1700a4dbcad4aced86cc7ef411bf07116f831ce5a"
+      "sha256": "728a5795176e20c2cf64b07110562a149a7349bd953ee1bff9ab2c6a8c089374"
     },
     {
       "name": "hive-composition-gate.cjs",
