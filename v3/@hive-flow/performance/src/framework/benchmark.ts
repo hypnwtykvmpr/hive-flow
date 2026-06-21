@@ -12,7 +12,7 @@
  * - Memory Write: <5ms
  * - Swarm Consensus: <100ms
  * - Flash Attention: optimization enabled
- * - Memory Usage: <256MB (50% reduction)
+ * - Memory Usage: <256MB
  */
 
 import { performance, PerformanceObserver } from 'perf_hooks';

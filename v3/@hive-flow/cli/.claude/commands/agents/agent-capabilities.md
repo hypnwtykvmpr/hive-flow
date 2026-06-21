@@ -65,7 +65,7 @@ Matrix of agent capabilities and their specializations for Hive Flow V3.
 |------------|--------|------------------|
 | Flash Attention | memory-specialist, performance-engineer | Flash Attention optimization |
 | HNSW Search | memory-specialist | HNSW-indexed |
-| Quantization | performance-engineer | 50-75% memory |
+| Quantization | performance-engineer | Reduced memory |
 | SONA Adaptation | sona-learning-optimizer | low-latency |
 
 ## Consensus Capabilities

@@ -29,7 +29,7 @@ export type HiveTopology = 'mesh' | 'hierarchical' | 'ring' | 'star';
  * Attention mechanism types
  */
 export type HiveAttentionMechanism =
-  | 'flash'       // Flash Attention - fastest, 75% memory reduction
+  | 'flash'       // Flash Attention with memory reduction
   | 'linear'      // Linear attention for long sequences
   | 'hyperbolic'  // Hyperbolic attention for hierarchical data
   | 'moe'         // Mixture of Experts attention

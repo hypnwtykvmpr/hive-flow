@@ -172,12 +172,12 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 <details>
 <summary>⚡ <strong>Optimization</strong> — How to reduce cost and latency</summary>
 
-Skip expensive LLM calls for simple tasks using WebAssembly transforms, and compress tokens to reduce API costs by 30-50%.
+Skip expensive LLM calls for simple tasks using WebAssembly transforms, and compress tokens to reduce API costs.
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Agent Booster | WASM, AST analysis | Skips LLM for simple edits when available |
-| Token Optimizer | Compression, Caching | Reduces token usage 30-50% |
+| Token Optimizer | Compression, Caching | Reduces token usage |
 
 </details>
 
@@ -250,7 +250,7 @@ When you see these in hook output, the system is telling you how to optimize:
 </details>
 
 <details>
-<summary>💰 <strong>Token Optimizer</strong> — 30-50% token reduction</summary>
+<summary>💰 <strong>Token Optimizer</strong> — Token reduction</summary>
 
 The Token Optimizer can use optional hive-flow optimizations to reduce API costs by compressing context and caching results.
 
@@ -258,11 +258,11 @@ The Token Optimizer can use optional hive-flow optimizations to reduce API costs
 
 | Optimization | Token Savings | How It Works |
 |--------------|---------------|--------------|
-| ReasoningBank retrieval | -32% | Fetches relevant patterns instead of full context |
-| Agent Booster edits | -15% | Simple edits skip LLM entirely |
-| Cache (95% hit rate) | -10% | Reuses embeddings and patterns |
-| Optimal batch size | -20% | Groups related operations |
-| **Combined** | **30-50%** | Stacks multiplicatively |
+| ReasoningBank retrieval | Reduced | Fetches relevant patterns instead of full context |
+| Agent Booster edits | Reduced | Simple edits skip LLM entirely |
+| Cache | Reduced | Reuses embeddings and patterns |
+| Optimal batch size | Reduced | Groups related operations |
+| **Combined** | **Reduced** | Stacks multiplicatively |
 
 **Usage:**
 
@@ -341,7 +341,7 @@ swarm_init({
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
 | **Learning** | Static behavior, no adaptation | SONA self-learning with LearningBridge for insights |
 | **Agent Scoping** | Single project scope | 3-scope agent memory (project/local/user) with cross-agent transfer |
-| **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
+| **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
 | **LLM Provider** | Anthropic only | Multiple providers with automatic failover and cost-based routing |
@@ -741,7 +741,7 @@ Not every task needs the most powerful (and expensive) model. Hive Flow analyzes
 
 | Benefit | Impact |
 |---------|--------|
-| 💵 **API Cost Reduction** | 75% lower costs by using right-sized models |
+| 💵 **API Cost Reduction** | Lower costs by using right-sized models |
 | ⏱️ **Claude Max Usage** | Fewer LLM calls for tasks that can skip model inference |
 | 🚀 **Simple Tasks** | Local transform path instead of 2-5s LLM calls when available |
 | 🎯 **Zero Wasted Tokens** | Simple edits use 0 tokens (WASM handles them) |
@@ -1813,7 +1813,7 @@ hive-flow hooks worker status
 | `round-robin` | Rotate through providers sequentially | Even distribution |
 | `least-loaded` | Use provider with lowest current load | High throughput |
 | `latency-based` | Use fastest responding provider | Low latency |
-| `cost-based` | Use cheapest provider that meets requirements | Cost optimization (85%+ savings) |
+| `cost-based` | Use cheapest provider that meets requirements | Cost optimization |
 
 </details>
 
@@ -2010,7 +2010,7 @@ hive-flow hooks worker status
 | **HNSW Indexing** | Hierarchical Navigable Small World graphs | Approximate nearest-neighbor search |
 | **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
 | **Batch Processing** | Process multiple embeddings in single call | Higher throughput |
-| **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
+| **Memory Compression** | Pattern distillation and pruning | Reduced memory |
 
 </details>
 
@@ -2038,13 +2038,13 @@ hive-flow embeddings init --model all-mpnet-base-v2
 hive-flow embeddings search -q "authentication patterns"
 ```
 
-| Mode | Adaptation | Quality | Memory | Use Case |
-|------|------------|---------|--------|----------|
-| `real-time` | <0.5ms | 70%+ | 25MB | Production, low-latency |
-| `balanced` | <18ms | 75%+ | 50MB | General purpose |
-| `research` | <100ms | 95%+ | 100MB | Deep exploration |
-| `edge` | <1ms | 80%+ | 5MB | Resource-constrained |
-| `batch` | <50ms | 85%+ | 75MB | High-throughput |
+| Mode | Adaptation | Memory | Use Case |
+|------|------------|--------|----------|
+| `real-time` | <0.5ms | 25MB | Production, low-latency |
+| `balanced` | <18ms | 50MB | General purpose |
+| `research` | <100ms | 100MB | Deep exploration |
+| `edge` | <1ms | 5MB | Resource-constrained |
+| `batch` | <50ms | 75MB | High-throughput |
 
 | Algorithm | Type | Best For |
 |-----------|------|----------|
@@ -3958,7 +3958,7 @@ hive-flow route task "refactor authentication to use JWT"
 # ║                                                                ║
 # ║ Why this agent?                                                ║
 # ║ • Domain match: authentication, security                       ║
-# ║ • Historical success: 12/13 similar tasks (92%)                ║
+# ║ • Historical success: 12/13 similar tasks                      ║
 # ║ • Expertise: JWT, OAuth, session management                    ║
 # ║                                                                ║
 # ║ Alternative agents:                                            ║
@@ -4431,7 +4431,7 @@ claude mcp add hive-flow -- hive-flow mcp start
 | **ReasoningBank** | Learning memory with HNSW | Vector search |
 | **ONNX Embeddings** | Local vector generation | Fast local embeddings, no API calls |
 | **Embedding Geometry** | Geometric intelligence layer | <3ms latency |
-| **Multi-Model Router** | Intelligent model selection | 30-50% cost savings |
+| **Multi-Model Router** | Intelligent model selection | Cost savings |
 | **QUIC Transport** | High-performance transport | Ultra-low latency |
 
 <details>
@@ -4610,7 +4610,7 @@ const result2 = await router.route({
 
 > **Note on `haiku` alias:** `haiku` is permitted as a resolver alias (mapping to a fast/efficient model) for non-agent-task calls such as `provider_complete`, but is BLOCKED by the enforcement gate for agent task spawning (`agent_spawn`, `queen_spawn_worker`, `queen_mission_assign`, `agent_task`). Use `mini` for fast/efficient agent tasks.
 
-**Savings: 30-50% on LLM costs through intelligent routing**
+**Savings on LLM costs through intelligent routing**
 
 </details>
 
@@ -5000,7 +5000,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Learning** | Consolidation | <500ms | ✅ 0.26ms |
 | **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms |
 | **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms |
-| **Task** | Success rate | 95%+ | ✅ Passing |
+| **Task** | Success rate | High | ✅ Passing |
 
 ### Topology Performance
 
@@ -5044,7 +5044,7 @@ const browser = createBrowserService({
 browser.startTrajectory('Login to dashboard');
 
 
-// Use element refs (93% context reduction vs CSS selectors)
+// Use element refs (context reduction vs CSS selectors)
 const snapshot = await browser.snapshot({ interactive: true });
 await browser.fill('@e1', 'user@example.com');
 await browser.fill('@e2', 'password');
@@ -5059,7 +5059,7 @@ await browser.close();
 | Feature | Description |
 |---------|-------------|
 | **59 MCP Tools** | Complete browser automation via MCP protocol |
-| **Element Refs** | 93% context reduction with `@e1`, `@e2` refs |
+| **Element Refs** | Context reduction with `@e1`, `@e2` refs |
 | **Trajectory Learning** | Records actions for ReasoningBank/SONA |
 | **Security Scanning** | URL validation, PII detection, XSS/SQL injection prevention |
 | **9 Workflow Templates** | Login, OAuth, scraping, testing, monitoring |

@@ -118,10 +118,10 @@ export interface SONALearningStats {
 
 /**
  * Attention mechanism types supported by Hive Flow.
- * Flash Attention provides Flash Attention optimization with 50-75% memory reduction.
+ * Flash Attention provides Flash Attention optimization with memory reduction.
  */
 export type AttentionMechanism =
-  | 'flash'       // Flash Attention - fastest, 75% memory reduction
+  | 'flash'       // Flash Attention - fastest, memory reduction
   | 'multi-head'  // Standard multi-head attention
   | 'linear'      // Linear attention for long sequences
   | 'hyperbolic'  // Hyperbolic attention for hierarchical data
@@ -280,7 +280,7 @@ export interface FeatureFlags {
   enableHiveMemory: boolean;
   /** Enable trajectory tracking */
   enableTrajectoryTracking: boolean;
-  /** Enable GNN query refinement (+12.4% recall) */
+  /** Enable GNN query refinement (improved recall) */
   enableGNN: boolean;
   /** Enable intelligence bridge tools */
   enableIntelligenceBridge: boolean;

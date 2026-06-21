@@ -8,7 +8,7 @@
  * - Batch deduplication for concurrent requests
  *
  * Performance targets:
- * - 50% memory reduction via eviction
+ * - memory reduction via eviction
  * - faster cold start via preloading
  *
  * @module gastown-bridge/cache

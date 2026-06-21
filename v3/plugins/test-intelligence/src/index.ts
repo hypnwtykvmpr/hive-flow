@@ -66,7 +66,7 @@ export const pluginMetadata = {
     flakyDetection: '<5s for 1000 test runs',
     coverageAnalysis: '<10s for 100K LOC',
     mutationOptimization: '80% score in 20% time',
-    ciTimeReduction: '60-80%',
+    ciTimeReduction: 'significant reduction',
   },
 };
 

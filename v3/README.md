@@ -11,7 +11,7 @@ V3 represents a complete architectural overhaul:
 - **Faster testing** with Vitest
 - **fast HNSW-indexed search** with HNSW indexing
 - **Flash Attention optimization**
-- **50-75% memory reduction**
+- **Memory reduction**
 
 ## Features
 
@@ -386,7 +386,7 @@ pnpm test:coverage
 |----------|--------|--------|
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
-| **Memory** | Reduction | 50-75% |
+| **Memory** | Reduction | Substantially lower |
 | **Code** | Package count | 22 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |

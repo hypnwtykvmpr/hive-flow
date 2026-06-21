@@ -83,7 +83,7 @@ export class GuidanceProvider {
       '**Performance Targets**:',
       '- Vector search: measure the local backend in use',
       '- Attention helpers: local deterministic fallback',
-      '- Memory: 50-75% reduction',
+      '- Memory: reduction with quantization',
       '',
       '**Active Patterns**:',
       '- Use TDD London School (mock-first)',

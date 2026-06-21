@@ -4,7 +4,7 @@
  * Cost-optimized routing across multiple LLM providers from Hive Flow@alpha:
  * - anthropic: Claude models
  * - openai: GPT models
- * - openrouter: 100+ models, 85-99% cost savings
+ * - openrouter: model marketplace with cost-conscious routing
  * - ollama: Local models
  * - litellm: Unified API
  * - onnx: Free local inference (Phi-4)
@@ -40,7 +40,7 @@ import { EventEmitter } from 'events';
 export type ProviderType =
   | 'anthropic'   // Claude models
   | 'openai'      // GPT models
-  | 'openrouter'  // 100+ models, 85-99% cost savings
+  | 'openrouter'  // Model marketplace with cost-conscious routing
   | 'ollama'      // Local models
   | 'litellm'     // Unified API
   | 'onnx'        // Free local inference

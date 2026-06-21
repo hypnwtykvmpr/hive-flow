@@ -1800,7 +1800,7 @@ hive-flow hive-mind consensus --propose "task"
 | Metric | Target | Status |
 |--------|--------|--------|
 | HNSW Search | HNSW-indexed | ✅ Implemented |
-| Memory Reduction | 50-75% | ✅ Implemented |
+| Memory Reduction | with quantization | ✅ Implemented |
 | SONA Integration | Pattern learning | ✅ Implemented |
 | Flash Attention | Flash Attention optimization | 🔄 In Progress |
 | MCP Response | <100ms | ✅ Achieved |

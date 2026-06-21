@@ -558,11 +558,11 @@ const optimizeCommand: Command = {
         { key: 'impact', header: 'Impact', width: 15 },
       ],
       data: [
-        { priority: output.error('P0'), area: 'Memory', recommendation: 'Enable HNSW index quantization', impact: '+50% reduction' },
+        { priority: output.error('P0'), area: 'Memory', recommendation: 'Enable HNSW index quantization', impact: 'memory reduction' },
         { priority: output.warning('P1'), area: 'CPU', recommendation: 'Enable WASM SIMD acceleration', impact: 'higher throughput' },
         { priority: output.warning('P1'), area: 'Latency', recommendation: 'Enable Flash Attention', impact: 'Measure speedup' },
-        { priority: output.info('P2'), area: 'Cache', recommendation: 'Increase pattern cache size', impact: '+15% hit rate' },
-        { priority: output.info('P2'), area: 'Network', recommendation: 'Enable request batching', impact: '-30% latency' },
+        { priority: output.info('P2'), area: 'Cache', recommendation: 'Increase pattern cache size', impact: 'higher hit rate' },
+        { priority: output.info('P2'), area: 'Network', recommendation: 'Enable request batching', impact: 'lower latency' },
       ],
     });
 
@@ -640,7 +640,7 @@ export const performanceCommand: Command = {
     output.printList([
       'HNSW Search: HNSW-indexed rather than brute force',
       'Flash Attention: optimization enabled',
-      'Memory: 50-75% reduction with quantization',
+      'Memory: reduction with quantization',
     ]);
     output.writeln();
     output.writeln(output.dim('Created by Hive Flow'));

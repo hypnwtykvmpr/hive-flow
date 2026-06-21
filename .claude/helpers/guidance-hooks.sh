@@ -73,7 +73,7 @@ case "$COMMAND" in
 **Performance Targets**:
 - HNSW search: fast HNSW-indexed
 - Flash Attention: optimization enabled
-- Memory: 50-75% reduction
+- Memory: reduced usage
 
 **Active Patterns**:
 - Use TDD London School (mock-first)

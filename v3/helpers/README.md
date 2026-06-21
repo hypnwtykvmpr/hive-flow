@@ -103,7 +103,7 @@ chmod +x your-project/.claude/helpers/*.sh
     },
     "performance": {
       "flashAttentionTarget": "Flash Attention optimization",
-      "memoryReductionTarget": "50-75%"
+      "memoryReductionTarget": "memory reduction"
     }
   },
   "hooks": {

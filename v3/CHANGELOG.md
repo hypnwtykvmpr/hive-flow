@@ -32,7 +32,7 @@ Complete restructure into 10 independent @hive-flow modules:
 
 #### Flash Attention Integration
 - **Flash Attention optimization** via built-in local attention kernels
-- 50-75% memory reduction during large context processing
+- Memory reduction during large context processing
 - Native NAPI (fastest), WebAssembly, and JavaScript fallback runtimes
 - Automatic runtime selection based on environment
 
@@ -46,12 +46,12 @@ Complete restructure into 10 independent @hive-flow modules:
 - **fast HNSW-indexed** search with HNSW indexing
 - Unified memory backend replacing 6+ fragmented systems
 - Quantization support (significant memory reduction)
-- GNN-enhanced context retrieval (+12.4% accuracy)
+- GNN-enhanced context retrieval (improved accuracy)
 
 #### Startup & Execution
-- **CLI cold start**: 20ms (96% faster, target: 500ms)
+- **CLI cold start**: 20ms (target: 500ms)
 - **Agent spawn**: 5ms (faster than v2)
-- **Memory reduction**: 83.1% achieved
+- **Memory reduction**: achieved
 - **Task orchestration**: improved parallel speedup
 
 ### 🔧 New @hive-flow Modules

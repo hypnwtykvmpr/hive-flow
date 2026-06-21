@@ -39,7 +39,7 @@
     "optionalComponents": {
       "TokenOptimizer": {
         "description": "Token reduction via local cache and conservative routing defaults",
-        "savings": "30-50%",
+        "savings": "reduced",
         "features": [
           "ReasoningBank",
           "cache",

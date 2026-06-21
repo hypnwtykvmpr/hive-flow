@@ -39,7 +39,7 @@
 |--------|--------|--------|
 | HNSW Search | Substantially faster | ✅ Achieved |
 | Flash Attention | Validated optimization | ✅ Achieved (alpha.102) |
-| Memory Reduction | 50-75% | ✅ Achieved |
+| Memory Reduction | Substantially lower | ✅ Achieved |
 | MCP Response | <100ms | ✅ Achieved |
 | CLI Startup | <500ms | ✅ Achieved |
 

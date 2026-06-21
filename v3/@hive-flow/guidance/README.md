@@ -49,7 +49,7 @@ The gains are not "better answers." They are less rework, fewer runaway loops, a
 | Dimension | Without control plane | With control plane | Improvement |
 |-----------|-------|-------------------|-------------|
 | Autonomy duration | Minutes to hours | Days to weeks | Substantially longer |
-| Cost per successful outcome | Rises super-linearly as agents loop | Agents slow naturally under uncertainty | **30–60% lower** |
+| Cost per successful outcome | Rises super-linearly as agents loop | Agents slow naturally under uncertainty | **Lower** |
 | Reliability (tool + memory) | Frequent silent failures | Failures surface early, writes blocked before corruption | Substantially higher |
 | Rule compliance over time | Degrades after ~30 min | Enforced mechanically at every step | **Constant** |
 
@@ -1005,19 +1005,19 @@ Each module contributes measurable improvement to a specific failure mode. These
 
 | # | Module | Key Metric | Improvement |
 |---|--------|-----------|-------------|
-| 1 | Hook Integration | Destructive tool actions | **50–90% reduction** |
-| 2 | Retriever Injection | Repeat instructions | **20–50% reduction** |
+| 1 | Hook Integration | Destructive tool actions | **Substantially reduced** |
+| 2 | Retriever Injection | Repeat instructions | **Reduced** |
 | 3 | Ledger Persistence | Debug time | **Substantially faster** |
-| 4 | Proof Envelope | Debate time on incidents | **30–70% less** |
-| 5 | Tool Gateway | Duplicate write actions | **80–95% reduction** |
-| 6 | Memory Write Gating | Silent corruption | **70–90% reduction** |
+| 4 | Proof Envelope | Debate time on incidents | **Less** |
+| 5 | Tool Gateway | Duplicate write actions | **Substantially reduced** |
+| 6 | Memory Write Gating | Silent corruption | **Substantially reduced** |
 | 7 | Conformance Test | Iteration speed | **Significantly faster** |
 | 8 | Trust Accumulation | Untrusted agent throughput | Throttled to **0.1x** |
-| 9 | Truth Anchors | Hallucinated contradictions | **80–95% reduction** |
-| 10 | Uncertainty Tracking | Low-confidence decisions | **60–80% reduction** |
-| 11 | Temporal Assertions | Actions on expired facts | **90–99% reduction** |
-| 12 | Authority + Irreversibility | Unauthorized irreversible actions | **99%+ prevention** |
-| 13 | Adversarial Defense | Prompt injection success | **80–95% reduction** |
+| 9 | Truth Anchors | Hallucinated contradictions | **Substantially reduced** |
+| 10 | Uncertainty Tracking | Low-confidence decisions | **Reduced** |
+| 11 | Temporal Assertions | Actions on expired facts | **Largely eliminated** |
+| 12 | Authority + Irreversibility | Unauthorized irreversible actions | **Largely prevented** |
+| 13 | Adversarial Defense | Prompt injection success | **Substantially reduced** |
 | 14 | Meta-Governance | Governance drift per cycle | **Bounded to 10%** |
 | 15 | Continue Gate | Runaway loop duration | **Self-terminates in N steps** |
 

@@ -4,7 +4,7 @@ Local Flash Attention-compatible capabilities for the V3 performance module.
 
 ## Overview
 
-This module provides high-performance attention mechanisms optimized for V3's Flash Attention optimization targets. Flash Attention reduces memory usage by ~50% while achieving significant performance improvements through block-wise computation.
+This module provides high-performance attention mechanisms optimized for V3's Flash Attention optimization targets. Flash Attention reduces memory usage while achieving significant performance improvements through block-wise computation.
 
 ## Features
 
@@ -169,7 +169,7 @@ console.log(validation.meetsMinimum); // true when optimized path beats baseline
 The V3 module measures Flash Attention performance against the current runtime baseline:
 
 - **Baseline Comparison**: optimized path should be faster than baseline on the sampled workload
-- **Memory Reduction**: ~50%
+- **Memory Reduction**: Substantially lower
 - **Target Use Cases**:
   - Small (128D): Mobile/edge devices
   - Medium (256D): Standard applications

@@ -32,7 +32,7 @@ Agent Request → Security Scan → Browser Adapter → agent-browser CLI → Pl
 
 🧠 **Trajectory Learning** - Records browser interactions for ReasoningBank/SONA learning. Successful patterns are stored and reused.
 
-📊 **AI-Optimized Snapshots** - 93% context reduction using element refs (`@e1`, `@e2`) instead of full CSS selectors.
+📊 **AI-Optimized Snapshots** - Context reduction using element refs (`@e1`, `@e2`) instead of full CSS selectors.
 
 🐝 **Swarm Coordination** - Multi-session browser coordination for parallel scraping, testing, and validation tasks.
 

@@ -46,7 +46,7 @@ Task({
 })
 ```
 
-**Benefits:** 75% cost reduction, sub-millisecond for Tier 1 tasks
+**Benefits:** cost reduction, sub-millisecond for Tier 1 tasks
 
 ---
 
@@ -493,7 +493,7 @@ Features:
 |--------|--------|
 | Flash Attention | Flash Attention optimization |
 | HNSW Search | HNSW-indexed |
-| Memory Reduction | 50-75% with quantization |
+| Memory Reduction | With quantization |
 | MCP Response | <100ms |
 | CLI Startup | <500ms |
 | SONA Adaptation | low-latency |

@@ -620,7 +620,7 @@ CVE remediation, input validation, path security:
 - `TokenGenerator` — Secure token generation
 
 ### Token Optimizer (Agent Booster)
-Integrates local Hive Flow optimizations for 30-50% token reduction:
+Integrates local Hive Flow optimizations for token reduction:
 ```typescript
 import { getTokenOptimizer } from '@hive-flow/integration';
 const optimizer = await getTokenOptimizer();

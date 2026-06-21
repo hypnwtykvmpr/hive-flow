@@ -49,7 +49,7 @@ Result includes:
     {
       "area": "execution_time",
       "suggestion": "Use parallel task execution",
-      "expectedImprovement": "30-50% time reduction"
+      "expectedImprovement": "reduced execution time"
     }
   ]
 }

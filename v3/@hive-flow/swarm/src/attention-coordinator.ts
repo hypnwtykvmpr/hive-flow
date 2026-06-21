@@ -3,7 +3,7 @@
  *
  * Implements attention-based coordination mechanisms from local compatibility API:
  * - multi-head: Standard multi-head attention
- * - flash: Flash Attention optimization, 75% memory reduction
+ * - flash: Flash Attention optimization with memory reduction
  * - linear: For long sequences
  * - hyperbolic: Hierarchical data
  * - moe: Mixture of Experts routing
@@ -11,7 +11,7 @@
  *
  * Performance Targets:
  * - Flash Attention: optimization enabled
- * - Memory Reduction: 50-75%
+ * - Memory Reduction: with quantization
  * - MoE Routing: <5ms
  *
  * @module v3/swarm/attention-coordinator
@@ -29,7 +29,7 @@ import { randomBytes } from 'crypto';
  */
 export type AttentionType =
   | 'multi-head'   // Standard multi-head attention
-  | 'flash'        // Flash Attention optimization, 75% memory reduction
+  | 'flash'        // Flash Attention optimization with memory reduction
   | 'linear'       // For long sequences
   | 'hyperbolic'   // Hierarchical data
   | 'moe'          // Mixture of Experts

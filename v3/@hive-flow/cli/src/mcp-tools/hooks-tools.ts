@@ -856,7 +856,7 @@ export const hooksMetrics: MCPTool = {
       },
       performance: {
         flashAttention: 'Flash Attention optimization',
-        memoryReduction: '50-75% reduction',
+        memoryReduction: 'memory reduction',
         searchImprovement: 'fast HNSW-indexed',
         tokenReduction: 'fewer tokens',
       },
@@ -1136,7 +1136,7 @@ export const hooksExplain: MCPTool = {
         reasoning: [
           `Task analysis identified ${matchedPatterns.length || 1} relevant patterns`,
           `"${suggestion.agents[0]}" has highest capability match for this task type`,
-          `Historical success rate for similar tasks: 87%`,
+          `Historical success patterns found for similar tasks`,
           `Confidence threshold met (${(suggestion.confidence * 100).toFixed(0)}% >= 70%)`,
         ],
       },
@@ -2490,7 +2490,7 @@ export const hooksIntelligenceAttention: MCPTool = {
       stats: {
         computeTimeMs,
         speedup: mode === 'flash' ? 'Flash Attention optimization' : mode === 'moe' ? 'MoE optimization' : 'optimized',
-        memoryReduction: mode === 'flash' ? '50-75%' : '25-40%',
+        memoryReduction: mode === 'flash' ? 'memory reduction' : 'memory reduction',
       },
       implementation,
     };

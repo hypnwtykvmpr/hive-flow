@@ -298,7 +298,7 @@ export class OptimizerLoop {
 
     switch (change.changeType) {
       case 'modify':
-        // Modifying a rule typically reduces its specific violations by 30-50%
+        // Modifying a rule applies a conservative violation-reduction heuristic.
         violationReduction = affectedRatio * 0.4;
         reworkReduction = change.triggeringViolation.cost * 0.3;
         break;

@@ -348,7 +348,7 @@ export const agentRoleMapping = {
     responsibilities: [
       'Benchmark suite',
       'Flash Attention optimization',
-      'Memory optimization (50-75%)'
+      'Memory optimization'
     ]
   },
   'agent-15': {

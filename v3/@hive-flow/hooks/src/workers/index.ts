@@ -95,7 +95,7 @@ function isValidWorkerName(name: unknown): name is string {
 }
 
 // ============================================================================
-// Pre-compiled Regexes for DDD Pattern Detection (20-40% faster)
+// Pre-compiled Regexes for DDD Pattern Detection
 // ============================================================================
 
 const DDD_PATTERNS = {
@@ -108,7 +108,7 @@ const DDD_PATTERNS = {
 } as const;
 
 // ============================================================================
-// File Cache for Repeated Reads (30-50% I/O reduction)
+// File Cache for Repeated Reads
 // ============================================================================
 
 interface CacheEntry {
@@ -1263,7 +1263,7 @@ export function createADRWorker(projectRoot: string): WorkerHandler {
     const v3Path = path.join(projectRoot, 'v3');
     const dddDomains = ['agent-lifecycle', 'task-execution', 'memory-management', 'coordination'];
 
-    // Run all ADR checks in parallel for 60-80% speedup
+    // Run all ADR checks in parallel
     const [
       adr001Result,
       adr002Results,

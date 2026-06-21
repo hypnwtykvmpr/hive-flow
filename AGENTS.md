@@ -768,7 +768,7 @@ Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery 
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (23,035t read) | 1,902,394t work | 99% savings
+Stats: 50 obs (23,035t read) | 1,902,394t work | savings
 
 ### May 20, 2026
 S2 Wave 1 PR 0B implementation complete + git state investigation (force-push origin/v8 + pre-existing test failures) (May 20 at 8:26 AM)

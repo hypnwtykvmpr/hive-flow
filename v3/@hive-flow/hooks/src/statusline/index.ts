@@ -524,7 +524,7 @@ export class StatuslineGenerator {
     return {
       flashAttentionTarget: 'Flash Attention optimization',
       searchImprovement: 'HNSW-indexed',
-      memoryReduction: '50-75%',
+      memoryReduction: 'memory reduction',
     };
   }
 

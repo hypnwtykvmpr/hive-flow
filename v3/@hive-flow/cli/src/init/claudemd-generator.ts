@@ -317,7 +317,7 @@ function performanceSection(): string {
 - Always profile before optimizing — never guess at bottlenecks
 - Prefer algorithmic improvements over micro-optimizations
 - Keep HNSW search within fast HNSW-indexed target
-- Keep memory reduction within 50-75% target with quantization
+- Keep memory reduction within target with quantization
 
 ### Performance Tooling
 \`\`\`bash

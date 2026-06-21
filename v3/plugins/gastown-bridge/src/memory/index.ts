@@ -7,7 +7,7 @@
  * - Memory monitoring with pressure callbacks
  * - Lazy loading for deferred resource initialization
  *
- * Target: 75% memory reduction, <10MB heap for 10k beads
+ * Target: memory reduction, <10MB heap for 10k beads
  *
  * @module gastown-bridge/memory
  */

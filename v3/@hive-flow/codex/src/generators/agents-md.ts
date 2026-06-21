@@ -269,7 +269,7 @@ function generateFull(options: AgentsMdOptions): string {
 | Metric | Target | Notes |
 |--------|--------|-------|
 | HNSW Search | Fast vector retrieval | Vector operations |
-| Memory Reduction | 50-75% | Int8 quantization |
+| Memory Reduction | with quantization | Int8 quantization |
 | MCP Response | <100ms | API latency |
 | CLI Startup | <500ms | Cold start |
 | SONA Adaptation | low-latency | Neural learning |

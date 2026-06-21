@@ -220,7 +220,7 @@ bridge.on('health-check', ({ results }) => {
 | Flash Attention speedup | Flash Attention optimization |
 | HiveMemory search | fast HNSW-indexed |
 | SONA adaptation | low-latency |
-| Memory reduction | 50-75% |
+| Memory reduction | Substantially lower |
 
 ## TypeScript Types
 

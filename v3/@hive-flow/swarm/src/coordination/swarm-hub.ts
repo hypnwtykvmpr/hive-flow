@@ -649,7 +649,7 @@ export class SwarmHub implements ISwarmHub {
         criteria: [
           { description: 'Single CoordinationEngine', met: false, evidence: null },
           { description: 'Pluggable strategies', met: false, evidence: null },
-          { description: '50% code reduction', met: false, evidence: null }
+          { description: 'code reduction', met: false, evidence: null }
         ],
         status: 'pending',
         completedAt: null
@@ -673,7 +673,7 @@ export class SwarmHub implements ISwarmHub {
         criteria: [
           { description: 'Flash Attention optimization', met: false, evidence: null },
           { description: 'HNSW-indexed HiveMemory search', met: false, evidence: null },
-          { description: '50-75% memory reduction', met: false, evidence: null },
+          { description: 'memory reduction', met: false, evidence: null },
           { description: '<500ms startup time', met: false, evidence: null }
         ],
         status: 'pending',

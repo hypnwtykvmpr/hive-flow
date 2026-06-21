@@ -723,7 +723,7 @@ const coordinateCommand: Command = {
     output.printList([
       `Flash Attention: ${output.success('Flash Attention optimization')}`,
       `HiveMemory Search: ${output.success('HNSW indexing improvements')}`,
-      `Memory Reduction: ${output.success('50-75%')}`,
+      `Memory Reduction: ${output.success('with quantization')}`,
       `Code Reduction: ${output.success('<5,000 lines')}`
     ]);
 

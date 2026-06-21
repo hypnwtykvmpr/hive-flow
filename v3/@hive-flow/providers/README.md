@@ -9,7 +9,7 @@
 - **Load Balancing** - Round-robin, latency-based, least-loaded, cost-based strategies
 - **Automatic Failover** - Seamless provider switching on failures
 - **Request Caching** - LRU cache with configurable TTL
-- **Cost Optimization** - Up to 85%+ savings with intelligent routing
+- **Cost Optimization** - Savings with intelligent routing
 - **Streaming Support** - Full streaming for all providers
 - **Tool Calling** - Unified tool/function calling interface
 - **Health Monitoring** - Real-time provider health checks

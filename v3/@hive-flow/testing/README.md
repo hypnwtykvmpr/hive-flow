@@ -459,7 +459,7 @@ The testing framework includes assertions for V3 performance targets:
 |--------|--------|
 | Search Speedup | HNSW-indexed |
 | Flash Attention Speedup | Flash Attention optimization |
-| Memory Reduction | >= 50% |
+| Memory Reduction | Reduced |
 | Startup Time | < 500ms |
 | Response Time | < 100ms |
 

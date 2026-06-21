@@ -574,7 +574,7 @@ const coordinator = createUnifiedSwarmCoordinator({
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| QUIC Transport | 🔌 Via bridge | 0-RTT connections, 50-70% faster |
+| QUIC Transport | 🔌 Via bridge | 0-RTT connections, faster |
 | Swarm Learning Optimizer | 🔌 Via bridge | Auto topology recommendations |
 | E2B Sandbox Agents | 🔌 Via bridge | Isolated execution environments |
 | P2P with GunDB/IPFS | 🔌 Via bridge | Free decentralized coordination |

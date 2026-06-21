@@ -70,7 +70,7 @@ const FEATURE_FLAG_DEFINITIONS: Record<keyof FeatureFlags, FeatureFlagInfo> = {
   },
   enableGNN: {
     name: 'enableGNN',
-    description: 'Enable GNN query refinement for +12.4% recall improvement',
+    description: 'Enable GNN query refinement for improved recall',
     defaultValue: true,
     experimental: false,
     performanceImpact: 'medium',

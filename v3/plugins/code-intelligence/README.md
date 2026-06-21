@@ -195,7 +195,7 @@ const result = await mcp.invoke('code/split-suggest', {
 //     },
 //     ...
 //   ],
-//   couplingReduction: '45%',
+//   couplingReduction: 'reduced',
 //   migrationComplexity: 'medium'
 // }
 ```

@@ -14,7 +14,7 @@
  * - Load balancing (round-robin, latency, cost-based)
  * - Automatic failover
  * - Request caching
- * - Cost optimization (85%+ savings with intelligent routing)
+ * - Cost optimization (savings with intelligent routing)
  * - Circuit breaker protection
  * - Health monitoring
  *

@@ -116,7 +116,7 @@ flowchart TB
 | Component | Purpose | Performance |
 |-----------|---------|-------------|
 | **SONA** | Self-Optimizing Neural Architecture - learns optimal routing | low-latency adaptation |
-| **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves 95%+ knowledge |
+| **EWC++** | Elastic Weight Consolidation - prevents catastrophic forgetting | Preserves knowledge |
 | **Local Attention** | Deterministic attention-style scoring | Offline, no external package |
 | **Vector Search** | Local vector search and hashing | Offline, no external package |
 | **ReasoningBank** | Pattern storage with trajectory learning | RETRIEVE→JUDGE→DISTILL |
@@ -220,12 +220,12 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 <details>
 <summary>⚡ <strong>Optimization</strong> — How to reduce cost and latency</summary>
 
-Skip expensive LLM calls for simple tasks using WebAssembly transforms, and compress tokens to reduce API costs by 30-50%.
+Skip expensive LLM calls for simple tasks using WebAssembly transforms, and compress tokens to reduce API costs.
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Agent Booster | WASM, AST analysis | Skips LLM for simple edits (<1ms) |
-| Token Optimizer | Compression, Caching | Reduces token usage 30-50% |
+| Token Optimizer | Compression, Caching | Reduces token usage |
 
 </details>
 
@@ -245,9 +245,9 @@ Background daemons handle security audits, performance optimization, and session
 </details>
 
 <details>
-<summary>🎯 <strong>Task Routing</strong> — Extend your Claude Code subscription by 250%</summary>
+<summary>🎯 <strong>Task Routing</strong> — Extend your Claude Code subscription</summary>
 
-Smart routing skips expensive LLM calls when possible. Simple edits use WASM (free), medium tasks use cheaper models. This can extend your Claude Code usage by 250% or save significantly on direct API costs.
+Smart routing skips expensive LLM calls when possible. Simple edits use WASM (free), medium tasks use cheaper models. This can extend your Claude Code usage or save significantly on direct API costs.
 
 | Complexity | Handler | Speed |
 |------------|---------|-------|
@@ -298,7 +298,7 @@ When you see these in hook output, the system is telling you how to optimize:
 </details>
 
 <details>
-<summary>💰 <strong>Token Optimizer</strong> — 30-50% token reduction</summary>
+<summary>💰 <strong>Token Optimizer</strong> — Token reduction</summary>
 
 The Token Optimizer integrates hive-flow optimizations to reduce API costs by compressing context and caching results.
 
@@ -306,11 +306,11 @@ The Token Optimizer integrates hive-flow optimizations to reduce API costs by co
 
 | Optimization | Token Savings | How It Works |
 |--------------|---------------|--------------|
-| ReasoningBank retrieval | -32% | Fetches relevant patterns instead of full context |
-| Agent Booster edits | -15% | Simple edits skip LLM entirely |
-| Cache (95% hit rate) | -10% | Reuses embeddings and patterns |
-| Optimal batch size | -20% | Groups related operations |
-| **Combined** | **30-50%** | Stacks multiplicatively |
+| ReasoningBank retrieval | Reduced | Fetches relevant patterns instead of full context |
+| Agent Booster edits | Reduced | Simple edits skip LLM entirely |
+| Cache | Reduced | Reuses embeddings and patterns |
+| Optimal batch size | Reduced | Groups related operations |
+| **Combined** | **Reduced** | Stacks multiplicatively |
 
 **Usage:**
 
@@ -389,10 +389,10 @@ swarm_init({
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
 | **Learning** | Static behavior, no adaptation | SONA self-learning with low-latency adaptation, LearningBridge for insights |
 | **Agent Scoping** | Single project scope | 3-scope agent memory (project/local/user) with cross-agent transfer |
-| **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns (89% accuracy) |
+| **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
-| **LLM Provider** | Anthropic only | 12+ providers with automatic failover and cost-based routing (85% savings) |
+| **LLM Provider** | Anthropic only | 12+ providers with automatic failover and cost-based routing |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
 | **Performance** | Baseline | Task, swarm, and SWE-Bench evaluation metrics require current benchmark evidence |
 
@@ -768,7 +768,7 @@ What makes Hive Flow different from other agent frameworks? These 10 capabilitie
 </details>
 
 <details>
-<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Save 75% on API costs, extend Claude Max usage</summary>
+<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Save on API costs, extend Claude Max usage</summary>
 
 Not every task needs the most powerful (and expensive) model. Hive Flow analyzes each request and automatically routes it to the cheapest handler that can do the job well. Simple code transforms skip the LLM entirely using WebAssembly. Medium tasks use faster, cheaper models. Only complex architecture decisions use Opus.
 
@@ -776,7 +776,7 @@ Not every task needs the most powerful (and expensive) model. Hive Flow analyzes
 
 | Benefit | Impact |
 |---------|--------|
-| 💵 **API Cost Reduction** | 75% lower costs by using right-sized models |
+| 💵 **API Cost Reduction** | Lower costs by using right-sized models |
 | ⏱️ **Claude Max Extension** | More tasks within your quota limits |
 | 🚀 **Faster Simple Tasks** | <1ms for transforms vs 2-5s with LLM |
 | 🎯 **Zero Wasted Tokens** | Simple edits use 0 tokens (WASM handles them) |
@@ -1723,7 +1723,7 @@ Pre-built WASM plugins for semantic search, intent routing, and pattern storage.
 | Plugin | Description | Performance |
 |--------|-------------|-------------|
 | **SemanticCodeSearchPlugin** | Semantic code search with vector embeddings | Real-time indexing |
-| **IntentRouterPlugin** | Routes user intents to optimal handlers | 95%+ accuracy |
+| **IntentRouterPlugin** | Routes user intents to optimal handlers | High accuracy |
 | **HookPatternLibraryPlugin** | Pre-built patterns for common tasks | Security, testing, performance |
 | **MCPToolOptimizerPlugin** | Optimizes MCP tool selection | Context-aware suggestions |
 | **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | fast search |
@@ -1786,7 +1786,7 @@ hive-flow hooks worker status
 | `round-robin` | Rotate through providers sequentially | Even distribution |
 | `least-loaded` | Use provider with lowest current load | High throughput |
 | `latency-based` | Use fastest responding provider | Low latency |
-| `cost-based` | Use cheapest provider that meets requirements | Cost optimization (85%+ savings) |
+| `cost-based` | Use cheapest provider that meets requirements | Cost optimization |
 
 </details>
 
@@ -1983,7 +1983,7 @@ hive-flow hooks worker status
 | **HNSW Indexing** | Hierarchical Navigable Small World graphs | fast HNSW-indexed search |
 | **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
 | **Batch Processing** | Process multiple embeddings in single call | Higher throughput |
-| **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
+| **Memory Compression** | Pattern distillation and pruning | Reduced memory |
 
 </details>
 
@@ -2011,13 +2011,13 @@ hive-flow embeddings init --model all-mpnet-base-v2
 hive-flow embeddings search -q "authentication patterns"
 ```
 
-| Mode | Adaptation | Quality | Memory | Use Case |
-|------|------------|---------|--------|----------|
-| `real-time` | <0.5ms | 70%+ | 25MB | Production, low-latency |
-| `balanced` | <18ms | 75%+ | 50MB | General purpose |
-| `research` | <100ms | 95%+ | 100MB | Deep exploration |
-| `edge` | <1ms | 80%+ | 5MB | Resource-constrained |
-| `batch` | <50ms | 85%+ | 75MB | High-throughput |
+| Mode | Adaptation | Memory | Use Case |
+|------|------------|--------|----------|
+| `real-time` | <0.5ms | 25MB | Production, low-latency |
+| `balanced` | <18ms | 50MB | General purpose |
+| `research` | <100ms | 100MB | Deep exploration |
+| `edge` | <1ms | 5MB | Resource-constrained |
+| `batch` | <50ms | 75MB | High-throughput |
 
 | Algorithm | Type | Best For |
 |-----------|------|----------|
@@ -3800,7 +3800,7 @@ hive-flow route task "refactor authentication to use JWT"
 # ║                                                                ║
 # ║ Why this agent?                                                ║
 # ║ • Domain match: authentication, security                       ║
-# ║ • Historical success: 12/13 similar tasks (92%)                ║
+# ║ • Historical success: 12/13 similar tasks                      ║
 # ║ • Expertise: JWT, OAuth, session management                    ║
 # ║                                                                ║
 # ║ Alternative agents:                                            ║
@@ -4719,7 +4719,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Learning** | Consolidation | <500ms | ✅ 0.26ms |
 | **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms |
 | **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms |
-| **Task** | Success rate | 95%+ | ✅ Passing |
+| **Task** | Success rate | High | ✅ Passing |
 
 ### Topology Performance
 
@@ -4763,7 +4763,7 @@ const browser = createBrowserService({
 browser.startTrajectory('Login to dashboard');
 
 
-// Use element refs (93% context reduction vs CSS selectors)
+// Use element refs (context reduction vs CSS selectors)
 const snapshot = await browser.snapshot({ interactive: true });
 await browser.fill('@e1', 'user@example.com');
 await browser.fill('@e2', 'password');
@@ -4778,7 +4778,7 @@ await browser.close();
 | Feature | Description |
 |---------|-------------|
 | **59 MCP Tools** | Complete browser automation via MCP protocol |
-| **Element Refs** | 93% context reduction with `@e1`, `@e2` refs |
+| **Element Refs** | Context reduction with `@e1`, `@e2` refs |
 | **Trajectory Learning** | Records actions for ReasoningBank/SONA |
 | **Security Scanning** | URL validation, PII detection, XSS/SQL injection prevention |
 | **9 Workflow Templates** | Login, OAuth, scraping, testing, monitoring |

@@ -124,7 +124,7 @@ EOF
     cat > "$METRICS_DIR/performance.json" <<EOF
 {
   "flashAttention": {"speedup": "1.0x", "target": "Flash Attention optimization"},
-  "memory": {"reduction": "0%", "target": "50-75%"},
+  "memory": {"reduction": "0%", "target": "Memory reduction"},
   "codeReduction": {"linesRemoved": 0, "target": "10,000+"},
   "startupTime": {"current": "2000ms", "target": "500ms"},
   "lastUpdated": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"

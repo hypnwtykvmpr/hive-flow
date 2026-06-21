@@ -87,7 +87,7 @@ V3 Performance Gains
 | Metric | Target | Description |
 |--------|--------|-------------|
 | Flash Attention | Flash Attention optimization | Neural attention speedup |
-| Memory Reduction | 50-75% | Quantization savings |
+| Memory Reduction | Reduced | Quantization savings |
 | HNSW Search | HNSW-indexed | Vector search improvement |
 | SONA Adaptation | low-latency | Real-time learning |
 

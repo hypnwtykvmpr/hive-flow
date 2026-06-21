@@ -5,7 +5,7 @@
  *
  * Key Features:
  * - SONA Learning: Real-time adaptation with low-latency response
- * - Flash Attention: optimization enabled with 50-75% memory reduction
+ * - Flash Attention: optimization enabled with memory reduction
  * - HiveMemory: fast HNSW-indexed search via HNSW indexing
  * - Intelligence Bridge: 19 hook tools + 9 learning tools
  * - Trajectory Tracking: Experience replay for continuous learning
@@ -435,7 +435,7 @@ export const METADATA = {
     flashAttentionSpeedup: 'Flash Attention optimization',
     hiveMemorySearchSpeedup: 'HNSW-indexed',
     sonaAdaptationLatency: 'low-latency',
-    memoryReduction: '50-75%',
+    memoryReduction: 'memory reduction',
   },
   workerPatterns: {
     baseWorker: 'WorkerBase with embeddings and load management',

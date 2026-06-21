@@ -131,7 +131,7 @@ function Create-DefaultConfigs {
     if (!(Test-Path $perfFile)) {
         $perfData = @{
             flashAttention = @{speedup="1.0x"; target="Flash Attention optimization"}
-            memory = @{reduction="0%"; target="50-75%"}
+            memory = @{reduction="0%"; target="Memory reduction"}
             codeReduction = @{linesRemoved=0; target="10,000+"}
             startupTime = @{current="2000ms"; target="500ms"}
             lastUpdated = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")

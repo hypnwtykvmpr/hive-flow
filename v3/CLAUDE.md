@@ -32,7 +32,7 @@ This directory contains the V3 monorepo packages. Root CLAUDE.md rules apply her
 | Metric | Target | Status |
 |--------|--------|--------|
 | HNSW Search | HNSW-indexed | Implemented |
-| Memory Reduction | 50-75% (Int8 quantization) | Implemented |
+| Memory Reduction | Int8 quantization | Implemented |
 | MCP Response | <100ms | Achieved |
 | CLI Startup | <500ms | Achieved |
 | Flash Attention | Flash Attention optimization | In progress |

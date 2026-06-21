@@ -28,7 +28,7 @@
  * Performance Targets:
  * - Flash Attention: optimization enabled
  * - HiveMemory Search: HNSW indexing improvements
- * - Memory Reduction: 50-75%
+ * - Memory Reduction: with quantization
  * - Code Reduction: <5,000 lines (vs 15,000+)
  * - Startup Time: <500ms
  *
@@ -204,7 +204,7 @@ export const V3_INFO = {
   performanceTargets: {
     flashAttention: 'Flash Attention optimization',
     hivememorySearch: 'HNSW indexing improvements',
-    memoryReduction: '50-75%',
+    memoryReduction: 'memory reduction',
     codeReduction: '<5,000 lines',
     startupTime: '<500ms'
   },

@@ -138,10 +138,10 @@ When using `--fix`, the following optimizations may be applied:
 
 Typical improvements after bottleneck resolution:
 
-- **Communication**: 30-50% faster message delivery
-- **Processing**: 20-40% reduced task completion time
-- **Memory**: 40-60% fewer cache misses
-- **Overall**: 25-45% performance improvement
+- **Communication**: faster message delivery
+- **Processing**: reduced task completion time
+- **Memory**: fewer cache misses
+- **Overall**: improved performance
 
 ## Integration with Claude Code
 
