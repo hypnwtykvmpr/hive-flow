@@ -148,7 +148,7 @@ Agents organize into swarms led by queens that coordinate work, prevent drift, a
 - 👷 **8 Worker Types**: Researcher, Coder, Analyst, Tester, Architect, Reviewer, Optimizer, Documenter
 - 🗳️ **3 Consensus Algorithms**: Majority, Weighted (Queen 3x), Byzantine (f < n/3)
 - 🧠 **Collective Memory**: Shared knowledge, LRU cache, SQLite persistence with WAL
-- ⚡ **Performance**: 10-20x faster batch spawning, SWE-Bench evaluation claims removed
+- ⚡ **Performance**: faster batch spawning, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -509,7 +509,7 @@ wait  # Wait for all to complete
 
 | Dual-Mode Feature | Benefit |
 |-------------------|---------|
-| Parallel Execution | 4-8x faster for bulk tasks |
+| Parallel Execution | Faster for bulk tasks |
 | Cost Optimization | Route simple tasks to cheaper workers |
 | Context Preservation | Shared memory across platforms |
 | Best of Both | Interactive + batch processing |
@@ -665,7 +665,7 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 | **Pattern Learning** | ✅ From trajectories | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Expert Routing** | ✅ MoE (8 experts) | Manual | Graph edges | ⛔ | Fixed |
 | **Attention Optimization** | ✅ Flash Attention | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Low-Rank Adaptation** | ✅ LoRA (128x compress) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Low-Rank Adaptation** | ✅ LoRA (compressed adapters) | ⛔ | ⛔ | ⛔ | ⛔ |
 
 #### 💾 Memory & Embeddings
 
@@ -676,7 +676,7 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball model | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Quantization** | ✅ Int8 (memory savings) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Persistent Memory** | ✅ SQLite + HiveMemory | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
 
@@ -725,8 +725,8 @@ What makes Hive Flow different from other agent frameworks? These 10 capabilitie
 | 🎯 | **MoE** | Routes tasks through 8 specialized expert networks based on task type | Mixture of 8 Experts with dynamic gating |
 | ⚡ | **Flash Attention** | Provides local attention-compatible computation for performance tests | Local attention coordinator |
 | 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
-| 📦 | **LoRA** | Compresses model weights 128x so agents fit in limited memory | 128x memory compression via Low-Rank Adaptation |
-| 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
+| 📦 | **LoRA** | Compresses model weights so agents fit in limited memory | Memory compression via Low-Rank Adaptation |
+| 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | Memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
 
@@ -801,7 +801,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 **Key ADRs:**
 - **ADR-001**: adopt hive-flow as core foundation (eliminates duplicate capabilities)
 - **ADR-006**: Unified Memory Service with HiveMemory
-- **ADR-008**: Vitest testing framework (10x faster than Jest)
+- **ADR-008**: Vitest testing framework
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
 - **ADR-026**: Intelligent 3-tier model routing
 - **ADR-048**: Auto Memory Bridge (Claude Code ↔ HiveMemory bidirectional sync)
@@ -1546,7 +1546,7 @@ hive-flow hive-mind memory                  # Collective memory stats
 hive-flow hive-mind sessions                # List active sessions
 ```
 
-**Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, SWE-Bench evaluation claims removed
+**Performance:** faster batch spawning, speed improvement, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -1662,7 +1662,7 @@ Advanced features for high availability and continuous learning.
 | Feature | Description | Benefit |
 |---------|-------------|---------|
 | **Automatic Topology Selection** | AI-driven topology choice based on task complexity | Optimal resource utilization |
-| **Parallel Execution** | Concurrent agent operation with load balancing | 2.8-4.4x speed improvement |
+| **Parallel Execution** | Concurrent agent operation with load balancing | speed improvement |
 | **Neural Training** | Continuous learning and adaptive routing support | Adaptive intelligence |
 | **Bottleneck Analysis** | Real-time performance monitoring and optimization | Proactive issue detection |
 | **Smart Auto-Spawning** | Dynamic agent creation based on workload | Elastic scaling |
@@ -1903,7 +1903,7 @@ hive-flow hooks worker status
 | Component | Description | Features |
 |-----------|-------------|----------|
 | **London School TDD** | Behavior verification with mocks | Mock-first, interaction testing |
-| **Vitest Integration** | ADR-008 compliant test runner | 10x faster than Jest |
+| **Vitest Integration** | ADR-008 compliant test runner | Fast test runner |
 | **Fixture Library** | Pre-defined test data | Agents, memory, swarm, MCP |
 | **Mock Factory** | Application and service mocks | Auto-reset, state tracking |
 | **Async Utilities** | waitFor, retry, withTimeout | Reliable async testing |
@@ -2005,11 +2005,11 @@ hive-flow hooks worker status
 
 | Feature | Description | Improvement |
 |---------|-------------|-------------|
-| **Scalar Quantization** | Reduce vector precision for memory savings | 4x memory reduction |
-| **Product Quantization** | Compress vectors into codebooks | 8-32x memory reduction |
+| **Scalar Quantization** | Reduce vector precision for memory savings | Memory reduction |
+| **Product Quantization** | Compress vectors into codebooks | Memory reduction |
 | **HNSW Indexing** | Hierarchical Navigable Small World graphs | Approximate nearest-neighbor search |
 | **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
-| **Batch Processing** | Process multiple embeddings in single call | 10x throughput |
+| **Batch Processing** | Process multiple embeddings in single call | Higher throughput |
 | **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
 
 </details>
@@ -2082,7 +2082,7 @@ hive-flow hive-mind status                                  # Check status
 
 **Hive Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
-**Performance:** 10-20x faster batch spawning, SWE-Bench evaluation claims removed, 32.3% token reduction
+**Performance:** faster batch spawning, SWE-Bench evaluation claims removed, 32.3% token reduction
 
 </details>
 
@@ -3399,7 +3399,7 @@ Local TypeScript neural training for pattern learning, contrastive scoring, and 
 
 | Component | Performance | Description |
 |-----------|-------------|-------------|
-| **MicroLoRA** | **<3μs adaptation** | Rank-2 LoRA with 105x faster than 100μs target |
+| **MicroLoRA** | **<3μs adaptation** | Rank-2 LoRA |
 | **ScopedLoRA** | 17 operators | Per-task-type learning (coordination, security, testing) |
 | **FlashAttention** | 9,127 ops/sec | Memory-efficient attention mechanism |
 | **TrajectoryBuffer** | 10k capacity | Success/failure learning from patterns |
@@ -3635,7 +3635,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | `hivememory-vector-search` | Semantic vector search | Building RAG systems, knowledge bases |
 | `hivememory-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
 | `hivememory-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
-| `hivememory-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
+| `hivememory-optimization` | Quantization (memory reduction), HNSW indexing | Scaling to millions of vectors |
 | `hivememory-advanced` | QUIC sync, multi-database, custom distance metrics | Distributed AI systems |
 
 ```bash
@@ -4807,7 +4807,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 | Operation | Target | Actual | Throughput |
 |-----------|--------|--------|------------|
-| **Threat Detection** | <10ms | **0.04ms** | 250x faster |
+| **Threat Detection** | <10ms | **0.04ms** | ✅ |
 | **Quick Scan** | <5ms | **0.02ms** | Pattern-only |
 | **PII Detection** | <3ms | **0.01ms** | Regex-based |
 | **Vector Search** | indexed lookup | HiveMemory-backed | With HNSW support |
@@ -4997,12 +4997,12 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Swarm** | Agent spawn | <200ms | ✅ 150ms |
 | **Swarm** | Consensus latency | <100ms | ✅ 75ms |
 | **Neural** | SONA adaptation | Low latency | Target tracked |
-| **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms (71.9x headroom) |
-| **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms (8.2x headroom) |
-| **Learning** | Insight recording | <5ms | ✅ 0.12ms (41x headroom) |
-| **Learning** | Consolidation | <500ms | ✅ 0.26ms (1,955x headroom) |
-| **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms (215x headroom) |
-| **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms (80x headroom) |
+| **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms |
+| **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms |
+| **Learning** | Insight recording | <5ms | ✅ 0.12ms |
+| **Learning** | Consolidation | <500ms | ✅ 0.26ms |
+| **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms |
+| **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms |
 | **Task** | Success rate | 95%+ | ✅ Passing |
 
 ### Topology Performance
@@ -5282,21 +5282,21 @@ import { V3_PERFORMANCE_TARGETS, meetsTarget } from '@hive-flow/performance';
 // Built-in targets
 V3_PERFORMANCE_TARGETS = {
   // Startup Performance
-  'cli-cold-start': 500,        // <500ms (5x faster)
+  'cli-cold-start': 500,        // <500ms target
   'cli-warm-start': 100,        // <100ms
-  'mcp-server-init': 400,       // <400ms (4.5x faster)
-  'agent-spawn': 200,           // <200ms (4x faster)
+  'mcp-server-init': 400,       // <400ms target
+  'agent-spawn': 200,           // <200ms target
 
   // Memory Operations
   'vector-search': 1,           // <1ms target
   'hnsw-indexing': 10,          // <10ms
-  'memory-write': 5,            // <5ms (10x faster)
+  'memory-write': 5,            // <5ms target
   'cache-hit': 0.1,             // <0.1ms
 
   // Swarm Coordination
   'agent-coordination': 50,     // <50ms
   'task-decomposition': 20,     // <20ms
-  'consensus-latency': 100,     // <100ms (5x faster)
+  'consensus-latency': 100,     // <100ms target
   'message-throughput': 0.1,    // <0.1ms per message
 
   // SONA Learning

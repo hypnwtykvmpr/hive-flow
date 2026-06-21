@@ -71,7 +71,7 @@ flowchart TB
         subgraph ROW1[" "]
             SONA[SONA<br/>Self-Optimize<br/>&lt;low-latency]
             EWC[EWC++<br/>No Forgetting]
-            FLASH[Flash Attention<br/>2.49-7.47x]
+            FLASH[Flash Attention<br/>accelerated]
         end
         subgraph ROW2[" "]
             HNSW[HNSW<br/>fast HNSW-indexed]
@@ -79,8 +79,8 @@ flowchart TB
             HYP[Hyperbolic<br/>Poincaré]
         end
         subgraph ROW3[" "]
-            LORA[LoRA/Micro<br/>128x compress]
-            QUANT[Int8 Quant<br/>3.92x memory]
+            LORA[LoRA/Micro<br/>compressed]
+            QUANT[Int8 Quant<br/>quantized]
             RL[9 RL Algos<br/>Q/SARSA/PPO/DQN]
         end
     end
@@ -122,7 +122,7 @@ flowchart TB
 | **ReasoningBank** | Pattern storage with trajectory learning | RETRIEVE→JUDGE→DISTILL |
 | **Hyperbolic** | Poincaré ball embeddings for hierarchical data | Better code relationships |
 | **LoRA/MicroLoRA** | Low-Rank Adaptation for efficient fine-tuning | **<3μs** adaptation, 383k ops/sec |
-| **Int8 Quantization** | Memory-efficient weight storage | 3.92x memory reduction |
+| **Int8 Quantization** | Memory-efficient weight storage | Memory reduction |
 | **SemanticRouter** | Semantic task routing with cosine similarity | **34,798 routes/s**, 0.029ms |
 | **9 RL Algorithms** | Q-Learning, SARSA, A2C, PPO, DQN, Decision Transformer, etc. | Task-specific learning |
 
@@ -196,7 +196,7 @@ Agents organize into swarms led by queens that coordinate work, prevent drift, a
 - 👷 **8 Worker Types**: Researcher, Coder, Analyst, Tester, Architect, Reviewer, Optimizer, Documenter
 - 🗳️ **3 Consensus Algorithms**: Majority, Weighted (Queen 3x), Byzantine (f < n/3)
 - 🧠 **Collective Memory**: Shared knowledge, LRU cache, SQLite persistence with WAL
-- ⚡ **Performance**: 10-20x faster batch spawning, SWE-Bench evaluation claims removed
+- ⚡ **Performance**: faster batch spawning, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -258,7 +258,7 @@ Smart routing skips expensive LLM calls when possible. Simple edits use WASM (fr
 </details>
 
 <details>
-<summary>⚡ <strong>Agent Booster (WASM)</strong> — 352x faster code transforms, skip LLM entirely</summary>
+<summary>⚡ <strong>Agent Booster (WASM)</strong> — direct code transforms, skip LLM entirely</summary>
 
 Agent Booster uses WebAssembly to handle simple code transformations without calling the LLM at all. When the hooks system detects a simple task, it routes directly to Agent Booster for instant results.
 
@@ -280,7 +280,7 @@ When you see these in hook output, the system is telling you how to optimize:
 ```bash
 # Agent Booster available - skip LLM entirely
 [AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
-→ Use Edit tool directly, 352x faster than LLM
+→ Use Edit tool directly (skips the LLM call)
 
 # Model recommendation for Task tool
 [TASK_MODEL_RECOMMENDATION] Use model="haiku"
@@ -293,7 +293,7 @@ When you see these in hook output, the system is telling you how to optimize:
 |--------|---------------|----------|
 | Latency | <1ms | 2-5s |
 | Cost | $0 | $0.0002-$0.015 |
-| Speedup | **352x faster** | baseline |
+| Speedup | **Skips LLM call** | baseline |
 
 </details>
 
@@ -321,7 +321,7 @@ const optimizer = await getTokenOptimizer();
 // Get compact context (32% fewer tokens)
 const ctx = await optimizer.getCompactContext("auth patterns");
 
-// Optimized edit (352x faster for simple transforms)
+// Optimized edit (skips the LLM for simple transforms)
 await optimizer.optimizedEdit(file, oldStr, newStr, "typescript");
 
 // Optimal config for swarm
@@ -543,7 +543,7 @@ wait  # Wait for all to complete
 
 | Dual-Mode Feature | Benefit |
 |-------------------|---------|
-| Parallel Execution | 4-8x faster for bulk tasks |
+| Parallel Execution | Faster for bulk tasks |
 | Cost Optimization | Route simple tasks to cheaper workers |
 | Context Preservation | Shared memory across platforms |
 | Best of Both | Interactive + batch processing |
@@ -699,7 +699,7 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 | **Pattern Learning** | ✅ From trajectories | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Expert Routing** | ✅ MoE (8 experts) | Manual | Graph edges | ⛔ | Fixed |
 | **Attention Optimization** | ✅ Flash Attention | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Low-Rank Adaptation** | ✅ LoRA (128x compress) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Low-Rank Adaptation** | ✅ LoRA (compressed adapters) | ⛔ | ⛔ | ⛔ | ⛔ |
 
 #### 💾 Memory & Embeddings
 
@@ -710,7 +710,7 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball model | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Quantization** | ✅ Int8 (memory savings) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Persistent Memory** | ✅ SQLite + HiveMemory | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
 
@@ -740,7 +740,7 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 |---------|----------------|--------|-----------|---------|-------|
 | **Threat Detection** | ✅ AIDefence (<10ms) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Cloud Platform** | ✅ Flow Nexus | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Code Transforms** | ✅ Agent Booster (352x) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Code Transforms** | ✅ Agent Booster | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Input Validation** | ✅ Zod + Path security | ⛔ | ⛔ | ⛔ | ⛔ |
 
 <sub>*Comparison updated January 23, 2026*</sub>
@@ -757,10 +757,10 @@ What makes Hive Flow different from other agent frameworks? These 10 capabilitie
 | 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture, low-latency adaptation |
 | 🔒 | **EWC++** | Preserves learned patterns when training on new ones — no forgetting | Elastic Weight Consolidation prevents catastrophic forgetting |
 | 🎯 | **MoE** | Routes tasks through 8 specialized expert networks based on task type | Mixture of 8 Experts with dynamic gating |
-| ⚡ | **Flash Attention** | Accelerates attention computation 2-7x for faster agent responses | Flash Attention optimization for attention computations |
+| ⚡ | **Flash Attention** | Accelerates attention computation for faster agent responses | Flash Attention optimization for attention computations |
 | 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
-| 📦 | **LoRA** | Compresses model weights 128x so agents fit in limited memory | 128x memory compression via Low-Rank Adaptation |
-| 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
+| 📦 | **LoRA** | Compresses model weights so agents fit in limited memory | Memory compression via Low-Rank Adaptation |
+| 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | Memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
 | 🐘 | **Local Vector Memory** | HNSW-indexed vector search for agent memory and pattern recall | Local HNSW in @hive-flow/memory, no external database |
@@ -768,7 +768,7 @@ What makes Hive Flow different from other agent frameworks? These 10 capabilitie
 </details>
 
 <details>
-<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Save 75% on API costs, extend Claude Max 2.5x</summary>
+<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Save 75% on API costs, extend Claude Max usage</summary>
 
 Not every task needs the most powerful (and expensive) model. Hive Flow analyzes each request and automatically routes it to the cheapest handler that can do the job well. Simple code transforms skip the LLM entirely using WebAssembly. Medium tasks use faster, cheaper models. Only complex architecture decisions use Opus.
 
@@ -777,7 +777,7 @@ Not every task needs the most powerful (and expensive) model. Hive Flow analyzes
 | Benefit | Impact |
 |---------|--------|
 | 💵 **API Cost Reduction** | 75% lower costs by using right-sized models |
-| ⏱️ **Claude Max Extension** | 2.5x more tasks within your quota limits |
+| ⏱️ **Claude Max Extension** | More tasks within your quota limits |
 | 🚀 **Faster Simple Tasks** | <1ms for transforms vs 2-5s with LLM |
 | 🎯 **Zero Wasted Tokens** | Simple edits use 0 tokens (WASM handles them) |
 
@@ -836,7 +836,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 **Key ADRs:**
 - **ADR-001**: adopt hive-flow as core foundation (eliminates 10,000+ duplicate lines)
 - **ADR-006**: Unified Memory Service with HiveMemory
-- **ADR-008**: Vitest testing framework (10x faster than Jest)
+- **ADR-008**: Vitest testing framework
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
 - **ADR-026**: Intelligent 3-tier model routing
 - **ADR-048**: Auto Memory Bridge (Claude Code ↔ HiveMemory bidirectional sync)
@@ -1491,7 +1491,7 @@ hive-flow hive-mind memory                  # Collective memory stats
 hive-flow hive-mind sessions                # List active sessions
 ```
 
-**Performance:** 10-20x faster batch spawning, 2.8-4.4x speed improvement, SWE-Bench evaluation claims removed
+**Performance:** faster batch spawning, speed improvement, SWE-Bench evaluation claims removed
 
 </details>
 
@@ -1607,7 +1607,7 @@ Advanced features for high availability and continuous learning.
 | Feature | Description | Benefit |
 |---------|-------------|---------|
 | **Automatic Topology Selection** | AI-driven topology choice based on task complexity | Optimal resource utilization |
-| **Parallel Execution** | Concurrent agent operation with load balancing | 2.8-4.4x speed improvement |
+| **Parallel Execution** | Concurrent agent operation with load balancing | speed improvement |
 | **Neural Training** | 27+ model support with continuous learning | Adaptive intelligence |
 | **Bottleneck Analysis** | Real-time performance monitoring and optimization | Proactive issue detection |
 | **Smart Auto-Spawning** | Dynamic agent creation based on workload | Elastic scaling |
@@ -1639,7 +1639,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
+| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing, Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
 | **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
 
 **Agentic-QE Plugin Features:**
@@ -1659,7 +1659,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 **Teammate Plugin Features:**
 - Native TeammateTool integration for Claude Code v2.1.19+
 - 21 MCP tools: `teammate_spawn`, `teammate_broadcast`, `teammate_discover_teams`, `teammate_route_task`, etc.
-- BMSSP WASM acceleration for topology optimization (352x faster)
+- BMSSP WASM acceleration for topology optimization
 - Rate limiting with sliding window (configurable limits)
 - Circuit breaker for fault tolerance (closed/open/half-open states)
 - Semantic routing with skill-based teammate selection
@@ -1876,7 +1876,7 @@ hive-flow hooks worker status
 | Component | Description | Features |
 |-----------|-------------|----------|
 | **London School TDD** | Behavior verification with mocks | Mock-first, interaction testing |
-| **Vitest Integration** | ADR-008 compliant test runner | 10x faster than Jest |
+| **Vitest Integration** | ADR-008 compliant test runner | Fast test runner |
 | **Fixture Library** | Pre-defined test data | Agents, memory, swarm, MCP |
 | **Mock Factory** | Application and service mocks | Auto-reset, state tracking |
 | **Async Utilities** | waitFor, retry, withTimeout | Reliable async testing |
@@ -1978,11 +1978,11 @@ hive-flow hooks worker status
 
 | Feature | Description | Improvement |
 |---------|-------------|-------------|
-| **Scalar Quantization** | Reduce vector precision for memory savings | 4x memory reduction |
-| **Product Quantization** | Compress vectors into codebooks | 8-32x memory reduction |
+| **Scalar Quantization** | Reduce vector precision for memory savings | Memory reduction |
+| **Product Quantization** | Compress vectors into codebooks | Memory reduction |
 | **HNSW Indexing** | Hierarchical Navigable Small World graphs | fast HNSW-indexed search |
 | **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
-| **Batch Processing** | Process multiple embeddings in single call | 10x throughput |
+| **Batch Processing** | Process multiple embeddings in single call | Higher throughput |
 | **Memory Compression** | Pattern distillation and pruning | 50-75% reduction |
 
 </details>
@@ -2055,7 +2055,7 @@ hive-flow hive-mind status                                  # Check status
 
 **Hive Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
-**Performance:** 10-20x faster batch spawning, SWE-Bench evaluation claims removed, 32.3% token reduction
+**Performance:** faster batch spawning, SWE-Bench evaluation claims removed, 32.3% token reduction
 
 </details>
 
@@ -2716,7 +2716,7 @@ When hooks run, they emit signals that guide routing decisions. Watch for these 
 
 | Signal | Meaning | Action |
 |--------|---------|--------|
-| `[AGENT_BOOSTER_AVAILABLE]` | Simple transform detected, skip LLM | Use Edit tool directly (352x faster, $0) |
+| `[AGENT_BOOSTER_AVAILABLE]` | Simple transform detected, skip LLM | Use Edit tool directly (skips the LLM call, $0) |
 | `[TASK_MODEL_RECOMMENDATION] Use model="haiku"` | Low complexity task | Pass `model: "haiku"` to Task tool |
 | `[TASK_MODEL_RECOMMENDATION] Use model="sonnet"` | Medium complexity task | Pass `model: "sonnet"` to Task tool |
 | `[TASK_MODEL_RECOMMENDATION] Use model="opus"` | High complexity task | Pass `model: "opus"` to Task tool |
@@ -2735,7 +2735,7 @@ $ hive-flow hooks pre-task --description "convert var to const in utils.ts"
 
 [AGENT_BOOSTER_AVAILABLE] Intent: var-to-const
 Recommendation: Use Edit tool directly
-Performance: <1ms (352x faster than LLM)
+Performance: <1ms
 Cost: $0
 ```
 
@@ -3240,7 +3240,7 @@ external vector packages.
 
 | Component | Performance | Description |
 |-----------|-------------|-------------|
-| **MicroLoRA** | **<3μs adaptation** | Rank-2 LoRA with 105x faster than 100μs target |
+| **MicroLoRA** | **<3μs adaptation** | Rank-2 LoRA |
 | **ScopedLoRA** | 17 operators | Per-task-type learning (coordination, security, testing) |
 | **FlashAttention** | 9,127 ops/sec | Memory-efficient attention mechanism |
 | **TrajectoryBuffer** | 10k capacity | Success/failure learning from patterns |
@@ -3477,7 +3477,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | `hivememory-vector-search` | Semantic search with fast retrieval | Building RAG systems, knowledge bases |
 | `hivememory-memory-patterns` | Session memory, long-term storage, context management | Stateful agents, chat systems |
 | `hivememory-learning` | 9 RL algorithms (PPO, DQN, SARSA, etc.) | Self-learning agents, behavior optimization |
-| `hivememory-optimization` | Quantization (4-32x memory reduction), HNSW indexing | Scaling to millions of vectors |
+| `hivememory-optimization` | Quantization (memory reduction), HNSW indexing | Scaling to millions of vectors |
 | `hivememory-advanced` | QUIC sync, multi-database, custom distance metrics | Distributed AI systems |
 
 ```bash
@@ -4526,7 +4526,7 @@ Detection Time: 0.04ms | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 | Operation | Target | Actual | Throughput |
 |-----------|--------|--------|------------|
-| **Threat Detection** | <10ms | **0.04ms** | 250x faster |
+| **Threat Detection** | <10ms | **0.04ms** | ✅ |
 | **Quick Scan** | <5ms | **0.02ms** | Pattern-only |
 | **PII Detection** | <3ms | **0.01ms** | Regex-based |
 | **HNSW Search** | <1ms | **0.1ms** | With HiveMemory |
@@ -4716,12 +4716,12 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Swarm** | Agent spawn | <200ms | ✅ 150ms |
 | **Swarm** | Consensus latency | <100ms | ✅ 75ms |
 | **Neural** | SONA adaptation | low-latency | ✅ 0.03ms |
-| **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms (71.9x headroom) |
-| **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms (8.2x headroom) |
-| **Learning** | Insight recording | <5ms | ✅ 0.12ms (41x headroom) |
-| **Learning** | Consolidation | <500ms | ✅ 0.26ms (1,955x headroom) |
-| **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms (215x headroom) |
-| **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms (80x headroom) |
+| **Graph** | Build (1k nodes) | <200ms | ✅ 2.78ms |
+| **Graph** | PageRank (1k nodes) | <100ms | ✅ 12.21ms |
+| **Learning** | Insight recording | <5ms | ✅ 0.12ms |
+| **Learning** | Consolidation | <500ms | ✅ 0.26ms |
+| **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms |
+| **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms |
 | **Task** | Success rate | 95%+ | ✅ Passing |
 
 ### Topology Performance
@@ -5000,21 +5000,21 @@ import { V3_PERFORMANCE_TARGETS, meetsTarget } from '@hive-flow/performance';
 // Built-in targets
 V3_PERFORMANCE_TARGETS = {
   // Startup Performance
-  'cli-cold-start': 500,        // <500ms (5x faster)
+  'cli-cold-start': 500,        // <500ms target
   'cli-warm-start': 100,        // <100ms
-  'mcp-server-init': 400,       // <400ms (4.5x faster)
-  'agent-spawn': 200,           // <200ms (4x faster)
+  'mcp-server-init': 400,       // <400ms target
+  'agent-spawn': 200,           // <200ms target
 
   // Memory Operations
   'vector-search': 1,           // <1ms (fast)
   'hnsw-indexing': 10,          // <10ms
-  'memory-write': 5,            // <5ms (10x faster)
+  'memory-write': 5,            // <5ms target
   'cache-hit': 0.1,             // <0.1ms
 
   // Swarm Coordination
   'agent-coordination': 50,     // <50ms
   'task-decomposition': 20,     // <20ms
-  'consensus-latency': 100,     // <100ms (5x faster)
+  'consensus-latency': 100,     // <100ms target
   'message-throughput': 0.1,    // <0.1ms per message
 
   // SONA Learning
