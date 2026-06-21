@@ -836,7 +836,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 ```
 
 **Key ADRs:**
-- **ADR-001**: local compatibility API as foundation (eliminates 10,000+ duplicate lines)
+- **ADR-001**: adopt hive-flow as core foundation (eliminates 10,000+ duplicate lines)
 - **ADR-006**: Unified Memory Service with HiveMemory
 - **ADR-008**: Vitest testing framework (10x faster than Jest)
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
@@ -2048,7 +2048,7 @@ hive-flow hooks worker status
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **HiveFlowBridge** | local compatibility API integration | ADR-001 compliant |
+| **HiveFlowBridge** | hive-flow core foundation integration | ADR-001 compliant |
 | **SONA Adapter** | Learning system integration | low-latency adaptation |
 | **Flash Attention** | Attention mechanism coordinator | Flash Attention optimization |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |

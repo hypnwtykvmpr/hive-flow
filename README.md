@@ -801,7 +801,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 ```
 
 **Key ADRs:**
-- **ADR-001**: optional hive-flow integration (avoids duplicating shared capabilities)
+- **ADR-001**: adopt hive-flow as core foundation (eliminates duplicate capabilities)
 - **ADR-006**: Unified Memory Service with HiveMemory
 - **ADR-008**: Vitest testing framework (10x faster than Jest)
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
@@ -1964,7 +1964,7 @@ hive-flow hooks worker status
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **HiveFlowBridge** | Optional hive-flow integration | ADR-001 compliant |
+| **HiveFlowBridge** | hive-flow core foundation integration | ADR-001 compliant |
 | **SONA Adapter** | Learning system integration | Low-latency adaptation |
 | **Flash Attention** | Attention mechanism coordinator | Local attention path |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
@@ -2043,7 +2043,7 @@ hive-flow hooks worker status
 | **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
 | **Similarity Metrics** | Cosine, Euclidean, Dot product, Hyperbolic distance | Task-specific matching |
-| **Neural Substrate** | Drift detection, memory physics, swarm coordination | optional hive-flow integration |
+| **Neural Substrate** | Drift detection, memory physics, swarm coordination | Local kernels |
 | **LRU + SQLite Cache** | Persistent cross-session caching | <1ms cache hits |
 
 ```bash
@@ -2106,12 +2106,12 @@ hive-flow hive-mind status                                  # Check status
 </details>
 
 <details>
-<summary>🔌 <strong>hive-flow Integration</strong> — optional ADR-001 bridge</summary>
+<summary>🔌 <strong>hive-flow Integration</strong> — ADR-001 core foundation</summary>
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **ADR-001 Compliance** | Reuse hive-flow when available | Avoids duplicating shared capabilities |
-| **Optional Bridge** | Use hive-flow as an optional layer | Local fallback remains available |
+| **ADR-001 Compliance** | Adopt hive-flow as core foundation | Eliminates duplicate capabilities |
+| **Local Fallback** | Use local implementations when hive-flow runtime services are unavailable | Fallback remains available |
 | **SONA Integration** | Seamless learning system connection | Low-latency adaptation |
 | **Flash Attention** | Optimized attention mechanisms | Local attention support |
 | **HiveMemory Bridge** | Vector storage integration | Vector search |
