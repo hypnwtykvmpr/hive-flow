@@ -1,21 +1,20 @@
 ---
 name: agentic-jujutsu
 version: 2.3.2
-description: Quantum-resistant, self-learning version control for AI agents with ReasoningBank intelligence and multi-agent coordination
+description: Self-learning version control for AI agents with ReasoningBank intelligence and multi-agent coordination
 ---
 
 # Agentic Jujutsu - AI Agent Version Control
 
-> Quantum-ready, self-learning version control designed for multiple AI agents working simultaneously without conflicts.
+> Self-learning version control designed for multiple AI agents working simultaneously without conflicts.
 
 ## When to Use This Skill
 
 Use **agentic-jujutsu** when you need:
 - ✅ Multiple AI agents modifying code simultaneously
-- ✅ Lock-free version control (23x faster than Git)
+- ✅ Lock-free version control
 - ✅ Self-learning AI that improves from experience
-- ✅ Quantum-resistant security for future-proof protection
-- ✅ Automatic conflict resolution (87% success rate)
+- ✅ Automatic conflict resolution
 - ✅ Pattern recognition and intelligent suggestions
 - ✅ Multi-agent coordination without blocking
 
@@ -143,29 +142,7 @@ const similar = JSON.parse(tester.queryTrajectories('test feature', 5));
 console.log(`Found ${similar.length} similar test approaches`);
 ```
 
-### 5. Quantum-Resistant Security (v2.3.0+)
-
-Fast integrity verification with quantum-resistant cryptography:
-
-```javascript
-const { generateQuantumFingerprint, verifyQuantumFingerprint } = require('agentic-jujutsu');
-
-// Generate SHA3-512 fingerprint (NIST FIPS 202)
-const data = Buffer.from('commit-data');
-const fingerprint = generateQuantumFingerprint(data);
-console.log('Fingerprint:', fingerprint.toString('hex'));
-
-// Verify integrity (<1ms)
-const isValid = verifyQuantumFingerprint(data, fingerprint);
-console.log('Valid:', isValid);
-
-// HQC-128 encryption for trajectories
-const crypto = require('crypto');
-const key = crypto.randomBytes(32).toString('base64');
-jj.enableEncryption(key);
-```
-
-### 6. Operation Tracking with HiveMemory
+### 5. Operation Tracking with HiveMemory
 
 Automatic tracking of all operations:
 
@@ -405,26 +382,6 @@ for (let i = 1; i <= 10; i++) {
 | `getUserOperations(limit)` | Get user operations only | JjOperation[] |
 | `clearLog()` | Clear operation log | void |
 
-### Quantum Security Methods (v2.3.0+)
-
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `generateQuantumFingerprint(data)` | Generate SHA3-512 fingerprint | Buffer (64 bytes) |
-| `verifyQuantumFingerprint(data, fp)` | Verify fingerprint | boolean |
-| `enableEncryption(key, pubKey?)` | Enable HQC-128 encryption | void |
-| `disableEncryption()` | Disable encryption | void |
-| `isEncryptionEnabled()` | Check encryption status | boolean |
-
-## Performance Characteristics
-
-| Metric | Git | Agentic Jujutsu |
-|--------|-----|-----------------|
-| Concurrent commits | 15 ops$s | 350 ops$s (23x) |
-| Context switching | 500-1000ms | 50-100ms (10x) |
-| Conflict resolution | 30-40% auto | 87% auto (2.5x) |
-| Lock waiting | 50 min$day | 0 min (∞) |
-| Quantum fingerprints | N/A | <1ms |
-
 ## Best Practices
 
 ### 1. Trajectory Management
@@ -632,9 +589,8 @@ async function agentSwarm(taskList) {
 
 - **v2.3.2** - Documentation updates
 - **v2.3.1** - Validation fixes for ReasoningBank
-- **v2.3.0** - Quantum-resistant security with @qudag$napi-core
 - **v2.1.0** - Self-learning AI with ReasoningBank
-- **v2.0.0** - Zero-dependency installation with embedded jj binary
+- **v2.0.0** - Bundled jj binary installation
 
 ---
 

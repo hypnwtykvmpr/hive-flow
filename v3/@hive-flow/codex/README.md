@@ -440,7 +440,7 @@ $performance-optimization
 | Skill Builder | `$skill-builder` | Create new Claude Code Skills |
 | Verification Quality | `$verification-quality` | Truth scoring and quality verification |
 | Performance Analysis | `$performance-analysis` | Bottleneck detection and optimization |
-| Agentic Jujutsu | `$agentic-jujutsu` | Quantum-resistant version control |
+| Agentic Jujutsu | `$agentic-jujutsu` | Version control integration |
 | Hooks Automation | `$hooks-automation` | Automated coordination and learning |
 
 #### Memory Management Skills

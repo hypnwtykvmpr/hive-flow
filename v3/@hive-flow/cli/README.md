@@ -3588,7 +3588,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
-| `agentic-jujutsu` | Quantum-resistant, self-learning version control | Multi-agent coordination |
+| `agentic-jujutsu` | Self-learning version control | Multi-agent coordination |
 | `worker-benchmarks` | Performance benchmarking framework | Measuring improvements |
 | `worker-integration` | Worker-agent coordination patterns | Background processing |
 
