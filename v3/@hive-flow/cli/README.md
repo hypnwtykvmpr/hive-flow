@@ -1292,32 +1292,6 @@ All configurations support these environment variables:
 | `OPENAI_API_KEY` | OpenAI API key | Optional (for GPT models) |
 | `GOOGLE_API_KEY` | Google AI API key | Optional (for Gemini) |
 | `HIVE_FLOW_LOG_LEVEL` | Logging level (debug, info, warn, error) | Optional |
-| `HIVE_FLOW_TOOL_GROUPS` | MCP tool groups to enable (comma-separated) | Optional |
-| `HIVE_FLOW_TOOL_MODE` | Preset tool mode (develop, pr-review, devops, etc.) | Optional |
-
-#### MCP Tool Groups
-
-Control which MCP tools are loaded to reduce latency and token usage:
-
-```bash
-# Enable specific tool groups
-export HIVE_FLOW_TOOL_GROUPS=implement,test,fix,memory
-
-# Or use a preset mode
-export HIVE_FLOW_TOOL_MODE=develop
-```
-
-**Available Groups:** `create`, `issue`, `branch`, `implement`, `test`, `fix`, `optimize`, `monitor`, `security`, `memory`, `all`, `minimal`
-
-**Preset Modes:**
-| Mode | Groups | Use Case |
-|------|--------|----------|
-| `develop` | create, implement, test, fix, memory | Active development |
-| `pr-review` | branch, fix, monitor, security | Code review |
-| `devops` | create, monitor, optimize, security | Infrastructure |
-| `triage` | issue, monitor, fix | Bug triage |
-
-**Precedence:** CLI args (`--tools=X`) > Environment vars > Config file > Default (all)
 
 ### Security Best Practices
 
@@ -5700,7 +5674,6 @@ $env:HIVE_FLOW_MODE = "integration"
 
 ```bash
 hive-flow security scan --target . --type all
-export HIVE_FLOW_SECURITY_MODE="strict"
 ```
 
 ### Linux (Bash)
@@ -5721,12 +5694,10 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `HIVE_FLOW_MODE` | Operation mode (`development`, `production`, `integration`) | `development` |
-| `HIVE_FLOW_ENV` | Environment name for test/dev isolation | - |
+| `HIVE_FLOW_MODE` | Operation mode (`v3`, `development`, `production`, `integration`) | `v3` |
 | `HIVE_FLOW_DATA_DIR` | Root data directory | `./data` |
 | `HIVE_FLOW_MEMORY_PATH` | Directory for persistent memory storage | `./data` |
-| `HIVE_FLOW_MEMORY_TYPE` | Memory backend type (`json`, `sqlite`, `hivememory`, `hybrid`) | `hybrid` |
-| `HIVE_FLOW_SECURITY_MODE` | Security level (`strict`, `standard`, `permissive`) | `standard` |
+| `HIVE_FLOW_MEMORY_BACKEND` | Memory backend type (`json`, `sqlite`, `hivememory`, `hybrid`) | `hybrid` |
 | `HIVE_FLOW_LOG_LEVEL` | Logging verbosity (`debug`, `info`, `warn`, `error`) | `info` |
 | `HIVE_FLOW_CONFIG` | Path to configuration file | `./hive-flow.config.json` |
 | `NODE_ENV` | Node.js environment (`development`, `production`, `test`) | `development` |
@@ -5736,7 +5707,7 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `HIVE_FLOW_MAX_AGENTS` | Default working agent limit (queue depth 30, hard cap 180) | `150` |
-| `HIVE_FLOW_TOPOLOGY` | Default swarm topology (`hierarchical`, `mesh`, `ring`, `star`) | `hierarchical` |
+| `HIVE_FLOW_TOPOLOGY` | Default swarm topology (`hierarchical`, `mesh`, `ring`, `star`) | `hierarchical-mesh` |
 | `HIVE_FLOW_HEADLESS` | Run in headless mode (no interactive prompts) | `false` |
 | `CLAUDE_CODE_HEADLESS` | Claude Code headless mode compatibility | `false` |
 
@@ -5747,15 +5718,6 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 | `HIVE_FLOW_MCP_PORT` | MCP server port | `3000` |
 | `HIVE_FLOW_MCP_HOST` | MCP server host | `localhost` |
 | `HIVE_FLOW_MCP_TRANSPORT` | Transport type (`stdio`, `http`, `websocket`) | `stdio` |
-
-### Vector Search (HNSW)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `HIVE_FLOW_HNSW_M` | HNSW index M parameter (connectivity, higher = more accurate) | `16` |
-| `HIVE_FLOW_HNSW_EF` | HNSW search ef parameter (accuracy, higher = slower) | `200` |
-| `HIVE_FLOW_EMBEDDING_DIM` | Vector embedding dimensions | `384` |
-| `SQLJS_WASM_PATH` | Custom path to sql.js WASM binary | - |
 
 ### AI Provider API Keys
 
@@ -5803,7 +5765,6 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 | `GITHUB_TOKEN` | GitHub API token for repository operations | Optional |
 | `JWT_SECRET` | JWT secret for authentication | Production |
 | `HMAC_SECRET` | HMAC secret for request signing | Production |
-| `HIVE_FLOW_TOKEN` | Internal authentication token | Optional |
 
 ### Output Formatting
 
@@ -5818,7 +5779,7 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 
 ```bash
 # Core
-HIVE_FLOW_MODE=development
+HIVE_FLOW_MODE=v3
 HIVE_FLOW_LOG_LEVEL=info
 HIVE_FLOW_MAX_AGENTS=150
 
@@ -5831,12 +5792,8 @@ HIVE_FLOW_MCP_PORT=3000
 HIVE_FLOW_MCP_TRANSPORT=stdio
 
 # Memory
-HIVE_FLOW_MEMORY_TYPE=hybrid
+HIVE_FLOW_MEMORY_BACKEND=hybrid
 HIVE_FLOW_MEMORY_PATH=./data
-
-# Vector Search
-HIVE_FLOW_HNSW_M=16
-HIVE_FLOW_HNSW_EF=200
 
 # Optional: IPFS Storage
 # PINATA_API_KEY=...
@@ -6161,9 +6118,6 @@ sudo chown -R $(whoami) ~/.npm
 ```bash
 # Enable garbage collection
 node --expose-gc node_modules/.bin/hive-flow
-# Reduce HNSW parameters for lower memory
-export HIVE_FLOW_HNSW_M=8
-export HIVE_FLOW_HNSW_EF=100
 ```
 
 </details>
