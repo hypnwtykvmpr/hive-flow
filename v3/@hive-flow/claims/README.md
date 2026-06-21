@@ -19,7 +19,7 @@ This package provides a complete system for coordinating work between humans and
 Or install via Hive Flow CLI:
 
 ```bash
-hive-flow plugins install @hive-flow/claims
+hive-flow plugins install -n @hive-flow/claims
 ```
 
 ---

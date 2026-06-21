@@ -638,7 +638,7 @@ verifyPlugin().catch(console.error);
 hive-flow plugins list | grep teammate
 
 # Check plugin info
-hive-flow plugins info teammate-plugin
+hive-flow plugins info -n teammate-plugin
 
 # Test MCP tools
 hive-flow mcp tools | grep teammate
@@ -680,20 +680,17 @@ This plugin is published to the Hive Flow Plugin Registry on IPFS for decentrali
 
 ```bash
 # Install from IPFS-backed registry
-hive-flow plugins install teammate-plugin --registry ipfs
-
-# Or specify registry CID directly
-hive-flow plugins install teammate-plugin --cid <registry-cid>
+hive-flow plugins install -n teammate-plugin --registry ipfs
 ```
 
-### Verify Registry Integrity
+### View Registry Metadata
 
 ```bash
-# Check plugin hash matches registry
-hive-flow plugins verify teammate-plugin
+# View plugin metadata from the registry
+hive-flow plugins info -n teammate-plugin --registry ipfs
 
-# View registry metadata
-hive-flow plugins registry info
+# List registry plugins
+hive-flow plugins list --registry ipfs
 ```
 
 ## License

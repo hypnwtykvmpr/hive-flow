@@ -535,7 +535,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 
 ```bash
 # Initialize project
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --wizard
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init wizard
 
 # Start daemon with background workers
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
@@ -857,11 +857,11 @@ Plugins are distributed via IPFS and can be installed with the CLI. Browse and i
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins list
 
 # Install a plugin
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins install @hive-flow/plugin-name
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins install -n @hive-flow/plugin-name
 
 # Enable/disable
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins enable @hive-flow/plugin-name
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins disable @hive-flow/plugin-name
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --enable
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --disable
 ```
 
 ### Core Plugins

@@ -287,7 +287,7 @@ Do NOT run manual memory/hooks/neural commands after completing work. Just stop.
 
 ```bash
 # Initialize project
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --wizard
+node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init wizard
 
 # Start daemon with background workers
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start

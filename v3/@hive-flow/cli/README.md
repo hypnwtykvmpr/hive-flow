@@ -135,13 +135,13 @@ Hive Flow commands; do not install or invoke external vector CLIs from this repo
 
 ```bash
 # Initialize the current project
-hive-flow init --wizard
+hive-flow init wizard
 
 # Or full setup with MCP + diagnostics
-hive-flow init --wizard --full
+hive-flow init --full
 
 # Re-run the wizard later
-hive-flow init --wizard
+hive-flow init wizard
 ```
 
 ---
@@ -463,7 +463,7 @@ curl ... | bash -s -- --full
 hive-flow init
 
 # Use the guided setup
-hive-flow init --wizard
+hive-flow init wizard
 
 # Use the full setup profile
 hive-flow init --full
@@ -2357,7 +2357,7 @@ All 37 commands and their subcommand counts are listed in the **CLI Commands** r
 
 ```bash
 # Initialize project with wizard
-hive-flow init --wizard
+hive-flow init wizard
 
 # Start daemon with background workers
 hive-flow daemon start
@@ -5133,7 +5133,7 @@ npm run bench:attention
 npm run bench:startup
 
 # Performance report
-hive-flow performance report
+hive-flow performance metrics
 
 # Benchmark specific suite
 hive-flow performance benchmark --suite memory
@@ -5811,7 +5811,7 @@ hive-flow config import --file my-config.json
 hive-flow config reset --key swarm
 
 # Initialize with wizard
-hive-flow init --wizard
+hive-flow init wizard
 ```
 
 </details>
@@ -5937,7 +5937,7 @@ hive-flow doctor --fix
 | V2 Command | V3 Command | Notes |
 |------------|------------|-------|
 | `hive-flow start` | `hive-flow mcp start` | MCP is explicit |
-| `hive-flow init` | `hive-flow init --wizard` | Interactive mode |
+| `hive-flow init` | `hive-flow init wizard` | Interactive mode |
 | `hive-flow spawn <type>` | `hive-flow agent spawn -t <type>` | Nested under `agent` |
 | `hive-flow swarm create` | `hive-flow swarm init --topology mesh` | Explicit topology |
 | `--pattern-store path` | `--memory-backend hivememory` | Backend selection |
