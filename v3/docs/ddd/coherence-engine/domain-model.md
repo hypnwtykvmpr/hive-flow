@@ -798,4 +798,4 @@ interface CausalQueryRepository {
 
 - [README](./README.md) - Domain overview
 - [Integration Points](./integration-points.md) - V3 integration details
-- [ADR-031: Prime Radiant Integration](../../implementation/adrs/ADR-031-prime-radiant-integration.md)
+- ADR-031 (prime-radiant-integration) — historical ADR sources not shipped in this tree

@@ -304,8 +304,8 @@ All Coherence Engine data is stored under the `pr/` namespace prefix:
 
 ## Related Documentation
 
-- [ADR-031: Prime Radiant Integration](../../implementation/adrs/ADR-031-prime-radiant-integration.md)
+- ADR-031 (prime-radiant-integration) — historical ADR sources not shipped in this tree
 - [Domain Model](./domain-model.md)
 - [Integration Points](./integration-points.md)
-- [ADR-006: Unified Memory Service](../../implementation/adrs/ADR-006-UNIFIED-MEMORY.md)
-- [ADR-022: AIDefence Integration](../../implementation/adrs/ADR-022-aidefence-integration.md)
+- ADR-006 (UNIFIED-MEMORY)
+- ADR-022 (aidefence-integration)

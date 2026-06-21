@@ -161,7 +161,7 @@ v3/@hive-flow/neural/
 
 ---
 
-**Location**: `/workspaces/hive-flow/v3/@hive-flow/neural/`
+**Location**: [`../`](../)
 
 **Package**: `@hive-flow/neural`
 

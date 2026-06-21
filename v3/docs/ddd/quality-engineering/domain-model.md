@@ -921,4 +921,4 @@ type ModelVersion = Branded<string, 'ModelVersion'>;
 
 - [README](./README.md) - Domain overview
 - [Integration Points](./integration-points.md) - V3 integration details
-- [ADR-030: Agentic-QE Integration](../../implementation/adrs/ADR-030-agentic-qe-integration.md)
+- ADR-030 (agentic-qe-integration) — historical ADR sources not shipped in this tree

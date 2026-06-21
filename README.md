@@ -1470,13 +1470,8 @@ chain.verify(envelope); // true — tamper-evident
 
 ### Documentation
 
-- [Architecture Overview](v3/@hive-flow/guidance/docs/guides/architecture-overview.md)
-- [Getting Started](v3/@hive-flow/guidance/docs/guides/getting-started.md)
-- [Enforcement Gates Tutorial](v3/@hive-flow/guidance/docs/tutorials/enforcement-gates.md)
-- [Proof Audit Trail](v3/@hive-flow/guidance/docs/tutorials/proof-audit-trail.md)
-- [Multi-Agent Security](v3/@hive-flow/guidance/docs/guides/multi-agent-security.md)
-- [API Quick Reference](v3/@hive-flow/guidance/docs/reference/api-quick-reference.md)
-- [Full README](v3/@hive-flow/guidance/README.md)
+- [Full README](v3/@hive-flow/guidance/README.md) — architecture, API examples, module reference, ADR index
+- Source: [`v3/@hive-flow/guidance/src/`](v3/@hive-flow/guidance/src/)
 
 </details>
 

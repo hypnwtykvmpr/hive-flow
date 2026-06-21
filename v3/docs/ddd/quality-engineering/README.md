@@ -365,8 +365,8 @@ All QE data is stored under the `aqe/v3/` namespace prefix:
 
 ## Related Documentation
 
-- [ADR-030: Agentic-QE Integration](../../implementation/adrs/ADR-030-agentic-qe-integration.md)
+- ADR-030 (agentic-qe-integration) — historical ADR sources not shipped in this tree
 - [Domain Model](./domain-model.md)
 - [Integration Points](./integration-points.md)
-- [ADR-015: Unified Plugin System](../../implementation/adrs/ADR-015-unified-plugin-system.md)
-- [ADR-006: Unified Memory Service](../../implementation/adrs/ADR-006-UNIFIED-MEMORY.md)
+- ADR-015 (unified-plugin-system)
+- ADR-006 (UNIFIED-MEMORY)

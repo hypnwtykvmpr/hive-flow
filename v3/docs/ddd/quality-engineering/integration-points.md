@@ -904,7 +904,7 @@ Memory Namespace Hierarchy
 
 - [README](./README.md) - Domain overview
 - [Domain Model](./domain-model.md) - Entities and aggregates
-- [ADR-030: Agentic-QE Integration](../../implementation/adrs/ADR-030-agentic-qe-integration.md)
-- [ADR-006: Unified Memory Service](../../implementation/adrs/ADR-006-UNIFIED-MEMORY.md)
-- [ADR-013: Core Security Module](../../implementation/adrs/ADR-013-core-security-module.md)
-- [ADR-026: Agent Booster Model Routing](../../implementation/adrs/ADR-026-agent-booster-model-routing.md)
+- ADR-030 (agentic-qe-integration) — historical ADR sources not shipped in this tree
+- ADR-006 (UNIFIED-MEMORY)
+- ADR-013 (core-security-module)
+- ADR-026 (agent-booster-model-routing)

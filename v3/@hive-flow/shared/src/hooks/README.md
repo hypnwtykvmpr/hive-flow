@@ -500,7 +500,7 @@ registry.register(
 Run the test suite:
 
 ```bash
-cd /workspaces/hive-flow/v3/@hive-flow/shared
+cd ../../
 npm test -- hooks.test.ts
 ```
 

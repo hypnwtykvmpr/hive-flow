@@ -689,7 +689,7 @@ const trajectory = await browser.endTrajectory(true); // Must await!
 
 ## License
 
-MIT License - see [LICENSE](../../LICENSE) for details.
+MIT License - see [LICENSE](../../../LICENSE) for details.
 
 ## Links
 

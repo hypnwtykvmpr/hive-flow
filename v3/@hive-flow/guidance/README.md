@@ -198,7 +198,7 @@ The compiler splits `CLAUDE.md` into two parts:
 
 ## What It Does
 
-The package ships 31 modules organized in 9 layers, from compilation through enforcement, trust, adversarial defense, audit, evolution, and tooling. Each module has a focused responsibility and a clean public API.
+The package ships 31 modules organized in 10 layers (7 core pipeline phases + WASM/Generate/Analyze tooling), from compilation through enforcement, trust, adversarial defense, audit, evolution, and tooling. Each module has a focused responsibility and a clean public API.
 
 | Layer | Component | Purpose |
 |-------|-----------|---------|
@@ -227,7 +227,6 @@ The package ships 31 modules organized in 9 layers, from compilation through enf
 | | `CapabilityAlgebra` | Grant, restrict, delegate, expire, revoke permissions as typed objects |
 | | `ManifestValidator` | Fails-closed admission for agent cell manifests |
 | | `ConformanceRunner` | Memory Clerk acceptance test with replay verification |
-| **Bridge** | `HiveBotGuidanceBridge` | Wires hivebot events to guidance hooks, AIDefence gate, memory adapter |
 | **WASM Kernel** | `guidance-kernel` | Rust→WASM policy kernel: SHA-256, HMAC, secret scanning, shard scoring |
 | | `WasmKernel` bridge | Auto-fallback host bridge with batch API for minimal boundary crossings |
 | **Generate** | `generateClaudeMd` | Scaffold CLAUDE.md from a project profile |
@@ -438,7 +437,7 @@ const evaluations = await plane.finalizeRun(run);
 
 ## Module Reference
 
-Each module is importable independently from its own subpath. The examples below show the most common usage patterns. For the complete API, see the [API quick reference](docs/reference/api-quick-reference.md).
+Each module is importable independently from its own subpath. The examples below show the most common usage patterns. For the complete API, see the source at `src/` or the package README sections above.
 
 ### Core Pipeline
 
@@ -652,9 +651,9 @@ const validation = governor.validateOptimizerAction({
 <summary><strong>Tutorial: Wiring into Claude Code hooks</strong></summary>
 
 ```typescript
-import { createGuidanceHooks } from '@hive-flow/guidance';
+import { createGuidanceHooks } from '@hive-flow/guidance/hooks';
 
-const provider = createGuidanceHooks({ gates, retriever, ledger });
+const { provider, hookIds } = createGuidanceHooks(gates, retriever, ledger, hookRegistry);
 
 // Registers on:
 // - PreCommand (Critical): destructive op + secret gates
@@ -662,8 +661,6 @@ const provider = createGuidanceHooks({ gates, retriever, ledger });
 // - PreEdit (Critical): diff size + secret gates
 // - PreTask (High): shard retrieval by intent
 // - PostTask (Normal): ledger finalization
-
-provider.register(hookRegistry);
 ```
 
 Gate decisions map to hook outcomes: `deny` → abort, `warn` → log, `allow` → pass through.
@@ -1095,33 +1092,35 @@ npm run test:coverage   # with coverage
 
 Every significant design decision is documented as an Architecture Decision Record. These are the authoritative references for why each module works the way it does.
 
+> Note: these guidance ADRs are not currently published as files in this package. The `docs/adrs/` directory does not exist. ADR titles below are listed for reference only.
+
 | ADR | Title | Status |
 |-----|-------|--------|
-| [G001](docs/adrs/ADR-G001-guidance-control-plane.md) | Guidance Control Plane | Accepted |
-| [G002](docs/adrs/ADR-G002-constitution-shard-split.md) | Constitution / Shard Split | Accepted |
-| [G003](docs/adrs/ADR-G003-intent-weighted-classification.md) | Intent-Weighted Classification | Accepted |
-| [G004](docs/adrs/ADR-G004-four-enforcement-gates.md) | Four Enforcement Gates | Accepted |
-| [G005](docs/adrs/ADR-G005-proof-envelope.md) | Proof Envelope | Accepted |
-| [G006](docs/adrs/ADR-G006-deterministic-tool-gateway.md) | Deterministic Tool Gateway | Accepted |
-| [G007](docs/adrs/ADR-G007-memory-write-gating.md) | Memory Write Gating | Accepted |
-| [G008](docs/adrs/ADR-G008-optimizer-promotion-rule.md) | Optimizer Promotion Rule | Accepted |
-| [G009](docs/adrs/ADR-G009-headless-testing-harness.md) | Headless Testing Harness | Accepted |
-| [G010](docs/adrs/ADR-G010-capability-algebra.md) | Capability Algebra | Accepted |
-| [G011](docs/adrs/ADR-G011-artifact-ledger.md) | Artifact Ledger | Accepted |
-| [G012](docs/adrs/ADR-G012-manifest-validator.md) | Manifest Validator | Accepted |
-| [G013](docs/adrs/ADR-G013-evolution-pipeline.md) | Evolution Pipeline | Accepted |
-| [G014](docs/adrs/ADR-G014-conformance-kit.md) | Agent Cell Conformance Kit | Accepted |
-| [G015](docs/adrs/ADR-G015-coherence-driven-throttling.md) | Coherence-Driven Throttling | Accepted |
-| [G016](docs/adrs/ADR-G016-agentic-container-integration.md) | Agentic Container Integration | Accepted |
-| [G017](docs/adrs/ADR-G017-trust-score-accumulation.md) | Trust Score Accumulation | Accepted |
-| [G018](docs/adrs/ADR-G018-truth-anchor-system.md) | Truth Anchor System | Accepted |
-| [G019](docs/adrs/ADR-G019-first-class-uncertainty.md) | First-Class Uncertainty | Accepted |
-| [G020](docs/adrs/ADR-G020-temporal-assertions.md) | Temporal Assertions | Accepted |
-| [G021](docs/adrs/ADR-G021-human-authority-and-irreversibility.md) | Human Authority and Irreversibility | Accepted |
-| [G022](docs/adrs/ADR-G022-adversarial-model.md) | Adversarial Model | Accepted |
-| [G023](docs/adrs/ADR-G023-meta-governance.md) | Meta-Governance | Accepted |
-| [G024](docs/adrs/ADR-G024-continue-gate.md) | Continue Gate | Accepted |
-| [G025](docs/adrs/ADR-G025-wasm-kernel.md) | Rust WASM Policy Kernel | Accepted |
+| G001 | Guidance Control Plane | Accepted |
+| G002 | Constitution / Shard Split | Accepted |
+| G003 | Intent-Weighted Classification | Accepted |
+| G004 | Four Enforcement Gates | Accepted |
+| G005 | Proof Envelope | Accepted |
+| G006 | Deterministic Tool Gateway | Accepted |
+| G007 | Memory Write Gating | Accepted |
+| G008 | Optimizer Promotion Rule | Accepted |
+| G009 | Headless Testing Harness | Accepted |
+| G010 | Capability Algebra | Accepted |
+| G011 | Artifact Ledger | Accepted |
+| G012 | Manifest Validator | Accepted |
+| G013 | Evolution Pipeline | Accepted |
+| G014 | Agent Cell Conformance Kit | Accepted |
+| G015 | Coherence-Driven Throttling | Accepted |
+| G016 | Agentic Container Integration | Accepted |
+| G017 | Trust Score Accumulation | Accepted |
+| G018 | Truth Anchor System | Accepted |
+| G019 | First-Class Uncertainty | Accepted |
+| G020 | Temporal Assertions | Accepted |
+| G021 | Human Authority and Irreversibility | Accepted |
+| G022 | Adversarial Model | Accepted |
+| G023 | Meta-Governance | Accepted |
+| G024 | Continue Gate | Accepted |
+| G025 | Rust WASM Policy Kernel | Accepted |
 
 ## Measurement Plan
 
@@ -1168,7 +1167,7 @@ Take 20 real Hive Flow tasks from repo history. Run A without control plane, run
 
 | Resource | URL |
 |----------|-----|
-| **API Reference** | [docs/reference/api-quick-reference.md](docs/reference/api-quick-reference.md) |
-| **ADR Index** | [docs/adrs/](docs/adrs/) |
+| **Package README** | This file — all API examples are above |
+| **Source** | [`src/`](src/) — browse subpath modules directly |
 
 ## License

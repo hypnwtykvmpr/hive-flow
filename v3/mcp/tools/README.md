@@ -399,7 +399,7 @@ Current implementation includes:
 
 ## Related Files
 
-- `/workspaces/hive-flow/v3/mcp/types.ts` - MCP type definitions
-- `/workspaces/hive-flow/v3/mcp/server.ts` - MCP server implementation
-- `/workspaces/hive-flow/v3/mcp/tool-registry.ts` - Tool registration system
-- `/workspaces/hive-flow/CLAUDE.md` - Project documentation
+- [`../types.ts`](../types.ts) - MCP type definitions
+- [`../server.ts`](../server.ts) - MCP server implementation
+- [`../tool-registry.ts`](../tool-registry.ts) - Tool registration system
+- [`../../../CLAUDE.md`](../../../CLAUDE.md) - Project documentation
