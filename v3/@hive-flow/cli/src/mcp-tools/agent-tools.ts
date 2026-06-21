@@ -23,6 +23,7 @@ import {
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
+import { resolveSessionId } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -479,7 +480,6 @@ const BRIDGE_BASE_ENV_KEYS = new Set([
   'HIVE_FLOW_CLIENT_KIND',
   'CLAUDE_SESSION_ID',
   'CODEX_SESSION_ID',
-  'HIVE_FLOW_SESSION_ID',
   'HIVE_FLOW_CONFIG',
   'HIVE_FLOW_LOG_LEVEL',
   // Proxy configuration — required for CLI providers in proxied/corporate networks
@@ -655,7 +655,7 @@ export const agentTools: MCPTool[] = [
       },
       required: ['agentType'],
     },
-    handler: async (input) => {
+    handler: async (input, context) => {
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
       const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
       const config = (input.config as Record<string, unknown>) || {};
@@ -788,7 +788,7 @@ export const agentTools: MCPTool[] = [
         modelRoutedBy: normalizedInputModel !== undefined && normalizedInputModel !== ''
           ? 'explicit'
           : routingResult.routedBy,
-        ownerSessionId: process.env.CLAUDE_SESSION_ID || process.env.HIVE_FLOW_SESSION_ID || undefined,
+        ownerSessionId: resolveSessionId(input, process.env, context) || undefined,
       };
 
       // Transition spawning → idle (setup complete)

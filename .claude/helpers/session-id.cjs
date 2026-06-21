@@ -38,12 +38,15 @@ function sanitizeSessionId(value) {
   return sanitized || null;
 }
 
-function resolveSessionId(input = null, env = process.env) {
+function resolveSessionId(input = null, env = process.env, context = null) {
   const source =
     asNonEmptyString(input && input.session_id)
     || asNonEmptyString(input && input.sessionId)
+    || asNonEmptyString(env && env.CODEX_SESSION_ID)
     || asNonEmptyString(env && env.CLAUDE_SESSION_ID)
-    || asNonEmptyString(env && env.HIVE_FLOW_SESSION_ID);
+    || asNonEmptyString(env && env.HIVE_FLOW_SESSION_ID)
+    || asNonEmptyString(context && context.session_id)
+    || asNonEmptyString(context && context.sessionId);
 
   return source ? sanitizeSessionId(source) : null;
 }

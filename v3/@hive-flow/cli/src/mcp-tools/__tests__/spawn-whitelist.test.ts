@@ -11,6 +11,11 @@ const spawnTool = agentTools.find(tool => tool.name === 'agent_spawn')!;
 const listTool = agentTools.find(tool => tool.name === 'agent_list')!;
 const statusTool = agentTools.find(tool => tool.name === 'agent_status')!;
 const ORIGINAL_CWD = process.cwd();
+const ORIGINAL_ENV = {
+  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
+  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
+  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
+};
 
 function readSpawnedTypes(root: string): string[] {
   const storePath = join(root, '.hive-flow', 'agents', 'store.json');
@@ -19,6 +24,15 @@ function readSpawnedTypes(root: string): string[] {
     agents?: Record<string, { agentType?: string }>;
   };
   return Object.values(store.agents ?? {}).map(agent => String(agent.agentType));
+}
+
+function readAgentRecord(root: string, agentId: string): Record<string, unknown> | undefined {
+  const storePath = join(root, '.hive-flow', 'agents', 'store.json');
+  if (!existsSync(storePath)) return undefined;
+  const store = JSON.parse(readFileSync(storePath, 'utf8')) as {
+    agents?: Record<string, Record<string, unknown>>;
+  };
+  return store.agents?.[agentId];
 }
 
 function cliSpawnChoices(): string[] {
@@ -37,6 +51,13 @@ describe('agent_spawn canonical roster whitelist', () => {
 
   afterEach(() => {
     process.chdir(ORIGINAL_CWD);
+    for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+      if (value === undefined) {
+        delete process.env[key as keyof typeof ORIGINAL_ENV];
+      } else {
+        process.env[key as keyof typeof ORIGINAL_ENV] = value;
+      }
+    }
     rmSync(tmpRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
   });
 
@@ -80,6 +101,42 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentType: 'bug-hunter',
     });
     expect(readSpawnedTypes(tmpRoot)).toContain('bug-hunter');
+  });
+
+  it('stamps ownerSessionId on agent_spawn from session env before MCP context fallback', async () => {
+    process.env.CODEX_SESSION_ID = 'codex-session';
+    process.env.CLAUDE_SESSION_ID = 'claude-session';
+    process.env.HIVE_FLOW_SESSION_ID = 'provider-session';
+
+    const result = await spawnTool.handler({
+      agentId: 'owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }, { sessionId: 'context-session' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'owned-agent',
+    });
+    expect(readAgentRecord(tmpRoot, 'owned-agent')?.ownerSessionId).toBe('codex-session');
+  });
+
+  it('falls back to MCP context for agent_spawn ownership when no session env exists', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await spawnTool.handler({
+      agentId: 'context-owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }, { sessionId: 'context-session' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'context-owned-agent',
+    });
+    expect(readAgentRecord(tmpRoot, 'context-owned-agent')?.ownerSessionId).toBe('context-session');
   });
 
   it('lists spawned idle agents when status is all and supports canonical type filters', async () => {

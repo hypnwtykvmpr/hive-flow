@@ -14,12 +14,16 @@ export function sanitizeSessionId(value: unknown): string | null {
 export function resolveSessionId(
   input: Record<string, unknown> | null | undefined = null,
   env: SessionEnv = process.env,
+  context: Record<string, unknown> | null | undefined = null,
 ): string | null {
   const source =
     asNonEmptyString(input?.session_id)
     ?? asNonEmptyString(input?.sessionId)
+    ?? asNonEmptyString(env.CODEX_SESSION_ID)
     ?? asNonEmptyString(env.CLAUDE_SESSION_ID)
-    ?? asNonEmptyString(env.HIVE_FLOW_SESSION_ID);
+    ?? asNonEmptyString(env.HIVE_FLOW_SESSION_ID)
+    ?? asNonEmptyString(context?.session_id)
+    ?? asNonEmptyString(context?.sessionId);
 
   return source ? sanitizeSessionId(source) : null;
 }

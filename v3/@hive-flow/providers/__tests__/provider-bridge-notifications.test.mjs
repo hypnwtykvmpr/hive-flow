@@ -155,6 +155,49 @@ describe('provider bridge task completion notifications', () => {
     expect(sessionPending).toContain('"targetAgent":"claude"');
   });
 
+  it('uses Codex session id before conflicting Claude/Hive session env values', () => {
+    const projectRoot = tempDir('hf-bridge-codex-owner-project-');
+    const hiveHome = tempDir('hf-bridge-codex-owner-home-');
+    const taskId = 'task-codex-env-owner';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+    writeFileSync(resultFile, JSON.stringify({
+      success: true,
+      result: {
+        success: true,
+        agentId: 'agent-codex-owner',
+        content: 'finished',
+      },
+    }), 'utf8');
+
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.CODEX_SESSION_ID = 'codex-session-env-owner';
+    process.env.CLAUDE_SESSION_ID = 'claude-session-wrong';
+    process.env.HIVE_FLOW_SESSION_ID = 'hive-session-wrong';
+    delete process.env.HIVE_FLOW_CLIENT_KIND;
+    delete process.env.CLAUDE_CODE_ENTRYPOINT;
+
+    expect(bridge.notifyTaskCompletionFromResultFile(resultFile)).toBe(true);
+
+    const codexSessionPending = join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('codex', 'codex-session-env-owner'),
+      'pending-notifications.jsonl',
+    );
+    const wrongHiveSessionPending = join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('codex', 'hive-session-wrong'),
+      'pending-notifications.jsonl',
+    );
+
+    expect(readFileSync(codexSessionPending, 'utf8')).toContain('"targetAgent":"codex"');
+    expect(existsSync(wrongHiveSessionPending)).toBe(false);
+  });
+
   it('escalates denied privileged run_command attempts to the owning operator', async () => {
     const projectRoot = tempDir('hf-bridge-permission-project-');
     const hiveHome = tempDir('hf-bridge-permission-home-');

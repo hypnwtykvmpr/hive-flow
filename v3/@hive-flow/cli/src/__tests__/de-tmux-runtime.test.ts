@@ -70,4 +70,16 @@ describe('de-tmux runtime invariant', () => {
     expect(wakePaths.wakeSessionPaths(null, { TMUX_PANE: '%1' })).toBeNull();
     expect(wakePaths.sessionValue(null, { CLAUDE_SESSION_ID: 'session-1', TMUX_PANE: '%1' })).toBe('session-1');
   });
+
+  it('routes wake sessions by Codex id before Claude or Hive fallback env ids', () => {
+    const wakePaths = requireFromHere(resolve(repoRoot, '.claude/helpers/wake-paths.cjs')) as {
+      sessionValue: (input?: unknown, env?: Record<string, string | undefined>) => string | null;
+    };
+
+    expect(wakePaths.sessionValue(null, {
+      CODEX_SESSION_ID: 'codex-session',
+      CLAUDE_SESSION_ID: 'claude-session',
+      HIVE_FLOW_SESSION_ID: 'hive-session',
+    })).toBe('codex-session');
+  });
 });

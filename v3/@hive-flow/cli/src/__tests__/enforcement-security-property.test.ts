@@ -118,6 +118,8 @@ function clearAgentEnv(): void {
   delete process.env.HIVE_FLOW_AGENT_ID;
   delete process.env.CLAUDE_AGENT_ID;
   delete process.env.CLAUDE_SESSION_ID;
+  delete process.env.CODEX_SESSION_ID;
+  delete process.env.HIVE_FLOW_SESSION_ID;
   delete process.env.HIVE_FLOW_AGENT_TOKEN;
   delete process.env.HIVE_FLOW_HIVE_ID;
   delete process.env.CLAUDE_PARENT_AGENT_ID;
@@ -522,6 +524,25 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('project', ctx.projectId)).toBeNull();
     expect(readScopedState('agent', 'coordinator-session-only')).toBeNull();
     expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('uses CODEX_SESSION_ID before Claude/Hive env ids for root-session scope state', () => {
+    process.env.CODEX_SESSION_ID = 'codex-root-session-only';
+    process.env.CLAUDE_SESSION_ID = 'claude-root-session-wrong';
+    process.env.HIVE_FLOW_SESSION_ID = 'hive-root-session-wrong';
+
+    const result = enf.processPreToolUse({
+      tool_name: 'Bash',
+      tool_input: { command: "bash -c 'eval $(echo echo hi)'" },
+    });
+
+    const ctx = enf.resolveScopeContext();
+    expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
+    expect(enf.getAgentId({})).toBeNull();
+    expect(ctx.sid).toBe('codex-root-session-only');
+    expect(readScopedState('session', 'codex-root-session-only')?.level).toBe(enf.LEVELS.WARNED);
+    expect(readScopedState('session', 'claude-root-session-wrong')).toBeNull();
+    expect(readScopedState('session', 'hive-root-session-wrong')).toBeNull();
   });
 
   it('writes new enforcement state under HIVE_FLOW_HOME and leaves project-local state as legacy-only', () => {
@@ -1014,6 +1035,24 @@ describe('enforcement security property contracts', () => {
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('POST-COMPACT RECOVERY REQUIRED');
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('compaction-recovery.cjs ack');
     expect(readScopedState('global', 'global')).toBeNull();
+  });
+
+  it('matches compaction recovery requirements against CODEX_SESSION_ID before Claude env ids', () => {
+    const recoveryPath = join(root, '.hive-flow', 'data', 'compaction-recovery-required.json');
+    mkdirSync(dirname(recoveryPath), { recursive: true });
+    writeFileSync(recoveryPath, JSON.stringify({
+      type: 'hive-flow.compaction-recovery-required',
+      sessionId: 'codex-compact-session',
+      recoveryNonce: 'nonce-codex',
+      source: 'compact',
+      requiredActions: ['read-compaction-handoff', 'inspect-live-git-state', 'acknowledge-recovery'],
+      createdAt: new Date().toISOString(),
+    }));
+    process.env.CODEX_SESSION_ID = 'codex-compact-session';
+    process.env.CLAUDE_SESSION_ID = 'claude-compact-session-wrong';
+
+    const flag = enf.loadCompactionRecoveryRequirement({});
+    expect(flag?.sessionId).toBe('codex-compact-session');
   });
 
   it('allows post-compact reorientation commands while recovery is required', () => {

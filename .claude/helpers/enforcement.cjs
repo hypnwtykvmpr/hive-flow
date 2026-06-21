@@ -711,8 +711,8 @@ function verifySpawnToken(agentId) {
 function resolveSessionScopeId(input = null) {
   const raw = input?.session_id
     || input?.sessionId
+    || process.env.CODEX_SESSION_ID
     || process.env.CLAUDE_SESSION_ID
-    || process.env.HIVE_FLOW_SESSION_ID
     || process.env.HIVE_FLOW_SESSION_ID
     || '';
   return sanitizeScopeId(raw || '');
@@ -2397,7 +2397,14 @@ function loadCompactionRecoveryRequirement(input = {}) {
   }
   if (!flag || flag.type !== 'hive-flow.compaction-recovery-required') return null;
 
-  const currentSession = String(input?.session_id || input?.sessionId || process.env.CLAUDE_SESSION_ID || '').trim();
+  const currentSession = String(
+    input?.session_id ||
+    input?.sessionId ||
+    process.env.CODEX_SESSION_ID ||
+    process.env.CLAUDE_SESSION_ID ||
+    process.env.HIVE_FLOW_SESSION_ID ||
+    ''
+  ).trim();
   const flagSession = String(flag.sessionId || '').trim();
   if (flagSession && currentSession && flagSession !== currentSession) return null;
   return flag;

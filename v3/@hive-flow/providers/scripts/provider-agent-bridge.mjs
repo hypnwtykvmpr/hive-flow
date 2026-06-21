@@ -143,9 +143,8 @@ function bridgeResolveHiveHome(env = process.env) {
 }
 
 function bridgeSessionValue(env = process.env) {
-  return bridgeStringValue(env.HIVE_FLOW_SESSION_ID)
+  return bridgeStringValue(env.CODEX_SESSION_ID)
     || bridgeStringValue(env.CLAUDE_SESSION_ID)
-    || bridgeStringValue(env.CODEX_SESSION_ID)
     || bridgeStringValue(env.HIVE_FLOW_SESSION_ID);
 }
 
@@ -2135,7 +2134,7 @@ async function evaluateRunShellBashGate(renderedCommand) {
       tool_name: 'Bash',
       tool_input: { command: renderedCommand },
       cwd: PROJECT_ROOT,
-      session_id: process.env.CLAUDE_SESSION_ID || 'provider-bridge-run-shell',
+      session_id: bridgeSessionValue(process.env) || 'provider-bridge-run-shell',
     });
     if (decision?.decision === 'allow') {
       return { allowed: true, reason: decision.reason || '' };

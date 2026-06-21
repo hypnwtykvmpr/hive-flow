@@ -34,6 +34,14 @@ function bashInput(command: string, sessionId = 'trusted-root-checkout-session')
   };
 }
 
+function bashInputWithoutSession(command: string): HookInput {
+  return {
+    tool_name: 'Bash',
+    tool_input: { command },
+    cwd: '/project',
+  };
+}
+
 async function evaluateWithLog(
   input: HookInput,
   config: Partial<PermissionConfig> = {},
@@ -139,6 +147,29 @@ describe('trusted-root git checkout branch policy', () => {
     expect(run.result.decision).toBe('allow');
     expect(lastLayer(run)).toBe('inline-jury');
     expect(autoDenyEntry(run)).toBeUndefined();
+  });
+
+  it('treats a Codex env session as a trusted-root permission session', async () => {
+    const previousCodex = process.env.CODEX_SESSION_ID;
+    const previousClaude = process.env.CLAUDE_SESSION_ID;
+    const previousHive = process.env.HIVE_FLOW_SESSION_ID;
+    process.env.CODEX_SESSION_ID = 'codex-trusted-root';
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+    try {
+      const run = await evaluateWithLog(bashInputWithoutSession('git checkout feat/codex-session'));
+
+      expect(run.result.decision).toBe('allow');
+      expect(lastLayer(run)).toBe('inline-jury');
+      expect(autoDenyEntry(run)).toBeUndefined();
+    } finally {
+      if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
+      else process.env.CODEX_SESSION_ID = previousCodex;
+      if (previousClaude === undefined) delete process.env.CLAUDE_SESSION_ID;
+      else process.env.CLAUDE_SESSION_ID = previousClaude;
+      if (previousHive === undefined) delete process.env.HIVE_FLOW_SESSION_ID;
+      else process.env.HIVE_FLOW_SESSION_ID = previousHive;
+    }
   });
 
   it.each(golden.pathRestores)('keeps path-restoring checkout auto-denied: %s', async (command) => {

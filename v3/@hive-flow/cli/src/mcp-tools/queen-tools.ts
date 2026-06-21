@@ -113,7 +113,10 @@ async function readVerifiedQueenDirectWorkCount(queenId: string): Promise<number
 // Helper: invoke agent_spawn handler via dynamic import (avoid circular)
 // ---------------------------------------------------------------------------
 
-async function callAgentSpawn(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function callAgentSpawn(
+  input: Record<string, unknown>,
+  context?: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   // FIX-C4 (G3, N1 gate): defense-in-depth — the public MCP gate enforces on
   // top-level calls, but queen-internal callers must also be validated to
   // prevent per-worker bypass of model policy (e.g. queen_mission_assign's
@@ -138,7 +141,7 @@ async function callAgentSpawn(input: Record<string, unknown>): Promise<Record<st
   const { agentTools } = await import('./agent-tools.js');
   const spawnTool = agentTools.find(t => t.name === 'agent_spawn');
   if (!spawnTool) throw new Error('agent_spawn tool not found');
-  return spawnTool.handler(effectiveInput) as Promise<Record<string, unknown>>;
+  return spawnTool.handler(effectiveInput, context) as Promise<Record<string, unknown>>;
 }
 
 async function callAgentTask(input: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -218,7 +221,7 @@ const missionAssignTool: MCPTool = {
     },
     required: ['queenId', 'scope', 'description'],
   },
-  handler: async (input) => {
+  handler: async (input, context) => {
     const queenId = input.queenId as string;
     const scope = input.scope as string;
     const description = input.description as string;
@@ -229,7 +232,7 @@ const missionAssignTool: MCPTool = {
     const workerDependencies = input.workerDependencies as Record<string, string[]> | undefined;
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
     const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
-    const ownerSessionId = resolveSessionId(input as Record<string, unknown>, process.env);
+    const ownerSessionId = resolveSessionId(input as Record<string, unknown>, process.env, context);
 
     // (1) Hard minimum of 5 workers
     if (maxWorkers < 5) {
@@ -380,7 +383,7 @@ const missionAssignTool: MCPTool = {
               parentAgentId: queenId,
               role,
             },
-          });
+          }, context);
         } catch (e) {
           return { role, error: `Spawn failed: ${(e as Error).message}` };
         }
@@ -550,7 +553,7 @@ const spawnWorkerTool: MCPTool = {
     },
     required: ['hiveId', 'queenId', 'role'],
   },
-  handler: async (input) => {
+  handler: async (input, context) => {
     const hiveId = input.hiveId as string;
     const queenId = input.queenId as string;
     const role = input.role as string;
@@ -624,7 +627,7 @@ const spawnWorkerTool: MCPTool = {
           role,
           budgetAllocation,
         },
-      });
+      }, context);
 
       if (!spawnResult.success) {
         return { success: false, error: `Failed to spawn worker: ${spawnResult.error}` };

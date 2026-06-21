@@ -111,6 +111,20 @@ describe('sessionKeyFor', () => {
     expect(fromInput).not.toBe(fromEnv);
   });
 
+  it('uses CODEX_SESSION_ID before Claude and Hive Flow session env values', () => {
+    const fromEnv = sessionKeyFor(undefined, {
+      HIVE_FLOW_SESSION_ID: 'hive-session',
+      CLAUDE_SESSION_ID: 'claude-session',
+      CODEX_SESSION_ID: 'codex-session',
+    });
+
+    expect(fromEnv).toBe(sessionKeyFor({ sessionId: 'codex-session' }, {
+      CODEX_SESSION_ID: 'codex-session',
+    }));
+    expect(fromEnv).not.toBe(sessionKeyFor({ sessionId: 'claude-session' }, {}));
+    expect(fromEnv).not.toBe(sessionKeyFor({ sessionId: 'hive-session' }, {}));
+  });
+
   it('returns deterministic path-safe keys for unsafe session values', () => {
     const key = sessionKeyFor({ sessionId: '../unsafe session/value' }, {});
     expect(key).toMatch(/^s_[a-f0-9]{32}$/);

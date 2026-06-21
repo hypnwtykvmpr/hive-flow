@@ -112,6 +112,7 @@ describe('Role Enforcement System', () => {
   afterEach(() => {
     delete process.env.HIVE_FLOW_AGENT_ID;
     delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.CODEX_SESSION_ID;
     delete process.env.CLAUDE_AGENT_ID;
     delete process.env.CLAUDE_PARENT_AGENT_ID;
     delete process.env.HIVE_FLOW_HOME;
@@ -698,6 +699,17 @@ describe('Role Enforcement System', () => {
       const result = roleEnf.processPreToolUse({ tool_name: 'Read' });
       expect(result).toEqual({});
       expect(roleEnf.getAgentId({})).toBe('session-agent');
+    });
+
+    it('falls back to CODEX_SESSION_ID before CLAUDE_SESSION_ID for Codex root role enforcement', () => {
+      delete process.env.HIVE_FLOW_AGENT_ID;
+      delete process.env.CLAUDE_AGENT_ID;
+      process.env.CODEX_SESSION_ID = 'codex-session-agent';
+      process.env.CLAUDE_SESSION_ID = 'claude-session-agent';
+
+      const result = roleEnf.processPreToolUse({ tool_name: 'Read' });
+      expect(result).toEqual({});
+      expect(roleEnf.getAgentId({})).toBe('codex-session-agent');
     });
 
     it('falls back to CLAUDE_AGENT_ID as last resort', () => {

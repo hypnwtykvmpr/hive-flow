@@ -40,9 +40,9 @@ function sessionValue(input, env = process.env) {
   const fromInput = sessionInputValue(input);
   return (
     fromInput.value ||
-    stringValue(env.HIVE_FLOW_SESSION_ID) ||
+    stringValue(env.CODEX_SESSION_ID) ||
     stringValue(env.CLAUDE_SESSION_ID) ||
-    stringValue(env.CODEX_SESSION_ID)
+    stringValue(env.HIVE_FLOW_SESSION_ID)
   );
 }
 

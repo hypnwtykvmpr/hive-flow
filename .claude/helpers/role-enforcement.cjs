@@ -241,6 +241,7 @@ function getAgentId(input = null) {
   return sanitizeId(process.env.HIVE_FLOW_AGENT_ID || '')
     || getHookAgentId(input)
     || sanitizeId(process.env.CLAUDE_AGENT_ID || '')
+    || sanitizeId(process.env.CODEX_SESSION_ID || '')
     || sanitizeId(process.env.CLAUDE_SESSION_ID || '')
     || null;
 }

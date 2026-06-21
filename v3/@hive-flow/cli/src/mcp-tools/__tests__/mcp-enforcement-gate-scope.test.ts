@@ -76,7 +76,7 @@ let originalCcAgentId: string | undefined;
 let originalHiveId: string | undefined;
 let originalSessionId: string | undefined;
 let originalHfSessionId: string | undefined;
-let originalAfSessionId: string | undefined;
+let originalCodexSessionId: string | undefined;
 const createdRoots: string[] = [];
 
 beforeEach(() => {
@@ -88,14 +88,14 @@ beforeEach(() => {
   originalHiveId = process.env.HIVE_FLOW_HIVE_ID;
   originalSessionId = process.env.CLAUDE_SESSION_ID;
   originalHfSessionId = process.env.HIVE_FLOW_SESSION_ID;
-  originalAfSessionId = process.env.HIVE_FLOW_SESSION_ID;
+  originalCodexSessionId = process.env.CODEX_SESSION_ID;
   // Default: clear scope-id env so only the project + global scopes apply.
   delete process.env.HIVE_FLOW_AGENT_ID;
   delete process.env.CLAUDE_AGENT_ID;
   delete process.env.HIVE_FLOW_HIVE_ID;
   delete process.env.CLAUDE_SESSION_ID;
   delete process.env.HIVE_FLOW_SESSION_ID;
-  delete process.env.HIVE_FLOW_SESSION_ID;
+  delete process.env.CODEX_SESSION_ID;
 });
 
 function restore(name: string, value: string | undefined): void {
@@ -112,7 +112,7 @@ afterEach(() => {
   restore('HIVE_FLOW_HIVE_ID', originalHiveId);
   restore('CLAUDE_SESSION_ID', originalSessionId);
   restore('HIVE_FLOW_SESSION_ID', originalHfSessionId);
-  restore('HIVE_FLOW_SESSION_ID', originalAfSessionId);
+  restore('CODEX_SESSION_ID', originalCodexSessionId);
 
   while (createdRoots.length > 0) {
     const root = createdRoots.pop()!;
@@ -303,6 +303,18 @@ describe('getEnforcementLevel — scope-aware (security regression)', () => {
     process.env.CLAUDE_SESSION_ID = 'sess-abc123';
     writeScopeState(sb, 'sessions', 'sess-abc123', 3);
     expect(getEnforcementLevel()).toBe(3);
+  });
+
+  it('Codex session scope HALT(3) wins over conflicting Claude/Hive env ids', () => {
+    const sb = makeSandbox();
+    writeGlobalState(sb, 0);
+    process.env.CODEX_SESSION_ID = 'codex-sess-abc123';
+    process.env.CLAUDE_SESSION_ID = 'claude-sess-wrong';
+    process.env.HIVE_FLOW_SESSION_ID = 'hive-sess-wrong';
+    writeScopeState(sb, 'sessions', 'codex-sess-abc123', 3);
+
+    expect(getEnforcementLevel()).toBe(3);
+    expect(checkMCPEnforcement('agent_spawn').allowed).toBe(false);
   });
 
   it('agent scope HALT(3) at correct hiveHome path -> 3', () => {

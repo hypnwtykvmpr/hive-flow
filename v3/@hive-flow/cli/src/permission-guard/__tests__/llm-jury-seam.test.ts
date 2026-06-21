@@ -74,6 +74,14 @@ function bashInput(command: string, sessionId = 'llm-jury-seam-session'): HookIn
   };
 }
 
+function bashInputWithoutSession(command: string): HookInput {
+  return {
+    tool_name: 'Bash',
+    tool_input: { command },
+    cwd: '/project',
+  };
+}
+
 function malformedInput(sessionId = 'llm-jury-malformed-session'): HookInput {
   return {
     tool_name: '',
@@ -227,6 +235,39 @@ describe('Stage-2 LLM jury seam', () => {
     expect(lastLayer(run)).toBe('inline-jury');
     expect(harness.evaluateLLMJury).not.toHaveBeenCalled();
     expect(harness.recordVerdict).not.toHaveBeenCalled();
+  });
+
+  it('uses CODEX_SESSION_ID for env-derived LLM jury budget ownership', async () => {
+    const root = makeTempRoot('llm-jury-codex-budget');
+    const harness = await loadHarness();
+    harness.evaluateLLMJury.mockResolvedValue({
+      verdict: 'APPROVED',
+      votes: [],
+      reason: 'first ambiguous call approved',
+      totalLatencyMs: 2,
+    });
+    const previousCodex = process.env.CODEX_SESSION_ID;
+    const previousClaude = process.env.CLAUDE_SESSION_ID;
+    const previousHive = process.env.HIVE_FLOW_SESSION_ID;
+    process.env.CODEX_SESSION_ID = 'codex-budget-session';
+    process.env.CLAUDE_SESSION_ID = 'claude-budget-session';
+    process.env.HIVE_FLOW_SESSION_ID = 'hive-budget-session';
+    try {
+      await evaluateWithLog(harness, bashInputWithoutSession('custom --codex-budget'), root, {
+        llm_jury_budget_dir: join(root, 'budget'),
+        llm_jury_budget_max_calls: 1,
+      });
+    } finally {
+      if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
+      else process.env.CODEX_SESSION_ID = previousCodex;
+      if (previousClaude === undefined) delete process.env.CLAUDE_SESSION_ID;
+      else process.env.CLAUDE_SESSION_ID = previousClaude;
+      if (previousHive === undefined) delete process.env.HIVE_FLOW_SESSION_ID;
+      else process.env.HIVE_FLOW_SESSION_ID = previousHive;
+    }
+
+    const budgetFiles = readFileSync(join(root, 'budget', 'llm-jury-budget-codex-budget-session.json'), 'utf8');
+    expect(budgetFiles).toContain('"count":1');
   });
 
   it('denies malformed no-subject input without entering the LLM path', async () => {

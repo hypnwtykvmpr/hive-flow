@@ -62,6 +62,31 @@ fs.writeFileSync(path.join(dataDir, 'watcher-spawned.json'), JSON.stringify({
   );
 }
 
+function installFakeAgentTools(root: string): void {
+  const packageDir = join(root, 'v3', '@hive-flow', 'cli');
+  const distDir = join(packageDir, 'dist', 'src', 'mcp-tools');
+  mkdirSync(distDir, { recursive: true });
+  writeFileSync(join(packageDir, 'package.json'), JSON.stringify({ type: 'module' }), 'utf8');
+  writeFileSync(
+    join(distDir, 'agent-tools.js'),
+    `
+import fs from 'node:fs';
+import path from 'node:path';
+
+export const agentTools = [{
+  name: 'agent_spawn',
+  handler: async (input) => {
+    const dataDir = path.join(process.cwd(), '.hive-flow', 'data');
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(path.join(dataDir, 'fake-agent-spawn.json'), JSON.stringify(input, null, 2));
+    return { success: true, agentId: input.agentId };
+  },
+}];
+`,
+    'utf8',
+  );
+}
+
 function writeHiveRecord(
   root: string,
   hiveId: string,
@@ -247,6 +272,33 @@ describe('hive enforcement watcher launch', () => {
         event: 'hive-enforcement-skipped',
         reason: 'agent-tools-not-available',
         deficit: 1,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('propagates hive ownerSessionId into enforcement top-up agent_spawn input', () => {
+    const root = makeTempProject();
+    try {
+      const hiveHome = join(root, 'global-home');
+      const hiveId = 'hive-owned-top-up';
+      installHookAndWatcher(root);
+      installFakeAgentTools(root);
+      writeHiveRecord(root, hiveId, 4, { ownerSessionId: 'owner-session' });
+
+      expect(invokeHook(root, hiveId, hiveHome)).toContain('Auto-spawned 1 worker');
+
+      const spawnInput = JSON.parse(
+        readFileSync(join(root, '.hive-flow', 'data', 'fake-agent-spawn.json'), 'utf8'),
+      );
+      expect(spawnInput).toMatchObject({
+        session_id: 'owner-session',
+        config: {
+          autoSpawnedBy: 'hive-enforcement',
+          hiveId,
+          queenId: 'queen-1',
+        },
       });
     } finally {
       rmSync(root, { recursive: true, force: true });

@@ -56,12 +56,17 @@ const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '../../../../../..');
 const requireFromHere = createRequire(import.meta.url);
 const cjsSession = requireFromHere(join(repoRoot, '.claude/helpers/session-id.cjs')) as {
-  resolveSessionId: (input?: Record<string, unknown> | null, env?: Record<string, string | undefined>) => string | null;
+  resolveSessionId: (
+    input?: Record<string, unknown> | null,
+    env?: Record<string, string | undefined>,
+    context?: Record<string, unknown> | null,
+  ) => string | null;
 };
 
 const originalCwd = process.cwd();
 const originalEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
 };
@@ -175,26 +180,43 @@ describe('R-sid multi-session enabler', () => {
     const cases: Array<{
       input?: Record<string, unknown> | null;
       env?: Record<string, string | undefined>;
+      context?: Record<string, unknown> | null;
       expected: string | null;
     }> = [
       {
         input: { session_id: 'payload-session' },
-        env: { CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        env: { CODEX_SESSION_ID: 'codex-session', CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
         expected: 'payload-session',
       },
       {
         input: {},
+        env: { CODEX_SESSION_ID: 'codex-session', CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'codex-session',
+      },
+      {
+        input: {},
         env: { CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
         expected: 'env-session',
       },
       {
         input: null,
         env: { HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
         expected: 'provider-session',
+      },
+      {
+        input: {},
+        env: {},
+        context: { sessionId: 'context-session' },
+        expected: 'context-session',
       },
       {
         input: { session_id: '../bad.session' },
         env: { CLAUDE_SESSION_ID: 'ignored' },
+        context: { sessionId: 'context-session' },
         expected: 'bad_session',
       },
       {
@@ -205,8 +227,8 @@ describe('R-sid multi-session enabler', () => {
     ];
 
     for (const testCase of cases) {
-      expect(resolveSessionId(testCase.input, testCase.env)).toBe(testCase.expected);
-      expect(cjsSession.resolveSessionId(testCase.input, testCase.env)).toBe(testCase.expected);
+      expect(resolveSessionId(testCase.input, testCase.env, testCase.context)).toBe(testCase.expected);
+      expect(cjsSession.resolveSessionId(testCase.input, testCase.env, testCase.context)).toBe(testCase.expected);
     }
   });
 
@@ -224,6 +246,22 @@ describe('R-sid multi-session enabler', () => {
     const hive = loadHive(String(result.hiveId));
     expect(hive?.ownerSessionId).toBe('payload-session');
     expect(hive).not.toHaveProperty('ownerTmuxPane');
+  });
+
+  it('stamps ownerSessionId from MCP context when queen_mission_assign has no caller session env', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'R-sid context mission',
+      description: 'Verify context owner session fallback',
+    }, { sessionId: 'context-session' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const hive = loadHive(String(result.hiveId));
+    expect(hive?.ownerSessionId).toBe('context-session');
   });
 
   it('threads watcher --sessionId into parsed config and completion payloads while preserving null fallback', () => {

@@ -9,6 +9,7 @@ import { dirname, isAbsolute, join, resolve } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { resolveProjectRoot } from '../permission-guard/protected-paths.js';
+import { resolveSessionId } from './session-id.js';
 
 export enum ToolRisk {
   CRITICAL = 3,
@@ -273,17 +274,12 @@ export function getEnforcementLevel(): number {
     // Scope ids come from the same env vars enforcement.cjs reads:
     //   agent   => HIVE_FLOW_AGENT_ID || CLAUDE_AGENT_ID
     //   hive    => HIVE_FLOW_HIVE_ID
-    //   session => CLAUDE_SESSION_ID || HIVE_FLOW_SESSION_ID || HIVE_FLOW_SESSION_ID
+    //   session => CODEX_SESSION_ID || CLAUDE_SESSION_ID || HIVE_FLOW_SESSION_ID
     const agentId = sanitizeScopeId(
       process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '',
     );
     const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID || '');
-    const sessionId = sanitizeScopeId(
-      process.env.CLAUDE_SESSION_ID ||
-        process.env.HIVE_FLOW_SESSION_ID ||
-        process.env.HIVE_FLOW_SESSION_ID ||
-        '',
-    );
+    const sessionId = sanitizeScopeId(resolveSessionId(null, process.env) || '');
 
     const scopes: ScopeSpec[] = [];
 

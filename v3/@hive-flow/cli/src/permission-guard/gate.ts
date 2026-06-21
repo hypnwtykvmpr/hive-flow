@@ -394,7 +394,7 @@ async function resolveJury(options: ResolveJuryOptions): Promise<GateResult> {
     return { decision: 'deny', reason };
   }
 
-  const sessionId = options.hookInput.session_id || process.env.CLAUDE_SESSION_ID || 'unknown-session';
+  const sessionId = resolveHookSessionId(options.hookInput) || 'unknown-session';
   const budgetAllowed = tryConsumeLLMJuryBudget(sessionId, {
     maxCalls: options.config.llm_jury_budget_max_calls,
     windowMs: options.config.llm_jury_budget_window_ms,
@@ -695,9 +695,7 @@ function shellWords(segment: string): string[] | null {
 }
 
 function isTrustedRootPermissionSession(hookInput: Partial<HookInput>): boolean {
-  const sessionId = typeof hookInput.session_id === 'string' && hookInput.session_id.trim()
-    ? hookInput.session_id.trim()
-    : (process.env.CLAUDE_SESSION_ID || '').trim();
+  const sessionId = resolveHookSessionId(hookInput);
   return Boolean(sessionId) && !hasSubagentIdentity(hookInput);
 }
 
@@ -721,6 +719,21 @@ const GIT_CHECKOUT_BLOCKED_OPTIONS = new Set([
   '--overlay',
   '--no-overlay',
 ]);
+
+function nonEmptySessionValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function resolveHookSessionId(hookInput: Partial<HookInput>): string | null {
+  const record = hookInput as Record<string, unknown>;
+  return (
+    nonEmptySessionValue(record.session_id) ??
+    nonEmptySessionValue(record.sessionId) ??
+    nonEmptySessionValue(process.env.CODEX_SESSION_ID) ??
+    nonEmptySessionValue(process.env.CLAUDE_SESSION_ID) ??
+    nonEmptySessionValue(process.env.HIVE_FLOW_SESSION_ID)
+  );
+}
 
 const GIT_OPTIONS_WITH_VALUES = new Set([
   '-C',

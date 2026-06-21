@@ -68,4 +68,9 @@ describe('provider-agent bridge security wiring', () => {
     const notificationCallCount = (bridgeSource.match(/notifyTaskCompletionFromResultFile\(/g) || []).length - 1;
     expect(notificationCallCount).toBe(resultWriteCount);
   });
+
+  it('routes run_shell permission guard context through the Codex-first bridge session helper', () => {
+    expect(bridgeSource).toContain("session_id: bridgeSessionValue(process.env) || 'provider-bridge-run-shell'");
+    expect(bridgeSource).not.toContain("session_id: process.env.CLAUDE_SESSION_ID || 'provider-bridge-run-shell'");
+  });
 });

@@ -129,9 +129,9 @@ export function sessionKeyFor(
   const fromInput = sessionInputValue(input);
   const rawSession =
     fromInput.value ??
-    stringValue(env.HIVE_FLOW_SESSION_ID) ??
-    stringValue(env.CLAUDE_SESSION_ID) ??
     stringValue(env.CODEX_SESSION_ID) ??
+    stringValue(env.CLAUDE_SESSION_ID) ??
+    stringValue(env.HIVE_FLOW_SESSION_ID) ??
     `pid:${process.pid}`;
   const clientKind =
     fromInput.clientKind ??

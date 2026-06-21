@@ -436,16 +436,20 @@ function loadAgentTools() {
  * Spawn a single worker via agent_spawn handler (metadata-only, fast).
  * Returns the spawn result or null on failure.
  */
-async function spawnWorkerViaAgentTools(agentTools, role, provider, model, hiveId, queenId) {
+async function spawnWorkerViaAgentTools(agentTools, role, provider, model, hiveId, queenId, ownerSessionId) {
   try {
     const spawnHandler = agentTools.find(t => t.name === 'agent_spawn');
     if (!spawnHandler) return null;
     const workerId = `worker-${randomUUID()}`;
+    const normalizedOwnerSessionId = typeof ownerSessionId === 'string' && ownerSessionId.trim()
+      ? ownerSessionId.trim()
+      : '';
     const result = await spawnHandler.handler({
       agentType: role,
       agentId: workerId,
       provider: provider,
       model: model,
+      ...(normalizedOwnerSessionId ? { session_id: normalizedOwnerSessionId } : {}),
       config: {
         autoSpawnedBy: 'hive-enforcement',
         hiveId,
@@ -647,6 +651,7 @@ async function processPostToolUse(input) {
   let liveWorkerCount;
   let deficit;
   let queenId;
+  let ownerSessionId = '';
   let shouldLaunchWatcher = false;
   try {
     record = loadHiveRecord(sanitizedId);
@@ -662,6 +667,9 @@ async function processPostToolUse(input) {
     }
 
     queenId = record.queenId;
+    ownerSessionId = typeof record.ownerSessionId === 'string' && record.ownerSessionId.trim()
+      ? record.ownerSessionId.trim()
+      : '';
     shouldLaunchWatcher = true;
 
     // Count live workers plus any already-reserved budget slots.
@@ -734,7 +742,7 @@ async function processPostToolUse(input) {
     const role = WORKER_ROLES[i % WORKER_ROLES.length];
 
     // 4a: Spawn via agent_spawn handler (metadata-only, fast)
-    const spawnResult = await spawnWorkerViaAgentTools(agentTools, role, provider, model, sanitizedId, queenId);
+    const spawnResult = await spawnWorkerViaAgentTools(agentTools, role, provider, model, sanitizedId, queenId, ownerSessionId);
     if (!spawnResult || !spawnResult.agentId) {
       releaseReservedWorkerSlot(sanitizedId, lockPath);
       appendAuditLog({
