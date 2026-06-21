@@ -222,7 +222,7 @@ npx hivememory@latest benchmark
 
 # Results show:
 # - Pattern Search: fast (100µs vs 15ms)
-# - Batch Insert: 500x faster (2ms vs 1s)
+# - Batch Insert: faster (2ms vs 1s)
 # - Large-scale Query: large-scale HNSW-indexed (8ms vs 100s)
 ```
 
@@ -293,9 +293,9 @@ npx hivememory@latest plugin-info <name>
 
 ## Best Practices
 
-1. **Enable quantization**: Use scalar$binary for 4-32x memory reduction
+1. **Enable quantization**: Use scalar/binary for memory reduction
 2. **Use caching**: 1000 pattern cache for <1ms retrieval
-3. **Batch operations**: 500x faster than individual inserts
+3. **Batch operations**: faster than individual inserts
 4. **Train regularly**: Update learning models with new experiences
 5. **Enable reasoning**: Automatic context synthesis and optimization
 6. **Monitor metrics**: Use `stats` command to track performance
@@ -308,7 +308,7 @@ npx hivememory@latest plugin-info <name>
 npx hivememory@latest stats .$agents.db
 
 # Enable quantization
-# Use 'binary' (32x smaller) or 'scalar' (4x smaller)
+# Use 'binary' or 'scalar' for memory reduction
 ```
 
 ### Issue: Slow search performance
@@ -328,7 +328,7 @@ npx hivememory@latest migrate --source .swarm$memory.db
 - **Vector Search**: <100µs (HNSW indexing)
 - **Pattern Retrieval**: <1ms (with cache)
 - **Batch Insert**: 2ms for 100 patterns
-- **Memory Efficiency**: 4-32x reduction with quantization
+- **Memory Efficiency**: lower memory with quantization
 - **Backward Compatibility**: 100% compatible with ReasoningBank API
 
 ## Learn More

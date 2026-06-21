@@ -1,13 +1,13 @@
 ---
 name: "HiveMemory Performance Optimization"
-description: "Optimize HiveMemory performance with quantization (4-32x memory reduction), HNSW indexing (fast search), caching, and batch operations. Use when optimizing memory usage, improving search speed, or scaling to millions of vectors."
+description: "Optimize HiveMemory performance with quantization (memory reduction), HNSW indexing (fast search), caching, and batch operations. Use when optimizing memory usage, improving search speed, or scaling to millions of vectors."
 ---
 
 # HiveMemory Performance Optimization
 
 ## What This Skill Does
 
-Provides comprehensive performance optimization techniques for HiveMemory vector databases. Achieve HNSW-indexed performance improvements through quantization, HNSW indexing, caching strategies, and batch operations. Reduce memory usage by 4-32x while maintaining accuracy.
+Provides comprehensive performance optimization techniques for HiveMemory vector databases. Achieve HNSW-indexed performance improvements through quantization, HNSW indexing, caching strategies, and batch operations. Reduce memory usage with quantization while maintaining accuracy.
 
 **Performance**: <100µs vector search, <1ms pattern retrieval, 2ms batch insert for 100 vectors.
 
@@ -29,20 +29,20 @@ npx hivememory@latest benchmark
 
 # Results show:
 # ✅ Pattern Search: fast (100µs vs 15ms)
-# ✅ Batch Insert: 500x faster (2ms vs 1s for 100 vectors)
+# ✅ Batch Insert: faster (2ms vs 1s for 100 vectors)
 # ✅ Large-scale Query: large-scale HNSW-indexed (8ms vs 100s at 1M vectors)
-# ✅ Memory Efficiency: 4-32x reduction with quantization
+# ✅ Memory Efficiency: lower memory with quantization
 ```
 
 ### Enable Optimizations
 
 ```typescript
-import { createHiveMemoryAdapter } from 'hive-flow/reasoningbank';
+import { createHiveMemoryAdapter } from 'hive-flow$reasoningbank';
 
 // Optimized configuration
 const adapter = await createHiveMemoryAdapter({
-  dbPath: '.hivememory/optimized.db',
-  quantizationType: 'binary',   // 32x memory reduction
+  dbPath: '.hivememory$optimized.db',
+  quantizationType: 'binary',   // binary quantization
   cacheSize: 1000,               // In-memory cache
   enableLearning: true,
   enableReasoning: true,
@@ -53,10 +53,10 @@ const adapter = await createHiveMemoryAdapter({
 
 ## Quantization Strategies
 
-### 1. Binary Quantization (32x Reduction)
+### 1. Binary Quantization
 
 **Best For**: Large-scale deployments (1M+ vectors), memory-constrained environments
-**Trade-off**: ~2-5% accuracy loss, 32x memory reduction, 10x faster
+**Trade-off**: ~2-5% accuracy loss, lower memory, faster
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
@@ -67,19 +67,19 @@ const adapter = await createHiveMemoryAdapter({
 ```
 
 **Use Cases**:
-- Mobile/edge deployment
+- Mobile$edge deployment
 - Large-scale vector storage (millions of vectors)
 - Real-time search with memory constraints
 
 **Performance**:
-- Memory: 32x smaller
-- Search Speed: 10x faster (bit operations)
+- Memory: lower
+- Search Speed: faster (bit operations)
 - Accuracy: 95-98% of original
 
-### 2. Scalar Quantization (4x Reduction)
+### 2. Scalar Quantization
 
-**Best For**: Balanced performance/accuracy, moderate datasets
-**Trade-off**: ~1-2% accuracy loss, 4x memory reduction, 3x faster
+**Best For**: Balanced performance$accuracy, moderate datasets
+**Trade-off**: ~1-2% accuracy loss, lower memory, faster
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
@@ -95,14 +95,14 @@ const adapter = await createHiveMemoryAdapter({
 - General-purpose optimization
 
 **Performance**:
-- Memory: 4x smaller
-- Search Speed: 3x faster
+- Memory: lower
+- Search Speed: faster
 - Accuracy: 98-99% of original
 
-### 3. Product Quantization (8-16x Reduction)
+### 3. Product Quantization
 
 **Best For**: High-dimensional vectors, balanced compression
-**Trade-off**: ~3-7% accuracy loss, 8-16x memory reduction, 5x faster
+**Trade-off**: ~3-7% accuracy loss, lower memory, faster
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
@@ -114,12 +114,12 @@ const adapter = await createHiveMemoryAdapter({
 
 **Use Cases**:
 - High-dimensional embeddings (>512 dims)
-- Image/video embeddings
+- Image$video embeddings
 - Large-scale similarity search
 
 **Performance**:
-- Memory: 8-16x smaller
-- Search Speed: 5x faster
+- Memory: lower
+- Search Speed: faster
 - Accuracy: 93-97% of original
 
 ### 4. No Quantization (Full Precision)
@@ -146,7 +146,7 @@ HiveMemory automatically builds HNSW indices:
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
-  dbPath: '.hivememory/vectors.db',
+  dbPath: '.hivememory$vectors.db',
   // HNSW automatically enabled
 });
 
@@ -161,7 +161,7 @@ const results = await adapter.retrieveWithReasoning(queryEmbedding, {
 ```typescript
 // Advanced HNSW configuration
 const adapter = await createHiveMemoryAdapter({
-  dbPath: '.hivememory/vectors.db',
+  dbPath: '.hivememory$vectors.db',
   hnswM: 16,              // Connections per layer (default: 16)
   hnswEfConstruction: 200, // Build quality (default: 200)
   hnswEfSearch: 100,       // Search quality (default: 100)
@@ -221,7 +221,7 @@ console.log('Cache Hit Rate:', stats.cacheHitRate);
 
 ## Batch Operations
 
-### Batch Insert (500x Faster)
+### Batch Insert
 
 ```typescript
 // ❌ SLOW: Individual inserts
@@ -316,7 +316,7 @@ await adapter.prune({
 
 ```bash
 # Get comprehensive stats
-npx hivememory@latest stats .hivememory/vectors.db
+npx hivememory@latest stats .hivememory$vectors.db
 
 # Output:
 # Total Patterns: 125,430
@@ -349,7 +349,7 @@ console.log('Insert Latency (avg):', stats.avgInsertLatency);
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
-  quantizationType: 'binary',  // 32x memory reduction
+  quantizationType: 'binary',  // binary quantization
   cacheSize: 5000,             // Large cache
   hnswM: 8,                    // Fewer connections = faster
   hnswEfSearch: 50,            // Low search quality = faster
@@ -362,7 +362,7 @@ const adapter = await createHiveMemoryAdapter({
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
-  quantizationType: 'scalar',  // 4x memory reduction
+  quantizationType: 'scalar',  // scalar quantization
   cacheSize: 1000,             // Standard cache
   hnswM: 16,                   // Balanced connections
   hnswEfSearch: 100,           // Balanced quality
@@ -388,7 +388,7 @@ const adapter = await createHiveMemoryAdapter({
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
-  quantizationType: 'binary',  // 32x memory reduction
+  quantizationType: 'binary',  // binary quantization
   cacheSize: 100,              // Small cache
   hnswM: 8,                    // Minimal connections
 });
@@ -414,7 +414,7 @@ const adapter = await createHiveMemoryAdapter({
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
-  quantizationType: 'scalar',  // 4x reduction
+  quantizationType: 'scalar',  // scalar quantization
   cacheSize: 1000,
   hnswM: 16,
 });
@@ -424,7 +424,7 @@ const adapter = await createHiveMemoryAdapter({
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
-  quantizationType: 'binary',  // 32x reduction
+  quantizationType: 'binary',  // binary quantization
   cacheSize: 2000,
   hnswM: 32,
 });
@@ -434,7 +434,7 @@ const adapter = await createHiveMemoryAdapter({
 
 ```typescript
 const adapter = await createHiveMemoryAdapter({
-  quantizationType: 'product',  // 8-16x reduction
+  quantizationType: 'product',  // product quantization
   cacheSize: 5000,
   hnswM: 48,
   hnswEfConstruction: 400,
@@ -449,10 +449,10 @@ const adapter = await createHiveMemoryAdapter({
 
 ```bash
 # Check database size
-npx hivememory@latest stats .hivememory/vectors.db
+npx hivememory@latest stats .hivememory$vectors.db
 
 # Enable quantization
-# Use 'binary' for 32x reduction
+# Use 'binary' for maximum memory reduction
 ```
 
 ### Issue: Slow search performance
@@ -488,17 +488,17 @@ const adapter = await createHiveMemoryAdapter({
 | Operation | Vector Count | No Optimization | Optimized | Improvement |
 |-----------|-------------|-----------------|-----------|-------------|
 | Search | 10K | 15ms | 100µs | HNSW-indexed |
-| Search | 100K | 150ms | 120µs | 1,250x |
+| Search | 100K | 150ms | 120µs | ✅ |
 | Search | 1M | 100s | 8ms | large-scale HNSW-indexed |
-| Batch Insert (100) | - | 1s | 2ms | 500x |
-| Memory Usage | 1M | 3GB | 96MB | 32x (binary) |
+| Batch Insert (100) | - | 1s | 2ms | ✅ |
+| Memory Usage | 1M | 3GB | 96MB | ✅ (binary) |
 
 ---
 
 ## Learn More
 
-- **Quantization Paper**: docs/quantization-techniques.pdf
-- **HNSW Algorithm**: docs/hnsw-index.pdf
+- **Quantization Paper**: docs$quantization-techniques.pdf
+- **HNSW Algorithm**: docs$hnsw-index.pdf
 
 ---
 

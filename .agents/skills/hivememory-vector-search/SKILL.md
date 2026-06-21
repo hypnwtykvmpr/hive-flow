@@ -7,7 +7,7 @@ description: "Implement semantic vector search with HiveMemory for intelligent d
 
 ## What This Skill Does
 
-Implements vector-based semantic search using HiveMemory's high-performance vector database with **fast HNSW-indexed** operations than traditional solutions. Features HNSW indexing, quantization, and sub-millisecond search (<100µs).
+Implements vector-based semantic search using HiveMemory's high-performance vector database with **HNSW-indexed** operations for semantic retrieval. Features HNSW indexing, quantization, and sub-millisecond search (<100µs).
 
 ## Prerequisites
 
@@ -82,7 +82,7 @@ const adapter = await createHiveMemoryAdapter({
   dbPath: '.hivememory$vectors.db',
   enableLearning: false,       // Vector search only
   enableReasoning: true,       // Enable semantic matching
-  quantizationType: 'binary',  // 32x memory reduction
+  quantizationType: 'binary',  // binary quantization
   cacheSize: 1000,             // Fast retrieval
 });
 
@@ -202,30 +202,30 @@ npx hivememory@latest benchmark
 
 # Results:
 # ✅ Pattern Search: fast (100µs vs 15ms)
-# ✅ Batch Insert: 500x faster (2ms vs 1s for 100 vectors)
+# ✅ Batch Insert: faster (2ms vs 1s for 100 vectors)
 # ✅ Large-scale Query: large-scale HNSW-indexed (8ms vs 100s at 1M vectors)
-# ✅ Memory Efficiency: 4-32x reduction with quantization
+# ✅ Memory Efficiency: lower memory with quantization
 ```
 
 ## Quantization Options
 
 HiveMemory provides multiple quantization strategies for memory efficiency:
 
-### Binary Quantization (32x reduction)
+### Binary Quantization
 ```typescript
 const adapter = await createHiveMemoryAdapter({
   quantizationType: 'binary',  // 768-dim → 96 bytes
 });
 ```
 
-### Scalar Quantization (4x reduction)
+### Scalar Quantization
 ```typescript
 const adapter = await createHiveMemoryAdapter({
   quantizationType: 'scalar',  // 768-dim → 768 bytes
 });
 ```
 
-### Product Quantization (8-16x reduction)
+### Product Quantization
 ```typescript
 const adapter = await createHiveMemoryAdapter({
   quantizationType: 'product',  // 768-dim → 48-96 bytes
@@ -264,9 +264,9 @@ npx hivememory@latest query .$db.sqlite "[...]" -m dot
 
 ## Performance Tips
 
-1. **Enable HNSW indexing**: Automatic with HiveMemory, 10-100x faster
-2. **Use quantization**: Binary (32x), Scalar (4x), Product (8-16x) memory reduction
-3. **Batch operations**: 500x faster for bulk inserts
+1. **Enable HNSW indexing**: Automatic with HiveMemory, faster search
+2. **Use quantization**: Binary, Scalar, or Product memory reduction
+3. **Batch operations**: faster for bulk inserts
 4. **Match dimensions**: 1536 (OpenAI), 768 (sentence-transformers), 384 (MiniLM)
 5. **Similarity threshold**: Start at 0.7 for quality, adjust based on use case
 6. **Enable caching**: 1000 pattern cache for frequent queries
@@ -283,7 +283,7 @@ npx hivememory@latest stats .$vectors.db
 
 ### Issue: High memory usage
 ```bash
-# Enable binary quantization (32x reduction)
+# Enable binary quantization
 # Use in adapter: quantizationType: 'binary'
 ```
 
@@ -325,7 +325,7 @@ npx hivememory@latest stats .$vectors.db
 - **Vector Search**: <100µs (HNSW indexing)
 - **Pattern Retrieval**: <1ms (with cache)
 - **Batch Insert**: 2ms for 100 vectors
-- **Memory Efficiency**: 4-32x reduction with quantization
+- **Memory Efficiency**: lower memory with quantization
 - **Scalability**: Handles 1M+ vectors efficiently
 - **Latency**: Sub-millisecond for most operations
 

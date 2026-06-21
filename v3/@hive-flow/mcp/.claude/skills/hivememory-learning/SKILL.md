@@ -9,7 +9,7 @@ description: "Create and train AI learning plugins with HiveMemory's 9 reinforce
 
 Provides access to 9 reinforcement learning algorithms via HiveMemory's plugin system. Create, train, and deploy learning plugins for autonomous agents that improve through experience. Includes offline RL (Decision Transformer), value-based learning (Q-Learning), policy gradients (Actor-Critic), and advanced techniques.
 
-**Performance**: Train models 10-100x faster with WASM-accelerated neural inference.
+**Performance**: Train models faster with WASM-accelerated neural inference.
 
 ## Prerequisites
 
@@ -424,7 +424,7 @@ await adapter.train({
 // Collect batch of experiences
 const experiences = collectBatch(size: 1000);
 
-// Batch insert (500x faster)
+// Batch insert (faster)
 for (const exp of experiences) {
   await adapter.insertPattern({ /* ... */ });
 }
@@ -526,7 +526,7 @@ await adapter.retrieveWithReasoning(queryEmbedding, {
 ### Issue: Slow training
 ```bash
 # Enable quantization for faster inference
-# Use binary quantization (32x faster)
+# Use binary quantization
 ```
 
 ---
