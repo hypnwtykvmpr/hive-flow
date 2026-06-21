@@ -343,7 +343,7 @@ export class QEModelRoutingAdapter implements IQEModelRoutingAdapter {
 
     // Agent Booster
     if (agentBooster.available) {
-      parts.push(`Agent Booster available (intent: ${agentBooster.intent}) for 352x faster execution at $0 cost.`);
+      parts.push(`Agent Booster available (intent: ${agentBooster.intent}) to skip the LLM call at $0 cost.`);
     }
 
     // Tier selection

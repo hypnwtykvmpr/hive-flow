@@ -859,7 +859,7 @@ export class HNSWIndex extends EventEmitter implements IVectorIndex {
   /**
    * OPTIMIZED searchLayer using heap-based priority queues
    * Performance: O(log n) per operation vs O(n log n) for Array.sort()
-   * Expected speedup: 3-5x for large result sets
+   * Expected improvement for large result sets
    */
   private searchLayerOptimized(
     query: Float32Array,
@@ -1000,7 +1000,7 @@ export class HNSWIndex extends EventEmitter implements IVectorIndex {
   /**
    * OPTIMIZED: Cosine distance using pre-normalized vectors
    * Only requires dot product (no sqrt operations)
-   * Performance: O(n) with ~2x speedup over standard cosine
+   * Performance: O(n), faster than standard cosine
    */
   private cosineDistanceNormalized(a: Float32Array, b: Float32Array): number {
     let dotProduct = 0;

@@ -559,7 +559,7 @@ const optimizeCommand: Command = {
       ],
       data: [
         { priority: output.error('P0'), area: 'Memory', recommendation: 'Enable HNSW index quantization', impact: '+50% reduction' },
-        { priority: output.warning('P1'), area: 'CPU', recommendation: 'Enable WASM SIMD acceleration', impact: '+4x speedup' },
+        { priority: output.warning('P1'), area: 'CPU', recommendation: 'Enable WASM SIMD acceleration', impact: 'higher throughput' },
         { priority: output.warning('P1'), area: 'Latency', recommendation: 'Enable Flash Attention', impact: 'Measure speedup' },
         { priority: output.info('P2'), area: 'Cache', recommendation: 'Increase pattern cache size', impact: '+15% hit rate' },
         { priority: output.info('P2'), area: 'Network', recommendation: 'Enable request batching', impact: '-30% latency' },

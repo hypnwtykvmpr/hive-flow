@@ -10,7 +10,7 @@
  * - Float32Array for all operations
  * - Online softmax for numerical stability
  *
- * Target: 2-5x speedup on CPU vs naive attention
+ * Target: faster than naive attention on CPU
  *
  * Created by Hive Flow
  */

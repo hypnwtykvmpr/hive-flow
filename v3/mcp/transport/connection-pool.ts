@@ -8,7 +8,7 @@
  * - Circuit breaker pattern for fault tolerance
  *
  * Performance Targets:
- * - 3-5x throughput improvement
+ * - higher throughput
  * - Connection reuse: >95%
  * - Health check: <10ms
  */

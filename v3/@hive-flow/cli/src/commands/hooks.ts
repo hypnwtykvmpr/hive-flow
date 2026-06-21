@@ -4523,7 +4523,7 @@ export const hooksCommand: Command = {
       '🔍 HiveMemory-compatible local search',
       '📊 SWE-Bench evaluation claims removed',
       '🎯 32.3% token reduction',
-      '🚀 2.8-4.4x speed improvement',
+      '🚀 Improved execution speed',
       '👥 Agent Teams integration (auto task assignment)'
     ]);
 

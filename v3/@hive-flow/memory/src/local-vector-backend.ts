@@ -438,7 +438,7 @@ export class LocalVectorBackend extends EventEmitter implements IMemoryBackend {
   }
 
   /**
-   * Bulk insert entries (OPTIMIZED: 2-3x faster with batched operations)
+   * Bulk insert entries (OPTIMIZED: faster with batched operations)
    *
    * Performance improvements:
    * - Parallel embedding generation

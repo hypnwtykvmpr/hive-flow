@@ -157,7 +157,7 @@ describe('generateClaudeMd', () => {
       wasmKernel: true,
     });
     expect(md).toContain('WASM kernel');
-    expect(md).toContain('1.25-1.96x');
+    expect(md).toContain('faster execution');
   });
 
   it('includes swarm configuration', () => {

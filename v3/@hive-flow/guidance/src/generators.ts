@@ -279,7 +279,7 @@ export function generateClaudeMd(profile: ProjectProfile): string {
     sections.push('');
     if (profile.wasmKernel) {
       sections.push('WASM kernel: hot-path operations (hashing, secret scanning) use the Rust WASM kernel');
-      sections.push('for 1.25-1.96x speedup. Falls back to JS automatically if WASM is unavailable.');
+      sections.push('for faster execution. Falls back to JS automatically if WASM is unavailable.');
       sections.push('');
     }
   }

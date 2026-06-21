@@ -17,7 +17,7 @@
  *
  * Formula Engine (4 tools) - WASM Accelerated:
  *   9. gt_formula_list - List available formulas
- *   10. gt_formula_cook - Cook formula into protomolecule (352x faster)
+ *   10. gt_formula_cook - Cook formula into protomolecule (WASM-accelerated)
  *   11. gt_formula_execute - Execute a formula
  *   12. gt_formula_create - Create custom formula
  *
@@ -1132,7 +1132,7 @@ export const formulaListTool: MCPTool<FormulaListInput, FormulaListResult> = {
 /**
  * MCP Tool: gt_formula_cook
  *
- * Cook a formula with variable substitution (352x faster with WASM)
+ * Cook a formula with variable substitution (WASM-accelerated)
  */
 export const formulaCookTool: MCPTool<FormulaCookInput, FormulaCookResult> = {
   name: 'gt_formula_cook',
@@ -1482,11 +1482,11 @@ export const mailTool: MCPTool<MailInput, MailResult> = {
 /**
  * MCP Tool: gt_wasm_parse_formula
  *
- * Parse TOML formula to AST (352x faster than JS)
+ * Parse TOML formula to AST (WASM-accelerated)
  */
 export const wasmParseFormulaTool: MCPTool<WasmParseFormulaInput, WasmParseFormulaResult> = {
   name: 'gt_wasm_parse_formula',
-  description: 'Parse TOML formula content to AST using WASM (352x faster than JavaScript)',
+  description: 'Parse TOML formula content to AST using WASM',
   category: 'gastown-bridge',
   version: '0.1.0',
   layer: 'wasm',
@@ -1591,7 +1591,7 @@ export const wasmResolveDepsTool: MCPTool<WasmResolveDepsInput, WasmResolveDepsR
 /**
  * MCP Tool: gt_wasm_cook_batch
  *
- * Batch cook multiple formulas using WASM (352x faster than JS)
+ * Batch cook multiple formulas using WASM
  */
 export const wasmCookBatchTool: MCPTool<WasmCookBatchInput, WasmCookBatchResult> = {
   name: 'gt_wasm_cook_batch',

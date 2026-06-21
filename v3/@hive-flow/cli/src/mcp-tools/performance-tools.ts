@@ -455,7 +455,7 @@ export const performanceTools: MCPTool[] = [
 
       const optimizations: Record<string, string[]> = {
         memory: [
-          'Enabled Int8 quantization (3.92x compression)',
+          'Enabled Int8 quantization (memory compression)',
           'Activated gradient checkpointing',
           'Configured memory pooling',
         ],

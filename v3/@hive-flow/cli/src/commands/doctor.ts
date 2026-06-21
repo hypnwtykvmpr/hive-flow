@@ -572,7 +572,7 @@ export const doctorCommand: Command = {
     const results: HealthCheck[] = [];
     const fixes: string[] = [];
 
-    // OPTIMIZATION: Run all checks in parallel for 3-5x faster execution
+    // OPTIMIZATION: Run all checks in parallel for faster execution
     const spinner = output.createSpinner({ text: 'Running health checks in parallel...', spinner: 'dots' });
     spinner.start();
 

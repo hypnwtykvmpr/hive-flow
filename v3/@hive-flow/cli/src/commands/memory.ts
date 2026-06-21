@@ -900,7 +900,7 @@ const compressCommand: Command = {
     {
       name: 'quantize',
       short: 'z',
-      description: 'Enable vector quantization (reduces memory 4-32x)',
+      description: 'Enable vector quantization (reduces memory)',
       type: 'boolean',
       default: false
     },
@@ -920,7 +920,7 @@ const compressCommand: Command = {
   ],
   examples: [
     { command: 'hive-flow memory compress', description: 'Balanced compression' },
-    { command: 'hive-flow memory compress --quantize --bits 4', description: '4-bit quantization (32x reduction)' },
+    { command: 'hive-flow memory compress --quantize --bits 4', description: '4-bit quantization (memory reduction)' },
     { command: 'hive-flow memory compress -l max -t vectors', description: 'Max compression on vectors' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {

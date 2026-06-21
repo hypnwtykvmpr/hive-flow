@@ -9,7 +9,7 @@
  *
  * Performance targets:
  * - 50% memory reduction via eviction
- * - 3x faster cold start via preloading
+ * - faster cold start via preloading
  *
  * @module gastown-bridge/cache
  * @version 0.1.0

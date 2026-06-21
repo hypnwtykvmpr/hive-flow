@@ -1595,7 +1595,7 @@ const benchmarkCommand: Command = {
 
       // Test 4b: Parallel batch embed
       // Note: Local ONNX is CPU-bound so parallelism has limited benefit
-      // Parallelism gives 2-4x speedup for API-based providers (OpenAI, etc.)
+      // Parallelism gives a speedup for API-based providers (OpenAI, etc.)
       output.writeln(output.dim(`Testing parallel batch of ${batchSize}...`));
       const parallelTexts = Array.from({ length: batchSize }, (_, i) => `Parallel batch text ${i + 1}`);
       const parallelStart = Date.now();
@@ -1729,7 +1729,7 @@ export const embeddingsCommand: Command = {
     output.writeln('Performance:');
     output.printList([
       'HNSW indexing for fast search',
-      'Hive Flow: 75x faster than Transformers.js (~3ms)',
+      'Hive Flow: Local ONNX (~3ms)',
       'Persistent cache: SQLite-backed, survives restarts',
       'Hyperbolic: Better hierarchical representation',
     ]);

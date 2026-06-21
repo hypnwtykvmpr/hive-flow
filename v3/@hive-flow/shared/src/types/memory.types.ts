@@ -243,7 +243,7 @@ export interface VectorIndexConfig {
     nprobe: number;
   };
 
-  // Quantization (4-32x memory reduction)
+  // Quantization (memory reduction)
   quantization?: {
     enabled: boolean;
     bits: 4 | 8 | 16;

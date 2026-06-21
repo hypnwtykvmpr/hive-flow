@@ -759,7 +759,7 @@ describe('junit-import: importJunitTree', () => {
       // this completes in ~1.5s; under full-suite concurrency (CPU-pressured
       // worker pool, shared filesystem, GC contention) it can take longer
       // without indicating any regression in the parser itself. The 30s
-      // threshold is still ~10-100x faster than a backtracking regex on this
+      // threshold is still substantially faster than a backtracking regex on this
       // input size would produce, so a true O(n^2) (or worse) regression is
       // still caught loudly. The explicit vitest testTimeout matches so the
       // assertion -- not the test framework -- is what fails on regression.

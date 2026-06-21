@@ -10,7 +10,7 @@
  * - Beads: Git-backed issue tracking with graph semantics
  * - Formulas: TOML-defined workflows (convoy, workflow, expansion, aspect)
  * - Convoys: Work-order tracking for slung work
- * - WASM: 352x faster formula parsing and graph analysis
+ * - WASM: faster formula parsing and graph analysis
  *
  * @module gastown-bridge
  * @version 0.1.0

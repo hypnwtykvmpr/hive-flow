@@ -2,7 +2,7 @@
  * Gas Town Formula Executor - Hybrid WASM/CLI Implementation
  *
  * Provides formula execution with:
- * - WASM acceleration for parsing and cooking (352x faster)
+ * - WASM acceleration for parsing and cooking
  * - CLI bridge fallback for I/O operations
  * - Progress tracking with event emission
  * - Step dependency resolution

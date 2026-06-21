@@ -6,7 +6,7 @@
  * and performance timing for benchmarks.
  *
  * WASM Modules:
- * - gastown-formula-wasm: TOML parsing and formula cooking (352x faster)
+ * - gastown-formula-wasm: TOML parsing and formula cooking
  * - local graph kernel: Graph operations and neural network fallback
  *
  * @module gastown-bridge/wasm-loader
@@ -754,7 +754,7 @@ function criticalPathFallback(
 
 /**
  * Parse TOML formula content to a Formula object.
- * Uses WASM if available (352x faster), falls back to JavaScript.
+ * Uses WASM if available, falls back to JavaScript.
  *
  * @param content - TOML string content to parse
  * @returns Parsed Formula object
@@ -809,7 +809,7 @@ export async function parseFormula(content: string): Promise<Formula> {
 
 /**
  * Cook a formula by substituting variables.
- * Uses WASM if available (352x faster), falls back to JavaScript.
+ * Uses WASM if available, falls back to JavaScript.
  *
  * @param formula - Formula to cook
  * @param vars - Variables to substitute
@@ -866,7 +866,7 @@ export async function cookFormula(
 
 /**
  * Batch cook multiple formulas with corresponding variables.
- * Uses WASM if available (352x faster), falls back to JavaScript.
+ * Uses WASM if available, falls back to JavaScript.
  *
  * @param formulas - Array of formulas to cook
  * @param varsArray - Array of variable objects (one per formula)

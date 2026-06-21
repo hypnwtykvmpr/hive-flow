@@ -675,11 +675,11 @@ export function clearHNSWIndex(): void {
 }
 
 // ============================================================================
-// INT8 VECTOR QUANTIZATION (4x memory reduction)
+// INT8 VECTOR QUANTIZATION (memory reduction)
 // ============================================================================
 
 /**
- * Quantize a Float32 embedding to Int8 (4x memory reduction)
+ * Quantize a Float32 embedding to Int8 (memory reduction)
  * Uses symmetric quantization with scale factor stored per-vector
  *
  * @param embedding - Float32 embedding array
@@ -1602,7 +1602,7 @@ export async function generateEmbedding(text: string): Promise<{
 
 /**
  * Generate embeddings for multiple texts
- * Uses parallel execution for API-based providers (2-4x faster)
+ * Uses parallel execution for API-based providers (faster)
  * Note: Local ONNX inference is CPU-bound, so parallelism has limited benefit
  *
  * @param texts - Array of texts to embed

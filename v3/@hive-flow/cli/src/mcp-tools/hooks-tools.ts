@@ -1670,7 +1670,7 @@ export const hooksIntelligence: MCPTool = {
           enabled: true,
           status: loraAvailable ? 'active' : 'loading',
           implemented: true, // NOW IMPLEMENTED in alpha.102
-          note: loraAvailable ? 'LoRA adapter with 128x memory compression (rank=8)' : 'LoRA loading...',
+          note: loraAvailable ? 'LoRA adapter with low-rank memory compression (rank=8)' : 'LoRA loading...',
         },
         embeddings: {
           provider: 'transformers',
@@ -2489,7 +2489,7 @@ export const hooksIntelligenceAttention: MCPTool = {
       results,
       stats: {
         computeTimeMs,
-        speedup: mode === 'flash' ? 'Flash Attention optimization' : mode === 'moe' ? '1.5x-3x' : '1.5x-2x',
+        speedup: mode === 'flash' ? 'Flash Attention optimization' : mode === 'moe' ? 'MoE optimization' : 'optimized',
         memoryReduction: mode === 'flash' ? '50-75%' : '25-40%',
       },
       implementation,

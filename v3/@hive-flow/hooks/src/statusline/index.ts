@@ -7,7 +7,7 @@
  * Format matches the working .claude/statusline.sh output:
  * ▊ Hive Flow V3 ● hypnwtykvmpr  │  ⎇ v3  │  Opus 4.5
  * ─────────────────────────────────────────────────────
- * 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ 1.0x → Flash Attention optimization
+ * 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ Flash Attention optimization
  * 🤖 Swarm  ◉ [58/15]  👥 0    🟢 CVE 3/3    💾 22282MB    📂  47%    🧠  10%
  * 🔧 Architecture    DDD ● 98%  │  Security ●CLEAN  │  Memory ●HiveMemory  │  Integration ●
  */
@@ -166,7 +166,7 @@ export class StatuslineGenerator {
     );
     const domainsColor = data.v3Progress.domainsCompleted >= 3 ? c.brightGreen :
                          data.v3Progress.domainsCompleted > 0 ? c.yellow : c.red;
-    const speedup = `${c.brightYellow}⚡ 1.0x${c.reset} ${c.dim}→${c.reset} ${c.brightYellow}${data.performance.flashAttentionTarget}${c.reset}`;
+    const speedup = `${c.brightYellow}⚡ ${data.performance.flashAttentionTarget}${c.reset}`;
     lines.push(
       `${c.brightCyan}🏗️  DDD Domains${c.reset}    ${progressBar}  ` +
       `${domainsColor}${data.v3Progress.domainsCompleted}${c.reset}/${c.brightWhite}${data.v3Progress.totalDomains}${c.reset}    ${speedup}`
@@ -314,7 +314,7 @@ export class StatuslineGenerator {
     );
     const domainsColor = data.v3Progress.domainsCompleted >= 3 ? c.brightGreen :
                          data.v3Progress.domainsCompleted > 0 ? c.yellow : c.red;
-    const speedup = `${c.brightYellow}⚡ 1.0x${c.reset} ${c.dim}→${c.reset} ${c.brightYellow}${data.performance.flashAttentionTarget}${c.reset}`;
+    const speedup = `${c.brightYellow}⚡ ${data.performance.flashAttentionTarget}${c.reset}`;
     lines.push(
       `${c.brightCyan}🏗️  DDD Domains${c.reset}    ${progressBar}  ` +
       `${domainsColor}${data.v3Progress.domainsCompleted}${c.reset}/${c.brightWhite}${data.v3Progress.totalDomains}${c.reset}    ${speedup}`

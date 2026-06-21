@@ -600,7 +600,7 @@ class HttpConnectionFactory implements ConnectionFactory<{ transport: HttpTransp
 /**
  * Pooled HTTP Transport Manager
  *
- * Provides 3-5x throughput improvement through connection pooling:
+ * Provides higher throughput through connection pooling:
  * - Reuses HTTP connections across requests
  * - Automatic health checking and recovery
  * - Load balancing across multiple transports

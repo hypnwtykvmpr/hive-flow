@@ -515,7 +515,7 @@ const metricsCommand: Command = {
         { type: 'tester', count: 1, tasks: 50, successRate: '98%' }
       ],
       performance: {
-        flashAttention: '2.8x speedup',
+        flashAttention: 'optimized attention',
         memoryReduction: '52%',
         searchImprovement: 'fast'
       }

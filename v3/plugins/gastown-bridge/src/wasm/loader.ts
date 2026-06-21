@@ -193,7 +193,7 @@ async function instantiateWasm<T>(
  * Load the Formula WASM module
  *
  * Features:
- * - TOML parsing (352x faster than JavaScript)
+ * - TOML parsing (WASM-accelerated)
  * - Variable cooking/substitution
  * - Molecule generation
  *

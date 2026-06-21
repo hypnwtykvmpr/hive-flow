@@ -1713,7 +1713,7 @@ hive-flow doctor --fix
 - **HNSW**: fast HNSW-indexed search
 - **EWC++**: Prevents catastrophic forgetting
 - **Flash Attention**: Flash Attention optimization
-- **Int8 Quantization**: 3.92x memory reduction
+- **Int8 Quantization**: memory reduction
 
 ### 4-Step Intelligence Pipeline
 1. **RETRIEVE** - HNSW pattern search
@@ -1800,17 +1800,17 @@ hive-flow hive-mind consensus --propose "task"
 | Metric | Target | Status |
 |--------|--------|--------|
 | HNSW Search | HNSW-indexed | ✅ Implemented |
-| Memory Reduction | 50-75% | ✅ Implemented (3.92x) |
+| Memory Reduction | 50-75% | ✅ Implemented |
 | SONA Integration | Pattern learning | ✅ Implemented |
 | Flash Attention | Flash Attention optimization | 🔄 In Progress |
 | MCP Response | <100ms | ✅ Achieved |
 | CLI Startup | <500ms | ✅ Achieved |
 | SONA Adaptation | low-latency | 🔄 In Progress |
-| Graph Build (1k) | <200ms | ✅ 2.78ms (71.9x headroom) |
-| PageRank (1k) | <100ms | ✅ 12.21ms (8.2x headroom) |
-| Insight Recording | <5ms/each | ✅ 0.12ms (41x headroom) |
-| Consolidation | <500ms | ✅ 0.26ms (1,955x headroom) |
-| Knowledge Transfer | <100ms | ✅ 1.25ms (80x headroom) |
+| Graph Build (1k) | <200ms | ✅ 2.78ms |
+| PageRank (1k) | <100ms | ✅ 12.21ms |
+| Insight Recording | <5ms/each | ✅ 0.12ms |
+| Consolidation | <500ms | ✅ 0.26ms |
+| Knowledge Transfer | <100ms | ✅ 1.25ms |
 
 ---
 

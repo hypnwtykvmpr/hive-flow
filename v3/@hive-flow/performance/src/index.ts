@@ -5,12 +5,12 @@
  * Provides benchmarking, Flash Attention validation, and optimization utilities.
  *
  * Target Performance Metrics:
- * - CLI Startup: <500ms (5x faster)
- * - MCP Init: <400ms (4.5x faster)
- * - Agent Spawn: <200ms (4x faster)
+ * - CLI Startup: <500ms
+ * - MCP Init: <400ms
+ * - Agent Spawn: <200ms
  * - Vector Search: measured against the current runtime
- * - Memory Write: <5ms (10x faster)
- * - Swarm Consensus: <100ms (5x faster)
+ * - Memory Write: <5ms
+ * - Swarm Consensus: <100ms
  * - Flash Attention: optimization enabled
  * - Memory Usage: <256MB (50% reduction)
  */

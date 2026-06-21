@@ -715,7 +715,7 @@ export class WorkerManager extends EventEmitter {
         progress: dddResult?.progress as number ?? 0,
       },
       performance: {
-        speedup: perfResult?.speedup as string ?? '1.0x',
+        speedup: perfResult?.speedup as string ?? 'baseline',
       },
       alerts: this.alerts.filter(a => a.severity === AlertSeverity.Critical).slice(-5),
       lastUpdate: new Date().toISOString(),
@@ -1062,7 +1062,7 @@ export function createPerformanceWorker(projectRoot: string): WorkerHandler {
         codebase: {
           v3Lines,
         },
-        speedup: '1.0x',  // Placeholder
+        speedup: 'baseline',  // Placeholder
       },
     };
   };

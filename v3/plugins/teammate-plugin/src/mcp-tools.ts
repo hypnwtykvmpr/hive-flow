@@ -3,7 +3,7 @@
  *
  * Exposes 21 MCP tools for multi-agent orchestration via Claude Code:
  * - 16 core TeammateTool integration tools
- * - 5 BMSSP optimization tools (10-15x faster with WASM)
+ * - 5 BMSSP optimization tools (WASM-accelerated)
  *
  * @module @hive-flow/teammate-plugin/mcp
  * @version 1.0.0-alpha.1
@@ -425,13 +425,13 @@ export const TEAMMATE_MCP_TOOLS: MCPTool[] = [
   },
 
   // ==========================================================================
-  // BMSSP Optimization Tools (10-15x faster with WASM)
+  // BMSSP Optimization Tools (WASM-accelerated)
   // ==========================================================================
   {
     name: 'teammate_enable_optimizers',
     description:
       'Enable BMSSP-powered optimization for team topology and task routing. ' +
-      'Uses WebAssembly for 10-15x faster pathfinding and semantic matching.',
+      'Uses WebAssembly for faster pathfinding and semantic matching.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -760,7 +760,7 @@ export async function handleMCPTool(
             enabled: true,
             wasmAccelerated: wasmAvailable,
             message: wasmAvailable
-              ? 'BMSSP WASM optimization enabled (10-15x faster)'
+              ? 'BMSSP WASM optimization enabled'
               : 'Optimization enabled with JavaScript fallback',
           },
         };

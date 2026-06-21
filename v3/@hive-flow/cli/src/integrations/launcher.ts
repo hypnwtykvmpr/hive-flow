@@ -178,7 +178,7 @@ export function resolveStatuslineLauncherPath(
 
 // REGRESSION FENCE: this launcher MUST exec bin/statusline.js. If it execs
 // bin/cli.js, the heavy CLI parser, hive-flow statusline, or npx, statusline
-// latency regresses by ~10x and Claude Code repaints will feel sluggish.
+// latency regresses substantially and Claude Code repaints will feel sluggish.
 export async function writeStableStatuslineLauncher(
   path: string,
   statuslineEntrypoint: string,

@@ -62,7 +62,7 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
   'deepseek': {
     'opus': 'deepseek-v4-pro',
     'sonnet': 'deepseek-v4-pro',
-    'haiku': 'deepseek-v4-flash',   // flash tier for haiku: ~35-100x cheaper
+    'haiku': 'deepseek-v4-flash',   // flash tier for haiku
     'mini': 'deepseek-v4-flash',    // mini alias → same as haiku (flash)
     'inherit': 'deepseek-v4-pro',
   },

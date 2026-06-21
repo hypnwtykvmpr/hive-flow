@@ -486,7 +486,7 @@ const statusCommand: Command = {
           {
             component: 'Int8 Quantization',
             status: output.success('Available'),
-            details: '~4x memory reduction',
+            details: 'memory reduction',
           },
         ],
       });

@@ -491,7 +491,7 @@ export class TeammateBridge extends EventEmitter {
   }
 
   // ==========================================================================
-  // BMSSP Optimization (10-15x faster routing)
+  // BMSSP Optimization (WASM-accelerated routing)
   // ==========================================================================
 
   /**

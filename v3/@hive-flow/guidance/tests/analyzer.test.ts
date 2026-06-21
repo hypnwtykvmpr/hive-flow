@@ -749,14 +749,14 @@ Performance: perf-analyzer, performance-benchmarker
 
 - SONA: Self-Optimizing Neural Architecture
 - MoE: Mixture of Experts routing
-- HNSW: 150x-12,500x faster pattern search
-- Flash Attention: 2.49x-7.47x speedup
+- HNSW: fast pattern search
+- Flash Attention: optimized attention
 
 ## Performance Targets
 
 | Metric | Target | Status |
 |--------|--------|--------|
-| HNSW Search | 150x faster | Implemented |
+| HNSW Search | Fast | Implemented |
 | Memory Reduction | 50-75% | Implemented |
 
 ## Environment Variables

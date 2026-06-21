@@ -105,7 +105,7 @@ vi.mock('../src/mcp-client.js', () => ({
           hnswEnabled: true
         },
         v3Gains: {
-          searchImprovement: '150x faster',
+          searchImprovement: 'fast',
           memoryReduction: '50% reduction'
         }
       };
