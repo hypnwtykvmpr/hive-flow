@@ -5,13 +5,6 @@ An exotic reasoning plugin implementing hyperbolic neural networks for hierarchi
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-hyperbolic-reasoning
 ```

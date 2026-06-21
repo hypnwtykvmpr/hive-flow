@@ -13,11 +13,6 @@
 - **Flash Attention Validation** - Validate Flash Attention optimization targets
 - **Multiple Output Formats** - Console, JSON, and programmatic access
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

@@ -1381,11 +1381,6 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 | **Defend** | Prompt injection, memory poisoning, and inter-agent collusion detection |
 | **Evolve** | Optimizer loop that ranks violations, simulates rule changes, and promotes winners |
 
-### Install
-
-```bash
-```
-
 ### Quick Usage
 
 ```typescript

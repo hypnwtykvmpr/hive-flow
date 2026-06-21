@@ -14,11 +14,6 @@ This plugin brings advanced mathematical techniques to Hive Flow for ensuring AI
 
 Think of it as a mathematical "sanity check" layer that catches logical inconsistencies that traditional validation misses.
 
-## Installation
-
-```bash
-```
-
 ---
 
 ## Practical Examples

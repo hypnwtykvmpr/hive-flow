@@ -13,13 +13,6 @@ A comprehensive legal contract analysis plugin combining hyperbolic embeddings f
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-legal-contracts
 ```

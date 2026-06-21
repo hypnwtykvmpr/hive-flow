@@ -21,10 +21,6 @@ Think of it as having a team of QA engineers who never sleep, never miss edge ca
 hive-flow plugins install --name @hive-flow/plugin-agentic-qe
 ```
 
-**Via npm:**
-```bash
-```
-
 **Verify installation:**
 ```bash
 hive-flow plugins list

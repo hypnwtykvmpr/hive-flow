@@ -5,13 +5,6 @@ An exotic optimization plugin implementing quantum-inspired algorithms including
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-quantum-optimizer
 ```

@@ -13,13 +13,6 @@ A comprehensive performance optimization plugin combining sparse inference for e
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-performance-optimizer
 ```

@@ -12,11 +12,6 @@
 - **Pre-Release Validation**: Lint, test, build, and dependency checks
 - **Dry Run Mode**: Test releases without making changes
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ### Prepare a Release

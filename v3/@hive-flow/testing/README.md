@@ -5,11 +5,6 @@
 
 Based on ADR-008 (Vitest over Jest).
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

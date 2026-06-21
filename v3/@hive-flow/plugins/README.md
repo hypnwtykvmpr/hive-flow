@@ -4,11 +4,6 @@
 
 A comprehensive plugin development framework providing workers, hooks, providers, and security utilities for building Hive Flow extensions.
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ### Create a Plugin with the Builder

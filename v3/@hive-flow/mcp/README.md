@@ -18,11 +18,6 @@
 - **Security** - CORS, Helmet, auth tokens
 - **Standalone package** - No @hive-flow/* runtime dependencies
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

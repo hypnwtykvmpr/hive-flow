@@ -12,11 +12,6 @@
 - **Pattern Recognition** - Automatic pattern extraction from completed trajectories
 - **Event System** - Subscribe to learning and trajectory events
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

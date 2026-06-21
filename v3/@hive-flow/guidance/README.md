@@ -378,11 +378,6 @@ Four acceptance tests verify the core claims of the control plane. These are int
 3. **Memory safety** — Inject a contradictory write, confirm it is quarantined (not merged). Then confirm a truth anchor resolves it deterministically
 4. **Budget invariants** — Under stress, the system fails closed before exceeding token, tool, or time budgets
 
-## Install
-
-```bash
-```
-
 ## Quickstart
 
 Create the control plane, retrieve rules for a task, evaluate commands through gates, and track the run. This covers the core compile → retrieve → enforce → record cycle.

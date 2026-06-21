@@ -21,11 +21,6 @@
 - **Neural Substrate** - Semantic drift detection, memory physics, swarm coordination
 - **Persistent Cache** - SQLite-backed disk cache with LRU eviction and TTL
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

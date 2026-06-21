@@ -5,13 +5,6 @@ An advanced multi-agent coordination plugin combining the SONA self-optimizing n
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-neural-coordination
 ```

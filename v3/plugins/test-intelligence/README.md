@@ -13,13 +13,6 @@ A comprehensive test intelligence plugin combining reinforcement learning for op
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-test-intelligence
 ```

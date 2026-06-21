@@ -5,13 +5,6 @@ An advanced cognitive augmentation plugin combining the Cognitum Gate Kernel wit
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-cognitive-kernel
 ```

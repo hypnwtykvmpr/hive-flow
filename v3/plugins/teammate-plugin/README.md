@@ -42,11 +42,6 @@ claude plugins install @hive-flow/teammate-plugin
 claude plugins install teammate-plugin --registry hive-flow
 ```
 
-### Via npm
-
-```bash
-```
-
 Or with pnpm:
 
 ```bash

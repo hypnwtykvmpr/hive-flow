@@ -17,11 +17,6 @@
 - **Cache Manager** - LRU caching with configurable size and TTL
 - **Migration Tools** - Seamless migration from V2 memory systems
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

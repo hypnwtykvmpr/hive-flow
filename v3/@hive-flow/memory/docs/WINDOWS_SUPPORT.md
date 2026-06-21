@@ -221,9 +221,6 @@ Memory Usage       Low              Medium
 
 ### Standard Installation
 
-```bash
-```
-
 The module will:
 1. Try to compile `better-sqlite3` (may fail on Windows)
 2. Install `sql.js` as fallback (always succeeds)
@@ -363,12 +360,6 @@ const db = await createDatabase('./memory.db');
 ## Troubleshooting
 
 ### sql.js Not Loading
-
-**Problem:** `Cannot find module 'sql.js'`
-
-**Solution:**
-```bash
-```
 
 ### WASM Load Failure
 

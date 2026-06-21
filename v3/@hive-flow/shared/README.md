@@ -13,11 +13,6 @@
 - **MCP Infrastructure** - Server, transport, connection pool, and tool registry
 - **Health Monitoring** - Health checks and monitoring utilities
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

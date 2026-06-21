@@ -13,13 +13,6 @@ A comprehensive code intelligence plugin combining graph neural networks for cod
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-code-intelligence
 ```

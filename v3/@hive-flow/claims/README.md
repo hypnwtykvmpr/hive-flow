@@ -13,10 +13,7 @@ This package provides a complete system for coordinating work between humans and
 
 ## Installation
 
-```bash
-```
-
-Or install via Hive Flow CLI:
+Install via Hive Flow CLI:
 
 ```bash
 hive-flow plugins install -n @hive-flow/claims

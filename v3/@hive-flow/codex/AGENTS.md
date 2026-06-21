@@ -11,10 +11,6 @@ A Hive Flow powered project
 
 ## Quick Start
 
-### Installation
-```bash
-```
-
 ### Build
 ```bash
 npm run build

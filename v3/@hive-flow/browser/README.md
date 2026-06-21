@@ -657,10 +657,6 @@ async function secureAutomation(url: string, formData: Record<string, string>) {
 
 ### Common Issues
 
-**agent-browser not found**
-```bash
-```
-
 **Playwright browsers missing**
 ```bash
 npx playwright install

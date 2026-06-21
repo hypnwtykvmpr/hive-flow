@@ -13,11 +13,6 @@
 - **Input Validation** - Zod-based schema validation for all input types
 - **Token Generation** - Secure token creation with HMAC signing
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

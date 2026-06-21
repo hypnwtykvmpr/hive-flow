@@ -13,13 +13,6 @@ A high-performance financial risk analysis plugin combining sparse inference for
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-financial-risk
 ```

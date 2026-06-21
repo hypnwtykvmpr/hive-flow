@@ -337,9 +337,6 @@ async function getAvailableProviders(): Promise<{
 
 ### All Platforms
 
-```bash
-```
-
 Dependencies are installed automatically:
 - `better-sqlite3` (tries to compile, fails gracefully)
 - `sql.js` (portable WASM fallback)

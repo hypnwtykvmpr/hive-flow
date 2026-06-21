@@ -44,11 +44,6 @@
 - `codellama`, `phi-4`
 - `deepseek-coder`
 
-## Installation
-
-```bash
-```
-
 ## Quick Start
 
 ```typescript

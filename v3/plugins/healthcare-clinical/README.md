@@ -13,13 +13,6 @@ A HIPAA-compliant clinical decision support plugin that combines ultra-fast vect
 
 ## Installation
 
-### npm
-
-```bash
-```
-
-### CLI
-
 ```bash
 hive-flow plugins install --name @hive-flow/plugin-healthcare-clinical
 ```
