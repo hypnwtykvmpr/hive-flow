@@ -175,10 +175,10 @@ const response = await registry.execute({
 ### 🔗 Hive Flow Integration
 
 ```typescript
-import { HiveFlowBridge, HiveMemoryBridge } from '@hive-flow/plugins';
+import { HiveIntegrationBridge, HiveMemoryBridge } from '@hive-flow/plugins';
 
 // Swarm coordination
-const agentic = new HiveFlowBridge({ maxConcurrentAgents: 15 });
+const agentic = new HiveIntegrationBridge({ maxConcurrentAgents: 15 });
 await agentic.initializeSwarm({ type: 'hierarchical', maxAgents: 15 });
 
 const agent = await agentic.spawnAgent({
@@ -289,7 +289,7 @@ const result = await resourceLimiter.enforce(async () => {
 
 | Export | Description |
 |--------|-------------|
-| `HiveFlowBridge` | local compatibility API integration |
+| `HiveIntegrationBridge` | local compatibility API integration |
 | `HiveMemoryBridge` | HiveMemory vector storage |
 
 ### Security

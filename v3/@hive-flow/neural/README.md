@@ -1,17 +1,16 @@
 # @hive-flow/neural
 
+> Local pattern learning and trajectory tracking module for Hive Flow V3.
 
-> Self-Optimizing Neural Architecture (SONA) module for Hive Flow V3 - adaptive learning, trajectory tracking, and pattern-based optimization.
+> **Note:** SONA/MoE/LoRA runtime training is not available in this build. This package provides deterministic local heuristic pattern learning via `ReasoningBank` and `PatternLearner`. Neural model training (LoRA fine-tuning, EWC++, runtime SONA adaptation) is unavailable at this time.
 
 ## Features
 
-- **SONA Learning** - Self-Optimizing Neural Architecture with low-latency adaptation time
-- **5 Learning Modes** - Real-time, Balanced, Research, Edge, and Batch modes
-- **9 RL Algorithms** - PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer, and more
-- **LoRA Integration** - Low-Rank Adaptation for efficient fine-tuning
-- **EWC++ Memory** - Elastic Weight Consolidation for continual learning without forgetting
-- **Trajectory Tracking** - Record and learn from agent execution paths
-- **Pattern Recognition** - Automatic pattern extraction and reuse
+- **Local Pattern Learning** - Heuristic pattern extraction and reuse via `PatternLearner`
+- **Trajectory Tracking** - Record and store agent execution paths in `ReasoningBank`
+- **9 RL Algorithm Classes** - `PPOAlgorithm`, `A2CAlgorithm`, `DQNAlgorithm`, `QLearning`, `SARSAAlgorithm`, `DecisionTransformer`, and more (algorithmic implementations; runtime neural training not available)
+- **Pattern Recognition** - Automatic pattern extraction from completed trajectories
+- **Event System** - Subscribe to learning and trajectory events
 
 ## Installation
 
@@ -21,97 +20,94 @@
 ## Quick Start
 
 ```typescript
-import { SONAManager, createSONAManager } from '@hive-flow/neural';
+import { NeuralLearningSystem, createNeuralLearningSystem } from '@hive-flow/neural';
 
-// Create SONA manager
-const sona = createSONAManager('balanced');
-await sona.initialize();
+// Create learning system
+const system = createNeuralLearningSystem('general');
+await system.initialize();
 
-// Begin trajectory tracking
-const trajectoryId = sona.beginTrajectory('code-review-task', 'development');
+// Begin task tracking
+const trajectoryId = system.beginTask('code-review-task', 'development');
 
 // Record steps
-sona.recordStep(trajectoryId, 'analyze-code', 0.8, stateEmbedding, {
-  filesAnalyzed: 5,
-  issuesFound: 2
-});
+system.recordStep(trajectoryId, 'analyze-code', 0.8, stateEmbedding);
 
-sona.recordStep(trajectoryId, 'generate-feedback', 0.9, newStateEmbedding);
+system.recordStep(trajectoryId, 'generate-feedback', 0.9, newStateEmbedding);
 
-// Complete trajectory
-const trajectory = sona.completeTrajectory(trajectoryId);
+// Complete task (stores trajectory and extracts patterns)
+await system.completeTask(trajectoryId);
 
 // Find similar patterns for guidance
-const patterns = await sona.findSimilarPatterns(contextEmbedding, 3);
-```
-
-## Learning Modes
-
-| Mode | Adaptation | Quality | Memory | Use Case |
-|------|------------|---------|--------|----------|
-| **real-time** | <0.5ms | 70%+ | 25MB | Production, low-latency |
-| **balanced** | <18ms | 75%+ | 50MB | General purpose |
-| **research** | <100ms | 95%+ | 100MB | Deep exploration |
-| **edge** | <1ms | 80%+ | 5MB | Resource-constrained |
-| **batch** | <50ms | 85%+ | 75MB | High-throughput |
-
-```typescript
-// Switch modes dynamically
-await sona.setMode('research');
-
-// Get current configuration
-const { mode, config, optimizations } = sona.getConfig();
+const patterns = await system.findPatterns(contextEmbedding, 3);
 ```
 
 ## API Reference
 
-### SONA Manager
+### NeuralLearningSystem
 
 ```typescript
-import { SONAManager } from '@hive-flow/neural';
+import { NeuralLearningSystem } from '@hive-flow/neural';
 
-const sona = new SONAManager('balanced');
-await sona.initialize();
+const system = new NeuralLearningSystem('general');
+await system.initialize();
 
-// Trajectory Management
-const trajectoryId = sona.beginTrajectory(context, domain);
-sona.recordStep(trajectoryId, action, reward, stateEmbedding, metadata);
-const trajectory = sona.completeTrajectory(trajectoryId, finalQuality);
+// Task / Trajectory Management
+const trajectoryId = system.beginTask(context, domain);
+system.recordStep(trajectoryId, action, reward, stateEmbedding);
+await system.completeTask(trajectoryId, finalQuality);
 
 // Pattern Matching
-const patterns = await sona.findSimilarPatterns(embedding, k);
-const pattern = sona.storePattern({ name, strategy, embedding, domain });
-sona.updatePatternUsage(patternId, quality);
+const patterns = await system.findPatterns(embedding, k);
+
+// Memory Retrieval
+const memories = await system.retrieveMemories(embedding, k);
 
 // Learning
-await sona.triggerLearning('manual');
-const output = await sona.applyAdaptations(input, domain);
+await system.triggerLearning();
 
 // Statistics
-const stats = sona.getStats();
+const stats = system.getStats();
+// stats.neuralTrainingAvailable is always false in this build
+
+// Events
+system.addEventListener(listener);
+
+// Lifecycle
+await system.cleanup();
+system.isInitialized();
+```
+
+> **Unavailable methods:** `storePattern()`, `updatePatternUsage()`, `applyAdaptations()`, `getConfig()`, `setMode()` (no-op stub only — SONA modes are not active), `getLoRAConfig()`, `initializeLoRAWeights()`, `getEWCConfig()`, `consolidateEWC()` — none of these exist on `NeuralLearningSystem` in the current build.
+
+### Factory Function
+
+```typescript
+import { createNeuralLearningSystem } from '@hive-flow/neural';
+
+const system = createNeuralLearningSystem('general');
 ```
 
 ### RL Algorithms
 
 ```typescript
-import { PPO, A2C, DQN, QLearning, SARSA, DecisionTransformer } from '@hive-flow/neural';
+import { PPOAlgorithm, A2CAlgorithm, DQNAlgorithm, QLearning, SARSAAlgorithm, DecisionTransformer } from '@hive-flow/neural';
 
 // Proximal Policy Optimization
-const ppo = new PPO({
+const ppo = new PPOAlgorithm({
   learningRate: 0.0003,
   epsilon: 0.2,
   valueCoef: 0.5
 });
 
 // Advantage Actor-Critic
-const a2c = new A2C({
+const a2c = new A2CAlgorithm({
   learningRate: 0.001,
   gamma: 0.99,
   entropyCoef: 0.01
 });
 
 // Deep Q-Network
-const dqn = new DQN({
+const dqn = new DQNAlgorithm({
   learningRate: 0.001,
   gamma: 0.99,
   epsilon: 0.1,
@@ -126,45 +122,11 @@ const dt = new DecisionTransformer({
 });
 ```
 
-### LoRA Configuration
-
-```typescript
-// Get LoRA config for current mode
-const loraConfig = sona.getLoRAConfig();
-// {
-//   rank: 4,
-//   alpha: 8,
-//   dropout: 0.05,
-//   targetModules: ['q_proj', 'v_proj', 'k_proj', 'o_proj'],
-//   microLoRA: false
-// }
-
-// Initialize LoRA weights for a domain
-const weights = sona.initializeLoRAWeights('code-generation');
-```
-
-### EWC++ (Elastic Weight Consolidation)
-
-```typescript
-// Get EWC config
-const ewcConfig = sona.getEWCConfig();
-// {
-//   lambda: 2000,
-//   decay: 0.9,
-//   fisherSamples: 100,
-//   minFisher: 1e-8,
-//   online: true
-// }
-
-// Consolidate after learning a new task
-sona.consolidateEWC();
-```
-
 ### Event System
 
 ```typescript
 // Subscribe to neural events
-sona.addEventListener((event) => {
+system.addEventListener((event) => {
   switch (event.type) {
     case 'trajectory_started':
       console.log(`Started: ${event.trajectoryId}`);
@@ -178,46 +140,9 @@ sona.addEventListener((event) => {
     case 'learning_triggered':
       console.log(`Learning: ${event.reason}`);
       break;
-    case 'mode_changed':
-      console.log(`Mode: ${event.fromMode} -> ${event.toMode}`);
-      break;
   }
 });
 ```
-
-## Mode Configurations
-
-```typescript
-// Real-time mode (ultra-fast)
-{
-  loraRank: 2,
-  learningRate: 0.001,
-  batchSize: 32,
-  trajectoryCapacity: 1000,
-  qualityThreshold: 0.7,
-  maxLatencyMs: 0.5
-}
-
-// Research mode (high quality)
-{
-  loraRank: 16,
-  learningRate: 0.002,
-  batchSize: 64,
-  trajectoryCapacity: 10000,
-  qualityThreshold: 0.2,
-  maxLatencyMs: 100
-}
-```
-
-## Performance Targets
-
-| Metric | Target | Typical |
-|--------|--------|---------|
-| Adaptation latency | low-latency | 0.02ms |
-| Pattern retrieval | <1ms | 0.5ms |
-| Learning step | <10ms | 5ms |
-| Quality improvement | +55% | +40-60% |
-| Memory overhead | <50MB | 25-75MB |
 
 ## TypeScript Types
 
@@ -231,11 +156,23 @@ import type {
   PatternMatch,
   NeuralStats,
   NeuralEvent,
-  LoRAConfig,
-  LoRAWeights,
-  EWCConfig,
   RLAlgorithm
 } from '@hive-flow/neural';
+```
+
+> **Note:** `LoRAConfig`, `LoRAWeights`, and `EWCConfig` types are not exported from this package. `SONAMode` and `SONAModeConfig` types are exported but SONA mode switching has no effect at runtime.
+
+## Capability Status
+
+```typescript
+import { getNeuralCapabilityStatus } from '@hive-flow/neural';
+
+const status = getNeuralCapabilityStatus();
+// {
+//   neuralTrainingAvailable: false,
+//   localPatternLearningAvailable: true,
+//   reason: 'This build provides local heuristic pattern learning only; neural model training is unavailable.'
+// }
 ```
 
 ## Dependencies

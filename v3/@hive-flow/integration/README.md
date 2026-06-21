@@ -23,23 +23,16 @@
 ## Quick Start
 
 ```typescript
-import { HiveFlowBridge, createHiveFlowBridge } from '@hive-flow/integration';
+import { IntegrationBridge, createIntegrationBridge } from '@hive-flow/integration';
 
 // Create and initialize bridge
-const bridge = await createHiveFlowBridge({
+const bridge = await createIntegrationBridge({
   features: {
     enableSONA: true,
     enableFlashAttention: true,
     enableHiveMemory: true
   }
 });
-
-// Check if hive-flow is connected
-if (bridge.isHiveFlowConnected()) {
-  console.log('Using optimized hive-flow implementation');
-} else {
-  console.log('Using local fallback implementation');
-}
 
 // Get SONA adapter
 const sona = await bridge.getSONAAdapter();
@@ -52,12 +45,12 @@ const result = await attention.compute({ query, key, value });
 
 ## API Reference
 
-### HiveFlowBridge
+### IntegrationBridge
 
 ```typescript
-import { HiveFlowBridge } from '@hive-flow/integration';
+import { IntegrationBridge } from '@hive-flow/integration';
 
-const bridge = new HiveFlowBridge({
+const bridge = new IntegrationBridge({
   sona: {
     mode: 'balanced',
     learningRate: 0.001,
@@ -99,12 +92,6 @@ await bridge.disableFeature('enableHiveMemory');
 const status = bridge.getStatus();
 const health = await bridge.healthCheck();
 const flags = bridge.getFeatureFlags();
-
-// Direct hive-flow access (when available)
-const core = bridge.getHiveFlowCore();
-if (core) {
-  const patterns = await core.sona.findPatterns(query);
-}
 
 // Cleanup
 await bridge.shutdown();

@@ -12,7 +12,7 @@
 - **LRU + Disk Caching** - In-memory LRU + SQLite persistent cache with TTL
 - **Batch Processing** - Efficient batch embedding with partial cache hits
 - **Similarity Functions** - Cosine, Euclidean, and dot product metrics
-- **75x Faster** - Agentic-flow ONNX is 75x faster than Transformers.js
+- **Deterministic Local** - FNV-1a hash-based vectors, no external API or model required
 
 ### Advanced Features (New in v3.0.0-alpha.11)
 - **Document Chunking** - Character, sentence, paragraph, and token-based chunking with overlap
@@ -74,7 +74,7 @@ hive-flow embeddings batch documents.txt -o embeddings.json
 hive-flow embeddings search "query" --index ./vectors
 
 # Initialize hive-flow model
-hive-flow embeddings init --provider hive-flow
+hive-flow embeddings init --provider rvf
 ```
 
 ## API Reference
@@ -128,13 +128,13 @@ const result = await service.embed('Your text here');
 console.log('Tokens used:', result.usage?.totalTokens);
 ```
 
-### Historical local ONNX provider
+### RVF Local Provider (FNV-1a hash-based)
 
 ```typescript
-import { HiveFlowEmbeddingService } from '@hive-flow/embeddings';
+import { RvfEmbeddingService } from '@hive-flow/embeddings';
 
-const service = new HiveFlowEmbeddingService({
-  provider: 'hive-flow',
+const service = new RvfEmbeddingService({
+  provider: 'rvf',
   cacheSize: 256,
 });
 
@@ -142,8 +142,8 @@ const result = await service.embed('Your text here');
 console.log(`Local deterministic embedding in ${result.latencyMs}ms`);
 ```
 
-The provider name is retained for config compatibility, but no external
-`hive-flow` package is installed or imported.
+Uses FNV-1a hashing to produce deterministic embeddings with no external
+API or model dependency.
 
 ### Transformers.js Provider (Local)
 

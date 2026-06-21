@@ -25,7 +25,7 @@
 ## Quick Start
 
 ```typescript
-import { HNSWIndex, HiveMemoryAdapter, CacheManager } from '@hive-flow/memory';
+import { HNSWIndex, UnifiedMemoryService, CacheManager } from '@hive-flow/memory';
 
 // Create HNSW index for vector search
 const index = new HNSWIndex({
@@ -88,19 +88,14 @@ const stats = index.getStats();
 // { vectorCount, memoryUsage, avgSearchTime, compressionRatio }
 ```
 
-### HiveMemory Adapter
+### Unified Memory Service
 
 ```typescript
-import { HiveMemoryAdapter } from '@hive-flow/memory';
+import { UnifiedMemoryService } from '@hive-flow/memory';
 
-const adapter = new HiveMemoryAdapter({
-  dimension: 1536,
-  indexType: 'hnsw',
-  metric: 'cosine',
-  hnswM: 16,
-  hnswEfConstruction: 200,
-  enableCache: true,
-  cacheSizeMb: 256
+const adapter = new UnifiedMemoryService({
+  dimensions: 1536,
+  cacheEnabled: true,
 });
 
 await adapter.initialize();
@@ -115,16 +110,12 @@ await adapter.store({
 
 // Semantic search
 const memories = await adapter.search(queryVector, {
-  limit: 10,
+  k: 10,
   threshold: 0.7,
-  filter: { type: 'preference' }
 });
 
 // Cross-agent memory sharing
-await adapter.enableCrossAgentSharing({
-  shareTypes: ['patterns', 'preferences'],
-  excludeTypes: ['secrets']
-});
+await adapter.shareWith('mem-123', 'agent-2');
 ```
 
 ### Cache Manager

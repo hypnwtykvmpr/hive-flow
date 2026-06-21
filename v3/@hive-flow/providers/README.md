@@ -1,11 +1,11 @@
 # @hive-flow/providers
 
 
-> Multi-LLM Provider System for Hive Flow V3 - unified interface for Anthropic, OpenAI, Google, Cohere, Ollama, and Hivector with intelligent load balancing, automatic failover, and cost optimization.
+> Multi-LLM Provider System for Hive Flow V3 - unified interface for Anthropic, OpenAI, Google, Cohere, Ollama, LM Studio, OpenRouter, Gemini CLI, Codex CLI, DeepSeek, Qwen, Cursor CLI, Copilot, and Anthropic CLI with intelligent load balancing, automatic failover, and cost optimization.
 
 ## Features
 
-- **6+ LLM Providers** - Anthropic, OpenAI, Google, Cohere, Ollama, Hivector
+- **14+ LLM Providers** - Anthropic, OpenAI, Google, Cohere, Ollama, LM Studio, OpenRouter, Gemini CLI, Codex CLI, DeepSeek, Qwen, Cursor CLI, Copilot, Anthropic CLI
 - **Load Balancing** - Round-robin, latency-based, least-loaded, cost-based strategies
 - **Automatic Failover** - Seamless provider switching on failures
 - **Request Caching** - LRU cache with configurable TTL

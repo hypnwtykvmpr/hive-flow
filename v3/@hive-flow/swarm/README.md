@@ -564,20 +564,9 @@ implementations. It does not require external local compatibility delegates or s
 
 ```typescript
 import { createUnifiedSwarmCoordinator } from '@hive-flow/swarm';
-import { HiveFlowBridge } from '@hive-flow/integration';
-
-// Connect local compatibility features through the Hive Flow bridge
-const bridge = new HiveFlowBridge({
-  hiveFlow: { version: 'alpha' },
-});
 
 const coordinator = createUnifiedSwarmCoordinator({
   topology: { type: 'hierarchical', maxAgents: 15 },
-  // Enable local compatibility features via bridge
-  extensions: {
-    transport: bridge.getQuicTransport(),     // QUIC 0-RTT
-    learning: bridge.getSwarmLearningOptimizer(),
-  },
 });
 ```
 
