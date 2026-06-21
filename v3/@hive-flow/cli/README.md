@@ -159,7 +159,7 @@ hive-flow init --wizard
 
 🔒 **Production-Ready Security** - Built-in protection against prompt injection, input validation, path traversal prevention, command injection blocking, and safe credential handling.
 
-🧩 **Extensible Plugin System** - Add custom capabilities with the plugin SDK. Create workers, hooks, providers, and security modules. Share plugins via the decentralized IPFS marketplace.
+🧩 **Extensible Plugin System** - Add custom capabilities with the plugin SDK. Create workers, hooks, providers, and security modules. Share plugins via the experimental IPFS-based plugin registry.
 
 ---
 
@@ -1674,7 +1674,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 - **Performance**: 5 tools for profiling, bottleneck detection, optimization suggestions
 - **Neural Coordination**: 5 tools for multi-agent learning, knowledge transfer, consensus
 - **Cognitive Kernel**: 5 tools for working memory, attention control, meta-cognition
-- **Quantum Optimizer**: 5 tools for QAOA, VQE, quantum annealing, Grover search
+- **Quantum Optimizer**: 5 quantum-inspired (classical simulation) tools — QAOA, VQE, annealing, Grover-style search
 - **Hyperbolic Reasoning**: 5 tools for Poincaré embeddings, tree inference, taxonomic analysis
 
 ```bash
@@ -3015,7 +3015,7 @@ hive-flow hooks worker dispatch --trigger audit
 <details>
 <summary>📦 <strong>Pattern Store & Export</strong> — Share Patterns, Import Config</summary>
 
-Share learned patterns across projects, teams, and the community via the decentralized pattern marketplace.
+Share learned patterns across projects, teams, and the community via the experimental IPFS-based pattern store.
 
 ### What You Can Share
 
@@ -3065,9 +3065,9 @@ hive-flow config import --input ./agent-configs.json --scope project
 hive-flow session restore --session-id "my-session"
 ```
 
-### Pattern Store (IPFS Marketplace)
+### Pattern Store (IPFS Registry)
 
-Decentralized pattern marketplace for sharing and discovering community patterns.
+Experimental IPFS-based pattern store for sharing and discovering community patterns.
 
 | Command | Description |
 |---------|-------------|
@@ -3091,11 +3091,11 @@ hive-flow hooks transfer store publish -i ./my-patterns.json --category "securit
 
 ### Plugin Store
 
-Discover and install community plugins from the **live IPFS registry** with 19 official plugins and **live ratings** via Cloud Function.
+Discover and install community plugins from the experimental IPFS-based registry (live-CID fetch with static fallback) with 19 official plugins.
 
 | Command | Description |
 |---------|-------------|
-| `plugins list` | List available plugins with live ratings |
+| `plugins list` | List available plugins |
 | `plugins rate` | Rate a plugin (1-5 stars) |
 | `plugins search` | Search plugins by type or category |
 | `plugins info` | Get plugin details and dependencies |
@@ -3103,7 +3103,7 @@ Discover and install community plugins from the **live IPFS registry** with 19 o
 | `plugins list --official` | List official/verified plugins |
 
 ```bash
-# List plugins with live ratings from Cloud Function
+# List available plugins
 hive-flow plugins list
 
 # Filter by type
@@ -3122,7 +3122,7 @@ hive-flow plugins info --name "semantic-code-search"
 hive-flow plugins list --official
 ```
 
-#### Live IPFS Plugin Registry
+#### IPFS Plugin Registry
 
 The official plugin registry is hosted on IPFS with Ed25519 signature verification:
 
