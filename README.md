@@ -1801,20 +1801,13 @@ hive-flow worker status
 <details>
 <summary>☁️ <strong>LLM Providers</strong> — Multiple providers with automatic failover</summary>
 
-| Provider | Models (2025-2026) | Features | Cost |
-|----------|--------|----------|------|
-| **Anthropic** | claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-20251001 | Native, streaming, tool calling, extended thinking | $1-25/1M tokens |
-| **OpenAI** | GPT-5.2, o3, o3-pro, o4-mini | 400K context, reasoning chains, 100% AIME 2025 | $0.15-60/1M tokens |
-| **Google** | Gemini 3 Pro, Gemini 3 Flash, Gemini 3 Deep Think | 1M+ context, multimodal, Deep Think reasoning | $0.075-7/1M tokens |
-| **xAI** | Grok 4.1, Grok 3 | Truth-seeking, real-time data, 200K H100 training | $2-10/1M tokens |
-| **Mistral** | Mistral Large 3 (675B MoE), Codestral | 92% GPT-5.2 performance at 15% cost | $0.50-8/1M tokens |
-| **DeepSeek** | deepseek-v4-pro, deepseek-v4-flash | Fast inference, code-optimized, cost-effective | Low cost |
-| **OpenRouter** | MiniMax M3, Grok 4.3, MiMo v2.5 Pro, Kimi K2.6, Qwen 3.7 Plus, GLM 5.2, Qwen 3.6 Plus, Nemotron 3 Super, DeepSeek V4 Flash | Multi-model proxy; tier pools per task complexity | Pay-per-use |
-| **Meta/Ollama** | Llama 4 Scout/Maverick | Local, free, up to 10M context (Scout) | Free |
-| **Qwen / qwen-cli** | Qwen 3 series | First-class provider; also available as CLI agent | Low cost |
-| **LM Studio** | Any local model | Local inference server | Free |
-| **Cohere** | Command series | Enterprise retrieval-augmented generation | API |
-| **GitHub Copilot** | copilot | IDE-integrated completion | Subscription |
+| Provider | Models | Access | Notes |
+|----------|--------|--------|-------|
+| **Anthropic** (`anthropic`) | claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-20251001 | API key | Native streaming, tool calling, extended thinking |
+| **DeepSeek** (`deepseek`) | deepseek-v4-pro, deepseek-v4-flash | API key | Fast inference, code-optimized |
+| **OpenRouter** (`openrouter`) | MiniMax M3, Grok 4.3, MiMo v2.5 Pro, Kimi K2.6, Qwen 3.7 Plus, GLM 5.2, Qwen 3.6 Plus, Nemotron 3 Super, DeepSeek V4 Flash | API key | Multi-model proxy; tier pools per task complexity |
+
+> Headless CLI agents (`anthropic-cli`, `gemini-cli`, `codex-cli`, `cursor-cli`) are listed in **Platform CLI Providers** below. OpenAI (GPT) and Google (Gemini) models are reached through those CLI agents or via OpenRouter. Grok (xAI), Qwen, and Mistral models are available as OpenRouter-routed options; Ollama and LM Studio serve local models through OpenAI-compatible/custom endpoints.
 
 **Platform CLI Providers** (headless agents via `agent_spawn`):
 
