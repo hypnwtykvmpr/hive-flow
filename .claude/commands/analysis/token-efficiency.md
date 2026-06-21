@@ -39,7 +39,7 @@ Parameters: {"operation": "session", "timeframe": "24h"}
 4. **Review session summaries** for insights
 
 ## Token Reduction Results
-- 📉 32.3% average token reduction
+- 📉 Token reduction
 - 🎯 More focused operations
 - 🔄 Intelligent result reuse
 - 📊 Cumulative improvements

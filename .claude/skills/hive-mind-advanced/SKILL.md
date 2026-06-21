@@ -309,7 +309,7 @@ const insights = hiveMind.getPerformanceInsights();
 **Benchmarks**
 - Significantly faster batch spawning
 - Improved overall speed
-- 32.3% token reduction
+- Token reduction
 - SWE-Bench evaluation claims removed
 
 ## Configuration

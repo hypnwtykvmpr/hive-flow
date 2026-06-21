@@ -625,7 +625,7 @@ Integrates local Hive Flow optimizations for 30-50% token reduction:
 import { getTokenOptimizer } from '@hive-flow/integration';
 const optimizer = await getTokenOptimizer();
 
-// Compact context (32% fewer tokens)
+// Compact context (fewer tokens)
 const ctx = await optimizer.getCompactContext("auth patterns");
 
 // Faster edits = fewer retries

@@ -270,7 +270,7 @@ The Token Optimizer can use optional hive-flow optimizations to reduce API costs
 import { getTokenOptimizer } from '@hive-flow/integration';
 const optimizer = await getTokenOptimizer();
 
-// Get compact context (32% fewer tokens)
+// Get compact context (fewer tokens)
 const ctx = await optimizer.getCompactContext("auth patterns");
 
 // Optimized edit path for simple transforms when Agent Booster is available
@@ -2082,7 +2082,7 @@ hive-flow hive-mind status                                  # Check status
 
 **Hive Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
-**Performance:** faster batch spawning, SWE-Bench evaluation claims removed, 32.3% token reduction
+**Performance:** faster batch spawning, SWE-Bench evaluation claims removed, token reduction
 
 </details>
 
@@ -3345,18 +3345,18 @@ Share trained neural patterns and learning models via IPFS.
 
 ### Pre-trained Model Registry
 
-Import pre-trained learning patterns for common tasks. **90.5% average accuracy** across 40 patterns trained on 110,600+ examples.
+Import pre-trained learning patterns for common tasks. 40 patterns across 8 categories.
 
-| Model | Category | Patterns | Accuracy | Use Case |
-|-------|----------|----------|----------|----------|
-| `security-review-patterns` | security | 5 | 94% | SQL injection, XSS, path traversal |
-| `code-review-patterns` | quality | 5 | 90% | SRP, error handling, type safety |
-| `performance-optimization-patterns` | performance | 5 | 89% | N+1 queries, memory leaks, caching |
-| `testing-patterns` | testing | 5 | 91% | Edge cases, mocking, contracts |
-| `api-development-patterns` | api | 5 | 92% | REST conventions, validation, pagination |
-| `bug-fixing-patterns` | debugging | 5 | 89% | Null tracing, race conditions, regressions |
-| `refactoring-patterns` | refactoring | 5 | 89% | Extract methods, DRY, value objects |
-| `documentation-patterns` | documentation | 5 | 90% | JSDoc, OpenAPI, ADRs |
+| Model | Category | Patterns | Use Case |
+|-------|----------|----------|----------|
+| `security-review-patterns` | security | 5 | SQL injection, XSS, path traversal |
+| `code-review-patterns` | quality | 5 | SRP, error handling, type safety |
+| `performance-optimization-patterns` | performance | 5 | N+1 queries, memory leaks, caching |
+| `testing-patterns` | testing | 5 | Edge cases, mocking, contracts |
+| `api-development-patterns` | api | 5 | REST conventions, validation, pagination |
+| `bug-fixing-patterns` | debugging | 5 | Null tracing, race conditions, regressions |
+| `refactoring-patterns` | refactoring | 5 | Extract methods, DRY, value objects |
+| `documentation-patterns` | documentation | 5 | JSDoc, OpenAPI, ADRs |
 
 **Registry CID**: `QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc`
 
@@ -3373,9 +3373,6 @@ hive-flow hooks route --task "review authentication code" --use-patterns
 | Metric | Fresh Install | With Pre-trained |
 |--------|---------------|------------------|
 | Patterns Available | 0 | 40 |
-| Detection Accuracy | ~50-60% | 90.5% |
-| Historical Examples | 0 | 110,600+ |
-| Issue Detection Rate | ~60-70% | ~90-95% |
 | Time to First Insight | Discovery needed | Immediate |
 
 ### Pre-Built Pattern Packs
@@ -4668,7 +4665,7 @@ When configured, Hive Flow can leverage hive-flow for:
 
 | Feature | How It's Used |
 |---------|---------------|
-| **Token Optimization** | ReasoningBank retrieval (-32% tokens) |
+| **Token Optimization** | ReasoningBank retrieval (fewer tokens) |
 | **Fast Edits** | Agent Booster for mechanical transforms |
 | **Intelligent Routing** | Model router for mini/sonnet/opus selection |
 | **Pattern Learning** | ReasoningBank stores successful patterns |
@@ -4680,7 +4677,7 @@ import { getTokenOptimizer } from '@hive-flow/integration';
 
 const optimizer = await getTokenOptimizer();
 
-// Uses ReasoningBank (32% fewer tokens)
+// Uses ReasoningBank (fewer tokens)
 const ctx = await optimizer.getCompactContext('auth patterns');
 
 // Uses Agent Booster when available for LLM-free edits
@@ -6279,7 +6276,7 @@ node --expose-gc node_modules/.bin/hive-flow
 │ Security              │ CVE remediation + strict validation │
 │ Modular Architecture  │ 18 @hive-flow/* packages          │
 │ Agent Coordination    │ 18 specialized agents               │
-│ Token Efficiency      │ 32% reduction with optimization     │
+│ Token Efficiency      │ token reduction with optimization   │
 └───────────────────────┴─────────────────────────────────────┘
 ```
 

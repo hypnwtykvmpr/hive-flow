@@ -4522,7 +4522,7 @@ export const hooksCommand: Command = {
       '⚡ Local attention coordination',
       '🔍 HiveMemory-compatible local search',
       '📊 SWE-Bench evaluation claims removed',
-      '🎯 32.3% token reduction',
+      '🎯 Token reduction',
       '🚀 Improved execution speed',
       '👥 Agent Teams integration (auto task assignment)'
     ]);

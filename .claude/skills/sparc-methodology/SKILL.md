@@ -1057,7 +1057,7 @@ mcp__hive-flow__token_usage {
 
 **Proven Results**:
 - SWE-Bench solve-rate claims require current benchmark evidence
-- **32.3%** token reduction through optimizations
+- Token reduction through optimizations
 - Improved execution speed with parallel execution
 - **27+** neural models for pattern learning
 - **90%+** test coverage standard

@@ -59,7 +59,7 @@ export const LIVE_REGISTRY_CID = 'QmXbfEAaR7D2Ujm4GAkbwcGZQMHqAMpwDoje4583uNP834
 /**
  * Pre-trained Model Registry CID - Updated 2026-01-24
  * Contains 8 pre-trained learning pattern models with 40 patterns
- * Trained on 110,600+ examples with 90.5% average accuracy
+ * Registry metadata tracks usage across 40 patterns in 8 categories
  */
 export const MODEL_REGISTRY_CID = 'QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc';
 

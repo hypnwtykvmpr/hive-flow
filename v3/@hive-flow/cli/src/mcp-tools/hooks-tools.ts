@@ -858,7 +858,7 @@ export const hooksMetrics: MCPTool = {
         flashAttention: 'Flash Attention optimization',
         memoryReduction: '50-75% reduction',
         searchImprovement: 'fast HNSW-indexed',
-        tokenReduction: '32.3% fewer tokens',
+        tokenReduction: 'fewer tokens',
       },
       status: '[SIMULATED] healthy',
       lastUpdated: new Date().toISOString(),

@@ -53,7 +53,7 @@ export class TokenOptimizer extends EventEmitter {
 
   /**
    * Retrieve compact context instead of full file content
-   * Saves ~32% tokens via semantic retrieval
+   * Saves tokens via semantic retrieval
    */
   async getCompactContext(query: string, options?: {
     limit?: number;

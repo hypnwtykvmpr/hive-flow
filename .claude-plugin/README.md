@@ -622,7 +622,7 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
 ## 📊 Performance
 
 - SWE-Bench evaluation support
-- **32.3%** token reduction vs. sequential execution
+- Token reduction vs. sequential execution
 - Significant speed improvement with WASM acceleration
 - **27+** neural models for pattern recognition
 - **100** max concurrent agents
