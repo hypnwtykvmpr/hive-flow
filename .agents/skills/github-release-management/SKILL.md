@@ -1017,8 +1017,8 @@ hive-flow github version-sync \
 ## Related Resources
 
 ### Documentation
-- [Hive Flow SPARC Guide](../..$docs$sparc-methodology.md)
-- [Swarm Coordination Patterns](../..$docs$swarm-patterns.md)
+- [Hive Flow SPARC Guide](../sparc-methodology/SKILL.md)
+- [Swarm Coordination Patterns](../swarm-orchestration/SKILL.md)
 
 ### Related Skills
 - **github-pr-management**: PR review and merge automation

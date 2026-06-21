@@ -637,4 +637,4 @@ mcp__hive-flow__task_orchestrate {
 }
 ```
 
-See also: [swarm-pr.md](.$swarm-pr.md), [swarm-issue.md](.$swarm-issue.md), [sync-coordinator.md](.$sync-coordinator.md)
+See also: [swarm-pr.md](../agent-swarm-pr/SKILL.md), [swarm-issue.md](../agent-swarm-issue/SKILL.md), [sync-coordinator.md](../agent-sync-coordinator/SKILL.md)

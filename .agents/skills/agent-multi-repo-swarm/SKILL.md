@@ -554,4 +554,4 @@ hive-flow github cross-team \
   --track-progress
 ```
 
-See also: [swarm-pr.md](.$swarm-pr.md), [project-board-sync.md](.$project-board-sync.md)
+See also: [swarm-pr.md](../agent-swarm-pr/SKILL.md), [project-board-sync.md](../agent-project-board-sync/SKILL.md)

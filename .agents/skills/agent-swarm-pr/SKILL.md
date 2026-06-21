@@ -430,4 +430,4 @@ mcp__hive-flow__memory_usage {
 }
 ```
 
-See also: [swarm-issue.md](.$swarm-issue.md), [sync-coordinator.md](.$sync-coordinator.md), [workflow-automation.md](.$workflow-automation.md)
+See also: [swarm-issue.md](../agent-swarm-issue/SKILL.md), [sync-coordinator.md](../agent-sync-coordinator/SKILL.md), [workflow-automation.md](../agent-workflow-automation/SKILL.md)

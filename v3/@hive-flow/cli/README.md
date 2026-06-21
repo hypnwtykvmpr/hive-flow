@@ -6032,24 +6032,24 @@ cp -r ./data-backup-v2 ./data
 
 | Module | Description | Docs |
 |--------|-------------|------|
-| `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/hooks/) |
-| `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
-| `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
-| `@hive-flow/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
-| `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
-| `@hive-flow/neural` | SONA learning integration | [Source](./v3/@hive-flow/neural/) |
-| `@hive-flow/testing` | TDD London School framework | [Source](./v3/@hive-flow/testing/) |
-| `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
-| `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |
-| `@hive-flow/providers` | LLM provider integrations | [Source](./v3/@hive-flow/providers/) |
-| `@hive-flow/integration` | local compatibility API integration | [Source](./v3/@hive-flow/integration/) |
-| `@hive-flow/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/performance/) |
-| `@hive-flow/deployment` | Release & CI/CD | [Source](./v3/@hive-flow/deployment/) |
-| `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |
+| `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](../hooks/) |
+| `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](../memory/) |
+| `@hive-flow/security` | CVE remediation & security patterns | [Source](../security/) |
+| `@hive-flow/swarm` | 150-agent coordination engine | [Source](../swarm/) |
+| `@hive-flow/cli` | CLI modernization | [Source](../cli/) |
+| `@hive-flow/neural` | SONA learning integration | [Source](../neural/) |
+| `@hive-flow/testing` | TDD London School framework | [Source](../testing/) |
+| `@hive-flow/mcp` | MCP server & tools | [Source](../mcp/) |
+| `@hive-flow/embeddings` | Vector embedding providers | [Source](../embeddings/) |
+| `@hive-flow/providers` | LLM provider integrations | [Source](../providers/) |
+| `@hive-flow/integration` | local compatibility API integration | [Source](../integration/) |
+| `@hive-flow/performance` | Benchmarking & optimization | [Source](../performance/) |
+| `@hive-flow/deployment` | Release & CI/CD | [Source](../deployment/) |
+| `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](../shared/) |
 
 ### Additional Resources
 
-- [Architecture Decisions (ADRs)](./v3/docs/adr/)
+- [Architecture Decisions (ADRs)](../../docs/adr/)
 
 </details>
 

@@ -463,5 +463,5 @@ await store.append(createMemoryDeletedEvent(id, ns, key));
 ---
 
 **Quick Links**:
-- [Example](./example-usage.ts) - Working code example
-- [Tests](./event-store.test.ts) - Test suite
+- [Example](../src/events/example-usage.ts) - Working code example
+- [Tests](../src/events/event-store.test.ts) - Test suite

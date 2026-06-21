@@ -598,7 +598,7 @@ const PROMPT_INJECTION_PATTERNS: ThreatPattern[] = [
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](../../../LICENSE) for details.
 
 ---
 

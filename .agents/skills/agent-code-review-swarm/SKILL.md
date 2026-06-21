@@ -540,4 +540,4 @@ hive-flow github review-report \
   --email-stakeholders
 ```
 
-See also: [swarm-pr.md](.$swarm-pr.md), [workflow-automation.md](.$workflow-automation.md)
+See also: [swarm-pr.md](../agent-swarm-pr/SKILL.md), [workflow-automation.md](../agent-workflow-automation/SKILL.md)

@@ -575,4 +575,4 @@ const postHook = async (results) => {
 };
 ```
 
-See also: [swarm-pr.md](.$swarm-pr.md), [sync-coordinator.md](.$sync-coordinator.md), [workflow-automation.md](.$workflow-automation.md)
+See also: [swarm-pr.md](../agent-swarm-pr/SKILL.md), [sync-coordinator.md](../agent-sync-coordinator/SKILL.md), [workflow-automation.md](../agent-workflow-automation/SKILL.md)

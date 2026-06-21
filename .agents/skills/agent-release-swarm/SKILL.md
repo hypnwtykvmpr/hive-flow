@@ -585,4 +585,4 @@ hive-flow github rollback \
   --notify-users
 ```
 
-See also: [workflow-automation.md](.$workflow-automation.md), [multi-repo-swarm.md](.$multi-repo-swarm.md)
+See also: [workflow-automation.md](../agent-workflow-automation/SKILL.md), [multi-repo-swarm.md](../agent-multi-repo-swarm/SKILL.md)

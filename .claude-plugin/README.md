@@ -672,7 +672,7 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
 
 ## 📝 License
 
-MIT License - see [LICENSE](LICENSE) file for details
+MIT License - see [LICENSE](../LICENSE) file for details
 
 ---
 
