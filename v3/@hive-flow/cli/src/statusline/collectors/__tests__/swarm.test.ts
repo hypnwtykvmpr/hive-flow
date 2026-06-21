@@ -466,12 +466,12 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // C1 #16 — cap defaults to 50 and accepts an override.
+  // C1 #16 — cap defaults to the canonical swarm max and accepts an override.
   // -------------------------------------------------------------------------
-  it('uses DEFAULT_CAP=50 by default and honors a cap override', async () => {
+  it('uses DEFAULT_CAP=150 by default and honors a cap override', async () => {
     writeStoreDict(fix.storePath, {});
     const def = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(def.cap).toBe(50);
+    expect(def.cap).toBe(150);
     const override = await collectSwarm({ projectRoot: fix.projectRoot, cap: 12 });
     expect(override.cap).toBe(12);
   });

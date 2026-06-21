@@ -116,7 +116,7 @@ const _typecheckSwarm: SwarmInfo = {
   activeAgents: 1,
   idleAgents: 0,
   queuedAgents: 0,
-  maxAgents: 50,
+  maxAgents: 150,
   activeQueens: 0,
   executingQueens: 0,
   agents: [_typecheckAgentRow],

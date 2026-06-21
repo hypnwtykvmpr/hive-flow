@@ -9,6 +9,7 @@
  * Implements ADR-005: MCP-First API Design
  */
 import { z } from 'zod';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 // ============================================================================
 // Input Schemas
 // ============================================================================
@@ -48,14 +49,14 @@ const validateConfigSchema = z.object({
 // keep in sync with @hive-flow/shared/core/config/defaults
 const DEFAULT_CONFIG = {
     agents: {
-        maxConcurrent: 50,
+        maxConcurrent: DEFAULT_MAX_AGENTS,
         defaultPriority: 'normal',
         timeout: 300000,
         retryAttempts: 3,
     },
     swarm: {
         topology: 'hierarchical-mesh',
-        maxAgents: 50,
+        maxAgents: DEFAULT_MAX_AGENTS,
         communicationProtocol: 'message-bus',
         consensusMechanism: 'majority',
     },
@@ -199,7 +200,7 @@ async function handleValidateConfig(input, context) {
                 field: 'agents.maxConcurrent',
                 issue: 'Must be between 1 and 1000',
                 severity: 'error',
-                suggestion: 'Set to 15 (default)',
+                suggestion: `Set to ${DEFAULT_MAX_AGENTS} (default)`,
             });
         }
         if (config.agents.timeout && config.agents.timeout < 1000) {
@@ -218,7 +219,7 @@ async function handleValidateConfig(input, context) {
                 field: 'swarm.maxAgents',
                 issue: 'Must be between 1 and 1000',
                 severity: 'error',
-                suggestion: 'Set to 15 (default)',
+                suggestion: `Set to ${DEFAULT_MAX_AGENTS} (default)`,
             });
         }
     }
@@ -267,11 +268,11 @@ async function handleValidateConfig(input, context) {
                 // Apply fixes based on suggestions
                 const parts = issue.field.split('.');
                 if (parts[0] === 'agents' && parts[1] === 'maxConcurrent') {
-                    fixedConfig.agents.maxConcurrent = 15;
+                    fixedConfig.agents.maxConcurrent = DEFAULT_MAX_AGENTS;
                     fixed = true;
                 }
                 else if (parts[0] === 'swarm' && parts[1] === 'maxAgents') {
-                    fixedConfig.swarm.maxAgents = 15;
+                    fixedConfig.swarm.maxAgents = DEFAULT_MAX_AGENTS;
                     fixed = true;
                 }
                 else if (parts[0] === 'memory' && parts[1] === 'vectorDimensions') {

@@ -216,7 +216,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         activeAgents: 7,
         idleAgents: 0,
         queuedAgents: 0,
-        maxAgents: 50,
+        maxAgents: 150,
         activeQueens: 2,
         executingQueens: 1,
       },
@@ -263,7 +263,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(plain).toContain('Opus 4.8');
     expect(plain).toContain('45% ctx');
     expect(plain).toContain('Swarm');
-    expect(plain).toMatch(/\[\s*7\/50\]/);
+    expect(plain).toMatch(/\[\s*7\/150\]/);
     expect(plain).toContain('♛2');
     expect(plain).toContain('Memory');
     expect(plain).toContain('Embeddings 290');
@@ -280,7 +280,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         activeAgents: 0,
         idleAgents: 5,
         queuedAgents: 0,
-        maxAgents: 50,
+        maxAgents: 150,
         activeQueens: 0,
         executingQueens: 0,
       },
@@ -299,8 +299,8 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     // idle-only swarm (activeAgents=0, total=5) => hollow ○ indicator (teal), not filled ◉.
     expect(plain).toContain('Swarm ○');
     expect(plain).not.toContain('Swarm ◉');
-    expect(plain).toMatch(/\[\s*5\/50\]/);
-    expect(plain).not.toMatch(/\[\s*0\/50\]/);
+    expect(plain).toMatch(/\[\s*5\/150\]/);
+    expect(plain).not.toMatch(/\[\s*0\/150\]/);
     expect(plain).not.toContain('agents off');
   });
 
@@ -354,7 +354,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
           activeAgents: 3,
           idleAgents: 0,
           queuedAgents: 0,
-          maxAgents: 50,
+          maxAgents: 150,
           activeQueens: 0,
           executingQueens: 0,
         },
@@ -373,7 +373,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         expect(plain).toContain('global-index-project');
         expect(plain).toContain('Codex 2');
         expect(plain).toContain('Swarm');
-        expect(plain).toMatch(/\[\s*3\/50\]/);
+        expect(plain).toMatch(/\[\s*3\/150\]/);
       } finally {
         process.chdir(origCwd);
       }
@@ -469,9 +469,9 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     // mine-busy has no pid => non-executing => hollow ○ indicator.
     expect(plain).toContain('Swarm ○');
     expect(plain).not.toContain('Swarm ◉');
-    expect(plain).toMatch(/\[\s*4\/50\]/);
-    expect(plain).not.toMatch(/\[\s*2\/50\]/);
-    expect(plain).not.toMatch(/\[\s*5\/50\]/);
+    expect(plain).toMatch(/\[\s*4\/150\]/);
+    expect(plain).not.toMatch(/\[\s*2\/150\]/);
+    expect(plain).not.toMatch(/\[\s*5\/150\]/);
   });
 
   // -------------------------------------------------------------------------
@@ -733,7 +733,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         stale: false,
       },
       swarm: {
-        activeAgents: 5, idleAgents: 0, queuedAgents: 0, maxAgents: 50,
+        activeAgents: 5, idleAgents: 0, queuedAgents: 0, maxAgents: 150,
         activeQueens: 1, executingQueens: 1,
       },
       memory: {
@@ -998,7 +998,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         activeAgents: 1,
         idleAgents: 0,
         queuedAgents: 0,
-        maxAgents: 50,
+        maxAgents: 150,
         activeQueens: 0,
         executingQueens: 0,
         agents: [
@@ -1063,7 +1063,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         activeAgents: 0,
         idleAgents: 0,
         queuedAgents: 0,
-        maxAgents: 50,
+        maxAgents: 150,
         activeQueens: 1,
         executingQueens: 0,
         agents: [

@@ -55,8 +55,8 @@ export const swarmInitTool: MCPTool = {
         type: 'number',
         description: 'Maximum number of agents',
         minimum: 1,
-        maximum: 100,
-        default: 5,
+        maximum: 1000,
+        default: DEFAULT_MAX_AGENTS,
       },
       strategy: {
         type: 'string',

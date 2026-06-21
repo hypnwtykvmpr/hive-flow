@@ -33,6 +33,8 @@
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+
 import {
   collectActiveHiveRuntimeState,
   type ActiveHiveRuntimeState,
@@ -111,7 +113,7 @@ export interface CollectSwarmOptions {
 // ---------------------------------------------------------------------------
 
 /** Default swarm cap when no config-supplied value is provided. */
-export const DEFAULT_CAP = 50;
+export const DEFAULT_CAP = DEFAULT_MAX_AGENTS;
 
 /** mtime threshold below which `store.json` is considered `fresh`. */
 export const FRESH_MS = 60_000;

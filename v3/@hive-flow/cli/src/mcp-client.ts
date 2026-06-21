@@ -144,7 +144,7 @@ export class MCPClientError extends Error {
  * // Initialize swarm
  * const swarm = await callMCPTool('swarm_init', {
  *   topology: 'hierarchical-mesh',
- *   maxAgents: 50
+ *   maxAgents: 150
  * });
  * ```
  */

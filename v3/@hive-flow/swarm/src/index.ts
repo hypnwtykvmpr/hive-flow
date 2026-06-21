@@ -6,7 +6,7 @@
  * This module provides ONE CANONICAL coordination engine: UnifiedSwarmCoordinator
  * SwarmHub is maintained ONLY as a compatibility layer for existing code.
  *
- * Provides 15-agent hierarchical mesh coordination with consensus algorithms.
+ * Provides hierarchical mesh coordination across the 15-role taxonomy with consensus algorithms.
  *
  * Features:
  * - Unified SwarmCoordinator consolidating 4 legacy systems
@@ -15,7 +15,7 @@
  * - Agent pool management with workload balancing
  * - Message bus for inter-agent communication
  *
- * Performance Targets (historical benchmark; cap is now 50 working + 10 queued):
+ * Performance Targets (historical benchmark; cap is now 150 working + 30 queued):
  * - Agent coordination: <100ms across the 15-role taxonomy
  * - Consensus: <100ms
  * - Message throughput: 1000+ msgs/sec
@@ -25,7 +25,7 @@
  * import { createUnifiedSwarmCoordinator } from '@hive-flow/swarm';
  *
  * const coordinator = createUnifiedSwarmCoordinator({
- *   topology: { type: 'hierarchical', maxAgents: 15 },
+ *   topology: { type: 'hierarchical', maxAgents: DEFAULT_MAX_AGENTS },
  *   consensus: { algorithm: 'raft', threshold: 0.67 },
  * });
  *

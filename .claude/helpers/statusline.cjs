@@ -21,11 +21,11 @@ const os = require('os');
 const crypto = require('crypto');
 
 // Configuration
-// keep in sync with @hive-flow/shared/core/config/defaults (DEFAULT_MAX_AGENTS=50, DEFAULT_QUEUE_DEPTH=10).
+// keep in sync with @hive-flow/shared/core/config/defaults (DEFAULT_MAX_AGENTS=150, DEFAULT_QUEUE_DEPTH=30).
 // Long-term: replace with a runtime import once this .cjs migrates to ESM.
 const CONFIG = {
-  maxAgents: 50,
-  queueDepth: 10,
+  maxAgents: 150,
+  queueDepth: 30,
 };
 
 const CWD = process.cwd();
@@ -320,7 +320,7 @@ function getSecurityStatus() {
 }
 
 // Read agent store and split into workers and queens. Queens are control-plane
-// orchestrators — they do not consume worker slots, so the [N/50] bracket
+// orchestrators — they do not consume worker slots, so the [N/150] bracket
 // counts workers only and queens render as a separate ♛N segment.
 //
 // Returned buckets:
@@ -1049,7 +1049,7 @@ function generateStatusline() {
       : `${c.dim}\u25CB${c.reset}`;
   const agentsColor = swarmExecuting ? c.brightGreen : swarmHasAgents ? c.brightYellow : c.dim;
 
-  // Queen segment — separate from worker [N/50] because queens don't consume
+  // Queen segment — separate from worker [N/150] because queens don't consume
   // worker slots. Bright cyan when any queen is running/busy, dark yellow
   // (renders as olive/brown on most terminals) when all queens are idle.
   // Omitted entirely when no queens are present.

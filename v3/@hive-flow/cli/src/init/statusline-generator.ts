@@ -705,7 +705,7 @@ function generateStatusline() {
       : c.dim + '\\u25CB' + c.reset;
   const agentsColor = swarmExecuting ? c.brightGreen : swarmHasAgents ? c.warn : c.dim;
 
-  // Queen segment — separate from worker [N/50] because queens don't consume
+  // Queen segment — separate from worker [N/max] because queens don't consume
   // worker slots. Bright cyan when any queen is running/busy, dark yellow
   // (renders as olive/brown) when all queens are idle. Omitted entirely when 0.
   let queenSegment = '';

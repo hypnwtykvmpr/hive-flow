@@ -366,7 +366,7 @@ async function handleValidateConfig(
         field: 'agents.maxConcurrent',
         issue: 'Must be between 1 and 1000',
         severity: 'error',
-        suggestion: 'Set to 15 (default)',
+        suggestion: `Set to ${DEFAULT_MAX_AGENTS} (default)`,
       });
     }
     if (config.agents.timeout && config.agents.timeout < 1000) {
@@ -386,7 +386,7 @@ async function handleValidateConfig(
         field: 'swarm.maxAgents',
         issue: 'Must be between 1 and 1000',
         severity: 'error',
-        suggestion: 'Set to 15 (default)',
+        suggestion: `Set to ${DEFAULT_MAX_AGENTS} (default)`,
       });
     }
   }

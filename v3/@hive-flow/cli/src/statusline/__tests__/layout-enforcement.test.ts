@@ -185,7 +185,7 @@ function fullFixtureSnapshot(projectRoot: string): void {
       activeAgents: 7,
       idleAgents: 0,
       queuedAgents: 0,
-      maxAgents: 50,
+      maxAgents: 150,
       activeQueens: 2,
       executingQueens: 1,
     },
@@ -366,7 +366,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
       '▊ fixture-project  │  main +2 ~3 ↑3 ↓1  │  Opus 4.8 1M  │  📖 45% ctx · 82000 in/14000 out',
       RULE,
       '🤖 Claude Opus 7 · Sonnet 4  │  Codex 3',
-      '🪪 Swarm ◉ [ 7/50]  ♛2',
+      '🪪 Swarm ◉ [ 7/150]  ♛2',
       '📊 Memory  Embeddings 290  │  Memories 41.1k  │  💾 333KB  │  🧪 Tests 142  │  🔌 MCP 5/7',
       '📌 attention  ! permission required',
       RULE,
@@ -390,7 +390,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
       '📊 Memory  Embeddings 290  │  Memories 41.1k  │  💾 333KB  │  🧪 Tests 142  │  🔌 MCP 5/7',
     );
     expect(plain).toContain('🤖 Claude Opus 7 · Sonnet 4  │  Codex 3');
-    expect(plain).toContain('🪪 Swarm ◉ [ 7/50]  ♛2');
+    expect(plain).toContain('🪪 Swarm ◉ [ 7/150]  ♛2');
     expect(plain).toContain('📌 attention  ! permission required');
     expect(plain).toContain('► ⛔ ENFORCEMENT OFF · daemon on · data fresh 0s');
   });
@@ -519,7 +519,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
       },
       {
         swarm: {
-          activeAgents: 1, idleAgents: 0, queuedAgents: 0, maxAgents: 50,
+          activeAgents: 1, idleAgents: 0, queuedAgents: 0, maxAgents: 150,
           activeQueens: 0, executingQueens: 0,
         },
         daemon: { running: true, health: 'healthy', observedAt: new Date().toISOString() },
@@ -612,7 +612,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
               activeAgents: s.activeAgents,
               idleAgents: 0,
               queuedAgents: 0,
-              maxAgents: 50,
+              maxAgents: 150,
               activeQueens: 0,
               executingQueens: 0,
             } as SwarmSummary;
@@ -707,7 +707,7 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     writeSnapshot(fix.projectRoot, {
       scoreboard: { agentsByProvider: {}, callsByProvider: {}, stale: false },
       swarm: {
-        activeAgents: 0, idleAgents: 0, queuedAgents: 0, maxAgents: 50,
+        activeAgents: 0, idleAgents: 0, queuedAgents: 0, maxAgents: 150,
         activeQueens: 0, executingQueens: 0,
       },
       memory: {

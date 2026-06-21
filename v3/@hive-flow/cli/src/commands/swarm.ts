@@ -740,7 +740,7 @@ export const swarmCommand: Command = {
   examples: [
     { command: 'hive-flow swarm init --v3-mode', description: 'Initialize V3 swarm' },
     { command: 'hive-flow swarm start -o "Build API" -s development', description: 'Start development swarm' },
-    { command: 'hive-flow swarm coordinate --agents 50', description: 'V3 coordination at default cap' }
+    { command: 'hive-flow swarm coordinate --agents 150', description: 'V3 coordination at default cap' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     output.writeln();

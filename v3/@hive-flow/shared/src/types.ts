@@ -1,6 +1,6 @@
 /**
  * V3 Hive-Flow Shared Types
- * Core type definitions for the 15-agent swarm coordination system
+ * Core type definitions for the 15-role swarm coordination taxonomy
  *
  * Based on ADR-002 (DDD) and ADR-003 (Single Coordination Engine)
  */

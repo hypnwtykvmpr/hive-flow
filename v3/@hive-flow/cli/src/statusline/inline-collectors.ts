@@ -41,6 +41,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+
 import {
   collectActiveHiveRuntimeState,
   type ActiveHiveRuntimeState,
@@ -592,7 +594,7 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
     activeAgents,
     idleAgents,
     queuedAgents,
-    maxAgents: 50,
+    maxAgents: DEFAULT_MAX_AGENTS,
     activeQueens,
     executingQueens,
     agents: rows,

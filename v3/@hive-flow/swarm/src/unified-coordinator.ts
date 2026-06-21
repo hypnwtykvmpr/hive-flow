@@ -1,10 +1,10 @@
 /**
  * V3 Unified Swarm Coordinator
  * Consolidates SwarmCoordinator, HiveMind, Maestro, and AgentManager into a single system
- * Supports the 15-agent hierarchical mesh structure with domain-based task routing
+ * Supports the 15-role hierarchical mesh taxonomy with domain-based task routing
  *
  * Performance Targets:
- * - Agent coordination: <100ms for 15 agents
+ * - Agent coordination: <100ms across the 15-role taxonomy
  * - Consensus: <100ms
  * - Message throughput: 1000+ msgs/sec
  *
@@ -53,7 +53,7 @@ import { AgentPool, createAgentPool } from './agent-pool.js';
 import { ConsensusEngine, createConsensusEngine } from './consensus/index.js';
 
 // =============================================================================
-// Domain Types for 15-Agent Hierarchy
+// Domain Types for the 15-role hierarchy
 // =============================================================================
 
 export type AgentDomain = 'queen' | 'security' | 'core' | 'integration' | 'support';
@@ -93,7 +93,7 @@ export interface DomainStatus {
 }
 
 // =============================================================================
-// 15-Agent Domain Configuration
+// 15-role Domain Configuration
 // =============================================================================
 
 const DOMAIN_CONFIGS: DomainConfig[] = [
@@ -142,7 +142,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
   private consensusEngine: ConsensusEngine;
   private agentPools: Map<AgentType, AgentPool> = new Map();
 
-  // Domain-based tracking for 15-agent hierarchy
+  // Domain-based tracking for the 15-role taxonomy
   private domainConfigs: Map<AgentDomain, DomainConfig> = new Map();
   private domainPools: Map<AgentDomain, AgentPool> = new Map();
   private agentDomainMap: Map<string, AgentDomain> = new Map();
@@ -642,7 +642,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
       this.agentPools.set(type, pool);
     }
 
-    // Initialize domain-based pools for 15-agent hierarchy
+    // Initialize domain-based pools for the 15-role taxonomy
     await this.initializeDomainPools();
   }
 
@@ -1095,7 +1095,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
   }
 
   // =============================================================================
-  // DOMAIN-BASED TASK ROUTING (15-Agent Hierarchy Support)
+  // DOMAIN-BASED TASK ROUTING (15-role hierarchy support)
   // =============================================================================
 
   /**
@@ -1453,7 +1453,7 @@ export class UnifiedSwarmCoordinator extends EventEmitter implements IUnifiedSwa
   }
 
   /**
-   * Spawn the full 15-agent hierarchy
+   * Spawn the full 15-role hierarchy
    * Returns a map of agent numbers to their IDs and domains
    */
   async spawnFullHierarchy(): Promise<Map<number, { agentId: string; domain: AgentDomain }>> {

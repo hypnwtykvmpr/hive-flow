@@ -159,7 +159,7 @@ export function createAgentInstance(
 }
 
 /**
- * Create a full 15-agent swarm configuration
+ * Create a full 15-role swarm configuration
  */
 export function create15AgentSwarmConfig(): AgentConfig[] {
   return [

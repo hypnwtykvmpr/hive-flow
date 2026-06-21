@@ -2,14 +2,14 @@
  * @hive-flow/testing - Agent Fixtures
  *
  * Comprehensive mock agents and agent configurations for testing V3 modules.
- * Supports all 15 V3 specialized swarm agents plus core development agents.
+ * Supports the 15-role V3 specialized swarm taxonomy plus core development agents.
  *
  * Based on ADR-002 (Domain-Driven Design) and V3 agent specifications.
  */
 import { vi, type Mock } from 'vitest';
 
 /**
- * Agent types for V3 15-agent swarm
+ * Agent types for the V3 15-role swarm taxonomy
  */
 export type V3AgentType =
   | 'queen-coordinator'
@@ -622,7 +622,7 @@ export function createAgentHealthCheckResult(
 }
 
 /**
- * Create a full 15-agent V3 swarm configuration
+ * Create a full 15-role V3 swarm configuration
  */
 export function createV3SwarmAgentConfigs(): AgentConfig[] {
   return [
@@ -645,7 +645,7 @@ export function createV3SwarmAgentConfigs(): AgentConfig[] {
 }
 
 /**
- * Create instances for all 15 V3 agents
+ * Create instances for all 15 V3 role agents
  */
 export function createV3SwarmAgentInstances(): AgentInstance[] {
   return createV3SwarmAgentConfigs().map((config, index) =>
@@ -768,7 +768,7 @@ export function createMockAgents(types: V3AgentType[]): MockAgent[] {
 }
 
 /**
- * Create a mock V3 15-agent swarm
+ * Create a mock V3 15-role swarm
  */
 export function createMockV3Swarm(): MockAgent[] {
   const types: V3AgentType[] = [

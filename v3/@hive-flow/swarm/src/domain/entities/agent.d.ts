@@ -11,7 +11,7 @@
  */
 export type AgentStatus = 'idle' | 'active' | 'busy' | 'paused' | 'terminated' | 'error';
 /**
- * Agent role types - following 15-agent hierarchy
+ * Agent role types - following the 15-role taxonomy
  */
 export type AgentRole = 'queen-coordinator' | 'security-architect' | 'security-auditor' | 'memory-specialist' | 'swarm-specialist' | 'integration-architect' | 'performance-engineer' | 'core-architect' | 'test-architect' | 'project-coordinator' | 'coder' | 'reviewer' | 'tester' | 'planner' | 'researcher' | 'custom';
 /**

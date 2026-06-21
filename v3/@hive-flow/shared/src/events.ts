@@ -1,6 +1,6 @@
 /**
  * V3 Event Bus System
- * Event-driven communication for the 15-agent swarm
+ * Event-driven communication for the 15-role swarm taxonomy
  *
  * Based on ADR-007 (Event Sourcing for State Changes)
  */

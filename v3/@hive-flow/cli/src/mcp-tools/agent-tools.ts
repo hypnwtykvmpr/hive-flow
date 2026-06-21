@@ -668,8 +668,8 @@ export const agentTools: MCPTool[] = [
         };
       }
 
-      // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 60).
-      // The runbook specifies a 50 working + 10 queued cap; without a persistent
+      // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 180).
+      // The runbook specifies a 150 working + 30 queued cap; without a persistent
       // queue runner that promotes queued→working when slots free, a transient
       // requestSpawn() over a fresh empty queue cannot reach busy:queue-full
       // (Codex flagged this exact gap). The honest minimal enforcement is a

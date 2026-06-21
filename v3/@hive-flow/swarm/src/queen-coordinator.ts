@@ -1,5 +1,5 @@
 /**
- * Queen Coordinator - Central Orchestrator for 15-Agent Swarm
+ * Queen Coordinator - Central Orchestrator for the 15-role swarm taxonomy
  *
  * The Queen Coordinator is the strategic decision-maker for the V3 hive-mind system.
  * It analyzes tasks, delegates to appropriate agents, monitors swarm health,
@@ -22,7 +22,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { generateSecureId } from '@hive-flow/shared';
+import { DEFAULT_QUEUE_DEPTH, generateSecureId } from '@hive-flow/shared';
 import type {
   AgentState,
   AgentType,
@@ -380,7 +380,7 @@ const DEFAULT_CONFIG: QueenCoordinatorConfig = {
   },
   healthCheckIntervalMs: 10000,
   bottleneckThresholds: {
-    queueDepth: 10,
+    queueDepth: DEFAULT_QUEUE_DEPTH,
     errorRate: 0.1,
     responseTimeMs: 5000,
   },
@@ -489,7 +489,7 @@ export interface MemoryStoreEntry {
 // =============================================================================
 
 /**
- * Queen Coordinator - Central orchestrator for the 15-agent hive-mind swarm
+ * Queen Coordinator - Central orchestrator for the 15-role hive-mind swarm taxonomy
  *
  * The Queen is responsible for:
  * 1. Strategic task analysis and decomposition

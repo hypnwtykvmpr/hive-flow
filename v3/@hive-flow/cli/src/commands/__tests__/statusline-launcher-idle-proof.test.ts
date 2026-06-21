@@ -196,7 +196,7 @@ describe('Proof 1 — launcher idle-only symbol (spec: idle => ○, not ◉)', (
       activeAgents: 0,
       idleAgents: 3,
       queuedAgents: 0,
-      maxAgents: 50,
+      maxAgents: 150,
       activeQueens: 0,
       executingQueens: 0,
     });
@@ -224,7 +224,7 @@ describe('Proof 1 — launcher idle-only symbol (spec: idle => ○, not ◉)', (
       activeAgents: 2,
       idleAgents: 1,
       queuedAgents: 0,
-      maxAgents: 50,
+      maxAgents: 150,
       activeQueens: 1,
       executingQueens: 1,
     });

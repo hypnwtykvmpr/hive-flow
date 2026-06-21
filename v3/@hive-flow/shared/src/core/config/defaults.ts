@@ -41,13 +41,13 @@ export const defaultTaskConfig: Partial<TaskConfig> = {
  * All default configurations and quorum calculations must reference this constant.
  * Distinguished from MAX_AGENTS_CEILING (system hard limit) which is declared separately.
  */
-export const DEFAULT_MAX_AGENTS = 50;
+export const DEFAULT_MAX_AGENTS = 150;
 
 /**
- * Hard queue depth cap per swarm. hard cap = MAX_AGENTS + QUEUE_DEPTH = 60;
+ * Hard queue depth cap per swarm. hard cap = MAX_AGENTS + QUEUE_DEPTH = 180;
  * requests above that are rejected with `busy:queue-full`.
  */
-export const DEFAULT_QUEUE_DEPTH = 10;
+export const DEFAULT_QUEUE_DEPTH = 30;
 
 /**
  * Default swarm configuration (core version)

@@ -18,7 +18,7 @@
  * - All core logic delegated to UnifiedSwarmCoordinator
  *
  * Based on ADR-001 (local compatibility integration), ADR-003 (Single Coordination Engine),
- * and the 15-Agent Swarm Architecture
+ * and the 15-role Swarm Architecture
  */
 
 import {

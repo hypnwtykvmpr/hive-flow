@@ -15,7 +15,7 @@ import { randomUUID } from 'crypto';
 export type AgentStatus = 'idle' | 'active' | 'busy' | 'paused' | 'terminated' | 'error';
 
 /**
- * Agent role types - following 15-agent hierarchy
+ * Agent role types - following the 15-role taxonomy
  */
 export type AgentRole =
   | 'queen-coordinator'

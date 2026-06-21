@@ -329,7 +329,7 @@ export class CLI {
 
     this.output.writeln(this.output.bold('V3 FEATURES:'));
     this.output.printList([
-      '50-agent hierarchical-mesh coordination',
+      '150-agent hierarchical-mesh coordination',
       'HiveMemory with HNSW-indexed search',
       'Flash Attention optimization',
       'Unified SwarmCoordinator engine',

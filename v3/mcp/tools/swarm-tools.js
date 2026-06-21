@@ -9,6 +9,7 @@
  * Implements ADR-005: MCP-First API Design
  */
 import { z } from 'zod';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 // ============================================================================
 // Input Schemas
 // ============================================================================
@@ -16,7 +17,7 @@ const initSwarmSchema = z.object({
     topology: z.enum(['hierarchical', 'mesh', 'adaptive', 'collective', 'hierarchical-mesh'])
         .default('hierarchical-mesh')
         .describe('Swarm coordination topology'),
-    maxAgents: z.number().int().positive().max(1000).default(50) // keep in sync with @hive-flow/shared/core/config/defaults
+    maxAgents: z.number().int().positive().max(1000).default(DEFAULT_MAX_AGENTS)
         .describe('Maximum number of agents in the swarm'),
     config: z.object({
         communicationProtocol: z.enum(['direct', 'message-bus', 'pubsub']).optional(),
@@ -187,7 +188,7 @@ async function handleSwarmStatus(input, context) {
         status: 'stopped',
         config: {
             topology: 'hierarchical-mesh',
-            maxAgents: 50, // keep in sync with @hive-flow/shared/core/config/defaults
+            maxAgents: DEFAULT_MAX_AGENTS,
             currentAgents: 0,
             communicationProtocol: 'message-bus',
             consensusMechanism: 'majority',
@@ -291,7 +292,7 @@ export const initSwarmTool = {
                 description: 'Maximum number of agents in the swarm',
                 minimum: 1,
                 maximum: 1000,
-                default: 50, // keep in sync with @hive-flow/shared/core/config/defaults
+                default: DEFAULT_MAX_AGENTS,
             },
             config: {
                 type: 'object',

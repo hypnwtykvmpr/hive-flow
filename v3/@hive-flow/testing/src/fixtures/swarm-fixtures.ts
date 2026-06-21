@@ -7,6 +7,7 @@
  * Based on ADR-003 (Single Coordination Engine) and V3 swarm specifications.
  */
 import { vi, type Mock } from 'vitest';
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 import type { V3AgentType, AgentInstance, MockAgent, createMockAgent } from './agent-fixtures.js';
 
 /**
@@ -222,9 +223,9 @@ export interface ConsensusResponse<T = unknown> {
 export const swarmConfigs: Record<string, SwarmConfig> = {
   v3Default: {
     topology: 'hierarchical-mesh',
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
     name: 'V3 Default Swarm',
-    description: 'Standard V3 15-agent hierarchical-mesh swarm',
+    description: 'Standard V3 hierarchical-mesh swarm using the default runtime agent cap',
     coordination: {
       consensusProtocol: 'raft',
       heartbeatInterval: 1000,
@@ -243,7 +244,7 @@ export const swarmConfigs: Record<string, SwarmConfig> = {
     autoScale: {
       enabled: true,
       minAgents: 5,
-      maxAgents: 15,
+      maxAgents: DEFAULT_MAX_AGENTS,
       scaleUpThreshold: 0.8,
       scaleDownThreshold: 0.3,
       cooldownMs: 30000,
@@ -279,7 +280,7 @@ export const swarmConfigs: Record<string, SwarmConfig> = {
 
   highPerformance: {
     topology: 'adaptive',
-    maxAgents: 50,
+    maxAgents: DEFAULT_MAX_AGENTS,
     name: 'High Performance Swarm',
     description: 'Optimized for maximum throughput',
     coordination: {
@@ -300,7 +301,7 @@ export const swarmConfigs: Record<string, SwarmConfig> = {
     autoScale: {
       enabled: true,
       minAgents: 10,
-      maxAgents: 50,
+      maxAgents: DEFAULT_MAX_AGENTS,
       scaleUpThreshold: 0.7,
       scaleDownThreshold: 0.2,
       cooldownMs: 15000,

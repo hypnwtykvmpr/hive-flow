@@ -21,6 +21,7 @@
  * - features_detect -> system/info
  */
 // Import V3 tool handlers
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
 import { initSwarmTool, swarmStatusTool } from './swarm-tools.js';
 import { spawnAgentTool, listAgentsTool, agentStatusTool } from './agent-tools.js';
 import { createTaskTool, taskStatusTool, taskResultsTool, listTasksTool } from './task-tools.js';
@@ -49,8 +50,8 @@ export const swarmInitTool = {
                 type: 'number',
                 description: 'Maximum number of agents',
                 minimum: 1,
-                maximum: 100,
-                default: 5,
+                maximum: 1000,
+                default: DEFAULT_MAX_AGENTS,
             },
             strategy: {
                 type: 'string',
@@ -63,7 +64,7 @@ export const swarmInitTool = {
     },
     handler: async (input, context) => {
         const topology = input.topology || 'mesh';
-        const maxAgents = input.maxAgents || 50; // keep in sync with @hive-flow/shared/core/config/defaults
+        const maxAgents = input.maxAgents || DEFAULT_MAX_AGENTS;
         const strategy = input.strategy || 'balanced';
         const v3Input = {
             topology,

@@ -4,6 +4,7 @@ import { mkdir, chmod, readFile } from 'node:fs/promises';
 import { atomicWrite } from './atomic-merge.js';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
 
 /**
  * POSIX single-quote escaping for embedding a path into a bash single-quoted
@@ -107,14 +108,13 @@ export function resolveLauncherPath(
 }
 
 export function hiveFlowMcpEnv(): Record<string, string> {
-  // NEW DIRECTIVE: 50 working agents + 10 queue depth. Hard cap = 60. Was 15.
   return {
     HIVE_FLOW_MODE: 'v3',
     HIVE_FLOW_HOOKS_ENABLED: 'true',
     HIVE_FLOW_TOPOLOGY: 'hierarchical-mesh',
-    HIVE_FLOW_MAX_AGENTS: '50',                  // max working (actively executing) agents
-    HIVE_FLOW_AGENT_QUEUE_DEPTH: '10',           // max queued (waiting to execute) agents; hard cap = MAX + QUEUE_DEPTH = 60
-    HIVE_FLOW_AGENT_QUEUE_REJECT_ABOVE: 'true',  // when working=50 AND queue=10, reject new requests with busy:queue-full
+    HIVE_FLOW_MAX_AGENTS: String(DEFAULT_MAX_AGENTS),           // max working (actively executing) agents
+    HIVE_FLOW_AGENT_QUEUE_DEPTH: String(DEFAULT_QUEUE_DEPTH),    // max queued; hard cap = MAX + QUEUE_DEPTH
+    HIVE_FLOW_AGENT_QUEUE_REJECT_ABOVE: 'true',                  // when working+queued reaches cap, reject busy:queue-full
     HIVE_FLOW_MEMORY_BACKEND: 'hybrid',
   };
 }

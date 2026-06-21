@@ -5,6 +5,8 @@
  * Following London School principle of explicit test data
  */
 
+import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
+
 /**
  * Security configuration interface
  */
@@ -260,7 +262,7 @@ export const memoryConfigs: Record<string, MemoryConfig> = {
 export const swarmConfigs: Record<string, SwarmConfig> = {
   v3Default: {
     topology: 'hierarchical-mesh',
-    maxAgents: 15,
+    maxAgents: DEFAULT_MAX_AGENTS,
     coordination: {
       consensusProtocol: 'raft',
       heartbeatInterval: 1000,
@@ -290,7 +292,7 @@ export const swarmConfigs: Record<string, SwarmConfig> = {
 
   highPerformance: {
     topology: 'adaptive',
-    maxAgents: 50,
+    maxAgents: DEFAULT_MAX_AGENTS,
     coordination: {
       consensusProtocol: 'pbft',
       heartbeatInterval: 500,

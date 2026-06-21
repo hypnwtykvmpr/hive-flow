@@ -52,6 +52,7 @@ import {
   mkdirSync,
   renameSync,
 } from 'node:fs';
+import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
 import { agentTools, loadAgentStore, transitionAgent } from '../src/mcp-tools/agent-tools.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -316,7 +317,7 @@ describe('Agent Race Condition Stress Tests', () => {
   // ════════════════════════════════════════════════════════════════════════════
   // 3.5. Spawn hard-cap enforcement (Codex Wave 7.5 B-5 follow-up)
   // ════════════════════════════════════════════════════════════════════════════
-  describe('RC-6: agent_spawn production hard-cap (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 60)', () => {
+  describe('RC-6: agent_spawn production hard-cap (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH)', () => {
     it('rejects with busy:queue-full when workingCount reaches the hard cap', async () => {
       // The production hard-cap branch in agent-tools.ts:agent_spawn is bypassed
       // when process.env.VITEST === 'true' so the surrounding 1000-spawn UUID
@@ -324,9 +325,10 @@ describe('Agent Race Condition Stress Tests', () => {
       const originalVitest = process.env.VITEST;
       delete process.env.VITEST;
       try {
-        // Pre-populate the store with 60 active agents (cap = 50 + 10 = 60).
+        const hardCap = DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH;
+        // Pre-populate the store exactly to the production hard cap.
         const agents: Record<string, AgentRecord> = {};
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < hardCap; i++) {
           const id = `cap-test-agent-${i}`;
           agents[id] = makeAgent({ agentId: id, status: i % 3 === 0 ? 'idle' : i % 3 === 1 ? 'busy' : 'spawning' });
         }
@@ -341,8 +343,8 @@ describe('Agent Race Condition Stress Tests', () => {
         expect(result.success).toBe(false);
         expect(result.error).toBe('busy:queue-full');
         expect(result.code).toBe('busy:queue-full');
-        expect(result.workingCount).toBe(60);
-        expect(result.capacity).toBe(60);
+        expect(result.workingCount).toBe(hardCap);
+        expect(result.capacity).toBe(hardCap);
       } finally {
         if (originalVitest !== undefined) process.env.VITEST = originalVitest;
       }
@@ -372,9 +374,10 @@ describe('Agent Race Condition Stress Tests', () => {
       const originalVitest = process.env.VITEST;
       delete process.env.VITEST;
       try {
-        // 60 agents present but all 'terminated' — should NOT block new spawns.
+        const hardCap = DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH;
+        // Hard-cap number of terminated agents present — should NOT block new spawns.
         const agents: Record<string, AgentRecord> = {};
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < hardCap; i++) {
           const id = `terminated-agent-${i}`;
           agents[id] = makeAgent({ agentId: id, status: 'terminated' });
         }
