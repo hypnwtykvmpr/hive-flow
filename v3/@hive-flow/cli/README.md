@@ -1572,13 +1572,13 @@ Full MCP server with tools for coordination, monitoring, memory, and GitHub inte
 
 | Category | Tools | Description |
 |----------|-------|-------------|
-| **Coordination** | `swarm_init`, `agent_spawn`, `task_orchestrate` | Swarm and agent lifecycle management |
-| **Monitoring** | `swarm_status`, `agent_list`, `agent_metrics`, `task_status` | Real-time status and metrics |
-| **Memory & Neural** | `memory_usage`, `neural_status`, `neural_train`, `neural_patterns` | Memory operations and learning |
-| **GitHub** | `github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review` | Repository integration |
-| **Workers** | `worker/run`, `worker/status`, `worker/alerts`, `worker/history` | Background task management |
-| **Hooks** | `hooks/pre-*`, `hooks/post-*`, `hooks/route`, `hooks/session-*`, `hooks/teammate-*`, `hooks/task-*` | 33 lifecycle hooks |
-| **Progress** | `progress/check`, `progress/sync`, `progress/summary`, `progress/watch` | V3 implementation tracking |
+| **Coordination** | `swarm_init`, `agent_spawn`, `task_create` | Swarm and agent lifecycle management |
+| **Monitoring** | `swarm_status`, `agent_list`, `agent_status`, `task_status` | Real-time status and metrics |
+| **Memory & Neural** | `memory_store`, `neural_status`, `neural_train`, `neural_patterns` | Memory operations and learning |
+| **GitHub** | `github_repo_analyze`, `github_pr_manage`, `github_issue_track`, `github_workflow`, `github_metrics` | Repository integration |
+| **Workers** | `hooks_worker-dispatch`, `hooks_worker-status`, `hooks_worker-detect`, `hooks_worker-cancel`, `hooks_worker-list` | Background task management |
+| **Hooks** | `hooks_pre-edit`, `hooks_post-edit`, `hooks_route`, `hooks_session-start`, `hooks_session-end` | 36 hooks tools |
+| **Progress** | `progress_check`, `progress_sync`, `progress_summary`, `progress_watch` | V3 implementation tracking |
 
 </details>
 
@@ -1673,7 +1673,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 **Teammate Plugin Features:**
 - Native TeammateTool integration for Claude Code v2.1.19+
-- 21 MCP tools: `teammate/spawn`, `teammate/coordinate`, `teammate/broadcast`, `teammate/discover-teams`, `teammate/route-task`, etc.
+- 21 MCP tools: `teammate_spawn`, `teammate_broadcast`, `teammate_discover_teams`, `teammate_route_task`, etc.
 - BMSSP WASM acceleration for topology optimization (352x faster)
 - Rate limiting with sliding window (configurable limits)
 - Circuit breaker for fault tolerance (closed/open/half-open states)
@@ -2272,8 +2272,8 @@ hive-flow hive-mind status                                  # Check status
 | `resources/subscribe` | Subscribe to updates |
 | `prompts/list` | List prompts with pagination |
 | `prompts/get` | Get prompt with arguments |
-| `tasks/status` | Get task status |
-| `tasks/cancel` | Cancel running task |
+| `task_status` | Get task status |
+| `task_cancel` | Cancel running task |
 | `completion/complete` | Auto-complete arguments |
 
 </details>

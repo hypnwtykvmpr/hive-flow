@@ -966,10 +966,10 @@ Hive Flow V3 integrates HiveMemory v3 (3.0.0-alpha.9) providing 20+ memory contr
 
 | Controller | MCP Tool | Description |
 |-----------|----------|-------------|
-| HierarchicalMemory | `hivememory_hierarchical-store/recall` | Working → short-term → long-term memory tiers with automatic promotion and retention decay |
+| HierarchicalMemory | `hivememory_hierarchical-store`, `hivememory_hierarchical-recall` | Working → short-term → long-term memory tiers with automatic promotion and retention decay |
 | MemoryConsolidation | `hivememory_consolidate` | Automatic clustering and merging of related memories into semantic summaries |
 | BatchOperations | `hivememory_batch` | Bulk insert/update/delete operations for high-throughput memory management |
-| ReasoningBank | `hivememory_pattern-store/search` | Pattern storage with BM25+semantic hybrid search |
+| ReasoningBank | `hivememory_pattern-store`, `hivememory_pattern-search` | Pattern storage with BM25+semantic hybrid search |
 
 **Intelligence:**
 
@@ -1627,13 +1627,13 @@ Full MCP server with tools for coordination, monitoring, memory, and GitHub inte
 
 | Category | Tools | Description |
 |----------|-------|-------------|
-| **Coordination** | `swarm_init`, `agent_spawn`, `task_orchestrate` | Swarm and agent lifecycle management |
-| **Monitoring** | `swarm_status`, `agent_list`, `agent_metrics`, `task_status` | Real-time status and metrics |
-| **Memory & Neural** | `memory_usage`, `neural_status`, `neural_train`, `neural_patterns` | Memory operations and learning |
-| **GitHub** | `github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review` | Repository integration |
-| **Workers** | `worker/run`, `worker/status`, `worker/alerts`, `worker/history` | Background task management |
-| **Hooks** | `hooks/pre-*`, `hooks/post-*`, `hooks/route`, `hooks/session-*`, `hooks/teammate-*`, `hooks/task-*` | 33 lifecycle hooks |
-| **Progress** | `progress/check`, `progress/sync`, `progress/summary`, `progress/watch` | V3 implementation tracking |
+| **Coordination** | `swarm_init`, `agent_spawn`, `task_create` | Swarm and agent lifecycle management |
+| **Monitoring** | `swarm_status`, `agent_list`, `agent_status`, `task_status` | Real-time status and metrics |
+| **Memory & Neural** | `memory_store`, `neural_status`, `neural_train`, `neural_patterns` | Memory operations and learning |
+| **GitHub** | `github_repo_analyze`, `github_pr_manage`, `github_issue_track`, `github_workflow`, `github_metrics` | Repository integration |
+| **Workers** | `hooks_worker-dispatch`, `hooks_worker-status`, `hooks_worker-detect`, `hooks_worker-cancel`, `hooks_worker-list` | Background task management |
+| **Hooks** | `hooks_pre-edit`, `hooks_post-edit`, `hooks_route`, `hooks_session-start`, `hooks_session-end` | 36 hooks tools |
+| **Progress** | `progress_check`, `progress_sync`, `progress_summary`, `progress_watch` | V3 implementation tracking |
 
 </details>
 
@@ -1728,7 +1728,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 **Teammate Plugin Features:**
 - Native TeammateTool integration for Claude Code v2.1.19+
-- 21 MCP tools: `teammate/spawn`, `teammate/coordinate`, `teammate/broadcast`, `teammate/discover-teams`, `teammate/route-task`, etc.
+- 21 MCP tools: `teammate_spawn`, `teammate_broadcast`, `teammate_discover_teams`, `teammate_route_task`, etc.
 - BMSSP WASM acceleration for topology optimization
 - Rate limiting with sliding window (configurable limits)
 - Circuit breaker for fault tolerance (closed/open/half-open states)
@@ -2143,8 +2143,8 @@ hive-flow hive-mind status                                  # Check status
 | `resources/subscribe` | Subscribe to updates |
 | `prompts/list` | List prompts with pagination |
 | `prompts/get` | Get prompt with arguments |
-| `tasks/status` | Get task status |
-| `tasks/cancel` | Cancel running task |
+| `task_status` | Get task status |
+| `task_cancel` | Cancel running task |
 | `completion/complete` | Auto-complete arguments |
 
 </details>
@@ -4710,12 +4710,12 @@ Agentic-flow exposes 213+ MCP tools for integration:
 
 | Category | Tools | Examples |
 |----------|-------|----------|
-| **Agent Booster** | 5 | `agent_booster_edit_file`, `agent_booster_batch` |
-| **ReasoningBank** | 8 | `reasoningbank_retrieve`, `reasoningbank_judge` |
-| **Embeddings** | 6 | `embedding_generate`, `embedding_search` |
-| **Model Router** | 4 | `router_route`, `router_stats` |
-| **Memory** | 10 | `memory_store`, `memory_search`, `memory_consolidate` |
-| **Swarm** | 12 | `swarm_init`, `agent_spawn`, `task_orchestrate` |
+| **Agent Booster** | — | Internal WASM transforms (not exposed as MCP tools) |
+| **ReasoningBank** | 2 | `hivememory_pattern-store`, `hivememory_pattern-search` |
+| **Embeddings** | 7 | `embeddings_generate`, `embeddings_search` |
+| **Model Router** | 3 | `hooks_route`, `hooks_model-route`, `hooks_model-stats` |
+| **Memory** | 7 | `memory_store`, `memory_search`, `memory_retrieve` |
+| **Swarm** | 4 | `swarm_init`, `swarm_status`, `swarm_shutdown`, `swarm_health` |
 | **Neural** | 8 | `neural_train`, `neural_patterns`, `neural_predict` |
 
 ```bash
