@@ -52,11 +52,11 @@ flowchart TB
     end
 
     subgraph AGENTS["🤖 18 Agents"]
-        AG1[coder]
+        AG1[implementer]
         AG2[tester]
-        AG3[reviewer]
+        AG3[verifier]
         AG4[architect]
-        AG5[security]
+        AG5[security-architect]
         AG6[...]
     end
 
@@ -366,12 +366,12 @@ swarm_init({
 
 | Code | Task Type | Recommended Agents |
 |------|-----------|-------------------|
-| 1 | Bug Fix | coordinator, researcher, coder, tester |
-| 3 | Feature | coordinator, architect, coder, tester, reviewer |
-| 5 | Refactor | coordinator, architect, coder, reviewer |
-| 7 | Performance | coordinator, perf-engineer, coder |
+| 1 | Bug Fix | coordinator, researcher, implementer, tester |
+| 3 | Feature | coordinator, architect, implementer, tester, verifier |
+| 5 | Refactor | coordinator, architect, implementer, verifier |
+| 7 | Performance | coordinator, performance-engineer, implementer |
 | 9 | Security | coordinator, security-architect, auditor |
-| 11 | Memory | coordinator, memory-specialist, perf-engineer |
+| 11 | Memory | coordinator, memory-specialist, performance-engineer |
 
 </details>
 
@@ -554,7 +554,7 @@ wait  # Wait for all to complete
 # List collaboration templates
 hive-flow-codex dual templates
 
-# Run feature development swarm (architect → coder → tester → reviewer)
+# Run feature development swarm (architect → implementer → tester → verifier)
 hive-flow-codex dual run --template feature --task "Add user auth"
 
 # Run security audit swarm (scanner → analyzer → fixer)
@@ -568,7 +568,7 @@ hive-flow-codex dual run --template refactor --task "src/legacy/"
 
 | Template | Pipeline | Platforms |
 |----------|----------|-----------|
-| **feature** | architect → coder → tester → reviewer | Claude + Codex |
+| **feature** | architect → implementer → tester → verifier | Claude + Codex |
 | **security** | scanner → analyzer → fixer | Codex + Claude |
 | **refactor** | analyzer → planner → refactorer → validator | Claude + Codex |
 
@@ -643,7 +643,7 @@ hive-flow init
 hive-flow mcp start
 
 # Run a task with agents
-hive-flow --agent coder --task "Implement user authentication"
+hive-flow --agent implementer --task "Implement user authentication"
 
 # List available agents
 hive-flow --list
@@ -1492,7 +1492,7 @@ The Hive Mind system implements queen-led hierarchical coordination where strate
 | **Adaptive** | Optimization, dynamic tasks | Real-time strategy adjustment |
 
 **Worker Specializations (8 types):**
-`researcher`, `coder`, `analyst`, `tester`, `architect`, `reviewer`, `optimizer`, `documenter`
+`researcher`, `implementer`, `investigator`, `tester`, `architect`, `verifier`, `performance-engineer`, `documenter`
 
 **Consensus Mechanisms:**
 
@@ -1560,7 +1560,7 @@ TaskCreate({ subject: "Implement endpoints", description: "..." })
 // Spawn teammates (parallel background work)
 Task({ prompt: "Work on task #1...", subagent_type: "architect",
        team_name: "feature-dev", name: "architect", run_in_background: true })
-Task({ prompt: "Work on task #2...", subagent_type: "coder",
+Task({ prompt: "Work on task #2...", subagent_type: "implementer",
        team_name: "feature-dev", name: "developer", run_in_background: true })
 
 // Message teammates
@@ -2234,7 +2234,7 @@ hive-flow memory backup --output ./backup.sql
 |---------|-------------|------------|
 | **Queen-Led Topology** | Hierarchical command structure | Unlimited agents + sub-workers |
 | **Queen Types** | Strategic, Tactical, Adaptive | Research/planning, execution, optimization |
-| **Worker Types** | 8 specialized agents | researcher, coder, analyst, tester, architect, reviewer, optimizer, documenter |
+| **Worker Types** | 8 specialized agents | researcher, implementer, investigator, tester, architect, verifier, performance-engineer, documenter |
 | **Byzantine Consensus** | Fault-tolerant agreement | f < n/3 tolerance (2/3 supermajority) |
 | **Weighted Consensus** | Queen 3x voting power | Strategic guidance with democratic input |
 | **Collective Memory** | Shared pattern storage | 8 memory types with TTL, LRU cache, SQLite WAL |
@@ -2594,7 +2594,7 @@ hive-flow init --wizard
 hive-flow daemon start
 
 # Spawn an agent with specific type
-hive-flow agent spawn -t coder --name my-coder
+hive-flow agent spawn -t implementer --name my-implementer
 
 # Initialize swarm with V3 mode
 hive-flow swarm init --v3-mode
@@ -2740,10 +2740,10 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow --agent reviewer --task "Review PR #123"` |
+| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow --agent verifier --task "Review PR #123"` |
 | **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `hive-flow --agent tester --task "Write tests for auth module"` |
-| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow --agent coder --task "Refactor user service to use repository pattern"` |
-| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow --agent coder --task "Fix race condition in checkout flow"` |
+| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow --agent implementer --task "Refactor user service to use repository pattern"` |
+| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow --agent implementer --task "Fix race condition in checkout flow"` |
 
 ### 🔒 Security & Compliance
 
@@ -2765,9 +2765,9 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow --agent perf-analyzer --task "Profile API endpoints"` |
+| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow --agent performance-engineer --task "Profile API endpoints"` |
 | **Query Optimization** | Speed up slow database queries | `hive-flow hooks route "Optimize database queries"` |
-| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow --agent perf-analyzer --task "Analyze memory usage patterns"` |
+| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow --agent performance-engineer --task "Analyze memory usage patterns"` |
 
 ### 🔄 GitHub & DevOps
 
@@ -3914,9 +3914,9 @@ The Claims system manages **who is working on what** — whether human or agent.
 | Command | What It Does | Example |
 |---------|--------------|---------|
 | `issues list` | See all issues and their status | `hive-flow issues list` |
-| `issues claim` | Claim an issue for yourself/agent | `hive-flow issues claim #123 --as coder-1` |
+| `issues claim` | Claim an issue for yourself/agent | `hive-flow issues claim #123 --as implementer-1` |
 | `issues release` | Release your claim | `hive-flow issues release #123` |
-| `issues handoff` | Hand off to another worker | `hive-flow issues handoff #123 --to reviewer` |
+| `issues handoff` | Hand off to another worker | `hive-flow issues handoff #123 --to verifier` |
 | `issues status` | Update progress on claimed work | `hive-flow issues status #123 --progress 75` |
 | `issues stealable` | List abandoned/stuck issues | `hive-flow issues stealable` |
 | `issues steal` | Take over stealable issue | `hive-flow issues steal #123` |
@@ -3937,9 +3937,9 @@ hive-flow issues board
 │   UNCLAIMED   │    ACTIVE     │   STEALABLE   │     COMPLETED       │
 ├───────────────┼───────────────┼───────────────┼─────────────────────┤
 │ #127 Add auth │ #123 Fix bug  │ #120 Refactor │ #119 Update docs    │
-│ #128 Tests    │   (coder-1)   │   (stale 2h)  │ #118 Security fix   │
+│ #128 Tests    │(implementer-1)│   (stale 2h)  │ #118 Security fix   │
 │               │ #124 API work │               │ #117 Performance    │
-│               │   (reviewer)  │               │                     │
+│               │   (verifier)  │               │                     │
 └───────────────┴───────────────┴───────────────┴─────────────────────┘
 ```
 
@@ -3969,9 +3969,9 @@ hive-flow issues load
 # Output:
 # Agent          | Claims | Load  | Status
 # ---------------+--------+-------+--------
-# coder-1        | 3      | 85%   | 🔴 Overloaded
-# coder-2        | 1      | 25%   | 🟢 Available
-# reviewer       | 2      | 50%   | 🟡 Normal
+# implementer-1  | 3      | 85%   | 🔴 Overloaded
+# implementer-2  | 1      | 25%   | 🟢 Available
+# verifier       | 2      | 50%   | 🟡 Normal
 # security-arch  | 0      | 0%    | 🟢 Available
 
 # Auto-rebalance
@@ -4060,8 +4060,8 @@ hive-flow route task "refactor authentication to use JWT"
 # ║ • Expertise: JWT, OAuth, session management                    ║
 # ║                                                                ║
 # ║ Alternative agents:                                            ║
-# ║ • coder (78% confidence) - general implementation              ║
-# ║ • backend-dev (71% confidence) - API expertise                 ║
+# ║ • implementer (78% confidence) - general implementation        ║
+# ║ • implementer (71% confidence) - API expertise                 ║
 # ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -4085,14 +4085,14 @@ hive-flow route coverage
 hive-flow hooks route "implement caching layer" --include-explanation
 
 # Record outcome for learning
-hive-flow hooks post-task --task-id "task-123" --success true --agent coder
+hive-flow hooks post-task --task-id "task-123" --success true --agent implementer
 ```
 
 ### How Q-Learning Improves Over Time
 
 | Iteration | Action | Result |
 |-----------|--------|--------|
-| 1 | Route "auth task" → coder | ❌ Failed (missing security context) |
+| 1 | Route "auth task" → implementer | ❌ Failed (missing security context) |
 | 2 | Route "auth task" → security-architect | ✅ Success |
 | 3 | Route "auth task" → security-architect | ✅ Success |
 | N | Route "auth task" → security-architect | 94% confidence (learned) |
@@ -4187,9 +4187,9 @@ const swarm = await createSwarm({
 });
 
 // Spawn agents
-await swarm.spawn('coder', { name: 'coder-1' });
+await swarm.spawn('implementer', { name: 'implementer-1' });
 await swarm.spawn('tester', { name: 'tester-1' });
-await swarm.spawn('reviewer', { name: 'reviewer-1' });
+await swarm.spawn('verifier', { name: 'verifier-1' });
 
 // Coordinate a task
 const result = await swarm.orchestrate({
@@ -4578,7 +4578,7 @@ steps:
   - action: spawn_swarm
     config:
       topology: mesh
-      agents: [reviewer, security-architect, tester]
+      agents: [verifier, security-architect, tester]
   - action: run_review
   - action: post_comments
   - action: shutdown_swarm
@@ -4643,7 +4643,7 @@ stages:
     output: architecture
 
   - name: implement
-    agent: coder
+    agent: implementer
     input: architecture
     output: code
 
@@ -4653,7 +4653,7 @@ stages:
     output: test_results
 
   - name: review
-    agent: reviewer
+    agent: verifier
     input: [code, test_results]
     output: final_review
 ```
@@ -4904,7 +4904,7 @@ import { calculateSecurityConsensus } from '@hive-flow/aidefence';
 const assessments = [
   { agentId: 'guardian-1', threatAssessment: result1, weight: 1.0 },
   { agentId: 'security-architect', threatAssessment: result2, weight: 0.8 },
-  { agentId: 'reviewer', threatAssessment: result3, weight: 0.5 },
+  { agentId: 'verifier', threatAssessment: result3, weight: 0.5 },
 ];
 
 const consensus = calculateSecurityConsensus(assessments);
@@ -5478,11 +5478,11 @@ import {
 
 // Pre-defined configs
 const queen = agentConfigs.queenCoordinator;
-const coder = agentConfigs.coder;
+const performanceEngineer = agentConfigs.performanceEngineer;
 
 // Create with overrides
-const customAgent = createAgentConfig('coder', {
-  name: 'Custom Coder',
+const customAgent = createAgentConfig('implementer', {
+  name: 'Custom Implementer',
   priority: 90,
 });
 
