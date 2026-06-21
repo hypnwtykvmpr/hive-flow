@@ -516,6 +516,8 @@ wait  # Wait for all to complete
 
 ### Dual-Mode CLI Commands (NEW)
 
+> `hive-flow-codex` is the binary from the separate `@hive-flow/codex` package, not a subcommand of the main `hive-flow` CLI, and not counted among its 37 commands.
+
 ```bash
 # List collaboration templates
 hive-flow-codex dual templates
@@ -2514,13 +2516,13 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 hive-flow embeddings init
 
 # Generate embedding for text
-hive-flow embeddings embed "authentication patterns"
+hive-flow embeddings generate --text "authentication patterns"
 
 # Batch embed multiple texts
-hive-flow embeddings batch --file texts.txt
+hive-flow embeddings chunk --file texts.txt --strategy paragraph
 
 # Search with semantic similarity
-hive-flow embeddings search "login flow" --top-k 5
+hive-flow embeddings search --query "login flow" --limit 5
 ```
 
 **Programmatic:**
@@ -3326,14 +3328,6 @@ Patterns and models are distributed via IPFS for decentralization and integrity.
 | **Multi-Gateway** | Automatic failover (Pinata, ipfs.io, dweb.link) |
 | **PII Detection** | Automatic scanning before publish |
 
-```bash
-# Resolve IPNS name to CID
-hive-flow transfer ipfs-resolve --name "/ipns/patterns.hive-flow.io"
-
-# Detect PII before publishing
-hive-flow transfer detect-pii --content "$(cat ./patterns.json)"
-```
-
 ### Model & Learning Pattern Import/Export
 
 Share trained neural patterns and learning models via IPFS.
@@ -3355,8 +3349,6 @@ Share trained neural patterns and learning models via IPFS.
     },
     "pinataMetadata": {"name": "hive-flow-learning-pattern"}
   }'
-
-# Import a pattern from IPFS CID
 
 # Via Cloud Function (when deployed)
 ```
@@ -3388,13 +3380,8 @@ Import pre-trained learning patterns for common tasks. **90.5% average accuracy*
 **Registry CID**: `QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc`
 
 ```bash
-# Browse available models
-
-# Import all models
-hive-flow transfer import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
-
 # Import specific category
-hive-flow neural import --model security-review-patterns --source ipfs
+hive-flow neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc --category security
 
 # Use patterns in routing
 hive-flow hooks route --task "review authentication code" --use-patterns
@@ -3794,11 +3781,6 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 /github-code-review
 /pair-programming --mode tdd
 /v3-security-overhaul
-
-# Via CLI
-hive-flow skill run github-code-review
-hive-flow skill list
-hive-flow skill info sparc-methodology
 ```
 
 ### Creating Custom Skills
@@ -4344,31 +4326,31 @@ console.log(`Hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
 
 ```bash
 # Generate embedding
-hive-flow embeddings embed "Your text here"
+hive-flow embeddings generate --text "Your text here"
 
 # Batch embed from file
-hive-flow embeddings batch documents.txt -o embeddings.json
+hive-flow embeddings chunk --file documents.txt --strategy paragraph
 
 # Similarity search
-hive-flow embeddings search "query" --index ./vectors
+hive-flow embeddings search --query "query" --db-path ./vectors
 
 # Document chunking
-hive-flow embeddings chunk document.txt --strategy sentence --max-size 512
+hive-flow embeddings chunk --file document.txt --strategy sentence
 
 # Normalize embeddings
-hive-flow embeddings normalize embeddings.json --type l2 -o normalized.json
+hive-flow embeddings normalize -i "[0.5, 0.3, 0.8]" -t l2
 
 # Convert to hyperbolic
-hive-flow embeddings hyperbolic embeddings.json -o poincare.json
+hive-flow embeddings hyperbolic -a convert -i "[0.5, 0.3]"
 
 # Neural operations
-hive-flow embeddings neural drift --baseline "context" --input "check"
-hive-flow embeddings neural store --id mem-1 --content "data"
-hive-flow embeddings neural recall "query" --top-k 5
+hive-flow embeddings neural -f drift
+hive-flow embeddings neural -f memory
+hive-flow embeddings neural -f coherence
 
 # Model management
-hive-flow embeddings models list
-hive-flow embeddings models download all-MiniLM-L6-v2
+hive-flow embeddings models
+hive-flow embeddings models -d all-MiniLM-L6-v2
 
 # Cache management
 hive-flow embeddings cache stats
@@ -4486,23 +4468,6 @@ Agent Booster performs mechanical code edits without calling LLM APIs:
 | Function signature | Required | Local transform | $0 |
 | Code formatting | Required | Local transform | $0 |
 | Batch edits | Required | Local transform | $0 |
-
-```bash
-# Single file edit
-hive-flow agent-booster edit \
-  --file src/api.ts \
-  --instructions "Add error handling" \
-  --code 'try { ... } catch (error) { ... }'
-
-# Batch rename across codebase
-hive-flow agent-booster batch-rename \
-  --pattern "getUserData" \
-  --replacement "fetchUserProfile" \
-  --glob "src/**/*.ts"
-
-# Parse LLM markdown output
-hive-flow agent-booster parse-md response.md
-```
 
 **Use Cases:**
 - ✅ Variable/function renaming across files
@@ -4675,22 +4640,10 @@ const result2 = await router.route({
 <summary>🚀 <strong>CLI Commands</strong> — Full hive-flow CLI</summary>
 
 ```bash
-# Agent Booster
-hive-flow agent-booster edit --file <file> --instructions "<instr>" --code '<code>'
-hive-flow agent-booster batch --config batch-edits.json
-hive-flow agent-booster batch-rename --pattern <old> --replacement <new> --glob "**/*.ts"
-hive-flow agent-booster parse-md response.md
-
-# ReasoningBank
-hive-flow reasoningbank retrieve "query" --k 5
-hive-flow reasoningbank record --task "task" --outcome "outcome" --success
-hive-flow reasoningbank distill
-hive-flow reasoningbank consolidate
-
 # Embeddings
-hive-flow embeddings embed "text"
-hive-flow embeddings batch documents.txt -o vectors.json
-hive-flow embeddings search "query" --index ./vectors
+hive-flow embeddings generate --text "text"
+hive-flow embeddings chunk --file documents.txt --strategy paragraph
+hive-flow embeddings search --query "query" --db-path ./vectors
 
 # Model Router
 hive-flow route task "task description"
@@ -5013,9 +4966,6 @@ The Pair Programming skill provides **human-AI collaborative coding** with role 
 
 # Or with specific mode
 /pair-programming --mode tdd
-
-# Via CLI
-hive-flow pair start --mode navigator
 ```
 
 ### TDD Mode Workflow
@@ -5053,19 +5003,7 @@ hive-flow pair start --mode navigator
 
 ### Session Commands
 
-```bash
-# Switch roles mid-session
-hive-flow pair switch
-
-# Get AI explanation
-hive-flow pair explain
-
-# Run tests
-hive-flow pair test
-
-# End session with summary
-hive-flow pair end
-```
+Session controls — switch roles, request an explanation, run tests, and end with a summary — are available within the `/pair-programming` skill session, not as separate CLI commands.
 
 </details>
 
