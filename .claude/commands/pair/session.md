@@ -115,7 +115,7 @@ Next Switch: in 3 minutes
 ├── Lines Changed: 234
 ├── Files Modified: 5
 ├── Tests Added: 12
-├── Coverage: 87% ↑3%
+├── Coverage: high ↑
 └── Commits: 3
 
 🎯 Focus: Implementation
@@ -176,7 +176,7 @@ Functions Refactored: 3
 
 ### Quality
 ```
-Test Coverage: 87% ↑3%
+Test Coverage: high ↑
 Lint Issues: 0
 Security Issues: 0
 Performance Issues: 1 ⚠️
@@ -185,7 +185,7 @@ Performance Issues: 1 ⚠️
 ### Collaboration
 ```
 Suggestions Given: 45
-Suggestions Accepted: 38 (84%)
+Suggestions Accepted: 38
 Reviews Completed: 12
 Rollbacks: 1
 ```

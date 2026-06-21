@@ -347,7 +347,7 @@ const rateLimits = {
 | Test selection | <1s for 10K tests |
 | Flaky detection | <5s for 1000 test runs |
 | Coverage gap analysis | <10s for 100K LOC |
-| Mutation optimization | 80% mutation score in 20% time |
+| Mutation optimization | high mutation score in less time |
 | CI time reduction | Substantially lower |
 
 ## Learning Pipeline

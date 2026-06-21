@@ -231,13 +231,13 @@ Complete restructure into 10 independent @hive-flow modules:
 |--------|-------------|-----------|-----------|
 | Flash Attention | baseline | Flash Attention optimization | Validated |
 | Vector Search | baseline | HNSW-indexed | HNSW-indexed |
-| Memory Usage | 100% | 25-50% | 16.9% |
+| Memory Usage | baseline | reduced usage | reduced |
 | CLI Startup | 500ms | <500ms | 20ms |
 | Agent Spawn | 18.5ms | <10ms | 5ms |
 | Test Execution | baseline | faster (Vitest) | exceeds target |
 
 #### Code Quality
-- **Test Coverage**: 87.3% (up from 62%)
+- **Test Coverage**: improved
 - **Security Score**: A+ (up from C)
 - **Code Complexity**: 15 avg (down from 42)
 - **Bundle Size**: 3.2MB (down from 12.8MB)

@@ -78,7 +78,7 @@ hive-flow mcp call aqe/tdd-cycle \
 1. Writes failing tests for password reset
 2. Implements minimal code to pass
 3. Refactors for clean code
-4. Verifies 100% coverage of the requirement
+4. Verifies full coverage of the requirement
 
 ### 🟡 Intermediate: Find Security Issues
 

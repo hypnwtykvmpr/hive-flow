@@ -636,10 +636,10 @@ const config = optimizer.getOptimalConfig(agentCount);
 ```
 | Feature | Token Savings |
 |---------|---------------|
-| ReasoningBank retrieval | -32% |
-| Agent Booster edits | -15% |
-| Cache (95% hit rate) | -10% |
-| Optimal batch size | -20% |
+| ReasoningBank retrieval | Reduced |
+| Agent Booster edits | Reduced |
+| Cache | Reduced |
+| Optimal batch size | Reduced |
 
 ### Swarm Coordination
 `hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`, `collective-intelligence-coordinator`, `swarm-memory-manager`

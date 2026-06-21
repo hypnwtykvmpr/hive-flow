@@ -92,7 +92,7 @@ The memory system provides persistent storage for cross-session and cross-agent 
 ```bash
 ./hive-flow memory store "spec_auth_requirements" "OAuth2 + JWT with refresh tokens" --namespace spec
 ./hive-flow memory store "arch_api_design" "RESTful microservices with GraphQL gateway" --namespace arch
-./hive-flow memory store "test_coverage_auth" "95% coverage, all tests passing" --namespace test
+./hive-flow memory store "test_coverage_auth" "high coverage, all tests passing" --namespace test
 ```
 
 ### Query project decisions:

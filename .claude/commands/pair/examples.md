@@ -266,13 +266,13 @@ hive-flow pair --start \
 # You implement with AI guidance
 
 /perf --profile
-> ProductList: 45ms render (90% improvement!) ✅
+> ProductList: 45ms render (improved!) ✅
 
 /implement virtualization with react-window
 > AI implements virtual scrolling
 
 /perf --profile
-> ProductList: 12ms render (97% improvement!) ✅
+> ProductList: 12ms render (improved!) ✅
 > FPS: 60 stable ✅
 
 /commit --message "perf: optimize ProductList with memoization and virtualization"
@@ -447,7 +447,7 @@ hive-flow pair --start \
 
 /optimize --mobile
 > AI optimizes:
-  - Reduces bundle size by 30%
+  - Reduces bundle size
   - Implements lazy loading
   - Adds image caching
 

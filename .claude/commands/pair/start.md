@@ -153,7 +153,7 @@ Navigator: senior-dev is ready...
 
 📝 Workspace: /workspaces/my-project
 📊 Truth Score: 0.972 ✅
-🧪 Test Coverage: 84%
+🧪 Test Coverage: high
 
 Type /help for commands or start coding...
 ```

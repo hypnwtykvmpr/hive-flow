@@ -2289,13 +2289,13 @@ hive-flow daemon stop
 
 Worker Status
 +-------------+----+----------+------+---------+----------+----------+
-| Worker      | On | Status   | Runs | Success | Last Run | Next Run |
+| Worker      | On | Status   | Runs | Health  | Last Run | Next Run |
 +-------------+----+----------+------+---------+----------+----------+
-| map         | ✓  | idle     | 12   | 100%    | 2m ago   | in 3m    |
-| audit       | ✓  | idle     | 6    | 100%    | 5m ago   | in 5m    |
-| optimize    | ✓  | running  | 4    | 100%    | now      | -        |
-| consolidate | ✓  | idle     | 2    | 100%    | 15m ago  | in 15m   |
-| testgaps    | ✓  | idle     | 3    | 100%    | 8m ago   | in 12m   |
+| map         | ✓  | idle     | 12   | ready   | 2m ago   | in 3m    |
+| audit       | ✓  | idle     | 6    | ready   | 5m ago   | in 5m    |
+| optimize    | ✓  | running  | 4    | active  | now      | -        |
+| consolidate | ✓  | idle     | 2    | ready   | 15m ago  | in 15m   |
+| testgaps    | ✓  | idle     | 3    | ready   | 8m ago   | in 12m   |
 +-------------+----+----------+------+---------+----------+----------+
 ```
 
@@ -3770,7 +3770,7 @@ The Route system uses **Q-Learning** to automatically assign tasks to the best a
 │           ▼                                                         │
 │  ┌─────────────────┐                                                │
 │  │ Recommend:      │                                                │
-│  │ security-arch   │ → 94% confidence (auth domain expert)          │
+│  │ security-arch   │ → high confidence (auth domain expert)         │
 │  └─────────────────┘                                                │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -3796,7 +3796,7 @@ hive-flow route task "refactor authentication to use JWT"
 # ║ Task: "refactor authentication to use JWT"                    ║
 # ║                                                                ║
 # ║ Recommended Agent: security-architect                         ║
-# ║ Confidence: 94%                                                ║
+# ║ Confidence: high                                               ║
 # ║                                                                ║
 # ║ Why this agent?                                                ║
 # ║ • Domain match: authentication, security                       ║
@@ -3804,8 +3804,8 @@ hive-flow route task "refactor authentication to use JWT"
 # ║ • Expertise: JWT, OAuth, session management                    ║
 # ║                                                                ║
 # ║ Alternative agents:                                            ║
-# ║ • implementer (78% confidence) - general implementation        ║
-# ║ • implementer (71% confidence) - API expertise                 ║
+# ║ • implementer (confidence) - general implementation            ║
+# ║ • implementer (confidence) - API expertise                     ║
 # ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -3817,9 +3817,9 @@ Routes tasks to agents based on **test coverage gaps**:
 hive-flow route coverage
 
 # Finds untested code and routes to tester agent:
-# • src/auth/jwt.ts - 23% coverage → tester
-# • src/api/users.ts - 45% coverage → tester
-# • src/utils/crypto.ts - 0% coverage → security-architect + tester
+# • src/auth/jwt.ts - low coverage → tester
+# • src/api/users.ts - low coverage → tester
+# • src/utils/crypto.ts - no coverage → security-architect + tester
 ```
 
 ### Routing Hooks
@@ -3839,7 +3839,7 @@ hive-flow hooks post-task --task-id "task-123" --success true --agent implemente
 | 1 | Route "auth task" → implementer | ❌ Failed (missing security context) |
 | 2 | Route "auth task" → security-architect | ✅ Success |
 | 3 | Route "auth task" → security-architect | ✅ Success |
-| N | Route "auth task" → security-architect | 94% confidence (learned) |
+| N | Route "auth task" → security-architect | confidence (learned) |
 
 The system **remembers** what works and applies it to future similar tasks.
 
@@ -4616,14 +4616,14 @@ await aidefence.learnFromDetection(input, result, {
 
 ### Mitigation Strategies
 
-| Threat Type | Strategy | Effectiveness |
-|-------------|----------|---------------|
-| **instruction_override** | `block` | 95% |
-| **jailbreak** | `block` | 92% |
-| **role_switching** | `sanitize` | 88% |
-| **context_manipulation** | `block` | 94% |
-| **encoding_attack** | `transform` | 85% |
-| **social_engineering** | `warn` | 78% |
+| Threat Type | Strategy | Handling |
+|-------------|----------|----------|
+| **instruction_override** | `block` | default response |
+| **jailbreak** | `block` | default response |
+| **role_switching** | `sanitize` | normalized |
+| **context_manipulation** | `block` | default response |
+| **encoding_attack** | `transform` | transformed |
+| **social_engineering** | `warn` | review |
 
 ### Multi-Agent Security Consensus
 

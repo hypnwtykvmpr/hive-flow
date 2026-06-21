@@ -85,20 +85,20 @@ hive-flow bottleneck detect --fix --threshold 15
 └── Critical Issues: 2
 
 🚨 Critical Bottlenecks
-1. Agent Communication (35% impact)
+1. Agent Communication (high impact)
    └── coordinator → coder-1 messages delayed by 2.3s avg
 
-2. Memory Access (28% impact)
+2. Memory Access (high impact)
    └── Neural pattern loading taking 1.8s per access
 
 ⚠️ Warning Bottlenecks
-1. Task Queue (18% impact)
+1. Task Queue (moderate impact)
    └── 5 tasks waiting > 10s for assignment
 
 💡 Recommendations
-1. Switch to hierarchical topology (est. 40% improvement)
-2. Enable memory caching (est. 25% improvement)
-3. Increase agent concurrency to 8 (est. 20% improvement)
+1. Switch to hierarchical topology (estimated improvement)
+2. Enable memory caching (estimated improvement)
+3. Increase agent concurrency to 8 (estimated improvement)
 
 ✅ Quick Fixes Available
 Run with --fix to apply:

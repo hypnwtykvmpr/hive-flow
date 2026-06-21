@@ -41,7 +41,7 @@ Result: {
     "divergent": 0.87,
     "lateral": 0.85
   },
-  "improvement": "5.3% since last session",
+  "improvement": "improved since last session",
   "confidence": 0.89
 }
 ```

@@ -57,7 +57,7 @@ Logs for coder-lx7m9k2
 2026-01-08 10:30:17 [INFO]  Task received: implement-auth-feature
 2026-01-08 10:30:18 [DEBUG] Loading context from memory
 2026-01-08 10:32:45 [INFO]  Task completed: implement-auth-feature (success)
-2026-01-08 10:32:46 [INFO]  Metrics updated: tasks=1, success_rate=100%
+2026-01-08 10:32:46 [INFO]  Metrics updated: tasks=1, success_rate=high
 2026-01-08 10:33:00 [INFO]  Task received: write-auth-tests
 2026-01-08 10:35:23 [INFO]  Task completed: write-auth-tests (success)
 2026-01-08 10:35:24 [WARN]  Memory usage approaching threshold: 85MB/100MB

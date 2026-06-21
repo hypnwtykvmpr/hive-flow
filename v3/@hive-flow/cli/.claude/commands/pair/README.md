@@ -198,7 +198,7 @@ Navigator: expert-coder is reviewing...
 
 📝 Working on: src/auth/login.js
 Truth Score: 0.972 ✅
-Test Coverage: 84% 📈
+Test Coverage: high 📈
 
 💡 Suggestion: Consider adding input validation for email field
 🔍 Review: Line 23 - Potential SQL injection vulnerability

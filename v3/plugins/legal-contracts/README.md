@@ -148,7 +148,7 @@ const result = await mcp.invoke('legal/contract-compare', {
 //       compareText: 'not exceed $500,000',
 //       changeType: 'modification',
 //       significance: 'high',
-//       recommendation: 'Reject - reduces protection by 50%'
+//       recommendation: 'Reject - materially reduces protection'
 //     },
 //     ...
 //   ],

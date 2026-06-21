@@ -81,7 +81,7 @@ const trajectoryId = browser.startTrajectory('Login to dashboard');
 const snapshot = await browser.snapshot({ interactive: true });
 // Returns: { refs: { '@e1': {role: 'textbox', name: 'Email'}, '@e2': ... } }
 
-// Fill form using refs (93% less context than CSS selectors)
+// Fill form using refs (less context than CSS selectors)
 await browser.fill('@e1', 'user@example.com');
 await browser.fill('@e2', 'password');
 await browser.click('@e3'); // Submit button
@@ -123,7 +123,7 @@ Available MCP tools:
 
 ### Element Refs (`@e1`, `@e2`, etc.)
 
-agent-browser generates AI-optimized element references that reduce context by 93%:
+agent-browser generates AI-optimized element references that reduce context:
 
 ```typescript
 // Traditional (verbose)
