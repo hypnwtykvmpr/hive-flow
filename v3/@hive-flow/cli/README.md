@@ -506,7 +506,7 @@ hive-flow init --dual
 | Skill Syntax | `/skill-name` | `$skill-name` |
 | Settings | `settings.json` | `config.toml` |
 | MCP | Native | Via `codex mcp add` |
-| Default Model | claude-sonnet | gpt-5.3 |
+| Default Model | claude-sonnet | gpt-5.5 |
 
 ### Key Concept: Execution Model
 
@@ -1919,7 +1919,7 @@ hive-flow worker status
 | **xAI** | Grok 4.1, Grok 3 | Truth-seeking, real-time data, 200K H100 training | $2-10/1M tokens |
 | **Mistral** | Mistral Large 3 (675B MoE), Codestral | 92% GPT-5.2 performance at 15% cost | $0.50-8/1M tokens |
 | **DeepSeek** | deepseek-v4-pro, deepseek-v4-flash | Fast inference, code-optimized, cost-effective | Low cost |
-| **OpenRouter** | MiniMax M3, Grok 4.3, Kimi K2.6, GLM 5.2, Qwen 3.7 Plus | Multi-model proxy; tier pools per task complexity | Pay-per-use |
+| **OpenRouter** | MiniMax M3, Grok 4.3, MiMo v2.5 Pro, Kimi K2.6, Qwen 3.7 Plus, GLM 5.2, Qwen 3.6 Plus, Nemotron 3 Super, DeepSeek V4 Flash | Multi-model proxy; tier pools per task complexity | Pay-per-use |
 | **Meta/Ollama** | Llama 4 Scout/Maverick | Local, free, up to 10M context (Scout) | Free |
 | **Qwen / qwen-cli** | Qwen 3 series | First-class provider; also available as CLI agent | Low cost |
 | **LM Studio** | Any local model | Local inference server | Free |
@@ -1933,7 +1933,7 @@ hive-flow worker status
 | `codex-cli` | gpt-5.5 | OpenAI Codex headless agent |
 | `gemini-cli` | gemini-3.5-flash | Google Gemini headless agent |
 | `cursor-cli` | auto | Cursor headless agent |
-| `anthropic-cli` | sonnet | Claude headless agent |
+| `anthropic-cli` | claude-opus-4-8 | Claude headless agent |
 
 **Credential Vault:** Use `hive-flow install --global --credentials` to create a per-machine KEK and encrypted credential vault, avoiding plain-text API key exposure in config files.
 
@@ -2650,7 +2650,7 @@ hive-flow doctor --verbose
 **Output Example:**
 
 ```
-🩺 Hive Flow Doctor v3.0.0-alpha
+🩺 Hive Flow Doctor v3.1.0-alpha.52
 
 ✅ Node.js      20.11.0 (required: 20+)
 ✅ npm          10.2.4 (required: 9+)
