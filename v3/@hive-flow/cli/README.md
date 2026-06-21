@@ -2356,7 +2356,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 ```
 ▊ <project>  │  ⎇ <branch> +N ~N ?N ↑N ↓N  │  <model>  │  📖 N% ctx · N in/N out  │  $N.NN  │  ⏱ NhNm
 🤖 Claude opus N, sonnet N, haiku N  │  Codex N  │  ...
-🪪 Swarm ◉ [N/50]  ♛N  ·  hives N this/N other
+🪪 Swarm ◉ [N/150]  ♛N  ·  hives N this/N other
 🔧 Architecture    ADRs ●N/N
 📊 Memory  Embeddings N  │  Memories N  │  💾 NKB  │  🧪 Tests N  │  🔌 MCP N/N
 ► ENFORCEMENT ON (NORMAL)  ·  daemon on  ·  Sessions N  ·  data fresh Ns
@@ -2372,7 +2372,7 @@ Claude Code pipes JSON session data via **stdin** to the statusline script after
 | `⏱ NhNm` | Session duration | Stdin JSON `cost.total_duration_ms` |
 | `🤖 Claude/Codex ...` | Provider call counts | `.hive-flow/data/store.json` (only providers with calls > 0) |
 | `◉/○` | Swarm active / idle | `.hive-flow/data/store.json` |
-| `[N/50]` | Active agents / max (50) | `.hive-flow/data/store.json` |
+| `[N/150]` | Active agents / max (150) | `.hive-flow/data/store.json` |
 | `♛N` | Queen count | `.hive-flow/data/store.json` |
 | `🔧 Architecture` | ADR compliance count | `.hive-flow/metrics/v3-progress.json` |
 | `📊 Memory` | Embeddings, memories, DB size, tests, MCP | Local data files |
@@ -3782,7 +3782,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | `v3-security-overhaul` | CVE fixes, secure-by-default patterns | Security hardening |
 | `v3-memory-unification` | HiveMemory unification, HNSW indexing improvements | Memory optimization |
 | `v3-performance-optimization` | Flash Attention optimization, memory reduction | Performance tuning |
-| `v3-swarm-coordination` | 50-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
+| `v3-swarm-coordination` | 150-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
 | `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
 | `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
 | `v3-integration-deep` | local compatibility API deep integration | Framework integration |
@@ -4502,7 +4502,7 @@ Flow Nexus is a **cloud platform** for deploying and scaling Hive Flow beyond yo
 
 | Feature | Local Hive Flow | + Flow Nexus |
 |---------|-------------------|--------------|
-| **Swarm Scale** | 50 agents (local resources) | 100+ agents (cloud resources) |
+| **Swarm Scale** | 150 agents (local resources) | 100+ agents (cloud resources) |
 | **Neural Training** | Limited by local GPU/CPU | Distributed GPU clusters |
 | **Persistence** | Local SQLite | Cloud-replicated databases |
 | **Collaboration** | Single user | Team workspaces |
@@ -5474,7 +5474,7 @@ const customAgent = createAgentConfig('coder', {
   priority: 90,
 });
 
-// Full V3 50-agent swarm
+// Full V3 150-agent swarm
 const swarmAgents = createV3SwarmAgentConfigs();
 
 // Mock agents with vitest mocks
@@ -5723,7 +5723,7 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `HIVE_FLOW_MAX_AGENTS` | Default concurrent agent limit | `15` |
+| `HIVE_FLOW_MAX_AGENTS` | Default working agent limit (queue depth 30, hard cap 180) | `150` |
 | `HIVE_FLOW_TOPOLOGY` | Default swarm topology (`hierarchical`, `mesh`, `ring`, `star`) | `hierarchical` |
 | `HIVE_FLOW_HEADLESS` | Run in headless mode (no interactive prompts) | `false` |
 | `CLAUDE_CODE_HEADLESS` | Claude Code headless mode compatibility | `false` |
@@ -5808,7 +5808,7 @@ export HIVE_FLOW_MEMORY_PATH="./data"
 # Core
 HIVE_FLOW_MODE=development
 HIVE_FLOW_LOG_LEVEL=info
-HIVE_FLOW_MAX_AGENTS=15
+HIVE_FLOW_MAX_AGENTS=150
 
 # AI Providers
 ANTHROPIC_API_KEY=sk-ant-api03-...
@@ -5887,7 +5887,7 @@ Hive Flow looks for configuration in this order:
 
   "swarm": {
     "topology": "hierarchical",
-    "maxAgents": 15,
+    "maxAgents": 150,
     "strategy": "specialized",
     "heartbeatInterval": 5000,
     "taskQueueSize": 100
@@ -6016,7 +6016,7 @@ Hive Flow looks for configuration in this order:
     "path": "/var/lib/hive-flow/data",
     "encryption": { "enabled": true, "algorithm": "aes-256-gcm" }
   },
-  "swarm": { "topology": "hierarchical", "maxAgents": 15 },
+  "swarm": { "topology": "hierarchical", "maxAgents": 150 },
   "security": {
     "mode": "strict",
     "rateLimit": { "enabled": true, "maxRequests": 100 }
@@ -6248,7 +6248,7 @@ hive-flow doctor --fix
   },
   "swarm": {
     "topology": "hierarchical",
-    "maxAgents": 15,
+    "maxAgents": 150,
     "strategy": "specialized"
   },
   "security": { "mode": "strict" },
@@ -6319,7 +6319,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/hooks/) |
 | `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
-| `@hive-flow/swarm` | 50-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
+| `@hive-flow/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
 | `@hive-flow/neural` | SONA learning integration | [Source](./v3/@hive-flow/neural/) |
 | `@hive-flow/testing` | TDD London School framework | [Source](./v3/@hive-flow/testing/) |
