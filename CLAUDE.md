@@ -157,7 +157,7 @@ Automated watcher system that monitors hive worker progress without polling.
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (40 commands) |
+| `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (37 commands) |
 | `@hive-flow/codex` | `v3/@hive-flow/codex/` | Dual-mode Claude + Codex collaboration |
 | `@hive-flow/guidance` | `v3/@hive-flow/guidance/` | Governance control plane |
 | `@hive-flow/hooks` | `v3/@hive-flow/hooks/` | 17 hooks + 12 workers |
@@ -511,24 +511,24 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 - **HNSW Indexing**: Enabled (fast HNSW-indexed)
 - **Neural Learning**: Enabled (SONA)
 
-## V3 CLI Commands (40 Commands, 140+ Subcommands)
+## V3 CLI Commands (37 Commands, 268 Subcommands)
 
 ### Core Commands
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
-| `init` | 4 | Project initialization with wizard, presets, skills, hooks |
+| `init` | 5 | Project initialization with wizard, check, skills, hooks, upgrade |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | HiveMemory memory with vector search (fast HNSW-indexed) |
-| `mcp` | 9 | MCP server management and tool execution |
+| `memory` | 12 | HiveMemory memory with vector search (fast HNSW-indexed) |
+| `mcp` | 10 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
-| `session` | 7 | Session state management and persistence |
-| `config` | 7 | Configuration management and provider setup |
+| `session` | 8 | Session state management and persistence |
+| `config` | 8 | Configuration management and provider setup |
 | `status` | 3 | System status monitoring with watch mode |
 | `start` | 3 | Service startup and quick launch |
 | `workflow` | 6 | Workflow execution and template management |
-| `hooks` | 17 | Self-learning hooks + 12 background workers |
+| `hooks` | 35 | Self-learning hooks + 12 background workers |
 | `hive-mind` | 11 | Queen-led Byzantine fault-tolerant consensus |
 
 ### Quick CLI Examples

@@ -27,40 +27,40 @@ Common topologies:
 - `hierarchical-mesh` (hybrid queen + peer)
 - `mesh`, `ring`, `star`, `hybrid`
 
-## V3 CLI Commands (26 Commands, 140+ Subcommands)
+## V3 CLI Commands (37 Commands, 268 Subcommands)
 
 ### Core Commands
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
-| `init` | 4 | Project initialization with wizard, presets, skills, hooks |
+| `init` | 5 | Project initialization with wizard, check, skills, hooks, upgrade |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | HiveMemory memory with vector search (fast HNSW-indexed) |
-| `mcp` | 9 | MCP server management and tool execution |
+| `memory` | 12 | HiveMemory memory with vector search (fast HNSW-indexed) |
+| `mcp` | 10 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
-| `session` | 7 | Session state management and persistence |
-| `config` | 7 | Configuration management and provider setup |
+| `session` | 8 | Session state management and persistence |
+| `config` | 8 | Configuration management and provider setup |
 | `status` | 3 | System status monitoring with watch mode |
 | `workflow` | 6 | Workflow execution and template management |
-| `hooks` | 17 | Self-learning hooks + 12 background workers |
-| `hive-mind` | 6 | Queen-led Byzantine fault-tolerant consensus |
+| `hooks` | 35 | Self-learning hooks + 12 background workers |
+| `hive-mind` | 11 | Queen-led Byzantine fault-tolerant consensus |
 
 ### Advanced Commands
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
 | `daemon` | 5 | Background worker daemon (start, stop, status, trigger, enable) |
-| `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
+| `neural` | 9 | Neural pattern training (train, status, patterns, predict, optimize, benchmark, list, export, import) |
 | `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
 | `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
 | `providers` | 5 | AI providers (list, add, remove, test, configure) |
-| `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
-| `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) |
-| `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
+| `plugins` | 9 | Plugin management (list, search, install, uninstall, upgrade, toggle, info, create, rate) |
+| `deployment` | 6 | Deployment management (deploy, status, rollback, history, environments, logs) |
+| `embeddings` | 15 | Vector embeddings (init, generate, search, compare, collections, index, providers, chunk, normalize, hyperbolic, neural, models, cache, warmup, benchmark) |
+| `claims` | 6 | Claims-based authorization (list, check, grant, revoke, roles, policies) |
 | `migrate` | 5 | V2 to V3 migration with rollback support |
-| `doctor` | 1 | System diagnostics with health checks |
+| `doctor` | 0 | System diagnostics with health checks |
 | `completions` | 4 | Shell completions (bash, zsh, fish, powershell) |
 
 ## Quick CLI Examples
