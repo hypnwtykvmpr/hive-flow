@@ -675,12 +675,10 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **PostgreSQL Vector DB** | ⛔ | ⛔ | pgvector only | ⛔ | ⛔ |
-| **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Hyperbolic Embeddings** | ✅ Poincaré ball model | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Persistent Memory** | ✅ SQLite + HiveMemory + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
+| **Persistent Memory** | ✅ SQLite + HiveMemory | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
-| **GNN/Attention in SQL** | ✅ 39 attention mechanisms | ⛔ | ⛔ | ⛔ | ⛔ |
 
 #### 🐝 Swarm & Coordination
 
@@ -1698,21 +1696,6 @@ Install these optional plugins to extend Hive Flow capabilities:
 |--------|---------|-------------|-----------------|
 | **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing, Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
 | **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
-
-#### 🏥 Domain-Specific Plugins
-
-| Plugin | Version | Description | Install Command |
-|--------|---------|-------------|-----------------|
-
-#### 💻 Development Intelligence Plugins
-
-| Plugin | Version | Description | Install Command |
-|--------|---------|-------------|-----------------|
-
-#### 🧠 Advanced AI/Reasoning Plugins
-
-| Plugin | Version | Description | Install Command |
-|--------|---------|-------------|-----------------|
 
 **Agentic-QE Plugin Features:**
 - 58 specialized QE agents across 13 bounded contexts

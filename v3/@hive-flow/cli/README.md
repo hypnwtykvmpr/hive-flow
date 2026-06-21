@@ -384,7 +384,7 @@ swarm_init({
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
 | **Memory** | Session-only, no persistence | HNSW vector memory with fast HNSW-indexed retrieval + knowledge graph |
-| **Vector Database** | ⛔ No native support | 🐘 Local Vector Store with 77+ SQL functions, ~61µs search, 16,400 QPS |
+| **Vector Database** | ⛔ No native support | 🐝 HNSW vector memory in @hive-flow/memory (local, no external DB) |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
 | **Learning** | Static behavior, no adaptation | SONA self-learning with low-latency adaptation, LearningBridge for insights |
@@ -709,12 +709,10 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **PostgreSQL Vector DB** | ✅ Local Vector (77+ SQL functions, ~61µs) | ⛔ | pgvector only | ⛔ | ⛔ |
-| **Hyperbolic Embeddings** | ✅ Poincaré ball (native + SQL) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Hyperbolic Embeddings** | ✅ Poincaré ball model | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (3.92x savings) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Persistent Memory** | ✅ SQLite + HiveMemory + PostgreSQL | ⛔ | ⛔ | ⛔ | Limited |
+| **Persistent Memory** | ✅ SQLite + HiveMemory | ⛔ | ⛔ | ⛔ | Limited |
 | **Cross-Session Context** | ✅ Full restoration | ⛔ | ⛔ | ⛔ | ⛔ |
-| **GNN/Attention in SQL** | ✅ 39 attention mechanisms | ⛔ | ⛔ | ⛔ | ⛔ |
 
 #### 🐝 Swarm & Coordination
 
@@ -765,7 +763,7 @@ What makes Hive Flow different from other agent frameworks? These 10 capabilitie
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | 3.92x memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
-| 🐘 | **Local Vector Store** | Enterprise-grade vector database with 77+ SQL functions for AI operations | ~61µs search, 16,400 QPS, GNN/attention in SQL |
+| 🐘 | **Local Vector Memory** | HNSW-indexed vector search for agent memory and pattern recall | Local HNSW in @hive-flow/memory, no external database |
 
 </details>
 
@@ -1644,21 +1642,6 @@ Install these optional plugins to extend Hive Flow capabilities:
 | **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing (352x faster), Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
 | **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
 
-#### 🏥 Domain-Specific Plugins
-
-| Plugin | Version | Description | Install Command |
-|--------|---------|-------------|-----------------|
-
-#### 💻 Development Intelligence Plugins
-
-| Plugin | Version | Description | Install Command |
-|--------|---------|-------------|-----------------|
-
-#### 🧠 Advanced AI/Reasoning Plugins
-
-| Plugin | Version | Description | Install Command |
-|--------|---------|-------------|-----------------|
-
 **Agentic-QE Plugin Features:**
 - 58 specialized QE agents across 13 bounded contexts
 - 16 MCP tools: `aqe/generate-tests`, `aqe/tdd-cycle`, `aqe/analyze-coverage`, `aqe/security-scan`, `aqe/chaos-inject`, etc.
@@ -1745,117 +1728,6 @@ Pre-built WASM plugins for semantic search, intent routing, and pattern storage.
 | **MCPToolOptimizerPlugin** | Optimizes MCP tool selection | Context-aware suggestions |
 | **ReasoningBankPlugin** | Vector-backed pattern storage with HNSW | fast search |
 | **AgentConfigGeneratorPlugin** | Generates optimized agent configurations | From pretrain data |
-
-</details>
-
-<details>
-<summary>🐘 <strong>Local Vector Store Bridge</strong> — Production vector database with AI capabilities</summary>
-
-Full PostgreSQL integration with advanced vector operations, attention mechanisms, GNN layers, and self-learning optimization.
-
-| Feature | Description | Performance |
-|---------|-------------|-------------|
-| **Vector Search** | HNSW/IVF indexing with 12+ distance metrics | 52,000+ inserts/sec, sub-ms queries |
-| **39 Attention Mechanisms** | Multi-head, Flash, Sparse, Linear, Graph, Temporal | GPU-accelerated SQL functions |
-| **15 GNN Layer Types** | GCN, GAT, GraphSAGE, MPNN, Transformer, PNA | Graph-aware vector queries |
-| **Hyperbolic Embeddings** | Poincare, Lorentz, Klein models for hierarchical data | Native manifold operations |
-| **Self-Learning** | Query optimizer, index tuner with EWC++ | Continuous improvement |
-
-**MCP Tools (8 tools):**
-
-| Tool | Description |
-|------|-------------|
-| `local_vector_search` | Vector similarity search (cosine, euclidean, dot, etc.) |
-| `local_vector_insert` | Insert vectors with batch support and upsert |
-| `local_vector_update` | Update existing vectors and metadata |
-| `local_vector_delete` | Delete vectors by ID or batch |
-| `local_vector_create_index` | Create HNSW/IVF indices with tuning |
-| `local_vector_index_stats` | Get index statistics and health |
-| `local_vector_batch_search` | Batch vector searches with parallelism |
-| `local_vector_health` | Connection pool health check |
-
-**Configuration:**
-
-```typescript
-import { createLocal VectorBridge } from '@hive-flow/plugins';
-
-const bridge = createLocal VectorBridge({
-  host: 'localhost',
-  port: 5432,
-  database: 'vectors',
-  user: 'postgres',
-  password: 'secret',
-  pool: { min: 2, max: 10 },
-  ssl: true
-});
-
-// Enable the plugin
-await registry.register(bridge);
-await registry.loadAll();
-```
-
-**Attention Mechanisms (39 types):**
-
-| Category | Mechanisms |
-|----------|------------|
-| **Core** | `multi_head`, `self_attention`, `cross_attention`, `causal`, `bidirectional` |
-| **Efficient** | `flash_attention`, `flash_attention_v2`, `memory_efficient`, `chunk_attention` |
-| **Sparse** | `sparse_attention`, `block_sparse`, `bigbird`, `longformer`, `local`, `global` |
-| **Linear** | `linear_attention`, `performer`, `linformer`, `nystrom`, `reformer` |
-| **Positional** | `relative_position`, `rotary_position`, `alibi`, `axial` |
-| **Graph** | `graph_attention`, `hyperbolic_attention`, `spherical_attention` |
-| **Temporal** | `temporal_attention`, `recurrent_attention`, `state_space` |
-| **Multimodal** | `cross_modal`, `perceiver`, `flamingo` |
-| **Retrieval** | `retrieval_attention`, `knn_attention`, `memory_augmented` |
-
-**GNN Layers (15 types):**
-
-| Layer | Use Case |
-|-------|----------|
-| `gcn` | General graph convolution |
-| `gat` / `gatv2` | Attention-weighted aggregation |
-| `sage` | Inductive learning on large graphs |
-| `gin` | Maximally expressive GNN |
-| `mpnn` | Message passing with edge features |
-| `edge_conv` | Point cloud processing |
-| `transformer` | Full attention on graphs |
-| `pna` | Principal neighborhood aggregation |
-| `rgcn` / `hgt` / `han` | Heterogeneous graphs |
-
-**Hyperbolic Operations:**
-
-```typescript
-import { createHyperbolicSpace } from '@hive-flow/plugins';
-
-const space = createHyperbolicSpace('poincare', { curvature: -1.0 });
-
-// Embed hierarchical data (trees, taxonomies)
-const embedding = await space.embed(vector);
-const distance = await space.distance(v1, v2);  // Geodesic distance
-const midpoint = await space.geodesicMidpoint(v1, v2);
-```
-
-**Self-Learning System:**
-
-```typescript
-import { createSelfLearningSystem } from '@hive-flow/plugins';
-
-const learning = createSelfLearningSystem(bridge);
-
-// Automatic optimization
-await learning.startLearningLoop();  // Runs in background
-
-// Manual optimization
-const suggestions = await learning.queryOptimizer.analyze(query);
-await learning.indexTuner.tune('my_index');
-```
-
-**Hooks (auto-triggered):**
-
-| Hook | Event | Purpose |
-|------|-------|---------|
-| `local-vector-learn-pattern` | `PostMemoryStore` | Learn from memory operations |
-| `local-vector-collect-stats` | `PostToolUse` | Collect query statistics |
 
 </details>
 
@@ -2157,51 +2029,6 @@ hive-flow embeddings search -q "authentication patterns"
 | **Q-Learning** | Tabular | Simple state spaces |
 | **SARSA** | On-policy | Online learning |
 | **Decision Transformer** | Sequence modeling | Long-horizon planning |
-
-</details>
-
-<details>
-<summary>🐘 <strong>Local Vector Store Bridge</strong> — Enterprise vector operations with pgvector</summary>
-
-| Feature | Description | Performance |
-|---------|-------------|-------------|
-| **pgvector Integration** | Native PostgreSQL vector operations | fast than in-memory |
-| **Attention Mechanisms** | Self, multi-head, cross-attention in SQL | GPU-accelerated |
-| **Graph Neural Networks** | GNN operations via SQL functions | Message passing, aggregation |
-| **Hyperbolic Embeddings** | Poincaré ball model in PostgreSQL | Better hierarchy representation |
-| **Quantization** | Int8/Float16 compression | 3.92x memory reduction |
-| **Streaming** | Large dataset processing | Batch + async support |
-| **Migrations** | Version-controlled schema | 7 migration scripts |
-
-```bash
-# Initialize Local Vector in PostgreSQL
-hive-flow memory init --database mydb --user admin
-
-# Check connection and schema status
-hive-flow memory status --verbose
-
-# Run pending migrations
-hive-flow memory migrate --up
-
-# Performance benchmark
-hive-flow memory benchmark --iterations 1000
-
-# Optimize indices and vacuum
-hive-flow memory optimize --analyze
-
-# Backup vector data
-hive-flow memory backup --output ./backup.sql
-```
-
-| Migration | Purpose | Features |
-|-----------|---------|----------|
-| `001_create_extension` | Enable pgvector | Vector type, operators |
-| `002_create_vector_tables` | Core tables | embeddings, patterns, agents |
-| `003_create_indices` | HNSW indices | fast search |
-| `004_create_functions` | Vector functions | Similarity, clustering |
-| `005_create_attention_functions` | Attention ops | Self/multi-head attention |
-| `006_create_gnn_functions` | GNN operations | Message passing, aggregation |
-| `007_create_hyperbolic_functions` | Hyperbolic geometry | Poincaré operations |
 
 </details>
 
@@ -2784,7 +2611,6 @@ UserPromptSubmit              PreCompact                     SessionStart
 | **Access Tracking** | Restored entries get access_count++ creating a relevance feedback loop | On restore |
 | **Auto-Pruning** | Never-accessed entries older than 30 days are automatically removed | On PreCompact |
 | **Content Compaction** | Old session entries trimmed to summaries, reducing archive storage | Manual or scheduled |
-| **Local Vector Sync** | SQLite entries auto-replicated to PostgreSQL when configured | On PreCompact |
 
 ### Optimization Thresholds
 
@@ -2814,9 +2640,8 @@ The statusline shows live context metrics read from `autopilot-state.json`:
 | Tier | Backend | Storage | Features |
 |------|---------|---------|----------|
 | 1 | **SQLite** (default) | `.hive-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
-| 2 | **Local Vector Store** | Configurable remote | TB-scale, pgvector embeddings, GNN search |
-| 3 | **HiveMemory + HNSW** | In-memory + persist | fast HNSW-indexed semantic search |
-| 4 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
+| 2 | **HiveMemory + HNSW** | In-memory + persist | fast HNSW-indexed semantic search |
+| 3 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
 
 ### Configuration
 
