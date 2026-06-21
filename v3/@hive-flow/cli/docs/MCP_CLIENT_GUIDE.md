@@ -35,10 +35,10 @@ import { callMCPTool, MCPClientError } from '../mcp-client.js';
 
 ```typescript
 try {
-  const result = await callMCPTool('agent/spawn', {
-    agentType: 'coder',
-    priority: 'normal',
-    config: { timeout: 300 }
+  const result = await callMCPTool('agent_spawn', {
+    agentType: 'implementer',
+    provider: 'gemini-cli',
+    task: 'Implement the feature'
   });
 
   // Handle success - display output
@@ -55,38 +55,103 @@ try {
 
 ## Available MCP Tools
 
+Tool implementations live at `v3/@hive-flow/cli/src/mcp-tools/`.
+
 ### Agent Tools
 
 | Tool Name | Description | Input Parameters |
 |-----------|-------------|------------------|
-| `agent/spawn` | Spawn a new agent | `agentType`, `id?`, `config?`, `priority?`, `metadata?` |
-| `agent/list` | List all agents | `status?`, `agentType?`, `limit?`, `offset?` |
-| `agent/status` | Get agent status | `agentId`, `includeMetrics?`, `includeHistory?` |
-| `agent/terminate` | Terminate an agent | `agentId`, `graceful?`, `reason?` |
+| `agent_spawn` | Spawn a new agent | `agentType` (req), `agentId?`, `config?`, `domain?`, `provider?`, `model?`, `task?` |
+| `agent_list` | List agents | `status?`, `agentType?`, `domain?`, `includeTerminated?` |
+| `agent_status` | Get agent status | `agentId` (req) |
+| `agent_terminate` | Terminate an agent | `agentId` (req), `force?` |
+| `agent_task` | Dispatch a task (non-blocking). Returns `taskId`. Poll with `agent_task_result`. | `agentId` (req), `task` (req), `timeout?` |
+| `agent_task_async` | Alias for `agent_task` | `agentId` (req), `task` (req), `timeout?` |
+| `agent_task_result` | Poll for result of a dispatched task | `taskId` (req) |
+| `agent_pool` | Manage agent pool | `action` (req: `status`\|`scale`\|`drain`\|`fill`), `targetSize?`, `agentType?` |
+| `agent_health` | Check agent health | `agentId?`, `threshold?` |
+| `agent_update` | Update agent status or config | `agentId` (req), `status?`, `health?`, `taskCount?`, `config?` |
+| `agent_activity` | Query recent per-tool activity log | `agentId?`, `hiveId?`, `timeRange?`, `tool?`, `limit?` |
+
+#### `agent_spawn` parameter details
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentType` | string (enum) | yes | Canonical agent type (e.g. `implementer`, `verifier`, `tester`) |
+| `agentId` | string | no | Optional custom agent ID |
+| `config` | object | no | Agent configuration |
+| `domain` | string | no | Agent domain |
+| `provider` | string | no | LLM provider: `anthropic`, `anthropic-cli`, `gemini-cli`, `codex-cli`, `cursor-cli`, `deepseek`, `openrouter` (default: `anthropic`) |
+| `model` | string | no | Model alias (`opus`/`sonnet`/`mini`/`inherit`) or provider-native model string |
+| `task` | string | no | Task description for intelligent model routing (ADR-026) |
+
+#### `agent_task` / `agent_task_async` async contract
+
+Both tools are non-blocking. They spawn a detached provider bridge and return immediately with `{ taskId, agentId, status: 'running', pid }`. The `anthropic` provider is **not** supported — use `anthropic-cli` for Claude subprocess workers.
+
+Poll with `agent_task_result`:
+- `status: 'running'` — bridge PID is alive, no result yet
+- `status: 'completed'` — result file written; returns `{ result }` object
+- `status: 'failed'` — bridge exited without writing result
+- `terminal: true` — task ID unknown (never existed or already fully consumed)
+
+State files: `.hive-flow/tasks/<taskId>.task`, `.hive-flow/tasks/<taskId>.json`, `.hive-flow/tasks/<taskId>.result.json`. See `agent-task-recovery-contract.md` for the full recovery contract.
 
 ### Swarm Tools
 
 | Tool Name | Description | Input Parameters |
 |-----------|-------------|------------------|
-| `swarm/init` | Initialize swarm | `topology`, `maxAgents?`, `config?`, `metadata?` |
-| `swarm/status` | Get swarm status | `includeAgents?`, `includeMetrics?`, `includeTopology?` |
-| `swarm/scale` | Scale swarm | `targetAgents`, `scaleStrategy?`, `agentTypes?`, `reason?` |
+| `swarm_init` | Initialize a swarm | `topology?`, `maxAgents?`, `config?` |
+| `swarm_status` | Get swarm status | `swarmId?` |
+| `swarm_shutdown` | Shutdown a swarm | `swarmId?`, `graceful?` |
+| `swarm_health` | Check swarm health | `swarmId?` |
+
+`topology` defaults to `hierarchical-mesh` when omitted. It is **not** required.
 
 ### Memory Tools
 
 | Tool Name | Description | Input Parameters |
 |-----------|-------------|------------------|
-| `memory/store` | Store memory | `content`, `type?`, `category?`, `tags?`, `importance?`, `ttl?` |
-| `memory/search` | Search memories | `query`, `searchType?`, `type?`, `category?`, `tags?`, `limit?`, `minRelevance?` |
-| `memory/list` | List memories | `type?`, `category?`, `tags?`, `sortBy?`, `sortOrder?`, `limit?`, `offset?` |
+| `memory_store` | Store a value (sql.js + HNSW backend) | `key` (req), `value` (req), `namespace?`, `tags?`, `ttl?`, `upsert?` |
+| `memory_retrieve` | Retrieve a value by key | `key` (req), `namespace?` |
+| `memory_search` | Semantic vector search (HNSW) | `query` (req), `namespace?`, `limit?`, `threshold?` |
+| `memory_list` | List memory entries | `namespace?`, `limit?`, `offset?` |
+| `memory_delete` | Delete a memory entry | `key` (req), `namespace?` |
+| `memory_stats` | Storage statistics and HNSW index status | _(no parameters)_ |
+| `memory_migrate` | Trigger migration from legacy JSON store to sql.js | `force?` |
+
+#### `memory_store` parameter details
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `key` | string | yes | Memory key (unique within namespace) |
+| `value` | any | yes | Value to store (string or object) |
+| `namespace` | string | no | Namespace for organization (default: `"default"`) |
+| `tags` | string[] | no | Optional tags |
+| `ttl` | number | no | Time-to-live in seconds |
+| `upsert` | boolean | no | Update existing key instead of failing (default: `false`) |
+
+#### `memory_search` parameter details
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | yes | Search query (semantic similarity via HNSW) |
+| `namespace` | string | no | Namespace to search (default: `"default"`) |
+| `limit` | number | no | Maximum results (default: 10) |
+| `threshold` | number | no | Minimum similarity 0–1 (default: 0.3) |
 
 ### Config Tools
 
 | Tool Name | Description | Input Parameters |
 |-----------|-------------|------------------|
-| `config/load` | Load configuration | `path?`, `scope?`, `merge?`, `includeDefaults?` |
-| `config/save` | Save configuration | `config`, `path?`, `scope?`, `merge?`, `createBackup?` |
-| `config/validate` | Validate config | `config`, `strict?`, `fixIssues?` |
+| `config_get` | Get a configuration value | `key` (req), `scope?` |
+| `config_set` | Set a configuration value | `key` (req), `value` (req), `scope?` |
+| `config_list` | List configuration values | `scope?`, `prefix?`, `includeDefaults?` |
+| `config_reset` | Reset config to defaults | `scope?`, `key?` |
+| `config_export` | Export configuration to JSON | `scope?`, `includeDefaults?` |
+| `config_import` | Import configuration from JSON | `config` (req), `scope?`, `merge?` |
+
+`config_get` and `config_set` use dot-notation keys (e.g. `swarm.topology`). The `scope` field accepts `project`, `user`, or `system`.
 
 ## MCP Client API
 
@@ -97,7 +162,7 @@ try {
 Call an MCP tool by name and return typed result.
 
 **Parameters:**
-- `toolName`: MCP tool name (e.g., `'agent/spawn'`)
+- `toolName`: MCP tool name (e.g., `'agent_spawn'`)
 - `input`: Tool input parameters (validated by tool's schema)
 - `context?`: Optional context object
 
@@ -107,9 +172,10 @@ Call an MCP tool by name and return typed result.
 
 **Example:**
 ```typescript
-const result = await callMCPTool<{ agentId: string }>('agent/spawn', {
-  agentType: 'coder',
-  priority: 'normal'
+const result = await callMCPTool<{ agentId: string }>('agent_spawn', {
+  agentType: 'implementer',
+  provider: 'codex-cli',
+  task: 'Implement the auth module'
 });
 console.log(`Spawned agent: ${result.agentId}`);
 ```
@@ -120,7 +186,7 @@ Get tool metadata without executing it.
 
 **Example:**
 ```typescript
-const metadata = getToolMetadata('agent/spawn');
+const metadata = getToolMetadata('agent_spawn');
 if (metadata) {
   console.log(`Description: ${metadata.description}`);
   console.log(`Category: ${metadata.category}`);
@@ -147,7 +213,7 @@ Check if an MCP tool exists.
 
 **Example:**
 ```typescript
-if (hasTool('agent/spawn')) {
+if (hasTool('agent_spawn')) {
   console.log('Agent spawn tool is available');
 }
 ```
@@ -158,9 +224,8 @@ Validate input against tool schema before calling.
 
 **Example:**
 ```typescript
-const validation = validateToolInput('agent/spawn', {
-  agentType: 'coder'
-  // missing required field
+const validation = validateToolInput('agent_spawn', {
+  agentType: 'implementer'
 });
 
 if (!validation.valid) {
@@ -170,13 +235,17 @@ if (!validation.valid) {
 
 #### `getToolCategories(): string[]`
 
-Get all unique tool categories.
+Get all unique tool categories (sorted alphabetically).
 
 **Example:**
 ```typescript
 const categories = getToolCategories();
 console.log('Available categories:', categories);
-// Output: ['agent', 'swarm', 'memory', 'config']
+// Example output (truncated): ['advocate', 'agent', 'analyze', 'browser', 'bug-hunter', 'claims',
+//          'config', 'coordination', 'daa', 'embeddings', 'github', 'hive-mind',
+//          'memory', 'neural', 'performance', 'permission-guard', 'planning',
+//          'provider', 'queen', 'security', 'session', 'swarm', 'system',
+//          'task', 'terminal', 'transfer', 'verification', 'workflow', ...]
 ```
 
 ### Error Handling
@@ -193,7 +262,7 @@ Custom error class for MCP tool failures.
 **Example:**
 ```typescript
 try {
-  await callMCPTool('agent/spawn', { ... });
+  await callMCPTool('agent_spawn', { ... });
 } catch (error) {
   if (error instanceof MCPClientError) {
     console.error(`Tool '${error.toolName}' failed: ${error.message}`);
@@ -239,7 +308,7 @@ const myCommand: Command = {
 
     // STEP 3: Call MCP tool (business logic)
     try {
-      const result = await callMCPTool<ResultType>('tool/name', {
+      const result = await callMCPTool<ResultType>('tool_name', {
         param,
         // ... other inputs
       });
@@ -302,19 +371,20 @@ const myCommand: Command = {
 
 ## Examples
 
-### Example 1: Simple Tool Call
+### Example 1: Spawn an Agent
 
 ```typescript
-// Spawn an agent
 const spawnCommand: Command = {
   name: 'spawn',
   action: async (ctx: CommandContext) => {
     const agentType = ctx.flags.type as string;
+    const provider = (ctx.flags.provider as string) || 'gemini-cli';
 
     try {
-      const result = await callMCPTool('agent/spawn', {
+      const result = await callMCPTool('agent_spawn', {
         agentType,
-        priority: 'normal'
+        provider,
+        task: ctx.flags.task as string
       });
 
       output.printSuccess(`Spawned agent: ${result.agentId}`);
@@ -330,10 +400,9 @@ const spawnCommand: Command = {
 };
 ```
 
-### Example 2: Tool Call with Filtering
+### Example 2: List Agents with Filtering
 
 ```typescript
-// List agents with filters
 const listCommand: Command = {
   name: 'list',
   action: async (ctx: CommandContext) => {
@@ -341,10 +410,11 @@ const listCommand: Command = {
       const result = await callMCPTool<{
         agents: Agent[];
         total: number;
-      }>('agent/list', {
-        status: ctx.flags.status || 'all',
+      }>('agent_list', {
+        status: ctx.flags.status || undefined,
         agentType: ctx.flags.type,
-        limit: 100
+        domain: ctx.flags.domain,
+        includeTerminated: ctx.flags.all as boolean
       });
 
       // Display results
@@ -370,49 +440,44 @@ const listCommand: Command = {
 };
 ```
 
-### Example 3: Interactive Input with Tool Call
+### Example 3: Store Memory
 
 ```typescript
-// Store memory with interactive input
 const storeCommand: Command = {
   name: 'store',
   action: async (ctx: CommandContext) => {
     // Get input interactively if not provided
-    let content = ctx.flags.content as string;
-    if (!content && ctx.interactive) {
-      content = await input({
-        message: 'Enter content to store:',
-        validate: (v) => v.length > 0 || 'Content required'
+    let key = ctx.flags.key as string;
+    if (!key && ctx.interactive) {
+      key = await input({
+        message: 'Enter memory key:',
+        validate: (v) => v.length > 0 || 'Key required'
       });
     }
 
-    if (!content) {
-      output.printError('Content is required');
+    let value = ctx.flags.value as string;
+    if (!value && ctx.interactive) {
+      value = await input({
+        message: 'Enter value to store:',
+        validate: (v) => v.length > 0 || 'Value required'
+      });
+    }
+
+    if (!key || !value) {
+      output.printError('Key and value are required');
       return { success: false, exitCode: 1 };
     }
 
-    // Select memory type interactively
-    let type = ctx.flags.type as string;
-    if (!type && ctx.interactive) {
-      type = await select({
-        message: 'Select memory type:',
-        options: [
-          { value: 'episodic', label: 'Episodic' },
-          { value: 'semantic', label: 'Semantic' },
-          { value: 'procedural', label: 'Procedural' }
-        ]
-      });
-    }
-
     try {
-      const result = await callMCPTool('memory/store', {
-        content,
-        type: type || 'episodic',
-        tags: ctx.flags.tags?.split(',') || [],
-        importance: ctx.flags.importance
+      const result = await callMCPTool('memory_store', {
+        key,
+        value,
+        namespace: ctx.flags.namespace || 'default',
+        tags: (ctx.flags.tags as string)?.split(',') || [],
+        upsert: ctx.flags.upsert as boolean
       });
 
-      output.printSuccess(`Stored memory: ${result.id}`);
+      output.printSuccess(`Stored memory: ${result.key}`);
       return { success: true, data: result };
 
     } catch (error) {
@@ -425,6 +490,38 @@ const storeCommand: Command = {
 };
 ```
 
+### Example 4: Dispatch and Poll an Async Agent Task
+
+```typescript
+// Dispatch — returns immediately
+const dispatch = await callMCPTool<{ taskId: string; status: string }>('agent_task', {
+  agentId: 'agent-abc123',
+  task: 'Refactor the auth module',
+  timeout: 120000
+});
+
+// Poll until terminal
+let done = false;
+while (!done) {
+  const poll = await callMCPTool<{ status: string; result?: unknown; terminal?: boolean }>(
+    'agent_task_result',
+    { taskId: dispatch.taskId }
+  );
+
+  if (poll.status === 'completed') {
+    output.printSuccess('Task completed');
+    output.printJson(poll.result);
+    done = true;
+  } else if (poll.status === 'failed' || poll.terminal) {
+    output.printError('Task failed or not found');
+    done = true;
+  } else {
+    // still running — wait before next poll
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
+```
+
 ## Testing
 
 ### Unit Testing MCP Client
@@ -433,24 +530,24 @@ const storeCommand: Command = {
 import { callMCPTool, MCPClientError, hasTool } from '../mcp-client.js';
 
 describe('MCP Client', () => {
-  it('should call agent/spawn tool', async () => {
-    const result = await callMCPTool('agent/spawn', {
-      agentType: 'coder'
+  it('should call agent_spawn tool', async () => {
+    const result = await callMCPTool('agent_spawn', {
+      agentType: 'implementer'
     });
 
     expect(result).toHaveProperty('agentId');
-    expect(result).toHaveProperty('agentType', 'coder');
+    expect(result).toHaveProperty('agentType', 'implementer');
   });
 
   it('should throw MCPClientError for unknown tool', async () => {
     await expect(
-      callMCPTool('unknown/tool', {})
+      callMCPTool('unknown_tool', {})
     ).rejects.toThrow(MCPClientError);
   });
 
   it('should check if tool exists', () => {
-    expect(hasTool('agent/spawn')).toBe(true);
-    expect(hasTool('unknown/tool')).toBe(false);
+    expect(hasTool('agent_spawn')).toBe(true);
+    expect(hasTool('unknown_tool')).toBe(false);
   });
 });
 ```
@@ -462,7 +559,7 @@ import { execute } from '../cli.js';
 
 describe('Agent spawn command', () => {
   it('should spawn agent via MCP tool', async () => {
-    const result = await execute(['agent', 'spawn', '--type', 'coder']);
+    const result = await execute(['agent', 'spawn', '--type', 'implementer']);
 
     expect(result.success).toBe(true);
     expect(result.data).toHaveProperty('agentId');
@@ -478,11 +575,11 @@ Always provide type parameters to `callMCPTool`:
 
 ```typescript
 // ✅ Good: Type-safe
-const result = await callMCPTool<{ agentId: string }>('agent/spawn', { ... });
+const result = await callMCPTool<{ agentId: string }>('agent_spawn', { ... });
 console.log(result.agentId); // TypeScript knows this exists
 
 // ❌ Bad: No type safety
-const result = await callMCPTool('agent/spawn', { ... });
+const result = await callMCPTool('agent_spawn', { ... });
 console.log(result.agentId); // No type checking
 ```
 
@@ -522,10 +619,10 @@ if (!agentId) {
   return { success: false, exitCode: 1 };
 }
 
-const result = await callMCPTool('agent/status', { agentId });
+const result = await callMCPTool('agent_status', { agentId });
 
 // ❌ Bad: Let tool fail
-const result = await callMCPTool('agent/status', { agentId }); // Might be undefined
+const result = await callMCPTool('agent_status', { agentId }); // Might be undefined
 ```
 
 ### 4. Output Formatting
@@ -534,7 +631,7 @@ Keep display logic in CLI, not in tool results:
 
 ```typescript
 // ✅ Good: CLI formats output
-const result = await callMCPTool('agent/list', { ... });
+const result = await callMCPTool('agent_list', { ... });
 const displayData = result.agents.map(agent => ({
   id: agent.id,
   type: agent.agentType,
@@ -543,7 +640,7 @@ const displayData = result.agents.map(agent => ({
 output.printTable({ data: displayData });
 
 // ❌ Bad: Expect pre-formatted data from tool
-const result = await callMCPTool('agent/list', { ... });
+const result = await callMCPTool('agent_list', { ... });
 output.printTable({ data: result.formattedAgents }); // Tool shouldn't format
 ```
 
@@ -552,13 +649,13 @@ output.printTable({ data: result.formattedAgents }); // Tool shouldn't format
 Use feature detection for optional capabilities:
 
 ```typescript
-// Check if tool supports feature
-const metadata = getToolMetadata('agent/status');
-const supportsMetrics = metadata?.inputSchema.properties?.includeMetrics;
+// Check if tool supports a feature before using it
+const metadata = getToolMetadata('agent_spawn');
+const supportsTask = metadata?.inputSchema.properties?.task;
 
-const result = await callMCPTool('agent/status', {
-  agentId,
-  includeMetrics: supportsMetrics ? true : undefined
+const result = await callMCPTool('agent_spawn', {
+  agentType,
+  task: supportsTask ? taskDescription : undefined
 });
 ```
 
@@ -566,12 +663,12 @@ const result = await callMCPTool('agent/status', {
 
 ### Tool Not Found
 
-**Problem:** `MCPClientError: MCP tool not found: xyz/abc`
+**Problem:** `MCPClientError: MCP tool not found: xyz_abc`
 
 **Solutions:**
-1. Check tool name spelling
+1. Check tool name spelling — all names use underscores, not slashes (e.g. `agent_spawn` not `agent/spawn`)
 2. Verify tool is registered in `mcp-client.ts`
-3. Import tool from correct tools file
+3. Import tool from the correct file under `v3/@hive-flow/cli/src/mcp-tools/`
 
 ### Type Errors
 
@@ -605,8 +702,8 @@ When adding new CLI commands:
 
 ## Related Documentation
 
-- [ADR-005: MCP-First API Design](/workspaces/hive-flow/docs/adr/ADR-005-mcp-first-api.md) - Architecture decision
-- [MCP Tool Implementations](/workspaces/hive-flow/v3/mcp/tools/) - Tool source code
+- [MCP Tool Implementations](../src/mcp-tools/) - Tool source code
+- [Agent Task Recovery Contract](./agent-task-recovery-contract.md) - Async task dispatch and recovery protocol
 
 ## Summary
 
