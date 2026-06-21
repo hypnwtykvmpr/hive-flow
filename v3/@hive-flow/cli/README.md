@@ -1953,38 +1953,47 @@ hive-flow worker status
 </details>
 
 <details>
-<summary>💻 <strong>CLI Commands</strong> — 40 commands with 140+ subcommands</summary>
+<summary>💻 <strong>CLI Commands</strong> — 37 commands with 268 subcommands</summary>
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
-| `init` | 4 | Project initialization (wizard, check, skills, hooks) |
+| `init` | 5 | Project initialization (wizard, check, skills, hooks, upgrade) |
+| `start` | 3 | Start the orchestration system (stop, restart, quick) |
+| `status` | 3 | System status with watch mode (agents, tasks, memory) |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Swarm coordination (init, start, status, stop, scale, coordinate) |
-| `memory` | 12 | Memory operations (init, store, retrieve, search --build-hnsw, list, delete, stats, configure, cleanup, compress, export, import) |
-| `mcp` | 9 | MCP server (start, stop, status, health, restart, tools, toggle, exec, logs) |
+| `memory` | 12 | Memory operations (init, store, retrieve, search, list, delete, stats, configure, cleanup, compress, export, import) |
 | `task` | 6 | Task management (create, list, status, cancel, assign, retry) |
-| `session` | 7 | Session management (list, save, restore, delete, export, import, current) |
-| `config` | 7 | Configuration (init, get, set, providers, reset, export, import) |
-| `status` | 3 | System status with watch mode (agents, tasks, memory) |
-| `workflow` | 6 | Workflow execution (run, validate, list, status, stop, template) |
-| `hooks` | 32 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, session-*, intelligence/*, worker/*, progress) |
-| `hive-mind` | 11 | Queen-led coordination (init, spawn, status, task, join, leave, consensus, broadcast, memory, optimize-memory, shutdown) |
-| `migrate` | 5 | V2→V3 migration (status, run, verify, rollback, breaking) |
+| `session` | 8 | Session management (list, save, restore, delete, export, import, current, recover) |
+| `mcp` | 10 | MCP server (start, stop, status, health, restart, reap, tools, toggle, exec, logs) |
+| `hooks` | 35 | Self-learning hooks + 12 background workers (pre/post-edit, pre/post-command, route, session-*, intelligence-*, worker-*, model-*, coverage-*, teammate-idle, task-completed) |
+| `statusline` | 3 | Statusline rendering for coding agent CLIs (wrapper-host, repair, compact) |
+| `tests` | 2 | Record test results for the statusline (record, import-junit) |
 | `neural` | 9 | Neural pattern training (train, status, patterns, predict, optimize, benchmark, list, export, import) |
 | `security` | 6 | Security scanning (scan, cve, threats, audit, secrets, defend) |
-| `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
+| `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, bottleneck) |
+| `embeddings` | 15 | Vector embeddings (init, generate, search, compare, collections, index, providers, chunk, normalize, hyperbolic, neural, models, cache, warmup, benchmark) |
+| `hive-mind` | 11 | Queen-led coordination (init, spawn, status, task, join, leave, consensus, broadcast, memory, optimize-memory, shutdown) |
+| `guidance` | 6 | Guidance Control Plane (compile, retrieve, gates, status, optimize, ab-test) |
+| `config` | 8 | Configuration (init, get, set, providers, key, reset, export, import) |
+| `doctor` | 0 | System diagnostics and health checks (flag-driven) |
+| `daemon` | 5 | Background worker daemon (start, stop, status, trigger, enable) |
+| `completions` | 4 | Shell completions (bash, zsh, fish, powershell) |
+| `migrate` | 5 | V2→V3 migration (status, run, verify, rollback, breaking) |
+| `workflow` | 6 | Workflow execution (run, validate, list, status, stop, template) |
+| `analyze` | 11 | Code analysis (diff, code, deps, ast, complexity, symbols, imports, boundaries, modules, dependencies, circular) |
+| `route` | 8 | Intelligent routing (task, list-agents, stats, feedback, reset, export, import, coverage-route) |
+| `progress` | 5 | V3 implementation progress (check, sync, summary, watch, classify) |
 | `providers` | 5 | AI providers (list, configure, test, models, usage) |
 | `plugins` | 9 | Plugin management (list, search, install, uninstall, upgrade, toggle, info, create, rate) |
 | `deployment` | 6 | Deployment management (deploy, status, rollback, history, environments, logs) |
-| `embeddings` | 15 | Vector embeddings (init, generate, search, compare, collections, index, providers, chunk, normalize, hyperbolic, neural, models, cache, warmup, benchmark) |
-| `daemon` | 5 | Background workers (start, stop, status, trigger, enable) |
-| `progress` | 4 | V3 implementation progress (check, sync, summary, watch) |
-| `claims` | 6 | Authorization (list, check, grant, revoke, roles, policies) |
-| `analyze` | 6 | Code analysis (diff, risk, classify, reviewers, file-risk, stats) |
+| `claims` | 6 | Claims-based authorization (list, check, grant, revoke, roles, policies) |
 | `issues` | 10 | Human-agent claims (list, claim, release, handoff, status, stealable, steal, load, rebalance, board) |
-| `hooks transfer store` | 4 | Pattern marketplace via IPFS (list, search, download, publish) |
-| `update` | 2 | Auto-update system (check, apply) |
-| `route` | 3 | Intelligent routing (task, explain, coverage) |
+| `update` | 5 | Auto-update system (check, all, history, rollback, clear-cache) |
+| `process` | 5 | Background process management (daemon, monitor, workers, signals, logs) |
+| `appliance` | 8 | RVFA appliance management (build, inspect, verify, extract, run, sign, publish, update) |
+| `setup` | 4 | Environment setup (global, providers, credentials, permission-guard) |
+| `signal` | 5 | Workflow control signals (pause, resume, skip, stop, mode) |
 
 </details>
 
@@ -2511,45 +2520,11 @@ Shell-based daemons for monitoring (Linux/macOS only):
 </details>
 
 <details>
-<summary>⌨️ <strong>V3 CLI Commands</strong> — 40 commands with 140+ subcommands</summary>
+<summary>⌨️ <strong>V3 CLI Commands</strong> — 37 commands with 268 subcommands</summary>
 
 Complete command-line interface for all Hive Flow operations.
 
-**Core Commands:**
-
-| Command | Subcommands | Description |
-|---------|-------------|-------------|
-| `init` | 4 | Project initialization with wizard, presets, skills, hooks |
-| `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
-| `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 11 | HiveMemory memory with vector search (fast HNSW-indexed) |
-| `mcp` | 9 | MCP server management and tool execution |
-| `task` | 6 | Task creation, assignment, and lifecycle |
-| `session` | 7 | Session state management and persistence |
-| `config` | 7 | Configuration management and provider setup |
-| `status` | 3 | System status monitoring with watch mode |
-| `start` | 3 | Service startup and quick launch |
-| `workflow` | 6 | Workflow execution and template management |
-| `hooks` | 17 | Self-learning hooks + 12 background workers |
-| `hive-mind` | 11 | Queen-led Byzantine fault-tolerant consensus (init, spawn, status, task, join, leave, consensus, broadcast, memory, optimize-memory, shutdown) |
-
-**Advanced Commands:**
-
-| Command | Subcommands | Description |
-|---------|-------------|-------------|
-| `daemon` | 5 | Background worker daemon (start, stop, status, trigger, enable) |
-| `neural` | 9 | Neural pattern training (train, status, patterns, predict, optimize, benchmark, list, export, import) |
-| `security` | 6 | Security scanning (scan, cve, threats, audit, secrets, defend) |
-| `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
-| `providers` | 5 | AI providers (list, configure, test, models, usage) |
-| `plugins` | 9 | Plugin management (list, search, install, uninstall, upgrade, toggle, info, create, rate) |
-| `deployment` | 6 | Deployment management (deploy, status, rollback, history, environments, logs) |
-| `embeddings` | 15 | Vector embeddings (init, generate, search, compare, collections, index, providers, chunk, normalize, hyperbolic, neural, models, cache, warmup, benchmark) |
-| `claims` | 6 | Claims-based authorization (list, check, grant, revoke, roles, policies) |
-| `migrate` | 5 | V2 to V3 migration with rollback support |
-| `process` | 4 | Background process management |
-| `doctor` | 1 | System diagnostics with health checks |
-| `completions` | 4 | Shell completions (bash, zsh, fish, powershell) |
+All 37 commands and their subcommand counts are listed in the **CLI Commands** reference table above.
 
 **Quick Examples:**
 
@@ -4923,7 +4898,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/plugins` | WASM extensions | local vector plugins, semantic search, intent routing |
-| `@hive-flow/cli` | Command interface | 40 commands, 140+ subcommands, shell completions |
+| `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
 | `@hive-flow/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
 | `@hive-flow/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/deployment` | Release automation | Versioning, changelogs, NPM publishing |
