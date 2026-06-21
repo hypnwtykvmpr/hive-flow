@@ -307,8 +307,8 @@ const insights = hiveMind.getPerformanceInsights();
 - Non-blocking task assignment
 
 **Benchmarks**
-- 10-20x faster batch spawning
-- 2.8-4.4x speed improvement overall
+- Significantly faster batch spawning
+- Improved overall speed
 - 32.3% token reduction
 - SWE-Bench evaluation claims removed
 

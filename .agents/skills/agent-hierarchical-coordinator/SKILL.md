@@ -279,7 +279,7 @@ def assign_task(task, available_agents):
 ### Escalation Protocols
 ```yaml
 Performance Issues:
-  - Threshold: <70% success rate or >2x expected duration
+  - Threshold: <70% success rate or materially above expected duration
   - Action: Reassign task to different agent, provide additional resources
 
 Resource Constraints:

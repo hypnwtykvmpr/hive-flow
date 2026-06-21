@@ -204,10 +204,10 @@ interface CognitiveKernelConfig {
 
 | Metric | Target | Notes |
 |--------|--------|-------|
-| Working memory operations | <1ms per slot | 10x faster than naive cache |
-| Attention steering | <5ms for reallocation | 10x faster than context rebuild |
+| Working memory operations | <1ms per slot | faster than naive cache |
+| Attention steering | <5ms for reallocation | faster than context rebuild |
 | Meta-cognitive check | <10ms per assessment | Novel capability |
-| Memory consolidation | <100ms batch | 10x faster than full reindex |
+| Memory consolidation | <100ms batch | faster than full reindex |
 | Scaffold generation | <50ms per step | Novel capability |
 
 ## Cognitive Theories Implemented

@@ -56,11 +56,11 @@ hive-flow memory search --query "related patterns" --semantic
 
 ## Quantization
 
-| Type | Memory Reduction | Speed |
-|------|-----------------|-------|
-| Int8 | 3.92x | Fast |
-| Int4 | 7.84x | Faster |
-| Binary | 32x | Fastest |
+| Type | Memory Usage | Speed |
+|------|--------------|-------|
+| Int8 | Lower | Fast |
+| Int4 | Lower | Fast |
+| Binary | Lowest | Fast |
 
 ## Best Practices
 1. Use HNSW for large pattern databases

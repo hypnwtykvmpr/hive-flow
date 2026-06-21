@@ -60,7 +60,7 @@ Hive Flow is the most comprehensive Claude Code plugin for enterprise AI agent o
 
 ### 🧠 **Neural Training**
 - **27+ Models**: Pre-trained patterns for common tasks
-- **WASM Acceleration**: 2.8-4.4x speed improvement
+- **WASM Acceleration**: significant speed improvement
 - **SIMD Optimization**: Advanced vector processing
 - **Pattern Learning**: Self-improving agent behaviors
 - **Context Persistence**: Cross-session learning retention
@@ -623,7 +623,7 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
 
 - SWE-Bench evaluation support
 - **32.3%** token reduction vs. sequential execution
-- **2.8-4.4x** speed improvement with WASM acceleration
+- Significant speed improvement with WASM acceleration
 - **27+** neural models for pattern recognition
 - **100** max concurrent agents
 

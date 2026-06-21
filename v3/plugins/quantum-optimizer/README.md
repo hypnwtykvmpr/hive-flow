@@ -208,11 +208,11 @@ interface QuantumOptimizerConfig {
 
 | Metric | Target | Improvement vs Classical |
 |--------|--------|-------------------------|
-| Annealing (100 vars) | <1s for 1000 reads | 30x faster than brute force |
-| QAOA (50 qubits) | <10s for p=5 | 30x faster than classical approx |
-| Grover (1M elements) | <100ms | 10x (sqrt speedup) |
-| Dependency resolution | <5s for 1000 packages | 24x faster than SAT solver |
-| Schedule optimization | <30s for 100 tasks | 20x faster than ILP solver |
+| Annealing (100 vars) | <1s for 1000 reads | faster than brute force |
+| QAOA (50 qubits) | <10s for p=5 | faster than classical baseline |
+| Grover (1M elements) | <100ms | quadratic (sqrt) speedup |
+| Dependency resolution | <5s for 1000 packages | faster than SAT solver |
+| Schedule optimization | <30s for 100 tasks | faster than ILP solver |
 
 ## Security Considerations
 

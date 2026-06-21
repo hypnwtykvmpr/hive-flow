@@ -11,7 +11,7 @@
 - **Self-Learning** - LearningBridge connects insights to SONA/ReasoningBank neural pipeline (ADR-049)
 - **Knowledge Graph** - PageRank + label propagation community detection over memory entries (ADR-049)
 - **Agent-Scoped Memory** - 3-scope agent memory (project/local/user) with cross-agent knowledge transfer (ADR-049)
-- **Vector Quantization** - Binary, scalar, and product quantization for 4-32x memory reduction
+- **Vector Quantization** - Binary, scalar, and product quantization for significant memory reduction
 - **Multiple Distance Metrics** - Cosine, Euclidean, dot product, and Manhattan distance
 - **Query Builder** - Fluent API for building complex memory queries
 - **Cache Manager** - LRU caching with configurable size and TTL
@@ -180,19 +180,19 @@ await migration.execute({
 ## Quantization Options
 
 ```typescript
-// Binary quantization (32x compression)
+// Binary quantization (high compression)
 const binaryIndex = new HNSWIndex({
   dimensions: 1536,
   quantization: { type: 'binary' }
 });
 
-// Scalar quantization (4x compression)
+// Scalar quantization (moderate compression)
 const scalarIndex = new HNSWIndex({
   dimensions: 1536,
   quantization: { type: 'scalar', bits: 8 }
 });
 
-// Product quantization (8x compression)
+// Product quantization (significant compression)
 const productIndex = new HNSWIndex({
   dimensions: 1536,
   quantization: { type: 'product', subquantizers: 8 }
@@ -507,24 +507,24 @@ const scopes = await listAgentScopes('/workspaces/my-project');
 
 ## Performance Benchmarks
 
-| Operation | V2 Performance | V3 Performance | Improvement |
-|-----------|---------------|----------------|-------------|
-| Vector Search | 150ms | <1ms | **HNSW-indexed** |
-| Bulk Insert | 500ms | 5ms | **100x** |
-| Memory Write | 50ms | <5ms | **10x** |
-| Cache Hit | 5ms | <0.1ms | **50x** |
-| Index Build | 10s | 800ms | **12.5x** |
+| Operation | V2 Performance | V3 Performance |
+|-----------|---------------|----------------|
+| Vector Search | 150ms | <1ms (HNSW-indexed) |
+| Bulk Insert | 500ms | 5ms |
+| Memory Write | 50ms | <5ms |
+| Cache Hit | 5ms | <0.1ms |
+| Index Build | 10s | 800ms |
 
 ### ADR-049 Benchmarks
 
-| Operation | Actual | Target | Headroom |
-|-----------|--------|--------|----------|
-| Graph build (1k nodes) | 2.78 ms | <200 ms | **71.9x** |
-| PageRank (1k nodes) | 12.21 ms | <100 ms | **8.2x** |
-| Insight recording | 0.12 ms/each | <5 ms/each | **41.0x** |
-| Consolidation | 0.26 ms | <500 ms | **1,955x** |
-| Confidence decay (1k) | 0.23 ms | <50 ms | **215x** |
-| Knowledge transfer | 1.25 ms | <100 ms | **80.0x** |
+| Operation | Actual | Target |
+|-----------|--------|--------|
+| Graph build (1k nodes) | 2.78 ms | <200 ms |
+| PageRank (1k nodes) | 12.21 ms | <100 ms |
+| Insight recording | 0.12 ms/each | <5 ms/each |
+| Consolidation | 0.26 ms | <500 ms |
+| Confidence decay (1k) | 0.23 ms | <50 ms |
+| Knowledge transfer | 1.25 ms | <100 ms |
 
 ## TypeScript Types
 

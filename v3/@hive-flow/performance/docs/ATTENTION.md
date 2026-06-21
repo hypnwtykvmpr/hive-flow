@@ -102,7 +102,7 @@ Run comprehensive benchmark comparing Flash Attention vs baseline.
 
 ```typescript
 const result = await optimizer.benchmark();
-console.log(result.speedup); // e.g., 4.23x
+console.log(result.speedup); // speedup metric
 ```
 
 ##### getSpeedup(): number

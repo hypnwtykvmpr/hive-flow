@@ -303,7 +303,7 @@ hive-flow analysis performance-report \
 | Avg Task Time | 42s | ↓ 12% | 35s |
 | Agent Utilization | 78% | ↑ 5% | 85% |
 | Cache Hit Rate | 91% | → | 90% |
-| Parallel Efficiency | 2.3x | ↑ 0.4x | 2.5x |
+| Parallel Efficiency | Improved | ↑ | Higher |
 
 ## Bottleneck Analysis
 ### Critical

@@ -206,16 +206,16 @@ console.log(`JSON: ${available.json ? '✓' : '✗'}`);
 ### Comparison to better-sqlite3
 
 ```
-Operation          better-sqlite3    sql.js        Ratio
+Operation          better-sqlite3    sql.js
 ─────────────────────────────────────────────────────────
-Single Read        0.1ms            0.5ms         5x
-Single Write       0.2ms            0.5ms         2.5x
-Bulk Insert (1k)   50ms             100ms         2x
-Vector Search (1k) 200ms            250ms         1.25x
-Memory Usage       Low              Medium        ~2x
+Single Read        0.1ms            0.5ms
+Single Write       0.2ms            0.5ms
+Bulk Insert (1k)   50ms             100ms
+Vector Search (1k) 200ms            250ms
+Memory Usage       Low              Medium
 ```
 
-**Verdict:** sql.js is 2-5x slower than native but still **very fast** for most use cases.
+**Verdict:** sql.js is slower than native but still **very fast** for most use cases.
 
 ## Windows Installation
 
@@ -327,7 +327,7 @@ const db = await createDatabase('./memory.db');
 ### sql.js Specific
 
 ⚠️ **In-memory operation** - Must persist to disk manually/automatically
-⚠️ **Slower than native** - 2-5x slower (but still fast)
+⚠️ **Slower than native** - slower than native bindings (but still fast)
 ⚠️ **Higher memory use** - Entire DB in memory
 ⚠️ **No concurrent writes** - Single-threaded JavaScript
 ⚠️ **WASM download** - Initial ~500KB download (cached)
@@ -358,7 +358,7 @@ const db = await createDatabase('./memory.db');
 
 4. **WASM HNSW Index** (Vector Search)
    - Fast vector search in WASM
-   - 100x+ speedup over brute-force
+   - Faster than brute-force search
 
 ## Troubleshooting
 

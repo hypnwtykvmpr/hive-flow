@@ -470,7 +470,7 @@ const result = await mcp.call('aidefence_scan', {
 
 | Operation | Target | Actual | Notes |
 |-----------|--------|--------|-------|
-| Threat Detection | <10ms | **0.04ms** | 250x faster than target |
+| Threat Detection | <10ms | **0.04ms** | Well within target |
 | Quick Scan | <5ms | **0.02ms** | Pattern match only |
 | PII Detection | <3ms | **0.01ms** | Regex-based |
 | HNSW Search | <1ms | **0.1ms** | With HiveMemory |

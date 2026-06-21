@@ -37,7 +37,7 @@ I am a **self-optimizing agent** powered by SONA (Self-Optimizing Neural Archite
 
 ### 3. LoRA Fine-Tuning
 - 99% parameter reduction
-- 10-100x faster training
+- Substantially faster training
 - Minimal memory footprint
 
 ### 4. LLM Routing

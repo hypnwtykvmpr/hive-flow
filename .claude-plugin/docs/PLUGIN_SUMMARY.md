@@ -154,7 +154,7 @@ cd hive-flow
 ### Performance
 - SWE-Bench evaluation support
 - 32.3% token reduction
-- 2.8-4.4x speed improvement with WASM
+- Significant speed improvement with WASM
 - Real-time performance monitoring
 - Bottleneck detection
 
@@ -277,7 +277,7 @@ Should show `hive-flow` as active.
 
 - **SWE-Bench**: Evaluation support
 - **Token Efficiency**: 32.3% reduction vs sequential
-- **Speed**: 2.8-4.4x with WASM acceleration
+- **Speed**: Significant improvement with WASM acceleration
 - **Scale**: Up to 100 concurrent agents
 - **Models**: 27+ neural models available
 

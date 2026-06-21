@@ -33,7 +33,7 @@ Current MCP Issues:
 └── Memory Usage: No cleanup of idle connections
 
 Target Performance:
-├── Startup Time: <400ms (4.5x improvement)
+├── Startup Time: <400ms (substantially improved)
 ├── Tool Lookup: <5ms (O(1) hash table)
 ├── Connection Reuse: 90%+ connection pool hits
 ├── Response Time: <100ms p95
@@ -722,7 +722,7 @@ export class MultiLevelCache {
 ## Success Metrics
 
 ### Performance Targets
-- [ ] **Startup Time**: <400ms MCP server initialization (4.5x improvement)
+- [ ] **Startup Time**: <400ms MCP server initialization (substantially improved)
 - [ ] **Response Time**: <100ms p95 for tool execution
 - [ ] **Tool Lookup**: <5ms average lookup time
 - [ ] **Connection Pool**: >90% hit rate

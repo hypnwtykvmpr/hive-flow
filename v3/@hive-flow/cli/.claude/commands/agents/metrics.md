@@ -66,7 +66,7 @@ By Agent Type
 +------------+-------+-------+---------+
 
 V3 Performance Gains
-  - Flash Attention: 2.8x speedup
+  - Flash Attention: optimized attention
   - Memory Reduction: 52%
   - Search: fast
 ```
@@ -108,7 +108,7 @@ V3 Performance Gains
     { "type": "coder", "count": 2, "tasks": 45, "successRate": "97%" }
   ],
   "performance": {
-    "flashAttention": "2.8x speedup",
+    "flashAttention": "optimized attention",
     "memoryReduction": "52%",
     "searchImprovement": "fast"
   }

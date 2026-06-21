@@ -628,7 +628,7 @@ const optimizer = await getTokenOptimizer();
 // Compact context (32% fewer tokens)
 const ctx = await optimizer.getCompactContext("auth patterns");
 
-// 352x faster edits = fewer retries
+// Faster edits = fewer retries
 await optimizer.optimizedEdit(file, old, new, "typescript");
 
 // Optimal config

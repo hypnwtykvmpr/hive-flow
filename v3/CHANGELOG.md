@@ -17,7 +17,7 @@ All notable changes to this project will be documented in this file.
 - **ADR-005**: MCP-first API design for consistent, standardized interfaces
 - **ADR-006**: Unified memory service replacing 6+ fragmented systems
 - **ADR-007**: Event sourcing for critical state changes with full audit trail
-- **ADR-008**: Migrated from Jest to Vitest (10x faster test execution)
+- **ADR-008**: Migrated from Jest to Vitest (significantly faster test execution)
 - **ADR-009**: Hybrid memory backend (SQLite + HiveMemory) as default
 - **ADR-010**: Removed Deno support, focused on Node.js 20+ LTS
 
@@ -45,14 +45,14 @@ Complete restructure into 10 independent @hive-flow modules:
 #### HiveMemory Vector Search
 - **fast HNSW-indexed** search with HNSW indexing
 - Unified memory backend replacing 6+ fragmented systems
-- Quantization support (4-32x memory reduction)
+- Quantization support (significant memory reduction)
 - GNN-enhanced context retrieval (+12.4% accuracy)
 
 #### Startup & Execution
 - **CLI cold start**: 20ms (96% faster, target: 500ms)
-- **Agent spawn**: 5ms (3.69x faster than v2)
+- **Agent spawn**: 5ms (faster than v2)
 - **Memory reduction**: 83.1% achieved
-- **Task orchestration**: 2.8-4.4x parallel speedup
+- **Task orchestration**: improved parallel speedup
 
 ### 🔧 New @hive-flow Modules
 
@@ -70,7 +70,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Hybrid SQLite + vector storage
 - Cross-session persistence
 - GNN-enhanced retrieval
-- 4-32x quantization support
+- Multi-level quantization support
 
 #### 3. `@hive-flow/integration` - Hive Flow Integration
 - Deep integration with hive-flow
@@ -115,7 +115,7 @@ Complete restructure into 10 independent @hive-flow modules:
 #### 8. `@hive-flow/testing` - TDD Framework
 - London School TDD methodology
 - Mock-first approach
-- Vitest test runner (10x faster)
+- Vitest test runner (significantly faster)
 - Cross-platform test execution
 - Security-focused test patterns
 - Comprehensive coverage reporting
@@ -227,14 +227,14 @@ Complete restructure into 10 independent @hive-flow modules:
 ### 📊 Metrics & Benchmarks
 
 #### Performance Achievements
-| Metric | v2 Baseline | v3 Target | v3 Actual | Improvement |
-|--------|-------------|-----------|-----------|-------------|
-| Flash Attention | 1x | Flash Attention optimization | 4.2x | ✅ 320% faster |
-| Vector Search | 1x | HNSW-indexed | 8,500x | ✅ 850,000% faster |
-| Memory Usage | 100% | 25-50% | 16.9% | ✅ 83.1% reduction |
-| CLI Startup | 500ms | <500ms | 20ms | ✅ 96% faster |
-| Agent Spawn | 18.5ms | <10ms | 5ms | ✅ 73% faster |
-| Test Execution | 1x | 10x | 12x | ✅ 1,100% faster |
+| Metric | v2 Baseline | v3 Target | v3 Actual |
+|--------|-------------|-----------|-----------|
+| Flash Attention | baseline | Flash Attention optimization | Validated |
+| Vector Search | baseline | HNSW-indexed | HNSW-indexed |
+| Memory Usage | 100% | 25-50% | 16.9% |
+| CLI Startup | 500ms | <500ms | 20ms |
+| Agent Spawn | 18.5ms | <10ms | 5ms |
+| Test Execution | baseline | faster (Vitest) | exceeds target |
 
 #### Code Quality
 - **Test Coverage**: 87.3% (up from 62%)

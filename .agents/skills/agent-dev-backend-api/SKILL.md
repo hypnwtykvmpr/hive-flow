@@ -246,7 +246,7 @@ console.log(`Context accuracy improved by ${relevantEndpoints.improvementPercent
 ### For Large Schemas: Flash Attention Processing
 
 ```typescript
-// Process large API schemas 4-7x faster
+// Process large API schemas faster
 if (schemaSize > 1024) {
   const result = await hiveMemory.flashAttention(
     queryEmbedding,

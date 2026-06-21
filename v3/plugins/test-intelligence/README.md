@@ -213,7 +213,7 @@ const result = await mcp.invoke('test/mutation-optimize', {
 //     { mutation: 'null_check at line 67', reason: 'No test covers null input' }
 //   ],
 //   timeSpent: '45s',
-//   timeVsFullRun: '12x faster'
+//   timeVsFullRun: 'faster than full run'
 // }
 ```
 

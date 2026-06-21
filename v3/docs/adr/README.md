@@ -37,8 +37,8 @@
 
 | Metric | Target | Status |
 |--------|--------|--------|
-| HNSW Search | 150x-12,500x faster | ✅ Achieved |
-| Flash Attention | 2.49x-7.47x speedup | ✅ Achieved (alpha.102) |
+| HNSW Search | Substantially faster | ✅ Achieved |
+| Flash Attention | Validated optimization | ✅ Achieved (alpha.102) |
 | Memory Reduction | 50-75% | ✅ Achieved |
 | MCP Response | <100ms | ✅ Achieved |
 | CLI Startup | <500ms | ✅ Achieved |
@@ -51,9 +51,9 @@
 | EWC++ Consolidation | ✅ Real | ~600 | Fisher matrix, prevents forgetting |
 | MoE Router | ✅ Real | ~500 | 8 experts with gating network |
 | Flash Attention | ✅ Real | ~500 | O(N) block attention |
-| LoRA Adapter | ✅ Real | ~400 | 128x compression (rank=8) |
+| LoRA Adapter | ✅ Real | ~400 | High compression (rank=8) |
 | Hyperbolic Embeddings | ✅ Real | - | Poincaré ball model |
-| Int8 Quantization | ✅ Real | - | 3.92x memory savings |
+| Int8 Quantization | ✅ Real | - | Significant memory savings |
 
 ## Security Status
 

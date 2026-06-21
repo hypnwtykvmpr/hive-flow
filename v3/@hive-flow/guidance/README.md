@@ -48,9 +48,9 @@ The gains are not "better answers." They are less rework, fewer runaway loops, a
 
 | Dimension | Without control plane | With control plane | Improvement |
 |-----------|-------|-------------------|-------------|
-| Autonomy duration | Minutes to hours | Days to weeks | **10x–100x** |
+| Autonomy duration | Minutes to hours | Days to weeks | Substantially longer |
 | Cost per successful outcome | Rises super-linearly as agents loop | Agents slow naturally under uncertainty | **30–60% lower** |
-| Reliability (tool + memory) | Frequent silent failures | Failures surface early, writes blocked before corruption | **2x–5x higher** |
+| Reliability (tool + memory) | Frequent silent failures | Failures surface early, writes blocked before corruption | Substantially higher |
 | Rule compliance over time | Degrades after ~30 min | Enforced mechanically at every step | **Constant** |
 
 The most important gain: **Hive Flow can now say "no" to itself and survive.** Self-limiting behavior, self-correction, and self-preservation compound over time.
@@ -274,12 +274,12 @@ const results = kernel.batchProcess([
 
 **Performance (10k events, SIMD + O2):**
 
-| Operation | JS | WASM SIMD | Gain |
-|-----------|-----|-----------|------|
-| Proof chain | 76ms | 61ms | 1.25x |
-| SHA-256 | 505k/s | 910k/s | 1.80x |
-| Secret scan (clean) | 402k/s | 676k/s | 1.68x |
-| Secret scan (dirty) | 185k/s | 362k/s | 1.96x |
+| Operation | JS | WASM SIMD |
+|-----------|-----|-----------|
+| Proof chain | 76ms | 61ms |
+| SHA-256 | 505k/s | 910k/s |
+| Secret scan (clean) | 402k/s | 676k/s |
+| Secret scan (dirty) | 185k/s | 362k/s |
 
 ## CLAUDE.md vs. CLAUDE.local.md — What Goes Where
 
@@ -1007,11 +1007,11 @@ Each module contributes measurable improvement to a specific failure mode. These
 |---|--------|-----------|-------------|
 | 1 | Hook Integration | Destructive tool actions | **50–90% reduction** |
 | 2 | Retriever Injection | Repeat instructions | **20–50% reduction** |
-| 3 | Ledger Persistence | Debug time | **5x–20x faster** |
+| 3 | Ledger Persistence | Debug time | **Substantially faster** |
 | 4 | Proof Envelope | Debate time on incidents | **30–70% less** |
 | 5 | Tool Gateway | Duplicate write actions | **80–95% reduction** |
 | 6 | Memory Write Gating | Silent corruption | **70–90% reduction** |
-| 7 | Conformance Test | Iteration speed | **10x faster** |
+| 7 | Conformance Test | Iteration speed | **Significantly faster** |
 | 8 | Trust Accumulation | Untrusted agent throughput | Throttled to **0.1x** |
 | 9 | Truth Anchors | Hallucinated contradictions | **80–95% reduction** |
 | 10 | Uncertainty Tracking | Low-confidence decisions | **60–80% reduction** |

@@ -174,11 +174,11 @@ interface PerfOptimizerConfig {
 
 | Metric | Target | Improvement vs Baseline |
 |--------|--------|------------------------|
-| Trace analysis (1M spans) | <5s | 24x faster |
-| Memory analysis (1GB heap) | <30s | 10x faster |
-| Query pattern detection (10K queries) | <1s | 600x faster |
-| Bundle analysis (10MB) | <10s | 6x faster |
-| Config optimization | <1min convergence | 1440x+ faster |
+| Trace analysis (1M spans) | <5s | faster |
+| Memory analysis (1GB heap) | <30s | faster |
+| Query pattern detection (10K queries) | <1s | faster |
+| Bundle analysis (10MB) | <10s | faster |
+| Config optimization | <1min convergence | faster |
 
 ## Security Considerations
 

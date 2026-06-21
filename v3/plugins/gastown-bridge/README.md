@@ -22,8 +22,8 @@ Gas Town is a 75,000-line Go codebase that implements:
 |-----------|----------|
 | Gas Town is Go-only | CLI bridge wraps `gt` and `bd` commands |
 | Go can't compile to WASM (syscalls) | Hybrid architecture: CLI for I/O, WASM for compute |
-| Formula parsing is slow in JS | Rust→WASM provides **352x speedup** |
-| Graph operations bottleneck | WASM DAG ops are **optimized faster** |
+| Formula parsing is slow in JS | Rust→WASM provides significant acceleration |
+| Graph operations bottleneck | WASM DAG ops are optimized faster |
 
 ## Features
 
@@ -31,9 +31,9 @@ Gas Town is a 75,000-line Go codebase that implements:
 
 | Operation | JavaScript | WASM | Speedup |
 |-----------|------------|------|---------|
-| Formula parse (TOML→AST) | 53ms | 0.15ms | **352x** |
-| Variable cooking | 35ms | 0.1ms | **350x** |
-| Batch cook (10 formulas) | 350ms | 1ms | **350x** |
+| Formula parse (TOML→AST) | 53ms | 0.15ms | **accelerated** |
+| Variable cooking | 35ms | 0.1ms | **accelerated** |
+| Batch cook (10 formulas) | 350ms | 1ms | **accelerated** |
 | DAG topological sort | 75ms | 0.5ms | **optimized** |
 | Cycle detection | 45ms | 0.3ms | **optimized** |
 | Critical path analysis | 120ms | 0.8ms | **optimized** |
@@ -93,17 +93,17 @@ Seamlessly sync between Gas Town's Beads and Hive Flow's HiveMemory:
 | **Agent Roles** | Mayor, Polecats, Crew | Hierarchical swarm | Interoperable |
 | **Crash Recovery** | GUPP hooks | Session persistence | Combined |
 | **Work Distribution** | Slinging | Task orchestration | Bridge via sling tool |
-| **Pattern Search** | N/A | HNSW (slow JS) | HNSW WASM (1000x faster) |
+| **Pattern Search** | N/A | HNSW (slow JS) | HNSW WASM (accelerated) |
 
 ### Performance Comparison
 
 | Metric | Pure JavaScript | This Plugin (WASM) | Improvement |
 |--------|-----------------|-------------------|-------------|
-| Formula parse | 53ms | 0.15ms | 352x faster |
-| 100-node DAG sort | 75ms | 0.5ms | optimized faster |
-| Pattern search (10k) | 5000ms | 5ms | 1000x faster |
-| Memory usage | 48MB | 12MB | 4x reduction |
-| Startup time | 850ms | 120ms | 7x faster |
+| Formula parse | 53ms | 0.15ms | accelerated |
+| 100-node DAG sort | 75ms | 0.5ms | optimized |
+| Pattern search (10k) | 5000ms | 5ms | accelerated |
+| Memory usage | 48MB | 12MB | lower memory |
+| Startup time | 850ms | 120ms | faster |
 
 ### Architecture Comparison
 
@@ -162,7 +162,7 @@ const ready = await plugin.tools.gt_beads_ready({
   rig: 'main',
 });
 
-// Cook a formula (WASM-accelerated, 352x faster)
+// Cook a formula (WASM-accelerated)
 const cooked = await plugin.tools.gt_formula_cook({
   formula: 'implement-feature',
   vars: {
@@ -182,7 +182,7 @@ await plugin.tools.gt_sling({
 ### WASM-Accelerated Operations
 
 ```typescript
-// Parse formula (352x faster than JS)
+// Parse formula (faster than JS)
 const ast = await plugin.tools.gt_wasm_parse_formula({
   content: `
     [formula]
@@ -201,7 +201,7 @@ const sorted = await plugin.tools.gt_wasm_resolve_deps({
   action: 'topo_sort',
 });
 
-// Batch cook formulas (352x faster)
+// Batch cook formulas (WASM-accelerated)
 const cooked = await plugin.tools.gt_wasm_cook_batch({
   formulas: formulaList,
   vars: [{ env: 'prod' }, { env: 'staging' }],
@@ -533,7 +533,7 @@ for (const formula of formulas) {
   });
 }
 
-// Do this (352x faster):
+// Do this (WASM-accelerated):
 const results = await hiveFlow.mcp.call('gt_wasm_cook_batch', {
   formulas: formulas.map(f => f.name),
   vars: formulas.map(f => f.vars),
@@ -612,8 +612,8 @@ interface GasTownBridgeConfig {
 │                             │  │              │ │              │  │ │
 │                             │  │ • Pattern    │ │ • SONA       │  │ │
 │                             │  │   search     │ │   patterns   │  │ │
-│                             │  │ • 1000x+     │ │ • MoE routing│  │ │
-│                             │  │   speedup    │ │ • EWC++      │  │ │
+│                             │  │ • accelerated│ │ • MoE routing│  │ │
+│                             │  │   search     │ │ • EWC++      │  │ │
 │                             │  └──────────────┘ └──────────────┘  │ │
 │                             │                                      │ │
 │                             │  [wasm-bindgen interface]            │ │

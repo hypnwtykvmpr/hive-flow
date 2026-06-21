@@ -622,7 +622,7 @@ Both platforms share the same `.hive-flow/` runtime:
 
 | Feature | Benefit |
 |---------|---------|
-| **Parallel Execution** | 4-8x faster for bulk tasks |
+| **Parallel Execution** | Significantly faster for bulk tasks |
 | **Cost Optimization** | Route simple tasks to cheaper workers |
 | **Context Preservation** | Shared memory across platforms |
 | **Best of Both** | Interactive + batch processing |

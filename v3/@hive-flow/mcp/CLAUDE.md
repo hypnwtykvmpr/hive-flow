@@ -46,7 +46,7 @@ Task({
 })
 ```
 
-**Benefits:** 75% cost reduction, 352x faster for Tier 1 tasks
+**Benefits:** 75% cost reduction, sub-millisecond for Tier 1 tasks
 
 ---
 

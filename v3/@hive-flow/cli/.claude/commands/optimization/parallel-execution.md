@@ -36,7 +36,7 @@ hive-flow parallel "Build REST API" --max-agents 8
 ```
 
 ## Performance Gains
-- 🚀 2.8-4.4x faster execution
+- 🚀 Significantly faster execution via parallelism
 - 💪 Optimal CPU utilization
 - 🔄 Automatic load balancing
 - 📈 Linear scalability with agents

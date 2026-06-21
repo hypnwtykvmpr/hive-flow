@@ -8,7 +8,7 @@
 Hive Flow V3 is a next-generation AI agent coordination system built on 10 Architecture Decision Records (ADRs). It provides a modular, security-first, high-performance platform for orchestrating multi-agent swarms with hierarchical mesh topology.
 
 V3 represents a complete architectural overhaul:
-- **10x faster testing** with Vitest
+- **Faster testing** with Vitest
 - **fast HNSW-indexed search** with HNSW indexing
 - **Flash Attention optimization**
 - **50-75% memory reduction**
@@ -38,7 +38,7 @@ V3 represents a complete architectural overhaul:
 |--------|--------|----------|
 | Event Bus (100k events) | <50ms | ~6ms |
 | Map Lookup (100k gets) | <20ms | ~16ms |
-| Array.find vs Map O(1) | N/A | 978x speedup |
+| Array.find vs Map O(1) | N/A | Map O(1) lookup |
 | Flash Attention | Flash Attention optimization | Validated |
 | HiveMemory Search | HNSW-indexed | HNSW indexed |
 
@@ -55,7 +55,7 @@ V3 represents a complete architectural overhaul:
 | ADR-005 | MCP-first API design |
 | ADR-006 | Unified memory service (HiveMemory) |
 | ADR-007 | Event sourcing for state changes |
-| ADR-008 | Vitest over Jest (10x faster) |
+| ADR-008 | Vitest over Jest (significantly faster) |
 | ADR-009 | Hybrid memory backend default |
 | ADR-010 | Remove Deno support (Node.js 20+ only) |
 

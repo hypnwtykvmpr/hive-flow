@@ -36,7 +36,7 @@ This directory contains helper scripts and utilities for V3 development.
   .claude/helpers/update-v3-progress.sh domain 3      # Mark 3 domains complete
   .claude/helpers/update-v3-progress.sh agent 8       # 8 agents active
   .claude/helpers/update-v3-progress.sh security 2    # 2 CVEs fixed
-  .claude/helpers/update-v3-progress.sh performance 2.5x # Performance boost
+  .claude/helpers/update-v3-progress.sh performance improved # Performance boost
   .claude/helpers/update-v3-progress.sh status        # Show current status
   ```
 

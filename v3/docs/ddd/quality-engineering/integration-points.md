@@ -91,7 +91,7 @@ export class QEMemoryBridge {
   }
 
   /**
-   * Search for similar patterns using HNSW (150x faster)
+   * Search for similar patterns using HNSW (fast indexed search)
    */
   async searchSimilarPatterns(
     query: string,
@@ -756,7 +756,7 @@ Coverage Report
         ▼
 ┌───────────────┐
 │ V3 Memory     │
-│ (HNSW Search) │  150x faster
+│ (HNSW Search) │  fast indexed
 └───────┬───────┘
         │
         ▼

@@ -200,18 +200,18 @@ interface HyperbolicReasoningConfig {
 | Parent-child relationship | No natural representation | Radial distance |
 | Sibling relationship | No natural representation | Angular distance |
 
-**Dimension Efficiency:** 32-dim hyperbolic embeddings match the quality of 512-dim Euclidean embeddings for hierarchical data (16x memory reduction).
+**Dimension Efficiency:** 32-dim hyperbolic embeddings match the quality of 512-dim Euclidean embeddings for hierarchical data (lower memory than 512-dim Euclidean).
 
 ## Performance Targets
 
 | Metric | Target | Improvement vs Euclidean |
 |--------|--------|-------------------------|
-| Embedding (10K nodes) | <10s | 3x faster |
-| Hyperbolic search (1M embeddings) | <5ms | 10x faster |
-| Taxonomic query | <10ms | 10x faster than graph traversal |
-| Hierarchy comparison (10K nodes) | <1s | 30x faster than tree edit distance |
-| Entailment graph (100K concepts) | <30s | 20x faster than pairwise |
-| Memory efficiency | 32-dim | 16x less than 512-dim Euclidean |
+| Embedding (10K nodes) | <10s | faster |
+| Hyperbolic search (1M embeddings) | <5ms | faster |
+| Taxonomic query | <10ms | faster than graph traversal |
+| Hierarchy comparison (10K nodes) | <1s | faster than tree edit distance |
+| Entailment graph (100K concepts) | <30s | faster than pairwise |
+| Memory efficiency | 32-dim | lower memory than 512-dim Euclidean |
 
 ## Security Considerations
 

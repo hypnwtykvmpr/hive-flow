@@ -146,7 +146,7 @@ mcp__hive-flow__memory_usage {
     category: "optimization|refactor|feature",
     description: "Can parallelize data processing",
     location: "src$processor.js",
-    potential_impact: "3x performance improvement",
+    potential_impact: "significant performance improvement",
     effort_required: "medium",
     identified_by: "scout-optimizer-1"
   })

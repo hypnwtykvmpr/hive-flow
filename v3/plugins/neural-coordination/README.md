@@ -187,10 +187,10 @@ interface NeuralCoordinationConfig {
 
 | Metric | Target | Improvement vs Baseline |
 |--------|--------|------------------------|
-| Consensus convergence (100 agents) | <100 rounds | 10x faster |
-| Communication overhead | <10% of total compute | 3x reduction |
-| Topology optimization (1000 nodes) | <1s | 60x faster |
-| Memory synchronization | <100ms eventual consistency | 10x faster |
+| Consensus convergence (100 agents) | <100 rounds | faster |
+| Communication overhead | <10% of total compute | reduced |
+| Topology optimization (1000 nodes) | <1s | faster |
+| Memory synchronization | <100ms eventual consistency | faster |
 | Emergent protocol training | <1 hour for basic tasks | Novel capability |
 
 ## Security Considerations

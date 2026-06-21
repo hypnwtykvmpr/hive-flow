@@ -9,7 +9,7 @@ description: "Implement ReasoningBank adaptive learning with HiveMemory's fast v
 
 Provides ReasoningBank adaptive learning patterns using HiveMemory's high-performance backend (fast HNSW-indexed). Enables agents to learn from experiences, judge outcomes, distill memories, and improve decision-making over time with 100% backward compatibility.
 
-**Performance**: fast pattern retrieval, 500x faster batch operations, <1ms memory access.
+**Performance**: fast pattern retrieval, high-throughput batch operations, <1ms memory access.
 
 ## Prerequisites
 
@@ -299,7 +299,7 @@ const newMemories = await distillMemories(
 
 - **Pattern Search**: fast (100µs vs 15ms)
 - **Memory Retrieval**: <1ms (with cache)
-- **Batch Insert**: 500x faster (2ms vs 1s for 100 patterns)
+- **Batch Insert**: substantially faster (2ms vs 1s for 100 patterns)
 - **Trajectory Judgment**: <5ms (including retrieval + analysis)
 - **Memory Distillation**: <50ms (consolidate 100 patterns)
 

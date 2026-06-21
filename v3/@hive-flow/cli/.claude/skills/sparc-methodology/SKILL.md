@@ -39,7 +39,7 @@ SPARC methodology emphasizes:
 
 - **Systematic Approach**: Structured phases from specification to completion
 - **Test-Driven Development**: Tests written before implementation
-- **Parallel Execution**: Concurrent agent coordination for 2.8-4.4x speed improvements
+- **Parallel Execution**: Concurrent agent coordination for improved execution speed
 - **Memory Integration**: Persistent knowledge sharing across agents and sessions
 - **Quality First**: Comprehensive reviews, testing, and validation
 - **Modular Design**: Clean separation of concerns with clear interfaces
@@ -1058,7 +1058,7 @@ mcp__hive-flow__token_usage {
 **Proven Results**:
 - SWE-Bench solve-rate claims require current benchmark evidence
 - **32.3%** token reduction through optimizations
-- **2.8-4.4x** speed improvement with parallel execution
+- Improved execution speed with parallel execution
 - **27+** neural models for pattern learning
 - **90%+** test coverage standard
 

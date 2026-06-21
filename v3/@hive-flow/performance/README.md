@@ -145,21 +145,21 @@ import { V3_PERFORMANCE_TARGETS, meetsTarget } from '@hive-flow/performance';
 // Built-in targets
 V3_PERFORMANCE_TARGETS = {
   // Startup Performance
-  'cli-cold-start': 500,        // <500ms (5x faster)
+  'cli-cold-start': 500,        // <500ms
   'cli-warm-start': 100,        // <100ms
-  'mcp-server-init': 400,       // <400ms (4.5x faster)
-  'agent-spawn': 200,           // <200ms (4x faster)
+  'mcp-server-init': 400,       // <400ms
+  'agent-spawn': 200,           // <200ms
 
   // Memory Operations
   'vector-search': 1,
   'hnsw-indexing': 10,
-  'memory-write': 5,            // <5ms (10x faster)
+  'memory-write': 5,            // <5ms
   'cache-hit': 0.1,             // <0.1ms
 
   // Swarm Coordination
   'agent-coordination': 50,     // <50ms
   'task-decomposition': 20,     // <20ms
-  'consensus-latency': 100,     // <100ms (5x faster)
+  'consensus-latency': 100,     // <100ms
   'message-throughput': 0.1,    // <0.1ms per message
 
   // SONA Learning
