@@ -1792,8 +1792,8 @@ Workers run automatically based on context, or dispatch manually via MCP tools.
 | **TestGaps** | `testgaps` | Test coverage analysis | Code changes without tests |
 
 ```bash
-hive-flow worker dispatch --trigger audit --context "./src"
-hive-flow worker status
+hive-flow hooks worker dispatch --trigger audit --context "./src"
+hive-flow hooks worker status
 ```
 
 </details>
@@ -3274,10 +3274,10 @@ Discover and install community plugins from the **live IPFS registry** with 19 o
 |---------|-------------|
 | `plugins list` | List available plugins with live ratings |
 | `plugins rate` | Rate a plugin (1-5 stars) |
-| `transfer plugin-search` | Search plugins by type or category |
-| `transfer plugin-info` | Get plugin details and dependencies |
-| `transfer plugin-featured` | Browse featured plugins |
-| `transfer plugin-official` | List official/verified plugins |
+| `plugins search` | Search plugins by type or category |
+| `plugins info` | Get plugin details and dependencies |
+| `plugins list --featured` | Browse featured plugins |
+| `plugins list --official` | List official/verified plugins |
 
 ```bash
 # List plugins with live ratings from Cloud Function
@@ -3290,13 +3290,13 @@ hive-flow plugins list --type integration
 hive-flow plugins rate --name @hive-flow/embeddings --rating 5
 
 # Search for MCP tool plugins
-hive-flow transfer plugin-search --type "mcp-tool" --verified
+hive-flow plugins search --query "mcp-tool" --type "mcp-tool" --verified
 
 # Get plugin info
-hive-flow transfer plugin-info --name "semantic-code-search"
+hive-flow plugins info --name "semantic-code-search"
 
 # List official plugins
-hive-flow transfer plugin-official
+hive-flow plugins list --official
 ```
 
 #### Live IPFS Plugin Registry
@@ -3897,7 +3897,7 @@ hive-flow issues handoff #123 \
   --progress 80
 
 # 2. Target accepts handoff
-hive-flow issues accept #123 --as security-architect
+hive-flow issues claim #123 --agent security-architect
 
 # 3. Work continues with full context
 ```
@@ -4693,8 +4693,8 @@ hive-flow embeddings batch documents.txt -o vectors.json
 hive-flow embeddings search "query" --index ./vectors
 
 # Model Router
-hive-flow router route "task description"
-hive-flow router stats
+hive-flow route task "task description"
+hive-flow route stats
 
 # MCP Server
 hive-flow mcp start
@@ -5248,7 +5248,7 @@ const consensus = calculateSecurityConsensus(assessments);
 | Block PII in outputs | Post-task validation | `aidefence_has_pii` |
 | Learn from detections | Feedback loop | `aidefence_learn` |
 | Audit security events | Regular review | `security defend --stats` |
-| Update patterns | Pull from store | `transfer store-download --id security-essentials` |
+| Update patterns | Pull from store | `hooks transfer store download --name security-essentials` |
 
 </details>
 
