@@ -8,7 +8,7 @@
 
 
 # **Production-ready multi-agent AI orchestration for Claude Code**
-*Deploy 60+ specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
+*Deploy 18 specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
 
 </div>
 
@@ -51,7 +51,7 @@ flowchart TB
         CLM[Claims<br/>Human-Agent Coord]
     end
 
-    subgraph AGENTS["🤖 60+ Agents"]
+    subgraph AGENTS["🤖 18 Agents"]
         AG1[coder]
         AG2[tester]
         AG3[reviewer]
@@ -147,7 +147,7 @@ hive-flow init --wizard
 ---
 ### Key Capabilities
 
-🤖 **60+ Specialized Agents** - Ready-to-use AI agents for coding, code review, testing, security audits, documentation, and DevOps. Each agent is optimized for its specific role.
+🤖 **18 Specialized Agents** - Ready-to-use AI agents for coding, code review, testing, security audits, documentation, and DevOps. Each agent is optimized for its specific role.
 
 🐝 **Coordinated Agent Teams** - Run unlimited agents simultaneously in organized swarms. Agents spawn sub-workers, communicate, share context, and divide work automatically using hierarchical (queen/workers) or mesh (peer-to-peer) patterns.
 
@@ -174,7 +174,7 @@ Every request flows through four layers: from your CLI or Claude Code interface,
 |-------|------------|--------------|
 | User | Claude Code, CLI | Your interface to control and run commands |
 | Orchestration | MCP Server, Router, Hooks | Routes requests to the right agents |
-| Agents | 60+ types | Specialized workers (coder, tester, reviewer...) |
+| Agents | 18 canonical types | Specialized workers (implementer, tester, verifier...) |
 | Providers | Anthropic, OpenAI, Google, Ollama | AI models that power reasoning |
 
 </details>
@@ -866,7 +866,7 @@ flowchart TB
 
     subgraph Agents["🤖 Agent Layer"]
         Queen[Queen Coordinator]
-        Workers[60+ Specialized Agents]
+        Workers[18 Specialized Agents]
         Swarm[Swarm Manager]
     end
 
@@ -1067,7 +1067,7 @@ Connect Hive Flow to your development environment.
 <details>
 <summary>🔌 <strong>MCP Setup</strong> — Connect Hive Flow to Any AI Environment</summary>
 
-Hive Flow runs as an MCP (Model Context Protocol) server, allowing you to connect it to any MCP-compatible AI client. This means you can use Hive Flow's 60+ agents, swarm coordination, and self-learning capabilities from Claude Desktop, VS Code, Cursor, Windsurf, ChatGPT, and more.
+Hive Flow runs as an MCP (Model Context Protocol) server, allowing you to connect it to any MCP-compatible AI client. This means you can use Hive Flow's 18 agents, swarm coordination, and self-learning capabilities from Claude Desktop, VS Code, Cursor, Windsurf, ChatGPT, and more.
 
 ### Quick Add Command
 
@@ -1428,25 +1428,37 @@ chain.verify(envelope); // true — tamper-evident
 Comprehensive capabilities for enterprise-grade AI agent orchestration.
 
 <details>
-<summary>📦 <strong>Features</strong> — 60+ Agents, Swarm Topologies, MCP Tools & Security</summary>
+<summary>📦 <strong>Features</strong> — 18 Agents, Swarm Topologies, MCP Tools & Security</summary>
 
 Comprehensive feature set for enterprise-grade AI agent orchestration.
 
 <details open>
-<summary>🤖 <strong>Agent Ecosystem</strong> — 60+ specialized agents across 8 categories</summary>
+<summary>🤖 <strong>Agent Ecosystem</strong> — 18 canonical agent types</summary>
 
 Pre-built agents for every development task, from coding to security audits.
 
-| Category | Agent Count | Key Agents | Purpose |
-|----------|-------------|------------|---------|
-| **Core Development** | 5 | coder, reviewer, tester, planner, researcher | Daily development tasks |
-| **V3 Specialized** | 10 | queen-coordinator, security-architect, memory-specialist | Enterprise orchestration |
-| **Swarm Coordination** | 5 | hierarchical-coordinator, mesh-coordinator, adaptive-coordinator | Multi-agent patterns |
-| **Consensus & Distributed** | 7 | byzantine-coordinator, raft-manager, gossip-coordinator | Fault-tolerant coordination |
-| **Performance** | 5 | perf-analyzer, performance-benchmarker, task-orchestrator | Optimization & monitoring |
-| **GitHub & Repository** | 9 | pr-manager, code-review-swarm, issue-tracker, release-manager | Repository automation |
-| **SPARC Methodology** | 6 | sparc-coord, specification, pseudocode, architecture | Structured development |
-| **Specialized Dev** | 8 | backend-dev, mobile-dev, ml-developer, cicd-engineer | Domain expertise |
+**Canonical Agent Types** (18 types from `roster.ts`):
+
+| Canonical Type | Role | Marketing Alias |
+|----------------|------|-----------------|
+| `investigator` | Investigates codebases and issues | — |
+| `researcher` | Researches topics and requirements | — |
+| `verifier` | Verifies and reviews code | `reviewer` |
+| `architect` | Designs system architecture | — |
+| `planner` | Plans tasks and milestones | — |
+| `implementer` | Writes and implements code | `coder` |
+| `tester` | Writes and runs tests | — |
+| `auditor` | Audits code and compliance | — |
+| `bug-hunter` | Hunts for bugs proactively | — |
+| `debugger` | Debugs failures and issues | — |
+| `security-architect` | Designs security architecture | — |
+| `security-reviewer` | Reviews code for security issues | — |
+| `red-team` | Adversarial attack simulation | — |
+| `blue-team` | Defensive security response | — |
+| `performance-engineer` | Optimizes performance | `perf-analyzer` |
+| `memory-specialist` | Manages memory and embeddings | — |
+| `documenter` | Writes documentation | — |
+| `coordinator` | Coordinates swarms and hives | `queen-coordinator` |
 
 </details>
 
@@ -6171,7 +6183,7 @@ export HIVE_FLOW_HNSW_EF=100
 │ Pattern Matching      │ Self-learning (ReasoningBank)       │
 │ Security              │ CVE remediation + strict validation │
 │ Modular Architecture  │ 18 @hive-flow/* packages          │
-│ Agent Coordination    │ 60+ specialized agents              │
+│ Agent Coordination    │ 18 specialized agents               │
 │ Token Efficiency      │ 32% reduction with optimization     │
 └───────────────────────┴─────────────────────────────────────┘
 ```
