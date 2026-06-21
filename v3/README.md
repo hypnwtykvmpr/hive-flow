@@ -1,6 +1,6 @@
 # Hive Flow V3
 
-> **Modular AI Agent Coordination System** - A complete reimagining of Hive-Flow with 15-agent hierarchical mesh swarm coordination.
+> **Modular AI Agent Coordination System** - A complete reimagining of Hive-Flow with 50-agent hierarchical mesh swarm coordination.
 
 
 ## Introduction
@@ -68,7 +68,7 @@ V3 represents a complete architectural overhaul:
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
 │  │   security   │  │    memory    │  │    swarm     │          │
-│  │  CVE fixes   │  │   HiveMemory    │  │ 15-agent     │          │
+│  │  CVE fixes   │  │   HiveMemory    │  │ 50-agent     │          │
 │  │  validation  │  │   HNSW       │  │ coordination │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │                                                                 │
@@ -96,105 +96,58 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages
-│   ├── security/                    # Security module
+├── @hive-flow/                    # Modular packages (22 packages)
+│   ├── aidefence/                   # AI-threat defence & PII scanning
+│   ├── browser/                     # Browser automation (Playwright/CDP)
+│   ├── claims/                      # Claims-based authorisation
+│   ├── cli/                         # CLI module (40 commands)
+│   │   ├── bin/                     # Executable
 │   │   └── src/
-│   │       ├── index.ts             # Password hashing, validators
-│   │       └── ...
-│   │
-│   ├── memory/                      # Memory module
-│   │   ├── src/
-│   │   │   ├── hivememory-backend.ts   # HiveMemory integration
-│   │   │   ├── hnsw-index.ts        # HNSW vector indexing
-│   │   │   ├── hybrid-backend.ts    # SQLite + HiveMemory
-│   │   │   ├── sqlite-backend.ts    # SQLite backend
-│   │   │   ├── cache-manager.ts     # Caching layer
-│   │   │   └── domain/              # DDD entities
-│   │   ├── benchmarks/              # Performance benchmarks
-│   │   └── examples/                # Usage examples
-│   │
-│   ├── swarm/                       # Swarm coordination
-│   │   └── src/
-│   │       ├── unified-coordinator.ts  # Main coordinator
-│   │       ├── topology-manager.ts     # Topology management
-│   │       ├── consensus/              # Consensus protocols
-│   │       └── domain/                 # DDD entities
-│   │
-│   ├── integration/                 # hive-flow integration
+│   │       └── commands/            # Command handlers
+│   ├── codex/                       # Dual-mode Claude + Codex collaboration
+│   ├── context/                     # Context management & autopilot
+│   ├── deployment/                  # Deployment & release management
+│   ├── e2e/                         # End-to-end integration tests
+│   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
+│   ├── guidance/                    # Governance control plane
+│   ├── hooks/                       # 17 hooks + 12 background workers
+│   ├── integration/                 # hive-flow integration bridge
 │   │   └── src/
 │   │       ├── hive-flow-bridge.ts  # Core bridge
-│   │       ├── agent-adapter.ts        # Agent adaptation
-│   │       └── sona-adapter.ts         # SONA learning
-│   │
-│   ├── performance/                 # Performance module
-│   │   ├── src/
-│   │   │   └── framework/           # Benchmark framework
-│   │   └── benchmarks/
-│   │       ├── startup/             # Startup benchmarks
-│   │       └── attention/           # Flash Attention
-│   │
+│   │       ├── agent-adapter.ts     # Agent adaptation
+│   │       └── sona-adapter.ts      # SONA learning
+│   ├── mcp/                         # MCP server & tools
+│   ├── memory/                      # HiveMemory + HNSW vector search
+│   │   └── src/
+│   │       ├── hivememory-backend.ts
+│   │       ├── hnsw-index.ts
+│   │       ├── hybrid-backend.ts
+│   │       └── sqlite-backend.ts
 │   ├── neural/                      # Neural/SONA module
 │   │   └── src/
 │   │       ├── algorithms/          # Learning algorithms
 │   │       └── modes/               # Neural modes
-│   │
-│   ├── cli/                         # CLI module
-│   │   ├── bin/                     # Executable
+│   ├── performance/                 # Performance profiling & benchmarks
+│   ├── plugins/                     # Plugin system & IPFS registry
+│   ├── providers/                   # LLM provider integrations
+│   ├── security/                    # Input validation, CVE remediation
+│   ├── shared/                      # Shared types, events, resilience
+│   ├── swarm/                       # Swarm coordination
 │   │   └── src/
-│   │       └── commands/            # Command handlers
-│   │
-│   ├── testing/                     # Testing framework
-│   │   └── src/
-│   │       ├── fixtures/            # Test fixtures
-│   │       ├── mocks/               # Mock services
-│   │       ├── helpers/             # Test helpers
-│   │       └── regression/          # Regression tests
-│   │
-│   ├── shared/                      # Shared utilities
-│   │   └── src/
-│   │       ├── types/               # Shared types
-│   │       ├── events/              # Event system
-│   │       ├── core/                # Core interfaces
-│   │       ├── hooks/               # Hook system
-│   │       ├── resilience/          # Retry, circuit breaker
-│   │       ├── plugins/             # Plugin system
-│   │       └── security/            # Security utilities
-│   │
-│   └── deployment/                  # Deployment module
-│       └── src/                     # Release management
-│
-├── mcp/                             # MCP Server
-│   ├── server.ts                    # Main server
-│   ├── tools/                       # MCP tools
-│   │   ├── agent-tools.ts
-│   │   ├── swarm-tools.ts
-│   │   ├── memory-tools.ts
-│   │   └── hooks-tools.ts
-│   └── transport/                   # Transport layers
-│       ├── stdio.ts
-│       ├── http.ts
-│       └── websocket.ts
-│
-├── __tests__/                       # Integration tests
-│   └── integration/
-│       ├── memory-integration.test.ts
-│       ├── swarm-integration.test.ts
-│       ├── mcp-integration.test.ts
-│       └── workflow-integration.test.ts
+│   │       ├── unified-coordinator.ts
+│   │       ├── topology-manager.ts
+│   │       └── consensus/
+│   └── testing/                     # TDD London School framework
+│       └── src/
+│           ├── fixtures/
+│           ├── mocks/
+│           └── helpers/
 │
 ├── docs/                            # Documentation
-│   ├── README.md                    # Docs overview
-│   ├── guides/                      # User guides
-│   └── implementation/              # Implementation details
-│
 ├── helpers/                         # Cross-platform helpers
 │   ├── hive-flow-v3.sh            # Master helper (Linux/macOS)
-│   ├── hive-flow-v3.ps1           # Master helper (Windows)
-│   └── templates/                   # Helper templates
-│
+│   └── hive-flow-v3.ps1           # Master helper (Windows)
 ├── scripts/                         # Utility scripts
-│   └── quick-benchmark.mjs          # Quick perf test
-│
 ├── index.ts                         # Main entry point
 ├── swarm.config.ts                  # Swarm configuration
 ├── vitest.config.ts                 # Test configuration
@@ -230,7 +183,7 @@ const results = await memory.search({ query: 'knowledge', limit: 10 });
 ```
 
 ### @hive-flow/swarm
-15-agent hierarchical mesh coordination with consensus protocols.
+50-agent hierarchical mesh coordination with consensus protocols.
 
 ```typescript
 import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
@@ -434,7 +387,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | 50-75% |
-| **Code** | Total lines | <5,000 |
+| **Code** | Package count | 22 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -479,4 +432,4 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ---
 
-**Built with the SPARC methodology and 15-agent hierarchical mesh coordination.**
+**Built with the SPARC methodology and 50-agent hierarchical mesh coordination.**

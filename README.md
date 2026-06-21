@@ -393,6 +393,10 @@ hive-flow init --global --claude-code
 | `--keypair-only` | Enroll only the Permission Guard override keypair |
 | `--credentials` | Create per-machine KEK and empty credential vault |
 | `--degraded` | Allow degraded credential backend (CI/test lanes) |
+| `--project-root` | Project root containing enforcement sources |
+| `--home` | Override target home directory |
+| `--user-settings` | Override Claude Code user settings path |
+| `--bin` | Override relocated enforcement bin directory |
 
 `hive-flow init` options:
 
@@ -406,6 +410,14 @@ hive-flow init --global --claude-code
 | `--only-claude` | Only create `.claude/` directory |
 | `--codex` | Initialize for OpenAI Codex CLI |
 | `--dual` | Initialize for both Claude Code and Codex |
+| `--start-all` | Auto-start daemon, memory, and swarm after init |
+| `--start-daemon` | Auto-start daemon after init |
+| `--with-embeddings` | Initialize ONNX embedding subsystem with hyperbolic support |
+| `--embedding-model` | ONNX embedding model (`all-MiniLM-L6-v2` or `all-mpnet-base-v2`) |
+| `-y`, `--yes` | Approve non-interactive global install prompts |
+| `--home` | Override target home directory for global adapter install |
+| `--user-settings` | Override Claude Code user settings path |
+| `--project-root` | Override package/project root containing enforcement sources |
 
 </details>
 
@@ -1326,6 +1338,14 @@ All configurations support these environment variables:
 | `HIVE_FLOW_LOG_LEVEL` | Logging level (debug, info, warn, error) | Optional |
 | `HIVE_FLOW_TOOL_GROUPS` | MCP tool groups to enable (comma-separated) | Optional |
 | `HIVE_FLOW_TOOL_MODE` | Preset tool mode (develop, pr-review, devops, etc.) | Optional |
+| `HIVE_FLOW_HOME` | Home directory override for statusline/state files (fallback: `~/`) | Optional |
+| `HIVE_FLOW_PROJECT_ROOT` | Project root path override (fallback: `CLAUDE_PROJECT_DIR` then `cwd`) | Optional |
+| `HIVE_FLOW_DAEMON` | Set to `'1'` to mark process as daemon mode | Internal |
+| `HIVE_FLOW_CREDENTIAL_HOLDER_REQUIRED` | Set to `'1'` to require credential holder feature | Optional |
+| `HIVE_FLOW_CREDENTIAL_HOLDER_OWNER` | Owner-mode flag for credential holder | Optional |
+| `HIVE_FLOW_CREDENTIAL_HOLDER_SOCKET` | Socket path for credential holder IPC | Optional |
+| `HIVE_FLOW_CONTEXT_AUTOPILOT` | Enable/disable context autopilot (default: `true`) | Optional |
+| `HIVE_FLOW_MEMORY_BACKEND` | Memory backend selection (`hybrid`/`sqlite`/`json`/`hivememory`) | Optional |
 
 #### MCP Tool Groups
 
@@ -1478,14 +1498,37 @@ Pre-built agents for every development task, from coding to security audits.
 
 | Category | Agent Count | Key Agents | Purpose |
 |----------|-------------|------------|---------|
-| **Core Development** | 5 | coder, reviewer, tester, planner, researcher | Daily development tasks |
-| **V3 Specialized** | 10 | queen-coordinator, security-architect, memory-specialist | Enterprise orchestration |
+| **Core Development** | 5 | implementer, verifier, tester, planner, researcher | Daily development tasks |
+| **V3 Specialized** | 10 | coordinator, security-architect, memory-specialist | Enterprise orchestration |
 | **Swarm Coordination** | 5 | hierarchical-coordinator, mesh-coordinator, adaptive-coordinator | Multi-agent patterns |
 | **Consensus & Distributed** | 7 | byzantine-coordinator, raft-manager, gossip-coordinator | Fault-tolerant coordination |
 | **Performance** | 5 | perf-analyzer, performance-benchmarker, task-orchestrator | Optimization & monitoring |
 | **GitHub & Repository** | 9 | pr-manager, code-review-swarm, issue-tracker, release-manager | Repository automation |
 | **SPARC Methodology** | 6 | sparc-coord, specification, pseudocode, architecture | Structured development |
 | **Specialized Dev** | 8 | backend-dev, mobile-dev, ml-developer, cicd-engineer | Domain expertise |
+
+**Canonical Agent Types** (18 types from `roster.ts`):
+
+| Canonical Type | Role | Marketing Alias |
+|----------------|------|-----------------|
+| `investigator` | Investigates codebases and issues | — |
+| `researcher` | Researches topics and requirements | — |
+| `verifier` | Verifies and reviews code | `reviewer` |
+| `architect` | Designs system architecture | — |
+| `planner` | Plans tasks and milestones | — |
+| `implementer` | Writes and implements code | `coder` |
+| `tester` | Writes and runs tests | — |
+| `auditor` | Audits code and compliance | — |
+| `bug-hunter` | Hunts for bugs proactively | — |
+| `debugger` | Debugs failures and issues | — |
+| `security-architect` | Designs security architecture | — |
+| `security-reviewer` | Reviews code for security issues | — |
+| `red-team` | Adversarial attack simulation | — |
+| `blue-team` | Defensive security response | — |
+| `performance-engineer` | Optimizes performance | `perf-analyzer` |
+| `memory-specialist` | Manages memory and embeddings | — |
+| `documenter` | Writes documentation | — |
+| `coordinator` | Coordinates swarms and hives | `queen-coordinator` |
 
 </details>
 
@@ -1806,7 +1849,24 @@ hive-flow worker status
 | **Google** | Gemini 3 Pro, Gemini 3 Flash, Gemini 3 Deep Think | 1M+ context, multimodal, Deep Think reasoning | $0.075-7/1M tokens |
 | **xAI** | Grok 4.1, Grok 3 | Truth-seeking, real-time data, 200K H100 training | $2-10/1M tokens |
 | **Mistral** | Mistral Large 3 (675B MoE), Codestral | 92% GPT-5.2 performance at 15% cost | $0.50-8/1M tokens |
-| **Meta/Ollama** | Llama 4 Scout/Maverick, DeepSeek V3, Qwen 3 | Local, free, up to 10M context (Scout) | Free |
+| **DeepSeek** | deepseek-v4-pro, deepseek-v4-flash | Fast inference, code-optimized, cost-effective | Low cost |
+| **OpenRouter** | MiniMax M3, Grok 4.3, Kimi K2.6, GLM 5.2, Qwen 3.7 Plus | Multi-model proxy; tier pools per task complexity | Pay-per-use |
+| **Meta/Ollama** | Llama 4 Scout/Maverick | Local, free, up to 10M context (Scout) | Free |
+| **Qwen / qwen-cli** | Qwen 3 series | First-class provider; also available as CLI agent | Low cost |
+| **LM Studio** | Any local model | Local inference server | Free |
+| **Cohere** | Command series | Enterprise retrieval-augmented generation | API |
+| **GitHub Copilot** | copilot | IDE-integrated completion | Subscription |
+
+**Platform CLI Providers** (headless agents via `agent_spawn`):
+
+| Provider | Default Model | Notes |
+|----------|--------------|-------|
+| `codex-cli` | gpt-5.5 | OpenAI Codex headless agent |
+| `gemini-cli` | gemini-3.5-flash | Google Gemini headless agent |
+| `cursor-cli` | auto | Cursor headless agent |
+| `anthropic-cli` | sonnet | Claude headless agent |
+
+**Credential Vault:** Use `hive-flow install --global --credentials` to create a per-machine KEK and encrypted credential vault, avoiding plain-text API key exposure in config files.
 
 <details>
 <summary>⚖️ <strong>Provider Load Balancing</strong> — 4 strategies for optimal cost and performance</summary>
@@ -1857,7 +1917,7 @@ hive-flow worker status
 </details>
 
 <details>
-<summary>💻 <strong>CLI Commands</strong> — 26 commands with 140+ subcommands</summary>
+<summary>💻 <strong>CLI Commands</strong> — 40 commands with 140+ subcommands</summary>
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
@@ -1872,23 +1932,23 @@ hive-flow worker status
 | `status` | 3 | System status with watch mode (agents, tasks, memory) |
 | `workflow` | 6 | Workflow execution (run, validate, list, status, stop, template) |
 | `hooks` | 32 | Self-learning hooks (pre/post-edit, pre/post-command, route, explain, pretrain, session-*, intelligence/*, worker/*, progress) |
-| `hive-mind` | 6 | Queen-led coordination (init, spawn, status, task, optimize-memory, shutdown) |
+| `hive-mind` | 11 | Queen-led coordination (init, spawn, status, task, join, leave, consensus, broadcast, memory, optimize-memory, shutdown) |
 | `migrate` | 5 | V2→V3 migration (status, run, verify, rollback, breaking) |
-| `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
-| `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
+| `neural` | 9 | Neural pattern training (train, status, patterns, predict, optimize, benchmark, list, export, import) |
+| `security` | 6 | Security scanning (scan, cve, threats, audit, secrets, defend) |
 | `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
-| `providers` | 5 | AI providers (list, add, remove, test, configure) |
-| `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
-| `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 13 | Vector embeddings with ONNX, hyperbolic space, neural substrate |
+| `providers` | 5 | AI providers (list, configure, test, models, usage) |
+| `plugins` | 9 | Plugin management (list, search, install, uninstall, upgrade, toggle, info, create, rate) |
+| `deployment` | 6 | Deployment management (deploy, status, rollback, history, environments, logs) |
+| `embeddings` | 15 | Vector embeddings (init, generate, search, compare, collections, index, providers, chunk, normalize, hyperbolic, neural, models, cache, warmup, benchmark) |
 | `daemon` | 5 | Background workers (start, stop, status, trigger, enable) |
 | `progress` | 4 | V3 implementation progress (check, sync, summary, watch) |
-| `claims` | 4 | Authorization (check, grant, revoke, list) |
+| `claims` | 6 | Authorization (list, check, grant, revoke, roles, policies) |
 | `analyze` | 6 | Code analysis (diff, risk, classify, reviewers, file-risk, stats) |
 | `issues` | 10 | Human-agent claims (list, claim, release, handoff, status, stealable, steal, load, rebalance, board) |
-| `transfer-store` | 4 | Pattern marketplace via IPFS (list, search, download, publish) |
 | `update` | 2 | Auto-update system (check, apply) |
 | `route` | 3 | Intelligent routing (task, explain, coverage) |
+| `setup` | — | Agent-integration setup surface (MCP install across 7 agent CLIs) |
 
 </details>
 
@@ -2190,29 +2250,35 @@ Real-time development status display integrated directly into Claude Code's stat
 
 Claude Code pipes JSON session data via **stdin** to the statusline script after each assistant message (debounced ~300ms). The script reads this data and combines it with local project metrics to produce a single-line status output.
 
-**Output Format:**
+**Output Format (multi-row renderer):**
 ```
-▊ Hive Flow V3 ● hive-flow  │  ⎇ main  │  Opus 4.6  | ●42% ctx  | $0.15
-🏗️ DDD [●●●●○] 4/5  ⚡ Vector search  🤖 ◉ [12/8]  👥 3  🟢 CVE 3/3  💾 512MB  🧠 15%  📦 HiveMemory ●1.2K vectors
+▊ <project>  │  ⎇ <branch> +N ~N ?N ↑N ↓N  │  <model>  │  📖 N% ctx · N in/N out  │  $N.NN  │  ⏱ NhNm
+🤖 Claude opus N, sonnet N, haiku N  │  Codex N  (only providers with calls > 0)
+🪪 Swarm ◉ [N/50]  ♛N  ·  hives N this/N other
+🔧 Architecture    ADRs ●N/N
+📊 Memory  Embeddings N  │  Memories N  │  💾 NKB  │  🧪 Tests N  │  🔌 MCP N/N
+► ENFORCEMENT ON (NORMAL)  ·  daemon on  ·  Sessions N  ·  data fresh Ns
 ```
 
 | Indicator | Description | Source |
 |-----------|-------------|--------|
-| `▊ Hive Flow V3` | Project header | Always shown |
-| `● hive-flow` | GitHub user | `gh api user` CLI |
-| `⎇ main` | Current git branch | `git branch --show-current` |
-| `Opus 4.6` | Claude model name | Stdin JSON `model.display_name` |
-| `●42% ctx` | Context window usage | Stdin JSON `context_window.used_percentage` |
-| `$0.15` | Session cost | Stdin JSON `cost.total_cost_usd` |
-| `[●●●●○]` | DDD domain progress bar | `.hive-flow/metrics/v3-progress.json` |
-| `⚡ Vector search` | Vector search status | HiveMemory file stats |
-| `◉/○` | Swarm coordination status | Process detection |
-| `[12/8]` | Active agents / max agents | `ps aux` process count |
-| `👥 3` | Sub-agents spawned | Task tool agent count |
-| `🟢 CVE 3/3` | Security CVE remediation | `.hive-flow/security/audit-status.json` |
-| `💾 512MB` | Memory usage | Node.js process RSS |
-| `🧠 15%` | Intelligence score | Pattern count from HiveMemory |
-| `📦 HiveMemory ●1.2K` | HiveMemory vector count | File size estimate (`size / 2KB`) |
+| `▊ <project>` | Project header | Always shown |
+| `⎇ <branch>` | Current git branch + diff stats | `git branch --show-current` |
+| `<model>` | Claude model name | Stdin JSON `model.display_name` |
+| `📖 N% ctx` | Context window usage | Stdin JSON `context_window.used_percentage` |
+| `$N.NN` | Session cost | Stdin JSON `cost.total_cost_usd` |
+| `🤖 Claude opus N, sonnet N` | Provider call counts (>0 only) | `.hive-flow/data/store.json` |
+| `◉/○` | Swarm active / idle / no agents | `.hive-flow/data/store.json` |
+| `[N/50]` | Active agents / max agents (50) | `.hive-flow/data/store.json` |
+| `♛N` | Active queens | `.hive-flow/data/store.json` |
+| `hives N this/N other` | Hive counts this session / other sessions | `.hive-flow/data/store.json` |
+| `ADRs ●N/N` | ADR compliance count | `.hive-flow/metrics/` |
+| `Embeddings N` | Embedding count | HiveMemory / embeddings store |
+| `Memories N` | Memory entry count | `.hive-flow/memory/` |
+| `💾 NKB` | Memory store size in KB | Database size |
+| `🧪 Tests N` | Test file count | Project test directory |
+| `🔌 MCP N/N` | MCP tools loaded / total | MCP server |
+| `► ENFORCEMENT ON (NORMAL)` | Enforcement level footer | `.hive-flow/enforcement/` |
 
 **Setup (Automatic):**
 
@@ -2368,7 +2434,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 </details>
 
 <details>
-<summary>⌨️ <strong>V3 CLI Commands</strong> — 26 commands with 140+ subcommands</summary>
+<summary>⌨️ <strong>V3 CLI Commands</strong> — 40 commands with 140+ subcommands</summary>
 
 Complete command-line interface for all Hive Flow operations.
 
@@ -2388,25 +2454,26 @@ Complete command-line interface for all Hive Flow operations.
 | `start` | 3 | Service startup and quick launch |
 | `workflow` | 6 | Workflow execution and template management |
 | `hooks` | 17 | Self-learning hooks + 12 background workers |
-| `hive-mind` | 6 | Queen-led Byzantine fault-tolerant consensus |
+| `hive-mind` | 11 | Queen-led Byzantine fault-tolerant consensus (init, spawn, status, task, join, leave, consensus, broadcast, memory, optimize-memory, shutdown) |
 
 **Advanced Commands:**
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
 | `daemon` | 5 | Background worker daemon (start, stop, status, trigger, enable) |
-| `neural` | 5 | Neural pattern training (train, status, patterns, predict, optimize) |
-| `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
+| `neural` | 9 | Neural pattern training (train, status, patterns, predict, optimize, benchmark, list, export, import) |
+| `security` | 6 | Security scanning (scan, cve, threats, audit, secrets, defend) |
 | `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
-| `providers` | 5 | AI providers (list, add, remove, test, configure) |
-| `plugins` | 5 | Plugin management (list, install, uninstall, enable, disable) |
-| `deployment` | 5 | Deployment management (deploy, rollback, status, environments, release) |
-| `embeddings` | 4 | Vector embeddings (embed, batch, search, init) with optional hive-flow provider |
-| `claims` | 4 | Claims-based authorization (check, grant, revoke, list) |
+| `providers` | 5 | AI providers (list, configure, test, models, usage) |
+| `plugins` | 9 | Plugin management (list, search, install, uninstall, upgrade, toggle, info, create, rate) |
+| `deployment` | 6 | Deployment management (deploy, status, rollback, history, environments, logs) |
+| `embeddings` | 15 | Vector embeddings (init, generate, search, compare, collections, index, providers, chunk, normalize, hyperbolic, neural, models, cache, warmup, benchmark) |
+| `claims` | 6 | Claims-based authorization (list, check, grant, revoke, roles, policies) |
 | `migrate` | 5 | V2 to V3 migration with rollback support |
 | `process` | 4 | Background process management |
 | `doctor` | 1 | System diagnostics with health checks |
 | `completions` | 4 | Shell completions (bash, zsh, fish, powershell) |
+| `setup` | — | Agent-integration setup surface (MCP install across 7 agent CLIs) |
 
 **Quick Examples:**
 
@@ -3257,22 +3324,20 @@ Decentralized pattern marketplace for sharing and discovering community patterns
 
 | Command | Description |
 |---------|-------------|
-| `transfer-store search` | Search patterns by keyword, category, or rating |
-| `transfer-store info` | Get detailed info about a pattern |
-| `transfer-store download` | Download pattern with integrity verification |
-| `transfer-store publish` | Publish your patterns to the store |
-| `transfer-store featured` | Browse featured/curated patterns |
-| `transfer-store trending` | See what's popular |
+| `hooks transfer store list` | List available patterns in the store |
+| `hooks transfer store search` | Search patterns by keyword or category |
+| `hooks transfer store download` | Download pattern with integrity verification |
+| `hooks transfer store publish` | Publish your patterns to the store |
 
 ```bash
 # Search for authentication patterns
-hive-flow transfer-store search --query "authentication" --min-rating 4.0
+hive-flow hooks transfer store search -q "authentication"
 
 # Download a pattern
-hive-flow transfer-store download --id "auth-jwt-patterns-v2" --verify
+hive-flow hooks transfer store download -n auth-jwt-patterns-v2
 
 # Publish your patterns
-hive-flow transfer-store publish --input ./my-patterns.json --category "security"
+hive-flow hooks transfer store publish -i ./my-patterns.json
 ```
 
 ### Plugin Store
@@ -3431,7 +3496,7 @@ hive-flow hooks route --task "review authentication code" --use-patterns
 
 ```bash
 # Install a pattern pack
-hive-flow transfer-store download --id "security-essentials" --apply
+hive-flow hooks transfer store download -n security-essentials
 ```
 
 ### Local TypeScript Neural Training
@@ -3745,7 +3810,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | `v3-security-overhaul` | CVE fixes, secure-by-default patterns | Security hardening |
 | `v3-memory-unification` | HiveMemory unification and vector search improvements | Memory optimization |
 | `v3-performance-optimization` | Attention, memory, and benchmark optimization | Performance tuning |
-| `v3-swarm-coordination` | 15-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
+| `v3-swarm-coordination` | 50-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
 | `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
 | `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
 | `v3-integration-deep` | hive-flow deep integration | Framework integration |
@@ -5281,7 +5346,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
-| `@hive-flow/cli` | Command interface | 26 commands, 140+ subcommands, shell completions |
+| `@hive-flow/cli` | Command interface | 40 commands, 140+ subcommands, shell completions |
 | `@hive-flow/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
 | `@hive-flow/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/deployment` | Release automation | Versioning, changelogs, NPM publishing |
@@ -5812,7 +5877,7 @@ const customAgent = createAgentConfig('coder', {
   priority: 90,
 });
 
-// Full V3 15-agent swarm
+// Full V3 50-agent swarm
 const swarmAgents = createV3SwarmAgentConfigs();
 
 // Mock agents with vitest mocks
@@ -6759,7 +6824,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/hooks/) |
 | `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
-| `@hive-flow/swarm` | 15-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
+| `@hive-flow/swarm` | 50-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
 | `@hive-flow/neural` | SONA learning integration | [Source](./v3/@hive-flow/neural/) |
 | `@hive-flow/testing` | TDD London School framework | [Source](./v3/@hive-flow/testing/) |

@@ -157,7 +157,7 @@ Automated watcher system that monitors hive worker progress without polling.
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (26 commands) |
+| `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (40 commands) |
 | `@hive-flow/codex` | `v3/@hive-flow/codex/` | Dual-mode Claude + Codex collaboration |
 | `@hive-flow/guidance` | `v3/@hive-flow/guidance/` | Governance control plane |
 | `@hive-flow/hooks` | `v3/@hive-flow/hooks/` | 17 hooks + 12 workers |
@@ -511,7 +511,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 - **HNSW Indexing**: Enabled (fast HNSW-indexed)
 - **Neural Learning**: Enabled (SONA)
 
-## V3 CLI Commands (26 Commands, 140+ Subcommands)
+## V3 CLI Commands (40 Commands, 140+ Subcommands)
 
 ### Core Commands
 
@@ -529,7 +529,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 | `start` | 3 | Service startup and quick launch |
 | `workflow` | 6 | Workflow execution and template management |
 | `hooks` | 17 | Self-learning hooks + 12 background workers |
-| `hive-mind` | 6 | Queen-led Byzantine fault-tolerant consensus |
+| `hive-mind` | 11 | Queen-led Byzantine fault-tolerant consensus |
 
 ### Quick CLI Examples
 
