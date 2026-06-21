@@ -1000,24 +1000,24 @@ Hive Flow V3 integrates HiveMemory v3 (3.0.0-alpha.9) providing 20+ memory contr
 | RVFOptimizer | — | 4-bit adaptive quantization and progressive compression |
 
 **MCP Tool Examples:**
-```bash
+```
 # Store to hierarchical memory
-hivememory_hierarchical-store --key "auth-pattern" --value "JWT refresh" --tier "longTerm"
+hivememory_hierarchical-store({ key: "auth-pattern", value: "JWT refresh", tier: "longTerm" })
 
 # Recall from memory tiers
-hivememory_hierarchical-recall --query "authentication" --topK 5
+hivememory_hierarchical-recall({ query: "authentication", topK: 5 })
 
 # Run memory consolidation
-hivememory_consolidate
+hivememory_consolidate({})
 
 # Batch insert
-hivememory_batch --operation insert --entries '[{"key":"k1","value":"v1"}]'
+hivememory_batch({ operation: "insert", entries: [{ key: "k1", value: "v1" }] })
 
 # Synthesize context
-hivememory_context-synthesize --query "error handling patterns"
+hivememory_context-synthesize({ query: "error handling patterns" })
 
 # Semantic routing
-hivememory_semantic-route --input "fix auth bug in login"
+hivememory_semantic-route({ input: "fix auth bug in login" })
 ```
 
 **Hierarchical Memory Tiers:**
