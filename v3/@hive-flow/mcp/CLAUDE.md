@@ -469,7 +469,7 @@ Features:
 - **Document chunking**: Configurable overlap and size
 - **Normalization**: L2, L1, min-max, z-score
 - **Hyperbolic embeddings**: Poincaré ball model for hierarchical data
-- **75x faster**: With hive-flow ONNX integration
+- **Local ONNX embeddings**: With hive-flow ONNX integration
 - **Neural substrate**: Integration with Hivector
 
 ## 🐝 Hive-Mind Consensus

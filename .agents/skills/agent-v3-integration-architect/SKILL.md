@@ -140,11 +140,11 @@ class HiveMemoryIntegration {
 
 ### **MCP Tools Integration**
 ```typescript
-// Leverage 213 pre-built tools + 19 hook types
+// Leverage pre-built MCP tools + 19 hook types
 class MCPToolsIntegration {
   async integrateBuiltinTools(): Promise<void> {
     const tools = await this.hiveFlow.mcp.getAvailableTools();
-    // 213 tools available
+    // MCP tools available
     await this.registerHiveFlowSpecificTools(tools);
   }
 

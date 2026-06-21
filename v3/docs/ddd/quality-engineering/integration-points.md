@@ -175,7 +175,7 @@ The QE domain reuses V3's `@hive-flow/embeddings` service instead of running sep
 async function generateQEEmbedding(text: string): Promise<Float32Array> {
   const v3Embeddings = await context.get<EmbeddingsService>('embeddings');
 
-  // Use V3's ONNX-based embedding generation (75x faster)
+  // Use V3's ONNX-based embedding generation
   return v3Embeddings.generate(text, {
     normalize: true,
     hyperbolic: false // Use Euclidean for QE patterns
@@ -877,7 +877,7 @@ function translateV3Error(error: Error): QEIntegrationError {
 | Resource | Optimization | Benefit |
 |----------|--------------|---------|
 | HNSW Index | Single shared index | No duplicate index builds |
-| Embeddings Model | Single ONNX instance | 75x faster, lower memory |
+| Embeddings Model | Single ONNX instance | Local ONNX, lower memory |
 | SQLite Connection | Connection pooling | Reduced I/O contention |
 | Agent Pool | Shared worker pool | Better resource utilization |
 

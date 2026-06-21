@@ -211,7 +211,7 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 | Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
 | Self-Learning | LearningBridge, SONA, ReasoningBank | Triggers learning from insights, confidence lifecycle (ADR-049) |
 | Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
-| Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls (75x faster) |
+| Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls |
 | Learning | SONA, MoE, ReasoningBank | Self-improves from results (low-latency adaptation) |
 | Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
 
@@ -1804,7 +1804,6 @@ hive-flow hooks worker status
 |---------|-------------|-------------|
 | **Auto-Install** | `provider: 'auto'` installs hive-flow automatically | Zero config |
 | **Smart Fallback** | hive-flow → transformers → mock chain | Always works |
-| **75x Faster** | Agentic-flow ONNX vs Transformers.js | 3ms vs 230ms |
 | **LRU Caching** | Intelligent cache with hit rate tracking | <1ms cache hits |
 | **Batch Processing** | Efficient batch embedding with partial cache | 10 items <100ms |
 | **Similarity Functions** | Cosine, Euclidean, Dot product | Optimized math |
@@ -1995,7 +1994,6 @@ hive-flow hooks worker status
 |---------|-------------|-------------|
 | **Multi-Provider** | ONNX Local, OpenAI, Transformers.js, Mock | 4 providers |
 | **Auto-Install** | `hive-flow embeddings init` or `createEmbeddingServiceAsync()` | Zero config |
-| **75x Faster** | Agentic-flow ONNX SIMD vs Transformers.js | 3ms vs 230ms |
 | **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
 | **Similarity Metrics** | Cosine, Euclidean, Dot product, Hyperbolic distance | Task-specific matching |
@@ -2451,7 +2449,7 @@ The embeddings package (v3.0.0-alpha.12) provides high-performance vector embedd
 | **Document chunking** | Configurable overlap and size | Handles large documents |
 | **Normalization** | L2, L1, min-max, z-score | 4 normalization methods |
 | **Hyperbolic embeddings** | Poincaré ball model | Better hierarchical representation |
-| **hive-flow ONNX** | Integrated ONNX runtime | 75x faster than API calls |
+| **hive-flow ONNX** | Integrated ONNX runtime | Fast local embeddings |
 | **Neural substrate** | local vector integration | Full learning pipeline |
 
 **Models Available:**
@@ -3990,7 +3988,7 @@ await aidefence.learnFromDetection(userInput, analysis, {
 
 | Provider | Latency | Quality | Cost | Offline | Best For |
 |----------|---------|---------|------|---------|----------|
-| **ONNX Local** | ~3ms | Good | Free | ✅ | Production (75x faster) |
+| **ONNX Local** | ~3ms | Good | Free | ✅ | Production |
 | **OpenAI** | ~50-100ms | Excellent | $0.02-0.13/1M | ❌ | Highest quality |
 | **Transformers.js** | ~230ms | Good | Free | ✅ | Local development |
 | **Mock** | <1ms | N/A | Free | ✅ | Testing |

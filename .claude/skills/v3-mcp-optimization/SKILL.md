@@ -28,7 +28,7 @@ Task("Transport optimization", "Optimize transport layer performance", "mcp-spec
 Current MCP Issues:
 ├── Cold Start Latency: ~1.8s MCP server init
 ├── Connection Overhead: New connection per request
-├── Tool Registry: Linear search O(n) for 213+ tools
+├── Tool Registry: Linear search O(n) for all registered tools
 ├── Transport Layer: No connection reuse
 └── Memory Usage: No cleanup of idle connections
 

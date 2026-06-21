@@ -1,7 +1,7 @@
 ---
 name: embeddings
 description: >
-  Vector embeddings with HNSW indexing, sql.js persistence, and hyperbolic support. 75x faster with hive-flow integration.
+  Vector embeddings with HNSW indexing, sql.js persistence, and hyperbolic support. Fast local embeddings with hive-flow integration.
   Use when: semantic search, pattern matching, similarity queries, knowledge retrieval.
   Skip when: exact text matching, simple lookups, no semantic understanding needed.
 ---
@@ -20,7 +20,7 @@ Vector embeddings for semantic search and pattern matching with HNSW indexing.
 | **Hyperbolic** | Poincare ball model for hierarchical data |
 | **Normalization** | L2, L1, min-max, z-score |
 | **Chunking** | Configurable overlap and size |
-| **75x faster** | With hive-flow ONNX integration |
+| **Local ONNX embeddings** | With hive-flow ONNX integration |
 
 ## Commands
 

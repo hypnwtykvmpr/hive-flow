@@ -85,7 +85,7 @@ class HiveMemoryIntegration {
 ```typescript
 class MCPToolsIntegration {
   async integrateBuiltinTools(): Promise<void> {
-    // Leverage 213 pre-built tools
+    // Leverage pre-built MCP tools
     const tools = await this.hiveFlow.mcp.getAvailableTools();
     await this.registerHiveFlowSpecificTools(tools);
 
@@ -231,7 +231,7 @@ class BackwardCompatibility {
 - **Memory**: 50-75% usage reduction
 - **Feature Parity**: 100% v2 functionality maintained
 - **SONA**: low-latency adaptation time
-- **Integration**: All 213 MCP tools + 19 hook types available
+- **Integration**: All MCP tools + 19 hook types available
 
 ## Related V3 Skills
 
