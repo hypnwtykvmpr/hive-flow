@@ -80,7 +80,8 @@
     "overrides": {
       "tar": ">=7.6.0",
       "node-gyp": "^10.0.0",
-      "undici": ">=7.26.0 <8",
+      "undici@<6.27.0": "^6.27.0",
+      "undici@>=7.0.0 <7.28.0": "^7.28.0",
       "@anthropic-ai/sdk": ">=0.98.0",
       "@modelcontextprotocol/sdk": ">=1.26.0",
       "rollup": ">=4.59.0",
