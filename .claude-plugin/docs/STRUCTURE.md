@@ -121,4 +121,4 @@ The plugin configures 3 MCP servers:
 
 ## Status
 
-✅ **PRODUCTION READY**
+✅ **Ready for installation**

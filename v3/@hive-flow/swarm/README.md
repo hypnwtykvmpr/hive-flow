@@ -597,7 +597,7 @@ Potential local enhancements:
 ### Priority 3 (Nice to Have)
 - [ ] Advanced gossip variants
 - [ ] CRDT synchronization
-- [ ] Production-grade Ed25519/X25519 cryptography
+- [ ] Ed25519/X25519 cryptography
 
 ## Contributing
 

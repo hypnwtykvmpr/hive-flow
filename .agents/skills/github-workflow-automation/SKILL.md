@@ -172,7 +172,7 @@ hive-flow actions security \
 ### 🔧 Workflow Templates
 
 <details>
-<summary>Production-Ready GitHub Actions Templates<$summary>
+<summary>Reusable GitHub Actions Templates<$summary>
 
 #### 1. Intelligent CI with Swarms
 ```yaml
@@ -812,7 +812,7 @@ hive-flow actions analyze-logs \
 ### 🚀 Complete Workflows
 
 <details>
-<summary>Production-Ready Integration Examples<$summary>
+<summary>Integration Examples<$summary>
 
 #### Example 1: Full-Stack Application CI/CD
 ```yaml
@@ -1052,6 +1052,6 @@ echo "✅ GitHub workflow automation setup complete"
 
 ---
 
-**Skill Status**: ✅ Production Ready
+**Skill Status**: ✅ Available
 **Last Updated**: 2025-01-19
 **Maintainer**: hive-flow team

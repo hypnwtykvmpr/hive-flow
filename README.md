@@ -3,8 +3,8 @@
 <div align="center">
 
 
-# **Production-ready multi-agent AI orchestration for Claude Code**
-*Deploy 18 specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and enterprise-grade security.*
+# **Advanced multi-agent AI orchestration for Claude Code**
+*Deploy 18 specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and security hardening.*
 
 </div>
 
@@ -109,7 +109,7 @@ hive-flow init wizard
 
 ⚡ **Plugs Into Claude Code** - Native integration via MCP (Model Context Protocol). Use hive-flow commands directly in your Claude Code sessions with full tool access.
 
-🔒 **Production-Ready Security** - Built-in protection against prompt injection, input validation, path traversal prevention, command injection blocking, and safe credential handling.
+🔒 **Security Hardening** - Built-in protection against prompt injection, input validation, path traversal prevention, command injection blocking, and safe credential handling.
 
 🧩 **Extensible Plugin System** - Add custom capabilities with the plugin SDK. Create workers, hooks, providers, and security modules. Share plugins via the experimental IPFS-based plugin registry.
 
@@ -276,7 +276,7 @@ const ctx = await optimizer.getCompactContext("auth patterns");
 // Optimized edit path for simple transforms when Agent Booster is available
 await optimizer.optimizedEdit(file, oldStr, newStr, "typescript");
 
-// Optimal config for swarm (100% success rate)
+// Optimal config for swarm
 const config = optimizer.getOptimalConfig(agentCount);
 ```
 
@@ -754,7 +754,7 @@ Not every task needs the most powerful (and expensive) model. Hive Flow analyzes
 | **2** | Haiku/Sonnet | 500ms-2s | $0.0002-$0.003 | Bug fixes, refactoring, feature implementation |
 | **3** | Opus | 2-5s | $0.015 | Architecture, security design, distributed systems |
 
-**Benchmark Results:** 100% routing accuracy, 0.57ms avg routing decision latency
+**Benchmark Results:** 0.57ms avg routing decision latency
 
 </details>
 
@@ -1454,12 +1454,12 @@ chain.verify(envelope); // true — tamper-evident
 
 ## 📦 Core Features
 
-Comprehensive capabilities for enterprise-grade AI agent orchestration.
+Comprehensive capabilities for advanced AI agent orchestration.
 
 <details>
 <summary>📦 <strong>Features</strong> — 18 Agents, Swarm Topologies, MCP Tools & Security</summary>
 
-Comprehensive feature set for enterprise-grade AI agent orchestration.
+Comprehensive feature set for advanced AI agent orchestration.
 
 <details open>
 <summary>🤖 <strong>Agent Ecosystem</strong> — 18 canonical agent types</summary>
@@ -1640,7 +1640,7 @@ Full MCP server with tools for coordination, monitoring, memory, and GitHub inte
 <details>
 <summary>🔒 <strong>Security Features</strong> — CVE-hardened with 7 protection layers</summary>
 
-Enterprise-grade security with input validation, sandboxing, and active CVE monitoring.
+Security hardening with input validation, sandboxing, and active CVE monitoring.
 
 | Feature | Protection | Implementation |
 |---------|------------|----------------|
@@ -1657,7 +1657,7 @@ Enterprise-grade security with input validation, sandboxing, and active CVE moni
 <details>
 <summary>⚡ <strong>Advanced Capabilities</strong> — Self-healing, auto-scaling, event sourcing</summary>
 
-Production-ready features for high availability and continuous learning.
+Advanced features for high availability and continuous learning.
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
@@ -1959,7 +1959,7 @@ hive-flow hooks worker status
 |---------|-------------|--------------|
 | **NAPI** | Optimal | Native bindings, x64 |
 | **WASM** | Good | WebAssembly support |
-| **JS** | Fallback | Always available |
+| **JS** | Fallback | Built-in JS fallback |
 
 </details>
 
@@ -2671,7 +2671,7 @@ The statusline shows live context metrics read from `autopilot-state.json`:
 |------|---------|---------|----------|
 | 1 | **SQLite** (default) | `.hive-flow/data/transcript-archive.db` | WAL mode, indexed queries, ACID, importance ranking |
 | 2 | **HiveMemory + HNSW** | In-memory + persist | Semantic search and learning memory |
-| 3 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | Zero dependencies, always works |
+| 3 | **JSON** (fallback) | `.hive-flow/data/transcript-archive.json` | No external service dependency |
 
 ### Configuration
 
@@ -2748,7 +2748,7 @@ You don't need to pick a backend. The `DatabaseProvider` tries each option in or
 Binary backend (RVF-compatible, pure TypeScript) → better-sqlite3 (native) → sql.js (WASM) → JSON (fallback)
 ```
 
-The binary backend is always available since it has zero dependencies, so it wins by default and stores data in RVF-compatible files.
+The binary backend has no native dependency and is tried first, so it wins by default and stores data in RVF-compatible files.
 
 ### Vector search with HnswLite
 
@@ -5003,7 +5003,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Learning** | Consolidation | <500ms | ✅ 0.26ms (1,955x headroom) |
 | **Learning** | Confidence decay (1k) | <50ms | ✅ 0.23ms (215x headroom) |
 | **Transfer** | Knowledge transfer | <100ms | ✅ 1.25ms (80x headroom) |
-| **Task** | Success rate | 95%+ | ✅ 100% (7/7) |
+| **Task** | Success rate | 95%+ | ✅ Passing |
 
 ### Topology Performance
 

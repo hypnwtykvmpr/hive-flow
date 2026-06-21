@@ -77,7 +77,7 @@ const db = await createDatabase('./data/memory.db', {
 **Best for:** Maximum compatibility, small datasets
 **Performance:** Slower (brute-force search)
 **Features:**
-- Zero dependencies
+- No native dependencies
 - Human-readable storage
 - Works on all platforms
 - Limited scalability
@@ -138,7 +138,7 @@ const db = await createDatabase('./data/memory.db', {
 **Why better-sqlite3 on Linux?**
 - Native SQLite library widely available
 - Excellent performance
-- Production-ready
+- Widely used
 - Standard on most distributions
 
 ## Automatic Provider Selection
@@ -342,7 +342,7 @@ async function getAvailableProviders(): Promise<{
 
 Dependencies are installed automatically:
 - `better-sqlite3` (tries to compile, fails gracefully)
-- `sql.js` (pure JavaScript, always works)
+- `sql.js` (portable WASM fallback)
 
 ### Windows-Specific
 

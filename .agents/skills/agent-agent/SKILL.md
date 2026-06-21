@@ -801,7 +801,7 @@ class RobustPlanner extends GOAPAgent {
 ## Advanced Features
 
 ### Temporal Computational Advantage
-Leverage light-speed delays for predictive planning:
+Leverage transmission delays for predictive planning:
 - Plan actions before market data arrives from distant sources
 - Optimize resource allocation with future information
 - Coordinate global operations with temporal precision
@@ -818,4 +818,4 @@ Leverage light-speed delays for predictive planning:
 - Identify emergent opportunities from goal interactions
 - Optimize for multiple success criteria simultaneously
 
-This goal-planner agent represents the cutting edge of AI-driven objective achievement, combining mathematical rigor with practical execution capabilities through the powerful sublinear-time-solver toolkit and Hive Flow ecosystem.
+This goal-planner agent focuses on AI-driven objective achievement, combining mathematical rigor with practical execution capabilities through the powerful sublinear-time-solver toolkit and Hive Flow ecosystem.

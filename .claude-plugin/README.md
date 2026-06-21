@@ -1,7 +1,7 @@
 # 🚀 Hive Flow Plugin - Complete Enterprise AI Agent Orchestration
 
 
-> **Enterprise-grade AI agent orchestration plugin with 150+ commands, 74+ specialized agents, SPARC methodology, swarm coordination, GitHub integration, and neural training capabilities**
+> **Advanced AI agent orchestration plugin with 150+ commands, 74+ specialized agents, SPARC methodology, swarm coordination, GitHub integration, and neural training capabilities**
 
 ---
 

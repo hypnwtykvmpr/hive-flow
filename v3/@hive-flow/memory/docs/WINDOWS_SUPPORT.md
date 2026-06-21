@@ -100,7 +100,7 @@ export async function getAvailableProviders(): Promise<{
   return {
     betterSqlite3: await testBetterSqlite3(),
     sqlJs: await testSqlJs(),
-    json: true  // Always available
+    json: true  // Built-in fallback
   };
 }
 ```

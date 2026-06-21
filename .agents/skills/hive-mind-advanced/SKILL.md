@@ -13,7 +13,7 @@ Master the advanced Hive Mind collective intelligence system for sophisticated m
 
 ## Overview
 
-The Hive Mind system represents the pinnacle of multi-agent coordination in Hive Flow, implementing a queen-led hierarchical architecture where a strategic queen coordinator directs specialized worker agents through collective decision-making and shared memory.
+The Hive Mind system provides advanced multi-agent coordination in Hive Flow, implementing a queen-led hierarchical architecture where a strategic queen coordinator directs specialized worker agents through collective decision-making and shared memory.
 
 ## Core Concepts
 

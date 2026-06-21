@@ -7,7 +7,7 @@ description: "Create new Claude Code Skills with proper YAML frontmatter, progre
 
 ## What This Skill Does
 
-Creates production-ready Claude Code Skills with proper YAML frontmatter, progressive disclosure architecture, and complete file$folder structure. This skill guides you through building skills that Claude can autonomously discover and use across all surfaces (Claude.ai, Claude Code, SDK, API).
+Creates well-structured Claude Code Skills with proper YAML frontmatter, progressive disclosure architecture, and complete file$folder structure. This skill guides you through building skills that Claude can autonomously discover and use across all surfaces (Claude.ai, Claude Code, SDK, API).
 
 ## Prerequisites
 
@@ -378,7 +378,7 @@ description: "Build API endpoints with proper validation and testing."
 **Keep Level 1 Brief** (Overview):
 ```markdown
 ## What This Skill Does
-Creates production-ready React components with TypeScript, hooks, and tests in 3 steps.
+Creates well-structured React components with TypeScript, hooks, and tests in 3 steps.
 ```
 
 **Level 2 for Common Paths** (Quick Start):

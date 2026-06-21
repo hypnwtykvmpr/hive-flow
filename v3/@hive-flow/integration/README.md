@@ -181,7 +181,7 @@ The bridge automatically selects the best runtime:
 |---------|-------------|--------------|
 | **NAPI** | Optimal | Native bindings, non-Windows or x64 |
 | **WASM** | Good | WebAssembly support |
-| **JS** | Fallback | Always available |
+| **JS** | Fallback | Built-in JS fallback |
 
 ```typescript
 const status = bridge.getStatus();

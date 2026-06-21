@@ -1,7 +1,7 @@
 # @hive-flow/plugin-hyperbolic-reasoning
 
 
-An exotic reasoning plugin implementing hyperbolic neural networks for superior hierarchical understanding. The plugin enables efficient representation of tree structures, taxonomic reasoning, and hierarchical entailment using Poincare ball embeddings with Mobius operations. Applications include improved ontology navigation, hierarchical code understanding, and organizational relationship modeling.
+An exotic reasoning plugin implementing hyperbolic neural networks for hierarchical understanding. The plugin enables efficient representation of tree structures, taxonomic reasoning, and hierarchical entailment using Poincare ball embeddings with Mobius operations. Applications include improved ontology navigation, hierarchical code understanding, and organizational relationship modeling.
 
 ## Installation
 

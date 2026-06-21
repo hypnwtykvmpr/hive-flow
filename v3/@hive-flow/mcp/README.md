@@ -16,7 +16,7 @@
 - **Fast Tool Registry** - O(1) lookup, <10ms registration
 - **Session Management** - Timeout handling, authentication
 - **Security** - CORS, Helmet, auth tokens
-- **Zero Dependencies** - No @hive-flow/* dependencies
+- **Standalone package** - No @hive-flow/* runtime dependencies
 
 ## Installation
 

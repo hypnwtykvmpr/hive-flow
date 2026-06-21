@@ -348,7 +348,7 @@ mcp__flow-nexus__template_list({
 ```javascript
 mcp__flow-nexus__app_store_publish_app({
   name: "JWT Authentication Service",
-  description: "Production-ready JWT authentication microservice with refresh tokens",
+  description: "JWT authentication microservice with refresh tokens",
   category: "backend",
   version: "1.0.0",
   source_code: sourceCodeString,

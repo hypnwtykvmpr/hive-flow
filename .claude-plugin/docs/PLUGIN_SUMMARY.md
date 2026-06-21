@@ -1,6 +1,6 @@
 # 🎉 Hive Flow Plugin - Complete Summary
 
-## ✅ Plugin Status: PRODUCTION READY
+## ✅ Plugin Status: Ready for installation
 
 **Version**: 2.5.0
 **License**: MIT
@@ -343,7 +343,7 @@ Users install with:
 
 ---
 
-**Plugin Status**: PRODUCTION READY
+**Plugin Status**: Ready for installation
 **Last Updated**: 2025-10-09
 **Version**: 2.5.0
 **Specification**: Claude Code Official Plugin Format

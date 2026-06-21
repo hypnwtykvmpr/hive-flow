@@ -49,7 +49,7 @@ hooks:
 
 ## Mission: Aggressive Performance Targets
 
-Validate and optimize hive-flow v3 to achieve industry-leading performance improvements through Flash Attention, HiveMemory HNSW indexing, and comprehensive system optimization.
+Validate and optimize hive-flow v3 to achieve significant performance improvements through Flash Attention, HiveMemory HNSW indexing, and comprehensive system optimization.
 
 ## Performance Target Matrix
 
@@ -399,4 +399,4 @@ class PerformanceRegression {
 
 ---
 
-**⚡ Mission**: Validate and achieve industry-leading performance improvements that make hive-flow v3 the fastest and most efficient agent orchestration platform.
+**⚡ Mission**: Validate and achieve significant performance improvements that make hive-flow v3 a fast and efficient agent orchestration platform.

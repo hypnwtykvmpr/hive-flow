@@ -381,7 +381,7 @@ const adapter = await createHiveMemoryAdapter({
   hnswEfSearch: 200,           // High search quality
 });
 
-// Expected: <200µs search, 100% accuracy
+// Expected: <200µs search, highest-accuracy profile
 ```
 
 ### Recipe 4: Memory-Constrained (Mobile/Edge)

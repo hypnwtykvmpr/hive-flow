@@ -94,7 +94,7 @@ await swarm.pipeline([
 ```typescript
 // Let swarm decide execution strategy
 await swarm.autoOrchestrate({
-  goal: 'Build production-ready API',
+  goal: 'Build deployable API',
   constraints: {
     maxTime: 3600,
     maxAgents: 8,

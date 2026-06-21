@@ -7,7 +7,7 @@ description: "Achieve aggressive v3 performance targets: Flash Attention optimiz
 
 ## What This Skill Does
 
-Validates and optimizes hive-flow v3 to achieve industry-leading performance through Flash Attention, HiveMemory HNSW indexing, and comprehensive system optimization with continuous benchmarking.
+Validates and optimizes hive-flow v3 to achieve high performance through Flash Attention, HiveMemory HNSW indexing, and comprehensive system optimization with continuous benchmarking.
 
 ## Quick Start
 

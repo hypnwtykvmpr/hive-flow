@@ -15,7 +15,7 @@ Execute sophisticated multi-step workflows where each agent's output flows into 
 Stream-Chain provides two powerful modes for orchestrating multi-agent workflows:
 
 1. **Custom Chains** (`run`): Execute custom prompt sequences with full control
-2. **Predefined Pipelines** (`pipeline`): Use battle-tested workflows for common tasks
+2. **Predefined Pipelines** (`pipeline`): Use predefined workflows for common tasks
 
 Each step in a chain receives the complete output from the previous step, enabling sophisticated multi-agent coordination through streaming data flow.
 
@@ -132,7 +132,7 @@ hive-flow stream-chain run \
 
 ## Predefined Pipelines (`pipeline`)
 
-Execute battle-tested workflows optimized for common development tasks.
+Execute predefined workflows optimized for common development tasks.
 
 ### Syntax
 
@@ -560,4 +560,4 @@ Stream-Chain enables sophisticated multi-step workflows by:
 - **Agent Coordination**: Natural multi-agent collaboration pattern
 - **Data Transformation**: Complex processing through simple steps
 
-Use `run` for custom workflows and `pipeline` for battle-tested solutions.
+Use `run` for custom workflows and `pipeline` for predefined solutions.

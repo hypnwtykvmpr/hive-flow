@@ -631,7 +631,7 @@ const ctx = await optimizer.getCompactContext("auth patterns");
 // 352x faster edits = fewer retries
 await optimizer.optimizedEdit(file, old, new, "typescript");
 
-// Optimal config (100% success rate)
+// Optimal config
 const config = optimizer.getOptimalConfig(agentCount);
 ```
 | Feature | Token Savings |

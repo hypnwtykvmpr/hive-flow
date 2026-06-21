@@ -118,7 +118,7 @@ Recent Tasks:
 #### Metrics Explained
 
 **Truth Scores (0.0-1.0):**
-- `1.0-0.95`: Excellent ⭐ (production-ready)
+- `1.0-0.95`: Excellent ⭐ (high quality)
 - `0.94-0.85`: Good ✅ (acceptable quality)
 - `0.84-0.75`: Warning ⚠️ (needs attention)
 - `<0.75`: Critical ❌ (requires immediate action)

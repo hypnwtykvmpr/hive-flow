@@ -594,6 +594,6 @@ async function agentSwarm(taskList) {
 
 ---
 
-**Status**: ✅ Production Ready
+**Status**: ✅ Available
 **License**: MIT
 **Maintained**: Active
