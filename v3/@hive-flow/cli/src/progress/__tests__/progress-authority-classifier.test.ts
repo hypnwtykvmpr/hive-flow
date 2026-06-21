@@ -1,5 +1,5 @@
 import fc from 'fast-check';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { propertyRunsFromEnv } from '../../__tests__/property-runs.js';
 import {
+  classifyHiveFlowTaskLiveness,
   classifyProgressAuthority,
   collectProgressAuthoritySnapshot,
   redactClassifierString,
@@ -30,6 +31,15 @@ function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'hf-progress-authority-'));
   roots.push(root);
   return root;
+}
+
+function writeTaskEvents(tasksDir: string, taskId: string, events: unknown[]): void {
+  mkdirSync(tasksDir, { recursive: true });
+  writeFileSync(
+    join(tasksDir, `${taskId}.events.jsonl`),
+    `${events.map((event) => JSON.stringify(event)).join('\n')}\n`,
+    'utf8',
+  );
 }
 
 function baseSnapshot(overrides: Partial<ProgressAuthoritySnapshot> = {}): ProgressAuthoritySnapshot {
@@ -293,5 +303,107 @@ describe('progress authority classifier', () => {
     expect(snapshot.router.latestPath).toBe(newerChatter);
     expect(snapshot.router.concreteAction).toBe(false);
     expect(result.classification).toBe('insufficient-evidence');
+  });
+
+  it('classifies a long-running provider request as in-flight instead of hung', () => {
+    const root = tempRoot();
+    const tasksDir = join(root, '.hive-flow', 'tasks');
+    const taskId = 'task-long-bughunt';
+    writeTaskEvents(tasksDir, taskId, [
+      { ts: '2026-06-12T21:00:00.000Z', event: 'bridge_start', taskId, pid: 123 },
+      { ts: '2026-06-12T21:05:00.000Z', event: 'provider_request_start', taskId, pid: 123, meta: { iteration: 8 } },
+    ]);
+
+    const eventsFile = join(tasksDir, `${taskId}.events.jsonl`);
+    const result = classifyHiveFlowTaskLiveness({
+      tasksDir,
+      taskId,
+      nowMs,
+      processSnapshot: { alive: true, state: 'S', cpuTimeMs: 100 },
+      idleStallMs: 5 * 60_000,
+      prior: {
+        observedAtMs: nowMs - 45 * 60_000,
+        eventSize: statSync(eventsFile).size,
+        lastEventTs: '2026-06-12T21:05:00.000Z',
+        processSnapshot: { alive: true, state: 'S', cpuTimeMs: 100 },
+        stableObservationCount: 12,
+      },
+    });
+
+    expect(result.status).toBe('in_flight');
+    expect(result.hung).toBe(false);
+    expect(result.shouldTerminate).toBe(false);
+    expect(result.signals.providerRequestInFlight).toBe(true);
+  });
+
+  it('requires multiple no-progress signals before classifying a task as stalled review', () => {
+    const root = tempRoot();
+    const tasksDir = join(root, '.hive-flow', 'tasks');
+    const taskId = 'task-needs-review';
+    writeTaskEvents(tasksDir, taskId, [
+      { ts: '2026-06-12T22:00:00.000Z', event: 'tool_exec_end', taskId, pid: 456, meta: { success: true } },
+    ]);
+    const eventsFile = join(tasksDir, `${taskId}.events.jsonl`);
+
+    const first = classifyHiveFlowTaskLiveness({
+      tasksDir,
+      taskId,
+      nowMs,
+      processSnapshot: { alive: true, state: 'S', cpuTimeMs: 1_000 },
+      idleStallMs: 5 * 60_000,
+    });
+    expect(first.status).toBe('observing');
+    expect(first.hung).toBe(false);
+
+    const stalled = classifyHiveFlowTaskLiveness({
+      tasksDir,
+      taskId,
+      nowMs: nowMs + 10 * 60_000,
+      processSnapshot: { alive: true, state: 'S', cpuTimeMs: 1_000 },
+      idleStallMs: 5 * 60_000,
+      minStableObservations: 3,
+      prior: {
+        observedAtMs: nowMs,
+        eventSize: statSync(eventsFile).size,
+        lastEventTs: '2026-06-12T22:00:00.000Z',
+        processSnapshot: { alive: true, state: 'S', cpuTimeMs: 1_000 },
+        stableObservationCount: 2,
+      },
+    });
+    expect(stalled.status).toBe('stalled_review');
+    expect(stalled.hung).toBe(false);
+    expect(stalled.shouldTerminate).toBe(false);
+    expect(stalled.signals.eventAdvanced).toBe(false);
+    expect(stalled.signals.processCpuAdvanced).toBe(false);
+  });
+
+  it('treats event growth as progress regardless of total runtime', () => {
+    const root = tempRoot();
+    const tasksDir = join(root, '.hive-flow', 'tasks');
+    const taskId = 'task-progress-growth';
+    writeTaskEvents(tasksDir, taskId, [
+      { ts: '2026-06-12T10:00:00.000Z', event: 'bridge_start', taskId, pid: 789 },
+      { ts: '2026-06-12T23:55:00.000Z', event: 'tool_exec_end', taskId, pid: 789, meta: { success: true } },
+    ]);
+    const eventSize = statSync(join(tasksDir, `${taskId}.events.jsonl`)).size;
+
+    const result = classifyHiveFlowTaskLiveness({
+      tasksDir,
+      taskId,
+      nowMs,
+      processSnapshot: { alive: true, state: 'S', cpuTimeMs: 10_000 },
+      prior: {
+        observedAtMs: nowMs - 10 * 60 * 60_000,
+        eventSize: eventSize - 10,
+        lastEventTs: '2026-06-12T10:00:00.000Z',
+        processSnapshot: { alive: true, state: 'S', cpuTimeMs: 10_000 },
+        stableObservationCount: 20,
+      },
+    });
+
+    expect(result.status).toBe('progressing');
+    expect(result.hung).toBe(false);
+    expect(result.shouldTerminate).toBe(false);
+    expect(result.nextPrior.stableObservationCount).toBe(0);
   });
 });

@@ -66,6 +66,50 @@ export interface TaskEvidence {
   malformed: number;
 }
 
+export interface HiveFlowTaskProcessSnapshot {
+  alive?: boolean;
+  state?: string;
+  cpuTimeMs?: number;
+}
+
+export interface HiveFlowTaskLivenessPrior {
+  observedAtMs: number;
+  eventSize: number;
+  lastEventTs?: string;
+  processSnapshot?: HiveFlowTaskProcessSnapshot | null;
+  stableObservationCount?: number;
+}
+
+export interface HiveFlowTaskLivenessOptions {
+  tasksDir?: string;
+  taskId?: string;
+  nowMs?: number;
+  processSnapshot?: HiveFlowTaskProcessSnapshot | null;
+  prior?: HiveFlowTaskLivenessPrior | null;
+  idleStallMs?: number;
+  minStableObservations?: number;
+}
+
+export interface HiveFlowTaskLivenessResult {
+  status: 'unknown' | 'completed' | 'progressing' | 'in_flight' | 'orphaned' | 'observing' | 'stalled_review';
+  reason: string;
+  hung: boolean;
+  shouldTerminate: boolean;
+  taskId: string;
+  signals: {
+    resultPresent: boolean;
+    eventFilePresent: boolean;
+    eventAdvanced: boolean;
+    providerRequestInFlight: boolean;
+    processAlive: boolean;
+    processDead: boolean;
+    processCpuAdvanced: boolean;
+    silentForMs: number | null;
+    stableObservationCount: number;
+  };
+  nextPrior: HiveFlowTaskLivenessPrior;
+}
+
 export interface ProgressAuthoritySnapshot {
   nowMs: number;
   observedAt: string;
@@ -116,6 +160,7 @@ const MAX_EXCERPT_CHARS = 500;
 const MAX_TASK_FILES = 1_000;
 const BEADS_STALE_MS = 60 * 60 * 1000;
 const RECENT_ROUTER_MS = 15 * 60 * 1000;
+const DEFAULT_TASK_STALL_REVIEW_MS = 30 * 60 * 1000;
 
 const REDACTED = '[REDACTED]';
 const SECRET_VALUE_PATTERNS = [
@@ -489,6 +534,149 @@ function collectTaskEvidence(projectRoot: string): TaskEvidence {
     failedResults,
     malformed,
   };
+}
+
+function parseTaskEventLine(line: string): Record<string, unknown> | undefined {
+  try {
+    const parsed = JSON.parse(line);
+    return isObject(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readTaskEvents(eventsFile: string): Record<string, unknown>[] {
+  const text = readBoundedText(eventsFile, MAX_NOTE_BYTES * 4);
+  if (text === undefined) return [];
+  return text.split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map(parseTaskEventLine)
+    .filter((event): event is Record<string, unknown> => event !== undefined);
+}
+
+function taskEventName(event: Record<string, unknown> | undefined): string {
+  return typeof event?.event === 'string' ? event.event : '';
+}
+
+function taskEventTs(event: Record<string, unknown> | undefined): string {
+  return typeof event?.ts === 'string' ? event.ts : '';
+}
+
+function taskEventTimestampMs(event: Record<string, unknown> | undefined): number {
+  const parsed = Date.parse(taskEventTs(event));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function hasProviderRequestInFlight(events: Record<string, unknown>[]): boolean {
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = taskEventName(events[index]);
+    if (event === 'provider_request_start') return true;
+    if (event === 'provider_request_end' || event === 'provider_error') return false;
+  }
+  return false;
+}
+
+export function classifyHiveFlowTaskLiveness(
+  options: HiveFlowTaskLivenessOptions = {},
+): HiveFlowTaskLivenessResult {
+  const taskId = String(options.taskId ?? '').trim();
+  const tasksDir = options.tasksDir ?? join(process.cwd(), ...TASKS_DIR);
+  const nowMs = options.nowMs ?? Date.now();
+  const prior = options.prior ?? null;
+  const processSnapshot = options.processSnapshot ?? null;
+  const idleStallMs = options.idleStallMs ?? DEFAULT_TASK_STALL_REVIEW_MS;
+  const minStableObservations = options.minStableObservations ?? 3;
+  const resultFile = join(tasksDir, `${taskId}.result.json`);
+  const eventsFile = join(tasksDir, `${taskId}.events.jsonl`);
+  const resultPresent = taskId.length > 0 && existsSync(resultFile);
+  let eventSize = 0;
+  let eventMtimeMs = 0;
+  try {
+    const stat = statSync(eventsFile);
+    if (stat.isFile()) {
+      eventSize = stat.size;
+      eventMtimeMs = stat.mtimeMs;
+    }
+  } catch {
+    // Absence of an event file is missing evidence, not hung evidence.
+  }
+
+  const events = taskId.length > 0 ? readTaskEvents(eventsFile) : [];
+  const lastEvent = events[events.length - 1];
+  const lastEventTs = taskEventTs(lastEvent);
+  const lastEventMs = taskEventTimestampMs(lastEvent);
+  const priorEventTsMs = Date.parse(String(prior?.lastEventTs ?? ''));
+  const eventAdvanced = Boolean(prior)
+    && (eventSize > Number(prior?.eventSize ?? 0)
+      || (lastEventMs > 0 && Number.isFinite(priorEventTsMs) && lastEventMs > priorEventTsMs));
+  const currentCpu = Number(processSnapshot?.cpuTimeMs);
+  const priorCpu = Number(prior?.processSnapshot?.cpuTimeMs);
+  const processCpuAdvanced = Boolean(prior)
+    && Number.isFinite(currentCpu)
+    && Number.isFinite(priorCpu)
+    && currentCpu > priorCpu;
+  const providerRequestInFlight = hasProviderRequestInFlight(events);
+  const processAlive = processSnapshot?.alive === true;
+  const processDead = processSnapshot?.alive === false;
+  const lastProgressMs = lastEventMs || eventMtimeMs || 0;
+  const silentForMs = lastProgressMs > 0 ? Math.max(0, nowMs - lastProgressMs) : null;
+  const noProgressThisObservation = Boolean(prior) && !eventAdvanced && !processCpuAdvanced && !resultPresent;
+  const stableObservationCount = noProgressThisObservation
+    ? Number(prior?.stableObservationCount ?? 0) + 1
+    : 0;
+
+  const signals = {
+    resultPresent,
+    eventFilePresent: eventSize > 0,
+    eventAdvanced,
+    providerRequestInFlight,
+    processAlive,
+    processDead,
+    processCpuAdvanced,
+    silentForMs,
+    stableObservationCount,
+  };
+  const nextPrior: HiveFlowTaskLivenessPrior = {
+    observedAtMs: nowMs,
+    eventSize,
+    lastEventTs,
+    processSnapshot,
+    stableObservationCount,
+  };
+
+  function verdict(status: HiveFlowTaskLivenessResult['status'], reason: string): HiveFlowTaskLivenessResult {
+    return {
+      status,
+      reason,
+      hung: false,
+      shouldTerminate: false,
+      taskId,
+      signals,
+      nextPrior,
+    };
+  }
+
+  if (!taskId) return verdict('unknown', 'No task id was supplied; liveness cannot be classified.');
+  if (resultPresent) return verdict('completed', 'Result file is present; task completed.');
+  if (eventAdvanced || processCpuAdvanced) {
+    return verdict('progressing', 'Event log or process CPU advanced since the previous observation.');
+  }
+  if (providerRequestInFlight) {
+    return verdict('in_flight', 'A provider request is in flight; elapsed time alone is not hung evidence.');
+  }
+  if (processDead) {
+    return verdict('orphaned', 'Process is not alive and no result file exists; recovery/reconciliation is needed.');
+  }
+  if (!prior) {
+    return verdict('observing', 'First observation only; repeated no-progress evidence is required.');
+  }
+  if (stableObservationCount >= minStableObservations
+    && typeof silentForMs === 'number'
+    && silentForMs >= idleStallMs) {
+    return verdict('stalled_review', 'Repeated no-progress observations with no result file require manual review, not elapsed-time termination.');
+  }
+  return verdict('observing', 'No conclusive stall evidence yet; keep observing.');
 }
 
 function liveContinuationAfterGate(snapshot: ProgressAuthoritySnapshot): boolean {
