@@ -57,6 +57,7 @@ function stripAnsi(value: string): string {
 
 // The full-width inter-row rule is 65 box-drawing horizontals (design §2 board).
 const RULE = '─'.repeat(65);
+const LAYOUT_TEST_SESSION_ID = 'statusline-layout-test-session';
 
 interface Fixture {
   projectRoot: string;
@@ -154,6 +155,7 @@ function writeSnapshot(
  */
 function canonicalStdin(): Record<string, unknown> {
   return {
+    session_id: LAYOUT_TEST_SESSION_ID,
     workspace: { current_dir: '', project_dir: '' },
     model: { id: 'claude-opus-4-8[1m]', display_name: 'Opus 4.8' },
     context_window: {
@@ -270,11 +272,32 @@ function materializedEightRowFixture(projectRoot: string): void {
           agentType: 'worker',
           status: 'busy',
           provider: 'codex',
+          ownerSessionId: LAYOUT_TEST_SESSION_ID,
           currentTaskPid: process.pid,
         },
       ]),
-      ['queen-1', { agentId: 'queen-1', agentType: 'queen', status: 'busy', provider: 'claude', currentTaskPid: process.pid }],
-      ['queen-2', { agentId: 'queen-2', agentType: 'queen', status: 'idle', provider: 'claude' }],
+      [
+        'queen-1',
+        {
+          agentId: 'queen-1',
+          agentType: 'queen',
+          status: 'busy',
+          provider: 'claude',
+          ownerSessionId: LAYOUT_TEST_SESSION_ID,
+          currentTaskPid: process.pid,
+        },
+      ],
+      [
+        'queen-2',
+        {
+          agentId: 'queen-2',
+          agentType: 'queen',
+          status: 'idle',
+          provider: 'claude',
+          ownerSessionId: LAYOUT_TEST_SESSION_ID,
+          currentTaskPid: process.pid,
+        },
+      ],
     ]),
   });
 

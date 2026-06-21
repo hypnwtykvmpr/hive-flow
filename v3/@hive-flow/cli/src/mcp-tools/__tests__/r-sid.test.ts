@@ -67,6 +67,7 @@ const originalCwd = process.cwd();
 const originalEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
   CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
+  CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
 };
@@ -156,6 +157,8 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'r-sid-'));
   process.chdir(root);
   process.env.CLAUDE_PROJECT_DIR = root;
+  delete process.env.CODEX_SESSION_ID;
+  delete process.env.CODEX_THREAD_ID;
   process.env.CLAUDE_SESSION_ID = 'env-session';
   process.env.HIVE_FLOW_SESSION_ID = 'provider-session';
   resetAgentStore();
@@ -191,9 +194,15 @@ describe('R-sid multi-session enabler', () => {
       },
       {
         input: {},
-        env: { CODEX_SESSION_ID: 'codex-session', CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        env: { CODEX_SESSION_ID: 'codex-session', CODEX_THREAD_ID: 'codex-thread', CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
         context: { sessionId: 'context-session' },
         expected: 'codex-session',
+      },
+      {
+        input: {},
+        env: { CODEX_THREAD_ID: 'codex-thread', CLAUDE_SESSION_ID: 'env-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'codex-thread',
       },
       {
         input: {},
@@ -212,6 +221,12 @@ describe('R-sid multi-session enabler', () => {
         env: {},
         context: { sessionId: 'context-session' },
         expected: 'context-session',
+      },
+      {
+        input: {},
+        env: {},
+        context: { sessionId: 'mcp-1790000000000-deadbeef' },
+        expected: null,
       },
       {
         input: { session_id: '../bad.session' },
@@ -250,6 +265,7 @@ describe('R-sid multi-session enabler', () => {
 
   it('stamps ownerSessionId from MCP context when queen_mission_assign has no caller session env', async () => {
     delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_SESSION_ID;
     delete process.env.HIVE_FLOW_SESSION_ID;
 
@@ -262,6 +278,39 @@ describe('R-sid multi-session enabler', () => {
     expect(result.success).toBe(true);
     const hive = loadHive(String(result.hiveId));
     expect(hive?.ownerSessionId).toBe('context-session');
+  });
+
+  it('refuses generated MCP transport ids as queen_mission_assign owner identity', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'ownerless transport mission',
+      description: 'Verify generated mcp ids do not become hive owners',
+    }, { sessionId: 'mcp-1790000000000-deadbeef' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(String(result.error)).toContain('owner session');
+  });
+
+  it('refuses queen_mission_assign when no owner session can be resolved', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'ownerless mission',
+      description: 'Verify ownerless hives cannot be created',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(String(result.error)).toContain('owner session');
+    expect(result.hiveId).toBeUndefined();
   });
 
   it('threads watcher --sessionId into parsed config and completion payloads while preserving null fallback', () => {

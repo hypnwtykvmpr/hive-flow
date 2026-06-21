@@ -54,6 +54,7 @@ interface AgentLike {
   provider?: string;
   resolvedModel?: string;
   model?: string;
+  ownerSessionId?: unknown;
   currentTaskPid?: number;
   config?: Record<string, unknown>;
   lastResult?: Record<string, unknown>;
@@ -72,12 +73,19 @@ function writeHive(
   hiveId: string,
   workers: Array<Record<string, unknown>>,
   queenId?: string,
+  ownerSessionId?: string,
 ): void {
   const hiveRoot = join(projectRoot, '.hive-flow', 'hives', hiveId);
   mkdirSync(hiveRoot, { recursive: true });
   writeFileSync(
     join(hiveRoot, 'hive.json'),
-    JSON.stringify({ hiveId, status: 'active', queenId, workers }),
+    JSON.stringify({
+      hiveId,
+      status: 'active',
+      queenId,
+      ...(ownerSessionId !== undefined ? { ownerSessionId } : {}),
+      workers,
+    }),
     { mode: 0o600 },
   );
 }
@@ -118,22 +126,25 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // C1 #1 — single 'busy' worker without a pid counts as alive but NOT executing.
-  // Original bug: legacy collector saw 0 because it filtered for 'working'.
-  // Phantom-activity fix: busy + no valid currentTaskPid => non-executing.
-  // -------------------------------------------------------------------------
-  it('counts a busy worker without a pid as workersAlive=1 but workersExecuting=0', async () => {
+// C1 #1 — single 'busy' worker without a pid is not live.
+// Original bug: legacy collector saw 0 because it filtered for 'working'.
+// Live-count invariant: a non-terminal row needs live process evidence.
+// -------------------------------------------------------------------------
+  it('does not count a busy worker without live process evidence', async () => {
     writeStoreDict(fix.storePath, {
-      'agent-1': { agentId: 'agent-1', agentType: 'coder', status: 'busy' },
+      'agent-1': {
+        agentId: 'agent-1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+      },
     });
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(result.workersAlive).toBe(1);
+    expect(result.workersAlive).toBe(0);
     expect(result.workersExecuting).toBe(0);
     expect(result.queensAlive).toBe(0);
     expect(result.queensExecuting).toBe(0);
-    expect(result.agents).toHaveLength(1);
-    // Status is demoted to 'idle' on the row because there is no pid to prove execution.
-    expect(result.agents[0]?.status).toBe('idle');
+    expect(result.agents).toHaveLength(0);
   });
 
   it('excludes only busy workers whose currentTaskPid is proven dead', async () => {
@@ -157,10 +168,33 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     }) as typeof process.kill);
 
     writeStoreDict(fix.storePath, {
-      dead: { agentId: 'dead', agentType: 'coder', status: 'busy', currentTaskPid: deadPid },
-      live: { agentId: 'live', agentType: 'coder', status: 'busy', currentTaskPid: process.pid },
-      eperm: { agentId: 'eperm', agentType: 'coder', status: 'busy', currentTaskPid: epermPid },
-      legacy: { agentId: 'legacy', agentType: 'coder', status: 'busy' },
+      dead: {
+        agentId: 'dead',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: deadPid,
+      },
+      live: {
+        agentId: 'live',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      eperm: {
+        agentId: 'eperm',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: epermPid,
+      },
+      legacy: {
+        agentId: 'legacy',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+      },
     });
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
@@ -169,36 +203,46 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     expect(killSpy).toHaveBeenCalledWith(process.pid, 0);
     expect(killSpy).toHaveBeenCalledWith(epermPid, 0);
     // `dead` is excluded (ESRCH). `live` and `eperm` have valid pids => executing.
-    // `legacy` has no pid => alive but NOT executing (phantom-activity fix).
-    expect(result.workersAlive).toBe(3);
+    // `legacy` has no pid => not live.
+    expect(result.workersAlive).toBe(2);
     expect(result.workersExecuting).toBe(2);
-    expect(result.agents.map((agent) => agent.id)).toEqual(['live', 'eperm', 'legacy']);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['live', 'eperm']);
   });
 
   // -------------------------------------------------------------------------
-  // C1 #2 — idle worker counts as alive but not executing.
+  // C1 #2 — idle worker with no live process evidence does not count as live.
   // -------------------------------------------------------------------------
-  it('counts an idle worker as alive but not executing', async () => {
+  it('does not count an idle worker without live process evidence', async () => {
     writeStoreDict(fix.storePath, {
-      'agent-1': { agentId: 'agent-1', agentType: 'coder', status: 'idle' },
+      'agent-1': {
+        agentId: 'agent-1',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+      },
     });
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(result.workersAlive).toBe(1);
+    expect(result.workersAlive).toBe(0);
     expect(result.workersExecuting).toBe(0);
-    expect(result.agents[0]?.status).toBe('idle');
+    expect(result.agents).toHaveLength(0);
   });
 
   // -------------------------------------------------------------------------
-  // C1 #3 — spawning maps to 'queued' (per normalizer) and counts as alive.
+  // C1 #3 — spawning maps to 'queued' but still needs live process evidence.
   // -------------------------------------------------------------------------
-  it("counts a spawning worker as alive (status 'queued' per normalizer) but not executing", async () => {
+  it("does not count a spawning worker without live process evidence", async () => {
     writeStoreDict(fix.storePath, {
-      'agent-1': { agentId: 'agent-1', agentType: 'coder', status: 'spawning' },
+      'agent-1': {
+        agentId: 'agent-1',
+        agentType: 'coder',
+        status: 'spawning',
+        ownerSessionId: 'session-a',
+      },
     });
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(result.workersAlive).toBe(1);
+    expect(result.workersAlive).toBe(0);
     expect(result.workersExecuting).toBe(0);
-    expect(result.agents[0]?.status).toBe('queued');
+    expect(result.agents).toHaveLength(0);
   });
 
   // -------------------------------------------------------------------------
@@ -228,24 +272,20 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // C1 #6 — mixed statuses aggregate correctly.
-  // 3 busy (no pid) + 2 idle + 1 spawning + 1 terminated -> alive=6, executing=0.
-  // Busy workers without a valid pid are alive but non-executing (phantom-activity fix).
+  // C1 #6 — mixed statuses aggregate only rows with live process evidence.
   // -------------------------------------------------------------------------
-  it('aggregates mixed statuses (3 busy + 2 idle + 1 spawning + 1 terminated)', async () => {
+  it('aggregates mixed statuses using live process evidence only', async () => {
     writeStoreDict(fix.storePath, {
-      b1: { agentId: 'b1', agentType: 'coder', status: 'busy' },
-      b2: { agentId: 'b2', agentType: 'tester', status: 'busy' },
-      b3: { agentId: 'b3', agentType: 'reviewer', status: 'busy' },
-      i1: { agentId: 'i1', agentType: 'coder', status: 'idle' },
-      i2: { agentId: 'i2', agentType: 'researcher', status: 'idle' },
-      sp1: { agentId: 'sp1', agentType: 'coder', status: 'spawning' },
-      t1: { agentId: 't1', agentType: 'coder', status: 'terminated' },
+      b1: { agentId: 'b1', agentType: 'coder', status: 'busy', ownerSessionId: 'session-a', currentTaskPid: process.pid },
+      b2: { agentId: 'b2', agentType: 'tester', status: 'busy', ownerSessionId: 'session-a' },
+      i1: { agentId: 'i1', agentType: 'coder', status: 'idle', ownerSessionId: 'session-a' },
+      sp1: { agentId: 'sp1', agentType: 'coder', status: 'spawning', ownerSessionId: 'session-a' },
+      t1: { agentId: 't1', agentType: 'coder', status: 'terminated', ownerSessionId: 'session-a' },
     });
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(result.workersAlive).toBe(6);
-    expect(result.workersExecuting).toBe(0);
-    expect(result.agents).toHaveLength(6);
+    expect(result.workersAlive).toBe(1);
+    expect(result.workersExecuting).toBe(1);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['b1']);
   });
 
   // -------------------------------------------------------------------------
@@ -253,30 +293,65 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
   // -------------------------------------------------------------------------
   it('handles the legacy array shape of store.agents', async () => {
     writeStoreArray(fix.storePath, [
-      { agentId: 'a1', agentType: 'coder', status: 'busy' },
-      { agentId: 'a2', agentType: 'coder', status: 'idle' },
-      { agentId: 'a3', agentType: 'coder', status: 'terminated' },
+      {
+        agentId: 'a1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      { agentId: 'a2', agentType: 'coder', status: 'idle', ownerSessionId: 'session-a' },
+      { agentId: 'a3', agentType: 'coder', status: 'terminated', ownerSessionId: 'session-a' },
     ]);
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(result.workersAlive).toBe(2);
-    // a1 has no pid => alive but not executing (phantom-activity fix).
-    expect(result.workersExecuting).toBe(0);
+    expect(result.workersAlive).toBe(1);
+    expect(result.workersExecuting).toBe(1);
   });
 
   // -------------------------------------------------------------------------
-  // C1 #8 — queens count separately and queue executing counts.
+  // C1 #8 — queens count separately when they have live process evidence.
   // -------------------------------------------------------------------------
-  it('counts a busy queen without a pid as queensAlive=1 but queensExecuting=0', async () => {
+  it('does not count a busy queen without live process evidence', async () => {
     writeStoreDict(fix.storePath, {
-      queen1: { agentId: 'queen1', agentType: 'queen', status: 'busy' },
-      worker1: { agentId: 'worker1', agentType: 'coder', status: 'idle' },
+      queen1: { agentId: 'queen1', agentType: 'queen', status: 'busy', ownerSessionId: 'session-a' },
+      worker1: { agentId: 'worker1', agentType: 'coder', status: 'idle', ownerSessionId: 'session-a' },
     });
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(result.queensAlive).toBe(1);
-    // No pid => non-executing (phantom-activity fix).
+    expect(result.queensAlive).toBe(0);
     expect(result.queensExecuting).toBe(0);
-    expect(result.workersAlive).toBe(1);
+    expect(result.workersAlive).toBe(0);
     expect(result.workersExecuting).toBe(0);
+  });
+
+  it('drops ownerless rows even when they have a live pid', async () => {
+    writeStoreDict(fix.storePath, {
+      owned: {
+        agentId: 'owned',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      ownerless: {
+        agentId: 'ownerless',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskPid: process.pid,
+      },
+      blankOwner: {
+        agentId: 'blank-owner',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: '',
+        currentTaskPid: process.pid,
+      },
+    });
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.workersAlive).toBe(1);
+    expect(result.workersExecuting).toBe(1);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['owned']);
   });
 
   it('drops hived agent records whose worker tasks already have result files', async () => {
@@ -296,17 +371,23 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
         agentId: 'queen-active',
         agentType: 'coordinator',
         status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
       },
       active: {
         agentId: 'active-agent',
         agentType: 'investigator',
         status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
         config: { hiveId: 'active-hive' },
       },
       standalone: {
         agentId: 'standalone-agent',
         agentType: 'researcher',
         status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
       },
     });
     writeHive(fix.projectRoot, 'done-hive', [
@@ -314,8 +395,8 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     ], 'queen-done');
     writeTaskResult(fix.projectRoot, 'task-done');
     writeHive(fix.projectRoot, 'active-hive', [
-      { agentId: 'active-agent', workerId: 'active-agent', status: 'idle', taskId: 'task-open' },
-    ], 'queen-active');
+      { agentId: 'active-agent', workerId: 'active-agent', status: 'idle', taskId: 'task-open', currentTaskPid: process.pid },
+    ], 'queen-active', 'session-a');
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
 
@@ -328,8 +409,8 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     expect(result.queensAlive).toBe(1);
     expect(result.activeHives).toEqual({
       active: 1,
-      unknownOwner: 1,
-      byOwnerSessionId: {},
+      unknownOwner: 0,
+      byOwnerSessionId: { 'session-a': 1 },
     });
   });
 
@@ -345,11 +426,13 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
         agentId: 'pending-direct',
         agentType: 'investigator',
         status: 'idle',
+        ownerSessionId: 'session-a',
       },
       executingDirect: {
         agentId: 'executing-direct',
         agentType: 'investigator',
         status: 'busy',
+        ownerSessionId: 'session-a',
         currentTaskPid: process.pid,
         lastResult: { completedAt: '2026-06-20T19:00:00.000Z' },
       },
@@ -357,11 +440,8 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
 
-    expect(result.agents.map((agent) => agent.id)).toEqual([
-      'pending-direct',
-      'executing-direct',
-    ]);
-    expect(result.workersAlive).toBe(2);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['executing-direct']);
+    expect(result.workersAlive).toBe(1);
     expect(result.workersExecuting).toBe(1);
   });
 
@@ -386,13 +466,17 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
   // -------------------------------------------------------------------------
   it("classifies an old store.json as freshness.state='stale' while still rendering counts", async () => {
     writeStoreDict(fix.storePath, {
-      a1: { agentId: 'a1', agentType: 'coder', status: 'busy' },
+      a1: {
+        agentId: 'a1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+      },
     });
     makeStoreStale(fix.storePath, DEGRADED_MS + 60_000);
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
     expect(result.freshness.state).toBe('stale');
-    expect(result.workersAlive).toBe(1);
-    // No pid => alive but not executing (phantom-activity fix).
+    expect(result.workersAlive).toBe(0);
     expect(result.workersExecuting).toBe(0);
   });
 
@@ -428,7 +512,13 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
   // -------------------------------------------------------------------------
   it("classifies a moderately-old store.json as freshness.state='degraded'", async () => {
     writeStoreDict(fix.storePath, {
-      a1: { agentId: 'a1', agentType: 'coder', status: 'idle' },
+      a1: {
+        agentId: 'a1',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
     });
     // Target ~90s old -> between FRESH_MS (60s) and DEGRADED_MS (300s).
     makeStoreStale(fix.storePath, FRESH_MS + 30_000);
@@ -484,7 +574,13 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     const corruptShape = {
       version: '1.0',
       agents: {
-        'good-1': { agentId: 'good-1', agentType: 'coder', status: 'busy' },
+        'good-1': {
+          agentId: 'good-1',
+          agentType: 'coder',
+          status: 'busy',
+          ownerSessionId: 'session-a',
+          currentTaskPid: process.pid,
+        },
         'bad-null': null,
         'bad-string': 'not-an-object',
         'bad-array': [1, 2, 3],
@@ -493,22 +589,32 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     writeFileSync(fix.storePath, JSON.stringify(corruptShape), { mode: 0o600 });
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
     expect(result.workersAlive).toBe(1);
-    // No pid => alive but not executing (phantom-activity fix).
-    expect(result.workersExecuting).toBe(0);
+    expect(result.workersExecuting).toBe(1);
   });
 
   // -------------------------------------------------------------------------
   // C1 #18 — legacy aliases ('running', 'working') still classify as busy
   // (back-compat with stores written by older code paths).
   // -------------------------------------------------------------------------
-  it("treats legacy status aliases 'running' and 'working' as busy (alive, non-executing without pid)", async () => {
+  it("treats legacy status aliases 'running' and 'working' as busy with live process evidence", async () => {
     writeStoreDict(fix.storePath, {
-      r1: { agentId: 'r1', agentType: 'coder', status: 'running' },
-      w1: { agentId: 'w1', agentType: 'coder', status: 'working' },
+      r1: {
+        agentId: 'r1',
+        agentType: 'coder',
+        status: 'running',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      w1: {
+        agentId: 'w1',
+        agentType: 'coder',
+        status: 'working',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
     });
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
     expect(result.workersAlive).toBe(2);
-    // No pid => alive but not executing (phantom-activity fix).
-    expect(result.workersExecuting).toBe(0);
+    expect(result.workersExecuting).toBe(2);
   });
 });

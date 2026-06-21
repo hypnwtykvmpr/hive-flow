@@ -14,12 +14,11 @@
 // The renderer MUST:
 //   a. NOT treat task-metadata or .result.json presence as "agents are active".
 //   b. NOT render "◉" in the Swarm row for this state.
-//   c. Render "○" if any idle (non-terminal) agents exist in store.json,
-//      OR omit the Swarm row entirely if zero live agents remain.
+//   c. Omit the Swarm row unless a non-terminal agent has live process evidence.
 //
 // Three sub-cases are tested:
 //   1. store.json has zero live agents + stale task files → Swarm row OMITTED.
-//   2. store.json has idle-only agents + stale task files → Swarm row "○" not "◉".
+//   2. store.json has idle-only agents + stale task files → Swarm row OMITTED.
 //   3. store.json ABSENT (no agents dir) + task files present → no Swarm row.
 //
 // Harness conventions follow claude-code-renderer.test.ts:
@@ -47,6 +46,7 @@ function stripAnsi(value: string): string {
 function stdinFor(projectRoot: string): Record<string, unknown> {
   return {
     workspace: { current_dir: projectRoot, project_dir: projectRoot },
+    session_id: 'session-a',
     model: { id: 'claude-opus-4-8', display_name: 'Opus 4.8' },
     context_window: {
       used_percentage: 15,
@@ -100,7 +100,7 @@ function writeStaleTaskFiles(projectRoot: string, taskIds: string[]): void {
  */
 function writeAgentStore(
   projectRoot: string,
-  agents: Record<string, { agentId: string; agentType: string; status: string; currentTaskPid?: number }>,
+  agents: Record<string, { agentId: string; agentType: string; status: string; ownerSessionId?: string; currentTaskPid?: number }>,
 ): void {
   const dir = join(projectRoot, '.hive-flow', 'agents');
   mkdirSync(dir, { recursive: true });
@@ -180,8 +180,8 @@ describe('Proof 3 — stale task-metadata files do not make Swarm row show execu
     expect(plain).not.toContain('◉');
   });
 
-  it('sub-case 2: store.json with idle-only agents + stale tasks → Swarm "○" not "◉"', async () => {
-    // Idle agents are LIVE (not terminal) — they appear in the Swarm row.
+  it('sub-case 2: store.json with idle-only agents + stale tasks → Swarm row omitted', async () => {
+    // Idle records without live process evidence are bookkeeping, not live agents.
     writeAgentStore(projectRoot, {
       'idle-1': { agentId: 'idle-1', agentType: 'coder', status: 'idle' },
       'idle-2': { agentId: 'idle-2', agentType: 'tester', status: 'idle' },
@@ -193,14 +193,10 @@ describe('Proof 3 — stale task-metadata files do not make Swarm row show execu
     const output = await renderClaudeCodeStatusline(stdinFor(projectRoot), projectRoot);
     const plain = stripAnsi(output);
 
-    // SPEC: Swarm row is present (idle agents are live).
-    expect(plain).toContain('Swarm');
-    // SPEC: idle-only → "○" in Swarm row (corrected behavior).
-    expect(plain).toContain('Swarm ○');
+    // SPEC: idle-only records with no live process evidence are not live.
+    expect(plain).not.toContain('Swarm');
     // SPEC: "◉" must NOT appear — stale task files must not inflate executing count.
     expect(plain).not.toContain('Swarm ◉');
-    // SPEC: The slot count reflects idle agents only (2), not stale task count (3).
-    expect(plain).toMatch(/\[\s*2\/\d+\]/);
     expect(plain).not.toMatch(/\[\s*3\/\d+\]/);
     expect(plain).not.toMatch(/\[\s*5\/\d+\]/);
   });
@@ -245,7 +241,13 @@ describe('Proof 3 — stale task-metadata files do not make Swarm row show execu
     vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
 
     writeAgentStore(projectRoot, {
-      'live-1': { agentId: 'live-1', agentType: 'coder', status: 'busy', currentTaskPid: livePid },
+      'live-1': {
+        agentId: 'live-1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: livePid,
+      },
     });
 
     // Stale task files also present (should not change the outcome).

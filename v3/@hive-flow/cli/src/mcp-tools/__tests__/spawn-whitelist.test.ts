@@ -13,6 +13,7 @@ const statusTool = agentTools.find(tool => tool.name === 'agent_status')!;
 const ORIGINAL_CWD = process.cwd();
 const ORIGINAL_ENV = {
   CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
+  CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
 };
@@ -47,6 +48,10 @@ describe('agent_spawn canonical roster whitelist', () => {
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'hive-flow-spawn-whitelist-'));
     process.chdir(tmpRoot);
+    process.env.CODEX_SESSION_ID = 'spawn-test-session';
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
   });
 
   afterEach(() => {
@@ -105,6 +110,7 @@ describe('agent_spawn canonical roster whitelist', () => {
 
   it('stamps ownerSessionId on agent_spawn from session env before MCP context fallback', async () => {
     process.env.CODEX_SESSION_ID = 'codex-session';
+    process.env.CODEX_THREAD_ID = 'codex-thread';
     process.env.CLAUDE_SESSION_ID = 'claude-session';
     process.env.HIVE_FLOW_SESSION_ID = 'provider-session';
 
@@ -121,8 +127,28 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecord(tmpRoot, 'owned-agent')?.ownerSessionId).toBe('codex-session');
   });
 
+  it('uses CODEX_THREAD_ID for agent_spawn ownership when CODEX_SESSION_ID is absent', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    process.env.CODEX_THREAD_ID = 'codex-thread-session';
+    process.env.CLAUDE_SESSION_ID = 'claude-session';
+    process.env.HIVE_FLOW_SESSION_ID = 'provider-session';
+
+    const result = await spawnTool.handler({
+      agentId: 'codex-thread-owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }, { sessionId: 'context-session' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'codex-thread-owned-agent',
+    });
+    expect(readAgentRecord(tmpRoot, 'codex-thread-owned-agent')?.ownerSessionId).toBe('codex-thread-session');
+  });
+
   it('falls back to MCP context for agent_spawn ownership when no session env exists', async () => {
     delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_SESSION_ID;
     delete process.env.HIVE_FLOW_SESSION_ID;
 
@@ -137,6 +163,40 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentId: 'context-owned-agent',
     });
     expect(readAgentRecord(tmpRoot, 'context-owned-agent')?.ownerSessionId).toBe('context-session');
+  });
+
+  it('refuses generated MCP transport ids as agent_spawn owner identity', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await spawnTool.handler({
+      agentId: 'mcp-transport-owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }, { sessionId: 'mcp-1790000000000-deadbeef' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(String(result.error)).toContain('owner session');
+    expect(readAgentRecord(tmpRoot, 'mcp-transport-owned-agent')).toBeUndefined();
+  });
+
+  it('refuses agent_spawn when no owner session can be resolved', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await spawnTool.handler({
+      agentId: 'ownerless-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(String(result.error)).toContain('owner session');
+    expect(readAgentRecord(tmpRoot, 'ownerless-agent')).toBeUndefined();
   });
 
   it('lists spawned idle agents when status is all and supports canonical type filters', async () => {

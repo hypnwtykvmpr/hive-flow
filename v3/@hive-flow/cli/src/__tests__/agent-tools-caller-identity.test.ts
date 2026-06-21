@@ -114,6 +114,7 @@ describe('agent_task bridge env includes non-secret notification routing keys', 
     'HIVE_FLOW_CLIENT_KIND',
     'CLAUDE_SESSION_ID',
     'CODEX_SESSION_ID',
+    'CODEX_THREAD_ID',
     'HIVE_FLOW_SESSION_ID',
   ] as const;
 

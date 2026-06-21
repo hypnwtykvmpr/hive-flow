@@ -639,6 +639,7 @@ const TASK_TTL_MS = 3600000; // 1 hour
 const RESULT_TTL_MS = parseInt(process.env.HIVE_FLOW_RESULT_TTL_MS, 10) || 14400000; // 4 hours
 const STUCK_ACTIVE_THRESHOLD_MS = parseInt(process.env.HIVE_FLOW_STUCK_ACTIVE_THRESHOLD_MS, 10) || (12 * 60 * 60_000);
 const LEGACY_WATCHER_TTL_MS = parseInt(process.env.HIVE_FLOW_LEGACY_WATCHER_TTL_MS, 10) || 14400000; // 4 hours
+const AGENT_RECORD_TTL_MS = parseInt(process.env.HIVE_FLOW_AGENT_RECORD_TTL_MS, 10) || (7 * 24 * 60 * 60_000);
 
 function findHiveByTaskTracking(tracking) {
   if (tracking && tracking.hiveId) return loadHive(String(tracking.hiveId));
@@ -663,33 +664,30 @@ async function autoFailStuckActiveHives(deadline = Date.now() + CLEANUP_MAX_RUNT
   const summary = { hivesScanned: 0, autoFailed: 0, failed: [], errors: [] };
   const activeHives = listActiveHives();
   summary.hivesScanned = activeHives.length;
-  const now = Date.now();
 
   for (const hive of activeHives) {
     if (deadlineExceeded(deadline)) {
       summary.errors.push({ error: 'Cleanup runtime budget exceeded while auto-failing stuck active hives' });
       break;
     }
-    const updatedAt = new Date(hive.updatedAt || hive.createdAt || 0).getTime();
-    if (!Number.isFinite(updatedAt) || now - updatedAt < STUCK_ACTIVE_THRESHOLD_MS) continue;
+    if (hiveHasLiveProcess(hive)) continue;
 
     const workersToReap = [];
     try {
       withHiveLockSync(hive.hiveId, () => {
         const freshHive = loadHive(hive.hiveId);
         if (!freshHive || freshHive.status !== 'active') return;
-        const freshUpdatedAt = new Date(freshHive.updatedAt || freshHive.createdAt || 0).getTime();
-        if (!Number.isFinite(freshUpdatedAt) || now - freshUpdatedAt < STUCK_ACTIVE_THRESHOLD_MS) return;
+        if (hiveHasLiveProcess(freshHive)) return;
 
         freshHive.status = 'failed';
-        if (!freshHive.error) freshHive.error = 'stuck-active-timeout';
+        if (!freshHive.error) freshHive.error = 'no-live-worker-process';
         freshHive.completedAt = new Date().toISOString();
         if (!freshHive.audit) freshHive.audit = [];
         freshHive.audit.push({
           timestamp: new Date().toISOString(),
           event: 'error',
           hiveId: freshHive.hiveId,
-          detail: 'Auto-failed stuck active hive during cleanup',
+          detail: 'Auto-failed active hive during cleanup because no worker or queen PID is live',
         });
         for (const w of freshHive.workers || []) {
           if (w.role === 'queen' || w.status === 'terminated') continue;
@@ -709,6 +707,153 @@ async function autoFailStuckActiveHives(deadline = Date.now() + CLEANUP_MAX_RUNT
     } catch (err) {
       summary.errors.push({ hiveId: hive.hiveId, error: err?.message || String(err) });
     }
+  }
+  return summary;
+}
+
+function directPidFrom(value) {
+  if (!value || typeof value !== 'object') return null;
+  for (const key of ['currentTaskPid', 'pid', 'workerPid']) {
+    const pid = value[key];
+    if (isPositivePid(pid)) return pid;
+  }
+  return null;
+}
+
+function isPidPossiblyAlive(pid) {
+  return isPositivePid(pid) && !isPidDefinitelyDead(pid);
+}
+
+function workerHasLiveProcess(worker) {
+  const directPid = directPidFrom(worker);
+  if (isPidPossiblyAlive(directPid)) return true;
+  const trackingPid = resolveWorkerPid(worker?.agentId);
+  return isPidPossiblyAlive(trackingPid);
+}
+
+function hiveHasLiveProcess(hive) {
+  const queenDirect = directPidFrom(hive?.queen) || (isPositivePid(hive?.queenPid) ? hive.queenPid : null);
+  if (isPidPossiblyAlive(queenDirect)) return true;
+  for (const worker of hive?.workers || []) {
+    if (!worker || worker.status === 'terminated') continue;
+    if (workerHasLiveProcess(worker)) return true;
+  }
+  return false;
+}
+
+function parseTimestamp(value) {
+  if (typeof value !== 'string' || !value.trim()) return NaN;
+  return new Date(value).getTime();
+}
+
+function latestAgentTimestamp(agent) {
+  const stamps = [
+    parseTimestamp(agent?.lastTaskAt),
+    parseTimestamp(agent?.idleSince),
+    parseTimestamp(agent?.terminatedAt),
+    parseTimestamp(agent?.createdAt),
+  ];
+  if (agent?.lastResult && typeof agent.lastResult === 'object') {
+    stamps.push(parseTimestamp(agent.lastResult.completedAt));
+    stamps.push(parseTimestamp(agent.lastResult.finishedAt));
+    stamps.push(parseTimestamp(agent.lastResult.updatedAt));
+  }
+  const finite = stamps.filter(Number.isFinite);
+  return finite.length > 0 ? Math.max(...finite) : NaN;
+}
+
+const TERMINAL_RECORD_STATUSES = new Set(['cancelled', 'canceled', 'complete', 'completed', 'done', 'failed', 'terminated']);
+
+function normalizeRecordStatus(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function isTerminalRecordStatus(value) {
+  return TERMINAL_RECORD_STATUSES.has(normalizeRecordStatus(value));
+}
+
+function agentRecordHasTerminalResult(agent) {
+  if (!agent?.lastResult || typeof agent.lastResult !== 'object') return false;
+  if (isTerminalRecordStatus(agent.lastResult.status)) return true;
+  return Number.isFinite(parseTimestamp(agent.lastResult.completedAt))
+    || Number.isFinite(parseTimestamp(agent.lastResult.finishedAt));
+}
+
+function agentRecordHasLiveProcess(agent) {
+  const directPid = directPidFrom(agent);
+  return isPidPossiblyAlive(directPid);
+}
+
+function agentRecordHasDeadProcess(agent) {
+  const directPid = directPidFrom(agent);
+  return isPositivePid(directPid) && isPidDefinitelyDead(directPid);
+}
+
+function collectNonActiveHiveAgentIds() {
+  const ids = new Set();
+  if (!fs.existsSync(HIVES_DIR)) return ids;
+  let entries;
+  try { entries = fs.readdirSync(HIVES_DIR, { withFileTypes: true }); } catch { return ids; }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+    const hive = loadHive(entry.name);
+    if (!hive || hive.status === 'active') continue;
+    if (typeof hive.queenId === 'string' && hive.queenId.trim()) ids.add(hive.queenId.trim());
+    for (const worker of hive.workers || []) {
+      if (typeof worker?.agentId === 'string' && worker.agentId.trim()) ids.add(worker.agentId.trim());
+      if (typeof worker?.workerId === 'string' && worker.workerId.trim()) ids.add(worker.workerId.trim());
+    }
+  }
+  return ids;
+}
+
+async function cleanupAgedAgentStoreRecords(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
+  const summary = { agedAgentsFound: 0, agedAgentsPruned: 0, pruned: [], errors: [] };
+  if (!fs.existsSync(AGENT_STORE_PATH)) return summary;
+  const lockPath = path.join(AGENTS_DIR, '.store.lock');
+  if (!acquireLockSync(lockPath)) {
+    summary.errors.push({ error: 'Could not acquire store lock for aged agent pruning' });
+    return summary;
+  }
+  try {
+    let store;
+    try {
+      store = JSON.parse(fs.readFileSync(AGENT_STORE_PATH, 'utf-8'));
+    } catch (err) {
+      summary.errors.push({ error: err?.message || String(err) });
+      return summary;
+    }
+
+    const now = Date.now();
+    const nonActiveHiveAgentIds = collectNonActiveHiveAgentIds();
+    let changed = false;
+    for (const [id, agent] of Object.entries(store.agents || {})) {
+      if (deadlineExceeded(deadline)) {
+        summary.errors.push({ error: 'Cleanup runtime budget exceeded while pruning aged agent records' });
+        break;
+      }
+      if (agentRecordHasLiveProcess(agent)) continue;
+      const latest = latestAgentTimestamp(agent);
+      const provenDeadOrDone = agentRecordHasDeadProcess(agent)
+        || isTerminalRecordStatus(agent?.status)
+        || agentRecordHasTerminalResult(agent)
+        || nonActiveHiveAgentIds.has(id)
+        || nonActiveHiveAgentIds.has(agent?.agentId);
+      if (!provenDeadOrDone && (!Number.isFinite(latest) || now - latest <= AGENT_RECORD_TTL_MS)) continue;
+      summary.agedAgentsFound++;
+      delete store.agents[id];
+      summary.agedAgentsPruned++;
+      summary.pruned.push(id);
+      changed = true;
+    }
+
+    if (changed) {
+      const tmpPath = AGENT_STORE_PATH + '.tmp.' + process.pid;
+      fs.writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
+      fs.renameSync(tmpPath, AGENT_STORE_PATH);
+    }
+  } finally {
+    releaseLock(lockPath);
   }
   return summary;
 }
@@ -825,6 +970,7 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
     const autoFailResult = await autoFailStuckActiveHives(deadline);
     const hiveDirResult = cleanupStaleHiveDirs(deadline);
     const pruneResult = pruneTerminatedAgents();
+    const agedAgentResult = await cleanupAgedAgentStoreRecords(deadline);
     const taskResult = cleanupOrphanedTasks(deadline);
     const watcherResult = cleanupLegacyWatchersDir(deadline);
 
@@ -837,6 +983,7 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
       hivesAutoFailed: autoFailResult.autoFailed,
       hivesArchived: hiveDirResult.hivesArchived,
       agentsPruned: pruneResult.agentsPruned,
+      agedAgentsPruned: agedAgentResult.agedAgentsPruned,
       tasksCleaned: taskResult.tasksCleaned,
       completedResultsCleaned: taskResult.completedResultsCleaned,
       legacyWatchersPruned: watcherResult.watchersPruned,
@@ -853,6 +1000,9 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
     if (autoFailResult.failed?.length > 0) {
       combined.autoFailed = autoFailResult.failed;
     }
+    if (agedAgentResult.pruned?.length > 0) {
+      combined.agedAgents = agedAgentResult.pruned;
+    }
     if (watcherResult.pruned?.length > 0) {
       combined.legacyWatchers = watcherResult.pruned;
     }
@@ -863,6 +1013,7 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
       ...(autoFailResult.errors || []),
       ...(hiveDirResult.errors || []),
       ...(pruneResult.errors || []),
+      ...(agedAgentResult.errors || []),
       ...(taskResult.errors || []),
       ...(watcherResult.errors || []),
     ];
@@ -870,6 +1021,7 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
 
     const totalWork = (combined.workersTerminated || 0) + (combined.orphansTerminated || 0)
       + (combined.hivesAutoFailed || 0) + (combined.hivesArchived || 0) + (combined.agentsPruned || 0)
+      + (combined.agedAgentsPruned || 0)
       + (combined.tasksCleaned || 0) + (combined.completedResultsCleaned || 0) + (combined.legacyWatchersPruned || 0)
       + (combined.staleBusyReaped || 0) + (combined.hiveWorkersReaped || 0);
     if (totalWork === 0 && allErrors.length === 0) {

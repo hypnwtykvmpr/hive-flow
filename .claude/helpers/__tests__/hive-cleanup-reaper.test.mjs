@@ -55,6 +55,7 @@ function loadCleanupModule(projectDir) {
 module.exports = {
   cleanupIdleAgents,
   cleanupStaleBusyAgents: typeof cleanupStaleBusyAgents === 'function' ? cleanupStaleBusyAgents : undefined,
+  cleanupAgedAgentStoreRecords: typeof cleanupAgedAgentStoreRecords === 'function' ? cleanupAgedAgentStoreRecords : undefined,
   autoFailStuckActiveHives: typeof autoFailStuckActiveHives === 'function' ? autoFailStuckActiveHives : undefined,
   cleanupOrphanedTasks,
   cleanupLegacyWatchersDir: typeof cleanupLegacyWatchersDir === 'function' ? cleanupLegacyWatchersDir : undefined,
@@ -156,6 +157,7 @@ beforeEach(() => {
     HIVE_FLOW_REAP_WAIT_MS: process.env.HIVE_FLOW_REAP_WAIT_MS,
     HIVE_FLOW_CLEANUP_MAX_RUNTIME_MS: process.env.HIVE_FLOW_CLEANUP_MAX_RUNTIME_MS,
     HIVE_FLOW_STUCK_ACTIVE_THRESHOLD_MS: process.env.HIVE_FLOW_STUCK_ACTIVE_THRESHOLD_MS,
+    HIVE_FLOW_AGENT_RECORD_TTL_MS: process.env.HIVE_FLOW_AGENT_RECORD_TTL_MS,
     HIVE_FLOW_RESULT_TTL_MS: process.env.HIVE_FLOW_RESULT_TTL_MS,
     HIVE_FLOW_LEGACY_WATCHER_TTL_MS: process.env.HIVE_FLOW_LEGACY_WATCHER_TTL_MS,
   };
@@ -163,6 +165,7 @@ beforeEach(() => {
   process.env.HIVE_FLOW_REAP_WAIT_MS = '10';
   process.env.HIVE_FLOW_CLEANUP_MAX_RUNTIME_MS = '2000';
   process.env.HIVE_FLOW_STUCK_ACTIVE_THRESHOLD_MS = '1';
+  process.env.HIVE_FLOW_AGENT_RECORD_TTL_MS = String(7 * 24 * 60 * 60 * 1000);
   process.env.HIVE_FLOW_RESULT_TTL_MS = '1';
   process.env.HIVE_FLOW_LEGACY_WATCHER_TTL_MS = '1';
 });
@@ -383,7 +386,7 @@ describe('hive-cleanup OS reaper', () => {
     }
   });
 
-  it('auto-fails stuck active hives and reaps their worker tracking PIDs', async () => {
+  it('does not auto-fail an old active hive while a worker tracking PID is alive', async () => {
     const projectDir = makeProjectDir();
     tempDirs.push(projectDir);
     const worker = makeIdleWorker(1, {
@@ -418,13 +421,199 @@ describe('hive-cleanup OS reaper', () => {
       };
       const result = await mod.autoFailStuckActiveHives(Date.now() + 2000);
 
-      assert.equal(result.autoFailed, 1);
-      assert.equal(readHive(projectDir, 'stuck-hive').status, 'failed');
-      assert.ok(killed.some(([pid, signal]) => pid === child.pid && signal === 'SIGTERM'));
+      assert.equal(result.autoFailed, 0);
+      assert.equal(readHive(projectDir, 'stuck-hive').status, 'active');
+      assert.equal(killed.some(([pid, signal]) => pid === child.pid && signal === 'SIGTERM'), false);
     } finally {
       process.kill = originalKill;
       await stopChild(child);
     }
+  });
+
+  it('auto-fails an old active hive only when its worker PIDs are gone', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const deadPid = 747474;
+    const worker = makeIdleWorker(1, {
+      agentId: 'agent-dead',
+      workerId: 'worker-dead',
+      status: 'busy',
+    });
+    writeHive(projectDir, 'dead-hive', [worker]);
+    const hivePath = join(projectDir, '.hive-flow', 'hives', 'dead-hive', 'hive.json');
+    const staleHive = readHive(projectDir, 'dead-hive');
+    staleHive.updatedAt = isoMsAgo(60_000);
+    writeFileSync(hivePath, JSON.stringify(staleHive, null, 2));
+
+    writeTracking(projectDir, 'task-dead.json', {
+      status: 'running',
+      taskId: 'task-dead',
+      agentId: 'agent-dead',
+      startedAt: new Date().toISOString(),
+      pid: deadPid,
+    });
+
+    const originalKill = process.kill;
+    process.kill = (pid, signal) => {
+      if ((signal === 0 || signal === 'SIGTERM') && pid === deadPid) {
+        const err = new Error('dead process');
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return originalKill.call(process, pid, signal);
+    };
+
+    try {
+      const mod = loadCleanupModule(projectDir);
+      const result = await mod.autoFailStuckActiveHives(Date.now() + 2000);
+
+      assert.equal(result.autoFailed, 1);
+      assert.equal(readHive(projectDir, 'dead-hive').status, 'failed');
+    } finally {
+      process.kill = originalKill;
+    }
+  });
+
+  it('prunes aged non-live agent store records while preserving live and recent records', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const livePid = process.pid;
+    const deadPid = 858585;
+    const eightDaysAgo = isoMsAgo(8 * 24 * 60 * 60 * 1000);
+    const oneDayAgo = isoMsAgo(24 * 60 * 60 * 1000);
+    writeAgentStore(projectDir, {
+      oldIdle: {
+        agentId: 'oldIdle',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        createdAt: eightDaysAgo,
+      },
+      oldTerminated: {
+        agentId: 'oldTerminated',
+        agentType: 'tester',
+        status: 'terminated',
+        ownerSessionId: 'session-a',
+        createdAt: eightDaysAgo,
+        terminatedAt: eightDaysAgo,
+      },
+      oldLive: {
+        agentId: 'oldLive',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        createdAt: eightDaysAgo,
+        currentTaskPid: livePid,
+      },
+      oldCreatedRecentActivity: {
+        agentId: 'oldCreatedRecentActivity',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        createdAt: eightDaysAgo,
+        lastTaskAt: oneDayAgo,
+      },
+      recentIdle: {
+        agentId: 'recentIdle',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        createdAt: oneDayAgo,
+      },
+      recentZombie: {
+        agentId: 'recentZombie',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        createdAt: oneDayAgo,
+        currentTaskPid: deadPid,
+      },
+      recentCompleted: {
+        agentId: 'recentCompleted',
+        agentType: 'tester',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        createdAt: oneDayAgo,
+        lastResult: {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    const originalKill = process.kill;
+    process.kill = (pid, signal) => {
+      if (signal === 0 && pid === deadPid) {
+        const err = new Error('dead process');
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return originalKill.call(process, pid, signal);
+    };
+
+    let result;
+    let store;
+    try {
+      const mod = loadCleanupModule(projectDir);
+      assert.equal(typeof mod.cleanupAgedAgentStoreRecords, 'function');
+      result = await mod.cleanupAgedAgentStoreRecords(Date.now() + 2000);
+      store = readAgentStore(projectDir);
+    } finally {
+      process.kill = originalKill;
+    }
+
+    assert.equal(result.agedAgentsPruned, 4);
+    assert.equal(JSON.stringify([...result.pruned].sort()), JSON.stringify(['oldIdle', 'oldTerminated', 'recentCompleted', 'recentZombie']));
+    assert.equal(store.agents.oldIdle, undefined);
+    assert.equal(store.agents.oldTerminated, undefined);
+    assert.equal(store.agents.recentCompleted, undefined);
+    assert.equal(store.agents.recentZombie, undefined);
+    assert.equal(store.agents.oldLive.status, 'busy');
+    assert.equal(store.agents.oldCreatedRecentActivity.status, 'idle');
+    assert.equal(store.agents.recentIdle.status, 'idle');
+  });
+
+  it('prunes non-live worker records from terminal hives without waiting for age TTL', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    writeHive(projectDir, 'failed-hive', [
+      makeIdleWorker(1, { agentId: 'failed-worker', workerId: 'failed-worker' }),
+    ]);
+    const failedHive = readHive(projectDir, 'failed-hive');
+    failedHive.status = 'failed';
+    writeFileSync(
+      join(projectDir, '.hive-flow', 'hives', 'failed-hive', 'hive.json'),
+      JSON.stringify(failedHive, null, 2),
+    );
+    writeHive(projectDir, 'active-hive', [
+      makeIdleWorker(2, { agentId: 'active-worker', workerId: 'active-worker' }),
+    ]);
+
+    writeAgentStore(projectDir, {
+      failedWorker: {
+        agentId: 'failed-worker',
+        agentType: 'tester',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        createdAt: new Date().toISOString(),
+      },
+      activeWorker: {
+        agentId: 'active-worker',
+        agentType: 'tester',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        createdAt: new Date().toISOString(),
+      },
+    });
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupAgedAgentStoreRecords(Date.now() + 2000);
+    const store = readAgentStore(projectDir);
+
+    assert.equal(result.agedAgentsPruned, 1);
+    assert.equal(JSON.stringify(result.pruned), JSON.stringify(['failedWorker']));
+    assert.equal(store.agents.failedWorker, undefined);
+    assert.equal(store.agents.activeWorker.status, 'idle');
   });
 
   it('prunes completed task/result pairs after TTL only when the hive is terminal', async () => {

@@ -39,6 +39,7 @@ import {
   collectActiveHiveRuntimeState,
   type ActiveHiveRuntimeState,
 } from '../hive-ownership.js';
+import { sanitizeSessionId } from '../../mcp-tools/session-id.js';
 import { readJsonFile } from '../storage.js';
 import {
   type ActiveHiveOwnershipSummary,
@@ -251,7 +252,7 @@ function isCompletedDirectAgent(rec: RawAgentRecord, row: NormalizedAgentRow): b
 }
 
 function isPositiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+  return typeof value === 'number' && Number.isInteger(value) && value > 1;
 }
 
 function isPidDefinitelyDead(pid: number): boolean {
@@ -261,6 +262,14 @@ function isPidDefinitelyDead(pid: number): boolean {
   } catch (err) {
     return err instanceof Error && 'code' in err && err.code === 'ESRCH';
   }
+}
+
+function hasLiveProcessEvidence(rec: RawAgentRecord): boolean {
+  return isPositiveInteger(rec.currentTaskPid) && !isPidDefinitelyDead(rec.currentTaskPid);
+}
+
+function ownerSessionIdOf(rec: RawAgentRecord): string | null {
+  return sanitizeSessionId(rec.ownerSessionId);
 }
 
 /**
@@ -421,30 +430,18 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
   const agents: NormalizedAgentRow[] = [];
   let index = 0;
   for (const rec of records) {
-    const ownerSessionId = typeof rec.ownerSessionId === 'string' ? rec.ownerSessionId.trim() : '';
-    if (opts.sessionId !== undefined && ownerSessionId !== '' && ownerSessionId !== opts.sessionId) continue;
+    const ownerSessionId = ownerSessionIdOf(rec);
+    if (ownerSessionId === null) continue;
+    if (opts.sessionId !== undefined && ownerSessionId !== opts.sessionId) continue;
     const built = buildRow(rec, `agent-${index}`);
     index++;
     if (built === undefined) continue;
     if (!shouldKeepRuntimeAgent(rec, built.row.id, runtimeState)) continue;
     if (isCompletedDirectAgent(rec, built.row)) continue;
-    if (built.row.status === 'busy'
-      && isPositiveInteger(rec.currentTaskPid)
-      && isPidDefinitelyDead(rec.currentTaskPid)) {
-      continue;
-    }
-    // Busy without a valid (positive-integer) currentTaskPid means the agent
-    // has not yet attached a real OS process — demote its row status to 'idle'
-    // so the Active sub-row (which checks row.status === 'busy') and the slot
-    // symbol (which checks workersExecuting) agree. The record still counts as
-    // alive; only the executing counter is withheld.
-    // Only demote when the normalized status is 'busy'; preserve 'queued',
-    // 'idle', 'stale', and all other statuses as-is.
+    if (!hasLiveProcessEvidence(rec)) continue;
     const isExecuting =
       built.row.status === 'busy' && isPositiveInteger(rec.currentTaskPid);
-    const row = (built.row.status === 'busy' && !isExecuting)
-      ? { ...built.row, status: 'idle' as const }
-      : built.row;
+    const row = built.row;
     agents.push(row);
     if (built.isQueen) {
       queensAlive++;

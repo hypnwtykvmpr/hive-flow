@@ -44,7 +44,7 @@ describe('collectSwarm session scoping', () => {
     vi.restoreAllMocks();
   });
 
-  it('counts current-session and unowned live records when sessionId is present', async () => {
+  it('counts only current-session records with live process evidence when sessionId is present', async () => {
     // A positive currentTaskPid is required for a busy agent to count as
     // executing (phantom-activity fix). Use process.pid (always alive) for the
     // four busy fixtures that should register as executing.
@@ -103,15 +103,9 @@ describe('collectSwarm session scoping', () => {
     const result = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-a' });
 
     expect(killSpy).toHaveBeenCalled();
-    expect(result.workersAlive).toBe(5);
-    expect(result.workersExecuting).toBe(4);
-    expect(result.agents.map((agent) => agent.id)).toEqual([
-      'mine-busy',
-      'mine-idle',
-      'unowned-busy',
-      'empty-owner-busy',
-      'null-owner-busy',
-    ]);
+    expect(result.workersAlive).toBe(1);
+    expect(result.workersExecuting).toBe(1);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['mine-busy']);
   });
 
   it('combines session scoping with dead-pid exclusion', async () => {
@@ -162,12 +156,12 @@ describe('collectSwarm session scoping', () => {
     const result = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-a' });
 
     expect(killSpy).toHaveBeenCalledWith(deadPid, 0);
-    expect(result.workersAlive).toBe(2);
-    expect(result.workersExecuting).toBe(2);
-    expect(result.agents.map((agent) => agent.id)).toEqual(['mine-busy', 'unowned-busy']);
+    expect(result.workersAlive).toBe(1);
+    expect(result.workersExecuting).toBe(1);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['mine-busy']);
   });
 
-  it('keeps count-all behavior when no sessionId is available', async () => {
+  it('keeps all owned live records when no sessionId is available', async () => {
     const livePid = process.pid;
     vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
 
@@ -182,20 +176,22 @@ describe('collectSwarm session scoping', () => {
       other: {
         agentId: 'other',
         agentType: 'coder',
-        status: 'idle',
+        status: 'busy',
         ownerSessionId: 'session-b',
+        currentTaskPid: livePid,
       },
       unowned: {
         agentId: 'unowned',
         agentType: 'coder',
-        status: 'idle',
+        status: 'busy',
+        currentTaskPid: livePid,
       },
     });
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
 
-    expect(result.workersAlive).toBe(3);
-    expect(result.workersExecuting).toBe(1);
-    expect(result.agents.map((agent) => agent.id)).toEqual(['owned', 'other', 'unowned']);
+    expect(result.workersAlive).toBe(2);
+    expect(result.workersExecuting).toBe(2);
+    expect(result.agents.map((agent) => agent.id)).toEqual(['owned', 'other']);
   });
 });

@@ -11,6 +11,16 @@ export function sanitizeSessionId(value: unknown): string | null {
   return sanitized || null;
 }
 
+function asOperatorContextSessionId(value: unknown): string | null {
+  const raw = asNonEmptyString(value);
+  if (!raw) return null;
+  // The stdio MCP wrapper generates process-local ids like
+  // `mcp-<timestamp>-<suffix>`. They identify the transport process, not the
+  // human/operator session, so they must not become hive/agent ownership.
+  if (/^mcp-\d+-[a-z0-9]+$/i.test(raw.trim())) return null;
+  return raw;
+}
+
 export function resolveSessionId(
   input: Record<string, unknown> | null | undefined = null,
   env: SessionEnv = process.env,
@@ -20,10 +30,11 @@ export function resolveSessionId(
     asNonEmptyString(input?.session_id)
     ?? asNonEmptyString(input?.sessionId)
     ?? asNonEmptyString(env.CODEX_SESSION_ID)
+    ?? asNonEmptyString(env.CODEX_THREAD_ID)
     ?? asNonEmptyString(env.CLAUDE_SESSION_ID)
     ?? asNonEmptyString(env.HIVE_FLOW_SESSION_ID)
-    ?? asNonEmptyString(context?.session_id)
-    ?? asNonEmptyString(context?.sessionId);
+    ?? asOperatorContextSessionId(context?.session_id)
+    ?? asOperatorContextSessionId(context?.sessionId);
 
   return source ? sanitizeSessionId(source) : null;
 }

@@ -81,12 +81,19 @@ function writeHive(
   hiveId: string,
   workers: Array<Record<string, unknown>>,
   queenId?: string,
+  ownerSessionId?: string,
 ): void {
   const hiveRoot = join(projectRoot, '.hive-flow', 'hives', hiveId);
   mkdirSync(hiveRoot, { recursive: true });
   writeFileSync(
     join(hiveRoot, 'hive.json'),
-    JSON.stringify({ hiveId, status: 'active', queenId, workers }),
+    JSON.stringify({
+      hiveId,
+      status: 'active',
+      queenId,
+      ...(ownerSessionId !== undefined ? { ownerSessionId } : {}),
+      workers,
+    }),
     { mode: 0o600 },
   );
 }
@@ -195,7 +202,13 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
   // -------------------------------------------------------------------------
   it('omits the git summary outside a git repo but resolves other probes', async () => {
     writeStoreDict(fix.storePath, {
-      'agent-1': { agentId: 'agent-1', agentType: 'coder', status: 'busy' },
+      'agent-1': {
+        agentId: 'agent-1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
     });
     writeFileSync(
       fix.daemonStatePath,
@@ -210,25 +223,26 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
 
     expect(snap.git).toBeUndefined();
     expect(snap.swarm).toBeDefined();
-    // agent-1 is busy but has no pid => alive but not active (phantom-activity fix).
-    expect(snap.swarm?.activeAgents).toBe(0);
+    expect(snap.swarm?.activeAgents).toBe(1);
     expect(snap.daemon).toBeDefined();
     expect(snap.daemon?.running).toBe(true);
   });
 
-  it('scopes inline swarm counts to current-session plus unowned live agents when sessionId is present', async () => {
+  it('scopes inline swarm counts to current-session rows with live process evidence', async () => {
     writeStoreDict(fix.storePath, {
       mineBusy: {
         agentId: 'mine-busy',
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
       },
       otherBusy: {
         agentId: 'other-busy',
         agentType: 'coder',
         status: 'busy',
         ownerSessionId: 'session-b',
+        currentTaskPid: process.pid,
       },
       unownedIdle: {
         agentId: 'unowned-idle',
@@ -242,18 +256,17 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
       sessionId: 'session-a',
       deadlineMs: 1000,
     });
-    // mine-busy has no pid => not active (phantom-activity fix); goes to idleAgents.
-    expect(scoped.swarm?.activeAgents).toBe(0);
-    expect(scoped.swarm?.idleAgents).toBe(2);
-    expect(scoped.swarm?.agents?.map((agent) => agent.id)).toEqual(['mine-busy', 'unowned-idle']);
+    expect(scoped.swarm?.activeAgents).toBe(1);
+    expect(scoped.swarm?.idleAgents).toBe(0);
+    expect(scoped.swarm?.agents?.map((agent) => agent.id)).toEqual(['mine-busy']);
 
     const unscoped = await collectInlineSnapshot({
       projectRoot: fix.projectRoot,
       deadlineMs: 1000,
     });
-    // both busy workers have no pid => idleAgents; unownedIdle => idleAgents.
-    expect(unscoped.swarm?.activeAgents).toBe(0);
-    expect(unscoped.swarm?.idleAgents).toBe(3);
+    expect(unscoped.swarm?.activeAgents).toBe(2);
+    expect(unscoped.swarm?.idleAgents).toBe(0);
+    expect(unscoped.swarm?.agents?.map((agent) => agent.id)).toEqual(['mine-busy', 'other-busy']);
   });
 
   it('excludes only inline busy agents whose currentTaskPid is proven dead', async () => {
@@ -277,10 +290,33 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     }) as typeof process.kill);
 
     writeStoreDict(fix.storePath, {
-      dead: { agentId: 'dead', agentType: 'coder', status: 'busy', currentTaskPid: deadPid },
-      live: { agentId: 'live', agentType: 'coder', status: 'busy', currentTaskPid: process.pid },
-      eperm: { agentId: 'eperm', agentType: 'coder', status: 'busy', currentTaskPid: epermPid },
-      legacy: { agentId: 'legacy', agentType: 'coder', status: 'busy' },
+      dead: {
+        agentId: 'dead',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: deadPid,
+      },
+      live: {
+        agentId: 'live',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      eperm: {
+        agentId: 'eperm',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: epermPid,
+      },
+      legacy: {
+        agentId: 'legacy',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+      },
     });
 
     const snap = await collectInlineSnapshot({
@@ -291,10 +327,10 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(killSpy).toHaveBeenCalledWith(deadPid, 0);
     expect(killSpy).toHaveBeenCalledWith(process.pid, 0);
     expect(killSpy).toHaveBeenCalledWith(epermPid, 0);
-    // `dead` is excluded (ESRCH). `live` and `eperm` have valid pids => executing (activeAgents).
-    // `legacy` has no pid => alive but NOT active (phantom-activity fix).
+    // `dead` is excluded (ESRCH). `live` and `eperm` have valid pids => executing.
+    // `legacy` has no pid => not live.
     expect(snap.swarm?.activeAgents).toBe(2);
-    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual(['live', 'eperm', 'legacy']);
+    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual(['live', 'eperm']);
   });
 
   it('does not surface completed hives or their stale idle worker records', async () => {
@@ -314,17 +350,23 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
         agentId: 'queen-active',
         agentType: 'coordinator',
         status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
       },
       active: {
         agentId: 'active-agent',
         agentType: 'investigator',
         status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
         config: { hiveId: 'active-hive' },
       },
       standalone: {
         agentId: 'standalone-agent',
         agentType: 'researcher',
         status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
       },
     });
     writeHive(fix.projectRoot, 'done-hive', [
@@ -332,8 +374,14 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     ], 'queen-done');
     writeTaskResult(fix.projectRoot, 'task-done');
     writeHive(fix.projectRoot, 'active-hive', [
-      { agentId: 'active-agent', workerId: 'active-agent', status: 'idle', taskId: 'task-open' },
-    ], 'queen-active');
+      {
+        agentId: 'active-agent',
+        workerId: 'active-agent',
+        status: 'idle',
+        taskId: 'task-open',
+        currentTaskPid: process.pid,
+      },
+    ], 'queen-active', 'session-a');
 
     const snap = await collectInlineSnapshot({
       projectRoot: fix.projectRoot,
@@ -349,8 +397,8 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     expect(snap.swarm?.activeQueens).toBe(1);
     expect(snap.swarm?.activeHives).toEqual({
       active: 1,
-      unknownOwner: 1,
-      byOwnerSessionId: {},
+      unknownOwner: 0,
+      byOwnerSessionId: { 'session-a': 1 },
     });
   });
 
@@ -366,11 +414,13 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
         agentId: 'pending-direct',
         agentType: 'investigator',
         status: 'idle',
+        ownerSessionId: 'session-a',
       },
       executingDirect: {
         agentId: 'executing-direct',
         agentType: 'investigator',
         status: 'busy',
+        ownerSessionId: 'session-a',
         currentTaskPid: process.pid,
         lastResult: { completedAt: '2026-06-20T19:00:00.000Z' },
       },
@@ -381,12 +431,9 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
       deadlineMs: 1000,
     });
 
-    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual([
-      'pending-direct',
-      'executing-direct',
-    ]);
+    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual(['executing-direct']);
     expect(snap.swarm?.activeAgents).toBe(1);
-    expect(snap.swarm?.idleAgents).toBe(1);
+    expect(snap.swarm?.idleAgents).toBe(0);
   });
 
   // -------------------------------------------------------------------------
@@ -562,12 +609,42 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
   // -------------------------------------------------------------------------
   it('integrates normalizeAgentStatus: busy executes, terminated drops, legacy running maps to busy', async () => {
     writeStoreDict(fix.storePath, {
-      busy1: { agentId: 'busy1', agentType: 'coder', status: 'busy' },
-      idle1: { agentId: 'idle1', agentType: 'tester', status: 'idle' },
-      term1: { agentId: 'term1', agentType: 'coder', status: 'terminated' },
-      legacy1: { agentId: 'legacy1', agentType: 'coder', status: 'running' }, // legacy alias
-      queen1: { agentId: 'queen1', agentType: 'queen', status: 'busy' },
-      spawning1: { agentId: 'spawning1', agentType: 'coder', status: 'spawning' },
+      busy1: {
+        agentId: 'busy1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      idle1: {
+        agentId: 'idle1',
+        agentType: 'tester',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      term1: { agentId: 'term1', agentType: 'coder', status: 'terminated', ownerSessionId: 'session-a' },
+      legacy1: {
+        agentId: 'legacy1',
+        agentType: 'coder',
+        status: 'running',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      }, // legacy alias
+      queen1: {
+        agentId: 'queen1',
+        agentType: 'queen',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      spawning1: {
+        agentId: 'spawning1',
+        agentType: 'coder',
+        status: 'spawning',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
     });
 
     const snap = await collectInlineSnapshot({
@@ -576,15 +653,14 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     });
 
     expect(snap.swarm).toBeDefined();
-    // workers: busy1 + legacy1 (running→busy) have no pid => NOT active (phantom-activity fix).
-    expect(snap.swarm?.activeAgents).toBe(0);
-    // idle workers: idle1 + busy1 (no pid) + legacy1 (no pid) = 3.
-    expect(snap.swarm?.idleAgents).toBe(3);
+    // workers: busy1 + legacy1 (running→busy) have live pids => active.
+    expect(snap.swarm?.activeAgents).toBe(2);
+    expect(snap.swarm?.idleAgents).toBe(1);
     // queued workers: spawning1 (normalizer maps 'spawning' → 'queued')
     expect(snap.swarm?.queuedAgents).toBe(1);
-    // queens: 1 alive, but no pid => non-executing.
+    // queens: 1 alive and executing.
     expect(snap.swarm?.activeQueens).toBe(1);
-    expect(snap.swarm?.executingQueens).toBe(0);
+    expect(snap.swarm?.executingQueens).toBe(1);
     // term1 is dropped (terminal status).
     expect(snap.swarm?.agents?.some((a) => a.id === 'term1')).toBe(false);
     // 5 live rows total (6 - 1 terminated).

@@ -38,15 +38,23 @@ function sanitizeSessionId(value) {
   return sanitized || null;
 }
 
+function asOperatorContextSessionId(value) {
+  const raw = asNonEmptyString(value);
+  if (!raw) return null;
+  if (/^mcp-\d+-[a-z0-9]+$/i.test(raw.trim())) return null;
+  return raw;
+}
+
 function resolveSessionId(input = null, env = process.env, context = null) {
   const source =
     asNonEmptyString(input && input.session_id)
     || asNonEmptyString(input && input.sessionId)
     || asNonEmptyString(env && env.CODEX_SESSION_ID)
+    || asNonEmptyString(env && env.CODEX_THREAD_ID)
     || asNonEmptyString(env && env.CLAUDE_SESSION_ID)
     || asNonEmptyString(env && env.HIVE_FLOW_SESSION_ID)
-    || asNonEmptyString(context && context.session_id)
-    || asNonEmptyString(context && context.sessionId);
+    || asOperatorContextSessionId(context && context.session_id)
+    || asOperatorContextSessionId(context && context.sessionId);
 
   return source ? sanitizeSessionId(source) : null;
 }

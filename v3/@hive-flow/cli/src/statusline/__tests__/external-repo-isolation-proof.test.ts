@@ -41,7 +41,13 @@ function stripAnsi(value: string): string {
 /** Write a minimal .hive-flow/agents/store.json with the given agent records. */
 function writeAgentStore(
   projectRoot: string,
-  agents: Record<string, { agentId: string; agentType: string; status: string }>,
+  agents: Record<string, {
+    agentId: string;
+    agentType: string;
+    status: string;
+    ownerSessionId?: string;
+    currentTaskPid?: number;
+  }>,
 ): void {
   const dir = join(projectRoot, '.hive-flow', 'agents');
   mkdirSync(dir, { recursive: true });
@@ -56,8 +62,9 @@ function writeAgentStore(
  * Standard stdin payload for renderer. Sets workspace.current_dir to
  * `projectRoot` so the renderer resolves scope to that directory.
  */
-function stdinFor(projectRoot: string): Record<string, unknown> {
+function stdinFor(projectRoot: string, sessionId = 'repo-isolation-session'): Record<string, unknown> {
   return {
+    session_id: sessionId,
     workspace: { current_dir: projectRoot, project_dir: projectRoot },
     model: { id: 'claude-opus-4-8', display_name: 'Opus 4.8' },
     context_window: {
@@ -101,10 +108,23 @@ describe('Proof 2 — external-temp-repo isolation: agents are project-scoped', 
   });
 
   it('repo A with busy agents shows Swarm row with those agents', async () => {
-    // Repo A has 2 busy + 1 idle agent.
+    // Repo A has 2 live busy agents plus one ownerless/no-PID idle record.
+    // Only owned records with live process evidence are allowed in Swarm.
     writeAgentStore(repoA, {
-      'agent-a1': { agentId: 'agent-a1', agentType: 'coder', status: 'busy' },
-      'agent-a2': { agentId: 'agent-a2', agentType: 'tester', status: 'busy' },
+      'agent-a1': {
+        agentId: 'agent-a1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
+      'agent-a2': {
+        agentId: 'agent-a2',
+        agentType: 'tester',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
       'agent-a3': { agentId: 'agent-a3', agentType: 'reviewer', status: 'idle' },
     });
 
@@ -113,8 +133,8 @@ describe('Proof 2 — external-temp-repo isolation: agents are project-scoped', 
 
     // Repo A has live agents → Swarm row must be present.
     expect(plain).toContain('Swarm');
-    // 2 busy + 1 idle = 3 total spawned agents in repo A's slot.
-    expect(plain).toMatch(/\[\s*3\/\d+\]/);
+    // 2 owned + live busy agents are counted; the idle bookkeeping row is not.
+    expect(plain).toMatch(/\[\s*2\/\d+\]/);
   });
 
   it('repo B with NO live agents shows NO Swarm row regardless of repo A', async () => {
@@ -141,12 +161,30 @@ describe('Proof 2 — external-temp-repo isolation: agents are project-scoped', 
     expect(plain).not.toContain('agent-a2');
   });
 
-  it('repo B idle-only store renders "○" not "◉" and contains no repo A agents', async () => {
+  it('repo B idle-only no-PID store renders no Swarm row and contains no repo A agents', async () => {
     // Repo A: 3 busy agents.
     writeAgentStore(repoA, {
-      'agent-a1': { agentId: 'agent-a1', agentType: 'coder', status: 'busy' },
-      'agent-a2': { agentId: 'agent-a2', agentType: 'architect', status: 'busy' },
-      'agent-a3': { agentId: 'agent-a3', agentType: 'reviewer', status: 'busy' },
+      'agent-a1': {
+        agentId: 'agent-a1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
+      'agent-a2': {
+        agentId: 'agent-a2',
+        agentType: 'architect',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
+      'agent-a3': {
+        agentId: 'agent-a3',
+        agentType: 'reviewer',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
     });
 
     // Repo B: only idle agents — no active execution.
@@ -158,24 +196,52 @@ describe('Proof 2 — external-temp-repo isolation: agents are project-scoped', 
     const output = await renderClaudeCodeStatusline(stdinFor(repoB), repoB);
     const plain = stripAnsi(output);
 
-    // SPEC: repo B has idle-only agents → "○" in Swarm row (corrected behavior).
-    expect(plain).toContain('Swarm ○');
-    // SPEC: "◉" must not appear (repo A's executing agents must not bleed in).
+    // SPEC: idle/no-PID bookkeeping is not live agent evidence.
+    expect(plain).not.toContain('Swarm');
+    // SPEC: repo A's executing agents must not bleed in.
     expect(plain).not.toContain('Swarm ◉');
-    // SPEC: repo A's idle-count (3) must not appear in repo B's slot.
-    // Repo B has 2 idle agents → slot should show 2, not 3 or 5.
-    expect(plain).toMatch(/\[\s*2\/\d+\]/);
+    // SPEC: repo A's count (3) must not appear in repo B's slot.
     expect(plain).not.toMatch(/\[\s*3\/\d+\]/);
   });
 
   it('repo C (no .hive-flow/) has no Swarm row even when repo A is fully active', async () => {
     // Repo A: many busy agents to ensure cross-contamination would be visible.
     writeAgentStore(repoA, {
-      'agent-a1': { agentId: 'agent-a1', agentType: 'coder', status: 'busy' },
-      'agent-a2': { agentId: 'agent-a2', agentType: 'tester', status: 'busy' },
-      'agent-a3': { agentId: 'agent-a3', agentType: 'reviewer', status: 'busy' },
-      'agent-a4': { agentId: 'agent-a4', agentType: 'architect', status: 'busy' },
-      'agent-a5': { agentId: 'agent-a5', agentType: 'queen', status: 'busy' },
+      'agent-a1': {
+        agentId: 'agent-a1',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
+      'agent-a2': {
+        agentId: 'agent-a2',
+        agentType: 'tester',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
+      'agent-a3': {
+        agentId: 'agent-a3',
+        agentType: 'reviewer',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
+      'agent-a4': {
+        agentId: 'agent-a4',
+        agentType: 'architect',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
+      'agent-a5': {
+        agentId: 'agent-a5',
+        agentType: 'queen',
+        status: 'busy',
+        ownerSessionId: 'repo-isolation-session',
+        currentTaskPid: process.pid,
+      },
     });
 
     // Repo C: no .hive-flow/ directory at all — header-only mode.
@@ -189,8 +255,8 @@ describe('Proof 2 — external-temp-repo isolation: agents are project-scoped', 
     expect(plain).not.toContain('agent-a5');
   });
 
-  it('two repos with independent idle agents each show their own counts without cross-contamination', async () => {
-    // Repo A: 4 idle agents.
+  it('two repos with independent idle no-PID records omit Swarm without cross-contamination', async () => {
+    // Repo A: 4 idle bookkeeping records.
     writeAgentStore(repoA, {
       'a1': { agentId: 'a1', agentType: 'coder', status: 'idle' },
       'a2': { agentId: 'a2', agentType: 'tester', status: 'idle' },
@@ -198,7 +264,7 @@ describe('Proof 2 — external-temp-repo isolation: agents are project-scoped', 
       'a4': { agentId: 'a4', agentType: 'planner', status: 'idle' },
     });
 
-    // Repo B: 2 idle agents.
+    // Repo B: 2 idle bookkeeping records.
     writeAgentStore(repoB, {
       'b1': { agentId: 'b1', agentType: 'coder', status: 'idle' },
       'b2': { agentId: 'b2', agentType: 'tester', status: 'idle' },
@@ -212,13 +278,9 @@ describe('Proof 2 — external-temp-repo isolation: agents are project-scoped', 
     const plainA = stripAnsi(outputA);
     const plainB = stripAnsi(outputB);
 
-    // Repo A: 4 idle => "○" + slot [4/N].
-    expect(plainA).toContain('Swarm ○');
-    expect(plainA).toMatch(/\[\s*4\/\d+\]/);
-
-    // Repo B: 2 idle => "○" + slot [2/N].
-    expect(plainB).toContain('Swarm ○');
-    expect(plainB).toMatch(/\[\s*2\/\d+\]/);
+    // Idle/no-PID records are not live agents.
+    expect(plainA).not.toContain('Swarm');
+    expect(plainB).not.toContain('Swarm');
 
     // No cross-contamination: repo A count must not appear in repo B's slot.
     expect(plainB).not.toMatch(/\[\s*4\/\d+\]/);

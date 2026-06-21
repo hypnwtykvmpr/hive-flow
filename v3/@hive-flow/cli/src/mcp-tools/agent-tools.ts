@@ -480,6 +480,7 @@ const BRIDGE_BASE_ENV_KEYS = new Set([
   'HIVE_FLOW_CLIENT_KIND',
   'CLAUDE_SESSION_ID',
   'CODEX_SESSION_ID',
+  'CODEX_THREAD_ID',
   'HIVE_FLOW_CONFIG',
   'HIVE_FLOW_LOG_LEVEL',
   // Proxy configuration — required for CLI providers in proxied/corporate networks
@@ -652,6 +653,8 @@ export const agentTools: MCPTool[] = [
           description: 'Model alias (opus/sonnet/mini/inherit) or provider-native model. OpenRouter direct models must be allowed by config.',
         },
         task: { type: 'string', description: 'Task description for intelligent model routing' },
+        session_id: { type: 'string', description: 'Optional operator session id for ownership routing' },
+        sessionId: { type: 'string', description: 'Optional operator session id fallback for ownership routing' },
       },
       required: ['agentType'],
     },
@@ -659,12 +662,20 @@ export const agentTools: MCPTool[] = [
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
       const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
       const config = (input.config as Record<string, unknown>) || {};
+      const ownerSessionId = resolveSessionId(input, process.env, context);
 
       if (!isCanonicalAgentType(agentType)) {
         return {
           success: false,
           code: 'invalid-agent-type',
           error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+        };
+      }
+      if (!ownerSessionId) {
+        return {
+          success: false,
+          code: 'missing-owner-session',
+          error: 'agent_spawn requires an owner session id; set CODEX_SESSION_ID, CODEX_THREAD_ID, CLAUDE_SESSION_ID, HIVE_FLOW_SESSION_ID, pass session_id, or provide operator MCP context.sessionId.',
         };
       }
 
@@ -788,7 +799,7 @@ export const agentTools: MCPTool[] = [
         modelRoutedBy: normalizedInputModel !== undefined && normalizedInputModel !== ''
           ? 'explicit'
           : routingResult.routedBy,
-        ownerSessionId: resolveSessionId(input, process.env, context) || undefined,
+        ownerSessionId,
       };
 
       // Transition spawning → idle (setup complete)

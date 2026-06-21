@@ -37,6 +37,7 @@ function writeSwarmStore(projectRoot: string, ownerSessionId?: string): void {
         agentId: 'coder',
         agentType: 'coder',
         status: 'busy',
+        currentTaskPid: process.pid,
         ...(ownerSessionId !== undefined ? { ownerSessionId } : {}),
       },
     },
@@ -52,6 +53,14 @@ function writeHive(
     hiveId,
     status: 'active',
     ...(ownerSessionId !== undefined ? { ownerSessionId } : {}),
+    workers: [
+      {
+        workerId: `${hiveId}-worker`,
+        agentId: `${hiveId}-worker`,
+        status: 'busy',
+        currentTaskPid: process.pid,
+      },
+    ],
   });
 }
 
@@ -67,6 +76,8 @@ describe('statusline R7 swarm session tag', () => {
   let originalHome: string | undefined;
   let originalNoColor: string | undefined;
   let originalForceColor: string | undefined;
+  let originalCodexSession: string | undefined;
+  let originalCodexThread: string | undefined;
   let originalClaudeSession: string | undefined;
   let originalAgenticSession: string | undefined;
 
@@ -76,11 +87,15 @@ describe('statusline R7 swarm session tag', () => {
     originalHome = process.env.HIVE_FLOW_HOME;
     originalNoColor = process.env.NO_COLOR;
     originalForceColor = process.env.FORCE_COLOR;
+    originalCodexSession = process.env.CODEX_SESSION_ID;
+    originalCodexThread = process.env.CODEX_THREAD_ID;
     originalClaudeSession = process.env.CLAUDE_SESSION_ID;
     originalAgenticSession = process.env.HIVE_FLOW_SESSION_ID;
     process.env.HIVE_FLOW_HOME = home;
     process.env.FORCE_COLOR = '0';
     process.env.NO_COLOR = '1';
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_SESSION_ID;
     delete process.env.HIVE_FLOW_SESSION_ID;
   });
@@ -94,6 +109,10 @@ describe('statusline R7 swarm session tag', () => {
     else process.env.NO_COLOR = originalNoColor;
     if (originalForceColor === undefined) delete process.env.FORCE_COLOR;
     else process.env.FORCE_COLOR = originalForceColor;
+    if (originalCodexSession === undefined) delete process.env.CODEX_SESSION_ID;
+    else process.env.CODEX_SESSION_ID = originalCodexSession;
+    if (originalCodexThread === undefined) delete process.env.CODEX_THREAD_ID;
+    else process.env.CODEX_THREAD_ID = originalCodexThread;
     if (originalClaudeSession === undefined) delete process.env.CLAUDE_SESSION_ID;
     else process.env.CLAUDE_SESSION_ID = originalClaudeSession;
     if (originalAgenticSession === undefined) delete process.env.HIVE_FLOW_SESSION_ID;
@@ -110,27 +129,29 @@ describe('statusline R7 swarm session tag', () => {
     expect(row).toContain('hives 1 this/1 other');
   });
 
-  it('surfaces unowned active hives in the session tag', async () => {
+  it('does not surface ownerless active hives in the session tag', async () => {
     writeSwarmStore(projectRoot, 'sid-current');
     writeHive(projectRoot, 'hive-current', 'sid-current');
     writeHive(projectRoot, 'hive-unowned', undefined);
 
     const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
 
-    expect(row).toContain('hives 1 this/1 unowned');
+    expect(row).not.toContain('unowned');
+    expect(row).not.toContain('hives');
   });
 
-  it('surfaces unowned hives even when no owned hives belong to another session', async () => {
-    writeSwarmStore(projectRoot);
+  it('omits ownerless hives instead of rendering an unowned bucket', async () => {
+    writeSwarmStore(projectRoot, 'sid-current');
     writeHive(projectRoot, 'hive-unowned', undefined);
 
     const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
 
-    expect(row).toContain('hives 0 this/1 unowned');
+    expect(row).not.toContain('unowned');
+    expect(row).not.toContain('hives');
   });
 
   it('leaves the swarm row unchanged when there is no current session id', async () => {
-    writeSwarmStore(projectRoot);
+    writeSwarmStore(projectRoot, 'sid-current');
     const baseline = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot), projectRoot));
 
     writeHive(projectRoot, 'hive-current', 'sid-current');

@@ -51,7 +51,7 @@ function currentTargetAgent(sessionInput = null, env = process.env) {
   ).toLowerCase();
   if (raw.includes('codex')) return 'codex';
   if (raw.includes('claude')) return 'claude';
-  if (env.CODEX_SESSION_ID) return 'codex';
+  if (env.CODEX_SESSION_ID || env.CODEX_THREAD_ID) return 'codex';
   return 'claude';
 }
 

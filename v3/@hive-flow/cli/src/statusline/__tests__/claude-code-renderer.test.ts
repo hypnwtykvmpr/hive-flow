@@ -393,8 +393,20 @@ describe('claude-code statusline renderer (Phase 12)', () => {
       JSON.stringify({
         version: '1.0',
         agents: {
-          w1: { agentId: 'W1', agentType: 'coder', status: 'busy' },
-          q1: { agentId: 'Q1', agentType: 'queen', status: 'idle' },
+          w1: {
+            agentId: 'W1',
+            agentType: 'coder',
+            status: 'busy',
+            ownerSessionId: 'session-a',
+            currentTaskPid: process.pid,
+          },
+          q1: {
+            agentId: 'Q1',
+            agentType: 'queen',
+            status: 'idle',
+            ownerSessionId: 'session-a',
+            currentTaskPid: process.pid,
+          },
         },
       }),
       'utf8',
@@ -404,7 +416,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     // commands/statusline.ts) persists the last-render mirror. We mirror that
     // wrapper contract here via `renderAndPersist` so the test exercises the
     // SAME write path production runs.
-    const { rendered } = await renderAndPersist(stdinPayload(), fix.projectRoot);
+    const { rendered } = await renderAndPersist(stdinPayload({ session_id: 'session-a' }), fix.projectRoot);
     const plain = stripAnsi(rendered);
     // The inline-collector populates swarm; we expect it to render.
     expect(plain).toContain('Swarm');
@@ -419,7 +431,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(record?.mode).toBe('inline-collector');
   });
 
-  it('inline-collector mode renders current-session plus unowned live agents before rendering', async () => {
+  it('inline-collector mode renders only owned current-session live agents', async () => {
     mkdirSync(join(fix.projectRoot, '.hive-flow', 'agents'), { recursive: true });
     writeFileSync(
       join(fix.projectRoot, '.hive-flow', 'agents', 'store.json'),
@@ -431,29 +443,34 @@ describe('claude-code statusline renderer (Phase 12)', () => {
             agentType: 'coder',
             status: 'busy',
             ownerSessionId: 'session-a',
+            currentTaskPid: process.pid,
           },
           other: {
             agentId: 'other',
             agentType: 'coder',
             status: 'busy',
             ownerSessionId: 'session-b',
+            currentTaskPid: process.pid,
           },
           unowned: {
             agentId: 'unowned',
             agentType: 'tester',
-            status: 'idle',
+            status: 'busy',
+            currentTaskPid: process.pid,
           },
           emptyOwner: {
             agentId: 'empty-owner',
             agentType: 'tester',
-            status: 'idle',
+            status: 'busy',
             ownerSessionId: '',
+            currentTaskPid: process.pid,
           },
           nullOwner: {
             agentId: 'null-owner',
             agentType: 'tester',
-            status: 'idle',
+            status: 'busy',
             ownerSessionId: null,
+            currentTaskPid: process.pid,
           },
         },
       }),
@@ -466,12 +483,12 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     );
     const plain = stripAnsi(output);
 
-    // mine-busy has no pid => non-executing => hollow ○ indicator.
-    expect(plain).toContain('Swarm ○');
-    expect(plain).not.toContain('Swarm ◉');
-    expect(plain).toMatch(/\[\s*4\/150\]/);
+    expect(plain).toContain('Swarm ◉');
+    expect(plain).not.toContain('Swarm ○');
+    expect(plain).toMatch(/\[\s*1\/150\]/);
     expect(plain).not.toMatch(/\[\s*2\/150\]/);
     expect(plain).not.toMatch(/\[\s*5\/150\]/);
+    expect(plain).not.toContain('unowned');
   });
 
   // -------------------------------------------------------------------------

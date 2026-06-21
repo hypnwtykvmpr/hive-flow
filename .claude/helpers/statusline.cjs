@@ -838,7 +838,7 @@ function getEnforcementStateFiles() {
   const globalEnforcementDir = path.join(HIVE_HOME, 'enforcement');
   const legacyEnforcementDir = path.join(CWD, '.hive-flow', 'enforcement');
   const stdin = getStdinData();
-  const sessionId = sanitizeScopeId(stdin?.session_id || stdin?.sessionId || process.env.CLAUDE_SESSION_ID);
+  const sessionId = sanitizeScopeId(stdin?.session_id || stdin?.sessionId || process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CLAUDE_SESSION_ID);
   const agentId = sanitizeScopeId(process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID);
   const hiveId = sanitizeScopeId(process.env.HIVE_FLOW_HIVE_ID);
   const files = [

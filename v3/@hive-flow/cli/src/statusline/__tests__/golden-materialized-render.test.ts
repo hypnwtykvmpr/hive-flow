@@ -18,6 +18,7 @@ function writeJson(path: string, value: unknown): void {
 
 function stdinPayload(projectRoot: string): Record<string, unknown> {
   return {
+    session_id: 'golden-materialized-session',
     workspace: { current_dir: projectRoot, project_dir: projectRoot },
     model: { id: 'claude-opus-4-8', display_name: 'Opus 4.8' },
     context_window: {
@@ -73,8 +74,20 @@ describe('statusline golden render from materialized producer files', () => {
     writeJson(join(projectRoot, '.hive-flow', 'agents', 'store.json'), {
       version: '1.0',
       agents: {
-        coder: { agentId: 'coder', agentType: 'coder', status: 'busy' },
-        queen: { agentId: 'queen', agentType: 'queen', status: 'idle' },
+        coder: {
+          agentId: 'coder',
+          agentType: 'coder',
+          status: 'busy',
+          ownerSessionId: 'golden-materialized-session',
+          currentTaskPid: process.pid,
+        },
+        queen: {
+          agentId: 'queen',
+          agentType: 'queen',
+          status: 'idle',
+          ownerSessionId: 'golden-materialized-session',
+          currentTaskPid: process.pid,
+        },
       },
     });
     writeJson(paths.memoryStats, {

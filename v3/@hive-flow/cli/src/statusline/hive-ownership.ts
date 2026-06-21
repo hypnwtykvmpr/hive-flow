@@ -12,6 +12,8 @@ interface HiveRecordShape {
   status?: unknown;
   ownerSessionId?: unknown;
   queenId?: unknown;
+  queenPid?: unknown;
+  queen?: unknown;
   workers?: unknown;
 }
 
@@ -20,10 +22,13 @@ interface HiveWorkerShape {
   agentId?: unknown;
   status?: unknown;
   taskId?: unknown;
+  currentTaskPid?: unknown;
+  pid?: unknown;
 }
 
 interface TaskMetadataShape {
   status?: unknown;
+  pid?: unknown;
 }
 
 function isActiveHiveRecord(record: unknown): record is HiveRecordShape {
@@ -59,6 +64,31 @@ function isTerminalStatus(value: unknown): boolean {
   return TERMINAL_STATUSES.has(normalizeStatus(value));
 }
 
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 1;
+}
+
+function isPidDefinitelyDead(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return err instanceof Error && 'code' in err && err.code === 'ESRCH';
+  }
+}
+
+function isLivePid(value: unknown): boolean {
+  return isPositiveInteger(value) && !isPidDefinitelyDead(value);
+}
+
+function recordQueenPid(record: HiveRecordShape): unknown {
+  if (isLivePid(record.queenPid)) return record.queenPid;
+  if (record.queen && typeof record.queen === 'object' && !Array.isArray(record.queen)) {
+    return (record.queen as { pid?: unknown }).pid;
+  }
+  return undefined;
+}
+
 function extractWorkers(record: HiveRecordShape): HiveWorkerShape[] {
   if (!Array.isArray(record.workers)) return [];
   return record.workers.filter(
@@ -83,15 +113,23 @@ async function taskMetadataTerminal(tasksRoot: string, taskId: string): Promise<
   return isTerminalStatus(meta?.status);
 }
 
-async function isWorkerUnresolved(tasksRoot: string, worker: HiveWorkerShape): Promise<boolean> {
+async function taskMetadataLivePid(tasksRoot: string, taskId: string): Promise<boolean> {
+  const meta = await readJsonFile<TaskMetadataShape>(join(tasksRoot, `${taskId}.json`)).catch(
+    () => undefined,
+  );
+  return isLivePid(meta?.pid);
+}
+
+async function isWorkerLive(tasksRoot: string, worker: HiveWorkerShape): Promise<boolean> {
   if (isTerminalStatus(worker.status)) return false;
+  if (isLivePid(worker.currentTaskPid) || isLivePid(worker.pid)) return true;
   const taskId = typeof worker.taskId === 'string' && worker.taskId.trim()
     ? worker.taskId.trim()
     : '';
-  if (!taskId) return true;
+  if (!taskId) return false;
   if (await taskResultExists(tasksRoot, taskId)) return false;
   if (await taskMetadataTerminal(tasksRoot, taskId)) return false;
-  return true;
+  return taskMetadataLivePid(tasksRoot, taskId);
 }
 
 function workerAgentId(worker: HiveWorkerShape): string | null {
@@ -137,32 +175,31 @@ export async function collectActiveHiveRuntimeState(
     );
     if (!isActiveHiveRecord(record)) continue;
 
+    const ownerSessionId = sanitizeSessionId(record.ownerSessionId);
+    if (ownerSessionId === null) continue;
+
     const workers = extractWorkers(record);
-    let hasUnresolvedWorker = workers.length === 0;
+    let hasLiveWorker = false;
     for (const worker of workers) {
       const agentId = workerAgentId(worker);
       if (agentId !== null) hiveAgentIds.add(agentId);
-      if (!(await isWorkerUnresolved(tasksRoot, worker))) continue;
-      hasUnresolvedWorker = true;
+      if (!(await isWorkerLive(tasksRoot, worker))) continue;
+      hasLiveWorker = true;
       if (agentId !== null) activeAgentIds.add(agentId);
     }
+    const hasLiveQueen = isLivePid(recordQueenPid(record));
     if (typeof record.queenId === 'string' && record.queenId.trim()) {
       const queenId = record.queenId.trim();
       hiveAgentIds.add(queenId);
-      if (hasUnresolvedWorker) activeAgentIds.add(queenId);
+      if (hasLiveWorker || hasLiveQueen) activeAgentIds.add(queenId);
     }
-    if (!hasUnresolvedWorker) continue;
+    if (!hasLiveWorker && !hasLiveQueen) continue;
     activeHiveIds.add(entry.name);
     if (typeof record.hiveId === 'string' && record.hiveId.trim()) {
       activeHiveIds.add(record.hiveId.trim());
     }
 
     active++;
-    const ownerSessionId = sanitizeSessionId(record.ownerSessionId);
-    if (ownerSessionId === null) {
-      unknownOwner++;
-      continue;
-    }
     byOwnerSessionId[ownerSessionId] = (byOwnerSessionId[ownerSessionId] ?? 0) + 1;
   }
 

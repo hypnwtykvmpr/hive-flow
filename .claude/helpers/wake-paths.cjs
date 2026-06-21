@@ -41,13 +41,14 @@ function sessionValue(input, env = process.env) {
   return (
     fromInput.value ||
     stringValue(env.CODEX_SESSION_ID) ||
+    stringValue(env.CODEX_THREAD_ID) ||
     stringValue(env.CLAUDE_SESSION_ID) ||
     stringValue(env.HIVE_FLOW_SESSION_ID)
   );
 }
 
 function defaultClientKind(env = process.env) {
-  if (stringValue(env.CODEX_SESSION_ID)) return 'codex';
+  if (stringValue(env.CODEX_SESSION_ID) || stringValue(env.CODEX_THREAD_ID)) return 'codex';
   if (stringValue(env.CLAUDE_SESSION_ID) || stringValue(env.CLAUDE_PROJECT_DIR)) return 'claude-code';
   return 'claude-code';
 }

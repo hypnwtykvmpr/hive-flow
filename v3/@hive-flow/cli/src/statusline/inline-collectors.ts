@@ -47,6 +47,7 @@ import {
   collectActiveHiveRuntimeState,
   type ActiveHiveRuntimeState,
 } from './hive-ownership.js';
+import { sanitizeSessionId } from '../mcp-tools/session-id.js';
 import { statuslinePaths } from './paths.js';
 import { readJsonFile } from './storage.js';
 import {
@@ -444,7 +445,7 @@ interface RawAgentRecord {
  * corrupt — the renderer omits the swarm row in those cases.
  */
 function isPositiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+  return typeof value === 'number' && Number.isInteger(value) && value > 1;
 }
 
 function isPidDefinitelyDead(pid: number): boolean {
@@ -454,6 +455,14 @@ function isPidDefinitelyDead(pid: number): boolean {
   } catch (err) {
     return err instanceof Error && 'code' in err && err.code === 'ESRCH';
   }
+}
+
+function hasLiveProcessEvidence(rec: RawAgentRecord): boolean {
+  return isPositiveInteger(rec.currentTaskPid) && !isPidDefinitelyDead(rec.currentTaskPid);
+}
+
+function ownerSessionIdOf(rec: RawAgentRecord): string | null {
+  return sanitizeSessionId(rec.ownerSessionId);
 }
 
 function rawAgentHiveId(rec: RawAgentRecord): string {
@@ -532,8 +541,9 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
   const rows: NormalizedAgentRow[] = [];
 
   for (const rec of records) {
-    const ownerSessionId = typeof rec.ownerSessionId === 'string' ? rec.ownerSessionId.trim() : '';
-    if (sessionId !== undefined && ownerSessionId !== '' && ownerSessionId !== sessionId) continue;
+    const ownerSessionId = ownerSessionIdOf(rec);
+    if (ownerSessionId === null) continue;
+    if (sessionId !== undefined && ownerSessionId !== sessionId) continue;
     const rawStatus = typeof rec.status === 'string' ? rec.status : undefined;
     const status = normalizeAgentStatus(rawStatus);
     if (status === undefined) continue;
@@ -543,11 +553,7 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
         : `agent-${rows.length}`;
     if (!shouldKeepRuntimeAgent(rec, id, runtimeState)) continue;
     if (isCompletedDirectAgent(rec, status)) continue;
-    if (status === 'busy'
-      && isPositiveInteger(rec.currentTaskPid)
-      && isPidDefinitelyDead(rec.currentTaskPid)) {
-      continue;
-    }
+    if (!hasLiveProcessEvidence(rec)) continue;
     const isQueen =
       (typeof rec.agentId === 'string' && rec.agentId.startsWith('queen-')) ||
       (typeof rec.agentType === 'string' && rec.agentType.toLowerCase() === 'queen') ||
@@ -561,13 +567,8 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
         (typeof rec.role === 'string' && rec.role) ||
         'worker';
 
-    // Busy without a valid (positive-integer) currentTaskPid means the agent
-    // has not yet attached a real OS process — demote its row status to 'idle'
-    // so the Active sub-row (which checks row.status === 'busy') and the slot
-    // symbol (which checks activeAgents) agree. The record still counts as alive.
     const isExecuting = status === 'busy' && isPositiveInteger(rec.currentTaskPid);
-    const effectiveStatus: NormalizedAgentRow['status'] =
-      status === 'busy' && !isExecuting ? 'idle' : status;
+    const effectiveStatus: NormalizedAgentRow['status'] = status;
 
     const row: NormalizedAgentRow = { id, role, status: effectiveStatus };
     if (typeof rec.provider === 'string' && rec.provider.length > 0) {

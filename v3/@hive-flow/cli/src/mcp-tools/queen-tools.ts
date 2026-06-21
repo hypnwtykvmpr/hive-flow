@@ -201,8 +201,8 @@ const missionAssignTool: MCPTool = {
         description: 'Role-based dependency graph. Keys are role names (not worker IDs), values are arrays of role names that must complete first.',
       },
       stalenessTimeout: { type: 'number', description: 'Timeout in ms before hive is considered stale (default: 3600000)' },
-      session_id: { type: 'string', description: 'Optional launching session id for multi-session ownership routing' },
-      sessionId: { type: 'string', description: 'Optional launching session id fallback for multi-session ownership routing' },
+      session_id: { type: 'string', description: 'Optional launching operator session id for multi-session ownership routing' },
+      sessionId: { type: 'string', description: 'Optional launching operator session id fallback for multi-session ownership routing' },
       ownerTmuxPane: { type: 'string', description: 'Deprecated legacy pane field; accepted for compatibility and ignored' },
       tmuxPane: { type: 'string', description: 'Deprecated legacy pane field; accepted for compatibility and ignored' },
       workers: {
@@ -233,6 +233,13 @@ const missionAssignTool: MCPTool = {
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
     const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
     const ownerSessionId = resolveSessionId(input as Record<string, unknown>, process.env, context);
+    if (!ownerSessionId) {
+      return {
+        success: false,
+        code: 'missing-owner-session',
+        error: 'queen_mission_assign requires an owner session id; set CODEX_SESSION_ID, CODEX_THREAD_ID, CLAUDE_SESSION_ID, HIVE_FLOW_SESSION_ID, pass session_id, or provide operator MCP context.sessionId.',
+      };
+    }
 
     // (1) Hard minimum of 5 workers
     if (maxWorkers < 5) {
