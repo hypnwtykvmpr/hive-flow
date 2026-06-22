@@ -5,10 +5,9 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "hive-flow": "./bin/cli.js"
+    "hive-flow": "./v3/@hive-flow/cli/bin/cli.js"
   },
   "files": [
-    "bin/**",
     "v3/@hive-flow/cli/bin/**",
     "v3/@hive-flow/cli/dist/**/*.js",
     "v3/@hive-flow/cli/dist/**/*.d.ts",

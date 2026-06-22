@@ -368,7 +368,7 @@ claude --dangerously-skip-permissions
 
 #### Build From Source (Current Verified Path)
 
-A fresh git clone does not include compiled `dist/` files: `dist/` is intentionally ignored, so build before invoking `bin/cli.js`, `hive-flow mcp start`, or a local global install.
+A fresh git clone does not include compiled `dist/` files: `dist/` is intentionally ignored, so build before invoking the CLI bin, `hive-flow mcp start`, or a local global install.
 
 ```bash
 git clone <repo-url> hive-flow
@@ -377,7 +377,7 @@ pnpm install
 pnpm run build:ts
 
 # Run from the clone
-node bin/cli.js --help
+node v3/@hive-flow/cli/bin/cli.js --help
 
 # Install this checkout globally after building
 npm install -g .

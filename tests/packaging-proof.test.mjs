@@ -12,7 +12,7 @@
 //     any packaged file or script,
 //   - runtime init templates ship (.claude/{commands,helpers,skills} + agents/),
 //   - CLI helper sources ship (dist/credential-store/helpers/*),
-//   - bin entry scripts are present and carry the executable bit.
+//   - canonical nested bin entry scripts are present and carry the executable bit.
 //
 // NOTE: this test shells out to `npm pack` and is therefore slower than a unit
 // test; the timeouts below are generous on purpose.
@@ -269,9 +269,14 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     );
   });
 
-  it('ships bin entry scripts with the executable bit', () => {
-    const mode = statSync(join(pkgDir, 'bin', 'cli.js')).mode;
-    assert.ok(mode & 0o111, `root bin/cli.js is not executable (mode ${mode.toString(8)})`);
+  it('ships the canonical nested bin entry with the executable bit', () => {
+    const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
+    assert.equal(
+      pkg.bin?.['hive-flow'],
+      './v3/@hive-flow/cli/bin/cli.js',
+      'root package bin must point directly at the canonical nested CLI',
+    );
+    assert.ok(!files.some((p) => p.startsWith('bin/')), 'root bin/ payload must not ship');
     const nestedMode = statSync(
       join(pkgDir, 'v3', '@hive-flow', 'cli', 'bin', 'cli.js'),
     ).mode;
