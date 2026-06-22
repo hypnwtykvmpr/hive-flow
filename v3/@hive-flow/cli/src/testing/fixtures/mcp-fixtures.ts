@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - MCP Fixtures
+ * @hive-flow/cli/testing - MCP Fixtures
  *
  * Comprehensive mock MCP tools, contexts, and server configurations for testing.
  * Supports all MCP protocol operations and Hive-Flow tool integrations.

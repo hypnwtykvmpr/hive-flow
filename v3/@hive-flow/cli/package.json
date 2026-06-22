@@ -75,6 +75,30 @@
     "./claims/*": {
       "types": "./dist/src/claims/*.d.ts",
       "import": "./dist/src/claims/*.js"
+    },
+    "./testing": {
+      "types": "./dist/src/testing/index.d.ts",
+      "import": "./dist/src/testing/index.js"
+    },
+    "./testing/helpers": {
+      "types": "./dist/src/testing/helpers/index.d.ts",
+      "import": "./dist/src/testing/helpers/index.js"
+    },
+    "./testing/fixtures": {
+      "types": "./dist/src/testing/fixtures/index.d.ts",
+      "import": "./dist/src/testing/fixtures/index.js"
+    },
+    "./testing/mocks": {
+      "types": "./dist/src/testing/mocks/index.d.ts",
+      "import": "./dist/src/testing/mocks/index.js"
+    },
+    "./testing/setup": {
+      "types": "./dist/src/testing/setup.d.ts",
+      "import": "./dist/src/testing/setup.js"
+    },
+    "./testing/v2-compat": {
+      "types": "./dist/src/testing/v2-compat/index.d.ts",
+      "import": "./dist/src/testing/v2-compat/index.js"
     }
   },
   "files": [
@@ -110,6 +134,7 @@
     "test:property": "vitest run src/statusline/__tests__/property-contracts.test.ts",
     "test:sentinel": "vitest run src/__tests__/sentinel-rewake.test.ts src/__tests__/mcp-server-notifications.test.ts",
     "test:enforcement": "vitest run src/__tests__/band1-enforcement.test.ts src/__tests__/role-enforcement.test.ts src/__tests__/pipeline-enforcement.test.ts src/__tests__/enforcement-security-property.test.ts src/__tests__/relocated-engine-root.test.ts",
+    "test:testing": "vitest run src/testing/__tests__/**/*.test.ts",
     "test:plugin-store": "tsx src/plugins/tests/standalone-test.ts",
     "test:pattern-store": "tsx src/transfer/store/tests/standalone-test.ts",
     "bench:performance": "vitest bench benchmarks/performance",
@@ -127,18 +152,17 @@
   },
   "devDependencies": {
     "@hive-flow/plugins": "workspace:*",
-    "@hive-flow/swarm": "workspace:*",
-    "fast-check": "^4.8.0",
-    "sql.js": "^1.14.1",
-    "vitest": "^4.0.16"
+    "sql.js": "^1.14.1"
   },
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
     "@hive-flow/mcp": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
+    "fast-check": "^4.8.0",
     "jsonc-parser": "^3.3.1",
     "semver": "^7.7.4",
+    "vitest": "^4.0.16",
     "zod": "^3.22.4"
   },
   "optionalDependencies": {
@@ -150,7 +174,8 @@
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/integration": "workspace:*",
     "@hive-flow/neural": "workspace:*",
-    "@hive-flow/plugin-gastown-bridge": "workspace:*"
+    "@hive-flow/plugin-gastown-bridge": "workspace:*",
+    "@hive-flow/swarm": "workspace:*"
   },
   "publishConfig": {
     "access": "public",

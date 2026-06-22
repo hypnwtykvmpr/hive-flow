@@ -21,7 +21,7 @@
     "test:integration:workflow": "pnpm --filter @hive-flow/cli exec vitest run --config e2e/vitest.config.ts __tests__/workflow.e2e.test.ts",
     "test:coverage": "vitest run --coverage",
     "test:coverage:integration": "vitest run __tests__/integration --coverage",
-    "test:hardening:pr": "pnpm --filter @hive-flow/testing test && pnpm --filter @hive-flow/cli test:property && pnpm --filter @hive-flow/cli test:sentinel && pnpm --filter @hive-flow/cli test:enforcement && pnpm --filter @hive-flow/providers test:provider-hardening",
+    "test:hardening:pr": "pnpm --filter @hive-flow/cli test:testing && pnpm --filter @hive-flow/cli test:property && pnpm --filter @hive-flow/cli test:sentinel && pnpm --filter @hive-flow/cli test:enforcement && pnpm --filter @hive-flow/providers test:provider-hardening",
     "test:hardening:deep": "HIVE_FLOW_PROPERTY_RUNS=1000 pnpm test:hardening:pr",
     "test:bats": "bash scripts/run-bats.sh",
     "test:security": "pnpm --filter @hive-flow/security test",

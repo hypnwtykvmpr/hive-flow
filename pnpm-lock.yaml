@@ -145,12 +145,18 @@ importers:
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.1.0
+      fast-check:
+        specifier: ^4.8.0
+        version: 4.8.0
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
       semver:
         specifier: ^7.7.4
         version: 7.7.4
+      vitest:
+        specifier: ^4.0.16
+        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
       zod:
         specifier: ^3.22.4
         version: 3.25.76
@@ -182,22 +188,16 @@ importers:
       '@hive-flow/providers':
         specifier: workspace:*
         version: link:../providers
+      '@hive-flow/swarm':
+        specifier: workspace:*
+        version: link:../swarm
     devDependencies:
       '@hive-flow/plugins':
         specifier: workspace:*
         version: link:../plugins
-      '@hive-flow/swarm':
-        specifier: workspace:*
-        version: link:../swarm
-      fast-check:
-        specifier: ^4.8.0
-        version: 4.8.0
       sql.js:
         specifier: ^1.14.1
         version: 1.14.1
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
   v3/@hive-flow/codex:
     dependencies:
@@ -373,9 +373,6 @@ importers:
         specifier: ^7.28.0
         version: 7.28.0
     devDependencies:
-      '@hive-flow/testing':
-        specifier: workspace:*
-        version: link:../testing
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -451,24 +448,6 @@ importers:
         specifier: workspace:*
         version: link:../shared
     devDependencies:
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  v3/@hive-flow/testing:
-    devDependencies:
-      '@hive-flow/memory':
-        specifier: workspace:*
-        version: link:../memory
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
-      '@hive-flow/swarm':
-        specifier: workspace:*
-        version: link:../swarm
-      fast-check:
-        specifier: ^4.8.0
-        version: 4.8.0
       vitest:
         specifier: ^4.0.16
         version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)

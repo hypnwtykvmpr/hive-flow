@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Mock MCP Client
+ * @hive-flow/cli/testing - Mock MCP Client
  *
  * Comprehensive mock MCP client for testing CLI and server interactions.
  * Simulates full MCP protocol behavior with request/response tracking.

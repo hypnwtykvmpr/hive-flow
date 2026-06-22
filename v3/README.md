@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (17 packages)
+├── @hive-flow/                    # Modular packages (16 packages)
 │   ├── aidefence/                   # AI-threat defence & PII scanning
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
@@ -245,11 +245,11 @@ now ship from the CLI package:
 import { ReleaseManager } from '@hive-flow/cli/deployment';
 ```
 
-### @hive-flow/testing
+### @hive-flow/cli/testing
 TDD London School framework with mocks, fixtures, and regression testing.
 
 ```typescript
-import { createMockAgent, createTestFixture } from '@hive-flow/testing';
+import { createMockAgent, createTestFixture } from '@hive-flow/cli/testing';
 
 const mockAgent = createMockAgent({ type: 'coder' });
 const fixture = createTestFixture('swarm-coordination');
@@ -365,7 +365,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 17 packages |
+| **Code** | Package count | 16 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -382,7 +382,7 @@ pnpm test:coverage
 - [@hive-flow/cli/performance](./@hive-flow/cli/docs/performance/)
 - [@hive-flow/neural](./@hive-flow/neural/)
 - [@hive-flow/cli](./@hive-flow/cli/)
-- [@hive-flow/testing](./@hive-flow/testing/)
+- [@hive-flow/cli/testing](./@hive-flow/cli/src/testing/)
 - [@hive-flow/shared](./@hive-flow/shared/)
 
 ### Examples

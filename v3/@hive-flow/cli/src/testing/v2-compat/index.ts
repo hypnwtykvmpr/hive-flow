@@ -15,7 +15,7 @@
  *   V2_MCP_TOOLS,
  *   V2_HOOKS,
  *   V2_API_INTERFACES
- * } from '@hive-flow/testing/v2-compat';
+ * } from '@hive-flow/cli/testing/v2-compat';
  *
  * // Run full validation
  * const validator = new V2CompatibilityValidator({ verbose: true });

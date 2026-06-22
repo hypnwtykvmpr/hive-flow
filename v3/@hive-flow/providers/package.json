@@ -61,7 +61,6 @@
     "undici": "^7.26.0"
   },
   "devDependencies": {
-    "@hive-flow/testing": "workspace:*",
     "dotenv": "^16.4.5",
     "fast-check": "^4.8.0",
     "tsx": "^4.19.0",

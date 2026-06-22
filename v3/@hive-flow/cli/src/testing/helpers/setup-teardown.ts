@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Setup & Teardown Helpers
+ * @hive-flow/cli/testing - Setup & Teardown Helpers
  *
  * Global setup and teardown utilities for V3 module testing.
  * Provides test isolation, resource cleanup, and environment management.

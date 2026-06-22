@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Mock Factory
+ * @hive-flow/cli/testing - Mock Factory
  *
  * Factory functions for creating comprehensive mocks of V3 services and components.
  * Implements London School TDD patterns with behavior verification.

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Mocks Index
+ * @hive-flow/cli/testing - Mocks Index
  *
  * Central export for all mock implementations
  */

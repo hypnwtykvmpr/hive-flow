@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Agent Fixtures
+ * @hive-flow/cli/testing - Agent Fixtures
  *
  * Comprehensive mock agents and agent configurations for testing V3 modules.
  * Supports the 15-role V3 specialized swarm taxonomy plus core development agents.

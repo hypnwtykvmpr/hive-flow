@@ -39,11 +39,11 @@
       "@hive-flow/cli": [
         "./@hive-flow/cli/src"
       ],
+      "@hive-flow/cli/*": [
+        "./@hive-flow/cli/src/*"
+      ],
       "@hive-flow/neural": [
         "./@hive-flow/neural/src"
-      ],
-      "@hive-flow/testing": [
-        "./@hive-flow/testing/src"
       ],
       "@hive-flow/shared": [
         "./@hive-flow/shared/src"
@@ -76,9 +76,6 @@
     },
     {
       "path": "./@hive-flow/neural"
-    },
-    {
-      "path": "./@hive-flow/testing"
     },
     {
       "path": "./@hive-flow/hooks"

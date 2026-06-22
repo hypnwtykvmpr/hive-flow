@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Test Utilities
+ * @hive-flow/cli/testing - Test Utilities
  *
  * Common test utilities for async operations, timing, retries, and more.
  * Designed for robust V3 module testing.

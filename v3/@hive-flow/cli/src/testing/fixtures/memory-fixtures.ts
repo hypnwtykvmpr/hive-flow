@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Memory Fixtures
+ * @hive-flow/cli/testing - Memory Fixtures
  *
  * Comprehensive mock memory entries and backend configurations for testing.
  * Supports HiveMemory, HNSW indexing, vector search, and ReasoningBank patterns.

@@ -7,7 +7,7 @@
  * @module v3/cli/src/claims/tests/work-stealing-service
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createMock, type MockedInterface } from '../../../../testing/src/helpers/create-mock.js';
+import { createMock, type MockedInterface } from '../../testing/helpers/create-mock.js';
 
 // =============================================================================
 // Domain Types

@@ -112,7 +112,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Continuous improvement tracking
 - Neural training pipelines
 
-#### 8. `@hive-flow/testing` - TDD Framework
+#### 8. `@hive-flow/cli/testing` - TDD Framework
 - London School TDD methodology
 - Mock-first approach
 - Vitest test runner (significantly faster)

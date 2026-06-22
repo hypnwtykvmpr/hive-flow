@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Testing Module
+ * @hive-flow/cli/testing - Testing Module
  * TDD London School framework and test utilities for V3 Hive-Flow
  *
  * Based on ADR-008 (Vitest over Jest)
@@ -11,7 +11,7 @@
  *   createMockApplication,
  *   agentConfigs,
  *   swarmConfigs,
- * } from '@hive-flow/testing';
+ * } from '@hive-flow/cli/testing';
  *
  * setupV3Tests();
  *

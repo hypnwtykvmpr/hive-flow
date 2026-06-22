@@ -1,7 +1,7 @@
 // Shared property-run count resolver for CLI property-based suites.
 //
-// Mirrors `propertyRunsFromEnv` in @hive-flow/testing (helpers/hardening.ts).
-// Defined locally because @hive-flow/cli does not depend on @hive-flow/testing.
+// Mirrors `propertyRunsFromEnv` in @hive-flow/cli/testing (helpers/hardening.ts).
+// Defined locally to keep statusline property tests independent of the testing helper bundle.
 //
 // Reads HIVE_FLOW_PROPERTY_RUNS / HF_PROPERTY_RUNS so that `test:hardening:deep`
 // (which sets HIVE_FLOW_PROPERTY_RUNS=1000) actually raises run counts for the

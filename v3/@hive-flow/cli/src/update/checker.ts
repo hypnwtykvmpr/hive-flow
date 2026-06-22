@@ -41,7 +41,6 @@ const DEFAULT_CONFIG: UpdateConfig = {
     '@hive-flow/cli': 'high',
     '@hive-flow/embeddings': 'normal',
     '@hive-flow/integration': 'normal',
-    '@hive-flow/testing': 'low',
   },
   exclude: [],
 };
@@ -52,7 +51,6 @@ const HIVE_FLOW_PACKAGES = [
   '@hive-flow/embeddings',
   '@hive-flow/security',
   '@hive-flow/integration',
-  '@hive-flow/testing',
 ];
 
 interface NpmPackageInfo {

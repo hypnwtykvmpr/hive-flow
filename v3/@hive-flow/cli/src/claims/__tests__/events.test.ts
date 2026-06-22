@@ -7,7 +7,7 @@
  * @module v3/cli/src/claims/tests/events
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createMock, type MockedInterface, InteractionRecorder } from '../../../../testing/src/helpers/create-mock.js';
+import { createMock, type MockedInterface, InteractionRecorder } from '../../testing/helpers/create-mock.js';
 
 // =============================================================================
 // Event Types

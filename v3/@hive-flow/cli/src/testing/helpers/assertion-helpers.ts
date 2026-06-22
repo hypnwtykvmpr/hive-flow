@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Assertion Helpers
+ * @hive-flow/cli/testing - Assertion Helpers
  *
  * Custom Vitest matchers and assertion utilities for V3 module testing.
  * Implements London School TDD behavior verification patterns.

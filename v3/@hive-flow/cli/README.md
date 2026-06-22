@@ -4682,7 +4682,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/plugins` | WASM extensions | local vector plugins, semantic search, intent routing |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
 | `@hive-flow/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
-| `@hive-flow/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
+| `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
 | `@hive-flow/shared` | Common utilities | Types, validation schemas, constants |
 | `@hive-flow/browser` | Browser automation | 59 MCP tools, element refs, trajectory learning |
@@ -5139,7 +5139,7 @@ hive-flow performance benchmark --suite memory
 ---
 
 <details>
-<summary>🧪 <strong>Testing Framework</strong> — @hive-flow/testing</summary>
+<summary>🧪 <strong>Testing Framework</strong> — @hive-flow/cli/testing</summary>
 
 Comprehensive TDD framework implementing **London School** patterns with behavior verification, shared fixtures, and mock services.
 
@@ -5167,7 +5167,7 @@ import {
   agentConfigs,
   swarmConfigs,
   waitFor,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Configure test environment
 setupV3Tests();
@@ -5198,7 +5198,7 @@ import {
   createAgentConfig,
   createV3SwarmAgentConfigs,
   createMockAgent,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined configs
 const queen = agentConfigs.queenCoordinator;
@@ -5226,7 +5226,7 @@ import {
   createMemoryEntry,
   generateMockEmbedding,
   createMemoryBatch,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined entries
 const pattern = memoryEntries.agentPattern;
@@ -5247,7 +5247,7 @@ import {
   createSwarmConfig,
   createSwarmTask,
   createMockSwarmCoordinator,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined configs
 const v3Config = swarmConfigs.v3Default;
@@ -5274,7 +5274,7 @@ import {
   mcpTools,
   createMCPTool,
   createMockMCPClient,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined tools
 const swarmInit = mcpTools.swarmInit;
@@ -5295,7 +5295,7 @@ import {
   createMockTaskManager,
   createMockSecurityService,
   createMockSwarmCoordinator,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Full application with all mocks
 const app = createMockApplication();
@@ -5318,7 +5318,7 @@ import {
   retry,
   withTimeout,
   parallelLimit,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Wait for condition
 await waitFor(() => element.isVisible(), { timeout: 5000 });
@@ -5351,7 +5351,7 @@ import {
   assertMocksCalledInOrder,
   assertV3PerformanceTargets,
   assertNoSensitiveData,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Event assertions
 assertEventPublished(mockEventBus, 'UserCreated', { userId: '123' });
@@ -5374,7 +5374,7 @@ assertNoSensitiveData(mockLogger.logs, ['password', 'token', 'secret']);
 ### Performance Testing
 
 ```typescript
-import { createPerformanceTestHelper, TEST_CONFIG } from '@hive-flow/testing';
+import { createPerformanceTestHelper, TEST_CONFIG } from '@hive-flow/cli/testing';
 
 const perf = createPerformanceTestHelper();
 
@@ -6038,7 +6038,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/swarm` | 150-agent coordination engine | [Source](../swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](../cli/) |
 | `@hive-flow/neural` | SONA learning integration | [Source](../neural/) |
-| `@hive-flow/testing` | TDD London School framework | [Source](../testing/) |
+| `@hive-flow/cli/testing` | TDD London School framework | [Source](./src/testing/) |
 | `@hive-flow/mcp` | MCP server & tools | [Source](../mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](../embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](../providers/) |

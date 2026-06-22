@@ -1,4 +1,4 @@
-# @hive-flow/testing
+# @hive-flow/cli/testing
 
 
 > Comprehensive testing framework for V3 Hive-Flow modules. Implements London School TDD patterns with behavior verification, shared fixtures, and mock services.
@@ -14,7 +14,7 @@ import {
   agentConfigs,
   swarmConfigs,
   waitFor,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Configure test environment
 setupV3Tests();
@@ -69,7 +69,7 @@ import {
   createV3SwarmAgentConfigs,
   createMockAgent,
   createMockV3Swarm,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined configs
 const queen = agentConfigs.queenCoordinator;
@@ -102,7 +102,7 @@ import {
   createVectorQuery,
   generateMockEmbedding,
   createMemoryBatch,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined entries
 const pattern = memoryEntries.agentPattern;
@@ -134,7 +134,7 @@ import {
   createSwarmMessage,
   createConsensusRequest,
   createMockSwarmCoordinator,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined configs
 const v3Config = swarmConfigs.v3Default;
@@ -169,7 +169,7 @@ import {
   createMCPRequest,
   createMCPResponse,
   createMockMCPClient,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Pre-defined tools
 const swarmInit = mcpTools.swarmInit;
@@ -193,7 +193,7 @@ import {
   withTimeout,
   sleep,
   parallelLimit,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Wait for condition
 await waitFor(() => element.isVisible(), { timeout: 5000 });
@@ -220,7 +220,7 @@ const results = await parallelLimit(
 ### Time Control
 
 ```typescript
-import { createMockClock, measureTime } from '@hive-flow/testing';
+import { createMockClock, measureTime } from '@hive-flow/cli/testing';
 
 // Mock clock for time-dependent tests
 const clock = createMockClock();
@@ -237,7 +237,7 @@ const { result, duration } = await measureTime(async () => {
 ### Event Emitter
 
 ```typescript
-import { createTestEmitter } from '@hive-flow/testing';
+import { createTestEmitter } from '@hive-flow/cli/testing';
 
 const emitter = createTestEmitter<{ message: string; count: number }>();
 
@@ -262,7 +262,7 @@ import {
   createMockSecurityService,
   createMockSwarmCoordinator,
   createMockLogger,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Full application with all mocks
 const app = createMockApplication();
@@ -286,7 +286,7 @@ expect(app.taskManager.tasks.size).toBe(1);
 ### MockHiveMemory
 
 ```typescript
-import { MockHiveMemory } from '@hive-flow/testing';
+import { MockHiveMemory } from '@hive-flow/cli/testing';
 
 const db = new MockHiveMemory();
 
@@ -303,7 +303,7 @@ expect(db.insert).toHaveBeenCalledWith('vec-1', expect.any(Array), expect.any(Ob
 ### MockSwarmCoordinator
 
 ```typescript
-import { MockSwarmCoordinator } from '@hive-flow/testing';
+import { MockSwarmCoordinator } from '@hive-flow/cli/testing';
 
 const coordinator = new MockSwarmCoordinator();
 
@@ -318,7 +318,7 @@ expect(result.success).toBe(true);
 ### MockMCPClient
 
 ```typescript
-import { MockMCPClient, createStandardMockMCPClient } from '@hive-flow/testing';
+import { MockMCPClient, createStandardMockMCPClient } from '@hive-flow/cli/testing';
 
 // Standard client with common tools
 const client = createStandardMockMCPClient();
@@ -348,7 +348,7 @@ import {
   assertV3PerformanceTargets,
   assertValidStateTransition,
   assertNoSensitiveData,
-} from '@hive-flow/testing';
+} from '@hive-flow/cli/testing';
 
 // Event assertions
 assertEventPublished(mockEventBus, 'UserCreated', { userId: '123' });
@@ -377,7 +377,7 @@ assertNoSensitiveData(mockLogger.logs, ['password', 'token', 'secret']);
 ### Custom Vitest Matchers
 
 ```typescript
-import { registerCustomMatchers } from '@hive-flow/testing';
+import { registerCustomMatchers } from '@hive-flow/cli/testing';
 
 // Register in setup
 registerCustomMatchers();
@@ -393,7 +393,7 @@ expect(metrics).toMeetV3PerformanceTargets();
 ### Global Test Setup
 
 ```typescript
-import { setupV3Tests, configureTestEnvironment } from '@hive-flow/testing';
+import { setupV3Tests, configureTestEnvironment } from '@hive-flow/cli/testing';
 
 // Simple setup
 setupV3Tests();
@@ -413,7 +413,7 @@ configureTestEnvironment({
 ### Test Context
 
 ```typescript
-import { createSetupContext, createTestScope } from '@hive-flow/testing';
+import { createSetupContext, createTestScope } from '@hive-flow/cli/testing';
 
 // Setup context with cleanup
 const ctx = createSetupContext();
@@ -433,7 +433,7 @@ await scope.run(async () => {
 ### Performance Testing
 
 ```typescript
-import { createPerformanceTestHelper } from '@hive-flow/testing';
+import { createPerformanceTestHelper } from '@hive-flow/cli/testing';
 
 const perf = createPerformanceTestHelper();
 
@@ -459,7 +459,7 @@ The testing framework includes assertions for V3 performance targets:
 | Response Time | < 100ms |
 
 ```typescript
-import { assertV3PerformanceTargets, TEST_CONFIG } from '@hive-flow/testing';
+import { assertV3PerformanceTargets, TEST_CONFIG } from '@hive-flow/cli/testing';
 
 // Assert targets
 assertV3PerformanceTargets({

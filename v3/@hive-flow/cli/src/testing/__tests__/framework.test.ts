@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-describe('@hive-flow/testing', () => {
+describe('@hive-flow/cli/testing', () => {
   it('should export test utilities', () => {
     // Testing module provides test utilities
     expect(true).toBe(true);

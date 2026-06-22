@@ -9,7 +9,7 @@ import {
   createTempProject,
   propertyRunsFromEnv,
   runProcess,
-} from '../src/helpers/hardening.js';
+} from '../helpers/hardening.js';
 
 describe('hardening test helpers', () => {
   it('creates and cleans isolated temp projects', () => {

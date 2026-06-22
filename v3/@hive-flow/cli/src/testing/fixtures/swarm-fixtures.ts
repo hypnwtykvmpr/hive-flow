@@ -1,5 +1,5 @@
 /**
- * @hive-flow/testing - Swarm Fixtures
+ * @hive-flow/cli/testing - Swarm Fixtures
  *
  * Comprehensive mock swarm configurations, topologies, and coordination fixtures.
  * Supports hierarchical-mesh, adaptive, and all consensus protocols.

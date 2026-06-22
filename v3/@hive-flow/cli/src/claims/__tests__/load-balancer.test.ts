@@ -7,7 +7,7 @@
  * @module v3/cli/src/claims/tests/load-balancer
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMock, type MockedInterface } from '../../../../testing/src/helpers/create-mock.js';
+import { createMock, type MockedInterface } from '../../testing/helpers/create-mock.js';
 
 // =============================================================================
 // Domain Types
