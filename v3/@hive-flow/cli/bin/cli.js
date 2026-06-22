@@ -11,29 +11,11 @@
  * in remote/CI environments (known npm 10.x bug).
  */
 
-// Pre-flight: repair stale npx cache to prevent ENOTEMPTY on next run
-import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { repairCacheIntegrity, repairNpxCache } from './npx-repair.js';
 
 try {
-  const npxRoot = join(homedir(), '.npm', '_npx');
-  if (existsSync(npxRoot)) {
-    for (const dir of readdirSync(npxRoot)) {
-      const nm = join(npxRoot, dir, 'node_modules');
-      if (!existsSync(nm)) continue;
-      try {
-        for (const entry of readdirSync(nm)) {
-          if (entry.startsWith('.') && entry.includes('-') && /[A-Za-z]{8}$/.test(entry)) {
-            try {
-              const p = join(nm, entry);
-              if (statSync(p).isDirectory()) rmSync(p, { recursive: true, force: true });
-            } catch {}
-          }
-        }
-      } catch {}
-    }
-  }
+  repairNpxCache();
+  repairCacheIntegrity();
 } catch {}
 
 import { randomUUID } from 'crypto';

@@ -8,7 +8,8 @@
  *
  * Usage:
  *   - Imported by bin entry points before main logic
- *   - Can also be run standalone: node bin/npx-repair.js
+ *   - Can also be run standalone from the CLI package bin directory:
+ *     node npx-repair.js
  */
 import { readdirSync, readFileSync, rmSync, statSync, existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

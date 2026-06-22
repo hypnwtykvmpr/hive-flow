@@ -28,7 +28,7 @@ var npmDir = path.join(os.homedir(), '.npm');
  * Anchored predicate: true only when a single cacache JSONL line's `key` field
  * matches the real `hive-flow` package or the `@hive-flow/*` scope.
  *
- * Mirrors bin/npx-repair.js#isHiveFlowCacheIndexEntry — kept in sync so the
+ * Mirrors ./npx-repair.js#isHiveFlowCacheIndexEntry — kept in sync so the
  * two repair paths behave identically.  A raw substring match on the full file
  * content is deliberately avoided because it would evict unrelated packages
  * that merely mention "hive-flow" in description/peer-dep fields.

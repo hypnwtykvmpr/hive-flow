@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 // Repair stale npx cache entries and corrupted integrity before loading
 try {
   const __dirname = dirname(fileURLToPath(import.meta.url));
-  const mod = await import(pathToFileURL(join(__dirname, 'npx-repair.js')).href);
+  const mod = await import(pathToFileURL(join(__dirname, '..', 'v3', '@hive-flow', 'cli', 'bin', 'npx-repair.js')).href);
   mod.repairNpxCache();
   if (mod.repairCacheIntegrity) mod.repairCacheIntegrity();
 } catch {
