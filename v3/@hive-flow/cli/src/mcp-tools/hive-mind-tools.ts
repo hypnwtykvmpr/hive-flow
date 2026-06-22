@@ -10,6 +10,7 @@ import type { MCPTool } from './types.js';
 import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
 import type { AgentProvider } from './agent-tools.js';
+import { resolveClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -62,6 +63,8 @@ interface HiveWorker {
   agentId: string;
   provider?: AgentProvider;
   model?: string;
+  ownerSessionId?: string;
+  ownerClientKind?: Exclude<OperatorClientKind, 'unknown'>;
   role: string;
   joinedAt: string;
   status: 'idle' | 'busy' | 'offline';
@@ -230,12 +233,23 @@ export const hiveMindTools: MCPTool[] = [
         model: { type: 'string', description: 'Model to use' },
       },
     },
-    handler: async (input) => {
+    handler: async (input, context) => {
       const state = loadHiveState();
 
       if (!state.initialized) {
         return { success: false, error: 'Hive-mind not initialized. Run hive-mind/init first.' };
       }
+      const ownerSessionId = resolveSessionId(input, process.env, context);
+      if (!ownerSessionId) {
+        return {
+          success: false,
+          code: 'missing-owner-session',
+          error: 'hive-mind_spawn requires an owner session id before creating worker agents.',
+        };
+      }
+      const resolvedOwnerClientKind = resolveClientKind(input, process.env, context);
+      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> =
+        resolvedOwnerClientKind === 'unknown' ? 'claude' : resolvedOwnerClientKind;
 
       const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
       const role = (input.role as string) || 'worker';
@@ -272,6 +286,8 @@ export const hiveMindTools: MCPTool[] = [
             domain: 'hive-mind',
             provider: (input.provider as AgentProvider) || undefined,
             resolvedModel: (input.model as string) || undefined,
+            ownerSessionId,
+            ownerClientKind,
           };
 
           // Join to hive-mind (like hive-mind/join)
@@ -279,6 +295,8 @@ export const hiveMindTools: MCPTool[] = [
             agentId,
             provider: (input.provider as AgentProvider) || undefined,
             model: (input.model as string) || undefined,
+            ownerSessionId,
+            ownerClientKind,
             role, joinedAt: new Date().toISOString(), status: 'idle',
           };
           if (!state.workers.find(w => w.agentId === agentId)) {

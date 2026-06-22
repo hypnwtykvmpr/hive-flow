@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Module mocks (hoisted before imports) ────────────────────────────────
 
@@ -37,6 +37,8 @@ interface HiveWorkerView {
   id: string;
   provider?: string;
   model?: string;
+  ownerSessionId?: string;
+  ownerClientKind?: string;
   role?: string;
   status?: string;
 }
@@ -154,6 +156,13 @@ function setupFsMocks(
  * completed result, exactly as the old synchronous handler would have returned.
  */
 let _dispatchCallTracker: ReturnType<typeof vi.fn> | null = null;
+const originalOwnerEnv = {
+  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
+  CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
+  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
+  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
+  HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
+};
 
 function setMockAgentTask(resultFactory: (input: Record<string, unknown>) => unknown) {
   // Wrap resultFactory in a vi.fn so tests can assert call counts / args
@@ -235,6 +244,21 @@ describe('Provider-Hive Compatibility', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearMockAgentTask();
+    process.env.CODEX_SESSION_ID = 'provider-hive-codex-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+  });
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(originalOwnerEnv)) {
+      if (value === undefined) {
+        delete process.env[key as keyof typeof originalOwnerEnv];
+      } else {
+        process.env[key as keyof typeof originalOwnerEnv] = value;
+      }
+    }
   });
 
   // ====================================================================
@@ -256,6 +280,43 @@ describe('Provider-Hive Compatibility', () => {
       expect(agentIds.length).toBe(1);
       expect(agentIds[0]).toMatch(/^test-/);
       expect(store.agents[agentIds[0]].agentType).toBe('implementer');
+    });
+
+    it('hive-mind spawn stamps owner session and client kind on every created agent', async () => {
+      const { getSaveAgentStoreCalls } = setupFsMocks(makeHiveState());
+      const spawnTool = getTool('hive-mind_spawn');
+
+      const result = await spawnTool.handler({
+        count: 2,
+        agentType: 'implementer',
+        prefix: 'owned-worker',
+      }) as AnyResult;
+
+      expect(result.success).toBe(true);
+      const calls = getSaveAgentStoreCalls();
+      const store = calls[0][0];
+      const agents = Object.values(store.agents) as Array<Record<string, unknown>>;
+      expect(agents).toHaveLength(2);
+      expect(agents.every(agent => agent.ownerSessionId === 'provider-hive-codex-session')).toBe(true);
+      expect(agents.every(agent => agent.ownerClientKind === 'codex')).toBe(true);
+    });
+
+    it('hive-mind spawn refuses to create ownerless workers', async () => {
+      delete process.env.CODEX_SESSION_ID;
+      delete process.env.CODEX_THREAD_ID;
+      delete process.env.CLAUDE_SESSION_ID;
+      delete process.env.HIVE_FLOW_SESSION_ID;
+      delete process.env.HIVE_FLOW_CLIENT_KIND;
+      const { getSaveAgentStoreCalls } = setupFsMocks(makeHiveState());
+      const spawnTool = getTool('hive-mind_spawn');
+
+      const result = await spawnTool.handler({ count: 1, agentType: 'implementer', prefix: 'ownerless' }) as AnyResult;
+
+      expect(result).toMatchObject({
+        success: false,
+        code: 'missing-owner-session',
+      });
+      expect(getSaveAgentStoreCalls()).toHaveLength(0);
     });
 
     it('hive-mind spawn rejects removed agent aliases before writing the canonical store', async () => {
