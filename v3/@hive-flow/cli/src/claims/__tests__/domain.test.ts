@@ -1,5 +1,5 @@
 /**
- * @hive-flow/claims - Domain Layer Tests
+ * @hive-flow/cli/claims - Domain Layer Tests
  * Tests for ADR-016 types, events, and business rules
  */
 
@@ -16,7 +16,7 @@ import {
   HandoffReason,
   DEFAULT_WORK_STEALING_CONFIG,
   DEFAULT_LOAD_BALANCING_CONFIG,
-} from '../src/domain/types.js';
+} from '../domain/types.js';
 
 import {
   // Events
@@ -27,7 +27,7 @@ import {
   createIssueMarkedStealableEvent,
   AllClaimEvents,
   AllExtendedClaimEvents,
-} from '../src/domain/events.js';
+} from '../domain/events.js';
 
 // =============================================================================
 // Domain Types Tests

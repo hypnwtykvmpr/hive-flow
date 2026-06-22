@@ -1,8 +1,8 @@
 /**
- * @hive-flow/claims - Claim Repository Implementation
+ * @hive-flow/cli/claims - Claim Repository Implementation
  * SQLite-based persistence for claims (ADR-016)
  *
- * @module v3/claims/infrastructure/claim-repository
+ * @module v3/cli/src/claims/infrastructure/claim-repository
  */
 
 import {

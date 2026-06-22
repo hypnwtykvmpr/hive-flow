@@ -80,14 +80,14 @@ setup() {
   [ "$status" -eq 1 ]
 }
 
-@test "v3 package count reflects retired performance package" {
+@test "v3 package count remains current after later package collapses" {
   count=0
   for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
     [ -e "$package_file" ] || continue
     count=$((count + 1))
   done
 
-  [ "$count" -eq 18 ]
-  run grep -F '18 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 17 ]
+  run grep -F '17 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

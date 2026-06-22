@@ -4,10 +4,10 @@
  * London School TDD - Behavior Verification
  * Tests load calculation, rebalancing, preview, and imbalance detection
  *
- * @module v3/claims/tests/load-balancer
+ * @module v3/cli/src/claims/tests/load-balancer
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMock, type MockedInterface } from '../../testing/src/helpers/create-mock.js';
+import { createMock, type MockedInterface } from '../../../../testing/src/helpers/create-mock.js';
 
 // =============================================================================
 // Domain Types

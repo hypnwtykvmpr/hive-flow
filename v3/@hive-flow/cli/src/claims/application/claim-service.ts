@@ -11,7 +11,7 @@
  * - Auto-management (expiration, auto-assignment)
  * - Full event sourcing (ADR-007)
  *
- * @module v3/claims/application/claim-service
+ * @module v3/cli/src/claims/application/claim-service
  */
 
 import { randomUUID } from 'crypto';

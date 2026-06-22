@@ -1,9 +1,9 @@
 /**
- * @hive-flow/claims - Infrastructure Layer
+ * @hive-flow/cli/claims - Infrastructure Layer
  *
  * Exports persistence implementations for the claims module.
  *
- * @module v3/claims/infrastructure
+ * @module v3/cli/src/claims/infrastructure
  */
 
 // Claim Repository

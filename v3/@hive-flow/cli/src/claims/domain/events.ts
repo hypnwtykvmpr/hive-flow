@@ -4,7 +4,7 @@
  * Domain events for the claims system following event sourcing pattern.
  * All state changes emit events for audit trail and projections.
  *
- * @module v3/claims/domain/events
+ * @module v3/cli/src/claims/domain/events
  */
 
 import type {

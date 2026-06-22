@@ -1,8 +1,8 @@
 /**
- * @hive-flow/claims - Event Store Implementation
+ * @hive-flow/cli/claims - Event Store Implementation
  * Event sourcing storage for claims (ADR-007, ADR-016)
  *
- * @module v3/claims/infrastructure/event-store
+ * @module v3/cli/src/claims/infrastructure/event-store
  */
 
 import {

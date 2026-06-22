@@ -1,5 +1,5 @@
 /**
- * @hive-flow/claims (ADR-016)
+ * @hive-flow/cli/claims (ADR-016)
  *
  * Issue claiming and handoff management for human and agent collaboration.
  *
@@ -24,7 +24,7 @@
  * - StealReason: timeout | overloaded | blocked | voluntary | rebalancing | abandoned | priority-change
  * - HandoffReason: capacity | expertise | shift-change | escalation | voluntary | rebalancing
  *
- * @module v3/claims
+ * @module v3/cli/src/claims
  */
 
 // Domain layer - Types, Events, Rules, Repositories

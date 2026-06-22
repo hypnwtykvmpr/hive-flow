@@ -4,10 +4,10 @@
  * London School TDD - Behavior Verification
  * Tests issue/task claiming, releasing, handoffs, and status transitions
  *
- * @module v3/claims/tests/claim-service
+ * @module v3/cli/src/claims/tests/claim-service
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMock, type MockedInterface } from '../../testing/src/helpers/create-mock.js';
+import { createMock, type MockedInterface } from '../../../../testing/src/helpers/create-mock.js';
 
 // =============================================================================
 // Domain Types

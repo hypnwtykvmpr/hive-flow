@@ -4,7 +4,7 @@
  * Exports all domain types, events, rules, and repository interfaces
  * for the issue claiming system.
  *
- * @module v3/claims/domain
+ * @module v3/cli/src/claims/domain
  */
 
 // =============================================================================

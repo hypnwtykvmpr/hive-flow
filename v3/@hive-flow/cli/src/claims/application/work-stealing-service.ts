@@ -4,7 +4,7 @@
  * Handles work stealing to maximize swarm throughput by redistributing
  * work from stale, blocked, or overloaded agents to available ones.
  *
- * @module v3/claims/application/work-stealing-service
+ * @module v3/cli/src/claims/application/work-stealing-service
  */
 
 import { randomUUID } from 'crypto';

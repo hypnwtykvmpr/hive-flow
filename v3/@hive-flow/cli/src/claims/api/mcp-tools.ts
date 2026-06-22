@@ -1880,7 +1880,7 @@ export const claimsTools: MCPTool[] = [
  *
  * @example
  * ```typescript
- * import { registerClaimsTools, claimsTools } from '@hive-flow/claims';
+ * import { registerClaimsTools, claimsTools } from '@hive-flow/cli/claims';
  *
  * // Register all tools
  * const count = registerClaimsTools(server);

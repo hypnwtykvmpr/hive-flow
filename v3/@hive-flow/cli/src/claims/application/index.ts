@@ -6,7 +6,7 @@
  * - LoadBalancer: Work distribution and rebalancing across the swarm
  * - WorkStealingService: Idle agent work acquisition
  *
- * @module v3/claims/application
+ * @module v3/cli/src/claims/application
  */
 
 // Core claim service

@@ -3,7 +3,7 @@
  *
  * Repository interfaces for the claims domain following DDD patterns.
  *
- * @module v3/claims/domain/repositories
+ * @module v3/cli/src/claims/domain/repositories
  */
 
 import {

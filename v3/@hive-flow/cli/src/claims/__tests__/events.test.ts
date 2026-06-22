@@ -4,10 +4,10 @@
  * London School TDD - Behavior Verification
  * Tests event emission, event data correctness, and event ordering
  *
- * @module v3/claims/tests/events
+ * @module v3/cli/src/claims/tests/events
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createMock, type MockedInterface, InteractionRecorder } from '../../testing/src/helpers/create-mock.js';
+import { createMock, type MockedInterface, InteractionRecorder } from '../../../../testing/src/helpers/create-mock.js';
 
 // =============================================================================
 // Event Types

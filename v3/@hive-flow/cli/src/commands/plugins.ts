@@ -921,7 +921,6 @@ export const pluginsCommand: Command = {
       '@hive-flow/neural              - Neural patterns and inference (WASM SIMD)',
       '@hive-flow/security            - Security scanning and CVE detection',
       '@hive-flow/embeddings          - Vector embeddings with hyperbolic support',
-      '@hive-flow/claims              - Claims-based authorization',
       '@hive-flow/plugin-perf-optimizer - Performance profiling and benchmarks',
       '@hive-flow/plugin-gastown-bridge - Gas Town orchestrator integration (WASM-accelerated)',
     ]);

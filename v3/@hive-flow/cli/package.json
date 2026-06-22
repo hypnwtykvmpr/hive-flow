@@ -67,6 +67,14 @@
     "./performance/*": {
       "types": "./dist/src/performance/*.d.ts",
       "import": "./dist/src/performance/*.js"
+    },
+    "./claims": {
+      "types": "./dist/src/claims/index.d.ts",
+      "import": "./dist/src/claims/index.js"
+    },
+    "./claims/*": {
+      "types": "./dist/src/claims/*.d.ts",
+      "import": "./dist/src/claims/*.js"
     }
   },
   "files": [
@@ -130,7 +138,8 @@
     "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
     "jsonc-parser": "^3.3.1",
-    "semver": "^7.7.4"
+    "semver": "^7.7.4",
+    "zod": "^3.22.4"
   },
   "optionalDependencies": {
     "@hive-flow/aidefence": "workspace:*",
