@@ -51,6 +51,14 @@
       "types": "./dist/src/hivector/*.d.ts",
       "import": "./dist/src/hivector/*.js"
     },
+    "./guidance": {
+      "types": "./dist/src/guidance/index.d.ts",
+      "import": "./dist/src/guidance/index.js"
+    },
+    "./guidance/*": {
+      "types": "./dist/src/guidance/*.d.ts",
+      "import": "./dist/src/guidance/*.js"
+    },
     "./package.json": "./package.json",
     "./mcp-tools": {
       "types": "./dist/src/mcp-tools/index.d.ts",
@@ -169,7 +177,8 @@
   ],
   "scripts": {
     "build:helpers-src": "node scripts/copy-helper-sources.mjs",
-    "build": "tsc && npm run build:helpers-src && node scripts/sync-engine-anchor.mjs",
+    "build:guidance-assets": "node scripts/copy-guidance-assets.mjs",
+    "build": "tsc && npm run build:helpers-src && npm run build:guidance-assets && node scripts/sync-engine-anchor.mjs",
     "sync:engine": "node scripts/sync-engine-anchor.mjs",
     "test": "vitest run",
     "test:e2e": "vitest run --config e2e/vitest.config.ts",
@@ -203,6 +212,7 @@
   },
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
+    "@hive-flow/hooks": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
     "ajv": "^8.18.0",
@@ -220,7 +230,6 @@
     "@hive-flow/codex": "workspace:*",
     "@hive-flow/providers": "workspace:*",
     "@hive-flow/embeddings": "workspace:*",
-    "@hive-flow/guidance": "workspace:*",
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/plugin-gastown-bridge": "workspace:*"
   },

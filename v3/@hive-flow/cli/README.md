@@ -1310,11 +1310,11 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env
 ---
 
 <details>
-<summary>🛡️ <strong>@hive-flow/guidance</strong> — Long-horizon governance control plane for Claude Code agents</summary>
+<summary>🛡️ <strong>@hive-flow/cli/guidance</strong> — Long-horizon governance control plane for Claude Code agents</summary>
 
 ### Overview
 
-`@hive-flow/guidance` turns `CLAUDE.md` into a runtime governance system with enforcement gates, cryptographic proofs, and feedback loops. Agents that normally drift after 30 minutes can now operate for days — rules are enforced mechanically at every step, not remembered by the model.
+`@hive-flow/cli/guidance` turns `CLAUDE.md` into a runtime governance system with enforcement gates, cryptographic proofs, and feedback loops. Agents that normally drift after 30 minutes can now operate for days — rules are enforced mechanically at every step, not remembered by the model.
 
 **7-phase pipeline:** Compile → Retrieve → Enforce → Trust → Prove → Defend → Evolve
 
@@ -1337,7 +1337,7 @@ import {
   createGates,
   createLedger,
   createProofChain,
-} from '@hive-flow/guidance';
+} from '@hive-flow/cli/guidance';
 
 // Compile CLAUDE.md into a policy bundle
 const compiler = createCompiler();
@@ -1365,18 +1365,18 @@ chain.verify(envelope); // true — tamper-evident
 
 | Import Path | Purpose |
 |-------------|---------|
-| `@hive-flow/guidance` | Main entry — GuidanceControlPlane |
-| `@hive-flow/guidance/compiler` | CLAUDE.md → PolicyBundle compiler |
-| `@hive-flow/guidance/retriever` | Intent classification + shard retrieval |
-| `@hive-flow/guidance/gates` | 4 enforcement gates |
-| `@hive-flow/guidance/ledger` | Run event logging + evaluators |
-| `@hive-flow/guidance/proof` | HMAC-SHA256 proof chain |
-| `@hive-flow/guidance/adversarial` | Threat, collusion, memory quorum |
-| `@hive-flow/guidance/trust` | Trust accumulation + privilege tiers |
-| `@hive-flow/guidance/authority` | Human authority + irreversibility classification |
-| `@hive-flow/guidance/wasm-kernel` | WASM-accelerated security-critical paths |
-| `@hive-flow/guidance/analyzer` | CLAUDE.md quality analysis + A/B benchmarking |
-| `@hive-flow/guidance/conformance-kit` | Headless conformance test runner |
+| `@hive-flow/cli/guidance` | Main entry — GuidanceControlPlane |
+| `@hive-flow/cli/guidance/compiler` | CLAUDE.md → PolicyBundle compiler |
+| `@hive-flow/cli/guidance/retriever` | Intent classification + shard retrieval |
+| `@hive-flow/cli/guidance/gates` | 4 enforcement gates |
+| `@hive-flow/cli/guidance/ledger` | Run event logging + evaluators |
+| `@hive-flow/cli/guidance/proof` | HMAC-SHA256 proof chain |
+| `@hive-flow/cli/guidance/adversarial` | Threat, collusion, memory quorum |
+| `@hive-flow/cli/guidance/trust` | Trust accumulation + privilege tiers |
+| `@hive-flow/cli/guidance/authority` | Human authority + irreversibility classification |
+| `@hive-flow/cli/guidance/wasm-kernel` | WASM-accelerated security-critical paths |
+| `@hive-flow/cli/guidance/analyzer` | CLAUDE.md quality analysis + A/B benchmarking |
+| `@hive-flow/cli/guidance/conformance-kit` | Headless conformance test runner |
 
 ### Stats
 

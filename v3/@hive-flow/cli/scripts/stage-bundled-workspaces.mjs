@@ -26,13 +26,12 @@
  * Eager runtime closure (traced from bin/cli.js -> dist/src/index.js):
  *   - @hive-flow/shared       (bare + /core/config/defaults + /workflow)  REQUIRED for every command
  *   - @hive-flow/providers    (/scripts/agent-task-journal.mjs)           REQUIRED for every command
- *   - @hive-flow/guidance     (/compiler,/retriever,/gates,/analyzer)     REQUIRED for `guidance` cmd (unguarded import)
+ *   - guidance command code now lives inside @hive-flow/cli/dist/src/guidance
  *
  * Each package's own third-party deps (express, helmet, cors, ws, sql.js, zod,
  * etc.) are declared in the umbrella root `dependencies` so they install into
  * the root node_modules and resolve via Node's upward lookup from the bundled
- * package. Inter-workspace deps among the bundled set (guidance->shared) resolve
- * because all are co-located under node_modules/@hive-flow.
+ * package.
  */
 import {
   cpSync,
@@ -85,7 +84,6 @@ const destRoot = join(repoRoot, 'node_modules', '@hive-flow');
 const BUNDLED = [
   { name: 'shared', copy: ['dist'] },
   { name: 'providers', copy: ['dist', 'scripts'] },
-  { name: 'guidance', copy: ['dist', 'wasm-pkg'] },
 ];
 
 // Resolve a concrete version for an @hive-flow/* package from the source tree.

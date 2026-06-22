@@ -153,7 +153,7 @@ const SECURITY_KEYWORDS = [
 ];
 const MONOREPO_PACKAGES = [
   '@hive-flow/cli', '@hive-flow/hooks', '@hive-flow/memory',
-  '@hive-flow/security', '@hive-flow/guidance', '@hive-flow/shared',
+  '@hive-flow/security', '@hive-flow/cli/guidance', '@hive-flow/shared',
   '@hive-flow/codex', '@hive-flow/providers',
 ];
 

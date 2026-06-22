@@ -27,7 +27,6 @@ const DUPLICATE_ROSTER_ROOTS = [
   'v3/@hive-flow/browser/agents',
   'v3/@hive-flow/codex/agents',
   'v3/@hive-flow/embeddings/agents',
-  'v3/@hive-flow/guidance/agents',
   'v3/@hive-flow/memory/agents',
   'v3/@hive-flow/memory/src/agents',
   'v3/plugins/agentic-qe/agents',

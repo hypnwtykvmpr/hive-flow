@@ -47,9 +47,6 @@ importers:
       '@ast-grep/napi':
         specifier: ^0.43.0
         version: 0.43.0
-      '@hive-flow/guidance':
-        specifier: 3.0.0-alpha.1
-        version: link:v3/@hive-flow/guidance
       '@hive-flow/providers':
         specifier: 3.0.0-alpha.6
         version: link:v3/@hive-flow/providers
@@ -127,6 +124,9 @@ importers:
       '@ast-grep/napi':
         specifier: ^0.43.0
         version: 0.43.0
+      '@hive-flow/hooks':
+        specifier: workspace:*
+        version: link:../hooks
       '@hive-flow/shared':
         specifier: workspace:*
         version: link:../shared
@@ -170,9 +170,6 @@ importers:
       '@hive-flow/embeddings':
         specifier: workspace:*
         version: link:../embeddings
-      '@hive-flow/guidance':
-        specifier: workspace:*
-        version: link:../guidance
       '@hive-flow/memory':
         specifier: workspace:*
         version: link:../memory
@@ -232,22 +229,6 @@ importers:
       sql.js:
         specifier: ^1.14.1
         version: 1.14.1
-    devDependencies:
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  v3/@hive-flow/guidance:
-    dependencies:
-      '@hive-flow/hooks':
-        specifier: workspace:*
-        version: link:../hooks
-      '@hive-flow/memory':
-        specifier: workspace:*
-        version: link:../memory
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
     devDependencies:
       vitest:
         specifier: ^4.0.16

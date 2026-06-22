@@ -11,6 +11,7 @@
     "v3/@hive-flow/cli/bin/**",
     "v3/@hive-flow/cli/dist/**/*.js",
     "v3/@hive-flow/cli/dist/**/*.d.ts",
+    "v3/@hive-flow/cli/dist/src/guidance/wasm-pkg/**",
     "v3/@hive-flow/cli/dist/credential-store/helpers/**",
     "!v3/@hive-flow/cli/dist/**/*.map",
     "v3/@hive-flow/cli/package.json",
@@ -25,10 +26,6 @@
     "v3/@hive-flow/shared/dist/**/*.d.ts",
     "!v3/@hive-flow/shared/dist/**/*.map",
     "v3/@hive-flow/shared/package.json",
-    "v3/@hive-flow/guidance/dist/**/*.js",
-    "v3/@hive-flow/guidance/dist/**/*.d.ts",
-    "!v3/@hive-flow/guidance/dist/**/*.map",
-    "v3/@hive-flow/guidance/package.json",
     ".claude-plugin/**",
     "!**/DELETE_*",
     "!**/.hive-flow/**",
@@ -64,7 +61,6 @@
   },
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
-    "@hive-flow/guidance": "3.0.0-alpha.1",
     "@hive-flow/providers": "3.0.0-alpha.6",
     "@hive-flow/shared": "3.0.0-alpha.6",
     "@noble/ed25519": "^3.0.0",
@@ -80,8 +76,7 @@
   },
   "bundledDependencies": [
     "@hive-flow/shared",
-    "@hive-flow/providers",
-    "@hive-flow/guidance"
+    "@hive-flow/providers"
   ],
   "overrides": {
     "hono": ">=4.12.4",
