@@ -9,7 +9,8 @@ import {
   createHash, scryptSync, randomBytes, createCipheriv, createDecipheriv,
 } from 'node:crypto';
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import {
   RvfaWriter, type RvfaHeader, type RvfaBootConfig, type RvfaModelConfig,
@@ -58,6 +59,33 @@ const OFFLINE_MODELS = [
   { name: 'phi-3-mini-q4', format: 'gguf', sizeHint: '2.3GB', params: '3.8B' },
   { name: 'qwen2.5-coder-3b-q4', format: 'gguf', sizeHint: '1.7GB', params: '3B' },
 ];
+
+function findCliRoot(startDir: string): string {
+  let current = resolve(startDir);
+  for (;;) {
+    const packageJsonPath = join(current, 'package.json');
+    if (existsSync(packageJsonPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+        if (pkg.name === '@hive-flow/cli') {
+          return current;
+        }
+      } catch {
+        // Keep walking; malformed package.json files are handled by normal build gates.
+      }
+    }
+
+    const parent = dirname(current);
+    if (parent === current) {
+      throw new Error('[rvfa-builder] unable to locate @hive-flow/cli package root');
+    }
+    current = parent;
+  }
+}
+
+export function resolveVerifyApplianceScript(startDir = dirname(fileURLToPath(import.meta.url))): string {
+  return join(findCliRoot(startDir), 'scripts', 'verify-appliance.sh');
+}
 
 // ── API Key Encryption / Decryption ──────────────────────────
 
@@ -281,7 +309,7 @@ export class RvfaBuilder {
   }
 
   private buildVerifySection(): Buffer {
-    const scriptPath = resolve(dirname(new URL(import.meta.url).pathname), '../../../../scripts/verify-appliance.sh');
+    const scriptPath = resolveVerifyApplianceScript();
     let script: Buffer;
 
     if (existsSync(scriptPath)) {

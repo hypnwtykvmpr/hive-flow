@@ -175,6 +175,11 @@ describe('packaging proof: @hive-flow/cli tarball', () => {
     assert.ok(has(/^helpers\/templates\/config-validator\.sh$/), 'missing helpers/templates/config-validator.sh');
   });
 
+  it('ships the appliance verification script used by RVFA builds', () => {
+    const has = (re) => files.some((p) => re.test(p));
+    assert.ok(has(/^scripts\/verify-appliance\.sh$/), 'missing scripts/verify-appliance.sh');
+  });
+
   it('ships bin entry scripts with the executable bit', () => {
     const binDir = join(pkgDir, 'bin');
     for (const bin of ['cli.js', 'mcp-server.js', 'statusline.js']) {
@@ -292,7 +297,12 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
       has(/^v3\/@hive-flow\/cli\/helpers\/templates\/progress-manager\.sh$/),
       'missing nested cli helper system templates/progress-manager.sh',
     );
+    assert.ok(
+      has(/^v3\/@hive-flow\/cli\/scripts\/verify-appliance\.sh$/),
+      'missing nested cli appliance verification script',
+    );
     assert.ok(!has(/^v3\/helpers\//), 'umbrella must not ship retired v3/helpers path');
+    assert.ok(!has(/^scripts\/verify-appliance\.sh$/), 'umbrella must not ship retired root verify-appliance path');
   });
 
   it('does NOT ship the developer top-level .claude/ tree', () => {

@@ -60,6 +60,7 @@
   "files": [
     "dist",
     "bin",
+    "scripts/verify-appliance.sh",
     "helpers/**",
     "agents/**/*.yaml",
     ".claude/commands/**",
