@@ -62,6 +62,8 @@ interface AgentRecord {
   terminatedAt?: string;
   provider?: string;
   model?: string;
+  ownerSessionId?: string;
+  ownerClientKind?: string;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -75,6 +77,8 @@ function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
     createdAt: new Date().toISOString(),
     provider: 'gemini-cli',
     model: 'sonnet',
+    ownerSessionId: 'owner-session',
+    ownerClientKind: 'codex',
     ...overrides,
   };
 }
@@ -249,6 +253,59 @@ describe('agent_task_async handler', () => {
 
     expect(tokenArgIndex).toBeGreaterThan(-1);
     expect(args[tokenArgIndex + 1]).toBe('spawn-token-123');
+  });
+
+  it('passes persisted owner session and client kind to the bridge process env', async () => {
+    const agent = makeAgent({
+      ownerSessionId: 'codex-owner-session',
+      ownerClientKind: 'codex',
+    });
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(12345);
+    process.env.CLAUDE_SESSION_ID = 'wrong-claude-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'claude-code';
+
+    try {
+      const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+
+      expect(result.success).toBe(true);
+      const [, , options] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(options.env.HIVE_FLOW_SESSION_ID).toBe('codex-owner-session');
+      expect(options.env.HIVE_FLOW_CLIENT_KIND).toBe('codex');
+      expect(options.env.CODEX_SESSION_ID).toBe('codex-owner-session');
+      expect(options.env.CLAUDE_SESSION_ID).toBeUndefined();
+    } finally {
+      delete process.env.CLAUDE_SESSION_ID;
+      delete process.env.HIVE_FLOW_CLIENT_KIND;
+    }
+  });
+
+  it('refuses to dispatch legacy ownerless agents before spawning the bridge', async () => {
+    const agent = makeAgent({ ownerSessionId: undefined });
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      agentId: agent.agentId,
+      error: expect.stringMatching(/missing ownerSessionId/i),
+    });
+    expect((spawn as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+  });
+
+  it('refuses to dispatch agents without an owner client kind before spawning the bridge', async () => {
+    const agent = makeAgent({ ownerClientKind: undefined });
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      agentId: agent.agentId,
+      error: expect.stringMatching(/missing ownerClientKind/i),
+    });
+    expect((spawn as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
   });
 
   // ------------------------------------------------------------------

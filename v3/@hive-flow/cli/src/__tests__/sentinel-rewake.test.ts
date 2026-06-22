@@ -65,8 +65,14 @@ describe('sentinel agent task rewake', () => {
       const taskId = 'task-demo-123';
       writeResult(root, taskId, { success: true, result: { agentId: 'agent-a', content: 'done' } });
 
-      const first = agentRewake.notifyCompletedTaskIfReady(root, taskId);
-      const second = agentRewake.notifyCompletedTaskIfReady(root, taskId);
+      const first = agentRewake.notifyCompletedTaskIfReady(root, taskId, {
+        sessionInput: { client_kind: 'claude-code' },
+        env: {},
+      });
+      const second = agentRewake.notifyCompletedTaskIfReady(root, taskId, {
+        sessionInput: { client_kind: 'claude-code' },
+        env: {},
+      });
 
       expect(first.notified).toBe(true);
       expect(first.summary).toContain('[TASK COMPLETE: task-demo-123]');

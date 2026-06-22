@@ -108,7 +108,7 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readSpawnedTypes(tmpRoot)).toContain('bug-hunter');
   });
 
-  it('stamps ownerSessionId on agent_spawn from session env before MCP context fallback', async () => {
+  it('stamps ownerSessionId and ownerClientKind on agent_spawn from session env before MCP context fallback', async () => {
     process.env.CODEX_SESSION_ID = 'codex-session';
     process.env.CODEX_THREAD_ID = 'codex-thread';
     process.env.CLAUDE_SESSION_ID = 'claude-session';
@@ -125,6 +125,7 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentId: 'owned-agent',
     });
     expect(readAgentRecord(tmpRoot, 'owned-agent')?.ownerSessionId).toBe('codex-session');
+    expect(readAgentRecord(tmpRoot, 'owned-agent')?.ownerClientKind).toBe('codex');
   });
 
   it('uses CODEX_THREAD_ID for agent_spawn ownership when CODEX_SESSION_ID is absent', async () => {
@@ -144,6 +145,7 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentId: 'codex-thread-owned-agent',
     });
     expect(readAgentRecord(tmpRoot, 'codex-thread-owned-agent')?.ownerSessionId).toBe('codex-thread-session');
+    expect(readAgentRecord(tmpRoot, 'codex-thread-owned-agent')?.ownerClientKind).toBe('codex');
   });
 
   it('falls back to MCP context for agent_spawn ownership when no session env exists', async () => {
@@ -163,6 +165,27 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentId: 'context-owned-agent',
     });
     expect(readAgentRecord(tmpRoot, 'context-owned-agent')?.ownerSessionId).toBe('context-session');
+    expect(readAgentRecord(tmpRoot, 'context-owned-agent')?.ownerClientKind).toBe('claude');
+  });
+
+  it('uses MCP context clientKind for agent_spawn owner lane when no client env exists', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await spawnTool.handler({
+      agentId: 'context-codex-owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }, { sessionId: 'context-session', clientKind: 'codex' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'context-codex-owned-agent',
+    });
+    expect(readAgentRecord(tmpRoot, 'context-codex-owned-agent')?.ownerSessionId).toBe('context-session');
+    expect(readAgentRecord(tmpRoot, 'context-codex-owned-agent')?.ownerClientKind).toBe('codex');
   });
 
   it('refuses generated MCP transport ids as agent_spawn owner identity', async () => {

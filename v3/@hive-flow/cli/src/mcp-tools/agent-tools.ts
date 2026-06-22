@@ -23,7 +23,7 @@ import {
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
-import { resolveSessionId } from './session-id.js';
+import { normalizeClientKind, resolveClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -61,6 +61,7 @@ export interface AgentRecord {
   resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.5-flash, gpt-5.5)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
   ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
+  ownerClientKind?: Exclude<OperatorClientKind, 'unknown'>;  // Owning operator lane for completion routing
   currentTaskPid?: number;  // Provider bridge child pid for read-side liveness checks
 }
 
@@ -518,6 +519,8 @@ function buildProviderBridgeEnv(
   agentId: string,
   agentToken: string | undefined,
   agentRole: { type?: string; hiveId?: string } | null,
+  ownerSessionId: string,
+  ownerClientKind: Exclude<OperatorClientKind, 'unknown'>,
 ): Record<string, string> {
   const childEnv: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
@@ -535,6 +538,16 @@ function buildProviderBridgeEnv(
 
   childEnv.HIVE_FLOW_AGENT_ID = agentId;
   childEnv.CLAUDE_AGENT_ID = agentId;
+  childEnv.HIVE_FLOW_SESSION_ID = ownerSessionId;
+  childEnv.HIVE_FLOW_CLIENT_KIND = ownerClientKind;
+  if (ownerClientKind === 'codex') {
+    childEnv.CODEX_SESSION_ID = ownerSessionId;
+    delete childEnv.CLAUDE_SESSION_ID;
+  } else if (ownerClientKind === 'claude') {
+    childEnv.CLAUDE_SESSION_ID = ownerSessionId;
+    delete childEnv.CODEX_SESSION_ID;
+    delete childEnv.CODEX_THREAD_ID;
+  }
   if (agentToken) childEnv.HIVE_FLOW_AGENT_TOKEN = agentToken;
   if (agentRole?.hiveId) childEnv.HIVE_FLOW_HIVE_ID = agentRole.hiveId;
   if (agentRole?.type) childEnv.HIVE_FLOW_ROLE = agentRole.type;
@@ -563,6 +576,17 @@ function readVerifiedAgentRole(agentId: string): { type?: string; hiveId?: strin
   } catch {
     return null;
   }
+}
+
+function persistedOwnerSessionId(agent: AgentRecord): string | null {
+  return typeof agent.ownerSessionId === 'string' && agent.ownerSessionId.trim()
+    ? agent.ownerSessionId.trim()
+    : null;
+}
+
+function persistedOwnerClientKind(agent: AgentRecord): Exclude<OperatorClientKind, 'unknown'> | null {
+  const kind = normalizeClientKind(agent.ownerClientKind);
+  return kind === 'unknown' ? null : kind;
 }
 
 /** Parse agent_activity time window: default 1h; accepts "1h"/"30m"/"2d" or hours as number. */
@@ -663,6 +687,9 @@ export const agentTools: MCPTool[] = [
       const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
       const config = (input.config as Record<string, unknown>) || {};
       const ownerSessionId = resolveSessionId(input, process.env, context);
+      const resolvedOwnerClientKind = resolveClientKind(input, process.env, context);
+      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> =
+        resolvedOwnerClientKind === 'unknown' ? 'claude' : resolvedOwnerClientKind;
 
       if (!isCanonicalAgentType(agentType)) {
         return {
@@ -800,6 +827,7 @@ export const agentTools: MCPTool[] = [
           ? 'explicit'
           : routingResult.routedBy,
         ownerSessionId,
+        ownerClientKind,
       };
 
       // Transition spawning → idle (setup complete)
@@ -1303,6 +1331,20 @@ export const agentTools: MCPTool[] = [
         if (!agent.provider) {
           return { error: 'Agent has no provider — use agent_spawn with a provider first' };
         }
+        const ownerSessionId = persistedOwnerSessionId(agent);
+        if (!ownerSessionId) {
+          return {
+            error: 'Agent is missing ownerSessionId; respawn it from Claude/Codex with a real operator session before dispatching tasks.',
+            code: 'missing-owner-session',
+          };
+        }
+        const ownerClientKind = persistedOwnerClientKind(agent);
+        if (!ownerClientKind) {
+          return {
+            error: 'Agent is missing ownerClientKind; respawn it from Claude/Codex so task completions route to the owning operator.',
+            code: 'missing-owner-client-kind',
+          };
+        }
         if (agent.provider === 'anthropic') {
           return {
             error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter. Use Claude Code Task tool for native anthropic agents.",
@@ -1335,6 +1377,8 @@ export const agentTools: MCPTool[] = [
           agentId,
           agentToken,
           agentRole,
+          ownerSessionId,
+          ownerClientKind,
         );
 
         try {
@@ -1440,11 +1484,11 @@ export const agentTools: MCPTool[] = [
       },
       required: ['agentId', 'task'],
     },
-    handler: async (input) => {
+    handler: async (input, context) => {
       // Delegate to agent_task — both are now identical (non-blocking)
       const agentTaskTool = agentTools.find(t => t.name === 'agent_task');
       if (!agentTaskTool) throw new Error('agent_task tool not found');
-      return agentTaskTool.handler(input);
+      return agentTaskTool.handler(input, context);
     },
   },
   {

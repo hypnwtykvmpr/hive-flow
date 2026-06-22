@@ -1,6 +1,7 @@
 import { sanitizeScopeId } from '../permission-guard/protected-paths.js';
 
 type SessionEnv = Record<string, string | undefined>;
+export type OperatorClientKind = 'claude' | 'codex' | 'gemini' | 'cursor' | 'unknown';
 
 function asNonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
@@ -37,4 +38,41 @@ export function resolveSessionId(
     ?? asOperatorContextSessionId(context?.sessionId);
 
   return source ? sanitizeSessionId(source) : null;
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+export function normalizeClientKind(value: unknown): OperatorClientKind {
+  const raw = stringValue(value);
+  if (!raw) return 'unknown';
+  const normalized = raw.toLowerCase();
+  if (normalized === 'claude' || normalized === 'claude-code') return 'claude';
+  if (normalized === 'codex' || normalized === 'codex-cli') return 'codex';
+  if (normalized === 'gemini' || normalized === 'gemini-cli') return 'gemini';
+  if (normalized === 'cursor' || normalized === 'cursor-cli' || normalized === 'cursor-agent') return 'cursor';
+  return 'unknown';
+}
+
+export function resolveClientKind(
+  input: Record<string, unknown> | null | undefined = null,
+  env: SessionEnv = process.env,
+  context: Record<string, unknown> | null | undefined = null,
+): OperatorClientKind {
+  const candidates: unknown[] = [
+    input?.client_kind,
+    input?.clientKind,
+    input?.ownerClientKind,
+    context?.client_kind,
+    context?.clientKind,
+    env.HIVE_FLOW_CLIENT_KIND,
+  ];
+  for (const candidate of candidates) {
+    const kind = normalizeClientKind(candidate);
+    if (kind !== 'unknown') return kind;
+  }
+  if (asNonEmptyString(env.CODEX_SESSION_ID) || asNonEmptyString(env.CODEX_THREAD_ID)) return 'codex';
+  if (asNonEmptyString(env.CLAUDE_SESSION_ID) || asNonEmptyString(env.CLAUDE_PROJECT_DIR)) return 'claude';
+  return 'unknown';
 }

@@ -496,7 +496,7 @@ export class MCPServerManager extends EventEmitter {
             if (message && typeof message === 'object' && message.method === 'initialize') {
               clientKind = classifyMCPClient(message.params);
             }
-            const response = await this.handleMCPMessage(message, sessionId);
+            const response = await this.handleMCPMessage(message, sessionId, clientKind);
             if (response) {
               this.stdoutQueue.write(JSON.stringify(response));
             }
@@ -593,7 +593,7 @@ export class MCPServerManager extends EventEmitter {
 
         // Not terminal — invoke hive_poll_workers to check result files + auto-transition
         try {
-          const pollResult = await callMCPTool('hive_poll_workers', { hiveId }, { sessionId }) as Record<string, unknown> | null;
+          const pollResult = await callMCPTool('hive_poll_workers', { hiveId }, { sessionId, clientKind }) as Record<string, unknown> | null;
           if (pollResult && (pollResult.allWorkersSettled || pollResult.allComplete)) {
             // Re-read hive — hive_poll_workers may have transitioned it to completed
             const freshHive = loadHive(hiveId);
@@ -734,7 +734,8 @@ export class MCPServerManager extends EventEmitter {
    */
   private async handleMCPMessage(
     message: { jsonrpc: string; id?: string | number; method?: string; params?: unknown },
-    sessionId: string
+    sessionId: string,
+    clientKind: MCPClientKind = 'unknown',
   ): Promise<{ jsonrpc: string; id?: string | number; result?: unknown; error?: { code: number; message: string } } | null> {
     const { listMCPTools, callMCPTool, hasTool } = await getMcpClient();
 
@@ -792,7 +793,7 @@ export class MCPServerManager extends EventEmitter {
           }
 
           try {
-            const result = await callMCPTool(toolName, toolParams, { sessionId });
+            const result = await callMCPTool(toolName, toolParams, { sessionId, clientKind });
             
             // Intercept queen_mission_assign success to auto-register hive for monitoring
             if (toolName === 'queen_mission_assign' && result && typeof result === 'object' && 'success' in result && result.success === true) {

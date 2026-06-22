@@ -48,7 +48,7 @@ vi.mock('../agent-tools.js', () => {
 
 import { queenTools } from '../queen-tools.js';
 import { loadHive } from '../hive-store.js';
-import { resolveSessionId } from '../session-id.js';
+import { normalizeClientKind, resolveClientKind, resolveSessionId } from '../session-id.js';
 import { setWorkflowHookDispatcher } from '../workflow-executor.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -245,6 +245,46 @@ describe('R-sid multi-session enabler', () => {
       expect(resolveSessionId(testCase.input, testCase.env, testCase.context)).toBe(testCase.expected);
       expect(cjsSession.resolveSessionId(testCase.input, testCase.env, testCase.context)).toBe(testCase.expected);
     }
+  });
+
+  it('resolves operator client kind from explicit input, MCP context, then environment markers', () => {
+    expect(normalizeClientKind('claude-code')).toBe('claude');
+    expect(normalizeClientKind('codex-cli')).toBe('codex');
+    expect(normalizeClientKind('gemini-cli')).toBe('gemini');
+    expect(normalizeClientKind('cursor-agent')).toBe('cursor');
+    expect(normalizeClientKind('not-a-client')).toBe('unknown');
+
+    expect(resolveClientKind(
+      { client_kind: 'codex' },
+      { HIVE_FLOW_CLIENT_KIND: 'claude-code', CLAUDE_SESSION_ID: 'claude-session' },
+      { clientKind: 'cursor' },
+    )).toBe('codex');
+
+    expect(resolveClientKind(
+      {},
+      { HIVE_FLOW_CLIENT_KIND: 'claude-code', CLAUDE_SESSION_ID: 'claude-session' },
+      { clientKind: 'cursor' },
+    )).toBe('cursor');
+
+    expect(resolveClientKind(
+      {},
+      { HIVE_FLOW_CLIENT_KIND: 'gemini' },
+      {},
+    )).toBe('gemini');
+
+    expect(resolveClientKind(
+      {},
+      { CODEX_THREAD_ID: 'codex-thread', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('codex');
+
+    expect(resolveClientKind(
+      {},
+      { CLAUDE_PROJECT_DIR: '/repo' },
+      {},
+    )).toBe('claude');
+
+    expect(resolveClientKind({}, {}, {})).toBe('unknown');
   });
 
   it('stamps ownerSessionId and ignores deprecated pane inputs during queen_mission_assign', async () => {
