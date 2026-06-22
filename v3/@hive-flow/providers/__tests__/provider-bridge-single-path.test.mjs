@@ -221,6 +221,41 @@ async function startFixtureServer(toolName, toolArgs, options = {}) {
         }));
         return;
       }
+      if (options.maxToolIterationsExhaustion) {
+        const lastMsg = [...(body.messages ?? [])].at(-1);
+        const isMaxSummaryTurn = lastMsg?.role === 'user'
+          && typeof lastMsg.content === 'string'
+          && lastMsg.content.startsWith('[BRIDGE ENFORCEMENT — MAX TOOL ITERATIONS REACHED]');
+        if (isMaxSummaryTurn) {
+          res.end(JSON.stringify({
+            id: 'single-path-max-iterations-summary',
+            choices: [{
+              message: {
+                content: 'FINAL_RESULT: summarized from gathered evidence after the tool iteration limit.',
+              },
+              finish_reason: 'stop',
+            }],
+            usage: { prompt_tokens: 20, completion_tokens: 8, total_tokens: 28 },
+          }));
+          return;
+        }
+        res.end(JSON.stringify({
+          id: 'single-path-max-iterations-tool-loop',
+          choices: [{
+            message: {
+              content: 'Now let me inspect one more source file.',
+              tool_calls: [{
+                id: `call_loop_${requests.length}`,
+                type: 'function',
+                function: { name: toolName, arguments: JSON.stringify(toolArgs) },
+              }],
+            },
+            finish_reason: 'tool_calls',
+          }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }));
+        return;
+      }
       // EXACT-ARGS ONE-CALL-AND-DONE: the model emits the correct single tool call on the
       // first turn (no tool message yet) — which satisfies the exact-args contract and
       // executes successfully. On the SECOND turn (a successful tool result is now in
@@ -720,6 +755,44 @@ describe('provider bridge single tool execution path', () => {
       expect(requests[0].tool_choice).not.toBe('required');
       expect(result.success).toBe(true);
       expect(result.toolUse).toMatchObject({ iterations: 2, tools: ['read_file'] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
+  it('forces a no-tool final summary instead of treating max-iteration preface text as success', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-single-path-max-iterations-');
+    try {
+      const readable = join(root, 'src', 'fixture.txt');
+      writeFileSync(readable, 'max iteration evidence\n', 'utf8');
+
+      const { result, requests, bridgeLog } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        toolName: 'read_file',
+        toolArgs: { path: readable },
+        provider: 'openrouter',
+        resolvedModel: 'minimax/minimax-m3',
+        taskText: 'Audit the local workspace README using bridge tools and provide a final report.',
+        fixtureOptions: { maxToolIterationsExhaustion: true },
+        envExtra: { HIVE_FLOW_AGENT_MAX_TOOL_ITERATIONS: '3' },
+      });
+
+      expect(requests).toHaveLength(4);
+      expect(result.success).toBe(true);
+      expect(result.content).toBe('FINAL_RESULT: summarized from gathered evidence after the tool iteration limit.');
+      expect(result.content).not.toContain('Now let me');
+      expect(result.toolUse).toMatchObject({
+        iterations: 3,
+        maxIterations: 3,
+        exhausted: true,
+        summaryAfterExhaustion: true,
+        tools: ['read_file', 'read_file', 'read_file'],
+      });
+      expect(bridgeLog).toContain('Worker hit MAX_TOOL_ITERATIONS limit');
+      expect(requests[3].messages.at(-1).content).toContain('MAX TOOL ITERATIONS REACHED');
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(layout.installRoot, { recursive: true, force: true });

@@ -124,6 +124,14 @@ function safeBridgeJsonStringify(value, space) {
   return JSON.stringify(redactBridgeCredentialMaterial(value), null, space);
 }
 
+function bridgeIntegerEnv(name, fallback, { min = 1, max = 200 } = {}) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+}
+
 function taskIdFromResultFile(resultFile) {
   if (!resultFile) return '';
   const file = basename(resultFile);
@@ -4349,7 +4357,12 @@ async function main() {
 
     let response;
     let iterations = 0;
-    const MAX_TOOL_ITERATIONS = 25;
+    const MAX_TOOL_ITERATIONS = bridgeIntegerEnv('HIVE_FLOW_AGENT_MAX_TOOL_ITERATIONS', 50, {
+      min: 1,
+      max: 200,
+    });
+    let hitMaxToolIterations = false;
+    let summaryAfterMaxToolIterations = false;
     const providerStartTime = Date.now();
     const executedTools = [];
     // FIX 3 (single-path regression): the UNGROUNDED_TOOL_TASK floor must fire ONLY
@@ -4989,6 +5002,7 @@ async function main() {
     }
 
     if (iterations >= MAX_TOOL_ITERATIONS) {
+      hitMaxToolIterations = true;
       bridgeLog('warn', 'Worker hit MAX_TOOL_ITERATIONS limit', {
         agentId,
         provider: providerName,
@@ -4997,6 +5011,45 @@ async function main() {
         hasContent: !!(response?.content),
         historyLength: request.messages.length,
       });
+
+      try {
+        const summaryRequest = {
+          messages: [...request.messages, {
+            role: 'user',
+            content:
+              '[BRIDGE ENFORCEMENT — MAX TOOL ITERATIONS REACHED] ' +
+              'You have reached the bridge tool-call iteration limit. Do not call any more tools. ' +
+              'Write the final task result from the evidence already gathered. ' +
+              'If the assignment is incomplete, say so explicitly at the top and list the missing evidence. ' +
+              'Do not continue with phrases like "now let me check"; produce the final report text now.',
+          }],
+          model: request.model,
+        };
+        if (providerName === 'openrouter') {
+          summaryRequest.temperature = 0;
+        }
+        summaryRequest.messages = prepareForProvider(
+          summaryRequest.messages,
+          dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel),
+        );
+        const summaryResponse = await completeProviderRequest(summaryRequest, {
+          reason: 'max-tool-iterations-summary',
+          maxIterations: MAX_TOOL_ITERATIONS,
+        });
+        if (summaryResponse.content && summaryResponse.content.trim() !== '') {
+          response = { ...response, ...summaryResponse, content: summaryResponse.content };
+          summaryAfterMaxToolIterations = true;
+        } else {
+          throw new Error('summary request returned empty content');
+        }
+      } catch (summaryErr) {
+        const exhausted = new Error(
+          `Provider tool loop exhausted after ${MAX_TOOL_ITERATIONS} iterations and no final summary could be produced: ` +
+          `${summaryErr?.message || String(summaryErr)}`
+        );
+        exhausted.code = 'MAX_TOOL_ITERATIONS_EXHAUSTED';
+        throw exhausted;
+      }
     }
 
     // Post-loop: if content empty after tool work, request text summary
@@ -5043,6 +5096,9 @@ async function main() {
 
     const toolUse = {
       iterations,
+      maxIterations: MAX_TOOL_ITERATIONS,
+      exhausted: hitMaxToolIterations,
+      summaryAfterExhaustion: summaryAfterMaxToolIterations,
       // FIX 3 / PART 2: `tools` reports EVERY tool the model ATTEMPTED to invoke
       // (including denied/error results), so diagnostics that legitimately exercise a
       // denied tool (web_fetch/web_search/unknown/blocked) still surface `tools: [<tool>]`.
