@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (16 packages)
+├── @hive-flow/                    # Modular packages (15 packages)
 │   ├── aidefence/                   # AI-threat defence & PII scanning
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
@@ -194,11 +194,11 @@ await coordinator.initialize();
 await coordinator.spawnAgent({ type: 'queen-coordinator' });
 ```
 
-### @hive-flow/integration
+### @hive-flow/cli/integration
 Local compatibility adapters per ADR-001. External package delegation is detached.
 
 ```typescript
-import { HiveFlowBridge } from '@hive-flow/integration';
+import { HiveFlowBridge } from '@hive-flow/cli/integration';
 
 const bridge = new HiveFlowBridge();
 await bridge.initialize();
@@ -365,7 +365,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 16 packages |
+| **Code** | Package count | 15 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -378,7 +378,7 @@ pnpm test:coverage
 - [@hive-flow/security](./@hive-flow/security/)
 - [@hive-flow/memory](./@hive-flow/memory/)
 - [@hive-flow/swarm](./@hive-flow/swarm/)
-- [@hive-flow/integration](./@hive-flow/integration/)
+- [@hive-flow/cli/integration](./@hive-flow/cli/src/integration/)
 - [@hive-flow/cli/performance](./@hive-flow/cli/docs/performance/)
 - [@hive-flow/neural](./@hive-flow/neural/)
 - [@hive-flow/cli](./@hive-flow/cli/)

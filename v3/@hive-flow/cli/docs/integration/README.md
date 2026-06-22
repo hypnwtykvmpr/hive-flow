@@ -1,4 +1,4 @@
-# @hive-flow/integration
+# @hive-flow/cli/integration
 
 
 > Deep hive-flow integration module for Hive Flow V3 - ADR-001 compliance, code deduplication, SONA adapter, and Flash Attention coordinator.
@@ -23,7 +23,7 @@
 ## Quick Start
 
 ```typescript
-import { IntegrationBridge, createIntegrationBridge } from '@hive-flow/integration';
+import { IntegrationBridge, createIntegrationBridge } from '@hive-flow/cli/integration';
 
 // Create and initialize bridge
 const bridge = await createIntegrationBridge({
@@ -48,7 +48,7 @@ const result = await attention.compute({ query, key, value });
 ### IntegrationBridge
 
 ```typescript
-import { IntegrationBridge } from '@hive-flow/integration';
+import { IntegrationBridge } from '@hive-flow/cli/integration';
 
 const bridge = new IntegrationBridge({
   sona: {
@@ -232,7 +232,7 @@ import type {
   ComponentHealth,
   FeatureFlags,
   HiveFlowCore
-} from '@hive-flow/integration';
+} from '@hive-flow/cli/integration';
 ```
 
 ## Peer Dependencies

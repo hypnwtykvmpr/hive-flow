@@ -1,5 +1,5 @@
 /**
- * @hive-flow/integration - V3 Integration Module
+ * @hive-flow/cli/integration - V3 Integration Module
  *
  * Main entry point for Hive Flow integration utilities.
  *
@@ -12,7 +12,7 @@
  *
  * Usage:
  * ```typescript
- * import { createHiveAgent } from '@hive-flow/integration';
+ * import { createHiveAgent } from '@hive-flow/cli/integration';
  *
  * const agent = await createHiveAgent({
  *   id: 'agent-1',
@@ -24,7 +24,7 @@
  * });
  * ```
  *
- * @module @hive-flow/integration
+ * @module @hive-flow/cli/integration
  * @version 3.0.0-alpha.1
  */
 
@@ -412,7 +412,7 @@ export const VERSION = '3.0.0-alpha.1';
  * Module metadata
  */
 export const METADATA = {
-  name: '@hive-flow/integration',
+  name: '@hive-flow/cli/integration',
   version: VERSION,
   description: 'Deep Hive Flow@alpha integration for hive-flow v3',
   implements: ['ADR-001'],

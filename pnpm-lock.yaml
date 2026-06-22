@@ -50,9 +50,6 @@ importers:
       '@hive-flow/guidance':
         specifier: 3.0.0-alpha.1
         version: link:v3/@hive-flow/guidance
-      '@hive-flow/integration':
-        specifier: 3.0.0
-        version: link:v3/@hive-flow/integration
       '@hive-flow/mcp':
         specifier: 3.0.0-alpha.8
         version: link:v3/@hive-flow/mcp
@@ -173,9 +170,6 @@ importers:
       '@hive-flow/guidance':
         specifier: workspace:*
         version: link:../guidance
-      '@hive-flow/integration':
-        specifier: workspace:*
-        version: link:../integration
       '@hive-flow/memory':
         specifier: workspace:*
         version: link:../memory
@@ -223,9 +217,6 @@ importers:
 
   v3/@hive-flow/embeddings:
     dependencies:
-      '@hive-flow/integration':
-        specifier: workspace:*
-        version: link:../integration
       '@hive-flow/shared':
         specifier: workspace:*
         version: link:../shared
@@ -278,16 +269,6 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.11
         version: 7.6.13
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  v3/@hive-flow/integration:
-    dependencies:
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
-    devDependencies:
       vitest:
         specifier: ^4.0.16
         version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)

@@ -301,7 +301,7 @@ This package is a dependency of all other @hive-flow modules:
 - [@hive-flow/neural](../neural) - SONA learning & RL algorithms
 - [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking & optimization
 - [@hive-flow/swarm](../swarm) - 15-agent coordination
-- [@hive-flow/integration](../integration) - local compatibility API bridge
+- [@hive-flow/cli/integration](../cli/src/integration) - local compatibility API bridge
 - [@hive-flow/cli/testing](../cli/src/testing) - TDD framework & fixtures
 - [@hive-flow/embeddings](../embeddings) - Embedding service
 - [@hive-flow/hooks](../hooks) - Hooks system

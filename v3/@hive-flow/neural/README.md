@@ -177,7 +177,7 @@ const status = getNeuralCapabilityStatus();
 ## Related Packages
 
 - [@hive-flow/memory](../memory) - Vector memory for patterns
-- [@hive-flow/integration](../integration) - local compatibility integration
+- [@hive-flow/cli/integration](../cli/src/integration) - local compatibility integration
 - [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking
 
 ## License

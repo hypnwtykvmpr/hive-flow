@@ -315,7 +315,7 @@ The Token Optimizer integrates hive-flow optimizations to reduce API costs by co
 **Usage:**
 
 ```typescript
-import { getTokenOptimizer } from '@hive-flow/integration';
+import { getTokenOptimizer } from '@hive-flow/cli/integration';
 const optimizer = await getTokenOptimizer();
 
 // Get compact context (fewer tokens)
@@ -6042,7 +6042,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/mcp` | MCP server & tools | [Source](../mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](../embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](../providers/) |
-| `@hive-flow/integration` | local compatibility API integration | [Source](../integration/) |
+| `@hive-flow/cli/integration` | local compatibility API integration | [Source](./src/integration/) |
 | `@hive-flow/cli/performance` | Benchmarking & optimization | [Source](docs/performance/) |
 | `@hive-flow/cli/deployment` | Release helper internals | [Source](./src/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](../shared/) |

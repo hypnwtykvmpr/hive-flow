@@ -30,9 +30,6 @@
       "@hive-flow/memory": [
         "./@hive-flow/memory/src"
       ],
-      "@hive-flow/integration": [
-        "./@hive-flow/integration/src"
-      ],
       "@hive-flow/swarm": [
         "./@hive-flow/swarm/src"
       ],
@@ -64,9 +61,6 @@
     },
     {
       "path": "./@hive-flow/memory"
-    },
-    {
-      "path": "./@hive-flow/integration"
     },
     {
       "path": "./@hive-flow/swarm"

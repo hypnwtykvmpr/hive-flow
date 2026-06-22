@@ -267,7 +267,7 @@ The Token Optimizer can use optional hive-flow optimizations to reduce API costs
 **Usage:**
 
 ```typescript
-import { getTokenOptimizer } from '@hive-flow/integration';
+import { getTokenOptimizer } from '@hive-flow/cli/integration';
 const optimizer = await getTokenOptimizer();
 
 // Get compact context (fewer tokens)
@@ -1959,7 +1959,7 @@ hive-flow hooks worker status
 | Component | Description | Performance |
 |-----------|-------------|-------------|
 | **HiveFlowBridge** | hive-flow core foundation integration | ADR-001 compliant |
-| **Integration Adapter** | Optional integration-layer adapter | Exported from `@hive-flow/integration` |
+| **Integration Adapter** | Optional integration-layer adapter | Exported from `@hive-flow/cli/integration` |
 | **Attention Coordinator** | Local attention-weighted coordination path | Integration support |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
 | **Feature Flags** | Dynamic feature management | 9 configurable flags |
@@ -2104,7 +2104,7 @@ hive-flow hive-mind status                                  # Check status
 |---------|-------------|---------|
 | **ADR-001 Compliance** | Adopt hive-flow as core foundation | Eliminates duplicate capabilities |
 | **Local Fallback** | Use local implementations when hive-flow runtime services are unavailable | Fallback remains available |
-| **Integration Adapter** | Optional integration-layer learning adapter | Available from `@hive-flow/integration` |
+| **Integration Adapter** | Optional integration-layer learning adapter | Available from `@hive-flow/cli/integration` |
 | **Attention Coordinator** | Attention-weighted coordination helpers | Local integration support |
 | **HiveMemory Bridge** | Vector storage integration | Vector search |
 | **Feature Flags** | Dynamic capability management | 9 configurable features |
@@ -4698,7 +4698,7 @@ When configured, Hive Flow can leverage hive-flow for:
 
 ```typescript
 // Hive Flow can use hive-flow optimizations when configured
-import { getTokenOptimizer } from '@hive-flow/integration';
+import { getTokenOptimizer } from '@hive-flow/cli/integration';
 
 const optimizer = await getTokenOptimizer();
 
@@ -6456,7 +6456,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](./v3/@hive-flow/providers/) |
-| `@hive-flow/integration` | Optional hive-flow integration | [Source](./v3/@hive-flow/integration/) |
+| `@hive-flow/cli/integration` | Optional hive-flow integration | [Source](./v3/@hive-flow/cli/src/integration/) |
 | `@hive-flow/cli/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/cli/docs/performance/) |
 | `@hive-flow/cli/deployment` | Release helper internals | [Source](./v3/@hive-flow/cli/src/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |

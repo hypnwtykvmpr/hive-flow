@@ -99,6 +99,14 @@
     "./testing/v2-compat": {
       "types": "./dist/src/testing/v2-compat/index.d.ts",
       "import": "./dist/src/testing/v2-compat/index.js"
+    },
+    "./integration": {
+      "types": "./dist/src/integration/index.d.ts",
+      "import": "./dist/src/integration/index.js"
+    },
+    "./integration/*": {
+      "types": "./dist/src/integration/*.d.ts",
+      "import": "./dist/src/integration/*.js"
     }
   },
   "files": [
@@ -172,7 +180,6 @@
     "@hive-flow/embeddings": "workspace:*",
     "@hive-flow/guidance": "workspace:*",
     "@hive-flow/memory": "workspace:*",
-    "@hive-flow/integration": "workspace:*",
     "@hive-flow/neural": "workspace:*",
     "@hive-flow/plugin-gastown-bridge": "workspace:*",
     "@hive-flow/swarm": "workspace:*"

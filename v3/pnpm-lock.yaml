@@ -136,9 +136,6 @@ importers:
       '@hive-flow/guidance':
         specifier: workspace:*
         version: link:../guidance
-      '@hive-flow/integration':
-        specifier: workspace:*
-        version: link:../integration
       '@hive-flow/memory':
         specifier: workspace:*
         version: link:../memory
@@ -186,9 +183,6 @@ importers:
 
   '@hive-flow/embeddings':
     dependencies:
-      '@hive-flow/integration':
-        specifier: workspace:*
-        version: link:../integration
       '@hive-flow/shared':
         specifier: workspace:*
         version: link:../shared
@@ -241,16 +235,6 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.11
         version: 7.6.13
-      vitest:
-        specifier: 4.1.0
-        version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  '@hive-flow/integration':
-    dependencies:
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
-    devDependencies:
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)

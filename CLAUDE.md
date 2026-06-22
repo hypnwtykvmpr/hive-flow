@@ -622,7 +622,7 @@ CVE remediation, input validation, path security:
 ### Token Optimizer (Agent Booster)
 Integrates local Hive Flow optimizations for token reduction:
 ```typescript
-import { getTokenOptimizer } from '@hive-flow/integration';
+import { getTokenOptimizer } from '@hive-flow/cli/integration';
 const optimizer = await getTokenOptimizer();
 
 // Compact context (fewer tokens)

@@ -332,10 +332,10 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
 
   it('bundles the runtime @hive-flow/* workspace packages so bare specifiers resolve post-install', () => {
     // The installed CLI dist imports BARE `@hive-flow/*` specifiers (shared,
-    // integration, providers, guidance, mcp). `workspace:*` does not resolve once
+    // providers, guidance, mcp). `workspace:*` does not resolve once
     // installed, so these MUST ship as real node_modules/@hive-flow/* entries.
     // Regression guard for ERR_MODULE_NOT_FOUND: Cannot find package '@hive-flow/shared'.
-    const REQUIRED_BUNDLED = ['shared', 'integration', 'providers', 'guidance', 'mcp'];
+    const REQUIRED_BUNDLED = ['shared', 'providers', 'guidance', 'mcp'];
     for (const name of REQUIRED_BUNDLED) {
       const pj = files.find(
         (p) => p === `node_modules/@hive-flow/${name}/package.json`,
@@ -489,7 +489,7 @@ describe('install smoke: hive-flow tarball resolves bundled @hive-flow/* post-in
 
   it('installs the bundled @hive-flow/* packages into the package node_modules', () => {
     const nm = join(prefix, 'lib', 'node_modules', 'hive-flow', 'node_modules', '@hive-flow');
-    for (const name of ['shared', 'integration', 'providers', 'guidance', 'mcp']) {
+    for (const name of ['shared', 'providers', 'guidance', 'mcp']) {
       assert.ok(
         statSync(join(nm, name, 'package.json')).isFile(),
         `bundled @hive-flow/${name} did not install`,
@@ -510,7 +510,7 @@ describe('install smoke: hive-flow tarball resolves bundled @hive-flow/* post-in
     const pkgDir = join(prefix, 'lib', 'node_modules', 'hive-flow');
     const script = [
       "await import('@hive-flow/shared');",
-      "await import('@hive-flow/integration');",
+      "await import('./v3/@hive-flow/cli/dist/src/integration/index.js');",
       "await import('@hive-flow/providers/scripts/agent-task-journal.mjs');",
       "await import('@hive-flow/guidance/compiler');",
       "const { createMCPServer } = await import('@hive-flow/mcp'); if (typeof createMCPServer !== 'function') throw new Error('createMCPServer not a function');",

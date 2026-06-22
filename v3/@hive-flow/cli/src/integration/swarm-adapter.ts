@@ -238,7 +238,7 @@ const DEFAULT_CONFIG: SwarmAdapterConfig = {
  *
  * Usage:
  * ```typescript
- * import { SwarmAdapter, createSwarmAdapter } from '@hive-flow/integration';
+ * import { SwarmAdapter, createSwarmAdapter } from '@hive-flow/cli/integration';
  *
  * const adapter = await createSwarmAdapter({
  *   enableAttentionCoordination: true,

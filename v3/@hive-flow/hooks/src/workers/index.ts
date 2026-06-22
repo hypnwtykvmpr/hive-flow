@@ -1376,18 +1376,17 @@ export function createDDDWorker(projectRoot: string): WorkerHandler {
     let maxScore = 0;
 
     const modules = [
-      '@hive-flow/hooks',
-      '@hive-flow/mcp',
-      '@hive-flow/integration',
-      '@hive-flow/providers',
-      '@hive-flow/memory',
-      '@hive-flow/security',
+      { mod: '@hive-flow/hooks', srcPath: path.join(v3Path, '@hive-flow/hooks', 'src') },
+      { mod: '@hive-flow/mcp', srcPath: path.join(v3Path, '@hive-flow/mcp', 'src') },
+      { mod: '@hive-flow/cli/integration', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'integration') },
+      { mod: '@hive-flow/providers', srcPath: path.join(v3Path, '@hive-flow/providers', 'src') },
+      { mod: '@hive-flow/memory', srcPath: path.join(v3Path, '@hive-flow/memory', 'src') },
+      { mod: '@hive-flow/security', srcPath: path.join(v3Path, '@hive-flow/security', 'src') },
     ];
 
     // Process all modules in parallel for 70-90% speedup
     const moduleResults = await Promise.all(
-      modules.map(async (mod) => {
-        const modPath = path.join(v3Path, mod);
+      modules.map(async ({ mod, srcPath }) => {
         const modMetrics: Record<string, number> = {
           entities: 0,
           valueObjects: 0,
@@ -1398,10 +1397,9 @@ export function createDDDWorker(projectRoot: string): WorkerHandler {
         };
 
         try {
-          await fs.access(modPath);
+          await fs.access(srcPath);
 
           // Count DDD patterns by searching for common patterns
-          const srcPath = path.join(modPath, 'src');
           const patterns = await searchDDDPatterns(srcPath);
           Object.assign(modMetrics, patterns);
 

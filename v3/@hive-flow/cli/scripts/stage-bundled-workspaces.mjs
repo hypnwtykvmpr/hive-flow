@@ -19,9 +19,12 @@
  * runtime surface, but it is invoked from the root `prepack` lifecycle and
  * stages files into the umbrella package root. It is idempotent.
  *
+ * Integration helpers now live inside the CLI package under the
+ * `@hive-flow/cli/integration` subpath, so they are not staged as a separate
+ * workspace dependency.
+ *
  * Eager runtime closure (traced from bin/cli.js -> dist/src/index.js):
  *   - @hive-flow/shared       (bare + /core/config/defaults + /workflow)  REQUIRED for every command
- *   - @hive-flow/integration  (bare, via commands/hooks.js)               REQUIRED for every command
  *   - @hive-flow/mcp          (dynamic import in startHttpServer)         REQUIRED for HTTP/WS MCP transport
  *   - @hive-flow/providers    (/scripts/agent-task-journal.mjs)           REQUIRED for every command
  *   - @hive-flow/guidance     (/compiler,/retriever,/gates,/analyzer)     REQUIRED for `guidance` cmd (unguarded import)
@@ -29,8 +32,8 @@
  * Each package's own third-party deps (express, helmet, cors, ws, sql.js, zod,
  * etc.) are declared in the umbrella root `dependencies` so they install into
  * the root node_modules and resolve via Node's upward lookup from the bundled
- * package. Inter-workspace deps among the bundled set (integration->shared,
- * guidance->shared) resolve because all are co-located under node_modules/@hive-flow.
+ * package. Inter-workspace deps among the bundled set (guidance->shared) resolve
+ * because all are co-located under node_modules/@hive-flow.
  */
 import {
   cpSync,
@@ -82,7 +85,6 @@ const destRoot = join(repoRoot, 'node_modules', '@hive-flow');
 // assets as needed).
 const BUNDLED = [
   { name: 'shared', copy: ['dist'] },
-  { name: 'integration', copy: ['dist'] },
   { name: 'mcp', copy: ['dist'] },
   { name: 'providers', copy: ['dist', 'scripts'] },
   { name: 'guidance', copy: ['dist', 'wasm-pkg'] },
