@@ -11,6 +11,7 @@
 
 import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
 // Storage paths
@@ -38,11 +39,22 @@ interface SyncState {
   pendingChanges: number;
 }
 
+interface OrchestrationRecord {
+  id: string;
+  task: string;
+  agents: string[];
+  strategy: 'parallel' | 'sequential' | 'pipeline' | 'broadcast';
+  status: 'recorded';
+  topology: string;
+  createdAt: string;
+}
+
 interface CoordinationStore {
   topology: TopologyConfig;
   loadBalance: LoadBalanceConfig;
   sync: SyncState;
   nodes: Record<string, { id: string; status: string; load: number; lastHeartbeat: string }>;
+  orchestrations: Record<string, OrchestrationRecord>;
   version: string;
 }
 
@@ -89,6 +101,7 @@ function loadCoordStore(): CoordinationStore {
       pendingChanges: 0,
     },
     nodes: {},
+    orchestrations: {},
     version: '3.0.0',
   };
 }
@@ -96,6 +109,11 @@ function loadCoordStore(): CoordinationStore {
 function saveCoordStore(store: CoordinationStore): void {
   ensureCoordDir();
   writeFileSync(getCoordPath(), JSON.stringify(store, null, 2), 'utf-8');
+}
+
+function normalizeCoordStore(store: CoordinationStore): CoordinationStore {
+  store.orchestrations ??= {};
+  return store;
 }
 
 export const coordinationTools: MCPTool[] = [
@@ -114,7 +132,7 @@ export const coordinationTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const store = loadCoordStore();
+      const store = normalizeCoordStore(loadCoordStore());
       const action = (input.action as string) || 'get';
 
       if (action === 'get') {
@@ -184,7 +202,7 @@ export const coordinationTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const store = loadCoordStore();
+      const store = normalizeCoordStore(loadCoordStore());
       const action = (input.action as string) || 'get';
 
       if (action === 'get') {
@@ -270,7 +288,7 @@ export const coordinationTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const store = loadCoordStore();
+      const store = normalizeCoordStore(loadCoordStore());
       const action = (input.action as string) || 'status';
 
       if (action === 'status') {
@@ -342,7 +360,7 @@ export const coordinationTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const store = loadCoordStore();
+      const store = normalizeCoordStore(loadCoordStore());
       const action = (input.action as string) || 'list';
 
       if (action === 'list') {
@@ -432,7 +450,7 @@ export const coordinationTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const store = loadCoordStore();
+      const store = normalizeCoordStore(loadCoordStore());
       const action = (input.action as string) || 'status';
 
       if (action === 'status') {
@@ -496,12 +514,24 @@ export const coordinationTools: MCPTool[] = [
       required: ['task'],
     },
     handler: async (input) => {
-      const store = loadCoordStore();
+      const store = normalizeCoordStore(loadCoordStore());
       const task = input.task as string;
       const agents = (input.agents as string[]) || Object.keys(store.nodes);
       const strategy = (input.strategy as string) || 'parallel';
 
-      const orchestrationId = `orch-${Date.now()}`;
+      const orchestrationId = `orch-${randomUUID()}`;
+      const createdAt = new Date().toISOString();
+      const record: OrchestrationRecord = {
+        id: orchestrationId,
+        task,
+        strategy: strategy as OrchestrationRecord['strategy'],
+        agents,
+        status: 'recorded',
+        topology: store.topology.type,
+        createdAt,
+      };
+      store.orchestrations[orchestrationId] = record;
+      saveCoordStore(store);
 
       return {
         success: true,
@@ -509,9 +539,11 @@ export const coordinationTools: MCPTool[] = [
         task,
         strategy,
         agents,
-        status: 'initiated',
+        status: record.status,
         topology: store.topology.type,
-        estimatedCompletion: `${agents.length * (strategy === 'sequential' ? 100 : 50)}ms`,
+        createdAt,
+        executed: false,
+        message: 'Coordination plan recorded in local state; no provider agent task dispatch was performed by this compatibility tool.',
       };
     },
   },
@@ -527,41 +559,59 @@ export const coordinationTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const store = loadCoordStore();
+      const store = normalizeCoordStore(loadCoordStore());
       const metric = (input.metric as string) || 'all';
 
       const nodes = Object.values(store.nodes);
       const activeNodes = nodes.filter(n => n.status === 'active');
+      const loads = nodes.map(n => n.load);
+      const totalNodes = nodes.length;
+      const avgLoad = loads.length > 0 ? loads.reduce((sum, load) => sum + load, 0) / loads.length : 0;
+      const lastSyncMs = Date.parse(store.sync.lastSync);
+      const lastSyncAgeMs = Number.isFinite(lastSyncMs) ? Date.now() - lastSyncMs : null;
 
       const metrics = {
         latency: {
-          avg: 25 + Math.random() * 20,
-          p50: 20 + Math.random() * 15,
-          p95: 50 + Math.random() * 30,
-          p99: 100 + Math.random() * 50,
+          available: false,
           unit: 'ms',
+          reason: 'No real latency samples are recorded by the local coordination store.',
         },
         throughput: {
-          current: Math.floor(Math.random() * 1000) + 500,
-          peak: Math.floor(Math.random() * 2000) + 1000,
-          avg: Math.floor(Math.random() * 800) + 400,
+          available: false,
           unit: 'ops/s',
+          reason: 'No real throughput counters are recorded by the local coordination store.',
         },
         availability: {
-          uptime: 99.9 + Math.random() * 0.09,
           activeNodes: activeNodes.length,
-          totalNodes: nodes.length,
+          totalNodes,
+          inactiveNodes: totalNodes - activeNodes.length,
+          availabilityRatio: totalNodes > 0 ? activeNodes.length / totalNodes : null,
           syncStatus: store.sync.conflicts === 0 ? 'healthy' : 'conflicts',
+        },
+        load: {
+          avgLoad,
+          maxLoad: loads.length > 0 ? Math.max(...loads) : 0,
+          minLoad: loads.length > 0 ? Math.min(...loads) : 0,
+          totalLoad: loads.reduce((sum, load) => sum + load, 0),
+        },
+        sync: {
+          syncCount: store.sync.syncCount,
+          conflicts: store.sync.conflicts,
+          pendingChanges: store.sync.pendingChanges,
+          lastSync: store.sync.lastSync,
+          lastSyncAgeMs,
+        },
+        orchestration: {
+          recorded: Object.keys(store.orchestrations).length,
         },
       };
 
       if (metric === 'all') {
-        return { success: true, simulated: true, metrics };
+        return { success: true, metrics };
       }
 
       return {
         success: true,
-        simulated: true,
         metric,
         data: metrics[metric as keyof typeof metrics],
       };
