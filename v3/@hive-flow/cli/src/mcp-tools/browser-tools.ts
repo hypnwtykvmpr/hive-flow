@@ -1,7 +1,7 @@
 /**
  * Browser MCP Tools
  *
- * CLI integration for @hive-flow/browser package.
+ * CLI browser MCP integration.
  * Provides browser automation tools for web navigation, interaction, and data extraction.
  */
 

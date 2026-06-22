@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Memory Integration Tests
+ * @hive-flow/cli/browser - Memory Integration Tests
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -9,8 +9,8 @@ import {
   createMemoryManager,
   getMemoryAdapter,
   type BrowserMemoryEntry,
-} from '../src/infrastructure/memory-integration.js';
-import type { BrowserTrajectory, Snapshot } from '../src/domain/types.js';
+} from '../infrastructure/memory-integration.js';
+import type { BrowserTrajectory, Snapshot } from '../domain/types.js';
 
 describe('HiveFlowMemoryAdapter', () => {
   let adapter: HiveFlowMemoryAdapter;

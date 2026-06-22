@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Agent Browser Adapter
+ * @hive-flow/cli/browser - Agent Browser Adapter
  * Wraps agent-browser CLI for programmatic access
  */
 

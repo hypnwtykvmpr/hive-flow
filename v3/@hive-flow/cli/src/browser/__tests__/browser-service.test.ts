@@ -1,15 +1,42 @@
 /**
- * @hive-flow/browser - Browser Service Tests
+ * @hive-flow/cli/browser - Browser Service Tests
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { BrowserService, createBrowserService } from '../src/application/browser-service.js';
+import { BrowserService, createBrowserService } from '../application/browser-service.js';
 
-// Mock execSync for agent-browser CLI
-vi.mock('child_process', () => ({
-  execSync: vi.fn(() => JSON.stringify({ success: true, data: { test: 'value' } })),
-  spawn: vi.fn(),
-}));
+const childProcessMocks = vi.hoisted(() => {
+  const execFile = vi.fn((...args: unknown[]) => {
+    const callback = args.at(-1) as (error: Error | null, stdout: string, stderr: string) => void;
+    callback(null, JSON.stringify({ success: true, data: { test: 'value' } }), '');
+    return undefined;
+  });
+  const execFileAsync = vi.fn(
+    (...args: unknown[]) =>
+      new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        execFile(...args, (error: Error | null, stdout = '', stderr = '') => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve({ stdout: String(stdout), stderr: String(stderr) });
+        });
+      }),
+  );
+
+  Object.defineProperty(execFile, Symbol.for('nodejs.util.promisify.custom'), {
+    value: execFileAsync,
+  });
+
+  return {
+    execFile,
+    execSync: vi.fn(() => JSON.stringify({ success: true, data: { test: 'value' } })),
+    spawn: vi.fn(),
+  };
+});
+
+// Mock agent-browser CLI execution.
+vi.mock('child_process', () => childProcessMocks);
 
 describe('BrowserService', () => {
   let service: BrowserService;

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Domain Types
+ * @hive-flow/cli/browser - Domain Types
  * Core type definitions for browser automation
  */
 

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Workflow Templates Tests
+ * @hive-flow/cli/browser - Workflow Templates Tests
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -10,7 +10,7 @@ import {
   getWorkflow,
   WORKFLOW_TEMPLATES,
   type WorkflowTemplate,
-} from '../src/infrastructure/workflow-templates.js';
+} from '../infrastructure/workflow-templates.js';
 
 describe('WorkflowManager', () => {
   let manager: WorkflowManager;

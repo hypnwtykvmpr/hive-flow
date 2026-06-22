@@ -4681,7 +4681,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
 | `@hive-flow/shared` | Common utilities | Types, validation schemas, constants |
-| `@hive-flow/browser` | Browser automation | 59 MCP tools, element refs, trajectory learning |
+| `@hive-flow/cli/browser` | Browser automation | 59 MCP tools, element refs, trajectory learning |
 
 ### Architecture Principles
 
@@ -4728,21 +4728,22 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 ---
 
 <details>
-<summary><strong>🌐 Browser Automation — @hive-flow/browser</strong></summary>
+<summary><strong>🌐 Browser Automation — @hive-flow/cli/browser</strong></summary>
 
 
 
 ### Installation
 
 ```bash
-
-# agent-browser CLI (auto-suggested on install, or install manually)
+# Browser automation ships as the @hive-flow/cli/browser subpath.
+corepack pnpm --dir v3 --filter @hive-flow/cli build
+corepack pnpm --dir v3 --filter @hive-flow/cli exec agent-browser --help
 ```
 
 ### Quick Start
 
 ```typescript
-import { createBrowserService } from '@hive-flow/browser';
+import { createBrowserService } from '@hive-flow/cli/browser';
 
 const browser = createBrowserService({
   sessionId: 'my-session',
@@ -4778,7 +4779,7 @@ await browser.close();
 ### Security Integration
 
 ```typescript
-import { getSecurityScanner, isUrlSafe, containsPII } from '@hive-flow/browser';
+import { getSecurityScanner, isUrlSafe, containsPII } from '@hive-flow/cli/browser';
 
 // URL threat detection
 const scanner = getSecurityScanner({ requireHttps: true });
@@ -4795,7 +4796,7 @@ scanner.validateInput('<script>alert(1)</script>', 'comment');
 ### Workflow Templates
 
 ```typescript
-import { listWorkflows, getWorkflow } from '@hive-flow/browser';
+import { listWorkflows, getWorkflow } from '@hive-flow/cli/browser';
 
 listWorkflows(); // ['login-basic', 'login-oauth', 'scrape-table', ...]
 const template = getWorkflow('login-basic');
@@ -5882,7 +5883,7 @@ node --expose-gc node_modules/.bin/hive-flow
 │ Memory Search         │ HNSW-indexed        │
 │ Pattern Matching      │ Self-learning (ReasoningBank)       │
 │ Security              │ CVE remediation + strict validation │
-│ Modular Architecture  │ 18 @hive-flow/* packages          │
+│ Modular Architecture  │ 8 @hive-flow/* packages           │
 │ Agent Coordination    │ 18 specialized agents               │
 │ Token Efficiency      │ token reduction with optimization   │
 └───────────────────────┴─────────────────────────────────────┘

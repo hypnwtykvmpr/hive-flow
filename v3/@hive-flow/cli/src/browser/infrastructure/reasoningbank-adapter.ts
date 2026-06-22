@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - ReasoningBank Integration
+ * @hive-flow/cli/browser - ReasoningBank Integration
  * Connects browser trajectories to the local compatibility learning system
  */
 

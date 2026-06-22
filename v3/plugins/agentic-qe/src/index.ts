@@ -313,7 +313,7 @@ export const PLUGIN_METADATA = {
       '@hive-flow/embeddings',
     ],
     optional: [
-      '@hive-flow/browser',
+      '@hive-flow/cli',
     ],
   },
 } as const;

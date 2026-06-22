@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - E2E Browser Tests
+ * @hive-flow/cli/browser - E2E Browser Tests
  *
  * These tests run against a real browser using agent-browser.
  * Run with: docker compose --profile e2e up browser-e2e

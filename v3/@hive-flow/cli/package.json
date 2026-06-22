@@ -127,6 +127,22 @@
       "types": "./dist/src/hooks/cli/guidance-cli.d.ts",
       "import": "./dist/src/hooks/cli/guidance-cli.js"
     },
+    "./browser": {
+      "types": "./dist/src/browser/index.d.ts",
+      "import": "./dist/src/browser/index.js"
+    },
+    "./browser/mcp-tools": {
+      "types": "./dist/src/browser/mcp-tools/index.d.ts",
+      "import": "./dist/src/browser/mcp-tools/index.js"
+    },
+    "./browser/skill": {
+      "types": "./dist/src/browser/skill/index.d.ts",
+      "import": "./dist/src/browser/skill/index.js"
+    },
+    "./browser/agent": {
+      "types": "./dist/src/browser/agent/index.d.ts",
+      "import": "./dist/src/browser/agent/index.js"
+    },
     "./package.json": "./package.json",
     "./mcp-tools": {
       "types": "./dist/src/mcp-tools/index.d.ts",
@@ -282,6 +298,7 @@
     "@ast-grep/napi": "^0.43.0",
     "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
+    "agent-browser": "^0.6.0",
     "ajv": "^8.18.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",

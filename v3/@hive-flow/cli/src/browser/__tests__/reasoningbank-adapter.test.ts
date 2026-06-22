@@ -1,10 +1,10 @@
 /**
- * @hive-flow/browser - ReasoningBank Adapter Tests
+ * @hive-flow/cli/browser - ReasoningBank Adapter Tests
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ReasoningBankAdapter, getReasoningBank } from '../src/infrastructure/reasoningbank-adapter.js';
-import type { BrowserTrajectory } from '../src/domain/types.js';
+import { ReasoningBankAdapter, getReasoningBank } from '../infrastructure/reasoningbank-adapter.js';
+import type { BrowserTrajectory } from '../domain/types.js';
 
 describe('ReasoningBankAdapter', () => {
   let adapter: ReasoningBankAdapter;

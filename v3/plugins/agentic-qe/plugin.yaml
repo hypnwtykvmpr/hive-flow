@@ -35,7 +35,7 @@ dependencies:
     - "@hive-flow/security": ">=3.0.0"
     - "@hive-flow/embeddings": ">=3.0.0"
   optional:
-    - "@hive-flow/browser": ">=3.0.0"  # For E2E/visual testing
+    - "@hive-flow/cli": ">=3.0.0"  # For E2E/visual testing
 
 # Bounded contexts and their agents
 contexts:

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Memory Integration
+ * @hive-flow/cli/browser - Memory Integration
  * Persistent memory storage with HNSW semantic search for browser patterns
  */
 

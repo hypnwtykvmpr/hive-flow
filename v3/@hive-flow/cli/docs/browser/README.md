@@ -1,4 +1,4 @@
-# @hive-flow/browser
+# @hive-flow/cli/browser
 
 <div align="center">
 
@@ -12,7 +12,7 @@
 
 ## Overview
 
-`@hive-flow/browser` provides a comprehensive browser automation layer for AI agents, combining Vercel Labs' `agent-browser` CLI with hive-flow's learning, memory, and security capabilities. It enables agents to navigate websites, fill forms, extract data, and learn from successful interaction patterns.
+`@hive-flow/cli/browser` provides a comprehensive browser automation layer for AI agents, combining Vercel Labs' `agent-browser` CLI with hive-flow's learning, memory, and security capabilities. It enables agents to navigate websites, fill forms, extract data, and learn from successful interaction patterns.
 
 ### Architecture
 
@@ -43,11 +43,12 @@ Agent Request → Security Scan → Browser Adapter → agent-browser CLI → Pl
 ## Installation
 
 ```bash
-# Install the package
+# Build the CLI package from the repository.
+corepack pnpm --dir v3 --filter @hive-flow/cli install
+corepack pnpm --dir v3 --filter @hive-flow/cli build
 
-# Peer dependency (if not already installed)
-
-# agent-browser CLI (required)
+# Verify the browser runtime dependency is available in the CLI workspace.
+corepack pnpm --dir v3 --filter @hive-flow/cli exec agent-browser --help
 ```
 
 ### Requirements
@@ -63,7 +64,7 @@ Agent Request → Security Scan → Browser Adapter → agent-browser CLI → Pl
 ### Basic Usage
 
 ```typescript
-import { createBrowserService, browserTools } from '@hive-flow/browser';
+import { createBrowserService, browserTools } from '@hive-flow/cli/browser';
 
 // Create a browser service with security and memory enabled
 const browser = createBrowserService({
@@ -98,7 +99,7 @@ await browser.close();
 Register browser tools with hive-flow's MCP server:
 
 ```typescript
-import { browserTools } from '@hive-flow/browser';
+import { browserTools } from '@hive-flow/cli/browser';
 
 // browserTools contains 59 MCP-compatible tools
 // Register with your MCP server
@@ -188,7 +189,7 @@ const piiResult = browser.scanForPII('SSN: 123-45-6789');
 Store and search browser patterns using HNSW-indexed memory:
 
 ```typescript
-import { createMemoryManager } from '@hive-flow/browser';
+import { createMemoryManager } from '@hive-flow/cli/browser';
 
 const memory = createMemoryManager('session-1');
 
@@ -212,7 +213,7 @@ const stats = await memory.getSessionStats();
 Comprehensive threat detection:
 
 ```typescript
-import { getSecurityScanner, isUrlSafe, containsPII } from '@hive-flow/browser';
+import { getSecurityScanner, isUrlSafe, containsPII } from '@hive-flow/cli/browser';
 
 const scanner = getSecurityScanner({
   requireHttps: true,
@@ -240,7 +241,7 @@ containsPII('My SSN is 123-45-6789'); // true
 Pre-built automation workflows:
 
 ```typescript
-import { listWorkflows, getWorkflow, getWorkflowManager } from '@hive-flow/browser';
+import { listWorkflows, getWorkflow, getWorkflowManager } from '@hive-flow/cli/browser';
 
 // List all templates
 const workflows = listWorkflows();
@@ -285,7 +286,7 @@ const validation = manager.validateVariables('login-basic', {
 Pre-browse and post-browse hooks for learning:
 
 ```typescript
-import { preBrowseHook, postBrowseHook, browserHooks } from '@hive-flow/browser';
+import { preBrowseHook, postBrowseHook, browserHooks } from '@hive-flow/cli/browser';
 
 // Before browsing - get recommendations
 const preResult = await preBrowseHook({
@@ -320,7 +321,7 @@ const postResult = await postBrowseHook({
 Coordinate multiple browser sessions for parallel tasks:
 
 ```typescript
-import { createBrowserSwarm } from '@hive-flow/browser';
+import { createBrowserSwarm } from '@hive-flow/cli/browser';
 
 // Create a swarm coordinator
 const swarm = createBrowserSwarm({
@@ -563,7 +564,7 @@ BROWSER_MEMORY_NAMESPACE=browser
 ### Login and Extract Data
 
 ```typescript
-import { createBrowserService } from '@hive-flow/browser';
+import { createBrowserService } from '@hive-flow/cli/browser';
 
 const browser = createBrowserService();
 
@@ -592,7 +593,7 @@ async function loginAndExtract() {
 ### Parallel Scraping
 
 ```typescript
-import { createBrowserSwarm } from '@hive-flow/browser';
+import { createBrowserSwarm } from '@hive-flow/cli/browser';
 
 async function parallelScrape(urls: string[]) {
   const swarm = createBrowserSwarm({ maxSessions: 5 });
@@ -617,7 +618,7 @@ async function parallelScrape(urls: string[]) {
 ### Security-First Automation
 
 ```typescript
-import { createBrowserService, getSecurityScanner } from '@hive-flow/browser';
+import { createBrowserService, getSecurityScanner } from '@hive-flow/cli/browser';
 
 async function secureAutomation(url: string, formData: Record<string, string>) {
   const scanner = getSecurityScanner({ requireHttps: true });

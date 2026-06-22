@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - MCP Tools Index
+ * @hive-flow/cli/browser - MCP Tools Index
  */
 
 export { browserTools, type MCPTool } from './browser-tools.js';

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Security Integration Tests
+ * @hive-flow/cli/browser - Security Integration Tests
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -9,7 +9,7 @@ import {
   isUrlSafe,
   containsPII,
   type SecurityConfig,
-} from '../src/infrastructure/security-integration.js';
+} from '../infrastructure/security-integration.js';
 
 describe('BrowserSecurityScanner', () => {
   let scanner: BrowserSecurityScanner;

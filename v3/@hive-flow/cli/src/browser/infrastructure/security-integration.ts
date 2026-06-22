@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Security Integration
+ * @hive-flow/cli/browser - Security Integration
  * AIDefence integration for URL validation, PII detection, and threat scanning
  */
 

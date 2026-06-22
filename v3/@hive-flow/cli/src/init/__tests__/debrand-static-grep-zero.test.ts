@@ -14,8 +14,8 @@ const CLASSIFIED_STATIC_EXCEPTIONS: ReadonlyMap<string, string> = new Map([
     'Installer performs the package-manager install operation; user-facing URL/install guidance is otherwise removed.',
   ],
   [
-    'v3/@hive-flow/browser/docker/Dockerfile:content:npm install guidance',
-    'Docker build layer installs package dependencies; this is build logic, not docs guidance.',
+    'v3/@hive-flow/cli/docker/browser/Dockerfile:content:npm install guidance',
+    'Browser fixture Docker build layer installs package dependencies; this is build logic, not docs guidance.',
   ],
   [
     'v3/@hive-flow/cli/docker/Dockerfile:content:npm install guidance',

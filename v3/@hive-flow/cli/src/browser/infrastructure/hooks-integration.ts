@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Hooks Integration
+ * @hive-flow/cli/browser - Hooks Integration
  * pre-browse and post-browse hooks for hive-flow
  */
 

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Workflow Templates
+ * @hive-flow/cli/browser - Workflow Templates
  * Pre-built workflow templates for common browser automation tasks
  */
 

@@ -69,7 +69,6 @@
     "neverBuiltDependencies": ["sharp"],
     "peerDependencyRules": {
       "ignoreMissing": [
-        "@hive-flow/browser",
         "@hive-flow/coordination",
         "@hive-flow/embeddings",
         "@hive-flow/memory",

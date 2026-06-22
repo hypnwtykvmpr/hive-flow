@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - Browser Service
+ * @hive-flow/cli/browser - Browser Service
  * Core application service integrating agent-browser with hive-flow
  */
 

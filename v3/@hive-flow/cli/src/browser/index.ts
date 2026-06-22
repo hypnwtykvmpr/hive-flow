@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser
+ * @hive-flow/cli/browser
  * Browser automation for AI agents - integrates agent-browser with hive-flow swarms
  *
  * Features:
@@ -11,7 +11,7 @@
  *
  * @example
  * ```typescript
- * import { createBrowserService, browserTools } from '@hive-flow/browser';
+ * import { createBrowserService, browserTools } from '@hive-flow/cli/browser';
  *
  * // Create a browser service
  * const browser = createBrowserService({ sessionId: 'my-session' });

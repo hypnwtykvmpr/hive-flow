@@ -1,5 +1,5 @@
 /**
- * @hive-flow/browser - MCP Tools
+ * @hive-flow/cli/browser - MCP Tools
  * 50+ browser automation tools for hive-flow MCP server
  */
 

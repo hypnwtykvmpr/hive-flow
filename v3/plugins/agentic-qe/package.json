@@ -63,7 +63,7 @@
     "@hive-flow/embeddings": {
       "optional": true
     },
-    "@hive-flow/browser": {
+    "@hive-flow/cli": {
       "optional": true
     }
   },
