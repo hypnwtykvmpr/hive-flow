@@ -6,8 +6,8 @@ The V3 Helper System provides cross-platform automation and development tools fo
 
 ### Installation
 ```bash
-# Copy helpers to your hive-flow v3 project
-cp -r v3/helpers/ your-project/.claude/helpers/
+# Copy helpers from the CLI package to your hive-flow v3 project
+cp -r v3/@hive-flow/cli/helpers/ your-project/.claude/helpers/
 
 # Make scripts executable (Linux/Mac)
 chmod +x your-project/.claude/helpers/*.sh

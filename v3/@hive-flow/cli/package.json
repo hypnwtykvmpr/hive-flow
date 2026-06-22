@@ -60,6 +60,7 @@
   "files": [
     "dist",
     "bin",
+    "helpers/**",
     "agents/**/*.yaml",
     ".claude/commands/**",
     ".claude/helpers/**",

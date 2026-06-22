@@ -7,7 +7,7 @@ This guide covers installing the V3 helper system across all supported platforms
 ### For New Projects
 ```bash
 # Copy the entire helper system to your project
-cp -r /path/to/hive-flow/v3/helpers/ your-project/.claude/helpers/
+cp -r /path/to/hive-flow/v3/@hive-flow/cli/helpers/ your-project/.claude/helpers/
 
 # Make scripts executable (Linux/macOS)
 chmod +x your-project/.claude/helpers/*.sh
@@ -23,7 +23,7 @@ cd your-existing-project
 mkdir -p .claude/helpers
 
 # Copy helpers
-cp -r /path/to/hive-flow/v3/helpers/* .claude/helpers/
+cp -r /path/to/hive-flow/v3/@hive-flow/cli/helpers/* .claude/helpers/
 
 # Initialize
 ./.claude/helpers/hive-flow-v3.sh init
@@ -35,18 +35,17 @@ cp -r /path/to/hive-flow/v3/helpers/* .claude/helpers/
 
 #### Prerequisites
 ```bash
-# Install required tools
-sudo apt update
-sudo apt install git jq curl nodejs npm
+# Install required tools with your platform package manager:
+# git, jq, curl, Node.js, and npm
 
 # For CentOS/RHEL
-sudo yum install git jq curl nodejs npm
+sudo yum install git jq curl nodejs
 ```
 
 #### Installation
 ```bash
 # Copy helpers
-cp -r v3/helpers/ .claude/helpers/
+cp -r v3/@hive-flow/cli/helpers/ .claude/helpers/
 
 # Make executable
 chmod +x .claude/helpers/*.sh .claude/helpers/templates/*.sh
@@ -71,7 +70,7 @@ brew install git jq node
 #### Installation
 ```bash
 # Copy helpers
-cp -r v3/helpers/ .claude/helpers/
+cp -r v3/@hive-flow/cli/helpers/ .claude/helpers/
 
 # Make executable
 chmod +x .claude/helpers/*.sh .claude/helpers/templates/*.sh
@@ -114,7 +113,7 @@ Copy-Item -Recurse -Path "v3\helpers\*" -Destination ".claude\helpers\"
 #### Installation (Git Bash/WSL)
 ```bash
 # Copy helpers
-cp -r v3/helpers/ .claude/helpers/
+cp -r v3/@hive-flow/cli/helpers/ .claude/helpers/
 
 # Make executable
 chmod +x .claude/helpers/*.sh .claude/helpers/templates/*.sh
@@ -276,7 +275,7 @@ export PATH="$PATH:$(pwd)/.claude/helpers"
 ```bash
 # Install missing tools
 ## Ubuntu/Debian
-sudo apt install git jq nodejs npm
+sudo apt install git jq nodejs
 
 ## macOS
 brew install git jq node
@@ -293,7 +292,7 @@ choco install git jq nodejs
 cp -r .claude/helpers .claude/helpers.backup
 
 # Copy new helpers
-cp -r /path/to/new/v3/helpers/* .claude/helpers/
+cp -r /path/to/new/v3/@hive-flow/cli/helpers/* .claude/helpers/
 
 # Re-initialize
 ./.claude/helpers/hive-flow-v3.sh init

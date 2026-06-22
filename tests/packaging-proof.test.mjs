@@ -12,6 +12,7 @@
 //     any packaged file or script,
 //   - runtime init templates ship (.claude/{commands,helpers,skills} + agents/),
 //   - CLI helper sources ship (dist/credential-store/helpers/*),
+//   - V3 helper system assets ship from the canonical CLI package path,
 //   - canonical nested bin entry scripts are present and carry the executable bit.
 //
 // NOTE: this test shells out to `npm pack` and is therefore slower than a unit
@@ -163,6 +164,16 @@ describe('packaging proof: @hive-flow/cli tarball', () => {
     );
   });
 
+  it('ships the V3 helper system assets from the CLI package', () => {
+    const has = (re) => files.some((p) => re.test(p));
+    assert.ok(has(/^helpers\/hive-flow-v3\.sh$/), 'missing helpers/hive-flow-v3.sh');
+    assert.ok(has(/^helpers\/hive-flow-v3\.ps1$/), 'missing helpers/hive-flow-v3.ps1');
+    assert.ok(has(/^helpers\/templates\/progress-manager\.sh$/), 'missing helpers/templates/progress-manager.sh');
+    assert.ok(has(/^helpers\/templates\/progress-manager\.ps1$/), 'missing helpers/templates/progress-manager.ps1');
+    assert.ok(has(/^helpers\/templates\/status-display\.sh$/), 'missing helpers/templates/status-display.sh');
+    assert.ok(has(/^helpers\/templates\/config-validator\.sh$/), 'missing helpers/templates/config-validator.sh');
+  });
+
   it('ships bin entry scripts with the executable bit', () => {
     const binDir = join(pkgDir, 'bin');
     for (const bin of ['cli.js', 'mcp-server.js', 'statusline.js']) {
@@ -256,6 +267,15 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
       has(/^v3\/@hive-flow\/cli\/dist\/credential-store\/helpers\//),
       'missing nested cli credential-helper sources',
     );
+    assert.ok(
+      has(/^v3\/@hive-flow\/cli\/helpers\/hive-flow-v3\.sh$/),
+      'missing nested cli helper system hive-flow-v3.sh',
+    );
+    assert.ok(
+      has(/^v3\/@hive-flow\/cli\/helpers\/templates\/progress-manager\.sh$/),
+      'missing nested cli helper system templates/progress-manager.sh',
+    );
+    assert.ok(!has(/^v3\/helpers\//), 'umbrella must not ship retired v3/helpers path');
   });
 
   it('does NOT ship the developer top-level .claude/ tree', () => {

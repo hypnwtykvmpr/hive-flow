@@ -18,7 +18,6 @@ export const SHIPPED_SURFACE_ROOTS = [
   'v3/CHANGELOG.md',
   'v3/index.ts',
   'v3/swarm.config.ts',
-  'v3/helpers',
   'v3/plugins',
   '.claude/commands',
   '.claude/skills',

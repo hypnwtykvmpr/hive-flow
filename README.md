@@ -379,8 +379,8 @@ pnpm run build:ts
 # Run from the clone
 node v3/@hive-flow/cli/bin/cli.js --help
 
-# Install this checkout globally after building
-npm install -g .
+# Link this checkout globally after building
+npm link
 hive-flow --help
 
 # Initialize in the current project

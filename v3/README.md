@@ -102,6 +102,7 @@ v3/
 │   ├── claims/                      # Claims-based authorisation
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
+│   │   ├── helpers/                 # Cross-platform helper assets
 │   │   └── src/
 │   │       └── commands/            # Command handlers
 │   ├── codex/                       # Dual-mode Claude + Codex collaboration
@@ -144,9 +145,6 @@ v3/
 │           └── helpers/
 │
 ├── docs/                            # Documentation
-├── helpers/                         # Cross-platform helpers
-│   ├── hive-flow-v3.sh            # Master helper (Linux/macOS)
-│   └── hive-flow-v3.ps1           # Master helper (Windows)
 ├── scripts/                         # Utility scripts
 ├── index.ts                         # Main entry point
 ├── swarm.config.ts                  # Swarm configuration
@@ -326,14 +324,14 @@ Cross-platform automation for V3 development:
 
 ```bash
 # Linux/macOS
-./helpers/hive-flow-v3.sh init
-./helpers/hive-flow-v3.sh status
-./helpers/hive-flow-v3.sh update domain 3
+./@hive-flow/cli/helpers/hive-flow-v3.sh init
+./@hive-flow/cli/helpers/hive-flow-v3.sh status
+./@hive-flow/cli/helpers/hive-flow-v3.sh update domain 3
 
 # Windows (PowerShell)
-.\helpers\hive-flow-v3.ps1 init
-.\helpers\hive-flow-v3.ps1 status
-.\helpers\hive-flow-v3.ps1 update domain 3
+.\@hive-flow\cli\helpers\hive-flow-v3.ps1 init
+.\@hive-flow\cli\helpers\hive-flow-v3.ps1 status
+.\@hive-flow\cli\helpers\hive-flow-v3.ps1 update domain 3
 ```
 
 Features:
@@ -393,7 +391,7 @@ pnpm test:coverage
 ## Links
 
 ### Documentation
-- [Helper System](./helpers/README.md)
+- [Helper System](./@hive-flow/cli/helpers/README.md)
 
 ### Modules
 - [@hive-flow/security](./@hive-flow/security/)
