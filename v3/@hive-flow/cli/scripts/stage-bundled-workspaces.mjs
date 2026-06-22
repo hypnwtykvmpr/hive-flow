@@ -15,7 +15,9 @@
  * `hive-flow --version` (and core commands) resolve without publishing the
  * subpackages to a registry.
  *
- * This script is invoked from the root `prepack` lifecycle. It is idempotent.
+ * This script lives under the CLI package because the CLI owns the installable
+ * runtime surface, but it is invoked from the root `prepack` lifecycle and
+ * stages files into the umbrella package root. It is idempotent.
  *
  * Eager runtime closure (traced from bin/cli.js -> dist/src/index.js):
  *   - @hive-flow/shared       (bare + /core/config/defaults + /workflow)  REQUIRED for every command
@@ -38,11 +40,40 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(__dirname, '..');
+
+function findUmbrellaRoot(startDir) {
+  let current = resolve(startDir);
+  for (;;) {
+    const packageJsonPath = join(current, 'package.json');
+    if (existsSync(packageJsonPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+        const bundled = Array.isArray(pkg.bundledDependencies)
+          ? pkg.bundledDependencies
+          : Array.isArray(pkg.bundleDependencies)
+            ? pkg.bundleDependencies
+            : [];
+        if (pkg.name === 'hive-flow' && bundled.includes('@hive-flow/shared')) {
+          return current;
+        }
+      } catch {
+        // Keep walking; malformed package.json files are handled by normal build gates.
+      }
+    }
+
+    const parent = dirname(current);
+    if (parent === current) {
+      throw new Error('[stage-bundled] unable to locate umbrella hive-flow package root');
+    }
+    current = parent;
+  }
+}
+
+const repoRoot = findUmbrellaRoot(__dirname);
 const wsRoot = join(repoRoot, 'v3', '@hive-flow');
 const destRoot = join(repoRoot, 'node_modules', '@hive-flow');
 

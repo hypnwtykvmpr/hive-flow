@@ -21,7 +21,7 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -29,6 +29,7 @@ import { tmpdir } from 'node:os';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..');
 const cliDir = join(repoRoot, 'v3', '@hive-flow', 'cli');
+const rootPackageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
 
 // Isolated npm cache so we never touch (or get blocked by) the shared ~/.npm.
 const ISOLATED_CACHE = mkdtempSync(join(tmpdir(), 'hf-pack-cache-'));
@@ -49,7 +50,7 @@ function packDryRun(cwd) {
   );
   assert.equal(res.status, 0, `npm pack --dry-run failed in ${cwd}:\n${res.stderr}`);
   // npm may emit notices on stdout before the JSON; isolate the JSON array.
-  // The `prepack` lifecycle (stage-bundled-workspaces) logs to STDERR, so stdout
+  // The `prepack` lifecycle (cli/scripts/stage-bundled-workspaces) logs to STDERR, so stdout
   // stays clean — but be defensive and locate the LAST top-level `[` that parses
   // as the npm pack JSON array (npm's array is emitted last on stdout).
   const start = res.stdout.lastIndexOf('\n[');
@@ -210,6 +211,22 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     pkgDir = extract(tgz, join(work, 'ext'));
   });
 
+  it('runs the bundled-workspace staging script from the canonical CLI package path', () => {
+    assert.equal(
+      rootPackageJson.scripts.prepack,
+      'node v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs',
+    );
+    assert.ok(
+      existsSync(join(repoRoot, 'v3', '@hive-flow', 'cli', 'scripts', 'stage-bundled-workspaces.mjs')),
+      'canonical CLI package staging script is missing',
+    );
+    assert.equal(
+      existsSync(join(repoRoot, 'scripts', 'stage-bundled-workspaces.mjs')),
+      false,
+      'retired root scripts/stage-bundled-workspaces.mjs must not be recreated',
+    );
+  });
+
   it('ships no dev/state junk', () => {
     assertNoJunk(files, 'root');
   });
@@ -351,7 +368,7 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     // PACKAGING HYGIENE (slice A): the 4 bundled @hive-flow/* packages are packed
     // via the umbrella root `bundledDependencies`, which BYPASSES the root `files`
     // `!**/*.map` negation (npm packs bundled deps by their own rules). The staging
-    // script (scripts/stage-bundled-workspaces.mjs) therefore strips `*.map` and
+    // script (v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs) therefore strips `*.map` and
     // `__tests__/` at the copy step. Regression guard for the 440-`.map` + 36-
     // `__tests__/` bundled bloat the audit found.
     const bundledMaps = files.filter(
