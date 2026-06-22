@@ -22,7 +22,7 @@ import {
   createDDDWorker,
   type WorkerResult,
   type AlertThreshold,
-} from '../src/index.js';
+} from '../index.js';
 
 // ============================================================================
 // Test Setup
@@ -32,7 +32,7 @@ const TEST_PROJECT_ROOT = path.join(os.tmpdir(), 'hive-flow-test-' + Date.now())
 
 async function setupTestDir(): Promise<void> {
   await fs.mkdir(path.join(TEST_PROJECT_ROOT, '.hive-flow', 'metrics'), { recursive: true });
-  await fs.mkdir(path.join(TEST_PROJECT_ROOT, 'v3', '@hive-flow', 'hooks', 'src'), { recursive: true });
+  await fs.mkdir(path.join(TEST_PROJECT_ROOT, 'v3', '@hive-flow', 'cli', 'src', 'hooks'), { recursive: true });
 }
 
 async function cleanupTestDir(): Promise<void> {

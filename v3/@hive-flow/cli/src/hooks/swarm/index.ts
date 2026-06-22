@@ -4,7 +4,7 @@
  * Enables agent-to-agent communication, pattern broadcasting,
  * consensus building, and task handoff coordination.
  *
- * @module @hive-flow/hooks/swarm
+ * @module @hive-flow/cli/hooks/swarm
  */
 
 import { EventEmitter } from 'node:events';

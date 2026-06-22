@@ -160,7 +160,7 @@ Automated watcher system that monitors hive worker progress without polling.
 | `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (37 commands) |
 | `@hive-flow/codex` | `v3/@hive-flow/codex/` | Dual-mode Claude + Codex collaboration |
 | `@hive-flow/cli/guidance` | `v3/@hive-flow/cli/src/guidance/` | Governance control plane |
-| `@hive-flow/hooks` | `v3/@hive-flow/hooks/` | 17 hooks + 12 workers |
+| `@hive-flow/cli/hooks` | `v3/@hive-flow/cli/src/hooks/` | 17 hooks + 12 workers |
 | `@hive-flow/memory` | `v3/@hive-flow/memory/` | HiveMemory + HNSW search |
 | `@hive-flow/security` | `v3/@hive-flow/security/` | Input validation, CVE remediation |
 

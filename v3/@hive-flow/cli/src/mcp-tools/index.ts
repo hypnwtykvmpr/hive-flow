@@ -4,6 +4,8 @@
  * Re-exports all tool definitions for use within the CLI package.
  */
 
+import type { HookEvent } from '../hooks/types.js';
+
 export type { MCPTool, MCPToolInputSchema, MCPToolResult } from './types.js';
 export { agentTools } from './agent-tools.js';
 export { swarmTools } from './swarm-tools.js';
@@ -47,17 +49,16 @@ export type {
   EnforcementAuditEntry,
 } from './workflow-enforcer.js';
 
-// Wire up workflow hook dispatcher (optional — only if @hive-flow/hooks is available)
+// Wire up workflow hook dispatcher from the in-package hooks runtime.
 (async () => {
   try {
-    const hooksModuleId = '@hive-flow/hooks';
-    const hooks = await import(/* webpackIgnore: true */ hooksModuleId);
+    const hooks = await import('../hooks/index.js');
     if (hooks.HookExecutor && hooks.defaultRegistry) {
       const executor = new hooks.HookExecutor(hooks.defaultRegistry);
       const { setWorkflowHookDispatcher } = await import('./workflow-executor.js');
       setWorkflowHookDispatcher({
         async dispatch(event: string, context: Record<string, unknown>) {
-          const result = await executor.execute(event, {
+          const result = await executor.execute(event as HookEvent, {
             metadata: context,
             workflow: {
               workflowId: (context.workflowId as string) || '',
@@ -71,6 +72,6 @@ export type {
       });
     }
   } catch {
-    // @hive-flow/hooks not available — workflow hooks disabled (non-blocking)
+    // Hooks dispatcher unavailable — workflow hooks disabled (non-blocking)
   }
 })();

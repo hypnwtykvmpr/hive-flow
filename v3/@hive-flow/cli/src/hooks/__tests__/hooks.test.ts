@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { addHook, defaultRegistry, HookEvent, HookPriority } from '../src/index.js';
+import { addHook, defaultRegistry, HookEvent, HookPriority } from '../index.js';
 
-describe('@hive-flow/hooks', () => {
+describe('@hive-flow/cli/hooks', () => {
   beforeEach(() => {
     defaultRegistry.clear();
   });

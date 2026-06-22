@@ -6,14 +6,14 @@
  * Generate statusline output for Claude Code integration.
  *
  * Usage:
- *   statusline              Output formatted statusline
- *   statusline --json       Output JSON data
- *   statusline --compact    Output compact JSON
+ *   hooks-statusline              Output formatted statusline
+ *   hooks-statusline --json       Output JSON data
+ *   hooks-statusline --compact    Output compact JSON
  */
 
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { StatuslineGenerator, parseStatuslineData } from '../dist/statusline/index.js';
+import { StatuslineGenerator } from '../dist/src/hooks/statusline/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,13 +27,13 @@ const helpMode = args.includes('--help') || args.includes('-h');
 async function main() {
   if (helpMode) {
     console.log(`
-Statusline - V3 Hooks System Status Generator
+Hooks Statusline - V3 Hooks System Status Generator
 
 Usage:
-  statusline              Output formatted statusline (default)
-  statusline --json       Output JSON data
-  statusline --compact    Output compact JSON (single line)
-  statusline --help       Show this help
+  hooks-statusline              Output formatted statusline (default)
+  hooks-statusline --json       Output JSON data
+  hooks-statusline --compact    Output compact JSON (single line)
+  hooks-statusline --help       Show this help
 
 Environment Variables:
   HIVE_FLOW_STATUSLINE_REFRESH   Refresh interval in ms
@@ -42,9 +42,9 @@ Environment Variables:
   HIVE_FLOW_SHOW_PERFORMANCE     Show performance targets (true/false)
 
 Examples:
-  statusline                       # Display formatted status
-  statusline --json | jq           # Parse JSON output
-  statusline --compact             # Single line JSON for scripting
+  hooks-statusline                       # Display formatted status
+  hooks-statusline --json | jq           # Parse JSON output
+  hooks-statusline --compact             # Single line JSON for scripting
 `);
     process.exit(0);
   }

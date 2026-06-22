@@ -2,14 +2,14 @@
  * V3 Statusline Generator
  *
  * Generates statusline data for Claude Code integration.
- * Provides real-time progress, metrics, and status information.
+ * Provides progress, metrics, and status information when source data exists.
  *
  * Format matches the working .claude/statusline.sh output:
  * ▊ Hive Flow V3 ● hypnwtykvmpr  │  ⎇ v3  │  Opus 4.5
  * ─────────────────────────────────────────────────────
- * 🏗️  DDD Domains    [●●●●●]  5/5    ⚡ Flash Attention optimization
- * 🤖 Swarm  ◉ [58/15]  👥 0    🟢 CVE 3/3    💾 22282MB    📂  47%    🧠  10%
- * 🔧 Architecture    DDD ● 98%  │  Security ●CLEAN  │  Memory ●HiveMemory  │  Integration ●
+ * 🏗️  DDD Domains    [○○○○○]  0/0    ⚡ No live performance data
+ * 🤖 Swarm  ○ [00/150]  👥 0    🔴 CVE 0/0    💾 --    📂   0%    🧠   0%
+ * 🔧 Architecture    DDD ●  0%  │  Security ●PENDING  │  Memory ●HiveMemory  │  Integration ●
  */
 
 import type {
@@ -18,7 +18,7 @@ import type {
 } from '../types.js';
 import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
 import { execSync } from 'child_process';
-import { existsSync, readFileSync, statSync, readdirSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 /**
@@ -397,27 +397,32 @@ export class StatuslineGenerator {
     try {
       if (existsSync(metricsPath)) {
         const data = JSON.parse(readFileSync(metricsPath, 'utf-8'));
+        const totalDomains = Math.max(0, Number(data.domains?.total ?? 0));
+        const domainsCompleted = Math.min(
+          Math.max(0, Number(data.domains?.completed ?? 0)),
+          totalDomains
+        );
+
         return {
-          domainsCompleted: data.domains?.completed ?? 5,
-          totalDomains: data.domains?.total ?? 5,
-          dddProgress: data.ddd?.progress ?? 98,
-          modulesCount: data.ddd?.modules ?? 16,
-          filesCount: data.ddd?.totalFiles ?? 245,
-          linesCount: data.ddd?.totalLines ?? 15000,
+          domainsCompleted,
+          totalDomains,
+          dddProgress: Math.max(0, Number(data.ddd?.progress ?? 0)),
+          modulesCount: Math.max(0, Number(data.ddd?.modules ?? 0)),
+          filesCount: Math.max(0, Number(data.ddd?.totalFiles ?? 0)),
+          linesCount: Math.max(0, Number(data.ddd?.totalLines ?? 0)),
         };
       }
     } catch {
       // Fall through to defaults
     }
 
-    // Default values
     return {
-      domainsCompleted: 5,
-      totalDomains: 5,
-      dddProgress: 98,
-      modulesCount: 16,
-      filesCount: 245,
-      linesCount: 15000,
+      domainsCompleted: 0,
+      totalDomains: 0,
+      dddProgress: 0,
+      modulesCount: 0,
+      filesCount: 0,
+      linesCount: 0,
     };
   }
 
@@ -435,9 +440,9 @@ export class StatuslineGenerator {
       if (existsSync(auditPath)) {
         const data = JSON.parse(readFileSync(auditPath, 'utf-8'));
         return {
-          status: data.status ?? 'CLEAN',
-          cvesFixed: data.cvesFixed ?? 3,
-          totalCves: data.totalCves ?? 3,
+          status: data.status ?? 'PENDING',
+          cvesFixed: Math.max(0, Number(data.cvesFixed ?? 0)),
+          totalCves: Math.max(0, Number(data.totalCves ?? 0)),
         };
       }
     } catch {
@@ -445,9 +450,9 @@ export class StatuslineGenerator {
     }
 
     return {
-      status: 'CLEAN',
-      cvesFixed: 3,
-      totalCves: 3,
+      status: 'PENDING',
+      cvesFixed: 0,
+      totalCves: 0,
     };
   }
 
@@ -506,10 +511,10 @@ export class StatuslineGenerator {
     }
 
     return {
-      status: 'ACTIVE',
-      patternsLearned: 156,
-      routingAccuracy: 89,
-      totalOperations: 1547,
+      status: 'INACTIVE',
+      patternsLearned: 0,
+      routingAccuracy: 0,
+      totalOperations: 0,
     };
   }
 
@@ -522,9 +527,9 @@ export class StatuslineGenerator {
     }
 
     return {
-      flashAttentionTarget: 'Flash Attention optimization',
-      searchImprovement: 'HNSW-indexed',
-      memoryReduction: 'memory reduction',
+      flashAttentionTarget: 'No live performance data',
+      searchImprovement: 'No live search metrics',
+      memoryReduction: 'No live memory metrics',
     };
   }
 
@@ -548,43 +553,12 @@ export class StatuslineGenerator {
       const agents = execSync('ps aux 2>/dev/null | grep -E "Task|subagent|agent_spawn" | grep -v grep | wc -l', { encoding: 'utf-8' });
       subAgents = parseInt(agents.trim(), 10) || 0;
     } catch {
-      // Use fallback: count v3 lines as proxy for progress
-      try {
-        const v3Dir = join(this.projectRoot, 'v3');
-        if (existsSync(v3Dir)) {
-          const countLines = (dir: string): number => {
-            let total = 0;
-            const items = readdirSync(dir, { withFileTypes: true });
-            for (const item of items) {
-              if (item.name === 'node_modules' || item.name === 'dist') continue;
-              const fullPath = join(dir, item.name);
-              if (item.isDirectory()) {
-                total += countLines(fullPath);
-              } else if (item.name.endsWith('.ts')) {
-                total += readFileSync(fullPath, 'utf-8').split('\n').length;
-              }
-            }
-            return total;
-          };
-          memoryMB = countLines(v3Dir);
-        }
-      } catch {
-        // Fall through
-      }
+      // Leave live process metrics at zero when process inspection is unavailable.
     }
 
-    // Intelligence score from patterns
-    let intelligencePct = 10;
-    const patternsPath = join(this.projectRoot, '.hive-flow', 'learning', 'patterns.db');
-    try {
-      if (existsSync(patternsPath)) {
-        // Estimate based on file size
-        const stats = statSync(patternsPath);
-        intelligencePct = Math.min(100, Math.floor(stats.size / 1000));
-      }
-    } catch {
-      // Fall through
-    }
+    // Intelligence score requires an explicit data source. Do not infer it from
+    // database byte size; file size is storage volume, not a quality percentage.
+    let intelligencePct = 0;
 
     return {
       memoryMB,
@@ -638,7 +612,9 @@ export class StatuslineGenerator {
    */
   private generateProgressBar(current: number, total: number): string {
     const width = 5;
-    const filled = Math.round((current / total) * width);
+    const safeTotal = Math.max(0, total);
+    const safeCurrent = Math.min(Math.max(0, current), safeTotal);
+    const filled = safeTotal > 0 ? Math.round((safeCurrent / safeTotal) * width) : 0;
     const empty = width - filled;
     const c = colors;
 
@@ -682,11 +658,11 @@ export function parseStatuslineData(json: string): StatuslineData | null {
   try {
     const data = JSON.parse(json);
     return {
-      v3Progress: data.v3Progress ?? { domainsCompleted: 0, totalDomains: 5, dddProgress: 0, modulesCount: 0, filesCount: 0, linesCount: 0 },
-      security: data.security ?? { status: 'PENDING', cvesFixed: 0, totalCves: 3 },
+      v3Progress: data.v3Progress ?? { domainsCompleted: 0, totalDomains: 0, dddProgress: 0, modulesCount: 0, filesCount: 0, linesCount: 0 },
+      security: data.security ?? { status: 'PENDING', cvesFixed: 0, totalCves: 0 },
       swarm: data.swarm ?? { activeAgents: 0, maxAgents: DEFAULT_MAX_AGENTS, coordinationActive: false },
       hooks: data.hooks ?? { status: 'INACTIVE', patternsLearned: 0, routingAccuracy: 0, totalOperations: 0 },
-      performance: data.performance ?? { flashAttentionTarget: 'Flash Attention optimization', searchImprovement: 'HNSW-indexed', memoryReduction: '50%' },
+      performance: data.performance ?? { flashAttentionTarget: 'No live performance data', searchImprovement: 'No live search metrics', memoryReduction: 'No live memory metrics' },
       lastUpdated: data.lastUpdated ? new Date(data.lastUpdated) : new Date(),
     };
   } catch {

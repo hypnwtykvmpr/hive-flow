@@ -3,7 +3,7 @@
 # Enables agent-to-agent messaging, pattern sharing, consensus, and task handoffs
 #
 # Integration with:
-# - @hive-flow/hooks SwarmCommunication module
+# - @hive-flow/cli hooks SwarmCommunication module
 # - local Hive Flow swarm coordination
 # - Local hooks system for real-time agent coordination
 #

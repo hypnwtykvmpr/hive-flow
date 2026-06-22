@@ -42,13 +42,9 @@
   "dependencies": {},
   "peerDependencies": {
     "@hive-flow/shared": "workspace:*",
-    "@hive-flow/hooks": "workspace:*",
     "@hive-flow/memory": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@hive-flow/hooks": {
-      "optional": true
-    },
     "@hive-flow/memory": {
       "optional": true
     }

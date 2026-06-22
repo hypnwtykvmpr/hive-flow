@@ -191,7 +191,7 @@ export function moduleStatusToCliStatus(status: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Workflow Hook Dispatch (lightweight — no @hive-flow/hooks dependency)
+// Workflow Hook Dispatch (lightweight — no @hive-flow/cli/hooks dependency)
 // ---------------------------------------------------------------------------
 
 export interface WorkflowHookDispatcher {

@@ -304,7 +304,7 @@ This package is a dependency of all other @hive-flow modules:
 - [@hive-flow/cli/integration](../cli/src/integration) - local compatibility API bridge
 - [@hive-flow/cli/testing](../cli/src/testing) - TDD framework & fixtures
 - [@hive-flow/embeddings](../embeddings) - Embedding service
-- [@hive-flow/hooks](../hooks) - Hooks system
+- [@hive-flow/cli/hooks](../cli/docs/hooks/) - Hooks system
 
 ## License
 

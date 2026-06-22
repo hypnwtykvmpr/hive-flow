@@ -10,7 +10,7 @@
  * - Local vector backend for persistence
  * - Pattern promotion from short-term to long-term memory
  *
- * @module @hive-flow/hooks/reasoningbank
+ * @module @hive-flow/cli/hooks/reasoningbank
  */
 
 import { EventEmitter } from 'node:events';

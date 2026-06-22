@@ -38,9 +38,6 @@
       ],
       "@hive-flow/shared": [
         "./@hive-flow/shared/src"
-      ],
-      "@hive-flow/hooks": [
-        "./@hive-flow/hooks/src"
       ]
     },
     "emitDeclarationOnly": false,
@@ -58,9 +55,6 @@
     },
     {
       "path": "./@hive-flow/cli"
-    },
-    {
-      "path": "./@hive-flow/hooks"
     }
   ],
   "include": [],

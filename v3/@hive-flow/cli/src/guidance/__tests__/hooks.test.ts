@@ -6,9 +6,8 @@ import { GuidanceHookProvider, createGuidanceHooks, gateResultsToHookResult } fr
 import { EnforcementGates } from '../gates.js';
 import { ShardRetriever, HashEmbeddingProvider } from '../retriever.js';
 import { RunLedger } from '../ledger.js';
-import { HookRegistry } from '@hive-flow/hooks';
-import { HookEvent, HookPriority } from '@hive-flow/hooks';
-import type { HookContext, HookResult } from '@hive-flow/hooks';
+import { HookRegistry, HookEvent, HookPriority } from '../../hooks/index.js';
+import type { HookContext, HookResult } from '../../hooks/index.js';
 import type { GateResult, RunEvent, PolicyBundle } from '../types.js';
 
 // ============================================================================

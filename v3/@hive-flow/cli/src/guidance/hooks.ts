@@ -19,14 +19,14 @@ import type {
   HookContext,
   HookResult,
   HookRegistrationOptions,
-} from '@hive-flow/hooks';
+} from '../hooks/index.js';
 
 import {
   HookEvent,
   HookPriority,
-} from '@hive-flow/hooks';
+} from '../hooks/index.js';
 
-import type { HookRegistry } from '@hive-flow/hooks';
+import type { HookRegistry } from '../hooks/index.js';
 
 import type { EnforcementGates } from './gates.js';
 import type { ShardRetriever } from './retriever.js';

@@ -4376,29 +4376,26 @@ hive-flow embeddings cache clear --older-than 7d
 <summary>🪝 <strong>Hooks & Learning</strong></summary>
 
 ```typescript
-import { HooksService } from '@hive-flow/hooks';
+import { HookRegistry, HookExecutor, HookEvent, HookPriority } from '@hive-flow/cli/hooks';
 
-const hooks = new HooksService({
-  enableLearning: true,
-  reasoningBank: true
+const registry = new HookRegistry();
+const executor = new HookExecutor(registry);
+
+registry.register(
+  HookEvent.PreTask,
+  async (context) => ({
+    success: true,
+    message: `Preparing ${context.task?.description ?? 'task'}`,
+  }),
+  HookPriority.Normal,
+  { name: 'task-prep' },
+);
+
+const result = await executor.execute(HookEvent.PreTask, {
+  task: { id: 'task-123', description: 'implement caching layer' },
 });
 
-// Route task to optimal agent
-const routing = await hooks.route('implement caching layer');
-console.log(`Recommended: ${routing.agent} (${routing.confidence}%)`);
-
-// Record task outcome
-await hooks.postTask({
-  taskId: 'task-123',
-  success: true,
-  quality: 0.95,
-  agent: routing.agent
-});
-
-// Start trajectory for RL learning
-const trajectory = await hooks.startTrajectory('complex-feature');
-await hooks.recordStep(trajectory, { action: 'created service', reward: 0.8 });
-await hooks.endTrajectory(trajectory, { success: true });
+console.log(`Hooks executed: ${result.hooksExecuted}`);
 ```
 
 </details>
@@ -4411,7 +4408,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 | `@hive-flow/cli/swarm` | Agent coordination | `createUnifiedSwarmCoordinator`, `UnifiedSwarmCoordinator` |
 | `@hive-flow/cli/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
-| `@hive-flow/hooks` | Event hooks, learning | `HooksService`, `ReasoningBank` |
+| `@hive-flow/cli/hooks` | Event hooks, learning | `HookRegistry`, `HookExecutor`, `ReasoningBank` |
 | `@hive-flow/security` | Input validation | `InputValidator`, `PathValidator` |
 | `@hive-flow/cli/neural` | Local pattern learning and reasoning helpers | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
@@ -4985,7 +4982,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
-| `@hive-flow/hooks` | Event-driven lifecycle | ReasoningBank, lifecycle hooks, pattern learning |
+| `@hive-flow/cli/hooks` | Event-driven lifecycle | ReasoningBank, lifecycle hooks, pattern learning |
 | `@hive-flow/memory` | Unified vector storage | UnifiedMemoryService, RVF binary format, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
@@ -6445,7 +6442,7 @@ cp -r ./data-backup-v2 ./data
 | Module | Description | Docs |
 |--------|-------------|------|
 | `@hive-flow/plugins` | Plugin SDK with workers, hooks, providers, security | [README](./v3/@hive-flow/plugins/README.md) |
-| `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/hooks/) |
+| `@hive-flow/cli/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/cli/src/hooks/) |
 | `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
 | `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/cli/src/swarm/) |

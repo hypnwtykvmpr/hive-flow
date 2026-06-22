@@ -388,7 +388,7 @@ export function findReferenceCode(solutions: Solution[]): Solution[] {
       refs.push('src/plugins/', 'v3/@hive-flow/cli/src/plugins/');
     }
     if (lower.includes('event') || lower.includes('hook')) {
-      refs.push('v3/@hive-flow/hooks/src/');
+      refs.push('v3/@hive-flow/cli/src/hooks/');
     }
     if (lower.includes('test') || lower.includes('tdd')) {
       refs.push('v3/@hive-flow/cli/src/__tests__/');

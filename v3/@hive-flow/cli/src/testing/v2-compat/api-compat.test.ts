@@ -138,7 +138,7 @@ const IMPORT_ALIASES: Record<string, string> = {
   'hive-flow/memory': '@hive-flow/memory',
   'hive-flow/agents': '@hive-flow/agent-lifecycle',
   'hive-flow/tasks': '@hive-flow/task-execution',
-  'hive-flow/hooks': '@hive-flow/hooks',
+  'hive-flow/hooks': '@hive-flow/cli/hooks',
   'hive-flow/config': '@hive-flow/config',
   'hive-flow': '@hive-flow/core',
 };

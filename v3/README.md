@@ -96,39 +96,35 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (10 packages)
+├── @hive-flow/                    # Modular packages (9 packages)
 │   ├── browser/                     # Browser automation (Playwright/CDP)
-│   ├── claims/                      # Claims-based authorisation
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
 │   │   ├── e2e/                     # CLI-owned integration tests
 │   │   ├── helpers/                 # Cross-platform helper assets
+│   │   ├── docs/                    # CLI-owned package docs
 │   │   └── src/
+│   │       ├── claims/              # Claims-based authorisation
 │   │       ├── commands/            # Command handlers
 │   │       ├── context/             # Internal context assembly helpers
 │   │       ├── deployment/          # Release helper internals
-│   │       └── swarm/               # Swarm coordination internals
+│   │       ├── guidance/            # Governance control plane
+│   │       ├── hooks/               # 17 hooks + 12 background workers
+│   │       ├── integration/         # hive-flow integration bridge
+│   │       ├── mcp/                 # MCP server internals
+│   │       ├── mcp-tools/           # MCP tool definitions
+│   │       ├── neural/              # Neural/SONA helpers
+│   │       ├── performance/         # Performance profiling internals
+│   │       ├── swarm/               # Swarm coordination internals
+│   │       └── testing/             # CLI-owned testing helpers
 │   ├── codex/                       # Dual-mode Claude + Codex collaboration
 │   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
-│   ├── guidance/                    # Governance control plane
-│   ├── hooks/                       # 17 hooks + 12 background workers
-│   ├── integration/                 # hive-flow integration bridge
-│   │   └── src/
-│   │       ├── hive-flow-bridge.ts  # Core bridge
-│   │       ├── agent-adapter.ts     # Agent adaptation
-│   │       └── sona-adapter.ts      # SONA learning
-│   ├── cli/src/mcp/                 # MCP server & tools
 │   ├── memory/                      # HiveMemory + HNSW vector search
 │   │   └── src/
 │   │       ├── hivememory-backend.ts
 │   │       ├── hnsw-index.ts
 │   │       ├── hybrid-backend.ts
 │   │       └── sqlite-backend.ts
-│   ├── neural/                      # Neural/SONA module
-│   │   └── src/
-│   │       ├── algorithms/          # Learning algorithms
-│   │       └── modes/               # Neural modes
-│   ├── performance/                 # Performance profiling & benchmarks
 │   ├── plugins/                     # Plugin system & IPFS registry
 │   ├── providers/                   # LLM provider integrations
 │   ├── security/                    # Input validation, CVE remediation
@@ -360,7 +356,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 10 packages |
+| **Code** | Package count | 9 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 

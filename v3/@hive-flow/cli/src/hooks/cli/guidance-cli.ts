@@ -6,12 +6,12 @@
  * Outputs plain text or JSON that Claude Code hooks can consume.
  *
  * Usage:
- *   npx @hive-flow/hooks session-context
- *   npx @hive-flow/hooks user-prompt "Fix authentication bug"
- *   npx @hive-flow/hooks pre-edit "/path/to/file.ts"
- *   npx @hive-flow/hooks route "Implement caching layer"
+ *   hive-flow-hooks session-context
+ *   hive-flow-hooks user-prompt "Fix authentication bug"
+ *   hive-flow-hooks pre-edit "/path/to/file.ts"
+ *   hive-flow-hooks route "Implement caching layer"
  *
- * @module @hive-flow/hooks/cli/guidance-cli
+ * @module @hive-flow/cli/hooks/cli/guidance-cli
  */
 
 import { GuidanceProvider } from '../reasoningbank/guidance-provider.js';
@@ -433,9 +433,9 @@ async function main(): Promise<void> {
 
 function printHelp(): void {
   console.log(`
-@hive-flow/hooks - V3 Guidance System CLI
+@hive-flow/cli/hooks - V3 Guidance System CLI
 
-Usage: npx @hive-flow/hooks <command> [args]
+Usage: hive-flow-hooks <command> [args]
 
 Guidance Commands (for Claude hooks):
   session-context           Output project context for SessionStart hook
@@ -496,28 +496,28 @@ Exit Codes:
 
 Examples:
   # Session start guidance
-  npx @hive-flow/hooks session-context
+  hive-flow-hooks session-context
 
   # User prompt analysis
-  npx @hive-flow/hooks user-prompt "Fix authentication security vulnerability"
+  hive-flow-hooks user-prompt "Fix authentication security vulnerability"
 
   # Pre-edit security check
-  npx @hive-flow/hooks pre-edit "src/auth/login.ts"
+  hive-flow-hooks pre-edit "src/auth/login.ts"
 
   # Agent routing
-  npx @hive-flow/hooks route "Implement HNSW vector search"
+  hive-flow-hooks route "Implement HNSW vector search"
 
   # Store a learned pattern
-  npx @hive-flow/hooks store "Use dependency injection for testability" architecture
+  hive-flow-hooks store "Use dependency injection for testability" architecture
 
   # Broadcast pattern to swarm
-  npx @hive-flow/hooks swarm-pattern-broadcast "Use HNSW for fast search" memory
+  hive-flow-hooks swarm-pattern-broadcast "Use HNSW for fast search" memory
 
   # Initiate consensus
-  npx @hive-flow/hooks swarm-consensus "Which auth method?" "JWT,OAuth2,Session"
+  hive-flow-hooks swarm-consensus "Which auth method?" "JWT,OAuth2,Session"
 
   # Hand off task
-  npx @hive-flow/hooks swarm-handoff security-auditor "Review auth implementation"
+  hive-flow-hooks swarm-handoff security-auditor "Review auth implementation"
 `);
 }
 

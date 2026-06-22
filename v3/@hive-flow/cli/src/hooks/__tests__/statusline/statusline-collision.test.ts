@@ -10,6 +10,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 /**
  * Strip ANSI escape codes from a string
@@ -79,7 +82,7 @@ function isCollisionZoneClear(line: string): boolean {
 describe('Statusline Collision Zone Avoidance', () => {
   it('should have clear collision zone in safe multi-line output', async () => {
     // Import dynamically to avoid build issues
-    const { StatuslineGenerator } = await import('../../src/statusline/index.js');
+    const { StatuslineGenerator } = await import('../../statusline/index.js');
 
     const generator = new StatuslineGenerator();
     const output = generator.generateSafeStatusline();
@@ -100,7 +103,7 @@ describe('Statusline Collision Zone Avoidance', () => {
   });
 
   it('should produce single-line output when requested', async () => {
-    const { StatuslineGenerator } = await import('../../src/statusline/index.js');
+    const { StatuslineGenerator } = await import('../../statusline/index.js');
 
     const generator = new StatuslineGenerator();
     const output = generator.generateSingleLine();
@@ -114,7 +117,7 @@ describe('Statusline Collision Zone Avoidance', () => {
   });
 
   it('should have padding in the collision line', async () => {
-    const { StatuslineGenerator } = await import('../../src/statusline/index.js');
+    const { StatuslineGenerator } = await import('../../statusline/index.js');
 
     const generator = new StatuslineGenerator();
     const output = generator.generateSafeStatusline();
@@ -145,7 +148,7 @@ describe('Statusline Collision Zone Avoidance', () => {
 
 describe('Statusline Output Modes', () => {
   it('should support all output modes', async () => {
-    const { StatuslineGenerator } = await import('../../src/statusline/index.js');
+    const { StatuslineGenerator } = await import('../../statusline/index.js');
 
     const generator = new StatuslineGenerator();
 
@@ -168,5 +171,35 @@ describe('Statusline Output Modes', () => {
     // Compact JSON
     const compact = generator.generateCompactJSON();
     expect(JSON.parse(compact)).toBeDefined();
+  });
+});
+
+describe('Statusline Truthful Defaults', () => {
+  it('should not invent metrics when no source data exists', async () => {
+    const { StatuslineGenerator } = await import('../../statusline/index.js');
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hooks-statusline-empty-'));
+    mkdirSync(join(projectRoot, '.hive-flow', 'learning'), { recursive: true });
+    writeFileSync(join(projectRoot, '.hive-flow', 'learning', 'patterns.db'), 'x'.repeat(50_000));
+
+    try {
+      const generator = new StatuslineGenerator(undefined, projectRoot);
+      const data = JSON.parse(generator.generateJSON());
+
+      expect(data.v3Progress.domainsCompleted).toBe(0);
+      expect(data.v3Progress.totalDomains).toBe(0);
+      expect(data.security.status).toBe('PENDING');
+      expect(data.security.cvesFixed).toBe(0);
+      expect(data.security.totalCves).toBe(0);
+      expect(data.hooks.status).toBe('INACTIVE');
+      expect(data.hooks.patternsLearned).toBe(0);
+      expect(data.hooks.routingAccuracy).toBe(0);
+      expect(data.hooks.totalOperations).toBe(0);
+      expect(data.performance.flashAttentionTarget).toBe('No live performance data');
+      expect(data.performance.searchImprovement).toBe('No live search metrics');
+      expect(data.performance.memoryReduction).toBe('No live memory metrics');
+      expect(data.system.intelligencePct).toBe(0);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
   });
 });

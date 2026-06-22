@@ -10,7 +10,11 @@
     "cli": "./bin/cli.js",
     "hive-flow": "./bin/cli.js",
     "hive-flow-mcp": "./bin/mcp-server.js",
-    "hive-flow-statusline": "./bin/statusline.js"
+    "hive-flow-statusline": "./bin/statusline.js",
+    "hooks-daemon": "./bin/hooks-daemon.js",
+    "hooks-statusline": "./bin/hooks-statusline.js",
+    "hive-flow-hooks": "./dist/src/hooks/cli/guidance-cli.js",
+    "guidance": "./dist/src/hooks/cli/guidance-cli.js"
   },
   "keywords": [
     "claude",
@@ -58,6 +62,70 @@
     "./guidance/*": {
       "types": "./dist/src/guidance/*.d.ts",
       "import": "./dist/src/guidance/*.js"
+    },
+    "./hooks": {
+      "types": "./dist/src/hooks/index.d.ts",
+      "import": "./dist/src/hooks/index.js"
+    },
+    "./hooks/types": {
+      "types": "./dist/src/hooks/types.d.ts",
+      "import": "./dist/src/hooks/types.js"
+    },
+    "./hooks/registry": {
+      "types": "./dist/src/hooks/registry/index.d.ts",
+      "import": "./dist/src/hooks/registry/index.js"
+    },
+    "./hooks/executor": {
+      "types": "./dist/src/hooks/executor/index.d.ts",
+      "import": "./dist/src/hooks/executor/index.js"
+    },
+    "./hooks/daemons": {
+      "types": "./dist/src/hooks/daemons/index.d.ts",
+      "import": "./dist/src/hooks/daemons/index.js"
+    },
+    "./hooks/statusline": {
+      "types": "./dist/src/hooks/statusline/index.d.ts",
+      "import": "./dist/src/hooks/statusline/index.js"
+    },
+    "./hooks/mcp": {
+      "types": "./dist/src/hooks/mcp/index.d.ts",
+      "import": "./dist/src/hooks/mcp/index.js"
+    },
+    "./hooks/reasoningbank": {
+      "types": "./dist/src/hooks/reasoningbank/index.d.ts",
+      "import": "./dist/src/hooks/reasoningbank/index.js"
+    },
+    "./hooks/guidance": {
+      "types": "./dist/src/hooks/reasoningbank/guidance-provider.d.ts",
+      "import": "./dist/src/hooks/reasoningbank/guidance-provider.js"
+    },
+    "./hooks/bridge": {
+      "types": "./dist/src/hooks/bridge/official-hooks-bridge.d.ts",
+      "import": "./dist/src/hooks/bridge/official-hooks-bridge.js"
+    },
+    "./hooks/swarm": {
+      "types": "./dist/src/hooks/swarm/index.d.ts",
+      "import": "./dist/src/hooks/swarm/index.js"
+    },
+    "./hooks/workers": {
+      "types": "./dist/src/hooks/workers/index.d.ts",
+      "import": "./dist/src/hooks/workers/index.js"
+    },
+    "./hooks/workers/mcp-tools": {
+      "types": "./dist/src/hooks/workers/mcp-tools.d.ts",
+      "import": "./dist/src/hooks/workers/mcp-tools.js"
+    },
+    "./hooks/workers/session-hook": {
+      "types": "./dist/src/hooks/workers/session-hook.d.ts",
+      "import": "./dist/src/hooks/workers/session-hook.js"
+    },
+    "./hooks/llm": {
+      "types": "./dist/src/hooks/llm/index.d.ts",
+      "import": "./dist/src/hooks/llm/index.js"
+    },
+    "./hooks/cli/guidance-cli": {
+      "types": "./dist/src/hooks/cli/guidance-cli.d.ts",
+      "import": "./dist/src/hooks/cli/guidance-cli.js"
     },
     "./package.json": "./package.json",
     "./mcp-tools": {
@@ -212,7 +280,6 @@
   },
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
-    "@hive-flow/hooks": "workspace:*",
     "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
     "ajv": "^8.18.0",

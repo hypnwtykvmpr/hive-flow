@@ -803,8 +803,8 @@ S3 Fix all 5 PR2 blockers in Graphify's schema-aware loader and stable edge iden
 623 " 🟣 pre-push Hook Added to Block Publishing of Private-Listed Files
 624 " ✅ 9 Stale Local pr10-* and Archive Branches Deleted
 S5 Vampyre repo housekeeping + privacy scrub: remove stale branches, audit/fix private file exposure on public GitHub origin (Jun 1 at 3:22 PM)
-638 9:52p 🔵 BUG-6: Collision-Prone ID Generation in @hive-flow/hooks
-639 " 🔵 BUG-14: addHook() Uses CJS require() for ESM Modules in @hive-flow/hooks
+638 9:52p 🔵 BUG-6: Collision-Prone ID Generation in @hive-flow/cli/hooks
+639 " 🔵 BUG-14: addHook() Uses CJS require() for ESM Modules in @hive-flow/cli/hooks
 640 10:01p 🔵 Four Bug Classes Identified in @hive-flow/providers Package
 643 10:34p 🔴 14 Bug Fixes Applied to hive-flow v3 Working Tree
 646 10:59p 🔴 TypeScript Type Error in input-validator.ts After Security Bug Fixes

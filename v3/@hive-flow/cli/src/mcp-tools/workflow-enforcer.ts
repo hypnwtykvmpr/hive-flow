@@ -152,7 +152,7 @@ const SECURITY_KEYWORDS = [
   'injection', 'traversal',
 ];
 const MONOREPO_PACKAGES = [
-  '@hive-flow/cli', '@hive-flow/hooks', '@hive-flow/memory',
+  '@hive-flow/cli', '@hive-flow/cli/hooks', '@hive-flow/memory',
   '@hive-flow/security', '@hive-flow/cli/guidance', '@hive-flow/shared',
   '@hive-flow/codex', '@hive-flow/providers',
 ];

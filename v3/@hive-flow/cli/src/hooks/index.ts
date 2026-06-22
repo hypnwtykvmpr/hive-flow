@@ -1,5 +1,5 @@
 /**
- * @hive-flow/hooks - V3 Hooks System
+ * @hive-flow/cli/hooks - V3 Hooks System
  *
  * Event-driven lifecycle hooks with ReasoningBank learning integration.
  *

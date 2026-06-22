@@ -52,11 +52,11 @@ setup() {
 @test "adjacent packages and workers no longer point at retired integration package" {
   run grep -F '"@hive-flow/integration"' "$REPO_ROOT/v3/@hive-flow/embeddings/package.json"
   [ "$status" -eq 1 ]
-  run grep -F "'@hive-flow/cli/integration'" "$REPO_ROOT/v3/@hive-flow/hooks/src/workers/index.ts"
+  run grep -F "'@hive-flow/cli/integration'" "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts"
   [ "$status" -eq 0 ]
-  run grep -F "path.join(v3Path, '@hive-flow/cli', 'src', 'integration')" "$REPO_ROOT/v3/@hive-flow/hooks/src/workers/index.ts"
+  run grep -F "path.join(v3Path, '@hive-flow/cli', 'src', 'integration')" "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts"
   [ "$status" -eq 0 ]
-  run grep -F "path.join(v3Path, '@hive-flow/cli/src/integration')" "$REPO_ROOT/v3/@hive-flow/hooks/src/workers/index.ts"
+  run grep -F "path.join(v3Path, '@hive-flow/cli/src/integration')" "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts"
   [ "$status" -eq 1 ]
 }
 
@@ -96,7 +96,7 @@ setup() {
     count=$((count + 1))
   done
 
-  [ "$count" -eq 10 ]
-  run grep -F '10 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 9 ]
+  run grep -F '9 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

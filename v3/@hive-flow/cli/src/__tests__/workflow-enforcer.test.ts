@@ -131,7 +131,7 @@ describe('workflow-enforcer', () => {
     });
 
     it('adds 15 points for multi-module detection', () => {
-      const result = assessComplexity('update @hive-flow/cli and @hive-flow/hooks');
+      const result = assessComplexity('update @hive-flow/cli and @hive-flow/cli/hooks');
       const multiSignals = result.signals.filter(s => s.category === 'multi-module');
       expect(multiSignals.length).toBe(1);
       expect(multiSignals[0].points).toBe(15);
@@ -157,7 +157,7 @@ describe('workflow-enforcer', () => {
       const result = assessComplexity(
         'refactor migrate architecture security auth performance optimize database schema breaking change ' +
         'across src/a.ts src/b.ts src/c.ts src/d.ts src/e.ts src/f.ts src/g.ts src/h.ts ' +
-        '@hive-flow/cli @hive-flow/hooks credential token password vulnerability injection',
+        '@hive-flow/cli @hive-flow/cli/hooks credential token password vulnerability injection',
       );
       expect(result.score).toBeLessThanOrEqual(100);
     });

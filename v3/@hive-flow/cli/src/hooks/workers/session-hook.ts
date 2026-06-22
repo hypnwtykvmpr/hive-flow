@@ -149,7 +149,7 @@ export function formatSessionStartOutput(result: SessionHookResult): string {
  * Generate a shell hook script for integration with .claude/settings.json
  */
 export function generateShellHook(projectRoot: string): string {
-  const hookPath = path.join(projectRoot, 'v3', '@hive-flow', 'hooks');
+  const cliPath = path.join(projectRoot, 'v3', '@hive-flow', 'cli');
 
   return `#!/bin/bash
 # Hive Flow V3 Workers - Session Start Hook
@@ -158,11 +158,12 @@ export function generateShellHook(projectRoot: string): string {
 set -euo pipefail
 
 PROJECT_ROOT="${projectRoot}"
-HOOKS_PATH="${hookPath}"
+CLI_PATH="${cliPath}"
 
 # Run worker initialization via Node.js
-node --experimental-specifier-resolution=node -e "
-const { onSessionStart, formatSessionStartOutput } = require('\${HOOKS_PATH}/dist/workers/session-hook.js');
+node --input-type=module -e "
+const hooksModule = await import('file://' + process.env.CLI_PATH + '/dist/src/hooks/workers/session-hook.js');
+const { onSessionStart, formatSessionStartOutput } = hooksModule;
 
 async function main() {
   const result = await onSessionStart({

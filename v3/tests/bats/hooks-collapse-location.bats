@@ -1,0 +1,84 @@
+#!/usr/bin/env bats
+
+setup() {
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
+}
+
+@test "retired hooks package directory is absent" {
+  [ ! -e "$REPO_ROOT/v3/@hive-flow/hooks" ]
+}
+
+@test "hooks source, tests, docs, and bins live under cli" {
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/index.ts" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/registry/index.ts" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/executor/index.ts" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/__tests__/hooks.test.ts" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/__tests__/workers.test.ts" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/hooks/README.md" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/bin/hooks-daemon.js" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/bin/hooks-statusline.js" ]
+}
+
+@test "cli publishes hooks subpaths and non-conflicting bins" {
+  run grep -F '"./hooks"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  [ "$status" -eq 0 ]
+  run grep -F '"./dist/src/hooks/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  [ "$status" -eq 0 ]
+  run grep -F '"./hooks/registry"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  [ "$status" -eq 0 ]
+  run grep -F '"hooks-daemon": "./bin/hooks-daemon.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  [ "$status" -eq 0 ]
+  run grep -F '"hooks-statusline": "./bin/hooks-statusline.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  [ "$status" -eq 0 ]
+  run grep -F '"statusline": "./bin/hooks-statusline.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  [ "$status" -eq 1 ]
+}
+
+@test "cli and plugins no longer depend on retired hooks workspace" {
+  run grep -F '"@hive-flow/hooks"' "$REPO_ROOT/v3/@hive-flow/cli/package.json" "$REPO_ROOT/v3/@hive-flow/plugins/package.json"
+  [ "$status" -eq 1 ]
+}
+
+@test "root TypeScript projects no longer reference retired hooks package" {
+  run grep -F '@hive-flow/hooks' "$REPO_ROOT/v3/tsconfig.json" "$REPO_ROOT/v3/tsconfig.vitest-temp.json"
+  [ "$status" -eq 1 ]
+  run grep -F './@hive-flow/hooks' "$REPO_ROOT/v3/tsconfig.json" "$REPO_ROOT/v3/tsconfig.vitest-temp.json"
+  [ "$status" -eq 1 ]
+}
+
+@test "lockfiles no longer declare the retired hooks workspace importer" {
+  run grep -F 'v3/@hive-flow/hooks:' "$REPO_ROOT/pnpm-lock.yaml"
+  [ "$status" -eq 1 ]
+  run grep -F "'@hive-flow/hooks':" "$REPO_ROOT/v3/pnpm-lock.yaml"
+  [ "$status" -eq 1 ]
+}
+
+@test "v3 package count reflects retired hooks package" {
+  count=0
+  for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
+    [ -e "$package_file" ] || continue
+    count=$((count + 1))
+  done
+
+  [ "$count" -eq 9 ]
+  run grep -F '9 packages' "$REPO_ROOT/v3/README.md"
+  [ "$status" -eq 0 ]
+}
+
+@test "tracked source and docs use cli hooks canonical location" {
+  run grep -R '@hive-flow/hooks' \
+    "$REPO_ROOT/README.md" \
+    "$REPO_ROOT/CLAUDE.md" \
+    "$REPO_ROOT/v3/README.md" \
+    "$REPO_ROOT/v3/CLAUDE.md" \
+    "$REPO_ROOT/v3/@hive-flow/cli/README.md" \
+    "$REPO_ROOT/v3/@hive-flow/cli/src" \
+    "$REPO_ROOT/v3/@hive-flow/cli/docs/hooks/README.md" \
+    "$REPO_ROOT/v3/@hive-flow/memory/README.md" \
+    "$REPO_ROOT/v3/@hive-flow/shared/README.md"
+  [ "$status" -eq 1 ]
+
+  run grep -F '@hive-flow/cli/hooks' "$REPO_ROOT/v3/@hive-flow/cli/docs/hooks/README.md"
+  [ "$status" -eq 0 ]
+}

@@ -1,9 +1,9 @@
-# @hive-flow/hooks
+# @hive-flow/cli/hooks
 
 
 > Event-driven lifecycle hooks with ReasoningBank learning integration for Hive Flow V3
 
-The `@hive-flow/hooks` package provides a comprehensive hooks system for intercepting and extending Hive Flow operations. It enables intelligent task routing, pattern learning, background metrics collection, and real-time statusline integration.
+The `@hive-flow/cli/hooks` subpath provides a comprehensive hooks system for intercepting and extending Hive Flow operations. It enables intelligent task routing, pattern learning, background metrics collection, and real-time statusline integration from the CLI package.
 
 ## Features
 
@@ -19,13 +19,8 @@ The `@hive-flow/hooks` package provides a comprehensive hooks system for interce
 ## Installation
 
 ```bash
-# Using npm
-
-# Using pnpm
-pnpm add @hive-flow/hooks
-
-# Using yarn
-yarn add @hive-flow/hooks
+# Hooks ship with the Hive Flow CLI package.
+pnpm add @hive-flow/cli
 ```
 
 ## Quick Start
@@ -38,7 +33,7 @@ import {
   HookExecutor,
   HookEvent,
   HookPriority,
-} from '@hive-flow/hooks';
+} from '@hive-flow/cli/hooks';
 
 // Create registry and executor
 const registry = new HookRegistry();
@@ -63,7 +58,7 @@ console.log(`Hooks executed: ${result.hooksExecuted}`);
 ### Initialize with Daemons
 
 ```typescript
-import { initializeHooks } from '@hive-flow/hooks';
+import { initializeHooks } from '@hive-flow/cli/hooks';
 
 // Initialize full system with background daemons
 const { registry, executor, statusline } = await initializeHooks({
@@ -78,7 +73,7 @@ console.log(statusline.generateStatusline());
 ### Using MCP Tools
 
 ```typescript
-import { hooksMCPTools, getHooksTool } from '@hive-flow/hooks';
+import { hooksMCPTools, getHooksTool } from '@hive-flow/cli/hooks';
 
 // Get specific tool
 const routeTool = getHooksTool('hooks/route');
@@ -131,16 +126,16 @@ Generate statusline output for Claude Code integration.
 
 ```bash
 # Display formatted statusline
-statusline
+hooks-statusline
 
 # Output JSON data
-statusline --json
+hooks-statusline --json
 
 # Compact JSON (single line)
-statusline --compact
+hooks-statusline --compact
 
 # Show help
-statusline --help
+hooks-statusline --help
 ```
 
 **Example Output:**
@@ -417,7 +412,7 @@ Add to your Claude settings (`~/.claude/settings.json`):
   },
   "statusLine": {
     "type": "command",
-    "command": "statusline"
+    "command": "hooks-statusline"
   }
 }
 ```
