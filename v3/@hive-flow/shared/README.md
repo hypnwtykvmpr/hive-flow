@@ -303,7 +303,6 @@ This package is a dependency of all other @hive-flow modules:
 - [@hive-flow/swarm](../swarm) - 15-agent coordination
 - [@hive-flow/integration](../integration) - local compatibility API bridge
 - [@hive-flow/testing](../testing) - TDD framework & fixtures
-- [@hive-flow/deployment](../deployment) - Release management
 - [@hive-flow/embeddings](../embeddings) - Embedding service
 - [@hive-flow/hooks](../hooks) - Hooks system
 

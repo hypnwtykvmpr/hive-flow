@@ -4994,7 +4994,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
 | `@hive-flow/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
 | `@hive-flow/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
-| `@hive-flow/deployment` | Release automation | Versioning, changelogs, NPM publishing |
+| `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
 | `@hive-flow/shared` | Common utilities | Types, validation schemas, RvfEventLog, constants |
 | `@hive-flow/browser` | Browser automation | 59 MCP tools, element refs, trajectory learning |
 
@@ -5124,7 +5124,7 @@ const template = getWorkflow('login-basic');
 ---
 
 <details>
-<summary>📦 <strong>Release Management</strong> — @hive-flow/deployment</summary>
+<summary>📦 <strong>Release Management</strong> — @hive-flow/cli/deployment</summary>
 
 Automated release management, versioning, and CI/CD for Hive Flow packages.
 
@@ -5142,7 +5142,7 @@ Automated release management, versioning, and CI/CD for Hive Flow packages.
 ### Quick Start
 
 ```typescript
-import { prepareRelease, publishToNpm, validate } from '@hive-flow/deployment';
+import { prepareRelease, publishToNpm, validate } from '@hive-flow/cli/deployment';
 
 // Bump version and generate changelog
 const result = await prepareRelease({
@@ -5164,7 +5164,7 @@ await publishToNpm({
 ### Version Bumping Examples
 
 ```typescript
-import { ReleaseManager } from '@hive-flow/deployment';
+import { ReleaseManager } from '@hive-flow/cli/deployment';
 
 const manager = new ReleaseManager();
 
@@ -5208,7 +5208,7 @@ Generated:
 ### Complete Release Workflow
 
 ```typescript
-import { Validator, ReleaseManager, Publisher } from '@hive-flow/deployment';
+import { Validator, ReleaseManager, Publisher } from '@hive-flow/cli/deployment';
 
 async function release(version: string, tag: string) {
   // 1. Validate
@@ -6458,7 +6458,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/providers` | LLM provider integrations | [Source](./v3/@hive-flow/providers/) |
 | `@hive-flow/integration` | Optional hive-flow integration | [Source](./v3/@hive-flow/integration/) |
 | `@hive-flow/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/performance/) |
-| `@hive-flow/deployment` | Release & CI/CD | [Source](./v3/@hive-flow/deployment/) |
+| `@hive-flow/cli/deployment` | Release helper internals | [Source](./v3/@hive-flow/cli/src/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |
 | `@hive-flow/browser` | AI-optimized browser automation with agent-browser | [README](./v3/@hive-flow/browser/README.md) |
 

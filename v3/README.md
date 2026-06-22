@@ -79,9 +79,9 @@ V3 represents a complete architectural overhaul:
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │     cli      │  │   testing    │  │  deployment  │          │
-│  │  commands    │  │ TDD London   │  │   release    │          │
-│  │  prompts     │  │   School     │  │    CI/CD     │          │
+│  │     cli      │  │   testing    │  │   browser    │          │
+│  │  commands    │  │ TDD London   │  │ automation   │          │
+│  │  prompts     │  │   School     │  │ trajectories │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (20 packages)
+├── @hive-flow/                    # Modular packages (19 packages)
 │   ├── aidefence/                   # AI-threat defence & PII scanning
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
@@ -106,9 +106,9 @@ v3/
 │   │   ├── helpers/                 # Cross-platform helper assets
 │   │   └── src/
 │   │       ├── commands/            # Command handlers
-│   │       └── context/             # Internal context assembly helpers
+│   │       ├── context/             # Internal context assembly helpers
+│   │       └── deployment/          # Release helper internals
 │   ├── codex/                       # Dual-mode Claude + Codex collaboration
-│   ├── deployment/                  # Deployment & release management
 │   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
 │   ├── guidance/                    # Governance control plane
 │   ├── hooks/                       # 17 hooks + 12 background workers
@@ -146,7 +146,6 @@ v3/
 │
 ├── docs/                            # Documentation
 ├── scripts/                         # Utility scripts
-├── index.ts                         # Main entry point
 ├── swarm.config.ts                  # Swarm configuration
 ├── vitest.config.ts                 # Test configuration
 └── package.json                     # Monorepo package
@@ -239,6 +238,13 @@ hive-flow agent spawn --type queen-coordinator
 hive-flow memory search "knowledge"
 ```
 
+Release helper internals that used to live in the standalone deployment package
+now ship from the CLI package:
+
+```typescript
+import { ReleaseManager } from '@hive-flow/cli/deployment';
+```
+
 ### @hive-flow/testing
 TDD London School framework with mocks, fixtures, and regression testing.
 
@@ -255,16 +261,6 @@ Common types, events, utilities, and core interfaces.
 ```typescript
 import { EventBus, Result, success, failure } from '@hive-flow/shared';
 import type { AgentId, TaskStatus } from '@hive-flow/shared/types';
-```
-
-### @hive-flow/deployment
-Release management and CI/CD automation.
-
-```typescript
-import { ReleaseManager } from '@hive-flow/deployment';
-
-const release = new ReleaseManager();
-await release.prepare({ version: '3.0.0', changelog: '...' });
 ```
 
 ## Usage
@@ -369,7 +365,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 22 packages |
+| **Code** | Package count | 19 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -388,7 +384,6 @@ pnpm test:coverage
 - [@hive-flow/cli](./@hive-flow/cli/)
 - [@hive-flow/testing](./@hive-flow/testing/)
 - [@hive-flow/shared](./@hive-flow/shared/)
-- [@hive-flow/deployment](./@hive-flow/deployment/)
 
 ### Examples
 - [HiveMemory Example](./@hive-flow/memory/examples/hivememory-example.ts)

@@ -2,6 +2,9 @@
  * Tests for Deployment Module
  */
 import { describe, it, expect } from 'vitest';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { ReleaseManager } from '../index.js';
 
 describe('ReleaseManager', () => {
@@ -15,6 +18,37 @@ describe('ReleaseManager', () => {
       const manager = new ReleaseManager('/custom/path');
       expect(manager).toBeDefined();
     });
+  });
+
+  it('should prepare a dry-run release without mutating package.json', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hive-flow-release-'));
+    const pkgPath = join(dir, 'package.json');
+
+    try {
+      writeFileSync(pkgPath, JSON.stringify({
+        name: 'demo-package',
+        version: '1.2.3',
+        description: 'demo',
+        repository: { type: 'git', url: 'https://example.invalid/repo.git' }
+      }, null, 2) + '\n');
+
+      const manager = new ReleaseManager(dir);
+      const result = await manager.prepareRelease({
+        bumpType: 'patch',
+        dryRun: true,
+        generateChangelog: false,
+        createTag: false,
+        commit: false,
+        skipValidation: true
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.oldVersion).toBe('1.2.3');
+      expect(result.newVersion).toBe('1.2.4');
+      expect(JSON.parse(readFileSync(pkgPath, 'utf8')).version).toBe('1.2.3');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

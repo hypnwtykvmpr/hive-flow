@@ -1,6 +1,6 @@
 /**
- * @hive-flow/deployment
- * Release management, CI/CD, and versioning module
+ * CLI deployment helpers
+ * Release management, CI/CD, and versioning support for Hive Flow CLI
  */
 
 // Export types

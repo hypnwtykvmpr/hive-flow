@@ -48,9 +48,6 @@
       "@hive-flow/testing": [
         "./@hive-flow/testing/src"
       ],
-      "@hive-flow/deployment": [
-        "./@hive-flow/deployment/src"
-      ],
       "@hive-flow/shared": [
         "./@hive-flow/shared/src"
       ],
@@ -88,9 +85,6 @@
     },
     {
       "path": "./@hive-flow/testing"
-    },
-    {
-      "path": "./@hive-flow/deployment"
     },
     {
       "path": "./@hive-flow/hooks"

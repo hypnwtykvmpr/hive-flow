@@ -55,6 +55,10 @@
     "./mcp-tools": {
       "types": "./dist/src/mcp-tools/index.d.ts",
       "import": "./dist/src/mcp-tools/index.js"
+    },
+    "./deployment": {
+      "types": "./dist/src/deployment/index.d.ts",
+      "import": "./dist/src/deployment/index.js"
     }
   },
   "files": [

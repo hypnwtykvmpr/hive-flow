@@ -120,7 +120,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Security-focused test patterns
 - Comprehensive coverage reporting
 
-#### 9. `@hive-flow/deployment` - Release Management
+#### 9. CLI release helpers - Release Management
 - Automated versioning
 - CI/CD pipeline integration
 - Multi-platform builds
