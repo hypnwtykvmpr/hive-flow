@@ -370,6 +370,35 @@ describe('provider bridge task completion notifications', () => {
     expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
   });
 
+  it('uses a codex-prefixed result agent id over stale ambient Claude ownership', () => {
+    const projectRoot = tempDir('hf-bridge-agentid-conflict-project-');
+    const hiveHome = tempDir('hf-bridge-agentid-conflict-home-');
+    const taskId = 'task-agentid-conflict-codex';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+    writeFileSync(resultFile, JSON.stringify({
+      success: true,
+      agentId: 'codex-notif-canary-deepseek',
+      targetAgent: 'claude',
+      ownerClientKind: 'claude-code',
+      content: 'finished',
+    }), 'utf8');
+
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.HIVE_FLOW_SESSION_ID = 'ambient-hive-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'claude-code';
+    process.env.CLAUDE_SESSION_ID = 'ambient-claude-session';
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+
+    expect(bridge.notifyTaskCompletionFromResultFile(resultFile)).toBe(true);
+
+    const localPending = readFileSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'), 'utf8');
+    expect(localPending).toContain('"targetAgent":"codex"');
+    expect(localPending).toContain('agent=codex-notif-canary-deepseek');
+    expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
+  });
+
   it('escalates denied privileged run_command attempts to the owning operator', async () => {
     const projectRoot = tempDir('hf-bridge-permission-project-');
     const hiveHome = tempDir('hf-bridge-permission-home-');

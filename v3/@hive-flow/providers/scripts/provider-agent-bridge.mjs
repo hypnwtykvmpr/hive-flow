@@ -190,8 +190,42 @@ function bridgeTargetAgentFromAgentId(agentId) {
   return null;
 }
 
+function bridgeOwnerFromAgentId(agentId) {
+  const normalizedAgentId = bridgeStringValue(agentId);
+  const targetAgent = bridgeTargetAgentFromAgentId(normalizedAgentId);
+  if (targetAgent === 'codex') {
+    return {
+      agentId: normalizedAgentId,
+      ownerClientKind: 'codex',
+      targetAgent,
+    };
+  }
+  if (targetAgent === 'claude') {
+    return {
+      agentId: normalizedAgentId,
+      ownerClientKind: 'claude-code',
+      targetAgent,
+    };
+  }
+  return normalizedAgentId ? { agentId: normalizedAgentId } : {};
+}
+
+function bridgeSessionValueForOwner(env = process.env, owner = {}) {
+  const explicit = bridgeStringValue(owner.ownerSessionId);
+  if (explicit) return explicit;
+  const kind = bridgeWakeClientKind(owner.ownerClientKind);
+  if (kind === 'codex') {
+    return bridgeStringValue(env.CODEX_SESSION_ID)
+      || bridgeStringValue(env.CODEX_THREAD_ID);
+  }
+  if (kind === 'claude-code') {
+    return bridgeStringValue(env.CLAUDE_SESSION_ID);
+  }
+  return bridgeSessionValue(env, owner);
+}
+
 function bridgeSessionKeyFor(env = process.env, owner = {}) {
-  const session = bridgeSessionValue(env, owner);
+  const session = bridgeSessionValueForOwner(env, owner);
   if (!session) return null;
   const clientKind = bridgeClientKind(env, owner);
   return `s_${createHash('sha256').update(`${clientKind}\0${session}`).digest('hex').slice(0, 32)}`;
@@ -252,13 +286,20 @@ function bridgeReadJsonFile(file) {
 
 function bridgeOwnerFromObject(obj) {
   if (!obj || typeof obj !== 'object') return {};
-  const ownerClientKind = bridgeStringValue(obj.ownerClientKind || obj.owner_client_kind || obj.clientKind || obj.client_kind);
-  const explicitTarget = bridgeStringValue(obj.targetAgent || obj.target_agent);
+  const ownerSessionId = bridgeStringValue(obj.ownerSessionId || obj.owner_session_id || obj.sessionId || obj.session_id);
+  const agentId = bridgeStringValue(obj.agentId || obj.agent_id);
+  const agentOwner = bridgeOwnerFromAgentId(agentId);
+  let ownerClientKind = bridgeStringValue(obj.ownerClientKind || obj.owner_client_kind || obj.clientKind || obj.client_kind);
+  let explicitTarget = bridgeStringValue(obj.targetAgent || obj.target_agent);
+  if (!ownerSessionId && agentOwner.targetAgent && explicitTarget && explicitTarget !== agentOwner.targetAgent) {
+    ownerClientKind = agentOwner.ownerClientKind || ownerClientKind;
+    explicitTarget = agentOwner.targetAgent;
+  }
   return {
-    ownerSessionId: bridgeStringValue(obj.ownerSessionId || obj.owner_session_id || obj.sessionId || obj.session_id),
-    ownerClientKind,
-    targetAgent: explicitTarget || (ownerClientKind ? bridgeTargetAgent({}, { ownerClientKind }) : null),
-    agentId: bridgeStringValue(obj.agentId || obj.agent_id),
+    ownerSessionId,
+    ownerClientKind: ownerClientKind || agentOwner.ownerClientKind,
+    targetAgent: explicitTarget || (ownerClientKind ? bridgeTargetAgent({}, { ownerClientKind }) : null) || agentOwner.targetAgent,
+    agentId,
   };
 }
 
@@ -276,10 +317,11 @@ function bridgeMergeOwners(...owners) {
   return merged;
 }
 
-function bridgeDurableOwnerFields(env = process.env) {
-  const ownerSessionId = bridgeSessionValue(env);
-  const ownerClientKind = bridgeClientKind(env);
-  const targetAgent = bridgeTargetAgent(env, { ownerSessionId, ownerClientKind });
+function bridgeDurableOwnerFields(env = process.env, owner = {}) {
+  const agentOwner = bridgeOwnerFromAgentId(owner.agentId);
+  const ownerClientKind = agentOwner.ownerClientKind || bridgeClientKind(env, owner);
+  const targetAgent = agentOwner.targetAgent || bridgeTargetAgent(env, { ...owner, ownerClientKind });
+  const ownerSessionId = bridgeSessionValueForOwner(env, { ...owner, ownerClientKind, targetAgent });
   return {
     ...(targetAgent ? { targetAgent } : {}),
     ...(ownerSessionId ? { ownerSessionId } : {}),
@@ -5258,7 +5300,7 @@ async function main() {
     result = {
       success: true,
       agentId,
-      ...bridgeDurableOwnerFields(process.env),
+      ...bridgeDurableOwnerFields(process.env, { agentId }),
       content: response.content,
       model: response.model,
       usage: response.usage,
@@ -5354,7 +5396,7 @@ async function handleMainError(err) {
     error: err.message || String(err),
     code: err.code || 'BRIDGE_ERROR',
     agentId: logAgentId !== 'unknown' ? logAgentId : undefined,
-    ...bridgeDurableOwnerFields(process.env),
+    ...bridgeDurableOwnerFields(process.env, { agentId: logAgentId !== 'unknown' ? logAgentId : undefined }),
   };
 
   // Reset agent status to idle before writing the error result file so that

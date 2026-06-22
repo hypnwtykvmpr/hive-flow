@@ -741,6 +741,37 @@ describe('provider bridge single tool execution path', () => {
     }
   }, 30000);
 
+  it('uses codex-prefixed agent id over ambient Claude ownership in detached bridge results', async () => {
+    const layout = makeInstallLayout({ fakeMcpClient: false });
+    const root = makeProjectRoot('hf-bridge-single-path-agentid-owner-');
+    try {
+      const readable = join(root, 'src', 'fixture.txt');
+      writeFileSync(readable, 'detached codex owner read\n', 'utf8');
+
+      const { result } = await runDetachedBridge({
+        bridgePath: layout.bridgePath,
+        root,
+        agentId: 'codex-notif-canary-deepseek',
+        toolName: 'read_file',
+        toolArgs: { path: readable },
+        envExtra: {
+          HIVE_FLOW_HOME: join(root, '.hive-flow-home'),
+          HIVE_FLOW_CLIENT_KIND: 'claude-code',
+          CLAUDE_SESSION_ID: 'ambient-claude-session',
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.ownerSessionId).toBeUndefined();
+      expect(result.ownerClientKind).toBe('codex');
+      expect(result.targetAgent).toBe('codex');
+      expect(result.content).toContain('tool-result:detached codex owner read');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(layout.installRoot, { recursive: true, force: true });
+    }
+  }, 30000);
+
   it('does not send incompatible tool_choice:required for OpenRouter MiniMax M3', async () => {
     const layout = makeInstallLayout({ fakeMcpClient: false });
     const root = makeProjectRoot('hf-bridge-single-path-openrouter-');
