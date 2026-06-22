@@ -522,7 +522,7 @@ COHERE_API_KEY=...
 
 ```typescript
 import { createProviderManager } from '@hive-flow/providers';
-import { createUnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { createUnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 
 // Create provider manager
 const providers = await createProviderManager({
@@ -546,7 +546,7 @@ const coordinator = createUnifiedSwarmCoordinator({
 
 - [@hive-flow/embeddings](../embeddings) - Embedding generation
 - [@hive-flow/memory](../memory) - Vector storage and retrieval
-- [@hive-flow/swarm](../swarm) - Multi-agent coordination
+- [@hive-flow/cli/swarm](../cli/docs/swarm) - Multi-agent coordination
 - [@hive-flow/neural](../neural) - SONA learning integration
 
 ## License

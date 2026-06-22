@@ -88,7 +88,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Memory profiling tools
 - Benchmark suite with Flash Attention targets
 
-#### 5. `@hive-flow/swarm` - Swarm Coordination
+#### 5. `@hive-flow/cli/swarm` - Swarm Coordination
 - Unified SwarmCoordinator (single implementation)
 - 15-agent hierarchical mesh topology
 - Attention-based consensus mechanisms
@@ -281,7 +281,7 @@ npx @hive-flow/security audit
 npx @hive-flow/memory unify --backend hivememory
 
 # Spawn v3 swarm
-npx @hive-flow/swarm coordinate --agents 15
+hive-flow swarm coordinate --agents 15
 ```
 
 ### Support & Feedback

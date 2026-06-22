@@ -132,7 +132,7 @@ count_domains() {
     local domains=0
 
     # Map @hive-flow modules to DDD domains
-    [ -d "$V3_DIR/@hive-flow/swarm" ] && ((domains++))      # task-management
+    [ -d "$V3_DIR/@hive-flow/cli/src/swarm" ] && ((domains++))      # task-management
     [ -d "$V3_DIR/@hive-flow/memory" ] && ((domains++))     # session-management
     [ -d "$V3_DIR/@hive-flow/cli/src/performance" ] && ((domains++)) # health-monitoring
     [ -d "$V3_DIR/@hive-flow/cli" ] && ((domains++))        # lifecycle-management
@@ -171,7 +171,7 @@ sync_metrics() {
     "completed": $domains,
     "total": 5,
     "list": [
-      {"name": "task-management", "status": "$([ -d "$V3_DIR/@hive-flow/swarm" ] && echo "complete" || echo "pending")", "module": "swarm"},
+      {"name": "task-management", "status": "$([ -d "$V3_DIR/@hive-flow/cli/src/swarm" ] && echo "complete" || echo "pending")", "module": "swarm"},
       {"name": "session-management", "status": "$([ -d "$V3_DIR/@hive-flow/memory" ] && echo "complete" || echo "pending")", "module": "memory"},
       {"name": "health-monitoring", "status": "$([ -d "$V3_DIR/@hive-flow/cli/src/performance" ] && echo "complete" || echo "pending")", "module": "performance"},
       {"name": "lifecycle-management", "status": "$([ -d "$V3_DIR/@hive-flow/cli" ] && echo "complete" || echo "pending")", "module": "cli"},
@@ -188,7 +188,7 @@ sync_metrics() {
     "activeAgents": 0,
     "totalAgents": 15,
     "topology": "hierarchical-mesh",
-    "coordination": "$([ -d "$V3_DIR/@hive-flow/swarm" ] && echo "ready" || echo "pending")"
+    "coordination": "$([ -d "$V3_DIR/@hive-flow/cli/src/swarm" ] && echo "ready" || echo "pending")"
   },
   "lastUpdated": "$timestamp",
   "autoSynced": true

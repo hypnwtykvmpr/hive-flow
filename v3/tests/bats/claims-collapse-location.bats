@@ -77,7 +77,7 @@ setup() {
     count=$((count + 1))
   done
 
-  [ "$count" -eq 14 ]
-  run grep -F '14 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 13 ]
+  run grep -F '13 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

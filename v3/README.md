@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (14 packages)
+├── @hive-flow/                    # Modular packages (13 packages)
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
 │   ├── cli/                         # CLI module (40 commands)
@@ -106,7 +106,8 @@ v3/
 │   │   └── src/
 │   │       ├── commands/            # Command handlers
 │   │       ├── context/             # Internal context assembly helpers
-│   │       └── deployment/          # Release helper internals
+│   │       ├── deployment/          # Release helper internals
+│   │       └── swarm/               # Swarm coordination internals
 │   ├── codex/                       # Dual-mode Claude + Codex collaboration
 │   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
 │   ├── guidance/                    # Governance control plane
@@ -132,11 +133,6 @@ v3/
 │   ├── providers/                   # LLM provider integrations
 │   ├── security/                    # Input validation, CVE remediation
 │   ├── shared/                      # Shared types, events, resilience
-│   ├── swarm/                       # Swarm coordination
-│   │   └── src/
-│   │       ├── unified-coordinator.ts
-│   │       ├── topology-manager.ts
-│   │       └── consensus/
 │   └── testing/                     # TDD London School framework
 │       └── src/
 │           ├── fixtures/
@@ -178,11 +174,11 @@ await memory.store({ key: 'knowledge', value: 'context', embedding: [...] });
 const results = await memory.search({ query: 'knowledge', limit: 10 });
 ```
 
-### @hive-flow/swarm
-50-agent hierarchical mesh coordination with consensus protocols.
+### @hive-flow/cli/swarm
+150-agent hierarchical mesh coordination with consensus protocols.
 
 ```typescript
-import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { UnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 
 const coordinator = new UnifiedSwarmCoordinator({
   topology: 'hierarchical-mesh',
@@ -267,7 +263,7 @@ import type { AgentId, TaskStatus } from '@hive-flow/shared/types';
 ### Quick Start
 
 ```typescript
-import { createUnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { createUnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 
 const swarm = createUnifiedSwarmCoordinator({
   topology: { type: 'hierarchical-mesh', maxAgents: 150 },
@@ -281,7 +277,7 @@ await swarm.initialize();
 
 ```typescript
 // Import the package you need directly.
-import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { UnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 import { PasswordHasher } from '@hive-flow/security';
 import { HNSWIndex } from '@hive-flow/memory';
 ```
@@ -364,7 +360,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 14 packages |
+| **Code** | Package count | 13 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -376,7 +372,7 @@ pnpm test:coverage
 ### Modules
 - [@hive-flow/security](./@hive-flow/security/)
 - [@hive-flow/memory](./@hive-flow/memory/)
-- [@hive-flow/swarm](./@hive-flow/swarm/)
+- [@hive-flow/cli/swarm](./@hive-flow/cli/src/swarm/)
 - [@hive-flow/cli/integration](./@hive-flow/cli/src/integration/)
 - [@hive-flow/cli/performance](./@hive-flow/cli/docs/performance/)
 - [@hive-flow/neural](./@hive-flow/neural/)

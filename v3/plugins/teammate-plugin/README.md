@@ -471,7 +471,7 @@ const bridge = await createTeammateBridge({
 
 ```typescript
 import { createTeammateBridge } from '@hive-flow/teammate-plugin';
-import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { UnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 
 // Create bridge
 const bridge = await createTeammateBridge();

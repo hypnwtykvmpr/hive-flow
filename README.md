@@ -4104,19 +4104,18 @@ hive-flow memory stats
 <summary>🐝 <strong>Swarm Coordination</strong></summary>
 
 ```typescript
-import { createSwarm } from '@hive-flow/swarm';
+import { createUnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 
 // Create a hierarchical swarm
-const swarm = await createSwarm({
-  topology: 'hierarchical',
-  maxAgents: 8,
-  strategy: 'specialized'
+const swarm = createUnifiedSwarmCoordinator({
+  topology: { type: 'hierarchical', maxAgents: 8 }
 });
+await swarm.initialize();
 
 // Spawn agents
-await swarm.spawn('implementer', { name: 'implementer-1' });
-await swarm.spawn('tester', { name: 'tester-1' });
-await swarm.spawn('verifier', { name: 'verifier-1' });
+await swarm.spawnAgent({ type: 'coder', name: 'coder-1', capabilities: [], domain: 'core' });
+await swarm.spawnAgent({ type: 'tester', name: 'tester-1', capabilities: [], domain: 'core' });
+await swarm.spawnAgent({ type: 'reviewer', name: 'reviewer-1', capabilities: [], domain: 'core' });
 
 // Coordinate a task
 const result = await swarm.orchestrate({
@@ -4409,7 +4408,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 | Package | Purpose | Main Exports |
 |---------|---------|--------------|
 | `@hive-flow/memory` | Vector storage, HNSW, memory graph, learning bridge | `UnifiedMemoryService`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
-| `@hive-flow/swarm` | Agent coordination | `createSwarm`, `Swarm` |
+| `@hive-flow/cli/swarm` | Agent coordination | `createUnifiedSwarmCoordinator`, `UnifiedSwarmCoordinator` |
 | `@hive-flow/cli/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
 | `@hive-flow/hooks` | Event hooks, learning | `HooksService`, `ReasoningBank` |
@@ -4989,7 +4988,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/hooks` | Event-driven lifecycle | ReasoningBank, lifecycle hooks, pattern learning |
 | `@hive-flow/memory` | Unified vector storage | UnifiedMemoryService, RVF binary format, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
-| `@hive-flow/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
+| `@hive-flow/cli/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
 | `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
 | `@hive-flow/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
@@ -6449,7 +6448,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/hooks/) |
 | `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
-| `@hive-flow/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
+| `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/cli/src/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
 | `@hive-flow/neural` | Local pattern learning helpers | [Source](./v3/@hive-flow/neural/) |
 | `@hive-flow/cli/testing` | TDD London School framework | [Source](./v3/@hive-flow/cli/src/testing/) |

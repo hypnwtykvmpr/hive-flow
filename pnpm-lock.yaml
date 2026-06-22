@@ -173,9 +173,6 @@ importers:
       '@hive-flow/providers':
         specifier: workspace:*
         version: link:../providers
-      '@hive-flow/swarm':
-        specifier: workspace:*
-        version: link:../swarm
     devDependencies:
       '@hive-flow/plugins':
         specifier: workspace:*
@@ -410,16 +407,6 @@ importers:
       '@types/ws':
         specifier: ^8.5.10
         version: 8.18.1
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  v3/@hive-flow/swarm:
-    dependencies:
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
-    devDependencies:
       vitest:
         specifier: ^4.0.16
         version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)

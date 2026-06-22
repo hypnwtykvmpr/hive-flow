@@ -119,21 +119,21 @@ export interface GraphRoPEContext {
 }
 
 // ============================================================================
-// V3 Swarm Types (Source Interface from @hive-flow/swarm)
+// V3 Swarm Types (Source Interface from @hive-flow/cli/swarm)
 // ============================================================================
 
 /**
- * V3 Topology types (from @hive-flow/swarm)
+ * V3 Topology types (from @hive-flow/cli/swarm)
  */
 export type V3TopologyType = 'mesh' | 'hierarchical' | 'centralized' | 'hybrid';
 
 /**
- * V3 Agent Domain types (from @hive-flow/swarm)
+ * V3 Agent Domain types (from @hive-flow/cli/swarm)
  */
 export type V3AgentDomain = 'queen' | 'security' | 'core' | 'integration' | 'support';
 
 /**
- * V3 Agent State interface (simplified from @hive-flow/swarm)
+ * V3 Agent State interface (simplified from @hive-flow/cli/swarm)
  */
 export interface V3AgentState {
   id: { id: string; swarmId: string; type: string; instance: number };
@@ -171,7 +171,7 @@ export interface V3AgentState {
 }
 
 /**
- * V3 Task Definition interface (simplified from @hive-flow/swarm)
+ * V3 Task Definition interface (simplified from @hive-flow/cli/swarm)
  */
 export interface V3TaskDefinition {
   id: { id: string; swarmId: string; sequence: number; priority: string };

@@ -133,8 +133,8 @@ const V3_CLASSES: Record<string, MockClass> = {
  * V2 to V3 import alias mapping
  */
 const IMPORT_ALIASES: Record<string, string> = {
-  'hive-flow/hive-mind': '@hive-flow/swarm',
-  'hive-flow/swarm': '@hive-flow/swarm',
+  'hive-flow/hive-mind': '@hive-flow/cli/swarm',
+  'hive-flow/swarm': '@hive-flow/cli/swarm',
   'hive-flow/memory': '@hive-flow/memory',
   'hive-flow/agents': '@hive-flow/agent-lifecycle',
   'hive-flow/tasks': '@hive-flow/task-execution',
@@ -207,10 +207,10 @@ describe('V2 API Compatibility', () => {
       expect(resolved).toBe(v3Path);
     });
 
-    it('should resolve hive-flow/hive-mind to @hive-flow/swarm', () => {
+    it('should resolve hive-flow/hive-mind to @hive-flow/cli/swarm', () => {
       const resolved = mockRegistry.resolveImport('hive-flow/hive-mind');
 
-      expect(resolved).toBe('@hive-flow/swarm');
+      expect(resolved).toBe('@hive-flow/cli/swarm');
     });
 
     it('should resolve hive-flow/memory to @hive-flow/memory', () => {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { UnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 
 const coordinators: UnifiedSwarmCoordinator[] = [];
 

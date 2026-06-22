@@ -265,7 +265,7 @@ export class IntegrationRegressionSuite {
       timeout: 10000,
       run: async () => {
         try {
-          const { UnifiedSwarmCoordinator } = await import('@hive-flow/swarm');
+          const { UnifiedSwarmCoordinator } = await import('../../swarm/index.js');
 
           const coordinator = new UnifiedSwarmCoordinator({
             topology: { type: 'hierarchical', maxAgents: 10 },
@@ -389,7 +389,7 @@ export class IntegrationRegressionSuite {
       timeout: 5000,
       run: async () => {
         try {
-          const swarm = await import('@hive-flow/swarm');
+          const swarm = await import('../../swarm/index.js');
           return typeof swarm.UnifiedSwarmCoordinator === 'function';
         } catch {
           return false;

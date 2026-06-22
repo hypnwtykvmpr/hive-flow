@@ -392,7 +392,7 @@ CLAUDE_CODE_TEAMMATE_COMMAND   # Spawn command
 
 **Hive Flow V3:**
 ```typescript
-import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
+import { UnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 
 const coordinator = new UnifiedSwarmCoordinator({
   topology: { type: 'hierarchical', maxAgents: 8 },

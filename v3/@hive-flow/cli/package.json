@@ -119,6 +119,14 @@
     "./aidefence/learning": {
       "types": "./dist/src/aidefence/domain/services/threat-learning-service.d.ts",
       "import": "./dist/src/aidefence/domain/services/threat-learning-service.js"
+    },
+    "./swarm": {
+      "types": "./dist/src/swarm/index.d.ts",
+      "import": "./dist/src/swarm/index.js"
+    },
+    "./swarm/*": {
+      "types": "./dist/src/swarm/*.d.ts",
+      "import": "./dist/src/swarm/*.js"
     }
   },
   "files": [
@@ -192,8 +200,7 @@
     "@hive-flow/guidance": "workspace:*",
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/neural": "workspace:*",
-    "@hive-flow/plugin-gastown-bridge": "workspace:*",
-    "@hive-flow/swarm": "workspace:*"
+    "@hive-flow/plugin-gastown-bridge": "workspace:*"
   },
   "publishConfig": {
     "access": "public",
