@@ -25,7 +25,6 @@ const DUPLICATE_ROSTER_ROOTS = [
   'agents',
   'v3/agents',
   'v3/@hive-flow/agents',
-  'v3/@hive-flow/aidefence/agents',
   'v3/@hive-flow/browser/agents',
   'v3/@hive-flow/codex/agents',
   'v3/@hive-flow/embeddings/agents',

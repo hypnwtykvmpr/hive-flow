@@ -8,7 +8,7 @@ import {
   isSafe,
   checkThreats,
   createThreatDetectionService,
-} from '../src/index.js';
+} from '../index.js';
 
 describe('ThreatDetectionService', () => {
   describe('detect()', () => {

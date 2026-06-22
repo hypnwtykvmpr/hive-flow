@@ -4134,7 +4134,7 @@ await swarm.shutdown({ graceful: true });
 <summary>🛡️ <strong>Security & AIDefence</strong></summary>
 
 ```typescript
-import { isSafe, checkThreats, createAIDefence } from '@hive-flow/aidefence';
+import { isSafe, checkThreats, createAIDefence } from '@hive-flow/cli/aidefence';
 
 // Quick safety check
 if (!isSafe(userInput)) {
@@ -4410,7 +4410,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 |---------|---------|--------------|
 | `@hive-flow/memory` | Vector storage, HNSW, memory graph, learning bridge | `UnifiedMemoryService`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
 | `@hive-flow/swarm` | Agent coordination | `createSwarm`, `Swarm` |
-| `@hive-flow/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
+| `@hive-flow/cli/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
 | `@hive-flow/hooks` | Event hooks, learning | `HooksService`, `ReasoningBank` |
 | `@hive-flow/security` | Input validation | `InputValidator`, `PathValidator` |
@@ -4894,7 +4894,7 @@ hive-flow security scan --depth full
 ### Programmatic Usage
 
 ```typescript
-import { isSafe, checkThreats, createAIDefence } from '@hive-flow/aidefence';
+import { isSafe, checkThreats, createAIDefence } from '@hive-flow/cli/aidefence';
 
 // Quick boolean check
 const safe = isSafe("Hello, help me write code");       // true
@@ -4934,7 +4934,7 @@ await aidefence.learnFromDetection(input, result, {
 ### Multi-Agent Security Consensus
 
 ```typescript
-import { calculateSecurityConsensus } from '@hive-flow/aidefence';
+import { calculateSecurityConsensus } from '@hive-flow/cli/aidefence';
 
 const assessments = [
   { agentId: 'guardian-1', threatAssessment: result1, weight: 1.0 },
@@ -4952,7 +4952,7 @@ const consensus = calculateSecurityConsensus(assessments);
 {
   "hooks": {
     "pre-agent-input": {
-      "command": "node -e \"const { isSafe } = require('@hive-flow/aidefence'); if (!isSafe(process.env.AGENT_INPUT)) { process.exit(1); }\"",
+      "command": "node -e \"import('@hive-flow/cli/aidefence').then(({ isSafe }) => { if (!isSafe(process.env.AGENT_INPUT || '')) { process.exit(1); } })\"",
       "timeout": 5000
     }
   }

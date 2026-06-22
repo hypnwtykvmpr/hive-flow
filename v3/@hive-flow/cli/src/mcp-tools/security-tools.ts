@@ -11,20 +11,13 @@
  */
 
 import type { MCPTool, MCPToolResult } from './types.js';
-import { autoInstallPackage } from './auto-install.js';
-import { createRequire } from 'module';
-
-// Create require for resolving module paths
-const require = createRequire(import.meta.url);
 
 // AIDefence instance type
-type AIDefenceInstance = ReturnType<typeof import('@hive-flow/aidefence').createAIDefence>;
+type AIDefenceModule = typeof import('../aidefence/index.js');
+type AIDefenceInstance = ReturnType<AIDefenceModule['createAIDefence']>;
 
 // Lazy-loaded AIDefence instance
 let aidefenceInstance: AIDefenceInstance | null = null;
-
-// Track if we've attempted install this session
-let installAttempted = false;
 
 /**
  * Get or create AIDefence instance (throws if unavailable)
@@ -34,54 +27,17 @@ async function getAIDefence(): Promise<AIDefenceInstance> {
     return aidefenceInstance;
   }
 
-  const packageName = '@hive-flow/aidefence';
-
-  // First attempt - try to load via dynamic import (ESM)
+  // Lazy-load the in-package AIDefence implementation.
   try {
-    const aidefence = await import(packageName);
+    const aidefence = await import('../aidefence/index.js');
     const instance = aidefence.createAIDefence({ enableLearning: true });
     if (!instance) {
       throw new Error('createAIDefence returned null');
     }
     aidefenceInstance = instance;
     return instance;
-  } catch (e) {
-    // Package not found or failed to load
-    const error = e as Error;
-    if (!error.message?.includes('Cannot find package') && !error.message?.includes('ERR_MODULE_NOT_FOUND')) {
-      // Different error - might be a real issue
-      throw new Error(`AIDefence failed to load: ${error.message}`);
-    }
-  }
-
-  // Don't attempt install more than once per session
-  if (installAttempted) {
-    throw new Error('AIDefence package not available. Install @hive-flow/aidefence with your configured package manager.');
-  }
-  installAttempted = true;
-
-  // Second attempt - auto-install and retry
-  console.error(`[hive-flow] ${packageName} not found, attempting auto-install...`);
-  const installed = await autoInstallPackage(packageName);
-
-  if (!installed) {
-    throw new Error('AIDefence package not available. Install @hive-flow/aidefence with your configured package manager.');
-  }
-
-  // Retry with ESM cache busting via file:// URL + timestamp
-  try {
-    const modulePath = require.resolve(packageName);
-    const cacheBust = `?t=${Date.now()}`;
-    const aidefence = await import(`file://${modulePath}${cacheBust}`);
-    const instance = aidefence.createAIDefence({ enableLearning: true });
-    if (!instance) {
-      throw new Error('createAIDefence returned null after install');
-    }
-    aidefenceInstance = instance;
-    console.error(`[hive-flow] ${packageName} loaded successfully after install`);
-    return instance;
-  } catch (retryError) {
-    throw new Error(`AIDefence installed but failed to load: ${retryError}. Try restarting the MCP server.`);
+  } catch (error) {
+    throw new Error(`AIDefence failed to load: ${String(error)}`);
   }
 }
 
@@ -393,7 +349,7 @@ const aidefenceIsSafeTool: MCPTool = {
     const input = args.input as string;
 
     try {
-      const { isSafe } = await import('@hive-flow/aidefence');
+      const { isSafe } = await import('../aidefence/index.js');
       const safe = isSafe(input);
 
       return {

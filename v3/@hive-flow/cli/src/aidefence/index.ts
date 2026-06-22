@@ -1,5 +1,5 @@
 /**
- * @hive-flow/aidefence
+ * @hive-flow/cli/aidefence
  *
  * AI Manipulation Defense System with self-learning capabilities.
  *
@@ -12,7 +12,7 @@
  *
  * @example
  * ```typescript
- * import { createAIDefence } from '@hive-flow/aidefence';
+ * import { createAIDefence } from '@hive-flow/cli/aidefence';
  *
  * const aidefence = createAIDefence({ enableLearning: true });
  *

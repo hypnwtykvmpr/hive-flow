@@ -107,6 +107,18 @@
     "./integration/*": {
       "types": "./dist/src/integration/*.d.ts",
       "import": "./dist/src/integration/*.js"
+    },
+    "./aidefence": {
+      "types": "./dist/src/aidefence/index.d.ts",
+      "import": "./dist/src/aidefence/index.js"
+    },
+    "./aidefence/detection": {
+      "types": "./dist/src/aidefence/domain/services/threat-detection-service.d.ts",
+      "import": "./dist/src/aidefence/domain/services/threat-detection-service.js"
+    },
+    "./aidefence/learning": {
+      "types": "./dist/src/aidefence/domain/services/threat-learning-service.d.ts",
+      "import": "./dist/src/aidefence/domain/services/threat-learning-service.js"
     }
   },
   "files": [
@@ -174,7 +186,6 @@
     "zod": "^3.22.4"
   },
   "optionalDependencies": {
-    "@hive-flow/aidefence": "workspace:*",
     "@hive-flow/codex": "workspace:*",
     "@hive-flow/providers": "workspace:*",
     "@hive-flow/embeddings": "workspace:*",

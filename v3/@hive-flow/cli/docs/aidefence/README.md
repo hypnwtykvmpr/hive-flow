@@ -1,4 +1,4 @@
-# @hive-flow/aidefence
+# @hive-flow/cli/aidefence
 
 
 **AI Manipulation Defense System (AIMDS)** - Protect your AI applications from prompt injection, jailbreak attempts, and sensitive data exposure with sub-millisecond detection.
@@ -30,7 +30,7 @@
 
 ## Introduction
 
-`@hive-flow/aidefence` is a high-performance security library designed to protect AI/LLM applications from manipulation attempts. It provides:
+`@hive-flow/cli/aidefence` is a high-performance security library designed to protect AI/LLM applications from manipulation attempts. It provides:
 
 - **Real-time threat detection** with <10ms latency
 - **50+ built-in patterns** for prompt injection, jailbreaks, and social engineering
@@ -85,15 +85,8 @@
 
 ## Installation
 
-```bash
-# npm
-
-# pnpm
-pnpm add @hive-flow/aidefence
-
-# yarn
-yarn add @hive-flow/aidefence
-```
+`@hive-flow/cli/aidefence` is shipped as a Hive Flow CLI subpath export. Install
+or build the Hive Flow CLI, then import from the subpath.
 
 ### Local Search
 
@@ -107,7 +100,7 @@ package is required or installed.
 ### Basic Usage
 
 ```typescript
-import { isSafe, checkThreats } from '@hive-flow/aidefence';
+import { isSafe, checkThreats } from '@hive-flow/cli/aidefence';
 
 // Simple boolean check
 const safe = isSafe("Hello, help me write code");
@@ -130,7 +123,7 @@ console.log(result);
 ### With Learning Enabled
 
 ```typescript
-import { createAIDefence } from '@hive-flow/aidefence';
+import { createAIDefence } from '@hive-flow/cli/aidefence';
 
 const aidefence = createAIDefence({ enableLearning: true });
 
@@ -155,7 +148,7 @@ await aidefence.learnFromDetection(input, result, {
 ### With a Custom Local Vector Store
 
 ```typescript
-import { createAIDefence } from '@hive-flow/aidefence';
+import { createAIDefence } from '@hive-flow/cli/aidefence';
 
 const vectorStore = createLocalVectorStore({ path: './data/security' });
 
@@ -497,7 +490,7 @@ const result = await mcp.call('aidefence_scan', {
 Combine assessments from multiple security agents:
 
 ```typescript
-import { calculateSecurityConsensus } from '@hive-flow/aidefence';
+import { calculateSecurityConsensus } from '@hive-flow/cli/aidefence';
 
 const assessments = [
   { agentId: 'guardian-1', threatAssessment: result1, weight: 1.0 },
@@ -518,7 +511,7 @@ if (consensus.consensus === 'threat') {
 Implement custom storage for patterns:
 
 ```typescript
-import { VectorStore, createAIDefence } from '@hive-flow/aidefence';
+import { VectorStore, createAIDefence } from '@hive-flow/cli/aidefence';
 
 class MyVectorStore implements VectorStore {
   async store(key: string, vector: number[], metadata: object): Promise<void> {
@@ -544,13 +537,7 @@ Pre-scan agent inputs automatically:
 {
   "hooks": {
     "pre-agent-input": {
-      "command": "node -e \"
-        const { isSafe } = require('@hive-flow/aidefence');
-        if (!isSafe(process.env.AGENT_INPUT)) {
-          console.error('BLOCKED: Threat detected');
-          process.exit(1);
-        }
-      \"",
+      "command": "node -e \"import('@hive-flow/cli/aidefence').then(({ isSafe }) => { if (!isSafe(process.env.AGENT_INPUT || '')) { console.error('BLOCKED: Threat detected'); process.exit(1); } })\"",
       "timeout": 5000
     }
   }
@@ -566,15 +553,16 @@ Pre-scan agent inputs automatically:
 
 ```bash
 # Clone repository
-cd hive-flow/v3/@hive-flow/aidefence
+cd hive-flow/v3/@hive-flow/cli
 
 # Install dependencies
+pnpm install
 
 # Run tests
-npm test
+pnpm exec vitest run src/aidefence
 
 # Build
-npm run build
+pnpm run build
 ```
 
 ### Adding New Patterns

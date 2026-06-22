@@ -448,13 +448,13 @@ const defendCommand: Command = {
     output.writeln(output.bold('🛡️ AIDefence - AI Manipulation Defense System'));
     output.writeln(output.dim('─'.repeat(55)));
 
-    // Dynamic import of aidefence (allows package to be optional)
-    let createAIDefence: typeof import('@hive-flow/aidefence').createAIDefence;
+    // Dynamic import keeps this command lazy while loading the in-package AIDefence implementation.
+    let createAIDefence: typeof import('../aidefence/index.js').createAIDefence;
     try {
-      const aidefence = await import('@hive-flow/aidefence');
+      const aidefence = await import('../aidefence/index.js');
       createAIDefence = aidefence.createAIDefence;
-    } catch {
-      output.error('AIDefence package not installed. Install @hive-flow/aidefence with your configured package manager.');
+    } catch (error) {
+      output.error(`AIDefence failed to load: ${String(error)}`);
       return { success: false, message: 'AIDefence not available' };
     }
 

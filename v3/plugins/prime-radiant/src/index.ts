@@ -266,7 +266,7 @@ export const pluginMetadata = {
       '@hive-flow/security',
       '@hive-flow/coordination',
     ],
-    optional: ['@hive-flow/embeddings', '@hive-flow/aidefence'],
+    optional: ['@hive-flow/embeddings', '@hive-flow/cli'],
   },
   capabilities: [
     'coherence-checking',

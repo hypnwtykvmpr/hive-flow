@@ -75,12 +75,6 @@ importers:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  '@hive-flow/aidefence':
-    devDependencies:
-      vitest:
-        specifier: 4.1.0
-        version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
   '@hive-flow/browser':
     dependencies:
       agent-browser:
@@ -124,9 +118,6 @@ importers:
         specifier: ^3.22.4
         version: 3.25.76
     optionalDependencies:
-      '@hive-flow/aidefence':
-        specifier: workspace:*
-        version: link:../aidefence
       '@hive-flow/codex':
         specifier: workspace:*
         version: link:../codex

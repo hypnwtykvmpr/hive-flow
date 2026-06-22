@@ -10,7 +10,7 @@ invocation:
   - /security-review
 
 requires:
-  - "@hive-flow/aidefence"
+  - "@hive-flow/cli/aidefence"
 ---
 
 # Secure Review Skill
@@ -41,7 +41,7 @@ When `/secure-review` is invoked:
 ### Step 1: Initialize Security Tools
 
 ```typescript
-import { createAIDefence } from '@hive-flow/aidefence';
+import { createAIDefence } from '@hive-flow/cli/aidefence';
 
 const aidefence = createAIDefence({ enableLearning: true });
 ```

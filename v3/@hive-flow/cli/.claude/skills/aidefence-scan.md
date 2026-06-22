@@ -13,7 +13,7 @@ invocation:
 
 # Dependencies
 requires:
-  - "@hive-flow/aidefence"
+  - "@hive-flow/cli/aidefence"
 ---
 
 # AIDefence Scan Skill
@@ -40,7 +40,7 @@ When this skill is invoked, execute the following:
 ### Step 1: Initialize AIDefence
 
 ```typescript
-import { createAIDefence } from '@hive-flow/aidefence';
+import { createAIDefence } from '@hive-flow/cli/aidefence';
 
 const aidefence = createAIDefence({ enableLearning: true });
 ```
@@ -127,7 +127,7 @@ await aidefence.learnFromDetection(input, result, {
 Recommended mitigation for jailbreak: block
   Effectiveness: high
 
-Detection time: 0.08ms
+Detection time: low-latency
 ```
 
 ### Safe Input
@@ -140,12 +140,12 @@ Detection time: low-latency
 ```
 ✅ No manipulation threats detected
 ⚠️ PII detected in input (emails, SSNs, API keys, etc.)
-Detection time: 0.06ms
+Detection time: low-latency
 ```
 
 ## Integration Notes
 
-- This skill uses the embedded `@hive-flow/aidefence` package
+- This skill uses the embedded `@hive-flow/cli/aidefence` subpath
 - No external server required
 - Learning is enabled by default for pattern improvement
-- Detection targets: <10ms (actual: ~0.06ms)
+- Detection is designed for low-latency local scans

@@ -41,7 +41,7 @@ dependencies:
     - "@hive-flow/coordination": ">=3.0.0"
   optional:
     - "@hive-flow/embeddings": ">=3.0.0"  # For embedding generation
-    - "@hive-flow/aidefence": ">=3.0.0"   # For enhanced threat detection
+    - "@hive-flow/cli": ">=3.0.0"         # For enhanced threat detection via the AIDefence subpath
 
 # Capabilities provided by this plugin
 capabilities:
