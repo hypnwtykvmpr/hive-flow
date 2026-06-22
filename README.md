@@ -1,18 +1,18 @@
-# 🌊 Hive Flow v3: Enterprise AI Orchestration Platform
+# 🌊 Hive Flow v3
 
 <div align="center">
 
 
-# **Advanced multi-agent AI orchestration for Claude Code**
-*Deploy 18 specialized agents in coordinated swarms with self-learning capabilities, fault-tolerant consensus, and security hardening.*
+# **AI agent orchestration for Claude Code and Codex**
+*Deploy 18 canonical agent types with HiveMemory, MCP tools, statusline guardrails, provider-backed workers, and installable Claude/Codex integrations.*
 
 </div>
 
 ## Getting into the Flow
 
-Hive Flow is a comprehensive AI agent orchestration framework that transforms Claude Code into a powerful multi-agent development platform. It enables teams to deploy, coordinate, and optimize specialized AI agents working together on complex software engineering tasks.
+Hive Flow is an AI agent orchestration toolkit for Claude Code, Codex, and provider-backed workers. It coordinates specialized agents, persists memory, exposes MCP tools, and installs statusline/enforcement workflows that can be reused across projects.
 
-### Self-Learning/Self-Optimizing Agent Architecture
+### Agent Orchestration and Memory Architecture
 
 ```
 User → Hive Flow (CLI/MCP) → Router → Swarm → Agents → Memory → LLM Providers
@@ -35,15 +35,15 @@ flowchart TB
     end
 
     subgraph ROUTING["🧭 Routing Layer"]
-        QL[Q-Learning Router]
-        MOE[MoE - 8 Experts]
-        SK[Skills - 42+]
-        HK[Hooks - 17]
+        QL[Routing Engine]
+        MOE[MoE-style Router]
+        SK[Skills<br/>Claude + Codex]
+        HK[Hooks<br/>commands + workers]
     end
 
     subgraph SWARM["🐝 Swarm Coordination"]
-        TOPO[Topologies<br/>mesh/hier/ring/star]
-        CONS[Consensus<br/>Raft/BFT/Gossip/CRDT]
+        TOPO[Topologies<br/>hierarchical/mesh/adaptive/collective]
+        CONS[Consensus<br/>majority/weighted/unanimous/none]
         CLM[Claims<br/>Human-Agent Coord]
     end
 
@@ -58,7 +58,7 @@ flowchart TB
 
     subgraph RESOURCES["📦 Resources"]
         MEM[(Memory<br/>HiveMemory)]
-        PROV[Providers<br/>Claude/GPT/Gemini/Ollama]
+        PROV[Providers<br/>Claude/Codex/Gemini/DeepSeek/OpenRouter]
         WORK[Workers - 12<br/>ultralearn/audit/optimize]
     end
 
@@ -101,11 +101,11 @@ hive-flow init wizard
 
 🤖 **18 Specialized Agents** - Ready-to-use AI agents for coding, code review, testing, security audits, documentation, and DevOps. Each agent is optimized for its specific role.
 
-🐝 **Coordinated Agent Teams** - Run unlimited agents simultaneously in organized swarms. Agents spawn sub-workers, communicate, share context, and divide work automatically using hierarchical (queen/workers) or mesh (peer-to-peer) patterns.
+🐝 **Coordinated Agent Teams** - Run agent swarms within configured caps (default statusboard cap: 150 live agents, with buffer). Agents spawn sub-workers, communicate, share context, and divide work using hierarchical (queen/workers) or mesh-style patterns.
 
 🧠 **Learns From Your Workflow** - The system remembers what works. Successful patterns are stored and reused, routing similar tasks to the best-performing agents. Gets smarter over time.
 
-🔌 **Works With Any LLM** - Switch between Claude, GPT, Gemini, Cohere, or local models like Llama. Automatic failover if one provider is unavailable. Smart routing picks the cheapest option that meets quality requirements.
+🔌 **Multiple Provider Paths** - Route through Anthropic/Claude CLI, Codex CLI, Gemini CLI, Cursor CLI, DeepSeek, OpenRouter-backed models, and optional local/OpenAI-compatible provider paths where configured.
 
 ⚡ **Plugs Into Claude Code** - Native integration via MCP (Model Context Protocol). Use hive-flow commands directly in your Claude Code sessions with full tool access.
 
@@ -127,45 +127,45 @@ Every request flows through four layers: from your CLI or Claude Code interface,
 | User | Claude Code, CLI | Your interface to control and run commands |
 | Orchestration | MCP Server, Router, Hooks | Routes requests to the right agents |
 | Agents | 18 canonical types | Specialized workers (implementer, tester, verifier...) |
-| Providers | Anthropic, OpenAI, Google, Ollama | AI models that power reasoning |
+| Providers | Anthropic/Claude CLI, Codex CLI, Gemini CLI, DeepSeek, OpenRouter | AI providers and CLI runtimes that power reasoning |
 
 </details>
 
 <details>
 <summary>🐝 <strong>Swarm Coordination</strong> — How agents work together</summary>
 
-Agents organize into swarms led by queens that coordinate work, prevent drift, and reach consensus on decisions—even when some agents fail.
+Agents organize into swarms led by queens that coordinate work, prevent drift, and use configured consensus workflows for shared decisions.
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| Coordination | Queen, Swarm, Consensus | Manages agent teams (Raft, Byzantine, Gossip) |
+| Coordination | Queen, Swarm, Consensus | Manages agent teams and consensus workflows |
 | Drift Control | Hierarchical topology, Checkpoints | Prevents agents from going off-task |
 | Hive Mind | Queen-led hierarchy, Collective memory | Strategic/tactical/adaptive queens coordinate workers |
-| Consensus | Byzantine, Weighted, Majority | Fault-tolerant decisions (2/3 majority for BFT) |
+| Consensus | Majority, weighted, unanimous, none | Source-backed consensus modes used by the MCP swarm layer |
 
 **Hive Mind Capabilities:**
-- 🐝 **Queen Types**: Strategic (planning), Tactical (execution), Adaptive (optimization)
-- 👷 **8 Worker Types**: Researcher, Coder, Analyst, Tester, Architect, Reviewer, Optimizer, Documenter
-- 🗳️ **3 Consensus Algorithms**: Majority, Weighted (Queen 3x), Byzantine (f < n/3)
+- 🐝 **Queen Types**: Strategic, tactical, adaptive, and hive-management workflows
+- 👷 **Agent Types**: 18 canonical agent types including researcher, implementer, tester, verifier, architect, and documenter
+- 🗳️ **Consensus Modes**: Majority, weighted, unanimous, and no-consensus modes where configured
 - 🧠 **Collective Memory**: Shared knowledge, LRU cache, SQLite persistence with WAL
-- ⚡ **Performance**: faster batch spawning, SWE-Bench evaluation claims removed
+- ⚙️ **Operations**: Batch worker spawning, status inspection, memory stats, and broadcast messaging
 
 </details>
 
 <details>
 <summary>🧠 <strong>Intelligence & Memory</strong> — How the system learns and remembers</summary>
 
-The system stores successful patterns in vector memory, builds a knowledge graph for structural understanding, learns from outcomes via neural networks, and adapts routing based on what works best.
+The system stores successful patterns in vector memory, builds a knowledge graph for structural understanding, and adapts routing based on recorded outcomes.
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
 | Memory | HNSW, HiveMemory, Cache | Stores and retrieves patterns with vector search |
 | Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
-| Self-Learning | LearningBridge, SONA, ReasoningBank | Triggers learning from insights, confidence lifecycle (ADR-049) |
+| Pattern Learning | LearningBridge, ReasoningBank, PatternLearner | Records insights, confidence lifecycle, and reusable patterns |
 | Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
 | Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls |
-| Learning | SONA, MoE, ReasoningBank | Self-improves from results with low-latency adaptation |
-| Fine-tuning | MicroLoRA, EWC++ | Lightweight adaptation without full retraining |
+| Routing | MoE-style router, ReasoningBank | Uses local routing and pattern signals |
+| Runtime Training | Neural-model training loops | Not available in this build; local pattern-learning helpers and type surfaces exist where noted |
 
 </details>
 
@@ -332,21 +332,21 @@ swarm_init({
 | Capability | Claude Code Alone | Claude Code + Hive Flow |
 |------------|-------------------|---------------------------|
 | **Agent Collaboration** | Agents work in isolation, no shared context | Agents collaborate via swarms with shared memory and consensus |
-| **Coordination** | Manual orchestration between tasks | Queen-led hierarchy with 5 consensus algorithms (Raft, Byzantine, Gossip) |
+| **Coordination** | Manual orchestration between tasks | Queen-led hierarchy with configured consensus workflows |
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
-| **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
+| **Consensus** | ⛔ No multi-agent decisions | Configured proposal/vote workflows, including weighted and majority modes |
 | **Memory** | Session-only, no persistence | HiveMemory vector memory with HNSW support + knowledge graph |
 | **Vector Database** | ⛔ No native support | ⛔ No native vector DB |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
-| **Learning** | Static behavior, no adaptation | SONA self-learning with LearningBridge for insights |
+| **Learning** | Static behavior, no adaptation | Local pattern learning with LearningBridge, ReasoningBank, and PatternLearner |
 | **Agent Scoping** | Single project scope | 3-scope agent memory (project/local/user) with cross-agent transfer |
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
 | **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
-| **LLM Provider** | Anthropic only | Multiple providers with automatic failover and cost-based routing |
+| **LLM Provider** | Anthropic only | Multiple provider paths with configurable routing strategies |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
-| **Performance** | Baseline | Task, swarm, and SWE-Bench evaluation metrics require current benchmark evidence |
+| **Evaluation** | Baseline | Task and swarm metrics require a current benchmark run for the target environment |
 
 ## Quick Start
 
@@ -366,7 +366,38 @@ claude --dangerously-skip-permissions
 
 ### Installation
 
-#### Install (Recommended)
+#### Published Package (Recommended)
+
+```bash
+# Install the published CLI
+npm install -g hive-flow@v3alpha
+
+# Verify the command is available
+hive-flow --help
+
+# Initialize in the current project
+hive-flow init
+```
+
+#### Build From Source (Fresh Clone / Local Development)
+
+The published package ships compiled `dist/` files. A fresh git clone does not: `dist/` is intentionally ignored, so build before invoking `bin/cli.js`, `hive-flow mcp start`, or a local global install.
+
+```bash
+git clone <repo-url> hive-flow
+cd hive-flow
+pnpm install
+pnpm run build:ts
+
+# Run from the clone
+node bin/cli.js --help
+
+# Optional: install this checkout globally after building
+npm install -g .
+hive-flow --help
+```
+
+#### Project Setup
 
 ```bash
 # Initialize in the current project
@@ -447,7 +478,7 @@ hive-flow init --minimal
 ```
 
 <details>
-<summary>🤖 <strong>OpenAI Codex CLI Support</strong> — Full Codex integration with self-learning</summary>
+<summary>🤖 <strong>OpenAI Codex CLI Support</strong> — Codex integration with memory-backed coordination</summary>
 
 
 ### Quick Start for Codex
@@ -456,7 +487,7 @@ hive-flow init --minimal
 # Initialize for Codex CLI (creates AGENTS.md instead of CLAUDE.md)
 hive-flow init --codex
 
-# Full Codex setup with all 137+ skills
+# Full Codex setup with the bundled Codex skill set
 hive-flow init --codex --full
 
 # Initialize for both platforms (dual mode)
@@ -483,7 +514,7 @@ hive-flow init --dual
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Codex does the work. Hive-flow coordinates and learns.**
+**Codex does the work. Hive Flow coordinates and stores reusable patterns.**
 
 ### Dual-Mode Integration (Claude Code + Codex)
 
@@ -552,7 +583,7 @@ codex mcp list
 codex mcp add hive-flow -- hive-flow mcp start
 ```
 
-### Self-Learning Workflow
+### Memory-Backed Workflow
 
 ```
 1. LEARN:   memory_search(query="task keywords") → Find similar patterns
@@ -561,7 +592,7 @@ codex mcp add hive-flow -- hive-flow mcp start
 4. REMEMBER: memory_store(key, value, namespace="patterns") → Save for future
 ```
 
-The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each session automatically:
+The **Intelligence Loop** (ADR-050) automates this cycle through hooks where configured. Each session can:
 - Builds a knowledge graph from memory entries (PageRank + Jaccard similarity)
 - Injects ranked context into every route decision
 - Tracks edit patterns and generates new insights
@@ -578,7 +609,7 @@ The **Intelligence Loop** (ADR-050) automates this cycle through hooks. Each ses
 | `agent_spawn` | Register agent roles | Multi-agent workflows |
 | `neural_train` | Train on patterns | Periodic improvement |
 
-### 137+ Skills Available
+### Codex Skill Set
 
 | Category | Examples |
 |----------|----------|
@@ -641,31 +672,31 @@ claude mcp add hive-flow -- hive-flow mcp start
 claude mcp list
 ```
 
-Once added, Claude Code can use all 175+ hive-flow MCP tools directly:
+Once added, Claude Code can use the installed hive-flow MCP tool surface directly. The current CLI build registers 253 MCP tools, including:
 - `swarm_init` - Initialize agent swarms
 - `agent_spawn` - Spawn specialized agents
 - `memory_search` - Search patterns with vector search
 - `hooks_route` - Intelligent task routing
-- And 170+ more tools...
+- The rest of the registered CLI MCP tool registry
 
 ---
-## What is it exactly? Agents that learn, build and work perpetually. 
+## What is it exactly? Agent orchestration with memory and installable guardrails.
 
 <details>
 <summary>🆚 <strong>Why Hive Flow v3?</strong></summary>
 
-Hive Flow v3 introduces **self-learning neural capabilities** that no other agent orchestration framework offers. While competitors require manual agent configuration and static routing, Hive Flow learns from every task execution, prevents catastrophic forgetting of successful patterns, and intelligently routes work to specialized experts.
+Hive Flow v3 combines agent orchestration, memory-backed routing, MCP tools, hooks, and provider-backed workers. The neural package in this build provides deterministic local pattern learning and trajectory tracking; runtime neural-model training is not available in this build.
 
 #### 🧠 Neural & Learning
 
 | Feature | Hive Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **Self-Learning** | ✅ SONA + EWC++ | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Prevents Forgetting** | ✅ EWC++ consolidation | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Pattern Learning** | ✅ From trajectories | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Expert Routing** | ✅ MoE (8 experts) | Manual | Graph edges | ⛔ | Fixed |
-| **Attention Optimization** | ✅ Flash Attention | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Low-Rank Adaptation** | ✅ LoRA (compressed adapters) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Pattern Learning** | ✅ ReasoningBank + PatternLearner | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Pattern Consolidation** | ✅ Memory-backed consolidation | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Trajectory Tracking** | ✅ Local trajectory records | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Expert Routing** | ✅ MoE-style local router support | Manual | Graph edges | ⛔ | Fixed |
+| **Attention Optimization** | In progress / validation targets | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Adapter Types** | Algorithm/type support; runtime training unavailable | ⛔ | ⛔ | ⛔ | ⛔ |
 
 #### 💾 Memory & Embeddings
 
@@ -673,7 +704,7 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 |---------|----------------|--------|-----------|---------|-------|
 | **Vector Memory** | ✅ HiveMemory + HNSW support | ⛔ | Via plugins | ⛔ | ⛔ |
 | **Knowledge Graph** | ✅ PageRank + communities | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Self-Learning Memory** | ✅ LearningBridge (SONA) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Pattern-Learning Memory** | ✅ LearningBridge + ReasoningBank | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Agent-Scoped Memory** | ✅ 3-scope (project/local/user) | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Hyperbolic Embeddings** | ✅ Poincaré ball model | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Quantization** | ✅ Int8 (memory savings) | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -684,18 +715,18 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 
 | Feature | Hive Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **Swarm Topologies** | ✅ 4 types | 1 | 1 | 1 | 1 |
-| **Consensus Protocols** | ✅ 5 (Raft, BFT, etc.) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Swarm Topologies** | ✅ Source-backed topology options | 1 | 1 | 1 | 1 |
+| **Consensus Modes** | ✅ Majority, weighted, unanimous, none | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Work Ownership** | ✅ Claims system | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Background Workers** | ✅ 12 auto-triggered | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Multi-Provider LLM** | ✅ 6 with failover | 2 | 3 | 2 | 1 |
+| **Multi-Provider LLM** | ✅ Anthropic, Claude CLI, Codex CLI, Gemini CLI, Cursor CLI, DeepSeek, OpenRouter | 2 | 3 | 2 | 1 |
 
 #### 🔧 Developer Experience
 
 | Feature | Hive Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **MCP Integration** | ✅ Native (170+ tools) | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Skills System** | ✅ 42+ pre-built | ⛔ | ⛔ | ⛔ | Limited |
+| **MCP Integration** | ✅ Native (253 registered tools) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Skills System** | ✅ Claude/Codex skill bundles | ⛔ | ⛔ | ⛔ | Limited |
 | **Stream Pipelines** | ✅ JSON chains | ⛔ | Via code | ⛔ | ⛔ |
 | **Pair Programming** | ✅ Driver/Navigator | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Auto-Updates** | ✅ With rollback | ⛔ | ⛔ | ⛔ | ⛔ |
@@ -704,57 +735,57 @@ Hive Flow v3 introduces **self-learning neural capabilities** that no other agen
 
 | Feature | Hive Flow v3 | CrewAI | LangGraph | AutoGen | Manus |
 |---------|----------------|--------|-----------|---------|-------|
-| **Threat Detection** | ✅ AIDefence (<10ms) | ⛔ | ⛔ | ⛔ | ⛔ |
+| **Threat Detection** | ✅ AIDefence | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Cloud Platform** | ✅ Flow Nexus | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Code Transforms** | ✅ Agent Booster routing | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Input Validation** | ✅ Zod + Path security | ⛔ | ⛔ | ⛔ | ⛔ |
 
-<sub>*Comparison updated January 23, 2026*</sub>
+<sub>*Feature-oriented comparison; verify installed integrations and provider availability for your environment.*</sub>
 
 </details>
 
 <details>
-<summary>🚀 <strong>Key Differentiators</strong> — Self-learning, memory optimization, fault tolerance</summary>
+<summary>🚀 <strong>Key Differentiators</strong> — pattern learning, memory optimization, coordination guardrails</summary>
 
-What makes Hive Flow different from other agent frameworks? These 10 capabilities work together to create a system that learns from experience, runs efficiently on any hardware, and keeps working even when things go wrong.
+What makes Hive Flow different from other agent frameworks? These capabilities work together to create a system that records useful patterns, routes work across agents, and keeps coordination state visible.
 
 | | Feature | What It Does | Technical Details |
 |---|---------|--------------|-------------------|
-| 🧠 | **SONA** | Learns which agents perform best for each task type and routes work accordingly | Self-Optimizing Neural Architecture with low-latency adaptation |
-| 🔒 | **EWC++** | Preserves learned patterns when training on new ones — no forgetting | Elastic Weight Consolidation prevents catastrophic forgetting |
-| 🎯 | **MoE** | Routes tasks through 8 specialized expert networks based on task type | Mixture of 8 Experts with dynamic gating |
-| ⚡ | **Flash Attention** | Provides local attention-compatible computation for performance tests | Local attention coordinator |
+| 🧠 | **ReasoningBank** | Stores and retrieves reusable patterns for agent routing | Deterministic local pattern learning |
+| 🔒 | **Pattern Consolidation** | Consolidates useful patterns into memory-backed context | Memory consolidation instead of runtime neural retraining |
+| 🎯 | **MoE-style Routing** | Routes tasks using local router signals where configured | Router support lives in the CLI hivector layer |
+| ⚡ | **Attention Helper Surfaces** | Provides local attention-style kernels and benchmarks | Helper APIs exist; production performance depends on the active runtime |
 | 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
-| 📦 | **LoRA** | Compresses model weights so agents fit in limited memory | Memory compression via Low-Rank Adaptation |
+| 📦 | **Adapter Types** | Keeps adapter and low-rank algorithm surfaces available | Type/support surfaces only |
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | Memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
-| 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
+| 🛡️ | **Consensus Workflows** | Coordinates proposals and votes across workers | Source-backed vote/list/status workflows |
 
 </details>
 
 <details>
-<summary>💰 <strong>Intelligent 3-Tier Model Routing</strong> — Reduce API costs with right-sized routing</summary>
+<summary>💰 <strong>Model Routing</strong> — Use local paths and provider tiers where configured</summary>
 
-Not every task needs the most powerful (and expensive) model. Hive Flow analyzes each request and automatically routes it to the cheapest handler that can do the job well. Simple code transforms skip the LLM entirely using WebAssembly. Medium tasks use faster, cheaper models. Only complex architecture decisions use Opus.
+Not every task needs the same provider path. Hive Flow can route work through local transform helpers, lower-cost provider tiers, or stronger reasoning models depending on configuration and task complexity.
 
 **Cost & Usage Benefits:**
 
 | Benefit | Impact |
 |---------|--------|
-| 💵 **API Cost Reduction** | Lower costs by using right-sized models |
-| ⏱️ **Claude Max Usage** | Fewer LLM calls for tasks that can skip model inference |
-| 🚀 **Simple Tasks** | Local transform path instead of 2-5s LLM calls when available |
-| 🎯 **Zero Wasted Tokens** | Simple edits use 0 tokens (WASM handles them) |
+| 💵 **API Cost Control** | Prefer local or lower-cost paths when they are sufficient |
+| ⏱️ **Provider Usage** | Reduce unnecessary model calls for tasks that can use local helpers |
+| 🚀 **Simple Tasks** | Local transform path where available |
+| 🎯 **Token Discipline** | Avoid model inference for eligible local operations |
 
 **Routing Tiers:**
 
-| Tier | Handler | Latency | Cost | Use Cases |
-|------|---------|---------|------|-----------|
-| **1** | Agent Booster (WASM) | local | $0 | Simple transforms: var→const, add-types, remove-console |
-| **2** | Haiku/Sonnet | fast to interactive | $0.0002-$0.003 | Bug fixes, refactoring, feature implementation |
-| **3** | Opus | 2-5s | $0.015 | Architecture, security design, distributed systems |
+| Tier | Handler | Runtime | Use Cases |
+|------|---------|---------|-----------|
+| **1** | Agent Booster / local helpers | Local | Simple transforms: var→const, add-types, remove-console |
+| **2** | Mid-tier model paths | Provider-dependent | Bug fixes, refactoring, feature implementation |
+| **3** | Strong reasoning model paths | Provider-dependent | Architecture, security design, distributed systems |
 
-**Benchmark Results:** low-latency routing decisions
+**Benchmarking:** run project-local benchmarks before relying on any latency or cost target.
 
 </details>
 
@@ -771,7 +802,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 | 🔍 **Real-Time Compliance** | Statusline shows ADR compliance %, catches deviations immediately |
 | 🚧 **Bounded Contexts** | Each domain (Security, Memory, etc.) has clear boundaries agents can't cross |
 | ✅ **Validation Gates** | `hooks progress` blocks merges that violate specifications |
-| 🔄 **Living Documentation** | ADRs update automatically as requirements evolve |
+| 🔄 **Documentation Discipline** | ADRs and docs are maintained alongside implementation changes |
 
 **Specification Features:**
 
@@ -805,7 +836,7 @@ Complex projects fail when implementation drifts from the original plan. Hive Fl
 - **ADR-009**: Hybrid Memory Backend (SQLite + HNSW)
 - **ADR-026**: Intelligent 3-tier model routing
 - **ADR-048**: Auto Memory Bridge (Claude Code ↔ HiveMemory bidirectional sync)
-- **ADR-049**: Self-Learning Memory with GNN (LearningBridge, MemoryGraph, AgentMemoryScope)
+- **ADR-049**: Pattern-learning memory graph (LearningBridge, MemoryGraph, AgentMemoryScope)
 
 </details>
 
@@ -826,7 +857,7 @@ flowchart TB
     subgraph Orchestration["🎯 Orchestration Layer"]
         MCP[MCP Server]
         Router[Intelligent Router]
-        Hooks[Self-Learning Hooks]
+        Hooks[Pattern Learning Hooks]
     end
 
     subgraph Agents["🤖 Agent Layer"]
@@ -836,8 +867,8 @@ flowchart TB
     end
 
     subgraph Intelligence["🧠 Intelligence Layer"]
-        SONA[SONA Learning]
-        MoE[Mixture of Experts]
+        Learning[ReasoningBank + PatternLearner]
+        Router[MoE-style Router]
         HNSW[HNSW Vector Search]
     end
 
@@ -914,7 +945,7 @@ flowchart LR
     subgraph Processing["⚙️ Processing"]
         Embed[ONNX Embeddings]
         Normalize[Normalization]
-        Learn[LearningBridge<br/>SONA + ReasoningBank]
+        Learn[LearningBridge<br/>ReasoningBank + PatternLearner]
     end
 
     subgraph Storage["💾 Storage"]
@@ -947,10 +978,10 @@ flowchart LR
     Rank --> Results
 ```
 
-**Self-Learning Memory (ADR-049):**
+**Pattern-Learning Memory (ADR-049):**
 | Component | Purpose | Performance |
 |-----------|---------|-------------|
-| **LearningBridge** | Connects insights to SONA/ReasoningBank neural pipeline | low-latency insight recording |
+| **LearningBridge** | Connects insights to ReasoningBank/PatternLearner persistence | low-latency insight recording |
 | **MemoryGraph** | PageRank + label propagation knowledge graph | fast graph build (1k nodes) |
 | **AgentMemoryScope** | 3-scope agent memory (project/local/user) with cross-agent transfer | fast knowledge transfer |
 | **AutoMemoryBridge** | Bidirectional sync: Claude Code auto memory files ↔ HiveMemory | ADR-048 |
@@ -958,9 +989,9 @@ flowchart LR
 </details>
 
 <details>
-<summary>🧠 <strong>HiveMemory v3 Controllers</strong> — 20+ intelligent memory controllers</summary>
+<summary>🧠 <strong>HiveMemory v3 Controllers</strong> — memory controllers and MCP tools</summary>
 
-Hive Flow V3 integrates HiveMemory v3 (3.0.0-alpha.9) providing 20+ memory controllers accessible via MCP tools and the CLI.
+Hive Flow V3 integrates HiveMemory v3 (3.0.0-alpha.11), exposing memory controllers through MCP tools and the CLI.
 
 **Core Memory:**
 
@@ -977,9 +1008,6 @@ Hive Flow V3 integrates HiveMemory v3 (3.0.0-alpha.9) providing 20+ memory contr
 |-----------|----------|-------------|
 | SemanticRouter | `hivememory_semantic-route` | Route tasks to agents using vector similarity instead of manual rules |
 | ContextSynthesizer | `hivememory_context-synthesize` | Auto-generate context summaries from memory entries |
-| GNNService | — | Graph neural network for intent classification and skill recommendation |
-| SonaTrajectoryService | — | Record and predict learning trajectories for agents |
-| GraphTransformerService | — | Sublinear attention, causal attention, Granger causality extraction |
 
 **Causal & Explainable:**
 
@@ -1053,16 +1081,14 @@ flowchart TB
         M3 <--> M1[Agent]
     end
 
-    subgraph Ring["💍 Ring"]
-        R1[Agent] --> R2[Agent]
-        R2 --> R3[Agent]
-        R3 --> R1
+    subgraph Collective["🧠 Collective"]
+        C1[Queen] --> C2[Hive]
+        C2 --> C3[Shared Memory]
     end
 
-    subgraph Star["⭐ Star"]
-        S1[Hub] --> S2[Agent]
-        S1 --> S3[Agent]
-        S1 --> S4[Agent]
+    subgraph Adaptive["🔁 Adaptive"]
+        A1[Router] --> A2[Agents]
+        A1 --> A3[Feedback]
     end
 ```
 
@@ -1111,7 +1137,7 @@ Connect Hive Flow to your development environment.
 <details>
 <summary>🔌 <strong>MCP Setup</strong> — Connect Hive Flow to Any AI Environment</summary>
 
-Hive Flow runs as an MCP (Model Context Protocol) server, allowing you to connect it to any MCP-compatible AI client. This means you can use Hive Flow's 18 agents, swarm coordination, and self-learning capabilities from Claude Desktop, VS Code, Cursor, Windsurf, ChatGPT, and more.
+Hive Flow runs as an MCP (Model Context Protocol) server, allowing you to connect it to any MCP-compatible AI client. This means you can use Hive Flow's 18 agents, swarm coordination, and memory-backed pattern learning from Claude Desktop, VS Code, Cursor, Windsurf, ChatGPT, and more.
 
 ### Quick Add Command
 
@@ -1449,12 +1475,12 @@ chain.verify(envelope); // true — tamper-evident
 
 ## 📦 Core Features
 
-Comprehensive capabilities for advanced AI agent orchestration.
+Core capabilities for AI agent orchestration.
 
 <details>
 <summary>📦 <strong>Features</strong> — 18 Agents, Swarm Topologies, MCP Tools & Security</summary>
 
-Comprehensive feature set for advanced AI agent orchestration.
+Feature set for AI agent orchestration.
 
 <details open>
 <summary>🤖 <strong>Agent Ecosystem</strong> — 18 canonical agent types</summary>
@@ -1487,18 +1513,17 @@ Pre-built agents for every development task, from coding to security audits.
 </details>
 
 <details>
-<summary>🐝 <strong>Swarm Topologies</strong> — 6 coordination patterns for any workload</summary>
+<summary>🐝 <strong>Swarm Topologies</strong> — source-backed coordination patterns</summary>
 
 Choose the right topology for your task complexity and team size.
 
-| Topology | Recommended Agents | Best For | Execution Time | Memory/Agent |
-|----------|-------------------|----------|----------------|--------------|
-| **Hierarchical** | 6+ | Structured tasks, clear authority chains | 0.20s | 256 MB |
-| **Mesh** | 4+ | Collaborative work, high redundancy | 0.15s | 192 MB |
-| **Ring** | 3+ | Sequential processing pipelines | 0.12s | 128 MB |
-| **Star** | 5+ | Centralized control, spoke workers | 0.14s | 180 MB |
-| **Hybrid (Hierarchical-Mesh)** | 7+ | Complex multi-domain tasks | 0.18s | 320 MB |
-| **Adaptive** | 2+ | Dynamic workloads, auto-scaling | Variable | Dynamic |
+| Topology | Best For | Notes |
+|----------|----------|-------|
+| **Hierarchical** | Structured tasks, clear authority chains | Coordinator-led anti-drift flow |
+| **Mesh** | Collaborative work, peer review | Agents can share context without one strict leader |
+| **Collective** | Hive/queen workflows | Shared-memory coordination and queen-managed missions |
+| **Hybrid (Hierarchical-Mesh)** | Complex multi-domain tasks | Hierarchical ownership with mesh collaboration |
+| **Adaptive** | Dynamic workloads | Router can adjust roles and routing as work changes |
 
 </details>
 
@@ -1520,11 +1545,11 @@ The Hive Mind system implements queen-led hierarchical coordination where strate
 
 **Consensus Mechanisms:**
 
-| Algorithm | Voting | Fault Tolerance | Best For |
-|-----------|--------|-----------------|----------|
-| **Majority** | Simple democratic | None | Quick decisions |
-| **Weighted** | Queen 3x weight | None | Strategic guidance |
-| **Byzantine** | 2/3 supermajority | f < n/3 faulty | Critical decisions |
+| Mode | Voting | Best For |
+|------|--------|----------|
+| **Majority** | Simple democratic | Quick decisions |
+| **Weighted** | Queen-weighted votes where configured | Strategic guidance |
+| **Status/List** | Inspect pending and decided proposals | Review and coordination |
 
 **Collective Memory Types:**
 - `knowledge` (permanent), `context` (1h TTL), `task` (30min TTL), `result` (permanent)
@@ -1533,15 +1558,15 @@ The Hive Mind system implements queen-led hierarchical coordination where strate
 **CLI Commands:**
 ```bash
 hive-flow hive-mind init                    # Initialize hive mind
-hive-flow hive-mind spawn "Build API"       # Spawn with objective
-hive-flow hive-mind spawn "..." --queen-type strategic --consensus byzantine
+hive-flow hive-mind spawn -n 5              # Spawn workers
+hive-flow hive-mind spawn -t implementer -p api-worker
+hive-flow hive-mind consensus --action list # List pending proposals
 hive-flow hive-mind status                  # Check status
-hive-flow hive-mind metrics                 # Performance metrics
 hive-flow hive-mind memory                  # Collective memory stats
-hive-flow hive-mind sessions                # List active sessions
+hive-flow hive-mind broadcast -m "Status?"  # Message workers
 ```
 
-**Performance:** faster batch spawning, speed improvement, SWE-Bench evaluation claims removed
+**Operational notes:** worker spawning, status, memory, consensus-listing, and broadcast commands are available from the CLI.
 
 </details>
 
@@ -1616,9 +1641,9 @@ hive-flow hooks task-completed --task-id <id> --train-patterns
 </details>
 
 <details>
-<summary>🔧 <strong>MCP Tools & Integration</strong> — 31+ tools across 7 categories</summary>
+<summary>🔧 <strong>MCP Tools & Integration</strong> — 253 registered tools across CLI/MCP categories</summary>
 
-Full MCP server with tools for coordination, monitoring, memory, and GitHub integration.
+MCP server with tools for coordination, monitoring, memory, and GitHub integration.
 
 | Category | Tools | Description |
 |----------|-------|-------------|
@@ -1650,19 +1675,19 @@ Security hardening with input validation, sandboxing, and active CVE monitoring.
 </details>
 
 <details>
-<summary>⚡ <strong>Advanced Capabilities</strong> — Self-healing, auto-scaling, event sourcing</summary>
+<summary>⚡ <strong>Operational Capabilities</strong> — routing, workers, monitoring, and event history</summary>
 
-Advanced features for high availability and continuous learning.
+Capabilities for coordinating agents, inspecting runtime state, and preserving useful history.
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **Automatic Topology Selection** | AI-driven topology choice based on task complexity | Optimal resource utilization |
-| **Parallel Execution** | Concurrent agent operation with load balancing | speed improvement |
-| **Neural Training** | Continuous learning and adaptive routing support | Adaptive intelligence |
-| **Bottleneck Analysis** | Real-time performance monitoring and optimization | Proactive issue detection |
-| **Smart Auto-Spawning** | Dynamic agent creation based on workload | Elastic scaling |
-| **Self-Healing Workflows** | Automatic error recovery and task retry | High availability |
-| **Cross-Session Memory** | Persistent pattern storage across sessions | Continuous learning |
+| **Topology Selection** | Route tasks to an appropriate configured topology | Clear coordination model |
+| **Parallel Execution** | Concurrent agent operation with load balancing | Parallel task progress |
+| **Pattern Learning** | Reuse recorded local patterns for routing and memory | Adaptive behavior without runtime model training |
+| **Bottleneck Analysis** | Runtime metrics and optimization commands | Proactive issue detection |
+| **Controlled Spawning** | Agent creation governed by ownership and configured caps | Predictable statusboard state |
+| **Retry Workflows** | Task retry and recovery commands | Operational resilience |
+| **Cross-Session Memory** | Persistent pattern storage across sessions | Reusable context |
 | **Event Sourcing** | Complete audit trail with replay capability | Debugging and compliance |
 
 </details>
@@ -1679,9 +1704,9 @@ Build custom plugins with the fluent builder API. Create MCP tools, hooks, worke
 | **HookBuilder** | Build hooks with conditions and transformers | Priorities, conditional execution |
 | **WorkerPool** | Managed worker pool with auto-scaling | Min/max workers, task queuing |
 | **ProviderRegistry** | LLM provider management with fallback | Cost optimization, automatic failover |
-| **HiveMemoryBridge** | Vector storage with HNSW indexing | Vector search, batch operations |
+| **HiveMemoryBridge** | Plugin bridge for vector storage with HNSW indexing | Vector search, batch operations |
 
-**Plugin Performance:** Load <20ms, Hook execution <0.5ms, Worker spawn <50ms
+**Plugin runtime:** load, hook, and worker timings depend on plugin implementation and the host runtime.
 
 ### 📦 Available Optional Plugins
 
@@ -1702,7 +1727,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 **Prime-Radiant Plugin Features:**
 - 6 mathematical engines for AI interpretability
 - 6 MCP tools: `pr_coherence_check`, `pr_spectral_analyze`, `pr_causal_infer`, `pr_consensus_verify`, `pr_quantum_topology`, `pr_memory_gate`
-- Sheaf Laplacian coherence detection (<5ms)
+- Sheaf Laplacian coherence checks
 - Do-calculus causal inference
 - Hallucination prevention via consensus verification
 
@@ -1779,7 +1804,7 @@ hive-flow hooks worker status
 </details>
 
 <details>
-<summary>☁️ <strong>LLM Providers</strong> — Multiple providers with automatic failover</summary>
+<summary>☁️ <strong>LLM Providers</strong> — Multiple provider paths with configurable routing</summary>
 
 | Provider | Models | Access | Notes |
 |----------|--------|--------|-------|
@@ -1820,14 +1845,14 @@ hive-flow hooks worker status
 | **ONNX Local** | ONNX SIMD optimized | 384 | local low latency | Free (local) |
 | **OpenAI** | text-embedding-3-small/large, ada-002 | 1536-3072 | remote API latency | $0.02-0.13/1M tokens |
 | **Transformers.js** | all-MiniLM-L6-v2, all-mpnet-base-v2, bge-small | 384-768 | higher local JS latency | Free (local) |
-| **Mock** | Deterministic hash-based | Configurable | <1ms | Free |
+| **Mock** | Deterministic hash-based | Configurable | Local deterministic | Free |
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **Optional Provider** | `provider: 'auto'` uses hive-flow when available | Zero config |
-| **Smart Fallback** | hive-flow → transformers → mock chain | Works without hive-flow |
-| **LRU Caching** | Intelligent cache with hit rate tracking | <1ms cache hits |
-| **Batch Processing** | Efficient batch embedding with partial cache | 10 items <100ms |
+| **Optional Provider** | `provider: 'auto'` uses hive-flow when available | Guided default |
+| **Smart Fallback** | hive-flow → transformers → mock chain | Configured fallback |
+| **LRU Caching** | Cache with hit-rate tracking | Runtime-dependent |
+| **Batch Processing** | Batch embedding with partial cache | Runtime-dependent |
 | **Similarity Functions** | Cosine, Euclidean, Dot product | Optimized math |
 
 </details>
@@ -1835,15 +1860,13 @@ hive-flow hooks worker status
 </details>
 
 <details>
-<summary>🤝 <strong>Consensus Strategies</strong> — 5 distributed agreement protocols</summary>
+<summary>🤝 <strong>Consensus Strategies</strong> — configured proposal and voting workflows</summary>
 
-| Strategy | Algorithm | Fault Tolerance | Latency | Best For |
-|----------|-----------|-----------------|---------|----------|
-| **Byzantine (PBFT)** | Practical Byzantine Fault Tolerance | f < n/3 faulty nodes | higher | Adversarial environments |
-| **Raft** | Leader-based log replication | f < n/2 failures | low | Strong consistency |
-| **Gossip** | Epidemic protocol dissemination | High partition tolerance | higher | Eventually consistent |
-| **CRDT** | Conflict-free Replicated Data Types | Strong eventual consistency | very low | Concurrent updates |
-| **Quorum** | Configurable read/write quorums | Flexible | moderate | Tunable consistency |
+| Strategy | Source Surface | Best For |
+|----------|----------------|----------|
+| **Majority** | `hive-mind consensus --action vote/list/status` | Simple decisions |
+| **Weighted** | Queen-weighted vote interpretation where configured | Strategic guidance |
+| **Quorum-style review** | Pending proposal counts and vote thresholds | Tunable coordination |
 
 </details>
 
@@ -1909,7 +1932,7 @@ hive-flow hooks worker status
 | `agentConfigs` | 15 V3 agent configurations | Agent testing |
 | `memoryEntries` | Patterns, rules, embeddings | Memory testing |
 | `swarmConfigs` | V3 default, minimal, mesh, hierarchical | Swarm testing |
-| `mcpTools` | 175+ tool definitions | MCP testing |
+| `mcpTools` | 253 registered tool definitions | MCP testing |
 
 </details>
 
@@ -1932,7 +1955,7 @@ hive-flow hooks worker status
 | `alpha` | 1.0.0-alpha.1 | Early development |
 | `beta` | 1.0.0-beta.1 | Feature complete, testing |
 | `rc` | 1.0.0-rc.1 | Release candidate |
-| `latest` | 1.0.0 | Stable production |
+| `latest` | 1.0.0 | Default release tag |
 
 </details>
 
@@ -1942,8 +1965,8 @@ hive-flow hooks worker status
 | Component | Description | Performance |
 |-----------|-------------|-------------|
 | **HiveFlowBridge** | hive-flow core foundation integration | ADR-001 compliant |
-| **SONA Adapter** | Learning system integration | Low-latency adaptation |
-| **Flash Attention** | Attention mechanism coordinator | Local attention path |
+| **Integration Adapter** | Optional integration-layer adapter | Exported from `@hive-flow/integration` |
+| **Attention Coordinator** | Local attention-weighted coordination path | Integration support |
 | **SDK Bridge** | Version negotiation, API compatibility | Auto-detection |
 | **Feature Flags** | Dynamic feature management | 9 configurable flags |
 | **Runtime Detection** | NAPI, WASM, JS auto-selection | Optimal performance |
@@ -1963,7 +1986,7 @@ hive-flow hooks worker status
 
 | Capability | Description | Output |
 |------------|-------------|--------|
-| **Statistical Analysis** | Mean, median, P95, P99, stddev | Comprehensive metrics |
+| **Statistical Analysis** | Mean, median, P95, P99, stddev | Metrics output |
 | **Memory Tracking** | Heap, RSS, external, array buffers | Resource monitoring |
 | **Auto-Calibration** | Automatic iteration adjustment | Statistical significance |
 | **Regression Detection** | Baseline comparison | Change detection |
@@ -1981,29 +2004,28 @@ hive-flow hooks worker status
 | **Memory** | Memory write | <5ms |
 | **Swarm** | Agent coordination | <50ms |
 | **Swarm** | Consensus latency | <100ms |
-| **Neural** | SONA adaptation | Low latency |
+| **Neural** | Local pattern learning | Qualitative |
 
 </details>
 
 <details>
-<summary>🧠 <strong>Neural & SONA</strong> — Self-optimizing learning with 9 RL algorithms</summary>
+<summary>🧠 <strong>Neural & Pattern Learning</strong> — Local reasoning helpers and algorithm surfaces</summary>
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **SONA Learning** | Self-Optimizing Neural Architecture | Low-latency adaptation |
-| **5 Learning Modes** | real-time, balanced, research, edge, batch | Mode-specific optimization |
-| **9 RL Algorithms** | PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer, etc. | Comprehensive RL |
-| **LoRA Integration** | Low-Rank Adaptation for efficient fine-tuning | Minimal memory overhead |
-| **MicroLoRA** | Ultra-lightweight LoRA for edge/real-time modes | <5MB memory footprint |
-| **EWC++ Memory** | Elastic Weight Consolidation prevents catastrophic forgetting | Zero knowledge loss |
-| **Trajectory Tracking** | Execution path recording for pattern extraction | Continuous learning |
+| **NeuralLearningSystem** | Facade over ReasoningBank and PatternLearner | Local heuristic pattern learning |
+| **ReasoningBank** | Stores trajectories and distills reusable memories | Local retrieval/consolidation |
+| **PatternLearner** | Extracts and matches task patterns | Local pattern matching |
+| **Algorithm Surfaces** | PPO, A2C, DQN, Q-Learning, SARSA, Decision Transformer helpers | Available APIs; runtime neural training is unavailable in this build |
+| **Adapter Types** | Adapter-related type surfaces | Type/support surfaces only |
+| **Trajectory Tracking** | Execution path recording for pattern extraction | Local learning input |
 
 | Feature | Description | Improvement |
 |---------|-------------|-------------|
 | **Scalar Quantization** | Reduce vector precision for memory savings | Memory reduction |
 | **Product Quantization** | Compress vectors into codebooks | Memory reduction |
 | **HNSW Indexing** | Hierarchical Navigable Small World graphs | Approximate nearest-neighbor search |
-| **LRU Caching** | Intelligent embedding cache with TTL | <1ms cache hits |
+| **LRU Caching** | Intelligent embedding cache with TTL | Runtime-dependent cache hits |
 | **Batch Processing** | Process multiple embeddings in single call | Higher throughput |
 | **Memory Compression** | Pattern distillation and pruning | Reduced memory |
 
@@ -2015,12 +2037,12 @@ hive-flow hooks worker status
 | Feature | Description | Performance |
 |---------|-------------|-------------|
 | **Multi-Provider** | ONNX Local, OpenAI, Transformers.js, Mock | 4 providers |
-| **Auto-Install** | `hive-flow embeddings init` or `createEmbeddingServiceAsync()` | Zero config |
-| **Hyperbolic Space** | Poincaré ball model for hierarchical data | Exponential capacity |
+| **Setup Helpers** | `hive-flow embeddings init` or `createEmbeddingServiceAsync()` | Guided setup |
+| **Hyperbolic Space** | Poincaré ball model for hierarchical data | Hierarchical relationships |
 | **Dimensions** | 384 to 3072 configurable | Quality vs speed tradeoff |
 | **Similarity Metrics** | Cosine, Euclidean, Dot product, Hyperbolic distance | Task-specific matching |
 | **Neural Substrate** | Drift detection, memory physics, swarm coordination | Local kernels |
-| **LRU + SQLite Cache** | Persistent cross-session caching | <1ms cache hits |
+| **LRU + SQLite Cache** | Persistent cross-session caching | Runtime-dependent cache hits |
 
 ```bash
 # Initialize ONNX embeddings with hyperbolic config
@@ -2033,17 +2055,17 @@ hive-flow embeddings init --model all-mpnet-base-v2
 hive-flow embeddings search -q "authentication patterns"
 ```
 
-| Mode | Adaptation | Memory | Use Case |
-|------|------------|--------|----------|
-| `real-time` | <0.5ms | 25MB | Production, low-latency |
-| `balanced` | <18ms | 50MB | General purpose |
-| `research` | <100ms | 100MB | Deep exploration |
-| `edge` | <1ms | 5MB | Resource-constrained |
-| `batch` | <50ms | 75MB | High-throughput |
+| Mode | Purpose |
+|------|---------|
+| `real-time` | Low-latency local use |
+| `balanced` | General purpose |
+| `research` | Deeper exploration |
+| `edge` | Resource-constrained environments |
+| `batch` | Batch processing |
 
 | Algorithm | Type | Best For |
 |-----------|------|----------|
-| **PPO** | Policy Gradient | Stable continuous learning |
+| **PPO** | Policy Gradient | Policy-gradient experiments |
 | **A2C** | Actor-Critic | Balanced exploration/exploitation |
 | **DQN** | Value-based | Discrete action spaces |
 | **Q-Learning** | Tabular | Simple state spaces |
@@ -2053,15 +2075,15 @@ hive-flow embeddings search -q "authentication patterns"
 </details>
 
 <details>
-<summary>👑 <strong>Hive-Mind Coordination</strong> — Queen-led topology with Byzantine consensus</summary>
+<summary>👑 <strong>Hive-Mind Coordination</strong> — Queen-led topology with consensus workflows</summary>
 
 | Feature | Description | Capability |
 |---------|-------------|------------|
-| **Queen-Led Topology** | Hierarchical command structure | Unlimited agents + sub-workers |
+| **Queen-Led Topology** | Hierarchical command structure | Worker count governed by configured caps |
 | **Queen Types** | Strategic, Tactical, Adaptive | Research/planning, execution, optimization |
 | **Worker Types** | 8 specialized agents | researcher, implementer, investigator, tester, architect, verifier, performance-engineer, documenter |
-| **Byzantine Consensus** | Fault-tolerant agreement | f < n/3 tolerance (2/3 supermajority) |
-| **Weighted Consensus** | Queen 3x voting power | Strategic guidance with democratic input |
+| **Consensus Workflows** | Proposal/vote/list/status commands | Strategy selected at init |
+| **Weighted Consensus** | Queen 3x voting power where configured | Strategic guidance with democratic input |
 | **Collective Memory** | Shared pattern storage | 8 memory types with TTL, LRU cache, SQLite WAL |
 | **Specialist Spawning** | Domain-specific agents | Security, performance, etc. |
 | **Adaptive Topology** | Dynamic structure changes | Load-based optimization, auto-scaling |
@@ -2070,14 +2092,14 @@ hive-flow embeddings search -q "authentication patterns"
 **Quick Commands:**
 ```bash
 hive-flow hive-mind init                                    # Initialize
-hive-flow hive-mind spawn "Build API" --queen-type tactical # Spawn swarm
-hive-flow hive-mind spawn "Research AI" --consensus byzantine --claude
+hive-flow hive-mind spawn -n 5 -t implementer              # Spawn workers
+hive-flow hive-mind consensus --action list                # Review proposals
 hive-flow hive-mind status                                  # Check status
 ```
 
 **Hive Flow Skill:** `/hive-mind-advanced` — Full hive mind orchestration
 
-**Performance:** faster batch spawning, SWE-Bench evaluation claims removed, token reduction
+**Operational notes:** hive-mind commands expose worker spawning, consensus listing, status, memory, and broadcast workflows.
 
 </details>
 
@@ -2088,8 +2110,8 @@ hive-flow hive-mind status                                  # Check status
 |---------|-------------|---------|
 | **ADR-001 Compliance** | Adopt hive-flow as core foundation | Eliminates duplicate capabilities |
 | **Local Fallback** | Use local implementations when hive-flow runtime services are unavailable | Fallback remains available |
-| **SONA Integration** | Seamless learning system connection | Low-latency adaptation |
-| **Flash Attention** | Optimized attention mechanisms | Local attention support |
+| **Integration Adapter** | Optional integration-layer learning adapter | Available from `@hive-flow/integration` |
+| **Attention Coordinator** | Attention-weighted coordination helpers | Local integration support |
 | **HiveMemory Bridge** | Vector storage integration | Vector search |
 | **Feature Flags** | Dynamic capability management | 9 configurable features |
 | **Runtime Detection** | NAPI/WASM/JS auto-selection | Optimal performance per platform |
@@ -2098,16 +2120,16 @@ hive-flow hive-mind status                                  # Check status
 </details>
 
 <details>
-<summary>🖥️ <strong>MCP Server</strong> — Full MCP 2025-11-25 spec with multiple transports</summary>
+<summary>🖥️ <strong>MCP Server</strong> — MCP-compatible server with multiple transports</summary>
 
 | Feature | Description | Spec |
 |---------|-------------|------|
-| **MCP 2025-11-25** | Full specification compliance | Latest MCP standard |
+| **MCP Server** | Tool registration and execution | Project MCP implementation |
 | **Multiple Transports** | stdio, HTTP, WebSocket, in-process | Flexible connectivity |
 | **Resources** | list, read, subscribe with caching | Dynamic content |
 | **Prompts** | Templates with arguments and embedding | Reusable prompts |
 | **Tasks** | Async operations with progress/cancel | Long-running ops |
-| **Tool Registry** | O(1) lookup, <10ms registration | Fast tool access |
+| **Tool Registry** | Indexed lookup and registration | Fast tool access |
 | **Connection Pooling** | Max 10 connections, configurable | Resource management |
 | **Session Management** | Timeout handling, authentication | Secure sessions |
 
@@ -2139,7 +2161,7 @@ hive-flow hive-mind status                                  # Check status
 | **Input Validation** | General | Zod-based schema validation |
 | **Token Generation** | General | HMAC-signed secure tokens |
 | **HTML Sanitization** | XSS | Script and injection prevention |
-| **AIDefence** | Threats | Prompt injection, jailbreak detection, PII scanning (<10ms) |
+| **AIDefence** | Threats | Prompt injection, jailbreak detection, PII scanning |
 
 | Schema | Purpose |
 |--------|---------|
@@ -2239,7 +2261,7 @@ The generated config uses a **fast local script** (no `npx` cold-start):
 
 If your statusline is not updating, run the upgrade command to regenerate helpers and fix the config:
 ```bash
-hive-flow init --update --settings
+hive-flow init upgrade --settings
 ```
 
 This removes invalid config fields and regenerates the statusline helper with stdin support.
@@ -2568,10 +2590,10 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **PR Management** | Review, approve, and merge PRs efficiently | `hive-flow agent spawn -t pr-manager` |
-| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow agent spawn -t issue-tracker` |
-| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow agent spawn -t release-manager` |
-| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow agent spawn -t cicd-engineer` |
+| **PR Management** | Review and validate PRs efficiently | `hive-flow agent spawn -t verifier` |
+| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow agent spawn -t investigator` |
+| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow agent spawn -t coordinator` |
+| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow agent spawn -t performance-engineer` |
 
 ### 📋 Spec-Driven Development
 
@@ -2586,7 +2608,7 @@ Real-world scenarios and pre-built workflows for common tasks.
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
 | **Bootstrap Intelligence** | Train the system on your codebase patterns | `hive-flow hooks pretrain --depth deep` |
-| **Optimize Routing** | Improve task-to-agent matching over time | `hive-flow hooks route "<task>" --include-explanation` |
+| **Optimize Routing** | Improve task-to-agent matching over time | `hive-flow hooks explain -t "<task>"` |
 | **Transfer Learning** | Apply patterns learned from other projects | `hive-flow hooks transfer <sourceProject>` |
 
 </details>
@@ -2720,7 +2742,7 @@ Previous versions shipped sql.js (18MB WASM blob) for persistent storage. This c
 | | Before (sql.js) | After (RVF) |
 |---|---|---|
 | **Install size** | +18MB WASM | 0 extra deps |
-| **Cold start** | slower (WASM compile) | <50ms |
+| **Cold start** | slower (WASM compile) | Lower startup overhead |
 | **Platform support** | x86/ARM issues | Runs everywhere |
 | **Native deps** | Optional hnswlib-node | Pure TypeScript fallback |
 
@@ -2733,7 +2755,7 @@ RVF files use a simple binary layout: a 4-byte magic header (`RVF\0`), a JSON me
 | `RVF\0` | `0x52564600` | Memory backend | Entries + HNSW index |
 | `RVEC` | `0x52564543` | Embedding cache | Cached vectors with LRU eviction |
 | `RVFL` | `0x5256464C` | Event log | Append-only domain events |
-| `RVLS` | — | Learning store | SONA patterns + trajectories |
+| `RVLS` | — | Learning store | Pattern records + trajectories |
 
 ### Storage auto-selection
 
@@ -2792,22 +2814,25 @@ All write operations use atomic writes: data goes to a temporary file first, the
 - **Embedding cache**: `file.rvec.tmp.{random}` → `file.rvec`
 - **Event log**: Append-only (no overwrite needed)
 
-### SONA learning persistence
+### Pattern learning persistence
 
-The `PersistentSonaCoordinator` stores learning patterns and trajectories in RVF format, so agents retain knowledge across sessions:
+Hive Flow stores reusable patterns and trajectories through the current memory and neural helper surfaces. Use `LearningBridge`, `ReasoningBank`, or `NeuralLearningSystem` depending on whether you are working from memory, neural helpers, or the CLI integration layer:
 
 ```typescript
-import { PersistentSonaCoordinator } from '@hive-flow/memory';
+import { LearningBridge, UnifiedMemoryService } from '@hive-flow/memory';
+import { createNeuralLearningSystem } from '@hive-flow/neural';
 
-const sona = new PersistentSonaCoordinator({
-  storePath: './data/sona-learning.rvls',
-});
-await sona.initialize();
+const memory = new UnifiedMemoryService();
+await memory.initialize();
 
-// Patterns survive restarts
-const similar = sona.findSimilarPatterns(embedding, 5);
-sona.storePattern('routing', embedding);
-await sona.shutdown(); // persists to disk
+const learning = new LearningBridge(memory);
+
+const neural = createNeuralLearningSystem('general');
+await neural.initialize();
+
+const trajectoryId = neural.beginTask('route auth refactor', 'coordination');
+neural.recordStep(trajectoryId, 'selected verifier', 0.8);
+await neural.completeTask(trajectoryId, 0.9);
 ```
 
 ### Security
@@ -2851,8 +2876,8 @@ Hooks intercept operations (file edits, commands, tasks) and learn from outcomes
 |---------|---------------|-------------------|
 | **Hook** | Code that runs before/after an action | Event listener with pre/post lifecycle |
 | **Pattern** | A learned strategy that worked | Vector embedding stored in ReasoningBank |
-| **Trajectory** | Recording of actions → outcomes | RL episode for SONA training |
-| **Routing** | Picking the best agent for a task | MoE-based classifier with learned weights |
+| **Trajectory** | Recording of actions → outcomes | Input for ReasoningBank and PatternLearner |
+| **Routing** | Picking the best agent for a task | Local router signals and recorded outcomes |
 
 ### How Hooks Learn (4-Step Pipeline)
 
@@ -2860,11 +2885,11 @@ Hooks intercept operations (file edits, commands, tasks) and learn from outcomes
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │  RETRIEVE   │───▶│    JUDGE    │───▶│   DISTILL   │───▶│ CONSOLIDATE │
 │             │    │             │    │             │    │             │
-│ Find similar│    │ Was it      │    │ Extract key │    │ Prevent     │
-│ past patterns│   │ successful? │    │ learnings   │    │ forgetting  │
+│ Find similar│    │ Was it      │    │ Extract key │    │ Prune stale │
+│ past patterns│   │ successful? │    │ patterns    │    │ matches     │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-     HNSW              Verdict            LoRA              EWC++
-  vector search      success/fail      compression       memory lock
+     HNSW              Verdict        PatternLearner      MemoryGraph
+  vector search      success/fail      extraction        consolidation
 ```
 
 ### Hook Signals (ADR-026 Model Routing)
@@ -2919,7 +2944,7 @@ UserPrompt:
 
 PostEdit:
   post-edit        → intelligence.recordEdit(file)
-    → Append to pending-insights.jsonl (<2ms)
+    → Append to pending-insights.jsonl
 
 SessionEnd:
   session-end      → intelligence.consolidate()
@@ -2991,7 +3016,7 @@ The stats command shows:
 +--------------------------------------------------------------+
 ```
 
-### All 27 Hooks by Category
+### Hooks by Category
 
 #### 🔧 Tool Lifecycle Hooks (6 hooks)
 
@@ -3025,10 +3050,10 @@ hive-flow hooks post-edit ./src/auth.ts --success true --train-patterns
 
 ```bash
 # Route a task with explanation
-hive-flow hooks route "refactor authentication to use JWT" --include-explanation
+hive-flow hooks explain -t "refactor authentication to use JWT"
 
 # Bootstrap intelligence from your codebase
-hive-flow hooks pretrain --depth deep --model-type moe
+hive-flow hooks pretrain --depth deep
 ```
 
 #### 📅 Session Management Hooks (4 hooks)
@@ -3052,7 +3077,7 @@ hive-flow hooks session-end --export-metrics --persist-patterns
 
 | Hook | Category | What It Does |
 |------|----------|--------------|
-| `intelligence` | Status | Shows SONA, MoE, HNSW, EWC++ status |
+| `intelligence` | Status | Shows local pattern, routing, HNSW, and consolidation status |
 | `intelligence-reset` | Admin | Clears learned patterns (use carefully!) |
 | `trajectory-start` | RL | Begin recording actions for learning |
 | `trajectory-step` | RL | Record an action with reward signal |
@@ -3143,7 +3168,7 @@ hive-flow hooks model-route --task "design distributed consensus system"
 # ══════════════════════════════════════════════════════════════════
 
 # Route task to best agent (with intelligence context injection)
-hive-flow hooks route "<task>" --include-explanation
+hive-flow hooks explain -t "<task>"
 
 # Start/end session with learning
 hive-flow hooks session-start --start-daemon
@@ -3334,7 +3359,7 @@ Share trained neural patterns and learning models via IPFS.
 | Type | Description | Use Case |
 |------|-------------|----------|
 | `learning-pattern` | Agent learning patterns | Code review, security analysis |
-| `neural-weights` | Trained neural weights | SONA, MoE routing |
+| `pattern-bundle` | Exported pattern data | Local routing and retrieval |
 | `reasoning-bank` | Reasoning trajectories | Few-shot learning |
 | `agent-config` | Agent configurations | Swarm templates |
 
@@ -3385,15 +3410,15 @@ hive-flow hooks route --task "review authentication code" --use-patterns
 hive-flow hooks transfer store download -n security-essentials
 ```
 
-### Local TypeScript Neural Training
+### Local TypeScript Pattern Commands
 
-Local TypeScript neural training for pattern learning, contrastive scoring, and attention-style ranking without external WASM packages.
+Local TypeScript helpers record pattern signals, contrastive scores, and attention-style ranking features through the CLI-local intelligence layer.
 
-| Component | Performance | Description |
-|-----------|-------------|-------------|
-| **MicroLoRA** | **<3μs adaptation** | Rank-2 LoRA |
+| Component | Role | Description |
+|-----------|------|-------------|
+| **MicroLoRA** | local signal path | Rank-2 adapter surface |
 | **ScopedLoRA** | 17 operators | Per-task-type learning (coordination, security, testing) |
-| **FlashAttention** | high-throughput | Memory-efficient attention mechanism |
+| **FlashAttention-compatible kernels** | local attention helpers | Attention-style operations used by local benchmarks |
 | **TrajectoryBuffer** | 10k capacity | Success/failure learning from patterns |
 | **InfoNCE Loss** | Contrastive | Temperature-scaled contrastive learning |
 | **AdamW Optimizer** | β1=0.9, β2=0.999 | Weight decay training optimization |
@@ -3411,7 +3436,7 @@ hive-flow neural train -p coordination -e 100 --flash --contrastive
 # Train security patterns
 hive-flow neural train -p security --contrastive
 
-# Benchmark local training performance
+# Benchmark local neural helper performance
 hive-flow neural benchmark -d 256 -i 1000
 
 # Import pre-trained models
@@ -3430,16 +3455,16 @@ hive-flow neural export --ipfs --sign
 | DotProduct          | low-latency   | high        |
 | FlashAttention      | low-latency   | high        |
 | MultiHead (4 heads) | low-latency   | moderate    |
-| MicroLoRA           | low-latency   | very high   |
+| MicroLoRA           | low-latency   | high        |
 +---------------------+---------------+-------------+
-MicroLoRA Target (<100μs): ✓ PASS
+MicroLoRA local signal path: available when local training initializes
 ```
 
 #### Training Options
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--flash` | Use Flash Attention | `true` |
+| `--flash` | Use local attention-compatible helper path | `true` |
 | `--moe` | Enable Mixture of Experts routing | `false` |
 | `--hyperbolic` | Hyperbolic attention for hierarchical patterns | `false` |
 | `--contrastive` | InfoNCE contrastive learning | `true` |
@@ -3503,7 +3528,7 @@ The `.claude/helpers/` directory contains **30+ automation scripts** for develop
 | `learning-service.mjs` | Neural learning service (Node.js) | `node .claude/helpers/learning-service.mjs` |
 | `learning-hooks.sh` | Hook-based pattern learning | `.claude/helpers/learning-hooks.sh` |
 | `learning-optimizer.sh` | Optimize learned patterns | `.claude/helpers/learning-optimizer.sh` |
-| `pattern-consolidator.sh` | Consolidate patterns (EWC++) | `.claude/helpers/pattern-consolidator.sh` |
+| `pattern-consolidator.sh` | Consolidate learned patterns | `.claude/helpers/pattern-consolidator.sh` |
 | `metrics-db.mjs` | Metrics database service | `node .claude/helpers/metrics-db.mjs` |
 
 #### 🐝 Swarm Coordination
@@ -3697,7 +3722,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 | `v3-memory-unification` | HiveMemory unification and vector search improvements | Memory optimization |
 | `v3-performance-optimization` | Attention, memory, and benchmark optimization | Performance tuning |
 | `v3-swarm-coordination` | 150-agent hierarchical mesh, 10 ADRs implementation | Swarm architecture |
-| `v3-mcp-optimization` | Connection pooling, load balancing, <100ms response | MCP performance |
+| `v3-mcp-optimization` | Connection pooling and load balancing | MCP performance |
 | `v3-core-implementation` | DDD domains, dependency injection, TypeScript | Core development |
 | `v3-integration-deep` | hive-flow deep integration | Framework integration |
 | `v3-cli-modernization` | Interactive prompts, enhanced hooks | CLI enhancement |
@@ -3736,7 +3761,7 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
-| `agentic-jujutsu` | Self-learning version control | Multi-agent coordination |
+| `agentic-jujutsu` | Optional Jujutsu integration | Multi-agent coordination |
 | `worker-benchmarks` | Performance benchmarking framework | Measuring improvements |
 | `worker-integration` | Worker-agent coordination patterns | Background processing |
 
@@ -3979,7 +4004,7 @@ hive-flow route coverage
 
 ```bash
 # Route via hooks (preferred)
-hive-flow hooks route "implement caching layer" --include-explanation
+hive-flow hooks explain -t "implement caching layer"
 
 # Record outcome for learning
 hive-flow hooks post-task --task-id "task-123" --success true --agent implementer
@@ -4023,26 +4048,37 @@ Use Hive Flow packages directly in your TypeScript/JavaScript applications.
 <summary>🧠 <strong>Memory & Vector Search</strong></summary>
 
 ```typescript
-import { HiveMemory } from '@hive-flow/memory';
+import { UnifiedMemoryService } from '@hive-flow/memory';
 
 // Initialize with HNSW indexing
-const db = new HiveMemory({
-  path: './data/memory',
-  hnsw: { m: 16, efConstruction: 200 }
+const memory = new UnifiedMemoryService({
+  persistenceEnabled: true,
+  persistencePath: './data/memory.sqlite',
+  hnswM: 16,
+  hnswEfConstruction: 200
 });
+await memory.initialize();
 
 // Store patterns with embeddings
-await db.store('auth-pattern', {
+await memory.store({
+  id: 'auth-pattern',
+  key: 'auth-pattern',
   content: 'JWT authentication flow',
-  domain: 'security',
-  embedding: await db.embed('JWT authentication flow')
+  type: 'semantic',
+  namespace: 'security',
+  tags: ['auth', 'jwt'],
+  metadata: {},
+  accessLevel: 'team',
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+  version: 1,
+  references: [],
+  accessCount: 0,
+  lastAccessedAt: Date.now()
 });
 
 // Semantic search
-const results = await db.search('how to authenticate users', {
-  topK: 5,
-  minSimilarity: 0.7
-});
+const results = await memory.semanticSearch('how to authenticate users', 5, 0.7);
 
 console.log(results);
 // [{ key: 'auth-pattern', similarity: 0.92, content: '...' }]
@@ -4138,10 +4174,10 @@ await aidefence.learnFromDetection(userInput, analysis, {
 
 | Provider | Latency | Quality | Cost | Offline | Best For |
 |----------|---------|---------|------|---------|----------|
-| **ONNX Local** | local low latency | Good | Free | ✅ | Production |
+| **ONNX Local** | local low latency | Good | Free | ✅ | Local/offline use |
 | **OpenAI** | remote API latency | Excellent | $0.02-0.13/1M | ❌ | Highest quality |
 | **Transformers.js** | higher local JS latency | Good | Free | ✅ | Local development |
-| **Mock** | <1ms | N/A | Free | ✅ | Testing |
+| **Mock** | local deterministic | N/A | Free | ✅ | Testing |
 
 ### Basic Usage
 
@@ -4378,13 +4414,13 @@ await hooks.endTrajectory(trajectory, { success: true });
 
 | Package | Purpose | Main Exports |
 |---------|---------|--------------|
-| `@hive-flow/memory` | Vector storage, HNSW, self-learning graph | `HiveMemory`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
+| `@hive-flow/memory` | Vector storage, HNSW, memory graph, learning bridge | `UnifiedMemoryService`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
 | `@hive-flow/swarm` | Agent coordination | `createSwarm`, `Swarm` |
 | `@hive-flow/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
 | `@hive-flow/hooks` | Event hooks, learning | `HooksService`, `ReasoningBank` |
 | `@hive-flow/security` | Input validation | `InputValidator`, `PathValidator` |
-| `@hive-flow/neural` | SONA learning | `SONAAdapter`, `MoERouter` |
+| `@hive-flow/neural` | Local pattern learning and reasoning helpers | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
 | `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
@@ -4425,7 +4461,7 @@ claude mcp add hive-flow -- hive-flow mcp start
 | **Agent Booster** | Rust/WASM code transformations | $0 API cost when LLM is skipped |
 | **ReasoningBank** | Learning memory with HNSW | Vector search |
 | **ONNX Embeddings** | Local vector generation | Fast local embeddings, no API calls |
-| **Embedding Geometry** | Geometric intelligence layer | <3ms latency |
+| **Embedding Geometry** | Geometric intelligence layer | Runtime-dependent latency |
 | **Multi-Model Router** | Intelligent model selection | Cost savings |
 | **QUIC Transport** | High-performance transport | Ultra-low latency |
 
@@ -4478,14 +4514,14 @@ const patterns = await bank.retrieveSimilar('add user login', { k: 5 });
 // Judge and distill learnings
 await bank.judge(trajectoryId, 'success');
 await bank.distill();  // Extract key patterns
-await bank.consolidate();  // Prevent forgetting (EWC++)
+await bank.consolidate();  // Consolidate reusable patterns
 ```
 
 **4-Step Pipeline:**
 1. **RETRIEVE** — Fetch relevant patterns via vector search
 2. **JUDGE** — Evaluate outcomes with verdicts
-3. **DISTILL** — Extract key learnings via LoRA
-4. **CONSOLIDATE** — Prevent catastrophic forgetting (EWC++)
+3. **DISTILL** — Extract reusable patterns
+4. **CONSOLIDATE** — Keep useful patterns and prune stale matches
 
 </details>
 
@@ -4596,16 +4632,16 @@ const result2 = await router.route({
 // Returns: { model: 'opus', reason: 'complex architecture, high reasoning' }
 ```
 
-| Complexity | Model | Cost | Use Case |
-|------------|-------|------|----------|
-| Agent Booster intent | **Skip LLM** | $0 | var→const, add-types |
-| Low (<30%) | **Mini** | $0.0002 | Simple fixes, docs |
-| Medium (30-70%) | **Sonnet** | $0.003 | Features, debugging |
-| High (>70%) | **Opus** | $0.015 | Architecture, security |
+| Complexity | Model Path | Cost Model | Use Case |
+|------------|------------|------------|----------|
+| Agent Booster intent | **Skip LLM** | Local | var→const, add-types |
+| Low | **Mini** | Provider-dependent | Simple fixes, docs |
+| Medium | **Sonnet** | Provider-dependent | Features, debugging |
+| High | **Opus** | Provider-dependent | Architecture, security |
 
 > **Note on `haiku` alias:** `haiku` is permitted as a resolver alias (mapping to a fast/efficient model) for non-agent-task calls such as `provider_complete`, but is BLOCKED by the enforcement gate for agent task spawning (`agent_spawn`, `queen_spawn_worker`, `queen_mission_assign`, `agent_task`). Use `mini` for fast/efficient agent tasks.
 
-**Savings on LLM costs through intelligent routing**
+**Cost control through configurable routing**
 
 </details>
 
@@ -4770,7 +4806,7 @@ AI manipulation defense, threat detection, and input validation.
 **AI Manipulation Defense System (AIMDS)** — Protect AI applications from prompt injection, jailbreaks, and data exposure with sub-millisecond detection.
 
 ```
-low-latency detection | 50+ Patterns | Self-Learning | HNSW Vector Search
+low-latency detection | 50+ Patterns | Pattern Learning | HNSW Vector Search
 ```
 
 ### Why AIDefence?
@@ -4780,8 +4816,8 @@ low-latency detection | 50+ Patterns | Self-Learning | HNSW Vector Search
 | Prompt injection attacks | 50+ detection patterns with contextual analysis | Block malicious inputs |
 | Jailbreak attempts (DAN, etc.) | Real-time blocking with adaptive learning | Prevent safety bypasses |
 | PII/credential exposure | Multi-pattern scanning for sensitive data | Stop data leaks |
-| Zero-day attack variants | Self-learning from new patterns | Adapt to new threats |
-| Performance overhead | Sub-millisecond detection | No user impact |
+| New attack variants | Feedback from reviewed patterns | Improve future scans |
+| Performance overhead | Runtime-dependent detection | Measure on your workload |
 
 ### Threat Categories
 
@@ -4797,11 +4833,11 @@ low-latency detection | 50+ Patterns | Self-Learning | HNSW Vector Search
 
 ### Performance
 
-| Operation | Target | Actual | Throughput |
-|-----------|--------|--------|------------|
-| **Threat Detection** | <10ms | ✅ Met | ✅ |
-| **Quick Scan** | <5ms | ✅ Met | Pattern-only |
-| **PII Detection** | <3ms | ✅ Met | Regex-based |
+| Operation | Target | Status | Notes |
+|-----------|--------|--------|-------|
+| **Threat Detection** | <10ms | Target | Pattern-based checks |
+| **Quick Scan** | <5ms | Target | Pattern-only |
+| **PII Detection** | <3ms | Target | Regex-based |
 | **Vector Search** | indexed lookup | HiveMemory-backed | With HNSW support |
 | **Single-threaded** | - | - | high-throughput |
 | **With Learning** | - | - | high-throughput |
@@ -4849,16 +4885,16 @@ hive-flow security scan --depth full
 | **API Keys** | Provider prefixes | `sk-ant-api03-...` | Block |
 | **Passwords** | `password=` patterns | `password="secret"` | Block |
 
-### Self-Learning Pipeline
+### Pattern Feedback Pipeline
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   RETRIEVE  │───▶│    JUDGE    │───▶│   DISTILL   │───▶│ CONSOLIDATE │
-│   (HNSW)    │    │  (Verdict)  │    │   (LoRA)    │    │   (EWC++)   │
+│   (HNSW)    │    │  (Verdict)  │    │  Patterns   │    │ Memory Graph│
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
        │                  │                  │                  │
  Fetch similar     Rate success/      Extract key        Prevent
- threat patterns   failure            learnings          forgetting
+ threat patterns   failure            learnings          stale matches
 ```
 
 ### Programmatic Usage
@@ -4956,13 +4992,13 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
-| `@hive-flow/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
-| `@hive-flow/memory` | Unified vector storage | HiveMemory, RVF binary format, HnswLite, BinaryMigrator, SONA persistence, LearningBridge, MemoryGraph |
+| `@hive-flow/hooks` | Event-driven lifecycle | ReasoningBank, lifecycle hooks, pattern learning |
+| `@hive-flow/memory` | Unified vector storage | UnifiedMemoryService, RVF binary format, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
 | `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
-| `@hive-flow/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
+| `@hive-flow/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
 | `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
-| `@hive-flow/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
+| `@hive-flow/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
 | `@hive-flow/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/deployment` | Release automation | Versioning, changelogs, NPM publishing |
 | `@hive-flow/shared` | Common utilities | Types, validation schemas, RvfEventLog, constants |
@@ -4982,20 +5018,20 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 
 | Category | Metric | Target | Measured |
 |----------|--------|--------|----------|
-| **Startup** | CLI cold start | <500ms | ✅ Met |
-| **Startup** | MCP server init | <400ms | ✅ Met |
-| **Memory** | HNSW search | <1ms | ✅ Met |
-| **Memory** | Pattern retrieval | <10ms | ✅ Met |
-| **Swarm** | Agent spawn | <200ms | ✅ Met |
-| **Swarm** | Consensus latency | <100ms | ✅ Met |
-| **Neural** | SONA adaptation | Low latency | Target tracked |
-| **Graph** | Build (1k nodes) | <200ms | ✅ Met |
-| **Graph** | PageRank (1k nodes) | <100ms | ✅ Met |
-| **Learning** | Insight recording | <5ms | ✅ Met |
-| **Learning** | Consolidation | <500ms | ✅ Met |
-| **Learning** | Confidence decay (1k) | <50ms | ✅ Met |
-| **Transfer** | Knowledge transfer | <100ms | ✅ Met |
-| **Task** | Success rate | High | ✅ Passing |
+| **Startup** | CLI cold start | <500ms | Target |
+| **Startup** | MCP server init | <400ms | Target |
+| **Memory** | HNSW search | <1ms | Target |
+| **Memory** | Pattern retrieval | <10ms | Target |
+| **Swarm** | Agent spawn | <200ms | Target |
+| **Swarm** | Consensus latency | <100ms | Target |
+| **Neural** | Local pattern learning | Qualitative | Available |
+| **Graph** | Build (1k nodes) | <200ms | Target |
+| **Graph** | PageRank (1k nodes) | <100ms | Target |
+| **Learning** | Insight recording | <5ms | Target |
+| **Learning** | Consolidation | <500ms | Target |
+| **Learning** | Confidence decay (1k) | <50ms | Target |
+| **Transfer** | Knowledge transfer | <100ms | Target |
+| **Task** | Success rate | High | Project-dependent |
 
 ### Topology Performance
 
@@ -5004,7 +5040,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | **Centralized** | 2-3 | 0.14-0.20s | 180-256 MB | Simple tasks, single coordinator |
 | **Distributed** | 4-5 | 0.10-0.12s | 128-160 MB | Parallel processing, speed |
 | **Hierarchical** | 6+ | 0.20s | 256 MB | Complex tasks, clear authority |
-| **Mesh** | 4+ | 0.15s | 192 MB | Collaborative, fault-tolerant |
+| **Mesh** | 4+ | 0.15s | 192 MB | Collaborative peer coordination |
 | **Hybrid** | 7+ | 0.18s | 320 MB | Multi-domain, mixed workloads |
 | **Adaptive** | 2+ | Variable | Dynamic | Auto-scaling, unpredictable load |
 
@@ -5035,7 +5071,7 @@ const browser = createBrowserService({
   enableMemory: true,    // Trajectory learning
 });
 
-// Track actions for ReasoningBank/SONA learning
+// Track actions for ReasoningBank-backed learning
 browser.startTrajectory('Login to dashboard');
 
 
@@ -5055,7 +5091,7 @@ await browser.close();
 |---------|-------------|
 | **59 MCP Tools** | Complete browser automation via MCP protocol |
 | **Element Refs** | Context reduction with `@e1`, `@e2` refs |
-| **Trajectory Learning** | Records actions for ReasoningBank/SONA |
+| **Trajectory Learning** | Records actions for ReasoningBank-backed workflows |
 | **Security Scanning** | URL validation, PII detection, XSS/SQL injection prevention |
 | **9 Workflow Templates** | Login, OAuth, scraping, testing, monitoring |
 | **Swarm Coordination** | Multi-session parallel browser automation |
@@ -5102,10 +5138,10 @@ Automated release management, versioning, and CI/CD for Hive Flow packages.
 
 | Feature | Description | Performance |
 |---------|-------------|-------------|
-| **Version Bumping** | Automatic major/minor/patch/prerelease | Instant |
-| **Changelog Generation** | From conventional commits | <2s |
-| **Git Integration** | Auto-tagging and committing | <1s |
-| **NPM Publishing** | Multi-tag support (alpha, beta, latest) | <5s |
+| **Version Bumping** | Automatic major/minor/patch/prerelease | Local operation |
+| **Changelog Generation** | From conventional commits | Runtime-dependent |
+| **Git Integration** | Auto-tagging and committing | Runtime-dependent |
+| **NPM Publishing** | Multi-tag support (alpha, beta, latest) | Network-dependent |
 | **Pre-Release Validation** | Lint, test, build, dependency checks | Configurable |
 | **Dry Run Mode** | Test releases without changes | Safe testing |
 
@@ -5210,7 +5246,7 @@ async function release(version: string, tag: string) {
 | `alpha` | `1.0.0-alpha.1` | Early development |
 | `beta` | `1.0.0-beta.1` | Feature complete, testing |
 | `rc` | `1.0.0-rc.1` | Release candidate |
-| `latest` | `1.0.0` | Stable production |
+| `latest` | `1.0.0` | Default release tag |
 
 ### CLI Commands
 
@@ -5244,9 +5280,9 @@ Statistical benchmarking, memory tracking, regression detection, and V3 performa
 | **Statistical Analysis** | Mean, median, P95, P99, stddev, outlier removal | Real-time |
 | **Memory Tracking** | Heap, RSS, external, array buffers | Per-iteration |
 | **Auto-Calibration** | Adjusts iterations for statistical significance | Automatic |
-| **Regression Detection** | Compare against baselines with significance testing | <10ms |
+| **Regression Detection** | Compare against baselines with significance testing | Runtime-dependent |
 | **V3 Targets** | Built-in targets for all performance metrics | Preconfigured |
-| **Flash Attention** | Validate local attention benchmark targets | Integrated |
+| **Attention Targets** | Validate local attention benchmark targets | Integration support |
 
 ### Quick Start
 
@@ -5291,7 +5327,7 @@ V3_PERFORMANCE_TARGETS = {
   'consensus-latency': 100,     // <100ms target
   'message-throughput': 0.1,    // <0.1ms per message
 
-  // SONA Learning
+  // Pattern learning
   'sona-adaptation': 0.05       // low-latency target
 };
 
@@ -5423,7 +5459,7 @@ hive-flow performance benchmark --suite memory
 <details>
 <summary>🧪 <strong>Testing Framework</strong> — @hive-flow/testing</summary>
 
-Comprehensive TDD framework implementing **London School** patterns with behavior verification, shared fixtures, and mock services.
+TDD framework implementing **London School** patterns with behavior verification, shared fixtures, and mock services.
 
 ### Philosophy: London School TDD
 
@@ -6267,7 +6303,7 @@ node --expose-gc node_modules/.bin/hive-flow
 │                    V2 → V3 IMPROVEMENTS                     │
 ├───────────────────────┬─────────────────────────────────────┤
 │ Memory Search         │ HiveMemory vector search with HNSW     │
-│ Pattern Matching      │ Self-learning (ReasoningBank)       │
+│ Pattern Matching      │ Pattern learning (ReasoningBank)    │
 │ Security              │ CVE remediation + strict validation │
 │ Modular Architecture  │ 18 @hive-flow/* packages          │
 │ Agent Coordination    │ 18 specialized agents               │
@@ -6281,7 +6317,7 @@ node --expose-gc node_modules/.bin/hive-flow
 |--------|----|----|--------|
 | **Package Structure** | `hive-flow` | `@hive-flow/*` (scoped) | Update imports |
 | **Memory Backend** | JSON files | HiveMemory + HNSW | Faster search |
-| **Hooks System** | Basic patterns | ReasoningBank + SONA | Self-learning |
+| **Hooks System** | Basic patterns | ReasoningBank + PatternLearner | Pattern learning |
 | **Security** | Manual validation | Automatic strict mode | More secure |
 | **CLI Commands** | Flat structure | Nested subcommands | New syntax |
 | **Config Format** | `.hive-flow/config.json` | `hive-flow.config.json` | Update path |
@@ -6363,7 +6399,7 @@ import { hiveFlow, Agent, Memory } from 'hive-flow';
 
 // V3 (new)
 import { hiveFlowClient } from '@hive-flow/cli';
-import { HiveMemory } from '@hive-flow/memory';
+import { UnifiedMemoryService } from '@hive-flow/memory';
 import { ThreatDetector } from '@hive-flow/security';
 import { HNSWIndex } from '@hive-flow/embeddings';
 ```
@@ -6421,7 +6457,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
 | `@hive-flow/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
-| `@hive-flow/neural` | SONA learning integration | [Source](./v3/@hive-flow/neural/) |
+| `@hive-flow/neural` | Local pattern learning helpers | [Source](./v3/@hive-flow/neural/) |
 | `@hive-flow/testing` | TDD London School framework | [Source](./v3/@hive-flow/testing/) |
 | `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |
