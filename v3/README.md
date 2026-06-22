@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (13 packages)
+├── @hive-flow/                    # Modular packages (12 packages)
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
 │   ├── cli/                         # CLI module (40 commands)
@@ -213,15 +213,15 @@ const result = await runner.run('map-lookup', () => map.get(key), {
 });
 ```
 
-### @hive-flow/neural
-SONA learning integration for self-optimizing agents.
+### @hive-flow/cli/neural
+Local pattern learning and trajectory tracking helpers.
 
 ```typescript
-import { SONAAdapter } from '@hive-flow/neural';
+import { createNeuralLearningSystem } from '@hive-flow/cli/neural';
 
-const sona = new SONAAdapter();
-await sona.train({ patterns: learningData });
-const prediction = await sona.predict(context);
+const learning = createNeuralLearningSystem('code');
+await learning.initialize();
+const trajectoryId = learning.beginTask('review auth middleware', 'code');
 ```
 
 ### @hive-flow/cli
@@ -360,7 +360,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 13 packages |
+| **Code** | Package count | 12 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -375,7 +375,7 @@ pnpm test:coverage
 - [@hive-flow/cli/swarm](./@hive-flow/cli/src/swarm/)
 - [@hive-flow/cli/integration](./@hive-flow/cli/src/integration/)
 - [@hive-flow/cli/performance](./@hive-flow/cli/docs/performance/)
-- [@hive-flow/neural](./@hive-flow/neural/)
+- [@hive-flow/cli/neural](./@hive-flow/cli/neural/)
 - [@hive-flow/cli](./@hive-flow/cli/)
 - [@hive-flow/cli/testing](./@hive-flow/cli/src/testing/)
 - [@hive-flow/shared](./@hive-flow/shared/)

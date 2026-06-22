@@ -12,12 +12,12 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { QLearning, createQLearning } from '../src/algorithms/q-learning.js';
-import { SARSAAlgorithm, createSARSA } from '../src/algorithms/sarsa.js';
-import { DQNAlgorithm, createDQN } from '../src/algorithms/dqn.js';
-import { PPOAlgorithm, createPPO } from '../src/algorithms/ppo.js';
-import { DecisionTransformer, createDecisionTransformer } from '../src/algorithms/decision-transformer.js';
-import type { Trajectory } from '../src/types.js';
+import { QLearning, createQLearning } from '../algorithms/q-learning.js';
+import { SARSAAlgorithm, createSARSA } from '../algorithms/sarsa.js';
+import { DQNAlgorithm, createDQN } from '../algorithms/dqn.js';
+import { PPOAlgorithm, createPPO } from '../algorithms/ppo.js';
+import { DecisionTransformer, createDecisionTransformer } from '../algorithms/decision-transformer.js';
+import type { Trajectory } from '../types.js';
 
 // Helper function to create test trajectories
 function createTestTrajectory(steps: number = 5): Trajectory {

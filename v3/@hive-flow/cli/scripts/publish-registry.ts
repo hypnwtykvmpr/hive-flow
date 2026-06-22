@@ -195,7 +195,6 @@ async function generateRegistry(): Promise<PluginRegistry> {
     '@hive-flow/plugin-gastown-bridge',
     '@hive-flow/security',
     '@hive-flow/embeddings',
-    '@hive-flow/neural',
     '@hive-flow/plugins',
   ];
 

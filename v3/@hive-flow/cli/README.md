@@ -4225,7 +4225,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
 | `@hive-flow/hooks` | Event hooks, learning | `HooksService`, `ReasoningBank` |
 | `@hive-flow/security` | Input validation | `InputValidator`, `PathValidator` |
-| `@hive-flow/neural` | SONA learning | `SONAAdapter`, `MoERouter` |
+| `@hive-flow/cli/neural` | Local pattern learning | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
 | `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
@@ -4680,7 +4680,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/plugins` | WASM extensions | local vector plugins, semantic search, intent routing |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
-| `@hive-flow/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
+| `@hive-flow/cli/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
 | `@hive-flow/shared` | Common utilities | Types, validation schemas, constants |
@@ -6036,7 +6036,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](../security/) |
 | `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./src/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](../cli/) |
-| `@hive-flow/neural` | SONA learning integration | [Source](../neural/) |
+| `@hive-flow/cli/neural` | SONA learning integration | [Source](./src/neural/) |
 | `@hive-flow/cli/testing` | TDD London School framework | [Source](./src/testing/) |
 | `@hive-flow/mcp` | MCP server & tools | [Source](../mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](../embeddings/) |

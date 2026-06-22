@@ -2814,7 +2814,7 @@ Hive Flow stores reusable patterns and trajectories through the current memory a
 
 ```typescript
 import { LearningBridge, UnifiedMemoryService } from '@hive-flow/memory';
-import { createNeuralLearningSystem } from '@hive-flow/neural';
+import { createNeuralLearningSystem } from '@hive-flow/cli/neural';
 
 const memory = new UnifiedMemoryService();
 await memory.initialize();
@@ -4413,7 +4413,7 @@ await hooks.endTrajectory(trajectory, { success: true });
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
 | `@hive-flow/hooks` | Event hooks, learning | `HooksService`, `ReasoningBank` |
 | `@hive-flow/security` | Input validation | `InputValidator`, `PathValidator` |
-| `@hive-flow/neural` | Local pattern learning and reasoning helpers | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
+| `@hive-flow/cli/neural` | Local pattern learning and reasoning helpers | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
 | `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
@@ -4991,7 +4991,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
 | `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
-| `@hive-flow/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
+| `@hive-flow/cli/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
 | `@hive-flow/shared` | Common utilities | Types, validation schemas, RvfEventLog, constants |
@@ -6450,7 +6450,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/security/) |
 | `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/cli/src/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
-| `@hive-flow/neural` | Local pattern learning helpers | [Source](./v3/@hive-flow/neural/) |
+| `@hive-flow/cli/neural` | Local pattern learning helpers | [Source](./v3/@hive-flow/cli/src/neural/) |
 | `@hive-flow/cli/testing` | TDD London School framework | [Source](./v3/@hive-flow/cli/src/testing/) |
 | `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |

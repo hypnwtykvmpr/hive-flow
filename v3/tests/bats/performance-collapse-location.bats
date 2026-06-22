@@ -75,7 +75,7 @@ setup() {
     "$REPO_ROOT/v3/CHANGELOG.md" \
     "$REPO_ROOT/v3/@hive-flow/cli/docs/performance" \
     "$REPO_ROOT/v3/@hive-flow/shared/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/neural/README.md" \
+    "$REPO_ROOT/v3/@hive-flow/cli/docs/neural/README.md" \
     "$REPO_ROOT/v3/@hive-flow/cli/docs/integration/README.md"
   [ "$status" -eq 1 ]
 }
@@ -87,7 +87,7 @@ setup() {
     count=$((count + 1))
   done
 
-  [ "$count" -eq 13 ]
-  run grep -F '13 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 12 ]
+  run grep -F '12 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

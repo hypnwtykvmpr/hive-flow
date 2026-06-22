@@ -547,7 +547,7 @@ const coordinator = createUnifiedSwarmCoordinator({
 - [@hive-flow/embeddings](../embeddings) - Embedding generation
 - [@hive-flow/memory](../memory) - Vector storage and retrieval
 - [@hive-flow/cli/swarm](../cli/docs/swarm) - Multi-agent coordination
-- [@hive-flow/neural](../neural) - SONA learning integration
+- [@hive-flow/cli/neural](../cli/docs/neural/) - SONA learning integration
 
 ## License
 

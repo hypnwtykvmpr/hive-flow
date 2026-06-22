@@ -16,13 +16,13 @@ import {
   createReasoningBank,
   type RetrievalResult,
   type ConsolidationResult,
-} from '../src/reasoning-bank.js';
+} from '../reasoning-bank.js';
 import type {
   Trajectory,
   TrajectoryVerdict,
   DistilledMemory,
   Pattern,
-} from '../src/types.js';
+} from '../types.js';
 
 // Helper function to create test trajectories
 function createTestTrajectory(

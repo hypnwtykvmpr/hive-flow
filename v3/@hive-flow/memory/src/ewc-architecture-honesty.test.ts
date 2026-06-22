@@ -30,7 +30,7 @@ function collectSourceFiles(dir: string): string[] {
 function shippedSourceFiles(): string[] {
   return [
     resolve(repoRoot, 'v3/@hive-flow/memory/src'),
-    resolve(repoRoot, 'v3/@hive-flow/neural/src'),
+    resolve(repoRoot, 'v3/@hive-flow/cli/src/neural/src'),
     resolve(repoRoot, 'v3/@hive-flow/cli/src/memory'),
   ].flatMap(collectSourceFiles);
 }

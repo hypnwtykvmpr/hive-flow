@@ -4,7 +4,7 @@
  * This package currently exposes deterministic local pattern and reasoning
  * utilities. SONA/MoE/LoRA runtime training is not available in this build.
  *
- * @module @hive-flow/neural
+ * @module @hive-flow/cli/neural
  */
 
 export type {

@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   createNeuralLearningSystem,
   getNeuralCapabilityStatus,
-} from '../src/index.js';
+} from '../index.js';
 
 describe('local learning compatibility facade', () => {
   it('reports neural training as unavailable while keeping local patterns available', () => {

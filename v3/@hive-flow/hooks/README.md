@@ -425,7 +425,7 @@ Add to your Claude settings (`~/.claude/settings.json`):
 ## Related Packages
 
 - [@hive-flow/shared](../shared) - Shared utilities and types
-- [@hive-flow/neural](../neural) - Neural network and SONA learning
+- [@hive-flow/cli/neural](../cli/docs/neural/) - Neural network and SONA learning
 - [@hive-flow/cli/swarm](../cli/docs/swarm) - Multi-agent coordination
 - [@hive-flow/memory](../memory) - HiveMemory memory system
 

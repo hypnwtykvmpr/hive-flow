@@ -14,8 +14,8 @@ vi.mock('@hive-flow/embeddings', () => {
   throw new Error('Module not found');
 });
 
-// Mock @hive-flow/neural — not installed in test environment
-vi.mock('@hive-flow/neural', () => {
+// Mock @hive-flow/cli/neural — not installed in test environment
+vi.mock('@hive-flow/cli/neural', () => {
   throw new Error('Module not found');
 });
 

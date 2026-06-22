@@ -241,7 +241,7 @@ import type {
 
 ## Related Packages
 
-- [@hive-flow/neural](../neural) - SONA learning module
+- [@hive-flow/cli/neural](../neural/) - SONA learning module
 - [@hive-flow/memory](../memory) - HiveMemory memory
 - [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking
 

@@ -447,7 +447,7 @@ const infoCommand: Command = {
     { name: 'registry', short: 'r', type: 'string', description: 'Registry to use' },
   ],
   examples: [
-    { command: 'hive-flow plugins info -n @hive-flow/neural', description: 'Show plugin info' },
+    { command: 'hive-flow plugins info -n @hive-flow/embeddings', description: 'Show plugin info' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const name = ctx.flags.name as string;
@@ -675,8 +675,8 @@ const upgradeCommand: Command = {
     { name: 'version', short: 'v', type: 'string', description: 'Target version (default: latest)' },
   ],
   examples: [
-    { command: 'hive-flow plugins upgrade -n @hive-flow/neural', description: 'Upgrade to latest' },
-    { command: 'hive-flow plugins upgrade -n @hive-flow/neural -v 3.1.0', description: 'Upgrade to specific version' },
+    { command: 'hive-flow plugins upgrade -n @hive-flow/embeddings', description: 'Upgrade to latest' },
+    { command: 'hive-flow plugins upgrade -n @hive-flow/embeddings -v 3.1.0', description: 'Upgrade to specific version' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const name = ctx.flags.name as string;
@@ -918,7 +918,6 @@ export const pluginsCommand: Command = {
     output.writeln();
     output.writeln(output.bold('Official Plugins:'));
     output.printList([
-      '@hive-flow/neural              - Neural patterns and inference (WASM SIMD)',
       '@hive-flow/security            - Security scanning and CVE detection',
       '@hive-flow/embeddings          - Vector embeddings with hyperbolic support',
       '@hive-flow/plugin-perf-optimizer - Performance profiling and benchmarks',

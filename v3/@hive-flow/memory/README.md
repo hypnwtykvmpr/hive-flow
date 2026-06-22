@@ -290,7 +290,7 @@ import type {
 
 ## Self-Learning Bridge (ADR-049)
 
-Connects insights to the `@hive-flow/neural` learning pipeline. When neural is unavailable, all operations degrade to no-ops.
+Connects insights to the `@hive-flow/cli/neural` learning pipeline. When neural is unavailable, all operations degrade to no-ops.
 
 ### Quick Start
 
@@ -327,7 +327,7 @@ import { LearningBridge } from '@hive-flow/memory';
 const lb = new LearningBridge(backend, {
   // Optional: inject neural loader for custom setups
   neuralLoader: async () => {
-    const { NeuralLearningSystem } = await import('@hive-flow/neural');
+    const { NeuralLearningSystem } = await import('@hive-flow/cli/neural');
     return new NeuralLearningSystem();
   },
 });
@@ -553,11 +553,11 @@ import type {
 - `hivememory` - Vector database engine
 - `better-sqlite3` - SQLite driver (native)
 - `sql.js` - SQLite driver (WASM fallback)
-- `@hive-flow/neural` - **Optional peer dependency** for self-learning (graceful fallback when unavailable)
+- `@hive-flow/cli/neural` - **Optional peer dependency** for self-learning (graceful fallback when unavailable)
 
 ## Related Packages
 
-- [@hive-flow/neural](../neural) - Neural learning integration (SONA, ReasoningBank, EWC++)
+- [@hive-flow/cli/neural](../cli/docs/neural/) - Neural learning integration (SONA, ReasoningBank, EWC++)
 - [@hive-flow/shared](../shared) - Shared types and utilities
 - [@hive-flow/hooks](../hooks) - Session lifecycle hooks for auto memory sync
 

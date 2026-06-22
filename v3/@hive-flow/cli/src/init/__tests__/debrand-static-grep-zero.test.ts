@@ -64,12 +64,12 @@ describe('DB-5 static prohibited debrand sweep', () => {
     const forbidden = trackedFilesForShippedSurfaces()
       .filter((file) => existsSync(resolve(REPO_ROOT, file)))
       .filter((file) =>
-        /^v3\/@hive-flow\/neural\/(?:DELETE_README\.md|docs\/DELETE_.*\.md|(?:src\/)?tmp\.json)$/.test(file),
+        /^v3\/@hive-flow\/cli\/docs\/neural\/(?:DELETE_README\.md|DELETE_.*\.md|tmp\.json)$/.test(file),
       );
     const missingRenames = [
-      'v3/@hive-flow/neural/README.md',
-      'v3/@hive-flow/neural/docs/SONA_INTEGRATION.md',
-      'v3/@hive-flow/neural/docs/SONA_QUICKSTART.md',
+      'v3/@hive-flow/cli/docs/neural/README.md',
+      'v3/@hive-flow/cli/docs/neural/SONA_INTEGRATION.md',
+      'v3/@hive-flow/cli/docs/neural/SONA_QUICKSTART.md',
     ].filter((file) => !existsSync(resolve(REPO_ROOT, file)));
 
     expect(forbidden).toEqual([]);

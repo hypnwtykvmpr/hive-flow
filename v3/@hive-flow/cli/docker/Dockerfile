@@ -69,7 +69,6 @@ RUN GLOBAL_PREFIX=$(npm config get prefix) \
       "${NESTED}/hive-flow" \
       "${NESTED}/hivememory" \
     && rm -rf \
-      "${CLI_NM}/@hive-flow/neural" \
       "${CLI_NM}/@grpc" \
       "${CLI_NM}/gun"
 

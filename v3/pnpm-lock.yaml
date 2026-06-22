@@ -130,9 +130,6 @@ importers:
       '@hive-flow/memory':
         specifier: workspace:*
         version: link:../memory
-      '@hive-flow/neural':
-        specifier: workspace:*
-        version: link:../neural
       '@hive-flow/plugin-gastown-bridge':
         specifier: workspace:*
         version: link:../../plugins/gastown-bridge
@@ -206,9 +203,6 @@ importers:
       '@hive-flow/memory':
         specifier: workspace:*
         version: link:../memory
-      '@hive-flow/neural':
-        specifier: workspace:*
-        version: link:../neural
       '@hive-flow/shared':
         specifier: workspace:*
         version: link:../shared
@@ -289,12 +283,6 @@ importers:
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  '@hive-flow/neural':
-    dependencies:
-      '@hive-flow/memory':
-        specifier: workspace:*
-        version: link:../memory
 
   '@hive-flow/plugins':
     devDependencies:

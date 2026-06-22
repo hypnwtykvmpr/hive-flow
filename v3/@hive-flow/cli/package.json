@@ -127,6 +127,14 @@
     "./swarm/*": {
       "types": "./dist/src/swarm/*.d.ts",
       "import": "./dist/src/swarm/*.js"
+    },
+    "./neural": {
+      "types": "./dist/src/neural/index.d.ts",
+      "import": "./dist/src/neural/index.js"
+    },
+    "./neural/*": {
+      "types": "./dist/src/neural/*.d.ts",
+      "import": "./dist/src/neural/*.js"
     }
   },
   "files": [
@@ -199,7 +207,6 @@
     "@hive-flow/embeddings": "workspace:*",
     "@hive-flow/guidance": "workspace:*",
     "@hive-flow/memory": "workspace:*",
-    "@hive-flow/neural": "workspace:*",
     "@hive-flow/plugin-gastown-bridge": "workspace:*"
   },
   "publishConfig": {

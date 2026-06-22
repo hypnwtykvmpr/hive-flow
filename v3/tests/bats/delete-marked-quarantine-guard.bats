@@ -98,9 +98,7 @@ setup() {
   [ -z "$hits" ]
 }
 
-@test "memory and neural tsconfig still exclude DELETE_ TS from build" {
+@test "memory tsconfig still excludes DELETE_ TS from build" {
   run grep -F 'src/**/DELETE_*' "$REPO_ROOT/v3/@hive-flow/memory/tsconfig.json"
-  [ "$status" -eq 0 ]
-  run grep -F 'src/**/DELETE_*' "$REPO_ROOT/v3/@hive-flow/neural/tsconfig.json"
   [ "$status" -eq 0 ]
 }

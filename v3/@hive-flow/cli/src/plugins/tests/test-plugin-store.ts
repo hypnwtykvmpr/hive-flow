@@ -204,11 +204,11 @@ async function runTests(): Promise<void> {
       );
 
       // Similar plugins
-      const similar = findSimilarPlugins(registry, '@hive-flow/neural', 3);
+      const similar = findSimilarPlugins(registry, '@hive-flow/embeddings', 3);
       logTest(
         'Similar plugins',
         similar.length >= 0,
-        `Similar to @hive-flow/neural: ${similar.map(p => p.name).join(', ') || 'none'}`
+        `Similar to @hive-flow/embeddings: ${similar.map(p => p.name).join(', ') || 'none'}`
       );
     }
 

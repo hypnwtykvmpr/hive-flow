@@ -1,4 +1,4 @@
-# @hive-flow/neural
+# @hive-flow/cli/neural
 
 > Local pattern learning and trajectory tracking module for Hive Flow V3.
 
@@ -15,7 +15,7 @@
 ## Quick Start
 
 ```typescript
-import { NeuralLearningSystem, createNeuralLearningSystem } from '@hive-flow/neural';
+import { NeuralLearningSystem, createNeuralLearningSystem } from '@hive-flow/cli/neural';
 
 // Create learning system
 const system = createNeuralLearningSystem('general');
@@ -41,7 +41,7 @@ const patterns = await system.findPatterns(contextEmbedding, 3);
 ### NeuralLearningSystem
 
 ```typescript
-import { NeuralLearningSystem } from '@hive-flow/neural';
+import { NeuralLearningSystem } from '@hive-flow/cli/neural';
 
 const system = new NeuralLearningSystem('general');
 await system.initialize();
@@ -77,7 +77,7 @@ system.isInitialized();
 ### Factory Function
 
 ```typescript
-import { createNeuralLearningSystem } from '@hive-flow/neural';
+import { createNeuralLearningSystem } from '@hive-flow/cli/neural';
 
 const system = createNeuralLearningSystem('general');
 ```
@@ -85,7 +85,7 @@ const system = createNeuralLearningSystem('general');
 ### RL Algorithms
 
 ```typescript
-import { PPOAlgorithm, A2CAlgorithm, DQNAlgorithm, QLearning, SARSAAlgorithm, DecisionTransformer } from '@hive-flow/neural';
+import { PPOAlgorithm, A2CAlgorithm, DQNAlgorithm, QLearning, SARSAAlgorithm, DecisionTransformer } from '@hive-flow/cli/neural';
 
 // Proximal Policy Optimization
 const ppo = new PPOAlgorithm({
@@ -152,7 +152,7 @@ import type {
   NeuralStats,
   NeuralEvent,
   RLAlgorithm
-} from '@hive-flow/neural';
+} from '@hive-flow/cli/neural';
 ```
 
 > **Note:** `LoRAConfig`, `LoRAWeights`, and `EWCConfig` types are not exported from this package. `SONAMode` and `SONAModeConfig` types are exported but SONA mode switching has no effect at runtime.
@@ -160,7 +160,7 @@ import type {
 ## Capability Status
 
 ```typescript
-import { getNeuralCapabilityStatus } from '@hive-flow/neural';
+import { getNeuralCapabilityStatus } from '@hive-flow/cli/neural';
 
 const status = getNeuralCapabilityStatus();
 // {
@@ -172,13 +172,13 @@ const status = getNeuralCapabilityStatus();
 
 ## Dependencies
 
-- [@hive-flow/memory](../memory) - Memory integration
+- [@hive-flow/memory](../../../memory/) - Memory integration
 
 ## Related Packages
 
-- [@hive-flow/memory](../memory) - Vector memory for patterns
-- [@hive-flow/cli/integration](../cli/src/integration) - local compatibility integration
-- [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking
+- [@hive-flow/memory](../../../memory/) - Vector memory for patterns
+- [@hive-flow/cli/integration](../integration/) - local compatibility integration
+- [@hive-flow/cli/performance](../performance/) - Benchmarking
 
 ## License
 

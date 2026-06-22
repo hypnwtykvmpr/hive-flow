@@ -236,7 +236,7 @@ import type {
 
 - [@hive-flow/memory](../memory) - Memory operations to benchmark
 - [@hive-flow/cli/swarm](../swarm) - Swarm coordination to benchmark
-- [@hive-flow/neural](../neural) - Neural operations to benchmark
+- [@hive-flow/cli/neural](../neural/) - Neural operations to benchmark
 
 ## License
 

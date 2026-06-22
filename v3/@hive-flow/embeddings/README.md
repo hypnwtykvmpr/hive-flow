@@ -632,7 +632,7 @@ hive-flow embeddings cache clear --older-than 7d
 
 - [@hive-flow/memory](../memory) - HNSW indexing and vector storage
 - [@hive-flow/providers](../providers) - Multi-LLM provider system
-- [@hive-flow/neural](../neural) - SONA learning integration
+- [@hive-flow/cli/neural](../cli/docs/neural/) - SONA learning integration
 
 ## License
 

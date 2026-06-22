@@ -104,7 +104,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Cross-platform compatibility
 - fast cold start performance
 
-#### 7. `@hive-flow/neural` - Neural Features
+#### 7. `@hive-flow/cli/neural` - Neural Features
 - SONA learning integration
 - ReasoningBank adaptive learning
 - Pattern recognition and optimization

@@ -243,7 +243,6 @@ export class PluginDiscoveryService {
       newest: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant'],
       official: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant', '@hive-flow/security'],
       compatibilityMatrix: [
-        { pluginId: '@hive-flow/neural', pluginVersion: '3.0.0', hiveFlowVersions: ['3.x'], tested: true },
         { pluginId: '@hive-flow/security', pluginVersion: '3.0.0', hiveFlowVersions: ['3.x'], tested: true },
       ],
     };
@@ -287,35 +286,6 @@ export class PluginDiscoveryService {
     };
 
     return [
-      {
-        id: '@hive-flow/neural',
-        name: '@hive-flow/neural',
-        displayName: 'Neural Patterns',
-        description: 'Neural pattern training and inference with WASM SIMD acceleration, MoE routing, and Flash Attention optimization',
-        version: '3.0.0',
-        cid: 'bafybeineuralpatternplugin',
-        size: 245000,
-        checksum: 'sha256:abc123neural',
-        author: officialAuthor,
-        license: 'MIT',
-        categories: ['ai-ml'],
-        tags: ['neural', 'training', 'inference', 'wasm', 'simd'],
-        keywords: ['neural', 'patterns', 'ml'],
-        downloads: 15000,
-        rating: 4.9,
-        ratingCount: 245,
-        lastUpdated: baseTime,
-        createdAt: '2024-01-01T00:00:00Z',
-        minHiveFlowVersion: '3.0.0',
-        dependencies: [{ name: '@hive-flow/core', version: '^3.0.0' }],
-        type: 'core',
-        hooks: ['neural:train', 'neural:inference', 'pattern:learn'],
-        commands: ['neural train', 'neural predict', 'neural patterns'],
-        permissions: ['memory', 'network'],
-        exports: ['NeuralTrainer', 'PatternRecognizer', 'FlashAttention'],
-        verified: true,
-        trustLevel: 'official',
-      },
       {
         id: '@hive-flow/security',
         name: '@hive-flow/security',
@@ -1023,7 +993,6 @@ export class PluginDiscoveryService {
       '@hive-flow/security',
       '@hive-flow/plugins',
       '@hive-flow/embeddings',
-      '@hive-flow/neural',
       '@hive-flow/teammate-plugin',
       // Domain-specific plugins
       '@hive-flow/plugin-healthcare-clinical',
