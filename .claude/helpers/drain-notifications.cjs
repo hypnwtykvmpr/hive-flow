@@ -70,6 +70,15 @@ function targetAgentFromKind(kind) {
   return null;
 }
 
+function agentIdFromNotification(obj) {
+  const explicit = obj?.agentId || obj?.agent_id;
+  if (typeof explicit === 'string' && explicit.trim()) return explicit.trim();
+  const summary = typeof obj?.summary === 'string' ? obj.summary : '';
+  const match = summary.match(/\bagent=("[^"]+"|'[^']+'|[^\s,.)]+)/i);
+  if (!match) return null;
+  return match[1].replace(/^['"]|['"]$/g, '').trim() || null;
+}
+
 function taskOwnerTargetAgent(projectRoot, obj) {
   const taskId = typeof obj?.taskId === 'string' ? obj.taskId : null;
   if (!taskId) return null;
@@ -83,8 +92,10 @@ function taskOwnerTargetAgent(projectRoot, obj) {
   const fromResult = targetAgentFromKind(result?.ownerClientKind || result?.owner_client_kind || inner?.ownerClientKind || inner?.owner_client_kind);
   if (fromResult) return fromResult;
 
-  const agentId = task?.agentId || task?.agent_id || result?.agentId || result?.agent_id || inner?.agentId || inner?.agent_id || obj?.agentId || obj?.agent_id;
+  const agentId = task?.agentId || task?.agent_id || result?.agentId || result?.agent_id || inner?.agentId || inner?.agent_id || agentIdFromNotification(obj);
   if (typeof agentId !== 'string' || !agentId.trim()) return null;
+  const fromAgentId = targetAgentFromKind(agentId);
+  if (fromAgentId) return fromAgentId;
   const store = readJsonFile(path.join(projectRoot, '.hive-flow', 'agents', 'store.json'));
   const agent = store?.agents?.[agentId.trim()];
   return targetAgentFromKind(agent?.ownerClientKind || agent?.owner_client_kind);
@@ -246,6 +257,7 @@ module.exports = {
   currentTargetAgent,
   readJsonFile,
   targetAgentFromKind,
+  agentIdFromNotification,
   taskOwnerTargetAgent,
   notificationTargetsAgent,
   collectDrainFiles,

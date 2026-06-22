@@ -698,6 +698,11 @@ describe('provider bridge single tool execution path', () => {
         root,
         toolName: 'read_file',
         toolArgs: { path: readable },
+        envExtra: {
+          HIVE_FLOW_HOME: join(root, '.hive-flow-home'),
+          CODEX_THREAD_ID: 'codex-single-path-owner',
+          CLAUDE_SESSION_ID: 'claude-single-path-wrong-owner',
+        },
       });
 
       expect(requests.length).toBeGreaterThanOrEqual(2);
@@ -720,6 +725,9 @@ describe('provider bridge single tool execution path', () => {
       expect(requests[0].tool_choice).not.toBe('required');
       expect(Buffer.byteLength(JSON.stringify(requests[0].tools), 'utf8')).toBeLessThan(10 * 1024);
       expect(result.success).toBe(true);
+      expect(result.ownerSessionId).toBe('codex-single-path-owner');
+      expect(result.ownerClientKind).toBe('codex');
+      expect(result.targetAgent).toBe('codex');
       expect(result.content).toContain('tool-result:detached built-in read');
       expect(result.toolUse).toMatchObject({
         iterations: 2,

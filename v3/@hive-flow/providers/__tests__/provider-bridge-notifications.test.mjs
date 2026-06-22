@@ -295,6 +295,81 @@ describe('provider bridge task completion notifications', () => {
     expect(existsSync(wrongClaudePending)).toBe(false);
   });
 
+  it('routes completion notifications from durable result ownership after tracking is consumed', () => {
+    const projectRoot = tempDir('hf-bridge-result-owner-project-');
+    const hiveHome = tempDir('hf-bridge-result-owner-home-');
+    const taskId = 'task-result-owned-codex';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+    writeFileSync(resultFile, JSON.stringify({
+      success: true,
+      agentId: 'codex-result-owner-agent',
+      ownerSessionId: 'codex-result-owner',
+      ownerClientKind: 'codex',
+      targetAgent: 'codex',
+      content: 'finished',
+    }), 'utf8');
+
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.HIVE_FLOW_SESSION_ID = 'ambient-hive-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'claude-code';
+    process.env.CLAUDE_SESSION_ID = 'ambient-claude-session';
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+
+    expect(bridge.notifyTaskCompletionFromResultFile(resultFile)).toBe(true);
+
+    const localPending = readFileSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'), 'utf8');
+    const codexSessionPending = join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('codex', 'codex-result-owner'),
+      'pending-notifications.jsonl',
+    );
+    const wrongClaudePending = join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('claude-code', 'ambient-claude-session'),
+      'pending-notifications.jsonl',
+    );
+
+    expect(localPending).toContain('"targetAgent":"codex"');
+    expect(localPending).toContain('"ownerSessionId":"codex-result-owner"');
+    expect(readFileSync(codexSessionPending, 'utf8')).toContain(taskId);
+    expect(existsSync(wrongClaudePending)).toBe(false);
+  });
+
+  it('uses a codex-prefixed result agent id as a target fallback for legacy result files', () => {
+    const projectRoot = tempDir('hf-bridge-agentid-owner-project-');
+    const hiveHome = tempDir('hf-bridge-agentid-owner-home-');
+    const taskId = 'task-agentid-owned-codex';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+    writeFileSync(resultFile, JSON.stringify({
+      success: true,
+      agentId: 'codex-dedupe-root-scripts-openrouter',
+      content: 'finished',
+    }), 'utf8');
+
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+    delete process.env.HIVE_FLOW_CLIENT_KIND;
+    delete process.env.CLAUDE_CODE_ENTRYPOINT;
+    delete process.env.CLAUDE_PROJECT_DIR;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+
+    expect(bridge.notifyTaskCompletionFromResultFile(resultFile)).toBe(true);
+
+    const localPending = readFileSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'), 'utf8');
+    expect(localPending).toContain('"targetAgent":"codex"');
+    expect(localPending).toContain('agent=codex-dedupe-root-scripts-openrouter');
+    expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
+  });
+
   it('escalates denied privileged run_command attempts to the owning operator', async () => {
     const projectRoot = tempDir('hf-bridge-permission-project-');
     const hiveHome = tempDir('hf-bridge-permission-home-');

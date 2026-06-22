@@ -183,6 +183,13 @@ function bridgeTargetAgent(env = process.env, owner = {}) {
   return null;
 }
 
+function bridgeTargetAgentFromAgentId(agentId) {
+  const raw = bridgeStringValue(agentId)?.toLowerCase() || '';
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude';
+  return null;
+}
+
 function bridgeSessionKeyFor(env = process.env, owner = {}) {
   const session = bridgeSessionValue(env, owner);
   if (!session) return null;
@@ -265,7 +272,19 @@ function bridgeMergeOwners(...owners) {
     if (!merged.agentId && owner.agentId) merged.agentId = owner.agentId;
   }
   if (!merged.targetAgent && merged.ownerClientKind) merged.targetAgent = bridgeTargetAgent({}, merged);
+  if (!merged.targetAgent && merged.agentId) merged.targetAgent = bridgeTargetAgentFromAgentId(merged.agentId);
   return merged;
+}
+
+function bridgeDurableOwnerFields(env = process.env) {
+  const ownerSessionId = bridgeSessionValue(env);
+  const ownerClientKind = bridgeClientKind(env);
+  const targetAgent = bridgeTargetAgent(env, { ownerSessionId, ownerClientKind });
+  return {
+    ...(targetAgent ? { targetAgent } : {}),
+    ...(ownerSessionId ? { ownerSessionId } : {}),
+    ...(ownerClientKind ? { ownerClientKind } : {}),
+  };
 }
 
 function bridgeTaskOwnershipFromResultFile(resultFile, projectRoot = projectRootFromResultFile(resultFile)) {
@@ -5239,6 +5258,7 @@ async function main() {
     result = {
       success: true,
       agentId,
+      ...bridgeDurableOwnerFields(process.env),
       content: response.content,
       model: response.model,
       usage: response.usage,
@@ -5333,6 +5353,8 @@ async function handleMainError(err) {
     success: false,
     error: err.message || String(err),
     code: err.code || 'BRIDGE_ERROR',
+    agentId: logAgentId !== 'unknown' ? logAgentId : undefined,
+    ...bridgeDurableOwnerFields(process.env),
   };
 
   // Reset agent status to idle before writing the error result file so that

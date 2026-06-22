@@ -35,6 +35,23 @@ function pendingFile(home, rawSession) {
   return join(home, 'wake', 'sessions', sessionKey(rawSession), 'pending-notifications.jsonl');
 }
 
+function withEnv(updates, fn) {
+  const previous = {};
+  for (const key of Object.keys(updates)) {
+    previous[key] = process.env[key];
+    if (updates[key] === undefined) delete process.env[key];
+    else process.env[key] = updates[key];
+  }
+  try {
+    return fn();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
@@ -91,5 +108,85 @@ describe('drain-notifications global wake queues', () => {
       if (origKind !== undefined) process.env.HIVE_FLOW_CLIENT_KIND = origKind;
       else delete process.env.HIVE_FLOW_CLIENT_KIND;
     }
+  });
+
+  it('does not let a Claude drain consume a Codex-owned project-local completion', () => {
+    const projectRoot = tempDir('hf-drain-project-codex-owned-');
+    const pending = join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl');
+    mkdirSync(dirname(pending), { recursive: true });
+    writeFileSync(
+      pending,
+      JSON.stringify({
+        kind: 'task',
+        taskId: 'task-codex-owned-shared-line',
+        summary: '[TASK COMPLETE: task-codex-owned-shared-line] agent=codex-dedupe-root-scripts-openrouter status=completed.',
+      }) + '\n',
+      'utf8',
+    );
+
+    const claudeOutput = withEnv({ HIVE_FLOW_CLIENT_KIND: 'claude-code' }, () => drain.drainNotifications(projectRoot, {
+      session_id: 'claude-session',
+      client_kind: 'claude-code',
+    }));
+
+    assert.deepEqual(claudeOutput, {});
+    assert.equal(existsSync(pending), true);
+    assert.match(readFileSync(pending, 'utf8'), /codex-dedupe-root-scripts-openrouter/);
+
+    const codexOutput = withEnv({ HIVE_FLOW_CLIENT_KIND: 'codex' }, () => drain.drainNotifications(projectRoot, {
+      session_id: 'codex-session',
+      client_kind: 'codex',
+    }));
+
+    const context = codexOutput.hookSpecificOutput?.additionalContext ?? '';
+    assert.match(context, /codex-owned-shared-line/);
+    assert.equal(existsSync(pending), false);
+  });
+
+  it('uses durable result owner after task tracking has been consumed', () => {
+    const projectRoot = tempDir('hf-drain-project-result-owned-');
+    const pending = join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl');
+    const tasksDir = join(projectRoot, '.hive-flow', 'tasks');
+    mkdirSync(dirname(pending), { recursive: true });
+    mkdirSync(tasksDir, { recursive: true });
+    writeFileSync(
+      join(tasksDir, 'task-result-owned-codex.result.json'),
+      JSON.stringify({
+        success: true,
+        agentId: 'codex-result-owned-agent',
+        ownerSessionId: 'codex-session',
+        ownerClientKind: 'codex',
+        targetAgent: 'codex',
+        content: 'done',
+      }),
+      'utf8',
+    );
+    writeFileSync(
+      pending,
+      JSON.stringify({
+        kind: 'task',
+        taskId: 'task-result-owned-codex',
+        targetAgent: 'claude',
+        summary: '[TASK COMPLETE: task-result-owned-codex] agent=codex-result-owned-agent status=completed.',
+      }) + '\n',
+      'utf8',
+    );
+
+    const claudeOutput = withEnv({ HIVE_FLOW_CLIENT_KIND: 'claude-code' }, () => drain.drainNotifications(projectRoot, {
+      session_id: 'claude-session',
+      client_kind: 'claude-code',
+    }));
+
+    assert.deepEqual(claudeOutput, {});
+    assert.equal(existsSync(pending), true);
+
+    const codexOutput = withEnv({ HIVE_FLOW_CLIENT_KIND: 'codex' }, () => drain.drainNotifications(projectRoot, {
+      session_id: 'codex-session',
+      client_kind: 'codex',
+    }));
+
+    const context = codexOutput.hookSpecificOutput?.additionalContext ?? '';
+    assert.match(context, /task-result-owned-codex/);
+    assert.equal(existsSync(pending), false);
   });
 });
