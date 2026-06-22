@@ -366,22 +366,9 @@ claude --dangerously-skip-permissions
 
 ### Installation
 
-#### Published Package (Recommended)
+#### Build From Source (Current Verified Path)
 
-```bash
-# Install the published CLI
-npm install -g hive-flow@v3alpha
-
-# Verify the command is available
-hive-flow --help
-
-# Initialize in the current project
-hive-flow init
-```
-
-#### Build From Source (Fresh Clone / Local Development)
-
-The published package ships compiled `dist/` files. A fresh git clone does not: `dist/` is intentionally ignored, so build before invoking `bin/cli.js`, `hive-flow mcp start`, or a local global install.
+A fresh git clone does not include compiled `dist/` files: `dist/` is intentionally ignored, so build before invoking `bin/cli.js`, `hive-flow mcp start`, or a local global install.
 
 ```bash
 git clone <repo-url> hive-flow
@@ -392,10 +379,17 @@ pnpm run build:ts
 # Run from the clone
 node bin/cli.js --help
 
-# Optional: install this checkout globally after building
+# Install this checkout globally after building
 npm install -g .
 hive-flow --help
+
+# Initialize in the current project
+hive-flow init
 ```
+
+#### Published Package
+
+The root package is configured to publish as `hive-flow` with the `v3alpha` dist tag, but the public npm package is not currently available. Use the source install above until the package is published.
 
 #### Project Setup
 
@@ -1159,8 +1153,8 @@ hive-flow mcp start
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1211,8 +1205,8 @@ Create `.vscode/mcp.json` in your project:
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1237,8 +1231,8 @@ Create `.cursor/mcp.json` in your project (or global config):
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1263,8 +1257,8 @@ Create `.cursor/mcp.json` in your project (or global config):
 {
   "mcpServers": {
     "hive-flow": {
-      "command": "npx",
-      "args": ["hive-flow@v3alpha", "mcp", "start"],
+      "command": "hive-flow",
+      "args": ["mcp", "start"],
       "env": {
         "ANTHROPIC_API_KEY": "sk-ant-..."
       }
@@ -1322,8 +1316,8 @@ const ai = new GoogleGenAI({ apiKey: 'YOUR_API_KEY' });
 const mcpConfig = {
   servers: [{
     name: 'hive-flow',
-    command: 'npx',
-    args: ['hive-flow@v3alpha', 'mcp', 'start']
+    command: 'hive-flow',
+    args: ['mcp', 'start']
   }]
 };
 ```
@@ -1344,8 +1338,8 @@ JetBrains AI Assistant supports MCP for IntelliJ IDEA, PyCharm, WebStorm, and ot
 ```json
 {
   "name": "hive-flow",
-  "command": "npx",
-  "args": ["hive-flow@v3alpha", "mcp", "start"]
+  "command": "hive-flow",
+  "args": ["mcp", "start"]
 }
 ```
 
