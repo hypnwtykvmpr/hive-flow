@@ -32,6 +32,12 @@ function writeResult(root: string, taskId: string, result: unknown): void {
   writeFileSync(join(taskDir, `${taskId}.result.json`), JSON.stringify(result));
 }
 
+function writeTracking(root: string, taskId: string, tracking: unknown): void {
+  const taskDir = join(root, '.hive-flow', 'tasks');
+  mkdirSync(taskDir, { recursive: true });
+  writeFileSync(join(taskDir, `${taskId}.json`), JSON.stringify(tracking));
+}
+
 describe('sentinel agent task rewake', () => {
   it('extracts task ids from known Claude Code PostToolUse payload shapes', () => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'.split('');
@@ -124,6 +130,56 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
+  it('routes task completion using persisted task ownership before hook ambient ownership', () => {
+    const root = makeTempProject();
+    const home = makeTempProject();
+    try {
+      const taskId = 'task-persisted-owner-rewake';
+      writeTracking(root, taskId, {
+        taskId,
+        agentId: 'codex-owned-agent',
+        ownerSessionId: 'codex-persisted-session',
+        ownerClientKind: 'codex',
+      });
+      writeResult(root, taskId, { success: true, result: { agentId: 'codex-owned-agent', content: 'done' } });
+
+      const result = agentRewake.notifyCompletedTaskIfReady(root, taskId, {
+        sessionInput: {
+          session_id: 'claude-hook-session',
+          client_kind: 'claude-code',
+        },
+        env: {
+          HIVE_FLOW_HOME: home,
+        },
+      });
+
+      expect(result.notified).toBe(true);
+
+      const localPending = join(root, '.hive-flow', 'data', 'pending-notifications.jsonl');
+      const codexPending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor({ session_id: 'codex-persisted-session', client_kind: 'codex' }, {}),
+        'pending-notifications.jsonl',
+      );
+      const wrongClaudePending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor({ session_id: 'claude-hook-session', client_kind: 'claude-code' }, {}),
+        'pending-notifications.jsonl',
+      );
+
+      expect(readFileSync(localPending, 'utf8')).toContain('"targetAgent":"codex"');
+      expect(readFileSync(codexPending, 'utf8')).toContain('"ownerSessionId":"codex-persisted-session"');
+      expect(existsSync(wrongClaudePending)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('defaults Claude hook ownership and wake session keys to Claude when client kind is absent', () => {
     const root = makeTempProject();
     const home = makeTempProject();
@@ -188,6 +244,12 @@ describe('sentinel agent task rewake', () => {
     try {
       const dataDir = join(root, '.hive-flow', 'data');
       mkdirSync(dataDir, { recursive: true });
+      writeTracking(root, 'task-stale-target-codex-owned', {
+        taskId: 'task-stale-target-codex-owned',
+        agentId: 'codex-owned-agent',
+        ownerClientKind: 'codex',
+        ownerSessionId: 'codex-owner',
+      });
       writeFileSync(
         join(dataDir, 'pending-notifications.jsonl'),
         [
@@ -203,6 +265,12 @@ describe('sentinel agent task rewake', () => {
             targetAgent: 'claude',
             summary: '[TASK COMPLETE: task-claude-owned] done',
           }),
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-stale-target-codex-owned',
+            targetAgent: 'claude',
+            summary: '[TASK COMPLETE: task-stale-target-codex-owned] done',
+          }),
         ].join('\n') + '\n',
       );
 
@@ -210,6 +278,12 @@ describe('sentinel agent task rewake', () => {
       const context = output.hookSpecificOutput.additionalContext;
       expect(context).toContain('task-claude-owned');
       expect(context).not.toContain('task-codex-owned');
+      expect(context).not.toContain('task-stale-target-codex-owned');
+
+      const remaining = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8');
+      expect(remaining).toContain('task-codex-owned');
+      expect(remaining).toContain('task-stale-target-codex-owned');
+      expect(remaining).not.toContain('task-claude-owned');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

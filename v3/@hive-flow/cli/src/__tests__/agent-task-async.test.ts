@@ -236,6 +236,8 @@ describe('agent_task_async handler', () => {
     expect(tracking.status).toBe('running');
     expect(tracking.agentId).toBe(agent.agentId);
     expect(typeof tracking.taskId).toBe('string');
+    expect(tracking.ownerSessionId).toBe(agent.ownerSessionId);
+    expect(tracking.ownerClientKind).toBe(agent.ownerClientKind);
     expect(tracking.pid).toBe(99);
   });
 

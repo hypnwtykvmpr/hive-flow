@@ -55,8 +55,45 @@ function currentTargetAgent(sessionInput = null, env = process.env) {
   return 'claude';
 }
 
-function notificationTargetsAgent(obj, targetAgent) {
+function readJsonFile(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function targetAgentFromKind(kind) {
+  const raw = String(kind || '').toLowerCase();
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude';
+  return null;
+}
+
+function taskOwnerTargetAgent(projectRoot, obj) {
+  const taskId = typeof obj?.taskId === 'string' ? obj.taskId : null;
+  if (!taskId) return null;
+
+  const task = readJsonFile(path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.json`));
+  const fromTask = targetAgentFromKind(task?.ownerClientKind || task?.owner_client_kind || task?.clientKind || task?.client_kind);
+  if (fromTask) return fromTask;
+
+  const result = readJsonFile(path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`));
+  const inner = result && typeof result === 'object' ? result.result : null;
+  const fromResult = targetAgentFromKind(result?.ownerClientKind || result?.owner_client_kind || inner?.ownerClientKind || inner?.owner_client_kind);
+  if (fromResult) return fromResult;
+
+  const agentId = task?.agentId || task?.agent_id || result?.agentId || result?.agent_id || inner?.agentId || inner?.agent_id || obj?.agentId || obj?.agent_id;
+  if (typeof agentId !== 'string' || !agentId.trim()) return null;
+  const store = readJsonFile(path.join(projectRoot, '.hive-flow', 'agents', 'store.json'));
+  const agent = store?.agents?.[agentId.trim()];
+  return targetAgentFromKind(agent?.ownerClientKind || agent?.owner_client_kind);
+}
+
+function notificationTargetsAgent(obj, targetAgent, projectRoot = projectDir()) {
   if (!targetAgent) return true;
+  const persisted = taskOwnerTargetAgent(projectRoot, obj);
+  if (persisted) return persisted === targetAgent;
   const explicit = String(obj?.targetAgent || obj?.target_agent || '').trim().toLowerCase();
   if (explicit) return explicit === targetAgent;
   const kind = String(obj?.clientKind || obj?.client_kind || obj?.ownerClientKind || obj?.owner_client_kind || '').toLowerCase();
@@ -95,12 +132,12 @@ function collectDrainFiles(file) {
   return files;
 }
 
-function parseSummariesFromLines(lines, targetAgent = null) {
+function parseSummariesFromLines(lines, targetAgent = null, projectRoot = projectDir()) {
   const summaries = new Map();
   for (const line of lines) {
     try {
       const obj = JSON.parse(line);
-      if (!notificationTargetsAgent(obj, targetAgent)) continue;
+      if (!notificationTargetsAgent(obj, targetAgent, projectRoot)) continue;
       if (obj && obj.summary) {
         const key = obj.taskId || obj.hiveId || obj.summary;
         const kind = typeof obj.kind === 'string' ? obj.kind : '';
@@ -113,6 +150,12 @@ function parseSummariesFromLines(lines, targetAgent = null) {
     }
   }
   return [...summaries.values()].map((entry) => entry.summary);
+}
+
+function originalPendingFileForDrain(drainFile) {
+  const marker = '.draining-';
+  const index = String(drainFile).indexOf(marker);
+  return index === -1 ? drainFile : drainFile.slice(0, index);
 }
 
 function supersedesCheckDue(existingKind, nextKind) {
@@ -130,22 +173,48 @@ function drainNotifications(projectRoot = projectDir(), sessionInput = null) {
   if (drainFiles.length === 0) return emptyOutput();
 
   const lines = [];
+  const targetAgent = currentTargetAgent(sessionInput, process.env);
+  const survivorsByFile = new Map();
   for (const drainFile of drainFiles) {
     try {
       const raw = fs.readFileSync(drainFile, 'utf8');
-      lines.push(...raw.split('\n').map((l) => l.trim()).filter(Boolean));
+      for (const line of raw.split('\n').map((l) => l.trim()).filter(Boolean)) {
+        let obj = null;
+        try {
+          obj = JSON.parse(line);
+        } catch {
+          lines.push(line);
+          continue;
+        }
+        if (!notificationTargetsAgent(obj, targetAgent, projectRoot)) {
+          const originalFile = originalPendingFileForDrain(drainFile);
+          const existing = survivorsByFile.get(originalFile) || [];
+          existing.push(line);
+          survivorsByFile.set(originalFile, existing);
+          continue;
+        }
+        lines.push(line);
+      }
     } catch {
       // Leave unread files in place so a future prompt can retry.
       continue;
     }
   }
 
-  const summaries = parseSummariesFromLines(lines, currentTargetAgent(sessionInput, process.env));
+  const summaries = parseSummariesFromLines(lines, targetAgent, projectRoot);
 
   // Remove only after parsing; an interruption before this point leaves a
   // .draining-* file that the next run recovers.
   for (const drainFile of drainFiles) {
     try { fs.unlinkSync(drainFile); } catch { /* retry on a future run */ }
+  }
+  for (const [file, survivorLines] of survivorsByFile.entries()) {
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.appendFileSync(file, `${survivorLines.join('\n')}\n`);
+    } catch {
+      // A failed restore should not block the active prompt hook.
+    }
   }
 
   if (summaries.length === 0) {
@@ -175,9 +244,13 @@ module.exports = {
   pendingFile,
   pendingFiles,
   currentTargetAgent,
+  readJsonFile,
+  targetAgentFromKind,
+  taskOwnerTargetAgent,
   notificationTargetsAgent,
   collectDrainFiles,
   parseSummariesFromLines,
+  originalPendingFileForDrain,
   supersedesCheckDue,
   drainNotifications,
 };

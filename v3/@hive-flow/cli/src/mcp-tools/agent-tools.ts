@@ -1425,7 +1425,15 @@ export const agentTools: MCPTool[] = [
             agent.currentTaskPid = childPid;
           }
           saveAgentStore(store);
-          return { error: null, agentToken, provider: agent.provider, model: agent.model, pid: childPid };
+          return {
+            error: null,
+            agentToken,
+            provider: agent.provider,
+            model: agent.model,
+            pid: childPid,
+            ownerSessionId,
+            ownerClientKind,
+          };
         } catch (err) {
           transitionAgent(agent, 'idle');
           saveAgentStore(store);
@@ -1446,6 +1454,8 @@ export const agentTools: MCPTool[] = [
         taskId,
         agentId,
         provider: dispatchResult.provider,
+        ownerSessionId: dispatchResult.ownerSessionId,
+        ownerClientKind: dispatchResult.ownerClientKind,
         startedAt: new Date().toISOString(),
         pid: dispatchResult.pid,
       }, null, 2), 'utf-8');

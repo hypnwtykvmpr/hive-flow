@@ -91,6 +91,8 @@ interface AgentRecord {
   model?: string;
   resolvedModel?: string;
   currentTaskPid?: number;
+  ownerSessionId?: string;
+  ownerClientKind?: string;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -104,6 +106,8 @@ function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
     createdAt: new Date().toISOString(),
     provider: 'gemini-cli',
     model: 'sonnet',
+    ownerSessionId: 'owner-session',
+    ownerClientKind: 'codex',
     ...overrides,
   };
 }
@@ -397,6 +401,8 @@ describe('agent_task handler (non-blocking)', () => {
     expect(tracking.status).toBe('running');
     expect(tracking.agentId).toBe(agent.agentId);
     expect(typeof tracking.taskId).toBe('string');
+    expect(tracking.ownerSessionId).toBe(agent.ownerSessionId);
+    expect(tracking.ownerClientKind).toBe(agent.ownerClientKind);
     expect(tracking.pid).toBe(99);
   });
 

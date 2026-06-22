@@ -150,37 +150,49 @@ function bridgeResolveHiveHome(env = process.env) {
   return join(homedir(), '.hive-flow');
 }
 
-function bridgeSessionValue(env = process.env) {
-  return bridgeStringValue(env.CODEX_SESSION_ID)
-    || bridgeStringValue(env.CLAUDE_SESSION_ID)
-    || bridgeStringValue(env.HIVE_FLOW_SESSION_ID);
+function bridgeWakeClientKind(kind) {
+  const raw = String(kind || '').toLowerCase();
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude-code';
+  return kind || null;
 }
 
-function bridgeClientKind(env = process.env) {
-  return bridgeStringValue(env.HIVE_FLOW_CLIENT_KIND)
+function bridgeSessionValue(env = process.env, owner = {}) {
+  return bridgeStringValue(owner.ownerSessionId)
+    || bridgeStringValue(env.CODEX_SESSION_ID)
+    || bridgeStringValue(env.HIVE_FLOW_SESSION_ID)
+    || bridgeStringValue(env.CODEX_THREAD_ID)
+    || bridgeStringValue(env.CLAUDE_SESSION_ID)
+}
+
+function bridgeClientKind(env = process.env, owner = {}) {
+  return bridgeWakeClientKind(bridgeStringValue(owner.ownerClientKind))
+    || bridgeStringValue(env.HIVE_FLOW_CLIENT_KIND)
     || bridgeStringValue(env.CLAUDE_CODE_ENTRYPOINT)
-    || (bridgeStringValue(env.CODEX_SESSION_ID) ? 'codex' : null)
+    || (bridgeStringValue(env.CODEX_SESSION_ID) || bridgeStringValue(env.CODEX_THREAD_ID) ? 'codex' : null)
     || (bridgeStringValue(env.CLAUDE_SESSION_ID) || bridgeStringValue(env.CLAUDE_PROJECT_DIR) ? 'claude-code' : null)
     || 'claude-code';
 }
 
-function bridgeTargetAgent(env = process.env) {
-  const raw = bridgeClientKind(env).toLowerCase();
+function bridgeTargetAgent(env = process.env, owner = {}) {
+  const explicit = bridgeStringValue(owner.targetAgent);
+  if (explicit) return explicit.toLowerCase();
+  const raw = bridgeClientKind(env, owner).toLowerCase();
   if (raw.includes('codex')) return 'codex';
   if (raw.includes('claude')) return 'claude';
   return null;
 }
 
-function bridgeSessionKeyFor(env = process.env) {
-  const session = bridgeSessionValue(env);
+function bridgeSessionKeyFor(env = process.env, owner = {}) {
+  const session = bridgeSessionValue(env, owner);
   if (!session) return null;
-  const clientKind = bridgeClientKind(env);
+  const clientKind = bridgeClientKind(env, owner);
   return `s_${createHash('sha256').update(`${clientKind}\0${session}`).digest('hex').slice(0, 32)}`;
 }
 
-function bridgeTaskNotificationDataDirs(projectRoot, env = process.env) {
+function bridgeTaskNotificationDataDirs(projectRoot, env = process.env, owner = {}) {
   const localDataDir = join(projectRoot, '.hive-flow', 'data');
-  const sessionKey = bridgeSessionKeyFor(env);
+  const sessionKey = bridgeSessionKeyFor(env, owner);
   if (!sessionKey) return [localDataDir];
   return [
     localDataDir,
@@ -221,6 +233,55 @@ function projectRootFromResultFile(resultFile) {
     /* fall through */
   }
   return process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+}
+
+function bridgeReadJsonFile(file) {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function bridgeOwnerFromObject(obj) {
+  if (!obj || typeof obj !== 'object') return {};
+  const ownerClientKind = bridgeStringValue(obj.ownerClientKind || obj.owner_client_kind || obj.clientKind || obj.client_kind);
+  const explicitTarget = bridgeStringValue(obj.targetAgent || obj.target_agent);
+  return {
+    ownerSessionId: bridgeStringValue(obj.ownerSessionId || obj.owner_session_id || obj.sessionId || obj.session_id),
+    ownerClientKind,
+    targetAgent: explicitTarget || (ownerClientKind ? bridgeTargetAgent({}, { ownerClientKind }) : null),
+    agentId: bridgeStringValue(obj.agentId || obj.agent_id),
+  };
+}
+
+function bridgeMergeOwners(...owners) {
+  const merged = {};
+  for (const owner of owners) {
+    if (!owner) continue;
+    if (!merged.ownerSessionId && owner.ownerSessionId) merged.ownerSessionId = owner.ownerSessionId;
+    if (!merged.ownerClientKind && owner.ownerClientKind) merged.ownerClientKind = owner.ownerClientKind;
+    if (!merged.targetAgent && owner.targetAgent) merged.targetAgent = owner.targetAgent;
+    if (!merged.agentId && owner.agentId) merged.agentId = owner.agentId;
+  }
+  if (!merged.targetAgent && merged.ownerClientKind) merged.targetAgent = bridgeTargetAgent({}, merged);
+  return merged;
+}
+
+function bridgeTaskOwnershipFromResultFile(resultFile, projectRoot = projectRootFromResultFile(resultFile)) {
+  const taskId = taskIdFromResultFile(resultFile);
+  const tracking = taskId ? bridgeReadJsonFile(join(projectRoot, '.hive-flow', 'tasks', `${taskId}.json`)) : null;
+  const result = bridgeReadJsonFile(resultFile);
+  const resultInner = result && typeof result === 'object' ? result.result : null;
+  const fromTracking = bridgeOwnerFromObject(tracking);
+  const fromResult = bridgeMergeOwners(bridgeOwnerFromObject(result), bridgeOwnerFromObject(resultInner));
+  const agentId = fromTracking.agentId || fromResult.agentId;
+  let fromAgent = {};
+  if (agentId) {
+    const store = bridgeReadJsonFile(join(projectRoot, '.hive-flow', 'agents', 'store.json'));
+    fromAgent = bridgeOwnerFromObject(store?.agents?.[agentId]);
+  }
+  return bridgeMergeOwners(fromTracking, fromResult, fromAgent);
 }
 
 function appendTaskNotificationOnce(dataDir, taskId, line) {
@@ -288,16 +349,19 @@ export function notifyTaskCompletionFromResultFile(resultFile) {
     const taskId = taskIdFromResultFile(resultFile);
     if (!taskId) return false;
     const projectRoot = projectRootFromResultFile(resultFile);
-    const targetAgent = bridgeTargetAgent(process.env);
+    const owner = bridgeTaskOwnershipFromResultFile(resultFile, projectRoot);
+    const targetAgent = bridgeTargetAgent(process.env, owner);
     const line = JSON.stringify({
       kind: 'task',
       taskId,
       ts: new Date().toISOString(),
       summary: summarizeBridgeResultFile(resultFile, taskId),
       ...(targetAgent ? { targetAgent } : {}),
+      ...(owner.ownerSessionId ? { ownerSessionId: owner.ownerSessionId } : {}),
+      ...(owner.ownerClientKind ? { ownerClientKind: owner.ownerClientKind } : {}),
     });
     let wrote = false;
-    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env)) {
+    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env, owner)) {
       if (appendTaskNotificationOnce(dataDir, taskId, line)) wrote = true;
     }
     return wrote;
@@ -312,7 +376,8 @@ function notifyPermissionEscalationFromDeniedTool(toolName, denied, ctx = {}) {
     const taskId = taskIdFromResultFile(resultFile);
     if (!taskId) return false;
     const projectRoot = projectRootFromResultFile(resultFile);
-    const targetAgent = bridgeTargetAgent(process.env);
+    const owner = bridgeTaskOwnershipFromResultFile(resultFile, projectRoot);
+    const targetAgent = bridgeTargetAgent(process.env, owner);
     const denyReason = String(denied?.error || denied?.message || denied?.denyReason || 'permission-denied').slice(0, 180);
     const denyCode = String(denied?.denyReason || 'permission-denied').slice(0, 80);
     const markerHash = createHash('sha256')
@@ -330,9 +395,11 @@ function notifyPermissionEscalationFromDeniedTool(toolName, denied, ctx = {}) {
       denyCode,
       ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
       ...(targetAgent ? { targetAgent } : {}),
+      ...(owner.ownerSessionId ? { ownerSessionId: owner.ownerSessionId } : {}),
+      ...(owner.ownerClientKind ? { ownerClientKind: owner.ownerClientKind } : {}),
     });
     let wrote = false;
-    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env)) {
+    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env, owner)) {
       if (appendPermissionNotificationOnce(dataDir, taskId, `permission-${markerHash}`, line)) wrote = true;
     }
     return wrote;

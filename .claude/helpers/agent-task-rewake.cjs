@@ -110,6 +110,72 @@ function summarizeResult(resultPath, taskId) {
   }
 }
 
+function readJsonFile(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function nonEmptyString(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function targetAgentFromClientKind(kind) {
+  const raw = String(kind || '').toLowerCase();
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude';
+  return null;
+}
+
+function wakeClientKind(kind) {
+  const raw = String(kind || '').toLowerCase();
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude-code';
+  return kind || null;
+}
+
+function ownerFromObject(obj) {
+  if (!obj || typeof obj !== 'object') return {};
+  const ownerClientKind = nonEmptyString(obj.ownerClientKind || obj.owner_client_kind || obj.clientKind || obj.client_kind);
+  return {
+    ownerSessionId: nonEmptyString(obj.ownerSessionId || obj.owner_session_id || obj.sessionId || obj.session_id),
+    ownerClientKind,
+    targetAgent: nonEmptyString(obj.targetAgent || obj.target_agent) || targetAgentFromClientKind(ownerClientKind),
+    agentId: nonEmptyString(obj.agentId || obj.agent_id),
+  };
+}
+
+function firstOwnerWithValue(...owners) {
+  const merged = {};
+  for (const owner of owners) {
+    if (!owner) continue;
+    if (!merged.ownerSessionId && owner.ownerSessionId) merged.ownerSessionId = owner.ownerSessionId;
+    if (!merged.ownerClientKind && owner.ownerClientKind) merged.ownerClientKind = owner.ownerClientKind;
+    if (!merged.targetAgent && owner.targetAgent) merged.targetAgent = owner.targetAgent;
+    if (!merged.agentId && owner.agentId) merged.agentId = owner.agentId;
+  }
+  if (!merged.targetAgent && merged.ownerClientKind) merged.targetAgent = targetAgentFromClientKind(merged.ownerClientKind);
+  return merged;
+}
+
+function taskOwnershipFromDisk(projectRoot, taskId, resultPath) {
+  const tracking = readJsonFile(path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.json`));
+  const result = readJsonFile(resultPath);
+  const resultInner = result && typeof result === 'object' ? result.result : null;
+  const fromTracking = ownerFromObject(tracking);
+  const fromResult = firstOwnerWithValue(ownerFromObject(result), ownerFromObject(resultInner));
+  const agentId = fromTracking.agentId || fromResult.agentId;
+  let fromAgent = {};
+  if (agentId) {
+    const store = readJsonFile(path.join(projectRoot, '.hive-flow', 'agents', 'store.json'));
+    const agent = store?.agents?.[agentId];
+    fromAgent = ownerFromObject(agent);
+  }
+  return firstOwnerWithValue(fromTracking, fromResult, fromAgent);
+}
+
 function appendPending(dataDir, line) {
   try {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -260,17 +326,26 @@ function notifyCompletedTaskIfReady(projectRoot, taskId, options = {}) {
   if (!done) return { notified: false, reason: 'pending' };
 
   const summary = summarizeResult(resultPath, taskId);
-  const targetAgent = targetAgentFromInputOrEnv(sessionInput, env);
+  const owner = taskOwnershipFromDisk(projectRoot, taskId, resultPath);
+  const targetAgent = owner.targetAgent || targetAgentFromInputOrEnv(sessionInput, env);
+  const notificationSessionInput = owner.ownerSessionId
+    ? {
+        session_id: owner.ownerSessionId,
+        client_kind: wakeClientKind(owner.ownerClientKind || targetAgent),
+      }
+    : sessionInput;
   const line = JSON.stringify({
     kind: 'task',
     taskId,
     ts: new Date().toISOString(),
     summary,
     ...(targetAgent ? { targetAgent } : {}),
+    ...(owner.ownerSessionId ? { ownerSessionId: owner.ownerSessionId } : {}),
+    ...(owner.ownerClientKind ? { ownerClientKind: owner.ownerClientKind } : {}),
   });
   let appendedAny = false;
   let appendFailed = false;
-  for (const dataDir of pendingDataDirs(projectRoot, sessionInput, env)) {
+  for (const dataDir of pendingDataDirs(projectRoot, notificationSessionInput, env)) {
     const result = appendTaskCompletionPendingOnce(dataDir, taskId, line);
     if (result.appended) appendedAny = true;
     if (result.reason === 'append-failed') appendFailed = true;
@@ -378,6 +453,12 @@ module.exports = {
   releaseNotifiedMarker,
   appendTaskCompletionPendingOnce,
   extractSessionInput,
+  nonEmptyString,
+  targetAgentFromClientKind,
+  wakeClientKind,
+  ownerFromObject,
+  firstOwnerWithValue,
+  taskOwnershipFromDisk,
   notifyCompletedTaskIfReady,
   importJournalModule,
   appendRewakeJournalEvent,
