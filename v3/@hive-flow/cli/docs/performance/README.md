@@ -1,4 +1,4 @@
-# @hive-flow/performance
+# @hive-flow/cli/performance
 
 
 > Comprehensive performance benchmarking module for Hive Flow V3 - statistical analysis, memory tracking, regression detection, and Flash Attention validation.
@@ -16,7 +16,7 @@
 ## Quick Start
 
 ```typescript
-import { benchmark, BenchmarkRunner, V3_PERFORMANCE_TARGETS } from '@hive-flow/performance';
+import { benchmark, BenchmarkRunner, V3_PERFORMANCE_TARGETS } from '@hive-flow/cli/performance';
 
 // Single benchmark
 const result = await benchmark('vector-search', async () => {
@@ -39,7 +39,7 @@ if (result.mean <= V3_PERFORMANCE_TARGETS['vector-search']) {
 ### Single Benchmark
 
 ```typescript
-import { benchmark } from '@hive-flow/performance';
+import { benchmark } from '@hive-flow/cli/performance';
 
 const result = await benchmark(
   'my-benchmark',
@@ -79,7 +79,7 @@ const result = await benchmark(
 ### Benchmark Suite
 
 ```typescript
-import { BenchmarkRunner } from '@hive-flow/performance';
+import { BenchmarkRunner } from '@hive-flow/cli/performance';
 
 const runner = new BenchmarkRunner('Memory Operations');
 
@@ -109,7 +109,7 @@ const json = runner.toJSON();
 ### Comparison & Regression Detection
 
 ```typescript
-import { compareResults, printComparisonReport } from '@hive-flow/performance';
+import { compareResults, printComparisonReport } from '@hive-flow/cli/performance';
 
 // Compare current vs baseline
 const comparisons = compareResults(baselineResults, currentResults, {
@@ -135,7 +135,7 @@ for (const comp of comparisons) {
 ### V3 Performance Targets
 
 ```typescript
-import { V3_PERFORMANCE_TARGETS, meetsTarget } from '@hive-flow/performance';
+import { V3_PERFORMANCE_TARGETS, meetsTarget } from '@hive-flow/cli/performance';
 
 // Built-in targets
 V3_PERFORMANCE_TARGETS = {
@@ -169,7 +169,7 @@ const { met, target, ratio } = meetsTarget('vector-search', 0.8);
 ### Formatting Utilities
 
 ```typescript
-import { formatBytes, formatTime } from '@hive-flow/performance';
+import { formatBytes, formatTime } from '@hive-flow/cli/performance';
 
 formatTime(0.00005);  // '50.00 ns'
 formatTime(0.5);      // '500.00 us'
@@ -225,7 +225,7 @@ import type {
   EnvironmentInfo,
   ComparisonResult,
   PerformanceTarget
-} from '@hive-flow/performance';
+} from '@hive-flow/cli/performance';
 ```
 
 ## Dependencies

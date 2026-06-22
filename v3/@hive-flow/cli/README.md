@@ -4951,7 +4951,7 @@ hive-flow deployment deploy -e staging --version 2.0.0 --dry-run
 ---
 
 <details>
-<summary>📊 <strong>Performance Benchmarking</strong> — @hive-flow/performance</summary>
+<summary>📊 <strong>Performance Benchmarking</strong> — @hive-flow/cli/performance</summary>
 
 Statistical benchmarking, memory tracking, regression detection, and V3 performance target validation.
 
@@ -4969,7 +4969,7 @@ Statistical benchmarking, memory tracking, regression detection, and V3 performa
 ### Quick Start
 
 ```typescript
-import { benchmark, BenchmarkRunner, V3_PERFORMANCE_TARGETS } from '@hive-flow/performance';
+import { benchmark, BenchmarkRunner, V3_PERFORMANCE_TARGETS } from '@hive-flow/cli/performance';
 
 // Single benchmark
 const result = await benchmark('vector-search', async () => {
@@ -4987,7 +4987,7 @@ if (result.mean <= V3_PERFORMANCE_TARGETS['vector-search']) {
 ### V3 Performance Targets
 
 ```typescript
-import { V3_PERFORMANCE_TARGETS, meetsTarget } from '@hive-flow/performance';
+import { V3_PERFORMANCE_TARGETS, meetsTarget } from '@hive-flow/cli/performance';
 
 // Built-in targets
 V3_PERFORMANCE_TARGETS = {
@@ -5021,7 +5021,7 @@ const { met, target, ratio } = meetsTarget('vector-search', 0.8);
 ### Benchmark Suite
 
 ```typescript
-import { BenchmarkRunner } from '@hive-flow/performance';
+import { BenchmarkRunner } from '@hive-flow/cli/performance';
 
 const runner = new BenchmarkRunner('Memory Operations');
 
@@ -5051,7 +5051,7 @@ const json = runner.toJSON();
 ### Comparison & Regression Detection
 
 ```typescript
-import { compareResults, printComparisonReport } from '@hive-flow/performance';
+import { compareResults, printComparisonReport } from '@hive-flow/cli/performance';
 
 // Compare current vs baseline
 const comparisons = compareResults(baselineResults, currentResults, {
@@ -5103,7 +5103,7 @@ interface BenchmarkResult {
 ### Formatting Utilities
 
 ```typescript
-import { formatBytes, formatTime } from '@hive-flow/performance';
+import { formatBytes, formatTime } from '@hive-flow/cli/performance';
 
 formatTime(0.00005);  // '50.00 ns'
 formatTime(0.5);      // '500.00 µs'
@@ -6043,7 +6043,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](../embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](../providers/) |
 | `@hive-flow/integration` | local compatibility API integration | [Source](../integration/) |
-| `@hive-flow/performance` | Benchmarking & optimization | [Source](../performance/) |
+| `@hive-flow/cli/performance` | Benchmarking & optimization | [Source](docs/performance/) |
 | `@hive-flow/cli/deployment` | Release helper internals | [Source](./src/deployment/) |
 | `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](../shared/) |
 

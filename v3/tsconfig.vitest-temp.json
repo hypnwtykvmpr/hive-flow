@@ -36,9 +36,6 @@
       "@hive-flow/swarm": [
         "./@hive-flow/swarm/src"
       ],
-      "@hive-flow/performance": [
-        "./@hive-flow/performance/src"
-      ],
       "@hive-flow/cli": [
         "./@hive-flow/cli/src"
       ],
@@ -73,9 +70,6 @@
     },
     {
       "path": "./@hive-flow/swarm"
-    },
-    {
-      "path": "./@hive-flow/performance"
     },
     {
       "path": "./@hive-flow/cli"

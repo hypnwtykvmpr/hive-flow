@@ -18,7 +18,7 @@ This module provides high-performance attention mechanisms optimized for V3's Fl
 ### Basic Usage
 
 ```typescript
-import { createFlashAttentionOptimizer } from '@hive-flow/performance';
+import { createFlashAttentionOptimizer } from '@hive-flow/cli/performance';
 
 // Create optimizer
 const optimizer = createFlashAttentionOptimizer(512, 64);
@@ -39,7 +39,7 @@ console.log(`Runtime: ${output.runtime}`); // 'napi', 'wasm', or 'js'
 ### Performance Benchmarking
 
 ```typescript
-import { quickBenchmark } from '@hive-flow/performance';
+import { quickBenchmark } from '@hive-flow/cli/performance';
 
 // Quick benchmark
 const result = await quickBenchmark(512);
@@ -50,7 +50,7 @@ console.log(`Meets target: ${result.meetsTarget ? 'YES' : 'NO'}`);
 ### V3 Target Validation
 
 ```typescript
-import { quickValidation } from '@hive-flow/performance';
+import { quickValidation } from '@hive-flow/cli/performance';
 
 // Validate V3 performance targets (Flash Attention optimization)
 const isValid = await quickValidation();
@@ -60,7 +60,7 @@ const isValid = await quickValidation();
 ### Comprehensive Benchmark Suite
 
 ```typescript
-import { runAndDisplaySuite } from '@hive-flow/performance';
+import { runAndDisplaySuite } from '@hive-flow/cli/performance';
 
 // Run full benchmark suite across multiple dimensions
 const suite = await runAndDisplaySuite();
@@ -183,7 +183,7 @@ See `/src/examples/flash-attention-demo.ts` for comprehensive examples:
 
 ```bash
 # Run all examples
-tsx v3/@hive-flow/performance/src/examples/flash-attention-demo.ts
+tsx v3/@hive-flow/cli/src/performance/examples/flash-attention-demo.ts
 ```
 
 ## Technical Details
@@ -218,7 +218,7 @@ Benchmarks measure:
 Performance metrics are automatically exported for the V3 metrics dashboard:
 
 ```typescript
-import { FlashAttentionOptimizer } from '@hive-flow/performance';
+import { FlashAttentionOptimizer } from '@hive-flow/cli/performance';
 
 const optimizer = new FlashAttentionOptimizer();
 // ... run operations ...

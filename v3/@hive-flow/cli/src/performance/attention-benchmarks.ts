@@ -1,5 +1,5 @@
 /**
- * @hive-flow/performance - Flash Attention Benchmarks
+ * @hive-flow/cli/performance - Flash Attention Benchmarks
  *
  * Comprehensive benchmark suite for Flash Attention performance validation.
  * Validates Flash Attention optimization targets and memory efficiency improvements.

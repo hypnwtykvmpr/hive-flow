@@ -197,7 +197,6 @@ async function generateRegistry(): Promise<PluginRegistry> {
     '@hive-flow/claims',
     '@hive-flow/embeddings',
     '@hive-flow/neural',
-    '@hive-flow/performance',
     '@hive-flow/plugins',
   ];
 

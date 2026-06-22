@@ -873,7 +873,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 | `@hive-flow/claims` | 3.0.0-alpha.8 | Claims-based authorization (check, grant, revoke, list) |
 | `@hive-flow/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
 | `@hive-flow/plugins` | 3.0.0-alpha.1 | Plugin system core (manager, discovery, store) |
-| `@hive-flow/performance` | 3.0.0-alpha.1 | Performance profiling and benchmarking |
+| `@hive-flow/plugin-perf-optimizer` | 0.1.0 | Performance profiling and benchmarking |
 
 ## Support
 

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/performance
+ * @hive-flow/cli/performance
  *
  * Performance module for hive-flow v3.
  * Provides benchmarking, Flash Attention validation, and optimization utilities.

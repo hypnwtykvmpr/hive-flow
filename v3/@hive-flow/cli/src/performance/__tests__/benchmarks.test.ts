@@ -15,7 +15,7 @@ import {
   type ComparisonBenchmark,
   type SuiteResult,
   type MemoryProfile,
-} from '../src/attention-benchmarks.js';
+} from '../attention-benchmarks.js';
 
 describe('AttentionBenchmarkRunner', () => {
   let runner: AttentionBenchmarkRunner;

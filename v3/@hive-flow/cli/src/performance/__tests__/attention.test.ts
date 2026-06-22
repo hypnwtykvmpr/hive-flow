@@ -14,7 +14,7 @@ import {
   type AttentionOutput,
   type BenchmarkResult,
   type PerformanceMetrics,
-} from '../src/attention-integration.js';
+} from '../attention-integration.js';
 
 describe('FlashAttentionOptimizer', () => {
   let optimizer: FlashAttentionOptimizer;
@@ -342,7 +342,7 @@ describe('FlashAttentionOptimizer', () => {
       const output = optimizer.optimize(input);
 
       // In Node.js, memoryUsageBytes may be available
-      if (typeof process !== 'undefined' && process.memoryUsage) {
+      if (typeof process !== 'undefined' && typeof process.memoryUsage === 'function') {
         expect(typeof output.memoryUsageBytes).toBe('number');
       }
     });

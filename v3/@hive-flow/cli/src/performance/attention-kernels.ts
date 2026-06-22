@@ -1,5 +1,5 @@
 /**
- * Local attention kernels for @hive-flow/performance.
+ * Local attention kernels for @hive-flow/cli/performance.
  *
  * These are deterministic TypeScript implementations used to avoid a hard
  * runtime dependency on external vector packages.

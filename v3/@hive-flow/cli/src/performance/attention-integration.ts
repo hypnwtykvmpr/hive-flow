@@ -1,5 +1,5 @@
 /**
- * @hive-flow/performance - Flash Attention Integration
+ * @hive-flow/cli/performance - Flash Attention Integration
  *
  * Provides local Flash Attention-compatible mechanisms for V3 performance tests.
  *

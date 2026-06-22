@@ -299,7 +299,7 @@ This package is a dependency of all other @hive-flow modules:
 - [@hive-flow/security](../security) - Security & validation
 - [@hive-flow/memory](../memory) - HiveMemory & HNSW indexing
 - [@hive-flow/neural](../neural) - SONA learning & RL algorithms
-- [@hive-flow/performance](../performance) - Benchmarking & optimization
+- [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking & optimization
 - [@hive-flow/swarm](../swarm) - 15-agent coordination
 - [@hive-flow/integration](../integration) - local compatibility API bridge
 - [@hive-flow/testing](../testing) - TDD framework & fixtures

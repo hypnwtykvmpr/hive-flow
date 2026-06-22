@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (19 packages)
+├── @hive-flow/                    # Modular packages (18 packages)
 │   ├── aidefence/                   # AI-threat defence & PII scanning
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
@@ -205,11 +205,11 @@ await bridge.initialize();
 const agent = await bridge.createAgent({ type: 'coder' });
 ```
 
-### @hive-flow/performance
+### @hive-flow/cli/performance
 Benchmarking framework with Flash Attention validation.
 
 ```typescript
-import { BenchmarkRunner, formatTime } from '@hive-flow/performance';
+import { BenchmarkRunner, formatTime } from '@hive-flow/cli/performance';
 
 const runner = new BenchmarkRunner();
 const result = await runner.run('map-lookup', () => map.get(key), {
@@ -365,7 +365,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 19 packages |
+| **Code** | Package count | 18 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -379,7 +379,7 @@ pnpm test:coverage
 - [@hive-flow/memory](./@hive-flow/memory/)
 - [@hive-flow/swarm](./@hive-flow/swarm/)
 - [@hive-flow/integration](./@hive-flow/integration/)
-- [@hive-flow/performance](./@hive-flow/performance/)
+- [@hive-flow/cli/performance](./@hive-flow/cli/docs/performance/)
 - [@hive-flow/neural](./@hive-flow/neural/)
 - [@hive-flow/cli](./@hive-flow/cli/)
 - [@hive-flow/testing](./@hive-flow/testing/)

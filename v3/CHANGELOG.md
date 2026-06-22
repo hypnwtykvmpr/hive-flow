@@ -80,7 +80,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Unified task orchestration
 - Plugin architecture compliance
 
-#### 4. `@hive-flow/performance` - Performance & Benchmarking
+#### 4. `@hive-flow/cli/performance` - Performance & Benchmarking
 - Flash Attention integration
 - SONA learning optimization
 - Real-time performance monitoring

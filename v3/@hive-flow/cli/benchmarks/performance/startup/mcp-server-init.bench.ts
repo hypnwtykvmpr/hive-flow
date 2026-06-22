@@ -7,7 +7,7 @@
  * including transport setup, tool registration, and handler configuration.
  */
 
-import { benchmark, BenchmarkRunner, formatTime, meetsTarget } from '../../src/framework/benchmark.js';
+import { benchmark, BenchmarkRunner, formatTime, meetsTarget } from '../../../src/performance/framework/benchmark.js';
 
 // ============================================================================
 // Simulated MCP Components
