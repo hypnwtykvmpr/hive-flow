@@ -272,35 +272,20 @@ await release.prepare({ version: '3.0.0', changelog: '...' });
 ### Quick Start
 
 ```typescript
-import { initializeV3Swarm } from '@hive-flow/v3';
+import { createUnifiedSwarmCoordinator } from '@hive-flow/swarm';
 
-// Initialize the swarm
-const swarm = await initializeV3Swarm();
-
-// Spawn agents
-await swarm.spawnAllAgents();
-
-// Submit a task
-const task = swarm.submitTask({
-  type: 'implementation',
-  title: 'Implement feature X',
-  description: 'Detailed description...',
-  domain: 'core',
-  phase: 'phase-2-core',
-  priority: 'high'
+const swarm = createUnifiedSwarmCoordinator({
+  topology: { type: 'hierarchical-mesh', maxAgents: 150 },
+  consensus: { algorithm: 'raft', threshold: 0.67 },
 });
 
-// Wait for completion
-const result = await swarm.waitForTask(task.id);
+await swarm.initialize();
 ```
 
 ### Import Specific Modules
 
 ```typescript
-// Import everything
-import * as hiveFlow from '@hive-flow/v3';
-
-// Or import specific modules for tree-shaking
+// Import the package you need directly.
 import { UnifiedSwarmCoordinator } from '@hive-flow/swarm';
 import { PasswordHasher } from '@hive-flow/security';
 import { HNSWIndex } from '@hive-flow/memory';
