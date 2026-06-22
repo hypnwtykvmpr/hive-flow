@@ -23,6 +23,7 @@ const CRITICAL_TOOLS = new Set([
   'agent_spawn', 'agent_task', 'agent_task_async',
   'queen_spawn_worker', 'queen_mission_assign',
   'workflow_enforcer_override',
+  'permission_guard_override', 'permission_guard_config',
   'browser_eval',
   'config_import',
   'system_reset',

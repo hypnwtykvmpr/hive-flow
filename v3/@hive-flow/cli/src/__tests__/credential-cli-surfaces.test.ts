@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const runtimeMocks = vi.hoisted(() => ({
+  installRelocatedEnforcement: vi.fn(async () => ({
+    binDir: '/tmp/hive-flow-bin',
+    userSettingsPath: '/tmp/settings.json',
+    messages: ['installed'],
+  })),
   initializeCredentialVault: vi.fn(async () => ({
     backend: { available: true },
     vaultPath: '/tmp/hive-flow-vault.json.gcm',
@@ -53,6 +58,10 @@ vi.mock('../credential-store/holder-runtime.js', async () => {
     removeProviderCredential: runtimeMocks.removeProviderCredential,
   };
 });
+
+vi.mock('../install/enforcement-installer.js', () => ({
+  installRelocatedEnforcement: runtimeMocks.installRelocatedEnforcement,
+}));
 
 vi.mock('../install/native-helper-installer.js', () => ({
   buildAndInstallNativeHelpers: vi.fn(async () => [
@@ -159,6 +168,21 @@ describe('credential CLI surfaces', () => {
       allowDegraded: true,
     }));
     expect(output.printError).not.toHaveBeenCalledWith(expect.stringMatching(/Required option missing: --provider/));
+  });
+
+  it('hidden install command remains reachable and parses boolean fallback flags', async () => {
+    const cli = new CLI({ interactive: false });
+
+    await cli.run(['install', '--global', '--yes', '--engine-only', '--project-root', '/tmp/hive-flow-src', '--no-update']);
+
+    expect(runtimeMocks.installRelocatedEnforcement).toHaveBeenCalledWith(expect.objectContaining({
+      projectRoot: '/tmp/hive-flow-src',
+      yes: true,
+      engineOnly: true,
+      hooksOnly: false,
+      setupKeypair: false,
+    }));
+    expect(output.printError).not.toHaveBeenCalledWith(expect.stringMatching(/Unknown option|Unknown command/i));
   });
 
   it('config key set stores provider material through the credential runtime', async () => {

@@ -7,6 +7,23 @@ import {
 } from '../install/native-helper-installer.js';
 import { initializeCredentialVault } from '../credential-store/holder-runtime.js';
 
+function normalizedFlagName(name: string): string {
+  return name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
+function flagValue(flags: CommandContext['flags'], name: string): unknown {
+  return flags[name] ?? flags[normalizedFlagName(name)];
+}
+
+function booleanFlag(flags: CommandContext['flags'], name: string): boolean {
+  return flagValue(flags, name) === true;
+}
+
+function stringFlag(flags: CommandContext['flags'], name: string): string | undefined {
+  const value = flagValue(flags, name);
+  return typeof value === 'string' ? value : undefined;
+}
+
 export const installCommand: Command = {
   name: 'install',
   description: 'Install user-level Hive Flow enforcement hooks',
@@ -29,21 +46,21 @@ export const installCommand: Command = {
     { command: 'hive-flow install --global --keypair-only', description: 'Enroll the Permission Guard override keypair interactively' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
-    if (ctx.flags.global !== true) {
+    if (!booleanFlag(ctx.flags, 'global')) {
       output.printError('Only --global enforcement install is supported by this command.');
       return { success: false, exitCode: 1 };
     }
 
     try {
-      const keypairOnly = ctx.flags['keypair-only'] as boolean;
+      const keypairOnly = booleanFlag(ctx.flags, 'keypair-only');
       const result = await installRelocatedEnforcement({
-        projectRoot: ctx.flags['project-root'] as string | undefined,
-        homeDir: ctx.flags.home as string | undefined,
-        userSettingsPath: ctx.flags['user-settings'] as string | undefined,
-        binDir: ctx.flags.bin as string | undefined,
-        yes: ctx.flags.yes as boolean,
-        engineOnly: keypairOnly || (ctx.flags['engine-only'] as boolean),
-        hooksOnly: keypairOnly || (ctx.flags['hooks-only'] as boolean),
+        projectRoot: stringFlag(ctx.flags, 'project-root'),
+        homeDir: stringFlag(ctx.flags, 'home'),
+        userSettingsPath: stringFlag(ctx.flags, 'user-settings'),
+        binDir: stringFlag(ctx.flags, 'bin'),
+        yes: booleanFlag(ctx.flags, 'yes'),
+        engineOnly: keypairOnly || booleanFlag(ctx.flags, 'engine-only'),
+        hooksOnly: keypairOnly || booleanFlag(ctx.flags, 'hooks-only'),
         setupKeypair: keypairOnly,
       });
 
@@ -55,17 +72,17 @@ export const installCommand: Command = {
       let helperPath: ReturnType<typeof ensureHelperBinOnPath> | undefined;
       if (ctx.flags.credentials === true) {
         nativeHelpers = await buildAndInstallNativeHelpers({
-          projectRoot: (ctx.flags['project-root'] as string | undefined) ?? ctx.cwd,
+          projectRoot: stringFlag(ctx.flags, 'project-root') ?? ctx.cwd,
         });
         helperPath = ensureHelperBinOnPath({
-          homeDir: ctx.flags.home as string | undefined,
+          homeDir: stringFlag(ctx.flags, 'home'),
         });
         for (const helper of nativeHelpers) {
           output.printInfo(`helper ${helper.helper}: ${helper.status}${helper.remediation ? ` — ${helper.remediation}` : ''}`);
         }
         output.printInfo(`helper ${helperPath.helper}: ${helperPath.status}${helperPath.reason ? ` — ${helperPath.reason}` : ''}`);
         credentialSetup = await initializeCredentialVault({
-          allowDegraded: Boolean(ctx.flags.degraded),
+          allowDegraded: booleanFlag(ctx.flags, 'degraded'),
         });
         output.printSuccess(credentialSetup.createdVault ? 'Created credential vault' : 'Credential vault already ready');
       }

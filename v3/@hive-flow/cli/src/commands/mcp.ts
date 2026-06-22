@@ -22,14 +22,12 @@ import {
 import { listMCPTools, callMCPTool, hasTool, getToolMetadata } from '../mcp-client.js';
 import { reapStaleMcpServers } from './daemon.js';
 
-// MCP tools categories
-const TOOL_CATEGORIES = [
-  { value: 'coordination', label: 'Coordination', hint: 'Swarm and agent coordination tools' },
-  { value: 'monitoring', label: 'Monitoring', hint: 'Status and metrics monitoring' },
-  { value: 'memory', label: 'Memory', hint: 'Memory and neural features' },
-  { value: 'github', label: 'GitHub', hint: 'GitHub integration tools' },
-  { value: 'system', label: 'System', hint: 'System and benchmark tools' }
-];
+// MCP tool categories come from the live registry so category filters do not
+// drift when new tool groups are registered.
+const TOOL_CATEGORIES = listMCPTools()
+  .map(tool => tool.category || 'uncategorized')
+  .filter((category, index, categories) => categories.indexOf(category) === index)
+  .sort();
 
 /**
  * Format uptime for display
@@ -46,6 +44,17 @@ function formatUptime(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   return `${hours}h ${mins}m`;
+}
+
+function countEnabledTools(toolsFlag: unknown): number {
+  if (typeof toolsFlag !== 'string' || toolsFlag.trim() === '' || toolsFlag.trim() === 'all') {
+    return listMCPTools().length;
+  }
+  return toolsFlag
+    .split(',')
+    .map(tool => tool.trim())
+    .filter(Boolean)
+    .length;
 }
 
 // Start MCP server
@@ -194,7 +203,7 @@ const startCommand: Command = {
           { property: 'Transport', value: transport },
           { property: 'Host', value: host },
           { property: 'Port', value: port },
-          { property: 'Tools', value: !tools || tools === 'all' ? '27 enabled' : `${tools.split(',').length} enabled` },
+          { property: 'Tools', value: `${countEnabledTools(tools)} enabled` },
           { property: 'Status', value: output.success('Running') }
         ]
       });
@@ -372,7 +381,7 @@ const toolsCommand: Command = {
       short: 'c',
       description: 'Filter by category',
       type: 'string',
-      choices: TOOL_CATEGORIES.map(c => c.value)
+      choices: TOOL_CATEGORIES
     },
     {
       name: 'enabled',
@@ -704,7 +713,7 @@ const logsCommand: Command = {
     // Default logs (loaded from actual log file when available)
     const logs = [
       { time: new Date().toISOString(), level: 'info', message: 'MCP Server started on stdio' },
-      { time: new Date().toISOString(), level: 'info', message: 'Registered 27 tools' },
+      { time: new Date().toISOString(), level: 'info', message: `Registered ${listMCPTools().length} tools` },
       { time: new Date().toISOString(), level: 'debug', message: 'Received request: tools/list' },
       { time: new Date().toISOString(), level: 'info', message: 'Session initialized' },
     ].slice(-lines);

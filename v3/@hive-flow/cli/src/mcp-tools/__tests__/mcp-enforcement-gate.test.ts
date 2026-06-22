@@ -301,6 +301,11 @@ describe('G2: agent_task_async dispatch gating', () => {
     expect(classifyTool('mcp__hive-flow__agent_task_async')).toBe(ToolRisk.CRITICAL);
   });
 
+  it('permission guard write tools are CRITICAL risk', () => {
+    expect(classifyTool('permission_guard_override')).toBe(ToolRisk.CRITICAL);
+    expect(classifyTool('permission_guard_config')).toBe(ToolRisk.CRITICAL);
+  });
+
   it('agent_task_async has classification parity with agent_task', () => {
     expect(classifyTool('agent_task_async')).toBe(classifyTool('agent_task'));
     expect(classifyTool('mcp__hive-flow__agent_task_async')).toBe(classifyTool('mcp__hive-flow__agent_task'));

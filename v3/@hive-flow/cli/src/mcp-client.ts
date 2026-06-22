@@ -9,6 +9,7 @@
  */
 
 import type { MCPTool } from './mcp-tools/types.js';
+import { createHash } from 'node:crypto';
 
 // Import MCP tool handlers from local package
 import { agentTools } from './mcp-tools/agent-tools.js';
@@ -39,6 +40,8 @@ import { browserTools } from './mcp-tools/browser-tools.js';
 import { hivememoryTools } from './mcp-tools/hivememory-tools.js';
 // First-class provider tools: Cursor, Codex, Gemini
 import { providerTools } from './mcp-tools/provider-tools.js';
+import { permissionGuardTools } from './mcp-tools/permission-guard-tools.js';
+import { coverageRouterTools } from './hivector/coverage-tools.js';
 import { verificationGateTools } from './mcp-tools/verification-gate.js';
 import { planningSubflowTools } from './mcp-tools/planning-subflow.js';
 import { bugHunterTools } from './mcp-tools/bug-hunter.js';
@@ -96,6 +99,8 @@ registerTools([
   ...hivememoryTools,
   // First-class provider tools: Cursor, Codex, Gemini
   ...providerTools,
+  ...permissionGuardTools,
+  ...coverageRouterTools,
   // Verification workflow tools
   ...verificationGateTools,
   ...planningSubflowTools,
@@ -152,6 +157,61 @@ export class MCPClientError extends Error {
 const MAX_FIELD_BYTES = 1 * 1024 * 1024;    // 1MB per field
 const MAX_TOTAL_BYTES = 5 * 1024 * 1024;    // 5MB total serialized input
 
+function nonEmpty(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function hasSessionIdentity(context: Record<string, unknown> | null | undefined): boolean {
+  return Boolean(
+    nonEmpty(process.env.CODEX_SESSION_ID)
+    || nonEmpty(process.env.CODEX_THREAD_ID)
+    || nonEmpty(process.env.CLAUDE_SESSION_ID)
+    || nonEmpty(process.env.HIVE_FLOW_SESSION_ID)
+    || nonEmpty(context?.session_id)
+    || nonEmpty(context?.sessionId)
+  );
+}
+
+function hasClientKind(context: Record<string, unknown> | null | undefined): boolean {
+  return Boolean(
+    nonEmpty(process.env.HIVE_FLOW_CLIENT_KIND)
+    || nonEmpty(context?.client_kind)
+    || nonEmpty(context?.clientKind)
+  );
+}
+
+function inferClientKind(): string {
+  const explicit = nonEmpty(process.env.HIVE_FLOW_CLIENT_KIND);
+  if (explicit) return explicit;
+  if (nonEmpty(process.env.CODEX_SESSION_ID) || nonEmpty(process.env.CODEX_THREAD_ID)) return 'codex';
+  if (nonEmpty(process.env.CLAUDE_SESSION_ID) || nonEmpty(process.env.CLAUDE_PROJECT_DIR)) return 'claude';
+  // A standalone CLI invocation still needs an owner lane. Claude is the
+  // default operator lane for local/global installs when no richer host signal
+  // exists, matching the statusboard notification fallback.
+  return 'claude';
+}
+
+function defaultCliSessionId(): string {
+  const root = nonEmpty(process.env.HIVE_FLOW_PROJECT_ROOT)
+    || nonEmpty(process.env.CLAUDE_PROJECT_DIR)
+    || process.cwd();
+  const digest = createHash('sha256').update(root).digest('hex').slice(0, 16);
+  return `cli-${digest}`;
+}
+
+export function buildDefaultMCPContext(
+  context: Record<string, unknown> | null | undefined = undefined,
+): Record<string, unknown> {
+  const enriched: Record<string, unknown> = { ...(context ?? {}) };
+  if (!hasSessionIdentity(context)) {
+    enriched.sessionId = defaultCliSessionId();
+  }
+  if (!hasClientKind(context)) {
+    enriched.clientKind = inferClientKind();
+  }
+  return enriched;
+}
+
 export async function callMCPTool<T = unknown>(
   toolName: string,
   input: Record<string, unknown> = {},
@@ -202,7 +262,7 @@ export async function callMCPTool<T = unknown>(
 
   try {
     // Call the tool handler
-    const result = await tool.handler(effectiveInput, context);
+    const result = await tool.handler(effectiveInput, buildDefaultMCPContext(context));
     return result as T;
   } catch (error) {
     // Wrap and re-throw with context
