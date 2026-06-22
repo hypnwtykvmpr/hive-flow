@@ -311,11 +311,10 @@ import { HNSWIndex } from '@hive-flow/memory';
 ### MCP Server
 
 ```typescript
-import { createMCPServer } from '@hive-flow/v3/mcp';
+import { createMCPServer } from '@hive-flow/mcp';
 
 const server = createMCPServer({
   transport: 'stdio',
-  tools: ['agent', 'swarm', 'memory', 'hooks']
 });
 
 await server.start();
@@ -413,10 +412,9 @@ pnpm test:coverage
 - [Cross-Platform Usage](./@hive-flow/memory/examples/cross-platform-usage.ts)
 
 ### MCP Tools
-- [Agent Tools](./mcp/tools/agent-tools.ts)
-- [Swarm Tools](./mcp/tools/swarm-tools.ts)
-- [Memory Tools](./mcp/tools/memory-tools.ts)
-- [Hooks Tools](./mcp/tools/hooks-tools.ts)
+- [CLI MCP Tool Registry](./@hive-flow/cli/src/mcp-client.ts)
+- [CLI MCP Tools](./@hive-flow/cli/src/mcp-tools/)
+- [Standalone MCP Server](./@hive-flow/mcp/)
 
 ### External
 

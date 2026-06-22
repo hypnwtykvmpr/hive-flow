@@ -494,46 +494,6 @@ importers:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  mcp:
-    dependencies:
-      '@hive-flow/neural':
-        specifier: workspace:*
-        version: link:../@hive-flow/neural
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../@hive-flow/shared
-      '@hive-flow/swarm':
-        specifier: workspace:*
-        version: link:../@hive-flow/swarm
-      ajv:
-        specifier: ^8.18.0
-        version: 8.18.0
-      cors:
-        specifier: ^2.8.6
-        version: 2.8.6
-      express:
-        specifier: ^5.2.1
-        version: 5.2.1
-      helmet:
-        specifier: ^8.1.0
-        version: 8.1.0
-      ws:
-        specifier: 8.21.0
-        version: 8.21.0
-      zod:
-        specifier: ^3.25.0
-        version: 3.25.76
-    devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.25
-      '@types/ws':
-        specifier: ^8.5.10
-        version: 8.18.1
-
   plugins/agentic-qe:
     dependencies:
       zod:
