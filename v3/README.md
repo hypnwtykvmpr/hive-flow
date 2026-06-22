@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (22 packages)
+├── @hive-flow/                    # Modular packages (20 packages)
 │   ├── aidefence/                   # AI-threat defence & PII scanning
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
@@ -105,9 +105,9 @@ v3/
 │   │   ├── e2e/                     # CLI-owned integration tests
 │   │   ├── helpers/                 # Cross-platform helper assets
 │   │   └── src/
-│   │       └── commands/            # Command handlers
+│   │       ├── commands/            # Command handlers
+│   │       └── context/             # Internal context assembly helpers
 │   ├── codex/                       # Dual-mode Claude + Codex collaboration
-│   ├── context/                     # Context management & autopilot
 │   ├── deployment/                  # Deployment & release management
 │   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
 │   ├── guidance/                    # Governance control plane

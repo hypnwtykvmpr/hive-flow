@@ -231,16 +231,6 @@ importers:
         specifier: ^4.0.16
         version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  v3/@hive-flow/context:
-    dependencies:
-      '@hive-flow/providers':
-        specifier: workspace:*
-        version: link:../providers
-    devDependencies:
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
   v3/@hive-flow/deployment:
     dependencies:
       '@hive-flow/shared':
