@@ -1,8 +1,9 @@
 /**
- * Memory MCP Tools for CLI - V3 with sql.js/HNSW Backend
+ * Memory MCP Tools for CLI - V3 with sql.js + local vector backend
  *
- * UPGRADED: Now uses the advanced sql.js + HNSW backend for:
- * - fast HNSW-indexed semantic search
+ * Uses the HiveMemory bridge when available, otherwise raw sql.js with a
+ * local vector-search fallback:
+ * - semantic search through HiveMemory bridge or local vector similarity
  * - Vector embeddings with cosine similarity
  * - Persistent SQLite storage (WASM)
  * - Backward compatible with legacy JSON storage (auto-migrates)
@@ -33,6 +34,7 @@ interface LegacyMemoryStore {
 const MEMORY_DIR = '.hive-flow/memory';
 const LEGACY_MEMORY_FILE = 'store.json';
 const MIGRATION_MARKER = '.migrated-to-sqlite';
+const MEMORY_BACKEND_LABEL = 'HiveMemory bridge or sql.js local vector fallback';
 
 function getMemoryDir(): string {
   return resolve(MEMORY_DIR);
@@ -158,7 +160,7 @@ async function ensureInitialized(): Promise<void> {
 export const memoryTools: MCPTool[] = [
   {
     name: 'memory_store',
-    description: 'Store a value in memory with vector embedding for semantic search (sql.js + HNSW backend). Use upsert=true to update existing keys.',
+    description: 'Store a value in memory with an embedding for semantic search (HiveMemory bridge or sql.js local vector fallback). Use upsert=true to update existing keys.',
     category: 'memory',
     inputSchema: {
       type: 'object',
@@ -210,7 +212,7 @@ export const memoryTools: MCPTool[] = [
           storedAt: new Date().toISOString(),
           hasEmbedding: !!result.embedding,
           embeddingDimensions: result.embedding?.dimensions || null,
-          backend: 'sql.js + HNSW',
+          backend: MEMORY_BACKEND_LABEL,
           storeTime: `${duration.toFixed(2)}ms`,
           error: result.error,
         };
@@ -264,7 +266,7 @@ export const memoryTools: MCPTool[] = [
             accessCount: result.entry.accessCount,
             hasEmbedding: result.entry.hasEmbedding,
             found: true,
-            backend: 'sql.js + HNSW',
+            backend: MEMORY_BACKEND_LABEL,
           };
         }
 
@@ -287,7 +289,7 @@ export const memoryTools: MCPTool[] = [
   },
   {
     name: 'memory_search',
-    description: 'Semantic vector search using HNSW index (HNSW-indexed rather than keyword search)',
+    description: 'Semantic vector search using the HiveMemory bridge when available, with sql.js local vector similarity fallback',
     category: 'memory',
     inputSchema: {
       type: 'object',
@@ -342,7 +344,7 @@ export const memoryTools: MCPTool[] = [
           results,
           total: results.length,
           searchTime: `${duration.toFixed(2)}ms`,
-          backend: 'HNSW + sql.js',
+          backend: MEMORY_BACKEND_LABEL,
         };
       } catch (error) {
         return {
@@ -381,7 +383,7 @@ export const memoryTools: MCPTool[] = [
           key,
           namespace,
           deleted: result.deleted,
-          backend: 'sql.js + HNSW',
+          backend: MEMORY_BACKEND_LABEL,
         };
       } catch (error) {
         return {
@@ -436,7 +438,7 @@ export const memoryTools: MCPTool[] = [
           total: result.total,
           limit,
           offset,
-          backend: 'sql.js + HNSW',
+          backend: MEMORY_BACKEND_LABEL,
         };
       } catch (error) {
         return {
@@ -451,7 +453,7 @@ export const memoryTools: MCPTool[] = [
   },
   {
     name: 'memory_stats',
-    description: 'Get memory storage statistics including HNSW index status',
+    description: 'Get memory storage statistics including embedding and local vector-search status',
     category: 'memory',
     inputSchema: {
       type: 'object',
@@ -482,11 +484,12 @@ export const memoryTools: MCPTool[] = [
             ? `${((withEmbeddings / allEntries.total) * 100).toFixed(1)}%`
             : '0%',
           namespaces,
-          backend: 'sql.js + HNSW',
+          backend: MEMORY_BACKEND_LABEL,
           version: status.version || '3.0.0',
           features: status.features || {
             vectorEmbeddings: true,
-            hnswIndex: true,
+            localVectorSearch: true,
+            hiveMemoryBridge: 'used when HiveMemory bridge initializes',
             semanticSearch: true,
           },
         };
@@ -536,7 +539,7 @@ export const memoryTools: MCPTool[] = [
         success: true,
         message: 'Migration completed',
         migrated: Object.keys(legacyStore.entries).length,
-        backend: 'sql.js + HNSW',
+        backend: MEMORY_BACKEND_LABEL,
       };
     },
   },
