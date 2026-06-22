@@ -84,6 +84,8 @@
     "build": "tsc && npm run build:helpers-src && node scripts/sync-engine-anchor.mjs",
     "sync:engine": "node scripts/sync-engine-anchor.mjs",
     "test": "vitest run",
+    "test:e2e": "vitest run --config e2e/vitest.config.ts",
+    "test:e2e:anti-mock": "vitest run --config e2e/vitest.config.ts __tests__/anti-mock-theater.test.ts",
     "test:debrand-assert-zero": "vitest run src/init/__tests__/debrand-generator-output.test.ts src/init/__tests__/perf-claims-grep-zero.test.ts src/init/__tests__/dropped-integration-grep-zero.test.ts src/init/__tests__/debrand-static-grep-zero.test.ts src/init/__tests__/debrand-ru-suspect-classification.test.ts",
     "test:property": "vitest run src/statusline/__tests__/property-contracts.test.ts",
     "test:sentinel": "vitest run src/__tests__/sentinel-rewake.test.ts src/__tests__/mcp-server-notifications.test.ts",
@@ -93,7 +95,8 @@
     "mutation:critical": "stryker run stryker.critical.conf.json",
     "preinstall": "node bin/preinstall.cjs || true",
     "prepublishOnly": "cp ../../../README.md ./README.md",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p e2e/tsconfig.json --noEmit",
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json --noEmit",
     "release": "npm version prerelease --preid=alpha && npm run publish:all",
     "publish:all": "./scripts/publish.sh"
   },
@@ -101,7 +104,10 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
+    "@hive-flow/plugins": "workspace:*",
+    "@hive-flow/swarm": "workspace:*",
     "fast-check": "^4.8.0",
+    "sql.js": "^1.14.1",
     "vitest": "^4.0.16"
   },
   "dependencies": {

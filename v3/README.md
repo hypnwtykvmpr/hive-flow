@@ -102,13 +102,13 @@ v3/
 │   ├── claims/                      # Claims-based authorisation
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
+│   │   ├── e2e/                     # CLI-owned integration tests
 │   │   ├── helpers/                 # Cross-platform helper assets
 │   │   └── src/
 │   │       └── commands/            # Command handlers
 │   ├── codex/                       # Dual-mode Claude + Codex collaboration
 │   ├── context/                     # Context management & autopilot
 │   ├── deployment/                  # Deployment & release management
-│   ├── e2e/                         # End-to-end integration tests
 │   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
 │   ├── guidance/                    # Governance control plane
 │   ├── hooks/                       # 17 hooks + 12 background workers

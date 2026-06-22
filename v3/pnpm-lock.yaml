@@ -156,9 +156,18 @@ importers:
         specifier: workspace:*
         version: link:../providers
     devDependencies:
+      '@hive-flow/plugins':
+        specifier: workspace:*
+        version: link:../plugins
+      '@hive-flow/swarm':
+        specifier: workspace:*
+        version: link:../swarm
       fast-check:
         specifier: ^4.8.0
         version: 4.8.0
+      sql.js:
+        specifier: ^1.14.1
+        version: 1.14.1
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
@@ -204,34 +213,6 @@ importers:
       semantic-release:
         specifier: ^25.0.3
         version: 25.0.3(typescript@5.9.3)
-      vitest:
-        specifier: 4.1.0
-        version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  '@hive-flow/e2e':
-    dependencies:
-      '@hive-flow/mcp':
-        specifier: workspace:*
-        version: link:../mcp
-      '@hive-flow/memory':
-        specifier: workspace:*
-        version: link:../memory
-      '@hive-flow/plugins':
-        specifier: workspace:*
-        version: link:../plugins
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
-      '@hive-flow/swarm':
-        specifier: workspace:*
-        version: link:../swarm
-      sql.js:
-        specifier: ^1.14.1
-        version: 1.14.1
-    devDependencies:
-      fast-check:
-        specifier: ^4.8.0
-        version: 4.8.0
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
