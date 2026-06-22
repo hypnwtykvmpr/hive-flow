@@ -7,6 +7,10 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync, statSync } from 'fs
 import { join, resolve } from 'path';
 import type { MCPTool } from './types.js';
 
+const SIMULATED_HOOKS_SOURCE = 'simulated-hooks-placeholder';
+const SIMULATED_HOOKS_WARNING =
+  'Synthetic hooks response; no live telemetry, persisted history, or repository-wide analysis was queried for these values.';
+
 function resolveProjectRoot(): string {
   const envRoot = process.env.HIVE_FLOW_PROJECT_ROOT;
   if (envRoot && envRoot.trim().length > 0) {
@@ -601,13 +605,18 @@ export const hooksPostEdit: MCPTool = {
   handler: async (params: Record<string, unknown>) => {
     const filePath = params.filePath as string;
     const success = params.success !== false;
+    const requestedLearningUpdate = success ? 'pattern_reinforced' : 'pattern_adjusted';
 
     return {
-      recorded: true,
+      simulated: true,
+      recorded: false,
+      source: 'unwired-learning-record-placeholder',
+      warning: 'Edit outcome was not persisted; no learning backend is wired for hooks_post-edit.',
       filePath,
       success,
       timestamp: new Date().toISOString(),
-      learningUpdate: success ? 'pattern_reinforced' : 'pattern_adjusted',
+      learningUpdate: 'not_recorded',
+      requestedLearningUpdate,
     };
   },
 };
@@ -664,7 +673,10 @@ export const hooksPostCommand: MCPTool = {
     const exitCode = (params.exitCode as number) || 0;
 
     return {
-      recorded: true,
+      simulated: true,
+      recorded: false,
+      source: 'unwired-command-record-placeholder',
+      warning: 'Command outcome was not persisted; no learning backend is wired for hooks_post-command.',
       command,
       exitCode,
       success: exitCode === 0,
@@ -705,23 +717,29 @@ export const hooksRoute: MCPTool = {
               backend: hiveMemoryRoute.controller,
               latencyMs: 0,
               throughput: 'N/A',
+              semantic: true,
+              confidenceSource: `hivememory-${hiveMemoryRoute.controller}`,
             },
             matchedPattern: hiveMemoryRoute.route,
             semanticMatches: [{ pattern: hiveMemoryRoute.route, score: hiveMemoryRoute.confidence }],
             primaryAgent: {
               type: agents[0],
               confidence: Math.round(hiveMemoryRoute.confidence * 100) / 100,
+              confidenceSource: `hivememory-${hiveMemoryRoute.controller}`,
               reason: `HiveMemory ${hiveMemoryRoute.controller}: "${hiveMemoryRoute.route}" (${Math.round(hiveMemoryRoute.confidence * 100)}%)`,
             },
             alternativeAgents: agents.slice(1).map((agent, i) => ({
               type: agent,
               confidence: Math.round((hiveMemoryRoute.confidence - (0.1 * (i + 1))) * 100) / 100,
+              confidenceSource: 'arithmetic-fallback',
               reason: `Alternative from ${hiveMemoryRoute.controller}`,
             })),
             estimatedMetrics: {
               successProbability: Math.round(hiveMemoryRoute.confidence * 100) / 100,
               estimatedDuration: complexity === 'high' ? '2-4 hours' : complexity === 'medium' ? '30-60 min' : '10-30 min',
               complexity,
+              source: 'heuristic-estimate',
+              warning: 'Duration is a heuristic estimate, not a measured outcome.',
             },
             swarmRecommendation: agents.length > 2 ? { topology: 'hierarchical', agents, coordination: 'queen-led' } : null,
           };
@@ -740,6 +758,7 @@ export const hooksRoute: MCPTool = {
     let routingMethod = 'keyword';
     let routingLatencyMs = 0;
     let backendInfo = '';
+    let confidenceSource = 'keyword-heuristic';
 
     const queryText = context ? `${task} ${context}` : task;
     const queryEmbedding = generateSimpleEmbedding(queryText);
@@ -751,8 +770,9 @@ export const hooksRoute: MCPTool = {
       const routeStart = performance.now();
       semanticResult = router.routeWithEmbedding(queryEmbedding, 3);
       routingLatencyMs = performance.now() - routeStart;
-      routingMethod = 'semantic-pure-js';
-      backendInfo = 'pure JS (cosine similarity)';
+      routingMethod = 'local-vector-heuristic';
+      backendInfo = 'deterministic character-hash cosine heuristic (not semantic embeddings)';
+      confidenceSource = 'deterministic-character-hash';
     }
 
     // Get agents from semantic routing or fall back to keyword
@@ -773,6 +793,7 @@ export const hooksRoute: MCPTool = {
       matchedPattern = 'keyword-fallback';
       routingMethod = 'keyword';
       backendInfo = 'keyword matching';
+      confidenceSource = 'keyword-heuristic';
     }
 
     // Determine complexity
@@ -790,6 +811,11 @@ export const hooksRoute: MCPTool = {
         backend: backendInfo,
         latencyMs: routingLatencyMs,
         throughput: routingLatencyMs > 0 ? `${Math.round(1000 / routingLatencyMs)} routes/s` : 'N/A',
+        semantic: routingMethod.startsWith('hivememory'),
+        confidenceSource,
+        warning: routingMethod === 'local-vector-heuristic'
+          ? 'Local routing uses deterministic character-hash vectors, not semantic embeddings.'
+          : undefined,
       },
       matchedPattern,
       semanticMatches: semanticResult.slice(0, 3).map(r => ({
@@ -799,19 +825,23 @@ export const hooksRoute: MCPTool = {
       primaryAgent: {
         type: agents[0],
         confidence: Math.round(confidence * 100) / 100,
-        reason: routingMethod.startsWith('semantic')
-          ? `Semantic similarity to "${matchedPattern}" pattern (${Math.round(confidence * 100)}%)`
+        confidenceSource,
+        reason: routingMethod === 'local-vector-heuristic'
+          ? `Character-hash vector similarity to "${matchedPattern}" pattern (${Math.round(confidence * 100)}%)`
           : `Task contains keywords matching ${agents[0]} specialization`,
       },
       alternativeAgents: agents.slice(1).map((agent, i) => ({
         type: agent,
         confidence: Math.round((confidence - (0.1 * (i + 1))) * 100) / 100,
+        confidenceSource: 'arithmetic-fallback',
         reason: `Alternative agent for ${agent} capabilities`,
       })),
       estimatedMetrics: {
         successProbability: Math.round(confidence * 100) / 100,
         estimatedDuration: complexity === 'high' ? '2-4 hours' : complexity === 'medium' ? '30-60 min' : '10-30 min',
         complexity,
+        source: 'heuristic-estimate',
+        warning: 'Duration and success probability are heuristic estimates, not measured outcomes.',
       },
       swarmRecommendation: agents.length > 2 ? {
         topology: 'hierarchical',
@@ -837,6 +867,9 @@ export const hooksMetrics: MCPTool = {
 
     return {
       simulated: true,
+      measured: false,
+      source: SIMULATED_HOOKS_SOURCE,
+      warning: SIMULATED_HOOKS_WARNING,
       period,
       patterns: {
         total: 15,
@@ -857,7 +890,7 @@ export const hooksMetrics: MCPTool = {
       performance: {
         flashAttention: 'Flash Attention optimization',
         memoryReduction: 'memory reduction',
-        searchImprovement: 'fast HNSW-indexed',
+        searchImprovement: 'not measured in simulated dashboard',
         tokenReduction: 'fewer tokens',
       },
       status: '[SIMULATED] healthy',
@@ -1111,13 +1144,16 @@ export const hooksExplain: MCPTool = {
         matchedPatterns.push({
           pattern,
           matchScore: 0.85 + Math.random() * 0.1,
-          examples: [`Previous ${pattern} task completed successfully`, `${pattern} patterns from repository analysis`],
+          examples: [`[SIMULATED] Illustrative ${pattern} success example`, '[SIMULATED] No persisted repository pattern lookup was performed'],
         });
       }
     }
 
     return {
       simulated: true,
+      measured: false,
+      source: SIMULATED_HOOKS_SOURCE,
+      warning: SIMULATED_HOOKS_WARNING,
       task,
       explanation: `[SIMULATED] The routing decision was made based on keyword analysis of the task description. ` +
         `The task contains keywords that match the "${suggestion.agents[0]}" specialization with ${(suggestion.confidence * 100).toFixed(0)}% confidence.`,
@@ -1136,7 +1172,7 @@ export const hooksExplain: MCPTool = {
         reasoning: [
           `Task analysis identified ${matchedPatterns.length || 1} relevant patterns`,
           `"${suggestion.agents[0]}" has highest capability match for this task type`,
-          `Historical success patterns found for similar tasks`,
+          'Simulated historical-success factor included; no persisted success lookup was performed',
           `Confidence threshold met (${(suggestion.confidence * 100).toFixed(0)}% >= 70%)`,
         ],
       },
@@ -1166,6 +1202,9 @@ export const hooksPretrain: MCPTool = {
 
     return {
       simulated: true,
+      measured: false,
+      source: SIMULATED_HOOKS_SOURCE,
+      warning: SIMULATED_HOOKS_WARNING,
       path,
       depth,
       stats: {
@@ -1297,14 +1336,6 @@ export const hooksTransfer: MCPTool = {
       'agent-success': sourceEntries.filter(e => e.key.includes('agent') || e.metadata?.type === 'agent-success').length,
     };
 
-    // If source has no patterns, provide demo data
-    if (Object.values(byType).every(v => v === 0)) {
-      byType['file-patterns'] = 8;
-      byType['task-routing'] = 12;
-      byType['command-risk'] = 5;
-      byType['agent-success'] = 15;
-    }
-
     if (filter) {
       Object.keys(byType).forEach(key => {
         if (!key.includes(filter)) delete byType[key];
@@ -1312,6 +1343,7 @@ export const hooksTransfer: MCPTool = {
     }
 
     const total = Object.values(byType).reduce((a, b) => a + b, 0);
+    const hasSourceEntries = sourceEntries.length > 0;
 
     return {
       sourcePath,
@@ -1320,15 +1352,19 @@ export const hooksTransfer: MCPTool = {
         byType,
       },
       skipped: {
-        lowConfidence: Math.floor(total * 0.15),
-        duplicates: Math.floor(total * 0.08),
-        conflicts: Math.floor(total * 0.03),
+        lowConfidence: hasSourceEntries ? Math.floor(total * 0.15) : 0,
+        duplicates: hasSourceEntries ? Math.floor(total * 0.08) : 0,
+        conflicts: hasSourceEntries ? Math.floor(total * 0.03) : 0,
       },
       stats: {
-        avgConfidence: 0.82 + (minConfidence > 0.8 ? 0.1 : 0),
-        avgAge: '3 days',
+        avgConfidence: hasSourceEntries ? Math.min(1, 0.82 + (minConfidence > 0.8 ? 0.1 : 0)) : null,
+        avgAge: hasSourceEntries ? '3 days' : null,
+        sourcePatterns: sourceEntries.length,
       },
-      dataSource: Object.values(sourceStore.entries).length > 0 ? 'source-project' : 'demo-data',
+      dataSource: hasSourceEntries ? 'source-project' : 'empty-source',
+      warning: hasSourceEntries
+        ? undefined
+        : 'No source project patterns were found; no demo transfer data was fabricated.',
     };
   },
 };
@@ -1445,8 +1481,8 @@ export const hooksSessionEnd: MCPTool = {
       const result = await bridge.bridgeSessionEnd({
         sessionId,
         summary: saveState ? 'Session ended with state saved' : 'Session ended',
-        tasksCompleted: 12,
-        patternsLearned: 8,
+        tasksCompleted: 0,
+        patternsLearned: 0,
       });
       if (result) {
         sessionPersistence = {
@@ -1460,22 +1496,26 @@ export const hooksSessionEnd: MCPTool = {
 
     return {
       sessionId,
-      duration: 3600000, // 1 hour in ms
+      measured: false,
+      source: 'session-summary-unavailable',
+      warning: 'Session activity counters are not wired; summary reports zero instead of fabricated counts.',
+      duration: 0,
+      durationMeasured: false,
       statePath: saveState ? `.claude/sessions/${sessionId}.json` : undefined,
       daemon: { stopped: daemonStopped },
       sessionPersistence: sessionPersistence || { controller: 'none', persisted: false },
       summary: {
-        tasksExecuted: 12,
-        tasksSucceeded: 10,
-        tasksFailed: 2,
-        commandsExecuted: 45,
-        filesModified: 23,
-        agentsSpawned: 5,
+        tasksExecuted: 0,
+        tasksSucceeded: 0,
+        tasksFailed: 0,
+        commandsExecuted: 0,
+        filesModified: 0,
+        agentsSpawned: 0,
       },
       learningUpdates: {
-        patternsLearned: 8,
-        trajectoriesRecorded: 12,
-        confidenceImproved: 0.05,
+        patternsLearned: 0,
+        trajectoriesRecorded: 0,
+        confidenceImproved: 0,
       },
     };
   },
@@ -1547,8 +1587,12 @@ export const hooksNotify: MCPTool = {
       message,
       target,
       priority,
-      delivered: true,
-      recipients: target === 'all' ? ['coder', 'architect', 'tester', 'reviewer'] : [target],
+      delivered: false,
+      deliveryAttempted: false,
+      source: 'unwired-notification-placeholder',
+      warning: 'No live cross-agent delivery backend is wired for hooks_notify.',
+      recipients: [],
+      intendedRecipients: target === 'all' ? ['coder', 'architect', 'tester', 'reviewer'] : [target],
       timestamp: new Date().toISOString(),
     };
   },
@@ -1625,59 +1669,74 @@ export const hooksIntelligence: MCPTool = {
     const flashAvailable = (await getFlashAttention()) !== null;
     const ewcAvailable = (await getEWCConsolidator()) !== null;
     const loraAvailable = (await getLoRAAdapter()) !== null;
+    const availableImplementations = [
+      sonaAvailable ? 'sona-optimizer' : null,
+      moeAvailable ? 'moe-routing' : null,
+      flashAvailable ? 'flash-attention' : null,
+      ewcAvailable ? 'ewc-consolidation' : null,
+      loraAvailable ? 'lora-adapter' : null,
+    ].filter((name): name is string => Boolean(name));
 
     return {
       mode,
-      status: 'active',
+      status: availableImplementations.length > 0 ? 'active' : 'memory-fallback',
+      measured: true,
+      source: availableImplementations.length > 0 ? 'lazy-backend-probe' : 'memory-store-fallback',
+      warning: availableImplementations.length > 0
+        ? undefined
+        : 'Lazy intelligence backends were not available; only local memory-store counts are reported.',
       components: {
         sona: {
           enabled: enableSona,
-          status: sonaAvailable ? 'active' : 'loading',
+          status: enableSona ? (sonaAvailable ? 'active' : 'unavailable') : 'disabled',
           implemented: true, // NOW IMPLEMENTED in alpha.102
           trajectoriesRecorded: realStats.trajectories.total,
           trajectoriesSuccessful: realStats.trajectories.successful,
           patternsLearned: realStats.patterns.learned,
-          note: sonaAvailable ? 'SONA optimizer active - learning from trajectories' : 'SONA loading...',
+          note: sonaAvailable ? 'SONA optimizer active - learning from trajectories' : 'SONA optimizer unavailable in this process',
         },
         moe: {
           enabled: enableMoe,
-          status: moeAvailable ? 'active' : 'loading',
+          status: enableMoe ? (moeAvailable ? 'active' : 'unavailable') : 'disabled',
           implemented: true, // NOW IMPLEMENTED in alpha.102
           routingDecisions: realStats.routing.decisions,
-          note: moeAvailable ? 'MoE router with 8 experts (coder, tester, reviewer, architect, security, performance, researcher, coordinator)' : 'MoE loading...',
+          note: moeAvailable ? 'MoE router with 8 experts (coder, tester, reviewer, architect, security, performance, researcher, coordinator)' : 'MoE router unavailable in this process',
         },
         hnsw: {
           enabled: enableHnsw,
-          status: enableHnsw ? 'active' : 'disabled',
-          implemented: true,
+          status: enableHnsw ? 'unverified' : 'disabled',
+          implemented: 'unknown',
+          backendVerified: false,
           indexSize: realStats.memory.indexSize,
           memorySizeBytes: realStats.memory.memorySizeBytes,
-          note: 'HNSW vector indexing with HNSW-indexed speedup',
+          note: 'Memory entries are visible; HNSW backend availability is not probed by this status tool',
         },
         flashAttention: {
           enabled: true,
-          status: flashAvailable ? 'active' : 'loading',
+          status: flashAvailable ? 'active' : 'unavailable',
           implemented: true, // NOW IMPLEMENTED in alpha.102
-          note: flashAvailable ? 'Flash Attention with O(N) memory (Flash Attention optimization)' : 'Flash Attention loading...',
+          note: flashAvailable ? 'Flash Attention with O(N) memory (Flash Attention optimization)' : 'Flash Attention unavailable in this process',
         },
         ewc: {
           enabled: true,
-          status: ewcAvailable ? 'active' : 'loading',
+          status: ewcAvailable ? 'active' : 'unavailable',
           implemented: true, // NOW IMPLEMENTED in alpha.102
-          note: ewcAvailable ? 'EWC++ consolidation prevents catastrophic forgetting' : 'EWC++ loading...',
+          note: ewcAvailable ? 'EWC++ consolidation prevents catastrophic forgetting' : 'EWC++ unavailable in this process',
         },
         lora: {
           enabled: true,
-          status: loraAvailable ? 'active' : 'loading',
+          status: loraAvailable ? 'active' : 'unavailable',
           implemented: true, // NOW IMPLEMENTED in alpha.102
-          note: loraAvailable ? 'LoRA adapter with low-rank memory compression (rank=8)' : 'LoRA loading...',
+          note: loraAvailable ? 'LoRA adapter with low-rank memory compression (rank=8)' : 'LoRA adapter unavailable in this process',
         },
         embeddings: {
           provider: 'transformers',
           model: 'all-MiniLM-L6-v2',
           dimension: 384,
           implemented: true,
-          note: 'Real ONNX embeddings via all-MiniLM-L6-v2',
+          status: 'configured',
+          backendVerified: false,
+          note: 'ONNX embedding provider is configured; this status tool does not load or benchmark it',
         },
       },
       realMetrics: {
@@ -1687,13 +1746,15 @@ export const hooksIntelligence: MCPTool = {
         routing: realStats.routing,
       },
       implementationStatus: {
-        working: [
-          'memory-store', 'embeddings', 'trajectory-recording', 'claims', 'swarm-coordination',
-          'hnsw-index', 'pattern-storage', 'sona-optimizer', 'ewc-consolidation', 'moe-routing',
-          'flash-attention', 'lora-adapter'
+        working: ['memory-store', ...availableImplementations],
+        partial: ['embeddings-config', 'pattern-storage'],
+        unavailable: [
+          ...(!sonaAvailable ? ['sona-optimizer'] : []),
+          ...(!moeAvailable ? ['moe-routing'] : []),
+          ...(!flashAvailable ? ['flash-attention'] : []),
+          ...(!ewcAvailable ? ['ewc-consolidation'] : []),
+          ...(!loraAvailable ? ['lora-adapter'] : []),
         ],
-        partial: [],
-        notImplemented: [],
       },
       version: '3.0.0-alpha.102',
     };
@@ -1710,11 +1771,15 @@ export const hooksIntelligenceReset: MCPTool = {
   },
   handler: async () => {
     return {
-      reset: true,
+      simulated: true,
+      reset: false,
+      executed: false,
+      source: 'unwired-intelligence-reset-placeholder',
+      warning: 'No intelligence reset backend is wired; nothing was cleared.',
       cleared: {
-        trajectories: 156,
-        patterns: 89,
-        hnswIndex: 12500,
+        trajectories: 0,
+        patterns: 0,
+        hnswIndex: 0,
       },
       timestamp: new Date().toISOString(),
     };
@@ -2151,7 +2216,8 @@ export const hooksIntelligenceStats: MCPTool = {
     let sonaStats = {
       trajectoriesTotal: memoryStats.trajectories.total,
       trajectoriesSuccessful: memoryStats.trajectories.successful,
-      avgLearningTimeMs: 0,
+      avgLearningTimeMs: null as number | null,
+      avgLearningTimeMeasured: false,
       patternsLearned: memoryStats.patterns.learned,
       patternCategories: memoryStats.patterns.categories,
       successRate: 0,
@@ -2163,7 +2229,8 @@ export const hooksIntelligenceStats: MCPTool = {
       sonaStats = {
         trajectoriesTotal: realSona.trajectoriesProcessed,
         trajectoriesSuccessful: realSona.successfulRoutings,
-        avgLearningTimeMs: realSona.lastUpdate ? 0.042 : 0, // Theoretical when active
+        avgLearningTimeMs: null,
+        avgLearningTimeMeasured: false,
         patternsLearned: realSona.totalPatterns,
         patternCategories: { learned: realSona.totalPatterns }, // Simplified
         successRate: totalRoutes > 0
@@ -2199,7 +2266,8 @@ export const hooksIntelligenceStats: MCPTool = {
       expertsTotal: 8,
       expertsActive: 0,
       routingDecisions: memoryStats.routing.decisions,
-      avgRoutingTimeMs: 0,
+      avgRoutingTimeMs: null as number | null,
+      avgRoutingTimeMeasured: false,
       avgConfidence: memoryStats.routing.avgConfidence,
       loadBalance: null as { giniCoefficient: number; coefficientOfVariation: number; expertUsage: Record<string, number> } | null,
       implementation: 'not-loaded' as string,
@@ -2214,7 +2282,8 @@ export const hooksIntelligenceStats: MCPTool = {
         expertsTotal: 8,
         expertsActive: activeExperts,
         routingDecisions: loadBalance.totalRoutings,
-        avgRoutingTimeMs: 0.15, // Theoretical performance
+        avgRoutingTimeMs: null,
+        avgRoutingTimeMeasured: false,
         avgConfidence: Math.round(avgUtil * 100) / 100,
         loadBalance: {
           giniCoefficient: Math.round(loadBalance.giniCoefficient * 1000) / 1000,
@@ -2228,14 +2297,16 @@ export const hooksIntelligenceStats: MCPTool = {
     // Flash Attention stats from real implementation
     let flashStats = {
       speedup: 1.0,
-      avgComputeTimeMs: 0,
+      avgComputeTimeMs: null as number | null,
+      avgComputeTimeMeasured: false,
       blockSize: 64,
       implementation: 'not-loaded' as string,
     };
     if (flash) {
       flashStats = {
         speedup: Math.round(flash.getSpeedup() * 100) / 100,
-        avgComputeTimeMs: 0, // Would need benchmarking
+        avgComputeTimeMs: null,
+        avgComputeTimeMeasured: false,
         blockSize: 64,
         implementation: 'real-flash-attention',
       };
@@ -2268,13 +2339,14 @@ export const hooksIntelligenceStats: MCPTool = {
       lora: loraStats,
       hnsw: {
         indexSize: memoryStats.memory.indexSize,
-        avgSearchTimeMs: 0.12,
-        cacheHitRate: memoryStats.memory.totalAccessCount > 0
-          ? Math.min(0.95, 0.5 + (memoryStats.memory.totalAccessCount / 1000))
-          : 0.78,
+        avgSearchTimeMs: null,
+        avgSearchTimeMeasured: false,
+        cacheHitRate: null,
+        cacheHitRateMeasured: false,
         memoryUsageMb: Math.round(memoryStats.memory.memorySizeBytes / 1024 / 1024 * 100) / 100,
       },
       dataSource: sona ? 'real-implementations' : 'memory-fallback',
+      warning: 'Timing and cache-hit fields are unavailable unless a measured backend reports them.',
       lastUpdated: new Date().toISOString(),
     };
 
@@ -2885,6 +2957,9 @@ export const hooksWorkerDispatch: MCPTool = {
       trigger,
       context,
       priority,
+      workPerformed: false,
+      source: 'local-worker-scheduler-placeholder',
+      warning: 'Worker lifecycle state was recorded locally; no background analysis task was executed by this MCP tool.',
       config: {
         description: config.description,
         estimatedDuration: config.estimatedDuration,
@@ -3013,6 +3088,9 @@ export const hooksWorkerDetect: MCPTool = {
         }
         result.autoDispatched = true;
         result.workerIds = dispatched;
+        result.workPerformed = false;
+        result.source = 'local-worker-scheduler-placeholder';
+        result.warning = 'Detected workers were recorded locally; no background analysis task was executed by this MCP tool.';
       }
     }
 
@@ -3101,12 +3179,15 @@ export const hooksModelOutcome: MCPTool = {
     const outcome = params.outcome as 'success' | 'failure' | 'escalated';
 
     const router = await getModelRouterInstance();
+    let recorded = false;
     if (router) {
       router.recordOutcome(task, model as 'sonnet' | 'opus' | 'mini' | 'inherit', outcome);
+      recorded = true;
     }
 
     return {
-      recorded: true,
+      recorded,
+      warning: recorded ? undefined : 'Model routing outcome was not recorded; model router backend is unavailable.',
       task: task.slice(0, 50),
       model,
       outcome,

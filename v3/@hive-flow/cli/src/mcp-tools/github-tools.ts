@@ -103,6 +103,26 @@ function saveGitHubStore(store: GitHubStore): void {
   writeFileSync(getGitHubPath(), JSON.stringify(store, null, 2), 'utf-8');
 }
 
+function simulatedGitHubFallback(kind: 'synthetic' | 'local-cache' | 'local-mutation' = 'synthetic') {
+  const label = kind === 'synthetic'
+    ? 'synthetic-github-fallback'
+    : kind === 'local-cache'
+      ? 'local-github-cache-fallback'
+      : 'local-github-store-mutation';
+  const warning = kind === 'local-mutation'
+    ? 'GitHub CLI was unavailable or returned no data; no GitHub API mutation was performed. Only the local hive-flow GitHub store was updated.'
+    : kind === 'local-cache'
+      ? 'GitHub CLI was unavailable or returned no data; response is from the local hive-flow GitHub store, not live GitHub.'
+      : 'GitHub CLI was unavailable or returned no data; response uses synthetic placeholder values, not live GitHub metrics.';
+
+  return {
+    simulated: true,
+    githubExecuted: false,
+    source: label,
+    warning,
+  };
+}
+
 export const githubTools: MCPTool[] = [
   {
     name: 'github_repo_analyze',
@@ -192,7 +212,7 @@ export const githubTools: MCPTool[] = [
       saveGitHubStore(store);
 
       return {
-        simulated: true,
+        ...simulatedGitHubFallback('synthetic'),
         success: true,
         repository: repoKey,
         branch,
@@ -261,7 +281,7 @@ export const githubTools: MCPTool[] = [
         // Simulated fallback
         const prs = Object.values(store.prs);
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-cache'),
           success: true,
           pullRequests: prs,
           total: prs.length,
@@ -302,7 +322,7 @@ export const githubTools: MCPTool[] = [
         store.prs[prId] = pr;
         saveGitHubStore(store);
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-mutation'),
           success: true,
           action: 'created',
           pullRequest: pr,
@@ -327,14 +347,15 @@ export const githubTools: MCPTool[] = [
           }
         }
         return {
-          simulated: true,
-          success: true,
-          action: 'reviewed',
+          ...simulatedGitHubFallback('synthetic'),
+          success: false,
+          action: 'review_unavailable',
           prNumber: input.prNumber,
+          reviewed: false,
           review: {
-            status: 'approved',
+            status: 'unavailable',
             comments: [],
-            suggestion: 'LGTM',
+            suggestion: 'GitHub CLI was unavailable; no pull request review was performed.',
           },
         };
       }
@@ -363,7 +384,7 @@ export const githubTools: MCPTool[] = [
           saveGitHubStore(store);
         }
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-mutation'),
           success: true,
           action: 'merged',
           prNumber,
@@ -394,7 +415,7 @@ export const githubTools: MCPTool[] = [
           saveGitHubStore(store);
         }
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-mutation'),
           success: true,
           action: 'closed',
           prNumber,
@@ -457,7 +478,7 @@ export const githubTools: MCPTool[] = [
         // Simulated fallback
         const issues = Object.values(store.issues);
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-cache'),
           success: true,
           issues,
           total: issues.length,
@@ -497,7 +518,7 @@ export const githubTools: MCPTool[] = [
         store.issues[issueId] = issue;
         saveGitHubStore(store);
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-mutation'),
           success: true,
           action: 'created',
           issue,
@@ -533,7 +554,7 @@ export const githubTools: MCPTool[] = [
           saveGitHubStore(store);
         }
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-mutation'),
           success: true,
           action: 'updated',
           issueNumber,
@@ -561,7 +582,7 @@ export const githubTools: MCPTool[] = [
           saveGitHubStore(store);
         }
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('local-mutation'),
           success: true,
           action: 'closed',
           issueNumber,
@@ -616,13 +637,10 @@ export const githubTools: MCPTool[] = [
           }
         }
         return {
-          simulated: true,
+          ...simulatedGitHubFallback('synthetic'),
           success: true,
-          workflows: [
-            { id: 'ci.yml', name: 'CI', status: 'active', lastRun: new Date().toISOString() },
-            { id: 'release.yml', name: 'Release', status: 'active', lastRun: new Date().toISOString() },
-            { id: 'test.yml', name: 'Tests', status: 'active', lastRun: new Date().toISOString() },
-          ],
+          available: false,
+          workflows: [],
         };
       }
 
@@ -644,13 +662,12 @@ export const githubTools: MCPTool[] = [
           }
         }
         return {
-          simulated: true,
-          success: true,
-          action: 'triggered',
+          ...simulatedGitHubFallback('synthetic'),
+          success: false,
+          action: 'trigger_unavailable',
           workflowId: input.workflowId,
           ref: input.ref || 'main',
-          runId: `run-${Date.now()}`,
-          triggeredAt: new Date().toISOString(),
+          triggered: false,
         };
       }
 
@@ -679,12 +696,13 @@ export const githubTools: MCPTool[] = [
           }
         }
         return {
-          simulated: true,
-          success: true,
+          ...simulatedGitHubFallback('synthetic'),
+          success: false,
           workflowId: input.workflowId,
-          status: 'completed',
-          conclusion: 'success',
-          duration: '2m 35s',
+          available: false,
+          status: 'unknown',
+          conclusion: null,
+          duration: null,
         };
       }
 
@@ -703,11 +721,11 @@ export const githubTools: MCPTool[] = [
           }
         }
         return {
-          simulated: true,
-          success: true,
-          action: 'cancelled',
+          ...simulatedGitHubFallback('synthetic'),
+          success: false,
+          action: 'cancel_unavailable',
           workflowId: input.workflowId,
-          cancelledAt: new Date().toISOString(),
+          cancelled: false,
         };
       }
 
@@ -824,11 +842,11 @@ export const githubTools: MCPTool[] = [
       };
 
       if (metric === 'all') {
-        return { simulated: true, success: true, metrics };
+        return { ...simulatedGitHubFallback('synthetic'), success: true, metrics };
       }
 
       return {
-        simulated: true,
+        ...simulatedGitHubFallback('synthetic'),
         success: true,
         metric,
         data: metrics[metric as keyof typeof metrics],

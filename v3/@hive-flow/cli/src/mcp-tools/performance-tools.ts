@@ -51,6 +51,10 @@ interface PerfStore {
   version: string;
 }
 
+const SIMULATED_PERFORMANCE_SOURCE = 'simulated-performance-placeholder';
+const SIMULATED_PERFORMANCE_WARNING =
+  'Synthetic performance response; no external profiler or optimizer was executed.';
+
 function getPerfDir(): string {
   return join(process.cwd(), STORAGE_DIR, PERF_DIR);
 }
@@ -112,6 +116,7 @@ export const performanceTools: MCPTool[] = [
 
       // Calculate real CPU usage percentage from load average
       const cpuPercent = (loadAvg[0] / cpus.length) * 100;
+      const hasMetricHistory = store.metrics.length > 0;
 
       // Generate current metrics with REAL values
       const currentMetrics: PerfMetrics = {
@@ -144,7 +149,12 @@ export const performanceTools: MCPTool[] = [
 
       if (format === 'summary') {
         return {
-          _real: true,
+          _real: false,
+          realFields: ['cpu', 'memory', 'heap'],
+          syntheticFields: ['latency', 'throughput'],
+          warning: 'CPU and memory are live process/system metrics; latency and throughput are synthetic placeholders until instrumentation is wired.',
+          latencyMeasured: hasMetricHistory,
+          throughputMeasured: false,
           status: 'healthy',
           cpu: `${currentMetrics.cpu.usage.toFixed(1)}%`,
           memory: `${currentMetrics.memory.used}MB / ${currentMetrics.memory.total}MB`,
@@ -166,7 +176,10 @@ export const performanceTools: MCPTool[] = [
         : 'stable';
 
       return {
-        _real: true,
+        _real: false,
+        realFields: ['current.cpu', 'current.memory', 'system'],
+        syntheticFields: ['current.latency', 'current.throughput'],
+        warning: 'CPU, memory, and system fields are live metrics; latency and throughput are synthetic placeholders until instrumentation is wired.',
         current: currentMetrics,
         history,
         system: {
@@ -244,6 +257,9 @@ export const performanceTools: MCPTool[] = [
 
       return {
         simulated: true,
+        measured: false,
+        source: SIMULATED_PERFORMANCE_SOURCE,
+        warning: SIMULATED_PERFORMANCE_WARNING,
         status: criticalCount > 0 ? '[SIMULATED] critical' : warningCount > 0 ? '[SIMULATED] warning' : '[SIMULATED] healthy',
         bottlenecks,
         summary: {
@@ -408,11 +424,14 @@ export const performanceTools: MCPTool[] = [
       const target = (input.target as string) || 'all';
       const duration = (input.duration as number) || 5;
 
-      // Simulate profiling
+      // Return a synthetic profile until a real profiler backend is wired.
       await new Promise(resolve => setTimeout(resolve, 100));
 
       return {
         simulated: true,
+        measured: false,
+        source: SIMULATED_PERFORMANCE_SOURCE,
+        warning: SIMULATED_PERFORMANCE_WARNING,
         target,
         duration: `${duration}s`,
         samples: Math.floor(duration * 100),
@@ -438,7 +457,7 @@ export const performanceTools: MCPTool[] = [
   },
   {
     name: 'performance_optimize',
-    description: 'Apply performance optimizations',
+    description: '[SIMULATED] Plan performance optimizations without applying system changes',
     category: 'performance',
     inputSchema: {
       type: 'object',
@@ -485,15 +504,19 @@ export const performanceTools: MCPTool[] = [
 
       return {
         simulated: true,
+        executed: false,
+        source: 'simulated-optimization-plan',
+        warning: 'No performance optimizations were applied; this is a synthetic plan.',
         target,
         aggressive,
-        applied,
-        improvements: {
+        applied: [],
+        plannedOptimizations: applied,
+        estimatedImprovements: {
           memory: '-50%',
           latency: '-40%',
           throughput: '+60%',
         },
-        status: '[SIMULATED] optimized',
+        status: '[SIMULATED] planned-not-applied',
         timestamp: new Date().toISOString(),
       };
     },
@@ -579,6 +602,10 @@ export const performanceTools: MCPTool[] = [
           p95: 150,
           p99: 220,
           unit: 'ms',
+          _real: false,
+          simulated: true,
+          source: 'synthetic-latency-placeholder',
+          warning: SIMULATED_PERFORMANCE_WARNING,
         },
         throughput: {
           current: 1250,
@@ -589,12 +616,19 @@ export const performanceTools: MCPTool[] = [
           p95: 1800,
           p99: 1950,
           unit: 'ops/s',
+          _real: false,
+          simulated: true,
+          source: 'synthetic-throughput-placeholder',
+          warning: SIMULATED_PERFORMANCE_WARNING,
         },
       };
 
       if (metric === 'all') {
         return {
-          _real: true,
+          _real: false,
+          realFields: ['metrics.cpu', 'metrics.memory'],
+          syntheticFields: ['metrics.latency', 'metrics.throughput'],
+          warning: 'CPU and memory are live metrics; latency and throughput are synthetic placeholders.',
           metrics: allMetrics,
           aggregation,
           historySize: history.length,
@@ -605,6 +639,9 @@ export const performanceTools: MCPTool[] = [
       const selectedMetric = allMetrics[metric as keyof typeof allMetrics];
       return {
         _real: ['cpu', 'memory'].includes(metric),
+        simulated: !['cpu', 'memory'].includes(metric),
+        source: ['cpu', 'memory'].includes(metric) ? 'live-process-system-metrics' : `synthetic-${metric}-placeholder`,
+        warning: ['cpu', 'memory'].includes(metric) ? undefined : SIMULATED_PERFORMANCE_WARNING,
         metric,
         value: selectedMetric[aggregation as keyof typeof selectedMetric],
         unit: selectedMetric.unit,

@@ -125,6 +125,9 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
+      expect(result.githubExecuted).toBe(false);
+      expect(result.source).toBe('synthetic-github-fallback');
+      expect(result.warning).toMatch(/not live GitHub metrics/i);
       expect(result.success).toBe(true);
       expect(result.repository).toBe('test-owner/test-repo');
       expect(result.branch).toBe('develop');
@@ -169,6 +172,9 @@ describe('github-tools', () => {
       const result = (await prManageTool.handler({ action: 'list' })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
+      expect(result.githubExecuted).toBe(false);
+      expect(result.source).toBe('local-github-cache-fallback');
+      expect(result.warning).toMatch(/local hive-flow GitHub store/i);
       expect(result.success).toBe(true);
       expect(result.total).toBe(1);
       expect(result.open).toBe(1);
@@ -185,6 +191,9 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
+      expect(result.githubExecuted).toBe(false);
+      expect(result.source).toBe('local-github-store-mutation');
+      expect(result.warning).toMatch(/no GitHub API mutation was performed/i);
       expect(result.success).toBe(true);
       expect(result.action).toBe('created');
       expect(result.url).toBeDefined();
@@ -202,9 +211,14 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
-      expect(result.success).toBe(true);
-      expect(result.action).toBe('reviewed');
+      expect(result.githubExecuted).toBe(false);
+      expect(result.source).toBe('synthetic-github-fallback');
+      expect(result.warning).toMatch(/not live GitHub metrics/i);
+      expect(result.success).toBe(false);
+      expect(result.action).toBe('review_unavailable');
       expect(result.prNumber).toBe(42);
+      expect(result.reviewed).toBe(false);
+      expect((result.review as Record<string, unknown>).status).toBe('unavailable');
     });
 
     it('merges a PR (simulated)', async () => {
@@ -216,6 +230,9 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
+      expect(result.githubExecuted).toBe(false);
+      expect(result.source).toBe('local-github-store-mutation');
+      expect(result.warning).toMatch(/no GitHub API mutation was performed/i);
       expect(result.success).toBe(true);
       expect(result.action).toBe('merged');
       expect(result.mergedAt).toBeDefined();
@@ -230,6 +247,9 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
+      expect(result.githubExecuted).toBe(false);
+      expect(result.source).toBe('local-github-store-mutation');
+      expect(result.warning).toMatch(/no GitHub API mutation was performed/i);
       expect(result.success).toBe(true);
       expect(result.action).toBe('closed');
       expect(result.closedAt).toBeDefined();
@@ -349,8 +369,9 @@ describe('github-tools', () => {
 
       expect(result.simulated).toBe(true);
       expect(result.success).toBe(true);
+      expect(result.available).toBe(false);
       expect(Array.isArray(result.workflows)).toBe(true);
-      expect((result.workflows as unknown[]).length).toBeGreaterThan(0);
+      expect((result.workflows as unknown[])).toEqual([]);
     });
 
     it('triggers a workflow (simulated)', async () => {
@@ -363,10 +384,12 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
-      expect(result.success).toBe(true);
-      expect(result.action).toBe('triggered');
+      expect(result.success).toBe(false);
+      expect(result.action).toBe('trigger_unavailable');
       expect(result.workflowId).toBe('ci.yml');
       expect(result.ref).toBe('develop');
+      expect(result.triggered).toBe(false);
+      expect(result.runId).toBeUndefined();
     });
 
     it('gets workflow status (simulated)', async () => {
@@ -378,9 +401,10 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
-      expect(result.success).toBe(true);
-      expect(result.status).toBe('completed');
-      expect(result.conclusion).toBe('success');
+      expect(result.success).toBe(false);
+      expect(result.available).toBe(false);
+      expect(result.status).toBe('unknown');
+      expect(result.conclusion).toBeNull();
     });
 
     it('cancels a workflow (simulated)', async () => {
@@ -392,9 +416,10 @@ describe('github-tools', () => {
       })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
-      expect(result.success).toBe(true);
-      expect(result.action).toBe('cancelled');
-      expect(result.cancelledAt).toBeDefined();
+      expect(result.success).toBe(false);
+      expect(result.action).toBe('cancel_unavailable');
+      expect(result.cancelled).toBe(false);
+      expect(result.cancelledAt).toBeUndefined();
     });
 
     it('returns error for unknown action', async () => {
@@ -420,6 +445,9 @@ describe('github-tools', () => {
       const result = (await metricsTool.handler({ metric: 'all' })) as Record<string, unknown>;
 
       expect(result.simulated).toBe(true);
+      expect(result.githubExecuted).toBe(false);
+      expect(result.source).toBe('synthetic-github-fallback');
+      expect(result.warning).toMatch(/not live GitHub metrics/i);
       expect(result.success).toBe(true);
       expect(result.metrics).toBeDefined();
       const metrics = result.metrics as Record<string, unknown>;

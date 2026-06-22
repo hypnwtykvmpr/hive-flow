@@ -243,21 +243,26 @@ describe('hooks-tools', () => {
   describe('hooks_post-edit', () => {
     const t = () => tool('hooks_post-edit');
 
-    it('records a successful edit', async () => {
+    it('reports edit learning as not persisted when backend is unwired', async () => {
       const result = (await t().handler({ filePath: 'src/api.ts', success: true })) as AnyResult;
 
-      expect(result.recorded).toBe(true);
+      expect(result.simulated).toBe(true);
+      expect(result.recorded).toBe(false);
+      expect(result.source).toBe('unwired-learning-record-placeholder');
       expect(result.filePath).toBe('src/api.ts');
       expect(result.success).toBe(true);
-      expect(result.learningUpdate).toBe('pattern_reinforced');
+      expect(result.learningUpdate).toBe('not_recorded');
+      expect(result.requestedLearningUpdate).toBe('pattern_reinforced');
       expect(typeof result.timestamp).toBe('string');
     });
 
-    it('records a failed edit with adjusted learning signal', async () => {
+    it('reports requested failed-edit learning signal separately from persistence', async () => {
       const result = (await t().handler({ filePath: 'src/api.ts', success: false })) as AnyResult;
 
       expect(result.success).toBe(false);
-      expect(result.learningUpdate).toBe('pattern_adjusted');
+      expect(result.recorded).toBe(false);
+      expect(result.learningUpdate).toBe('not_recorded');
+      expect(result.requestedLearningUpdate).toBe('pattern_adjusted');
     });
 
     it('defaults success to true when not provided', async () => {
@@ -318,10 +323,12 @@ describe('hooks-tools', () => {
   describe('hooks_post-command', () => {
     const t = () => tool('hooks_post-command');
 
-    it('records successful command execution', async () => {
+    it('reports command outcome as not persisted when backend is unwired', async () => {
       const result = (await t().handler({ command: 'npm test', exitCode: 0 })) as AnyResult;
 
-      expect(result.recorded).toBe(true);
+      expect(result.simulated).toBe(true);
+      expect(result.recorded).toBe(false);
+      expect(result.source).toBe('unwired-command-record-placeholder');
       expect(result.command).toBe('npm test');
       expect(result.exitCode).toBe(0);
       expect(result.success).toBe(true);
@@ -356,6 +363,10 @@ describe('hooks-tools', () => {
       expect(typeof primary.type).toBe('string');
       expect(typeof primary.confidence).toBe('number');
       expect(result.routing).toBeDefined();
+      const routing = result.routing as AnyResult;
+      expect(typeof routing.confidenceSource).toBe('string');
+      const metrics = result.estimatedMetrics as AnyResult;
+      expect(metrics.source).toBe('heuristic-estimate');
     });
 
     it('identifies security tasks correctly', async () => {
@@ -400,6 +411,9 @@ describe('hooks-tools', () => {
       const result = (await t().handler({})) as AnyResult;
 
       expect(result.simulated).toBe(true);
+      expect(result.measured).toBe(false);
+      expect(result.source).toBe('simulated-hooks-placeholder');
+      expect(result.warning).toMatch(/Synthetic hooks response/i);
       expect(result.period).toBe('24h');
       expect(result.patterns).toBeDefined();
       expect(result.agents).toBeDefined();
@@ -538,6 +552,9 @@ describe('hooks-tools', () => {
 
       expect(result.task).toBe('implement authentication middleware');
       expect(result.simulated).toBe(true);
+      expect(result.measured).toBe(false);
+      expect(result.source).toBe('simulated-hooks-placeholder');
+      expect(result.warning).toMatch(/no live telemetry/i);
       expect(typeof result.explanation).toBe('string');
       expect(Array.isArray(result.factors)).toBe(true);
       expect(result.decision).toBeDefined();
@@ -564,6 +581,9 @@ describe('hooks-tools', () => {
       const result = (await t().handler({})) as AnyResult;
 
       expect(result.simulated).toBe(true);
+      expect(result.measured).toBe(false);
+      expect(result.source).toBe('simulated-hooks-placeholder');
+      expect(result.warning).toMatch(/repository-wide analysis/i);
       expect(result.depth).toBe('medium');
       expect(result.stats).toBeDefined();
       const stats = result.stats as AnyResult;
@@ -636,22 +656,36 @@ describe('hooks-tools', () => {
   describe('hooks_transfer', () => {
     const t = () => tool('hooks_transfer');
 
-    it('returns transfer results with demo data when source is empty', async () => {
+    it('does not fabricate transfer data when source is empty', async () => {
       setupEmptyMemory();
 
       const result = (await t().handler({ sourcePath: '/tmp/empty-project' })) as AnyResult;
 
       const transferred = result.transferred as AnyResult;
       expect(typeof transferred.total).toBe('number');
-      expect(transferred.total).toBeGreaterThan(0);
-      expect(result.dataSource).toBe('demo-data');
+      expect(transferred.total).toBe(0);
+      expect(result.dataSource).toBe('empty-source');
+      expect(result.warning).toMatch(/no demo transfer data/i);
     });
 
-    it('applies minConfidence to stats', async () => {
+    it('applies minConfidence to stats when source patterns exist', async () => {
+      setupMemoryWithStore({
+        'pattern-file': {
+          key: 'pattern-file',
+          value: 'file pattern',
+          metadata: { type: 'file-pattern' },
+          storedAt: '2026-01-01T00:00:00.000Z',
+          accessCount: 0,
+          lastAccessed: '2026-01-01T00:00:00.000Z',
+        },
+      });
+
       const result = (await t().handler({ sourcePath: '/tmp/proj', minConfidence: 0.9 })) as AnyResult;
 
       const stats = result.stats as AnyResult;
       expect(stats.avgConfidence as number).toBeGreaterThan(0.85);
+      expect(stats.sourcePatterns).toBe(1);
+      expect(result.dataSource).toBe('source-project');
     });
 
     it('filters transferred types when filter provided', async () => {
@@ -726,16 +760,18 @@ describe('hooks-tools', () => {
       const result = (await t().handler({})) as AnyResult;
 
       expect(result.summary).toBeDefined();
+      expect(result.measured).toBe(false);
+      expect(result.warning).toMatch(/summary reports zero/i);
       const summary = result.summary as AnyResult;
-      expect(typeof summary.tasksExecuted).toBe('number');
-      expect(typeof summary.commandsExecuted).toBe('number');
+      expect(summary.tasksExecuted).toBe(0);
+      expect(summary.commandsExecuted).toBe(0);
     });
 
     it('includes learningUpdates', async () => {
       const result = (await t().handler({})) as AnyResult;
 
       const updates = result.learningUpdates as AnyResult;
-      expect(typeof updates.patternsLearned).toBe('number');
+      expect(updates.patternsLearned).toBe(0);
     });
 
     it('does not throw when daemon unavailable', async () => {
@@ -794,20 +830,24 @@ describe('hooks-tools', () => {
   describe('hooks_notify', () => {
     const t = () => tool('hooks_notify');
 
-    it('delivers notification to all agents by default', async () => {
+    it('reports notification as not delivered when backend is unwired', async () => {
       const result = (await t().handler({ message: 'Build failed' })) as AnyResult;
 
-      expect(result.delivered).toBe(true);
+      expect(result.delivered).toBe(false);
+      expect(result.deliveryAttempted).toBe(false);
+      expect(result.source).toBe('unwired-notification-placeholder');
       expect(result.target).toBe('all');
       expect(Array.isArray(result.recipients)).toBe(true);
-      expect((result.recipients as string[]).length).toBeGreaterThan(1);
+      expect((result.recipients as string[])).toEqual([]);
+      expect((result.intendedRecipients as string[]).length).toBeGreaterThan(1);
     });
 
     it('delivers to specific target agent', async () => {
       const result = (await t().handler({ message: 'Code ready for review', target: 'reviewer' })) as AnyResult;
 
       expect(result.target).toBe('reviewer');
-      expect(result.recipients).toEqual(['reviewer']);
+      expect(result.recipients).toEqual([]);
+      expect(result.intendedRecipients).toEqual(['reviewer']);
     });
 
     it('uses normal priority by default', async () => {
@@ -871,7 +911,8 @@ describe('hooks-tools', () => {
 
       const result = (await t().handler({})) as AnyResult;
 
-      expect(result.status).toBe('active');
+      expect(['active', 'memory-fallback']).toContain(result.status);
+      expect(typeof result.source).toBe('string');
       const components = result.components as AnyResult;
       expect(components.sona).toBeDefined();
       expect(components.moe).toBeDefined();
@@ -887,9 +928,12 @@ describe('hooks-tools', () => {
       const result = (await t().handler({})) as AnyResult;
 
       const components = result.components as AnyResult;
-      // Status is 'active' when neural modules are present, 'loading' when unavailable
-      expect(['active', 'loading']).toContain((components.sona as AnyResult).status);
-      expect(['active', 'loading']).toContain((components.moe as AnyResult).status);
+      // Status is active only when a lazy backend is available; unavailable/disabled
+      // states are explicit instead of pretending background systems are running.
+      expect(['active', 'unavailable', 'disabled']).toContain((components.sona as AnyResult).status);
+      expect(['active', 'unavailable', 'disabled']).toContain((components.moe as AnyResult).status);
+      expect(['unverified', 'disabled']).toContain((components.hnsw as AnyResult).status);
+      expect(['configured']).toContain((components.embeddings as AnyResult).status);
     });
 
     it('returns version string', async () => {
@@ -906,14 +950,17 @@ describe('hooks-tools', () => {
   describe('hooks_intelligence-reset', () => {
     const t = () => tool('hooks_intelligence-reset');
 
-    it('returns reset=true with cleared counts', async () => {
+    it('reports reset as not executed when backend is unwired', async () => {
       const result = (await t().handler({})) as AnyResult;
 
-      expect(result.reset).toBe(true);
+      expect(result.simulated).toBe(true);
+      expect(result.reset).toBe(false);
+      expect(result.executed).toBe(false);
+      expect(result.warning).toMatch(/nothing was cleared/i);
       const cleared = result.cleared as AnyResult;
-      expect(typeof cleared.trajectories).toBe('number');
-      expect(typeof cleared.patterns).toBe('number');
-      expect(typeof cleared.hnswIndex).toBe('number');
+      expect(cleared.trajectories).toBe(0);
+      expect(cleared.patterns).toBe(0);
+      expect(cleared.hnswIndex).toBe(0);
     });
   });
 
@@ -1052,6 +1099,9 @@ describe('hooks-tools', () => {
       expect(result.flash).toBeDefined();
       expect(result.lora).toBeDefined();
       expect(result.hnsw).toBeDefined();
+      expect((result.hnsw as AnyResult).avgSearchTimeMeasured).toBe(false);
+      expect((result.hnsw as AnyResult).cacheHitRateMeasured).toBe(false);
+      expect(result.warning).toMatch(/Timing and cache-hit fields are unavailable/i);
     });
 
     it('includes implementationStatus when detailed=true', async () => {
@@ -1171,6 +1221,8 @@ describe('hooks-tools', () => {
       expect(result.trigger).toBe('audit');
       expect(typeof result.workerId).toBe('string');
       expect(result.status).toBe('dispatched');
+      expect(result.workPerformed).toBe(false);
+      expect(result.source).toBe('local-worker-scheduler-placeholder');
     });
 
     it('completes synchronously when background=false', async () => {
@@ -1178,6 +1230,7 @@ describe('hooks-tools', () => {
 
       expect(result.success).toBe(true);
       expect(result.status).toBe('completed');
+      expect(result.workPerformed).toBe(false);
     });
 
     it('returns error for unknown trigger', async () => {
@@ -1254,6 +1307,8 @@ describe('hooks-tools', () => {
 
       expect(result.autoDispatched).toBe(true);
       expect(Array.isArray(result.workerIds)).toBe(true);
+      expect(result.workPerformed).toBe(false);
+      expect(result.source).toBe('local-worker-scheduler-placeholder');
     });
   });
 
@@ -1331,14 +1386,19 @@ describe('hooks-tools', () => {
   describe('hooks_model-outcome', () => {
     const t = () => tool('hooks_model-outcome');
 
-    it('records model outcome', async () => {
+    it('reports model outcome recording status without claiming an unavailable backend recorded it', async () => {
       const result = (await t().handler({
         task: 'implement OAuth login',
         model: 'sonnet',
         outcome: 'success',
       })) as AnyResult;
 
-      expect(result.recorded).toBe(true);
+      expect(typeof result.recorded).toBe('boolean');
+      if (result.recorded) {
+        expect(result.warning).toBeUndefined();
+      } else {
+        expect(result.warning).toMatch(/backend is unavailable/i);
+      }
       expect(result.model).toBe('sonnet');
       expect(result.outcome).toBe('success');
       expect(typeof result.timestamp).toBe('string');
@@ -1390,7 +1450,7 @@ describe('hooks-tools', () => {
 
     it('hooks_notify handles empty message without throwing', async () => {
       const result = (await tool('hooks_notify').handler({ message: '' })) as AnyResult;
-      expect(result.delivered).toBe(true);
+      expect(result.delivered).toBe(false);
     });
 
     it('hooks_intelligence_trajectory-step defaults quality to 0.85', async () => {
