@@ -6038,7 +6038,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/cli` | CLI modernization | [Source](../cli/) |
 | `@hive-flow/cli/neural` | SONA learning integration | [Source](./src/neural/) |
 | `@hive-flow/cli/testing` | TDD London School framework | [Source](./src/testing/) |
-| `@hive-flow/mcp` | MCP server & tools | [Source](../mcp/) |
+| `@hive-flow/cli/mcp` | MCP server & tools | [Source](./src/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](../embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](../providers/) |
 | `@hive-flow/cli/integration` | local compatibility API integration | [Source](./src/integration/) |

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Session Manager
+ * @hive-flow/cli/mcp - Session Manager
  *
  * MCP session lifecycle management
  */

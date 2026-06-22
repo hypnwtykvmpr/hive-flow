@@ -332,10 +332,10 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
 
   it('bundles the runtime @hive-flow/* workspace packages so bare specifiers resolve post-install', () => {
     // The installed CLI dist imports BARE `@hive-flow/*` specifiers (shared,
-    // providers, guidance, mcp). `workspace:*` does not resolve once
+    // providers, guidance). `workspace:*` does not resolve once
     // installed, so these MUST ship as real node_modules/@hive-flow/* entries.
     // Regression guard for ERR_MODULE_NOT_FOUND: Cannot find package '@hive-flow/shared'.
-    const REQUIRED_BUNDLED = ['shared', 'providers', 'guidance', 'mcp'];
+    const REQUIRED_BUNDLED = ['shared', 'providers', 'guidance'];
     for (const name of REQUIRED_BUNDLED) {
       const pj = files.find(
         (p) => p === `node_modules/@hive-flow/${name}/package.json`,
@@ -359,11 +359,11 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     );
   });
 
-  it('createMCPServer resolves from the bundled @hive-flow/mcp package (d8-001 runtime path)', () => {
-    // mcp-server.ts dynamically imports createMCPServer from '@hive-flow/mcp'.
-    // Prove that the export resolves from the at-tree workspace dist — this is the
-    // same path that runs post-install when the tarball's bundled mcp package is used.
-    const mcpDist = join(repoRoot, 'v3', '@hive-flow', 'mcp', 'dist', 'index.js');
+  it('createMCPServer resolves from the shipped CLI MCP subpath (d8-001 runtime path)', () => {
+    // mcp-server.ts dynamically imports createMCPServer from the local CLI MCP implementation.
+    // Prove that the export resolves from the at-tree CLI dist — this is the
+    // same path that runs post-install when the tarball's CLI dist is used.
+    const mcpDist = join(repoRoot, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp', 'index.js');
     const res = spawnSync(
       'node',
       ['--input-type=module', '-e', `import { createMCPServer } from ${JSON.stringify('file://' + mcpDist)}; if (typeof createMCPServer !== 'function') throw new Error('createMCPServer is not a function'); console.log('MCP_CREATESERVER_OK');`],
@@ -375,7 +375,7 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
   });
 
   it('ships ZERO sourcemaps (bundled) and ZERO __tests__ (anywhere) in the umbrella tarball', () => {
-    // PACKAGING HYGIENE (slice A): the 4 bundled @hive-flow/* packages are packed
+    // PACKAGING HYGIENE (slice A): the bundled @hive-flow/* packages are packed
     // via the umbrella root `bundledDependencies`, which BYPASSES the root `files`
     // `!**/*.map` negation (npm packs bundled deps by their own rules). The staging
     // script (v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs) therefore strips `*.map` and
@@ -402,7 +402,7 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
   });
 
   it('does NOT bundle foreign (non-@hive-flow) packages into node_modules', () => {
-    // Only the 4 unpublished @hive-flow/* workspace packages may be bundled.
+    // Only unpublished @hive-flow/* workspace packages may be bundled.
     // Third-party deps (express, semver, ...) must install from the registry into
     // the umbrella ROOT node_modules — bundling their transitive trees produces a
     // bloated, partially-deduped, broken node_modules (e.g. an empty semver/).
@@ -489,7 +489,7 @@ describe('install smoke: hive-flow tarball resolves bundled @hive-flow/* post-in
 
   it('installs the bundled @hive-flow/* packages into the package node_modules', () => {
     const nm = join(prefix, 'lib', 'node_modules', 'hive-flow', 'node_modules', '@hive-flow');
-    for (const name of ['shared', 'providers', 'guidance', 'mcp']) {
+    for (const name of ['shared', 'providers', 'guidance']) {
       assert.ok(
         statSync(join(nm, name, 'package.json')).isFile(),
         `bundled @hive-flow/${name} did not install`,
@@ -513,7 +513,7 @@ describe('install smoke: hive-flow tarball resolves bundled @hive-flow/* post-in
       "await import('./v3/@hive-flow/cli/dist/src/integration/index.js');",
       "await import('@hive-flow/providers/scripts/agent-task-journal.mjs');",
       "await import('@hive-flow/guidance/compiler');",
-      "const { createMCPServer } = await import('@hive-flow/mcp'); if (typeof createMCPServer !== 'function') throw new Error('createMCPServer not a function');",
+      "const { createMCPServer } = await import('./v3/@hive-flow/cli/dist/src/mcp/index.js'); if (typeof createMCPServer !== 'function') throw new Error('createMCPServer not a function');",
       "console.log('HF_RESOLVE_OK');",
     ].join('\n');
     const res = spawnSync('node', ['--input-type=module', '-e', script], {

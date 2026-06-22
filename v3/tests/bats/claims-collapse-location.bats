@@ -23,7 +23,7 @@ setup() {
   [ "$status" -eq 0 ]
   run grep -F '"./dist/src/claims/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"zod": "^3.22.4"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"zod": "^3.25.0"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
@@ -77,7 +77,7 @@ setup() {
     count=$((count + 1))
   done
 
-  [ "$count" -eq 12 ]
-  run grep -F '12 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 11 ]
+  run grep -F '11 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

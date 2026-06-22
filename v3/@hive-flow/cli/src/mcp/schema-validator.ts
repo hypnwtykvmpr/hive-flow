@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - JSON Schema Validator
+ * @hive-flow/cli/mcp - JSON Schema Validator
  *
  * Lightweight JSON Schema validation for tool inputs
  * Implements JSON Schema Draft 2020-12 subset

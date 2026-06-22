@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Connection Pool
+ * @hive-flow/cli/mcp - Connection Pool
  *
  * High-performance connection pooling
  */

@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (12 packages)
+├── @hive-flow/                    # Modular packages (11 packages)
 │   ├── browser/                     # Browser automation (Playwright/CDP)
 │   ├── claims/                      # Claims-based authorisation
 │   ├── cli/                         # CLI module (40 commands)
@@ -117,7 +117,7 @@ v3/
 │   │       ├── hive-flow-bridge.ts  # Core bridge
 │   │       ├── agent-adapter.ts     # Agent adaptation
 │   │       └── sona-adapter.ts      # SONA learning
-│   ├── mcp/                         # MCP server & tools
+│   ├── cli/src/mcp/                 # MCP server & tools
 │   ├── memory/                      # HiveMemory + HNSW vector search
 │   │   └── src/
 │   │       ├── hivememory-backend.ts
@@ -285,7 +285,7 @@ import { HNSWIndex } from '@hive-flow/memory';
 ### MCP Server
 
 ```typescript
-import { createMCPServer } from '@hive-flow/mcp';
+import { createMCPServer } from '@hive-flow/cli/mcp';
 
 const server = createMCPServer({
   transport: 'stdio',
@@ -360,7 +360,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 12 packages |
+| **Code** | Package count | 11 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -387,7 +387,7 @@ pnpm test:coverage
 ### MCP Tools
 - [CLI MCP Tool Registry](./@hive-flow/cli/src/mcp-client.ts)
 - [CLI MCP Tools](./@hive-flow/cli/src/mcp-tools/)
-- [Standalone MCP Server](./@hive-flow/mcp/)
+- [CLI MCP Server](./@hive-flow/cli/src/mcp/)
 
 ### External
 

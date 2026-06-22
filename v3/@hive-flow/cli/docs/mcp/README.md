@@ -1,7 +1,7 @@
-# @hive-flow/mcp
+# @hive-flow/cli/mcp
 
 
-> **MCP 2025-11-25 Compliant** - Standalone Model Context Protocol server implementation with full Resources, Prompts, and Tasks support
+> **MCP 2025-11-25 Compliant** - CLI-shipped Model Context Protocol server implementation with full Resources, Prompts, and Tasks support
 
 ## Features
 
@@ -16,12 +16,12 @@
 - **Fast Tool Registry** - O(1) lookup, <10ms registration
 - **Session Management** - Timeout handling, authentication
 - **Security** - CORS, Helmet, auth tokens
-- **Standalone package** - No @hive-flow/* runtime dependencies
+- **CLI subpath** - Ships as `@hive-flow/cli/mcp` for HTTP/WebSocket and in-process MCP use
 
 ## Quick Start
 
 ```typescript
-import { quickStart, defineTool } from '@hive-flow/mcp';
+import { quickStart, defineTool } from '@hive-flow/cli/mcp';
 
 // Create and start server
 const server = await quickStart({
@@ -52,7 +52,7 @@ await server.start();
 ### Stdio (Default)
 
 ```typescript
-import { createMCPServer } from '@hive-flow/mcp';
+import { createMCPServer } from '@hive-flow/cli/mcp';
 
 const server = createMCPServer({
   transport: 'stdio',
@@ -99,7 +99,7 @@ await server.start();
 ## Tool Registry
 
 ```typescript
-import { createToolRegistry, defineTool } from '@hive-flow/mcp';
+import { createToolRegistry, defineTool } from '@hive-flow/cli/mcp';
 
 const registry = createToolRegistry(logger);
 
@@ -131,7 +131,7 @@ const stats = registry.getStats();
 ## Session Management
 
 ```typescript
-import { createSessionManager } from '@hive-flow/mcp';
+import { createSessionManager } from '@hive-flow/cli/mcp';
 
 const sessions = createSessionManager(logger, {
   maxSessions: 100,
@@ -156,7 +156,7 @@ const metrics = sessions.getSessionMetrics();
 ## Connection Pool
 
 ```typescript
-import { createConnectionPool } from '@hive-flow/mcp';
+import { createConnectionPool } from '@hive-flow/cli/mcp';
 
 const pool = createConnectionPool({
   maxConnections: 10,
@@ -240,7 +240,7 @@ The server automatically registers these system tools:
 ## Resources (MCP 2025-11-25)
 
 ```typescript
-import { createMCPServer, createTextResource } from '@hive-flow/mcp';
+import { createMCPServer, createTextResource } from '@hive-flow/cli/mcp';
 
 const server = createMCPServer({ transport: 'stdio' }, logger);
 const resourceRegistry = server.getResourceRegistry();
@@ -278,7 +278,7 @@ resourceRegistry.subscribe('file://readme.txt', (uri, content) => {
 ## Prompts (MCP 2025-11-25)
 
 ```typescript
-import { createMCPServer, definePrompt, textMessage, interpolate } from '@hive-flow/mcp';
+import { createMCPServer, definePrompt, textMessage, interpolate } from '@hive-flow/cli/mcp';
 
 const server = createMCPServer({ transport: 'stdio' }, logger);
 const promptRegistry = server.getPromptRegistry();
@@ -311,7 +311,7 @@ const result = await promptRegistry.get('code_review', {
 ## Tasks (MCP 2025-11-25)
 
 ```typescript
-import { createMCPServer } from '@hive-flow/mcp';
+import { createMCPServer } from '@hive-flow/cli/mcp';
 
 const server = createMCPServer({ transport: 'stdio' }, logger);
 const taskManager = server.getTaskManager();

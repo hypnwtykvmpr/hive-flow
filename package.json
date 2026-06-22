@@ -65,10 +65,10 @@
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
     "@hive-flow/guidance": "3.0.0-alpha.1",
-    "@hive-flow/mcp": "3.0.0-alpha.8",
     "@hive-flow/providers": "3.0.0-alpha.6",
     "@hive-flow/shared": "3.0.0-alpha.6",
     "@noble/ed25519": "^3.0.0",
+    "ajv": "^8.18.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
@@ -80,7 +80,6 @@
   },
   "bundledDependencies": [
     "@hive-flow/shared",
-    "@hive-flow/mcp",
     "@hive-flow/providers",
     "@hive-flow/guidance"
   ],

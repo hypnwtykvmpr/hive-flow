@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Integration Tests
+ * @hive-flow/cli/mcp - Integration Tests
  *
  * End-to-end tests for MCP 2025-11-25 features
  */
@@ -11,8 +11,8 @@ import {
   definePrompt,
   textMessage,
   resourceMessage,
-} from '../src/index.js';
-import type { ILogger, MCPRequest, MCPResponse } from '../src/types.js';
+} from '../index.js';
+import type { ILogger, MCPRequest, MCPResponse } from '../types.js';
 
 const createMockLogger = (): ILogger => ({
   debug: vi.fn(),

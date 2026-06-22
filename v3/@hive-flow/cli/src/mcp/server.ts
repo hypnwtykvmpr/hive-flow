@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - MCP Server
+ * @hive-flow/cli/mcp - MCP Server
  *
  * High-performance MCP server implementation
  */

@@ -6452,7 +6452,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
 | `@hive-flow/cli/neural` | Local pattern learning helpers | [Source](./v3/@hive-flow/cli/src/neural/) |
 | `@hive-flow/cli/testing` | TDD London School framework | [Source](./v3/@hive-flow/cli/src/testing/) |
-| `@hive-flow/mcp` | MCP server & tools | [Source](./v3/@hive-flow/mcp/) |
+| `@hive-flow/cli/mcp` | MCP server & tools | [Source](./v3/@hive-flow/cli/src/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./v3/@hive-flow/embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](./v3/@hive-flow/providers/) |
 | `@hive-flow/cli/integration` | Optional hive-flow integration | [Source](./v3/@hive-flow/cli/src/integration/) |

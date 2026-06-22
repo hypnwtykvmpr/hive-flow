@@ -21,7 +21,6 @@ function workspaceRoot(): string {
 
 const DUPLICATE_ROSTER_ROOTS = [
   'v3/@hive-flow/cli/.claude/agents',
-  'v3/@hive-flow/mcp/.claude/agents',
   'agents',
   'v3/agents',
   'v3/@hive-flow/agents',

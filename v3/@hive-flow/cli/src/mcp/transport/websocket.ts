@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - WebSocket Transport
+ * @hive-flow/cli/mcp - WebSocket Transport
  *
  * Standalone WebSocket transport with heartbeat
  */

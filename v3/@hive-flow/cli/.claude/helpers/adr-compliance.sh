@@ -84,14 +84,14 @@ check_adr_005() {
   local score=0
 
   # Check for MCP server implementation
-  [ -d "$PROJECT_ROOT/v3/@hive-flow/mcp" ] && score=$((score + 40))
+  [ -d "$PROJECT_ROOT/v3/@hive-flow/cli/src/mcp" ] && score=$((score + 40))
 
   # Check for MCP tools
   local tools=$(grep -r "tool.*name\|registerTool" "$PROJECT_ROOT/v3" 2>/dev/null | wc -l)
   [ "$tools" -gt 5 ] && score=$((score + 30))
 
   # Check for MCP schemas
-  grep -rq "schema\|jsonSchema" "$PROJECT_ROOT/v3/@hive-flow/mcp" 2>/dev/null && score=$((score + 30))
+  grep -rq "schema\|jsonSchema" "$PROJECT_ROOT/v3/@hive-flow/cli/src/mcp" 2>/dev/null && score=$((score + 30))
 
   echo "$score"
 }

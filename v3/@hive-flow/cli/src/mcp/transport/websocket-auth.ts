@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - WebSocket Authentication Middleware
+ * @hive-flow/cli/mcp - WebSocket Authentication Middleware
  *
  * Provides token-based authentication for WebSocket connections.
  * Guards all non-authenticate messages behind a handshake that must

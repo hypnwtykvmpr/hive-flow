@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Transport Factory
+ * @hive-flow/cli/mcp - Transport Factory
  *
  * Central factory for creating transport instances
  */

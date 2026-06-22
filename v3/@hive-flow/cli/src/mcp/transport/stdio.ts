@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Stdio Transport
+ * @hive-flow/cli/mcp - Stdio Transport
  *
  * Standard I/O transport for MCP communication
  */

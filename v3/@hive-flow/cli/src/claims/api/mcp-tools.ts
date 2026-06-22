@@ -35,7 +35,7 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 
 // ============================================================================
-// Type Definitions (compatible with @hive-flow/mcp tool shapes)
+// Type Definitions (compatible with @hive-flow/cli/mcp tool shapes)
 // ============================================================================
 
 /**

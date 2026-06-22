@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMCPServer, type ILogger, type MCPRequest, type MCPResponse } from '@hive-flow/mcp';
+import { createMCPServer, type ILogger, type MCPRequest, type MCPResponse } from '../../src/mcp/index.js';
 import { compactTextResponse, readJsonFixture, stableJson } from './helpers.js';
 
 interface RequestHarness {

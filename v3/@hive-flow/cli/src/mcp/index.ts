@@ -1,7 +1,7 @@
 /**
- * @hive-flow/mcp - Standalone MCP Server
+ * @hive-flow/cli/mcp - CLI MCP Server
  *
- * Zero-dependency MCP (Model Context Protocol) implementation
+ * MCP (Model Context Protocol) implementation shipped through the CLI package
  *
  * Features:
  * - High-performance server with <400ms startup
@@ -11,7 +11,7 @@
  * - Session management with timeout handling
  * - Comprehensive metrics and monitoring
  *
- * @module @hive-flow/mcp
+ * @module @hive-flow/cli/mcp
  * @version 3.0.0
  */
 
@@ -209,7 +209,7 @@ import type { MCPServerConfig, ILogger } from './types.js';
  *
  * @example
  * ```typescript
- * import { quickStart } from '@hive-flow/mcp';
+ * import { quickStart } from '@hive-flow/cli/mcp';
  *
  * const server = await quickStart({
  *   transport: 'stdio',
@@ -250,4 +250,4 @@ export const VERSION = '3.0.0';
 /**
  * Module name
  */
-export const MODULE_NAME = '@hive-flow/mcp';
+export const MODULE_NAME = '@hive-flow/cli/mcp';

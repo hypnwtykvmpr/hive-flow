@@ -548,7 +548,7 @@ QE tools are registered with V3's MCP server using the standard tool definition 
 ```typescript
 // v3/plugins/agentic-qe/src/mcp-tools/registration.ts
 
-import type { MCPServer, ToolDefinition } from '@hive-flow/mcp';
+import type { MCPServer, ToolDefinition } from '@hive-flow/cli/mcp';
 import { mcpTools } from './index';
 
 export async function registerQETools(server: MCPServer): Promise<void> {

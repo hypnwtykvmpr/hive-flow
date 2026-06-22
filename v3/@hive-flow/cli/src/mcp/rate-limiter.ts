@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Rate Limiter
+ * @hive-flow/cli/mcp - Rate Limiter
  *
  * Token bucket rate limiting for DoS protection
  */

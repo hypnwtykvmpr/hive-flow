@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Test Suite
+ * @hive-flow/cli/mcp - Test Suite
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -20,8 +20,8 @@ import {
   MCPServerError,
   VERSION,
   MODULE_NAME,
-} from '../src/index.js';
-import type { ILogger, MCPTool } from '../src/types.js';
+} from '../index.js';
+import type { ILogger, MCPTool } from '../types.js';
 
 // Mock logger
 const createMockLogger = (): ILogger => ({
@@ -31,14 +31,14 @@ const createMockLogger = (): ILogger => ({
   error: vi.fn(),
 });
 
-describe('@hive-flow/mcp', () => {
+describe('@hive-flow/cli/mcp', () => {
   describe('Module exports', () => {
     it('should export VERSION', () => {
       expect(VERSION).toBe('3.0.0');
     });
 
     it('should export MODULE_NAME', () => {
-      expect(MODULE_NAME).toBe('@hive-flow/mcp');
+      expect(MODULE_NAME).toBe('@hive-flow/cli/mcp');
     });
 
     it('should export ErrorCodes', () => {

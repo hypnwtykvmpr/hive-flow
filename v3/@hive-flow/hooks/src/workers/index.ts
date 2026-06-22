@@ -1377,7 +1377,7 @@ export function createDDDWorker(projectRoot: string): WorkerHandler {
 
     const modules = [
       { mod: '@hive-flow/hooks', srcPath: path.join(v3Path, '@hive-flow/hooks', 'src') },
-      { mod: '@hive-flow/mcp', srcPath: path.join(v3Path, '@hive-flow/mcp', 'src') },
+      { mod: '@hive-flow/cli/mcp', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'mcp') },
       { mod: '@hive-flow/cli/integration', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'integration') },
       { mod: '@hive-flow/providers', srcPath: path.join(v3Path, '@hive-flow/providers', 'src') },
       { mod: '@hive-flow/memory', srcPath: path.join(v3Path, '@hive-flow/memory', 'src') },

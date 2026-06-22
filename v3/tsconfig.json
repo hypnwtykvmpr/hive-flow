@@ -13,7 +13,6 @@
       "@hive-flow/codex": ["./@hive-flow/codex/src"],
       "@hive-flow/embeddings": ["./@hive-flow/embeddings/src"],
       "@hive-flow/guidance": ["./@hive-flow/guidance/src"],
-      "@hive-flow/mcp": ["./@hive-flow/mcp/src"],
       "@hive-flow/plugins": ["./@hive-flow/plugins/src"],
       "@hive-flow/providers": ["./@hive-flow/providers/src"]
     }
@@ -28,7 +27,6 @@
     { "path": "./@hive-flow/codex" },
     { "path": "./@hive-flow/embeddings" },
     { "path": "./@hive-flow/guidance" },
-    { "path": "./@hive-flow/mcp" },
     { "path": "./@hive-flow/plugins" },
     { "path": "./@hive-flow/providers" }
   ],

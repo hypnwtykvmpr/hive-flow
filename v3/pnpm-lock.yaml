@@ -93,18 +93,27 @@ importers:
       '@ast-grep/napi':
         specifier: ^0.43.0
         version: 0.43.0
-      '@hive-flow/mcp':
-        specifier: workspace:*
-        version: link:../mcp
       '@hive-flow/shared':
         specifier: workspace:*
         version: link:../shared
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.0.0
+      ajv:
+        specifier: ^8.18.0
+        version: 8.18.0
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.6
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
       fast-check:
         specifier: ^4.8.0
         version: 4.8.0
+      helmet:
+        specifier: ^8.1.0
+        version: 8.1.0
       jsonc-parser:
         specifier: ^3.3.1
         version: 3.3.1
@@ -114,8 +123,11 @@ importers:
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
+      ws:
+        specifier: 8.21.0
+        version: 8.21.0
       zod:
-        specifier: ^3.22.4
+        specifier: ^3.25.0
         version: 3.25.76
     optionalDependencies:
       '@hive-flow/codex':
@@ -140,6 +152,15 @@ importers:
       '@hive-flow/plugins':
         specifier: workspace:*
         version: link:../plugins
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/ws':
+        specifier: ^8.5.10
+        version: 8.18.1
       sql.js:
         specifier: ^1.14.1
         version: 1.14.1
@@ -217,43 +238,6 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.11
         version: 7.6.13
-      vitest:
-        specifier: 4.1.0
-        version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  '@hive-flow/mcp':
-    dependencies:
-      ajv:
-        specifier: ^8.18.0
-        version: 8.18.0
-      cors:
-        specifier: ^2.8.6
-        version: 2.8.6
-      express:
-        specifier: ^5.2.1
-        version: 5.2.1
-      helmet:
-        specifier: ^8.1.0
-        version: 8.1.0
-      ws:
-        specifier: 8.21.0
-        version: 8.21.0
-      zod:
-        specifier: ^3.25.0
-        version: 3.25.76
-    devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.25
-      '@types/ws':
-        specifier: ^8.5.10
-        version: 8.18.1
-      vite:
-        specifier: 6.4.3
-        version: 6.4.3(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)

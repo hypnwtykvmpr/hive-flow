@@ -73,7 +73,7 @@ export interface MCPServerStatus {
 
 /**
  * JSON-RPC error codes (MCP / JSON-RPC 2.0 spec)
- * Mirrors @hive-flow/mcp ErrorCodes — kept local to avoid cross-package import.
+ * Mirrors local MCP ErrorCodes — kept local so stdio startup stays light.
  */
 const ErrorCodes = {
   PARSE_ERROR: -32700,
@@ -883,16 +883,16 @@ export class MCPServerManager extends EventEmitter {
    * Start HTTP server in-process
    */
   private async startHttpServer(): Promise<void> {
-    // Dynamically import the MCP server package (HTTP/WS transport only).
-    // @hive-flow/mcp is bundled in the umbrella package; if resolution fails
-    // the user is on a dev install without the workspace built.
-    let createMCPServer: (typeof import('@hive-flow/mcp'))['createMCPServer'];
+    // Dynamically import the local MCP implementation (HTTP/WS transport only).
+    // The stdio path stays dependency-light; HTTP/WebSocket loads the heavier
+    // transport stack only when requested.
+    let createMCPServer: (typeof import('./mcp/index.js'))['createMCPServer'];
     try {
-      ({ createMCPServer } = await import('@hive-flow/mcp'));
+      ({ createMCPServer } = await import('./mcp/index.js'));
     } catch (importErr) {
       throw new Error(
-        `HTTP/WebSocket MCP transport requires @hive-flow/mcp which could not be loaded: ${(importErr as Error).message}. ` +
-        `Use --transport stdio (default) or run 'pnpm install' in the repo root to build all workspaces.`,
+        `HTTP/WebSocket MCP transport requires the local MCP implementation which could not be loaded: ${(importErr as Error).message}. ` +
+        `Use --transport stdio (default) or run 'pnpm install' and 'pnpm --filter @hive-flow/cli build'.`,
       );
     }
 

@@ -29,7 +29,7 @@ import {
 
 /**
  * JSON-RPC error codes (MCP / JSON-RPC 2.0 spec)
- * Mirrors @hive-flow/mcp ErrorCodes — kept local to avoid cross-package import.
+ * Mirrors @hive-flow/cli/mcp ErrorCodes — kept local to avoid cross-package import.
  */
 const ErrorCodes = {
   PARSE_ERROR: -32700,

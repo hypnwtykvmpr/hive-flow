@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - Standalone Types
+ * @hive-flow/cli/mcp - Standalone Types
  *
  * Complete type definitions for MCP server implementation
  * Zero external @hive-flow dependencies

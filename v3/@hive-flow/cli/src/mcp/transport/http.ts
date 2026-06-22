@@ -1,5 +1,5 @@
 /**
- * @hive-flow/mcp - HTTP Transport
+ * @hive-flow/cli/mcp - HTTP Transport
  *
  * HTTP/REST transport with WebSocket support
  */
