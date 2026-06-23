@@ -9,11 +9,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   EnhancedPluginRegistry,
   type EnhancedPluginRegistryConfig,
-} from '../src/registry/enhanced-plugin-registry.js';
-import { PluginBuilder } from '../src/sdk/index.js';
-import { BasePlugin } from '../src/core/base-plugin.js';
-import type { PluginContext, PluginMetadata, HealthCheckResult } from '../src/types/index.js';
-import type { IPlugin } from '../src/core/plugin-interface.js';
+} from '../registry/enhanced-plugin-registry.js';
+import { PluginBuilder } from '../sdk/index.js';
+import { BasePlugin } from '../core/base-plugin.js';
+import type { PluginContext, PluginMetadata, HealthCheckResult } from '../types/index.js';
+import type { IPlugin } from '../core/plugin-interface.js';
 
 // ============================================================================
 // Test Helpers

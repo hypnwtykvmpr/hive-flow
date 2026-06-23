@@ -7,8 +7,8 @@
  *
  * @example
  * ```typescript
- * import { pluginCreatorPlugin } from '@hive-flow/plugins/examples/plugin-creator';
- * import { getDefaultRegistry } from '@hive-flow/plugins';
+ * import { pluginCreatorPlugin } from '@hive-flow/cli/plugin-sdk/examples/plugin-creator';
+ * import { getDefaultRegistry } from '@hive-flow/cli/plugin-sdk';
  *
  * await getDefaultRegistry().register(pluginCreatorPlugin);
  * ```
@@ -29,7 +29,7 @@ import {
   type WorkerDefinition,
   type AgentTypeDefinition,
   type IPlugin,
-} from '../../src/index.js';
+} from '../../index.js';
 
 // ============================================================================
 // Plugin Creator Types
@@ -178,7 +178,7 @@ const ${camelCase(event)}Hook = new HookBuilder(HookEvent.${getEventEnumName(eve
   .withName('${event}-handler')
   .withDescription('Handler for ${event} event')
   .withPriority(HookPriority.Normal)
-  .withHandler(async (ctx) => {
+  .handle(async (ctx) => {
     console.log('Hook triggered: ${event}', ctx.data);
     return { success: true };
   })
@@ -320,7 +320,7 @@ export function generatePlugin(options: CreatePluginOptions): GeneratedPlugin {
   codeBlocks.push(`import {
   PluginBuilder,${enabledFeatures.tools ? '\n  MCPToolBuilder,' : ''}${enabledFeatures.hooks ? '\n  HookBuilder,\n  HookEvent,\n  HookPriority,' : ''}${enabledFeatures.workers ? '\n  WorkerFactory,' : ''}${enabledFeatures.security ? '\n  Security,' : ''}
   type IPlugin,${enabledFeatures.workers ? '\n  type WorkerDefinition,' : ''}${agents.length > 0 ? '\n  type AgentTypeDefinition,' : ''}
-} from '@hive-flow/plugins';
+} from '@hive-flow/cli/plugin-sdk';
 `);
 
   // Generate tools
@@ -603,7 +603,7 @@ export const pluginCreatorPlugin = new PluginBuilder('plugin-creator', '1.0.0')
       .withName('plugin-creator-logger')
       .withDescription('Log plugin creation events')
       .withPriority(HookPriority.Low)
-      .withHandler(async (ctx) => {
+      .handle(async (ctx) => {
         const data = ctx.data as { toolName?: string } | undefined;
         // Only log if this is from the create-plugin tool
         if (data?.toolName === 'create-plugin') {

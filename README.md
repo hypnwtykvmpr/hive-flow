@@ -4412,7 +4412,7 @@ console.log(`Hooks executed: ${result.hooksExecuted}`);
 | `@hive-flow/cli/security` | Input validation | `InputValidator`, `PathValidator` |
 | `@hive-flow/cli/neural` | Local pattern learning and reasoning helpers | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
-| `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
+| `@hive-flow/cli/plugin-sdk` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
 HiveMemory may retain internal vector-search transitive dependencies, but Hive Flow no longer exposes standalone external-vector CLI, MCP, or PostgreSQL surfaces.
 
@@ -4986,7 +4986,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/memory` | Unified vector storage | UnifiedMemoryService, RVF binary format, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
 | `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
-| `@hive-flow/plugins` | Plugin SDK | Semantic search, intent routing, lifecycle extensions |
+| `@hive-flow/cli/plugin-sdk` | Plugin SDK | Builders, registries, workers, hooks, providers |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
 | `@hive-flow/cli/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
@@ -6442,7 +6442,7 @@ cp -r ./data-backup-v2 ./data
 
 | Module | Description | Docs |
 |--------|-------------|------|
-| `@hive-flow/plugins` | Plugin SDK with workers, hooks, providers, security | [README](./v3/@hive-flow/plugins/README.md) |
+| `@hive-flow/cli/plugin-sdk` | Plugin SDK with workers, hooks, providers, security | [README](./v3/@hive-flow/cli/docs/plugin-sdk/README.md) |
 | `@hive-flow/cli/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/cli/src/hooks/) |
 | `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
 | `@hive-flow/cli/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/cli/docs/security/README.md) |

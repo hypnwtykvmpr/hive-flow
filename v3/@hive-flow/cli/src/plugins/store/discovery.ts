@@ -407,10 +407,10 @@ export class PluginDiscoveryService {
       },
       // Plugin SDK - Unified Plugin SDK for creating plugins
       {
-        id: '@hive-flow/plugins',
-        name: '@hive-flow/plugins',
+        id: '@hive-flow/cli/plugin-sdk',
+        name: '@hive-flow/cli/plugin-sdk',
         displayName: 'Plugin SDK',
-        description: 'Unified Plugin SDK for Hive Flow V3 - Worker, Hook, and Provider Integration. Create, test, and publish Hive Flow plugins.',
+        description: 'Unified Plugin SDK shipped with the Hive Flow CLI - Worker, Hook, and Provider Integration. Create, test, and publish Hive Flow plugins.',
         version: '3.0.0-alpha.2',
         cid: 'bafybeipluginsdk2024xyz',
         size: 156000,
@@ -427,7 +427,7 @@ export class PluginDiscoveryService {
         createdAt: '2024-04-01T00:00:00Z',
         minHiveFlowVersion: '3.0.0',
         dependencies: [
-          { name: '@hive-flow/core', version: '^3.0.0' },
+          { name: '@hive-flow/cli', version: '^3.0.0' },
         ],
         type: 'core',
         hooks: [
@@ -951,7 +951,6 @@ export class PluginDiscoveryService {
     const realNpmPackages = [
       '@hive-flow/plugin-agentic-qe',
       '@hive-flow/plugin-prime-radiant',
-      '@hive-flow/plugins',
       '@hive-flow/embeddings',
       '@hive-flow/teammate-plugin',
       // Domain-specific plugins

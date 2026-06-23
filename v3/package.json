@@ -71,8 +71,7 @@
       "ignoreMissing": [
         "@hive-flow/coordination",
         "@hive-flow/embeddings",
-        "@hive-flow/memory",
-        "@hive-flow/plugins"
+        "@hive-flow/memory"
       ]
     },
     "overrides": {

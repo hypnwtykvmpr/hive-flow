@@ -11,8 +11,8 @@ import {
   createToolPlugin,
   createHooksPlugin,
   createWorkerPlugin,
-} from '../src/sdk/index.js';
-import { HookEvent, HookPriority } from '../src/types/index.js';
+} from '../sdk/index.js';
+import { HookEvent, HookPriority } from '../types/index.js';
 
 describe('PluginBuilder', () => {
   it('should create a basic plugin', () => {

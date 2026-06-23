@@ -4224,7 +4224,7 @@ console.log(`Hooks executed: ${result.hooksExecuted}`);
 | `@hive-flow/cli/security` | Input validation | `InputValidator`, `PathValidator` |
 | `@hive-flow/cli/neural` | Local pattern learning | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
-| `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
+| `@hive-flow/cli/plugin-sdk` | Plugin SDK | `PluginBuilder`, `createPlugin` |
 
 </details>
 
@@ -4675,7 +4675,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/memory` | Unified vector storage | HiveMemory, HNSW indexing, fast search, LearningBridge, MemoryGraph, AgentMemoryScope |
 | `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
-| `@hive-flow/plugins` | WASM extensions | local vector plugins, semantic search, intent routing |
+| `@hive-flow/cli/plugin-sdk` | Plugin SDK | Builders, registries, workers, hooks, providers |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
 | `@hive-flow/cli/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |

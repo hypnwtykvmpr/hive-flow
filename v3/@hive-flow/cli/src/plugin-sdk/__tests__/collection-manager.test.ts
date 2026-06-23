@@ -11,9 +11,9 @@ import {
   type PluginCollection,
   type PluginCollectionEntry,
   type CollectionManagerState,
-} from '../src/collections/collection-manager.js';
-import { PluginBuilder } from '../src/sdk/index.js';
-import { EnhancedPluginRegistry } from '../src/registry/enhanced-plugin-registry.js';
+} from '../collections/collection-manager.js';
+import { PluginBuilder } from '../sdk/index.js';
+import { EnhancedPluginRegistry } from '../registry/enhanced-plugin-registry.js';
 
 // ============================================================================
 // Test Helpers

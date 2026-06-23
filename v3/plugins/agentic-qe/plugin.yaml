@@ -30,7 +30,7 @@ metadata:
 # Dependencies
 dependencies:
   required:
-    - "@hive-flow/plugins": ">=3.0.0"
+    - "@hive-flow/cli": ">=3.0.0"
     - "@hive-flow/memory": ">=3.0.0"
     - "@hive-flow/embeddings": ">=3.0.0"
   optional:
@@ -982,7 +982,7 @@ implementation:
       files: 8
       estimatedLines: 1210
       deliverables:
-        - Plugin registers with @hive-flow/plugins SDK
+        - Plugin registers with @hive-flow/cli/plugin-sdk
         - Type-safe configuration validation
         - Basic lifecycle hooks (onLoad, onUnload)
 

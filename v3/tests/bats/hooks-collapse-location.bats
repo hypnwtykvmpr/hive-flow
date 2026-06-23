@@ -35,8 +35,8 @@ setup() {
   [ "$status" -eq 1 ]
 }
 
-@test "cli and plugins no longer depend on retired hooks workspace" {
-  run grep -F '"@hive-flow/hooks"' "$REPO_ROOT/v3/@hive-flow/cli/package.json" "$REPO_ROOT/v3/@hive-flow/plugins/package.json"
+@test "cli no longer depends on retired hooks workspace" {
+  run grep -F '"@hive-flow/hooks"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
   [ "$status" -eq 1 ]
 }
 
@@ -61,8 +61,8 @@ setup() {
     count=$((count + 1))
   done
 
-  [ "$count" -eq 7 ]
-  run grep -F '7 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 6 ]
+  run grep -F '6 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }
 

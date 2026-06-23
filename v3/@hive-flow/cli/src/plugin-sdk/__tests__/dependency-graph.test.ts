@@ -12,7 +12,7 @@ import {
   compareVersions,
   satisfiesVersion,
   type PluginDependency,
-} from '../src/registry/dependency-graph.js';
+} from '../registry/dependency-graph.js';
 
 // ============================================================================
 // Version Parsing Tests

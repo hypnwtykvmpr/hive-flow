@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { PluginRegistry, getDefaultRegistry, setDefaultRegistry } from '../src/registry/plugin-registry.js';
-import { BasePlugin } from '../src/core/base-plugin.js';
-import type { PluginMetadata, PluginContext, MCPToolDefinition } from '../src/types/index.js';
+import { PluginRegistry, getDefaultRegistry, setDefaultRegistry } from '../registry/plugin-registry.js';
+import { BasePlugin } from '../core/base-plugin.js';
+import type { PluginMetadata, PluginContext, MCPToolDefinition } from '../types/index.js';
 
 // ============================================================================
 // Test Plugin Implementation

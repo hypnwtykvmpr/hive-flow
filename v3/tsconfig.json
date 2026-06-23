@@ -9,7 +9,6 @@
       "@hive-flow/shared": ["./@hive-flow/shared/src"],
       "@hive-flow/codex": ["./@hive-flow/codex/src"],
       "@hive-flow/embeddings": ["./@hive-flow/embeddings/src"],
-      "@hive-flow/plugins": ["./@hive-flow/plugins/src"],
       "@hive-flow/providers": ["./@hive-flow/providers/src"]
     }
   },
@@ -19,7 +18,6 @@
     { "path": "./@hive-flow/cli" },
     { "path": "./@hive-flow/codex" },
     { "path": "./@hive-flow/embeddings" },
-    { "path": "./@hive-flow/plugins" },
     { "path": "./@hive-flow/providers" }
   ],
   "include": [],

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/plugins
+ * @hive-flow/cli/plugin-sdk
  *
  * Unified Plugin SDK for Hive Flow v3
  *
@@ -20,7 +20,7 @@
  *   WorkerFactory,
  *   ProviderFactory,
  *   Security,
- * } from '@hive-flow/plugins';
+ * } from '@hive-flow/cli/plugin-sdk';
  *
  * // Create a plugin with the builder
  * const myPlugin = new PluginBuilder('my-plugin', '1.0.0')
@@ -287,12 +287,37 @@ export {
 // Version
 // ============================================================================
 
-// Import version from package.json to avoid hardcoded mismatch
-import { createRequire } from 'module';
-const _require = createRequire(import.meta.url);
-const _pkg = _require('../package.json') as { version: string };
+// Import version from the CLI package root in both source tests and built dist.
+import { existsSync, readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-export const VERSION = _pkg.version;
+function getPackageVersion(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    // src/plugin-sdk/index.ts -> package root
+    join(here, '..', '..', 'package.json'),
+    // dist/src/plugin-sdk/index.js -> package root
+    join(here, '..', '..', '..', 'package.json'),
+  ];
+
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) continue;
+
+    try {
+      const pkg = JSON.parse(readFileSync(candidate, 'utf8')) as { name?: string; version?: string };
+      if (pkg.name === '@hive-flow/cli' && pkg.version) {
+        return pkg.version;
+      }
+    } catch {
+      // Keep searching; malformed package.json files are handled by normal gates.
+    }
+  }
+
+  return '3.0.0';
+}
+
+export const VERSION = getPackageVersion();
 export const SDK_VERSION = '1.0.0';
 
 // ============================================================================

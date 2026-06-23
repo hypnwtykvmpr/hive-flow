@@ -872,7 +872,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 | `@hive-flow/cli/security` | 3.0.0-alpha.1 | Input validation, path security, CVE remediation |
 | `@hive-flow/cli/claims` | 3.1.0-alpha.52 | Preserved claims API subpath; live commands are built into `hive-flow claims` |
 | `@hive-flow/cli/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
-| `@hive-flow/plugins` | 3.0.0-alpha.1 | Plugin system core (manager, discovery, store) |
+| `@hive-flow/cli/plugin-sdk` | 3.0.0-alpha.1 | Plugin SDK core (builder, registry, workers, hooks) |
 | `@hive-flow/plugin-perf-optimizer` | 0.1.0 | Performance profiling and benchmarking |
 
 ## Support

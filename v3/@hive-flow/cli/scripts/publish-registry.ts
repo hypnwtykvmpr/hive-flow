@@ -194,7 +194,6 @@ async function generateRegistry(): Promise<PluginRegistry> {
     '@hive-flow/plugin-prime-radiant',
     '@hive-flow/plugin-gastown-bridge',
     '@hive-flow/embeddings',
-    '@hive-flow/plugins',
   ];
 
   const plugins: PluginEntry[] = [];

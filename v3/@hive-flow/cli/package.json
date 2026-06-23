@@ -159,6 +159,34 @@
       "types": "./dist/src/security/*.d.ts",
       "import": "./dist/src/security/*.js"
     },
+    "./plugin-sdk": {
+      "types": "./dist/src/plugin-sdk/index.d.ts",
+      "import": "./dist/src/plugin-sdk/index.js"
+    },
+    "./plugin-sdk/sdk": {
+      "types": "./dist/src/plugin-sdk/sdk/index.d.ts",
+      "import": "./dist/src/plugin-sdk/sdk/index.js"
+    },
+    "./plugin-sdk/workers": {
+      "types": "./dist/src/plugin-sdk/workers/index.d.ts",
+      "import": "./dist/src/plugin-sdk/workers/index.js"
+    },
+    "./plugin-sdk/hooks": {
+      "types": "./dist/src/plugin-sdk/hooks/index.d.ts",
+      "import": "./dist/src/plugin-sdk/hooks/index.js"
+    },
+    "./plugin-sdk/providers": {
+      "types": "./dist/src/plugin-sdk/providers/index.d.ts",
+      "import": "./dist/src/plugin-sdk/providers/index.js"
+    },
+    "./plugin-sdk/examples/plugin-creator": {
+      "types": "./dist/src/plugin-sdk/examples/plugin-creator/index.d.ts",
+      "import": "./dist/src/plugin-sdk/examples/plugin-creator/index.js"
+    },
+    "./plugin-sdk/*": {
+      "types": "./dist/src/plugin-sdk/*.d.ts",
+      "import": "./dist/src/plugin-sdk/*.js"
+    },
     "./package.json": "./package.json",
     "./mcp-tools": {
       "types": "./dist/src/mcp-tools/index.d.ts",
@@ -304,7 +332,6 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
-    "@hive-flow/plugins": "workspace:*",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",

@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (7 packages)
+├── @hive-flow/                    # Modular packages (6 packages)
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
 │   │   ├── e2e/                     # CLI-owned integration tests
@@ -355,7 +355,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 7 packages |
+| **Code** | Package count | 6 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 

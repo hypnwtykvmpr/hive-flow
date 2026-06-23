@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import { PluginBuilder, PluginRegistry } from '@hive-flow/plugins';
+import { PluginBuilder, PluginRegistry } from '@hive-flow/cli/plugin-sdk';
 
 const tempDirs: string[] = [];
 

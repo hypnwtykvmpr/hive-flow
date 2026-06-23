@@ -45,15 +45,11 @@
     "zod": "^3.23.0"
   },
   "peerDependencies": {
-    "@hive-flow/plugins": "workspace:*",
     "@hive-flow/memory": "workspace:*",
     "@hive-flow/embeddings": "workspace:*",
     "@hive-flow/cli": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@hive-flow/plugins": {
-      "optional": true
-    },
     "@hive-flow/memory": {
       "optional": true
     },

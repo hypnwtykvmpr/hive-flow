@@ -1,4 +1,4 @@
-# @hive-flow/plugins
+# @hive-flow/cli/plugin-sdk
 
 **Unified Plugin SDK for Hive Flow V3**
 
@@ -9,7 +9,7 @@ A comprehensive plugin development framework providing workers, hooks, providers
 ### Create a Plugin with the Builder
 
 ```typescript
-import { PluginBuilder, HookEvent, HookPriority } from '@hive-flow/plugins';
+import { PluginBuilder, HookEvent, HookPriority } from '@hive-flow/cli/plugin-sdk';
 
 const myPlugin = new PluginBuilder('my-awesome-plugin', '1.0.0')
   .withDescription('My awesome plugin for Hive Flow')
@@ -43,14 +43,14 @@ const myPlugin = new PluginBuilder('my-awesome-plugin', '1.0.0')
   .build();
 
 // Register with the default registry
-import { getDefaultRegistry } from '@hive-flow/plugins';
+import { getDefaultRegistry } from '@hive-flow/cli/plugin-sdk';
 await getDefaultRegistry().register(myPlugin);
 ```
 
 ### Quick Plugin Creators
 
 ```typescript
-import { createToolPlugin, createHooksPlugin, createWorkerPlugin } from '@hive-flow/plugins';
+import { createToolPlugin, createHooksPlugin, createWorkerPlugin } from '@hive-flow/cli/plugin-sdk';
 
 // Tool-only plugin
 const toolPlugin = createToolPlugin('my-tools', '1.0.0', [
@@ -73,7 +73,7 @@ const workerPlugin = createWorkerPlugin('my-workers', '1.0.0', [
 ### 🔧 MCP Tool Builder
 
 ```typescript
-import { MCPToolBuilder } from '@hive-flow/plugins';
+import { MCPToolBuilder } from '@hive-flow/cli/plugin-sdk';
 
 const tool = new MCPToolBuilder('calculate')
   .withDescription('Perform calculations')
@@ -89,7 +89,7 @@ const tool = new MCPToolBuilder('calculate')
 ### 🎣 Hook System
 
 ```typescript
-import { HookBuilder, HookFactory, HookRegistry, HookEvent, HookPriority } from '@hive-flow/plugins';
+import { HookBuilder, HookFactory, HookRegistry, HookEvent, HookPriority } from '@hive-flow/cli/plugin-sdk';
 
 // Create a custom hook with conditions
 const hook = new HookBuilder(HookEvent.PreAgentSpawn)
@@ -112,7 +112,7 @@ const validator = HookFactory.createValidator(HookEvent.PreAgentSpawn, (data) =>
 ### 👷 Worker Pool
 
 ```typescript
-import { WorkerPool, WorkerFactory } from '@hive-flow/plugins';
+import { WorkerPool, WorkerFactory } from '@hive-flow/cli/plugin-sdk';
 
 // Create a worker pool
 const pool = new WorkerPool({
@@ -140,7 +140,7 @@ await pool.shutdown();
 ### 🤖 LLM Provider Integration
 
 ```typescript
-import { ProviderRegistry, ProviderFactory, BaseLLMProvider } from '@hive-flow/plugins';
+import { ProviderRegistry, ProviderFactory, BaseLLMProvider } from '@hive-flow/cli/plugin-sdk';
 
 const registry = new ProviderRegistry({
   fallbackChain: ['anthropic', 'openai'],
@@ -170,7 +170,7 @@ const response = await registry.execute({
 ### 🔗 Hive Flow Integration
 
 ```typescript
-import { HiveIntegrationBridge, HiveMemoryBridge } from '@hive-flow/plugins';
+import { HiveIntegrationBridge, HiveMemoryBridge } from '@hive-flow/cli/plugin-sdk';
 
 // Swarm coordination
 const agentic = new HiveIntegrationBridge({ maxConcurrentAgents: 15 });
@@ -198,7 +198,7 @@ const similar = await hivememory.search(queryVector, { limit: 10 });
 ### 🔒 Security Utilities
 
 ```typescript
-import { Security, createRateLimiter, createResourceLimiter } from '@hive-flow/plugins';
+import { Security, createRateLimiter, createResourceLimiter } from '@hive-flow/cli/plugin-sdk';
 
 // Input validation
 const name = Security.validateString(input, { minLength: 1, maxLength: 100 });

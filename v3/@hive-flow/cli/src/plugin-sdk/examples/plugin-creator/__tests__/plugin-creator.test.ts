@@ -12,8 +12,8 @@ import {
   generateAgentTypeCode,
   PLUGIN_TEMPLATES,
   type CreatePluginOptions,
-} from './index.js';
-import { HookEvent } from '../../src/types/index.js';
+} from '../index.js';
+import { HookEvent } from '../../../types/index.js';
 
 describe('Plugin Creator Plugin', () => {
   describe('pluginCreatorPlugin', () => {

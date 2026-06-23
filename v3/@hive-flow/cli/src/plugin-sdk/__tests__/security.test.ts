@@ -23,7 +23,7 @@ import {
   hashString,
   constantTimeCompare,
   createResourceLimiter,
-} from '../src/security/index.js';
+} from '../security/index.js';
 import * as path from 'path';
 
 describe('Input Validation', () => {

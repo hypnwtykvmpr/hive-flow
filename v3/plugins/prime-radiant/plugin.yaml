@@ -675,7 +675,7 @@ implementation:
       files: 5
       estimatedLines: 475
       deliverables:
-        - Plugin registers with @hive-flow/plugins SDK
+        - Plugin registers with @hive-flow/cli/plugin-sdk
         - Type-safe configuration
         - Basic lifecycle hooks
 

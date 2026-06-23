@@ -1,5 +1,5 @@
 /**
- * @hive-flow/plugins - Core Type Definitions
+ * @hive-flow/cli/plugin-sdk - Core Type Definitions
  *
  * Unified type system for plugins, workers, hooks, and providers.
  */
