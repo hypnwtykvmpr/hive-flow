@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - AGENTS.md Generator
+ * @hive-flow/cli/codex - AGENTS.md Generator
  *
  * Generates AGENTS.md files for OpenAI Codex CLI
  * Following the Agentic AI Foundation standard

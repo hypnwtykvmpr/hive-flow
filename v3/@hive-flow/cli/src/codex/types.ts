@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - Type Definitions
+ * @hive-flow/cli/codex - Type Definitions
  *
  * OpenAI Codex platform adapter types for Hive Flow
  * Part of the coflow rebranding initiative

@@ -61,7 +61,6 @@ RUN GLOBAL_PREFIX=$(npm config get prefix) \
     && rm -rf \
       "${CLI_NM}/@hive-flow/embeddings" \
       "${CLI_NM}/@hive-flow/memory" \
-      "${CLI_NM}/@hive-flow/codex" \
       "${CLI_NM}/@hive-flow/plugin-gastown-bridge" \
     && NESTED="${CLI_NM}/@hive-flow/cli/node_modules" \
     && rm -rf \

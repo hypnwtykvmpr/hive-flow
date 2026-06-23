@@ -1,11 +1,14 @@
 /**
- * @hive-flow/codex
+ * @hive-flow/cli/codex
  *
  * OpenAI Codex platform adapter for Hive Flow
- * First step in the coflow rebranding initiative
  *
  * @packageDocumentation
  */
+
+import { existsSync, readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 // Re-export all types
 export * from './types.js';
@@ -63,13 +66,38 @@ export {
 /**
  * Package version
  */
-export const VERSION = '3.0.0-alpha.8';
+function getPackageVersion(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    // src/codex/index.ts -> package root
+    join(here, '..', '..', 'package.json'),
+    // dist/src/codex/index.js -> package root
+    join(here, '..', '..', '..', 'package.json'),
+  ];
+
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) continue;
+
+    try {
+      const pkg = JSON.parse(readFileSync(candidate, 'utf8')) as { name?: string; version?: string };
+      if (pkg.name === '@hive-flow/cli' && pkg.version) {
+        return pkg.version;
+      }
+    } catch {
+      // Keep searching; malformed package.json files are handled by normal gates.
+    }
+  }
+
+  return '3.0.0';
+}
+
+export const VERSION = getPackageVersion();
 
 /**
  * Package metadata
  */
 export const PACKAGE_INFO = {
-  name: '@hive-flow/codex',
+  name: '@hive-flow/cli/codex',
   version: VERSION,
   description: 'Codex CLI integration for Hive Flow',
   futureUmbrella: 'coflow',

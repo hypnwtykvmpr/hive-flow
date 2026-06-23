@@ -154,7 +154,7 @@ const SECURITY_KEYWORDS = [
 const MONOREPO_PACKAGES = [
   '@hive-flow/cli', '@hive-flow/cli/hooks', '@hive-flow/memory',
   '@hive-flow/cli/security', '@hive-flow/cli/guidance', '@hive-flow/shared',
-  '@hive-flow/codex', '@hive-flow/providers',
+  '@hive-flow/cli/codex', '@hive-flow/providers',
 ];
 
 const FILE_PATH_REGEX = /[\w/.-]+\.\w{1,4}/g;

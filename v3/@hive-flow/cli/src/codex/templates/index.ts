@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - Templates
+ * @hive-flow/cli/codex - Templates
  *
  * Built-in templates and skill definitions
  */

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - Shared Utilities
+ * @hive-flow/cli/codex - Shared Utilities
  */
 
 import fs from 'node:fs/promises';

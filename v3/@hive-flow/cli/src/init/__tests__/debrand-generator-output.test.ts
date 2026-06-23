@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { extname, join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { initializeCodexProject } from '../../../../codex/src/initializer.js';
-import { PACKAGE_INFO } from '../../../../codex/src/index.js';
-import { generateBuiltInSkill } from '../../../../codex/src/generators/skill-md.js';
+import { initializeCodexProject } from '../../codex/initializer.js';
+import { PACKAGE_INFO } from '../../codex/index.js';
+import { generateBuiltInSkill } from '../../codex/generators/skill-md.js';
 import { executeInit } from '../executor.js';
 import { DEFAULT_INIT_OPTIONS, type InitOptions } from '../types.js';
 import { DEBRAND_ASSERT_ZERO_PROHIBITED, type ProhibitedPattern } from './debrand-prohibited-patterns.js';

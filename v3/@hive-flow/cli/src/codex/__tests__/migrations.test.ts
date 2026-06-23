@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - Migration Tests
+ * @hive-flow/cli/codex - Migration Tests
  *
  * Tests for Claude Code to Codex migration functions
  */
@@ -12,8 +12,8 @@ import {
   convertSettingsToToml,
   generateMigrationReport,
   FEATURE_MAPPINGS,
-} from '../src/migrations/index.js';
-import type { MigrationResult } from '../src/types.js';
+} from '../migrations/index.js';
+import type { MigrationResult } from '../types.js';
 
 // =============================================================================
 // Sample CLAUDE.md Content for Testing

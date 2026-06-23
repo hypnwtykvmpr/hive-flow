@@ -1,4 +1,4 @@
-# @hive-flow/codex
+# @hive-flow/cli/codex
 
 <p align="center">
   <strong>OpenAI Codex CLI Adapter for Hive Flow V3</strong><br/>
@@ -9,7 +9,7 @@
 
 ---
 
-## Why @hive-flow/codex?
+## Why @hive-flow/cli/codex?
 
 Transform OpenAI Codex CLI into a **self-improving AI development system**. While Codex executes code, hive-flow orchestrates, coordinates, and **learns from every interaction**.
 
@@ -628,9 +628,9 @@ Both platforms share the same `.hive-flow/` runtime:
 | **Best of Both** | Interactive + batch processing |
 | **Unified Learning** | Patterns learned by both platforms |
 
-### CLI Commands (NEW in v3.0.0-alpha.8)
+### CLI Commands
 
-The `@hive-flow/codex` package now includes built-in dual-mode orchestration:
+The `@hive-flow/cli` package ships a `hive-flow-codex` compatibility binary for built-in dual-mode orchestration:
 
 ```bash
 # List available collaboration templates
@@ -660,7 +660,7 @@ hive-flow-codex dual status
 ### Programmatic API
 
 ```typescript
-import { DualModeOrchestrator, CollaborationTemplates } from '@hive-flow/codex';
+import { DualModeOrchestrator, CollaborationTemplates } from '@hive-flow/cli/codex';
 
 // Create orchestrator
 const orchestrator = new DualModeOrchestrator({
@@ -807,7 +807,7 @@ memory_search({ query: "user profile API", namespace: "tasks" })
 ### CodexInitializer Class
 
 ```typescript
-import { CodexInitializer } from '@hive-flow/codex';
+import { CodexInitializer } from '@hive-flow/cli/codex';
 
 class CodexInitializer {
   /**
@@ -825,7 +825,7 @@ class CodexInitializer {
 ### initializeCodexProject Function
 
 ```typescript
-import { initializeCodexProject } from '@hive-flow/codex';
+import { initializeCodexProject } from '@hive-flow/cli/codex';
 
 /**
  * Quick initialization helper
@@ -871,7 +871,7 @@ interface CodexInitResult {
 ### Programmatic Usage
 
 ```typescript
-import { CodexInitializer, initializeCodexProject } from '@hive-flow/codex';
+import { CodexInitializer, initializeCodexProject } from '@hive-flow/cli/codex';
 
 // Quick initialization
 const result = await initializeCodexProject('/path/to/project', {
@@ -909,9 +909,9 @@ if (result.warnings?.length) {
 ### Convert CLAUDE.md to AGENTS.md
 
 ```typescript
-import { migrate } from '@hive-flow/codex';
+import { migrateFromClaudeCode } from '@hive-flow/cli/codex';
 
-const result = await migrate({
+const result = await migrateFromClaudeCode({
   sourcePath: './CLAUDE.md',
   targetPath: './AGENTS.md',
   preserveComments: true,

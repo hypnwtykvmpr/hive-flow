@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - Validator Tests
+ * @hive-flow/cli/codex - Validator Tests
  *
  * Tests for AGENTS.md, SKILL.md, and config.toml validators
  */
@@ -9,7 +9,7 @@ import {
   validateAgentsMd,
   validateSkillMd,
   validateConfigToml,
-} from '../src/validators/index.js';
+} from '../validators/index.js';
 
 // =============================================================================
 // AGENTS.md Validator Tests

@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - Validators
+ * @hive-flow/cli/codex - Validators
  *
  * Comprehensive validation functions for AGENTS.md, SKILL.md, and config.toml
  * Provides detailed error messages and suggestions for fixes.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @hive-flow/codex - CLI
+ * @hive-flow/cli/codex - CLI
  *
  * Command-line interface for Codex integration
  * Part of the coflow rebranding initiative
@@ -591,7 +591,7 @@ program
         return;
       }
 
-      console.log(chalk.cyan.bold('\n  @hive-flow/codex'));
+      console.log(chalk.cyan.bold('\n  @hive-flow/cli/codex'));
       console.log(chalk.gray('  ' + '='.repeat(40)));
       console.log(chalk.white(`  Version:     ${PACKAGE_INFO.version}`));
       console.log(chalk.white(`  Description: ${PACKAGE_INFO.description}`));

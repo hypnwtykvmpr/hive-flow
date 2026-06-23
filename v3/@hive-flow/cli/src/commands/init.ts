@@ -87,33 +87,13 @@ async function initCodexAction(
   spinner.start();
 
   try {
-    // Dynamic import of the Codex initializer with lazy loading fallback
+    // Dynamic import keeps normal init light while shipping Codex support in-package.
     let CodexInitializer: any;
 
-    // Try multiple resolution strategies for the @hive-flow/codex package
+    // Codex support was collapsed into @hive-flow/cli; do not depend on a
+    // separate workspace/npm package at runtime.
     const resolutionStrategies = [
-      // Strategy 1: Direct import (works if installed as CLI dependency)
-      async () => (await import('@hive-flow/codex')).CodexInitializer,
-      // Strategy 2: Project node_modules (works if installed in user's project)
-      async () => {
-        const projectPath = path.join(ctx.cwd, 'node_modules', '@hive-flow', 'codex', 'dist', 'index.js');
-        if (fs.existsSync(projectPath)) {
-          const mod = await import(`file://${projectPath}`);
-          return mod.CodexInitializer;
-        }
-        throw new Error('Not found in project');
-      },
-      // Strategy 3: Global node_modules
-      async () => {
-        const { execSync } = await import('child_process');
-        const globalPath = execSync('npm root -g', { encoding: 'utf-8' }).trim();
-        const codexPath = path.join(globalPath, '@hive-flow', 'codex', 'dist', 'index.js');
-        if (fs.existsSync(codexPath)) {
-          const mod = await import(`file://${codexPath}`);
-          return mod.CodexInitializer;
-        }
-        throw new Error('Not found globally');
-      },
+      async () => (await import('../codex/index.js')).CodexInitializer,
     ];
 
     for (const strategy of resolutionStrategies) {
@@ -126,7 +106,7 @@ async function initCodexAction(
     }
 
     if (!CodexInitializer) {
-      throw new Error('Cannot find module @hive-flow/codex');
+      throw new Error('Cannot find in-package Codex initializer');
     }
 
     const initializer = new CodexInitializer();
@@ -199,9 +179,9 @@ async function initCodexAction(
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     // Handle module not found error gracefully
-    if (errorMessage.includes('Cannot find module') || errorMessage.includes('@hive-flow/codex')) {
-      output.printError('The @hive-flow/codex package is not installed.');
-      output.printInfo('Install @hive-flow/codex with your configured package manager.');
+    if (errorMessage.includes('Cannot find in-package Codex initializer')) {
+      output.printError('The in-package Codex initializer is unavailable.');
+      output.printInfo('Rebuild or reinstall @hive-flow/cli, then retry `hive-flow init --codex`.');
       output.writeln();
       output.printInfo('Alternatively, copy skills manually from .claude/skills/ to .agents/skills/');
     } else {

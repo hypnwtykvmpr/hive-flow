@@ -9,6 +9,7 @@
   "bin": {
     "cli": "./bin/cli.js",
     "hive-flow": "./bin/cli.js",
+    "hive-flow-codex": "./bin/codex.js",
     "hive-flow-mcp": "./bin/mcp-server.js",
     "hive-flow-statusline": "./bin/statusline.js",
     "hooks-daemon": "./bin/hooks-daemon.js",
@@ -187,6 +188,30 @@
       "types": "./dist/src/plugin-sdk/*.d.ts",
       "import": "./dist/src/plugin-sdk/*.js"
     },
+    "./codex": {
+      "types": "./dist/src/codex/index.d.ts",
+      "import": "./dist/src/codex/index.js"
+    },
+    "./codex/generators": {
+      "types": "./dist/src/codex/generators/index.d.ts",
+      "import": "./dist/src/codex/generators/index.js"
+    },
+    "./codex/templates": {
+      "types": "./dist/src/codex/templates/index.d.ts",
+      "import": "./dist/src/codex/templates/index.js"
+    },
+    "./codex/migrations": {
+      "types": "./dist/src/codex/migrations/index.d.ts",
+      "import": "./dist/src/codex/migrations/index.js"
+    },
+    "./codex/dual-mode": {
+      "types": "./dist/src/codex/dual-mode/index.d.ts",
+      "import": "./dist/src/codex/dual-mode/index.js"
+    },
+    "./codex/*": {
+      "types": "./dist/src/codex/*.d.ts",
+      "import": "./dist/src/codex/*.js"
+    },
     "./package.json": "./package.json",
     "./mcp-tools": {
       "types": "./dist/src/mcp-tools/index.d.ts",
@@ -345,18 +370,22 @@
     "agent-browser": "^0.6.0",
     "ajv": "^8.18.0",
     "bcrypt": "^6.0.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "fast-check": "^4.8.0",
     "helmet": "^8.1.0",
+    "inquirer": "^9.2.0",
     "jsonc-parser": "^3.3.1",
     "semver": "^7.7.4",
+    "toml": "^3.0.0",
     "vitest": "^4.0.16",
     "ws": "^8.19.0",
+    "yaml": "^2.8.2",
     "zod": "^3.25.0"
   },
   "optionalDependencies": {
-    "@hive-flow/codex": "workspace:*",
     "@hive-flow/providers": "workspace:*",
     "@hive-flow/embeddings": "workspace:*",
     "@hive-flow/memory": "workspace:*",

@@ -77,7 +77,6 @@ RUN GLOBAL_NM="$(npm config get prefix)/lib/node_modules" \
        "$GLOBAL_NM/hive-flow/node_modules/sharp" \
        "$GLOBAL_NM/hive-flow/node_modules/@google" \
        "$GLOBAL_NM/hive-flow/node_modules/@hive-flow/embeddings" \
-       "$GLOBAL_NM/hive-flow/node_modules/@hive-flow/codex" \
        "$GLOBAL_NM/hive-flow/node_modules/@grpc" \
        "$GLOBAL_NM/hive-flow/node_modules/gun" \
     2>/dev/null || true

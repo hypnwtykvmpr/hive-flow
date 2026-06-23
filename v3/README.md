@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (6 packages)
+├── @hive-flow/                    # Modular packages (5 packages)
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
 │   │   ├── e2e/                     # CLI-owned integration tests
@@ -105,6 +105,7 @@ v3/
 │   │   └── src/
 │   │       ├── claims/              # Claims-based authorisation
 │   │       ├── commands/            # Command handlers
+│   │       ├── codex/               # Codex adapter and dual-mode binary internals
 │   │       ├── context/             # Internal context assembly helpers
 │   │       ├── deployment/          # Release helper internals
 │   │       ├── guidance/            # Governance control plane
@@ -114,9 +115,10 @@ v3/
 │   │       ├── mcp-tools/           # MCP tool definitions
 │   │       ├── neural/              # Neural/SONA helpers
 │   │       ├── performance/         # Performance profiling internals
+│   │       ├── plugin-sdk/          # Plugin SDK and examples
+│   │       ├── security/            # Input validation, CVE remediation
 │   │       ├── swarm/               # Swarm coordination internals
 │   │       └── testing/             # CLI-owned testing helpers
-│   ├── codex/                       # Dual-mode Claude + Codex collaboration
 │   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
 │   ├── memory/                      # HiveMemory + HNSW vector search
 │   │   └── src/
@@ -124,15 +126,8 @@ v3/
 │   │       ├── hnsw-index.ts
 │   │       ├── hybrid-backend.ts
 │   │       └── sqlite-backend.ts
-│   ├── plugins/                     # Plugin system & IPFS registry
 │   ├── providers/                   # LLM provider integrations
-│   ├── security/                    # Input validation, CVE remediation
-│   ├── shared/                      # Shared types, events, resilience
-│   └── testing/                     # TDD London School framework
-│       └── src/
-│           ├── fixtures/
-│           ├── mocks/
-│           └── helpers/
+│   └── shared/                      # Shared types, events, resilience
 │
 ├── docs/                            # Documentation
 ├── scripts/                         # Utility scripts
@@ -355,7 +350,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 6 packages |
+| **Code** | Package count | 5 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 

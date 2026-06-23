@@ -158,7 +158,7 @@ Automated watcher system that monitors hive worker progress without polling.
 | Package | Path | Purpose |
 |---------|------|---------|
 | `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (37 commands) |
-| `@hive-flow/codex` | `v3/@hive-flow/codex/` | Dual-mode Claude + Codex collaboration |
+| `@hive-flow/cli/codex` | `v3/@hive-flow/cli/src/codex/` | Dual-mode Claude + Codex collaboration |
 | `@hive-flow/cli/guidance` | `v3/@hive-flow/cli/src/guidance/` | Governance control plane |
 | `@hive-flow/cli/hooks` | `v3/@hive-flow/cli/src/hooks/` | 17 hooks + 12 workers |
 | `@hive-flow/memory` | `v3/@hive-flow/memory/` | HiveMemory + HNSW search |
@@ -407,7 +407,7 @@ Level 3: [🟢 Optimizer]           # Depends on Reviewer approval
 ### Programmatic API
 
 ```typescript
-import { DualModeOrchestrator, CollaborationTemplates } from '@hive-flow/codex';
+import { DualModeOrchestrator, CollaborationTemplates } from '@hive-flow/cli/codex';
 
 const orchestrator = new DualModeOrchestrator({
   namespace: 'my-feature',

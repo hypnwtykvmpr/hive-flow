@@ -1,5 +1,5 @@
 /**
- * @hive-flow/codex - Generators
+ * @hive-flow/cli/codex - Generators
  *
  * Template generation functions for AGENTS.md, SKILL.md, and config.toml
  */

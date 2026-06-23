@@ -541,7 +541,7 @@ wait  # Wait for all to complete
 
 ### Dual-Mode CLI Commands (NEW)
 
-> `hive-flow-codex` is the binary from the separate `@hive-flow/codex` package, not a subcommand of the main `hive-flow` CLI, and not counted among its 37 commands.
+> `hive-flow-codex` is a compatibility binary shipped by `@hive-flow/cli`. It is not a subcommand of the main `hive-flow` CLI and is not counted among its 37 commands.
 
 ```bash
 # List collaboration templates
