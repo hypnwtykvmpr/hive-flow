@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../../..');
+const repoRoot = resolve(here, '../../../../..');
 
 function collectSourceFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
@@ -29,9 +29,8 @@ function collectSourceFiles(dir: string): string[] {
 
 function shippedSourceFiles(): string[] {
   return [
-    resolve(repoRoot, 'v3/@hive-flow/memory/src'),
-    resolve(repoRoot, 'v3/@hive-flow/cli/src/neural/src'),
     resolve(repoRoot, 'v3/@hive-flow/cli/src/memory'),
+    resolve(repoRoot, 'v3/@hive-flow/cli/src/neural'),
   ].flatMap(collectSourceFiles);
 }
 

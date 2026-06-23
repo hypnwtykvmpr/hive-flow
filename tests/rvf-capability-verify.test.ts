@@ -7,13 +7,11 @@
  * 3. RvfEventLog — Append-only event sourcing
  * 4. RvfEmbeddingCache — Binary file cache with LRU/TTL
  * 5. RvfEmbeddingService — Hash-based embedding generation
- * 6. RvfLearningStore — SONA learning artifact persistence
- * 7. PersistentSonaCoordinator — Pattern matching + learning loops
- * 8. BinaryMigrator — Bidirectional migration (JSON↔RVF, SQLite↔RVF)
- * 9. Security — Path validation, input validation, atomic writes
- * 10. Performance — Timer unref, safe iteration, no stack overflow
- * 11. Forward/Backward compat — Binary format v1/v2
- * 12. DatabaseProvider — Auto-selection of RVF backend
+ * 6. BinaryMigrator — Bidirectional migration (JSON↔RVF, SQLite↔RVF)
+ * 7. Security — Path validation, input validation, atomic writes
+ * 8. Performance — Timer unref, safe iteration, no stack overflow
+ * 9. Forward/Backward compat — Binary format v1/v2
+ * 10. DatabaseProvider — Auto-selection of RVF backend
  */
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
@@ -25,15 +23,13 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 // --- Module Imports ---
-import { BinaryBackend } from '../v3/@hive-flow/memory/src/binary-backend.js';
-import type { BinaryBackendConfig } from '../v3/@hive-flow/memory/src/binary-backend.js';
-import { HnswLite, cosineSimilarity } from '../v3/@hive-flow/memory/src/hnsw-lite.js';
+import { BinaryBackend } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
+import type { BinaryBackendConfig } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
+import { HnswLite, cosineSimilarity } from '../v3/@hive-flow/cli/src/memory/hnsw-lite.js';
 import { RvfEventLog } from '../v3/@hive-flow/shared/src/events/rvf-event-log.js';
 import { RvfEmbeddingCache } from '../v3/@hive-flow/embeddings/src/rvf-embedding-cache.js';
 import { RvfEmbeddingService } from '../v3/@hive-flow/embeddings/src/rvf-embedding-service.js';
-import { RvfLearningStore } from '../v3/@hive-flow/memory/src/rvf-learning-store.js';
-import { PersistentSonaCoordinator } from '../v3/@hive-flow/memory/src/persistent-sona.js';
-import { BinaryMigrator } from '../v3/@hive-flow/memory/src/binary-migration.js';
+import { BinaryMigrator } from '../v3/@hive-flow/cli/src/memory/binary-migration.js';
 
 // --- Helpers ---
 let tmpDir: string;
@@ -508,156 +504,9 @@ describe('5. RvfEmbeddingService — Hash Embeddings', () => {
 });
 
 // =============================================================================
-// 6. RvfLearningStore — SONA Persistence
+// 6. BinaryMigrator — Bidirectional Migration
 // =============================================================================
-describe('6. RvfLearningStore — SONA Persistence', () => {
-  let store: RvfLearningStore;
-
-  beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'rvf-ls-'));
-    store = new RvfLearningStore({ storePath: tmp('learn.rvls'), autoPersistInterval: 0 });
-    await store.initialize();
-  });
-
-  afterEach(async () => {
-    await store.close();
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it('patterns CRUD', async () => {
-    await store.savePatterns([
-      { id: 'p1', type: 'query', embedding: [0.1, 0.2], successRate: 0.9, useCount: 5, lastUsed: new Date().toISOString() },
-    ]);
-    assert.equal(await store.getPatternCount(), 1);
-    const patterns = await store.loadPatterns();
-    assert.equal(patterns[0].id, 'p1');
-  });
-
-  it('LoRA CRUD', async () => {
-    await store.saveLoraAdapter({ id: 'l1', config: { rank: 4 }, weights: 'base64...', frozen: false, numParameters: 100 });
-    const adapters = await store.loadLoraAdapters();
-    assert.equal(adapters.length, 1);
-    assert.equal(await store.deleteLoraAdapter('l1'), true);
-    assert.equal((await store.loadLoraAdapters()).length, 0);
-  });
-
-  it('EWC state', async () => {
-    await store.saveEwcState({ tasksLearned: 3, protectionStrength: 0.5, forgettingRate: 0.01, taskWeights: {} });
-    const ewc = await store.loadEwcState();
-    assert.ok(ewc);
-    assert.equal(ewc.tasksLearned, 3);
-  });
-
-  it('trajectories', async () => {
-    await store.appendTrajectory({
-      id: 't1', steps: [{ type: 'step', input: 'in', output: 'out', durationMs: 10, confidence: 0.9 }],
-      outcome: 'success', durationMs: 100, timestamp: new Date().toISOString(),
-    });
-    assert.equal(await store.getTrajectoryCount(), 1);
-    const trajs = await store.getTrajectories(1);
-    assert.equal(trajs[0].id, 't1');
-  });
-
-  it('persistence roundtrip', async () => {
-    await store.savePatterns([
-      { id: 'rp1', type: 'test', embedding: [1, 2, 3], successRate: 1, useCount: 0, lastUsed: new Date().toISOString() },
-    ]);
-    await store.persist();
-    await store.close();
-
-    const store2 = new RvfLearningStore({ storePath: tmp('learn.rvls'), autoPersistInterval: 0 });
-    await store2.initialize();
-    assert.equal(await store2.getPatternCount(), 1);
-    store = store2; // for afterEach cleanup
-  });
-
-  it('getStats', async () => {
-    const stats = await store.getStats();
-    assert.equal(stats.patterns, 0);
-    assert.equal(stats.loraAdapters, 0);
-    assert.equal(stats.trajectories, 0);
-  });
-});
-
-// =============================================================================
-// 7. PersistentSonaCoordinator — Pattern Matching + Learning
-// =============================================================================
-describe('7. PersistentSonaCoordinator — Learning', () => {
-  let sona: PersistentSonaCoordinator;
-
-  beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'rvf-sona-'));
-    sona = new PersistentSonaCoordinator({
-      storePath: tmp('sona.rvls'), patternThreshold: 0.5, autoPersistInterval: 0,
-    });
-    await sona.initialize();
-  });
-
-  afterEach(async () => {
-    await sona.shutdown();
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it('storePattern + findSimilarPatterns', () => {
-    const emb = Array.from({ length: 64 }, (_, i) => Math.sin(i));
-    const id = sona.storePattern('test', emb);
-    assert.ok(id.startsWith('pat_'));
-
-    const similar = sona.findSimilarPatterns(emb, 5);
-    assert.ok(similar.length > 0);
-    assert.equal(similar[0].id, id);
-  });
-
-  it('recordPatternUsage updates success rate', () => {
-    const emb = Array.from({ length: 64 }, () => Math.random());
-    const id = sona.storePattern('usage', emb);
-
-    sona.recordPatternUsage(id, true);
-    sona.recordPatternUsage(id, false);
-
-    const stats = sona.getStats();
-    assert.ok(stats.patterns > 0);
-    assert.ok(stats.avgSuccessRate < 1.0);
-  });
-
-  it('prunePatterns removes low performers', () => {
-    const emb = Array.from({ length: 64 }, () => Math.random());
-    const id = sona.storePattern('low', emb);
-    // Simulate many failures — EMA: alpha=0.1, 20 failures drives rate below 0.15
-    for (let i = 0; i < 20; i++) sona.recordPatternUsage(id, false);
-
-    const pruned = sona.prunePatterns(0.5, 5);
-    assert.ok(pruned >= 1);
-  });
-
-  it('recordTrajectory + runBackgroundLoop', () => {
-    sona.recordTrajectory({
-      id: 'traj-1',
-      steps: [{ type: 'code', input: 'fn foo', output: 'done', durationMs: 50, confidence: 0.95 }],
-      outcome: 'success', durationMs: 100, timestamp: new Date().toISOString(),
-    });
-    const result = sona.runBackgroundLoop();
-    assert.ok(result.trajectoriesProcessed >= 1);
-  });
-
-  it('persistence across restart', async () => {
-    sona.storePattern('persist-test', Array.from({ length: 64 }, (_, i) => i * 0.01));
-    await sona.shutdown();
-
-    const sona2 = new PersistentSonaCoordinator({
-      storePath: tmp('sona.rvls'), patternThreshold: 0.5, autoPersistInterval: 0,
-    });
-    await sona2.initialize();
-    const stats = sona2.getStats();
-    assert.ok(stats.patterns >= 1);
-    sona = sona2; // for afterEach cleanup
-  });
-});
-
-// =============================================================================
-// 8. BinaryMigrator — Bidirectional Migration
-// =============================================================================
-describe('8. BinaryMigrator — Migration', () => {
+describe('6. BinaryMigrator — Migration', () => {
   beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-mig-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
@@ -713,9 +562,9 @@ describe('8. BinaryMigrator — Migration', () => {
 });
 
 // =============================================================================
-// 9. Security Verification
+// 7. Security Verification
 // =============================================================================
-describe('9. Security — Validation & Atomic Writes', () => {
+describe('7. Security — Validation & Atomic Writes', () => {
   beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-sec-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
@@ -772,9 +621,9 @@ describe('9. Security — Validation & Atomic Writes', () => {
 });
 
 // =============================================================================
-// 10. Performance — Timer Unref, Safe Iteration
+// 8. Performance — Timer Unref, Safe Iteration
 // =============================================================================
-describe('10. Performance — Timers & Iteration', () => {
+describe('8. Performance — Timers & Iteration', () => {
   beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-perf-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
@@ -808,14 +657,14 @@ describe('10. Performance — Timers & Iteration', () => {
 });
 
 // =============================================================================
-// 11. DatabaseProvider — Auto-Selection
+// 9. DatabaseProvider — Auto-Selection
 // =============================================================================
-describe('11. DatabaseProvider Integration', () => {
+describe('9. DatabaseProvider Integration', () => {
   beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-db-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
   it('auto-selects RVF when available', async () => {
-    const { createDatabase, getAvailableProviders } = await import('../v3/@hive-flow/memory/src/database-provider.js');
+    const { createDatabase, getAvailableProviders } = await import('../v3/@hive-flow/cli/src/memory/database-provider.js');
     const providers = await getAvailableProviders();
     assert.equal(providers.rvf, true);
 
@@ -829,7 +678,7 @@ describe('11. DatabaseProvider Integration', () => {
   });
 
   it('converts .db extension to .rvf', async () => {
-    const { createDatabase } = await import('../v3/@hive-flow/memory/src/database-provider.js');
+    const { createDatabase } = await import('../v3/@hive-flow/cli/src/memory/database-provider.js');
     const db = await createDatabase(tmp('convert.db'), { provider: 'rvf' });
     await db.store(makeEntry('cv1'));
     await db.shutdown();

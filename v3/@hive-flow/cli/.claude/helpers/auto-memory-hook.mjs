@@ -127,25 +127,25 @@ class JsonFileBackend {
 }
 
 // ============================================================================
-// Resolve memory package path (local dev or npm installed)
+// Resolve CLI memory module path (local dev or npm installed)
 // ============================================================================
 
 async function loadMemoryPackage() {
   // Strategy 1: Local dev (built dist)
-  const localDist = join(PROJECT_ROOT, 'v3/@hive-flow/memory/dist/index.js');
+  const localDist = join(PROJECT_ROOT, 'v3/@hive-flow/cli/dist/src/memory/index.js');
   if (existsSync(localDist)) {
     try {
       return await import(`file://${localDist}`);
     } catch { /* fall through */ }
   }
 
-  // Strategy 2: npm installed @hive-flow/memory
+  // Strategy 2: npm installed @hive-flow/cli with memory subpath export
   try {
-    return await import('@hive-flow/memory');
+    return await import('@hive-flow/cli/memory');
   } catch { /* fall through */ }
 
-  // Strategy 3: Installed via @hive-flow/cli which includes memory
-  const cliMemory = join(PROJECT_ROOT, 'node_modules/@hive-flow/memory/dist/index.js');
+  // Strategy 3: Installed package dist fallback
+  const cliMemory = join(PROJECT_ROOT, 'node_modules/@hive-flow/cli/dist/src/memory/index.js');
   if (existsSync(cliMemory)) {
     try {
       return await import(`file://${cliMemory}`);

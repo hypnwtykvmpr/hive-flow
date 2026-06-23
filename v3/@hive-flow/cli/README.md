@@ -384,7 +384,7 @@ swarm_init({
 | **Hive Mind** | ⛔ Not available | 🐝 Queen-led swarms with collective intelligence, 3 queen types, 8 worker types |
 | **Consensus** | ⛔ No multi-agent decisions | Byzantine fault-tolerant voting (f < n/3), weighted, majority |
 | **Memory** | Session-only, no persistence | HNSW vector memory with fast HNSW-indexed retrieval + knowledge graph |
-| **Vector Database** | ⛔ No native support | 🐝 HNSW vector memory in @hive-flow/memory (local, no external DB) |
+| **Vector Database** | ⛔ No native support | 🐝 HNSW vector memory in @hive-flow/cli/memory (local, no external DB) |
 | **Knowledge Graph** | ⛔ Flat insight lists | PageRank + community detection identifies influential insights (ADR-049) |
 | **Collective Memory** | ⛔ No shared knowledge | Shared knowledge base with LRU cache, SQLite persistence, 8 memory types |
 | **Learning** | Static behavior, no adaptation | SONA self-learning with low-latency adaptation, LearningBridge for insights |
@@ -763,7 +763,7 @@ What makes Hive Flow different from other agent frameworks? These 10 capabilitie
 | 🗜️ | **Int8 Quantization** | Converts 32-bit weights to 8-bit with minimal accuracy loss | Memory reduction with calibrated 8-bit integers |
 | 🤝 | **Claims System** | Manages task ownership between humans and agents with handoff support | Work ownership with claim/release/handoff protocols |
 | 🛡️ | **Byzantine Consensus** | Coordinates agents even when some fail or return bad results | Fault-tolerant, handles up to 1/3 failing agents |
-| 🐘 | **Local Vector Memory** | HNSW-indexed vector search for agent memory and pattern recall | Local HNSW in @hive-flow/memory, no external database |
+| 🐘 | **Local Vector Memory** | HNSW-indexed vector search for agent memory and pattern recall | Local HNSW in @hive-flow/cli/memory, no external database |
 
 </details>
 
@@ -3865,20 +3865,19 @@ Use Hive Flow packages directly in your TypeScript/JavaScript applications.
 <summary>🧠 <strong>Memory & Vector Search</strong></summary>
 
 ```typescript
-import { HiveMemory } from '@hive-flow/memory';
+import { UnifiedMemoryService, createDefaultEntry } from '@hive-flow/cli/memory';
 
 // Initialize with HNSW indexing (fast)
-const db = new HiveMemory({
-  path: './data/memory',
-  hnsw: { m: 16, efConstruction: 200 }
-});
+const db = new UnifiedMemoryService({ dimensions: 384 });
+await db.initialize();
 
 // Store patterns with embeddings
-await db.store('auth-pattern', {
+await db.store(createDefaultEntry({
+  key: 'auth-pattern',
   content: 'JWT authentication flow',
-  domain: 'security',
-  embedding: await db.embed('JWT authentication flow')
-});
+  namespace: 'security',
+  embedding: new Float32Array(384),
+}));
 
 // Semantic search
 const results = await db.search('how to authenticate users', {
@@ -4216,7 +4215,7 @@ console.log(`Hooks executed: ${result.hooksExecuted}`);
 
 | Package | Purpose | Main Exports |
 |---------|---------|--------------|
-| `@hive-flow/memory` | Vector storage, HNSW, self-learning graph | `HiveMemory`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
+| `@hive-flow/cli/memory` | Vector storage, HNSW, self-learning graph | `UnifiedMemoryService`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
 | `@hive-flow/cli/swarm` | Agent coordination | `createUnifiedSwarmCoordinator`, `UnifiedSwarmCoordinator` |
 | `@hive-flow/cli/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
@@ -4672,7 +4671,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@hive-flow/cli/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
-| `@hive-flow/memory` | Unified vector storage | HiveMemory, HNSW indexing, fast search, LearningBridge, MemoryGraph, AgentMemoryScope |
+| `@hive-flow/cli/memory` | Unified vector storage | HiveMemory, HNSW indexing, fast search, LearningBridge, MemoryGraph, AgentMemoryScope |
 | `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/cli/plugin-sdk` | Plugin SDK | Builders, registries, workers, hooks, providers |
@@ -5977,7 +5976,7 @@ import { HiveFlow, Agent, Memory } from 'hive-flow';
 
 // V3 (new)
 import { HiveFlowClient } from '@hive-flow/cli';
-import { HiveMemory } from '@hive-flow/memory';
+import { UnifiedMemoryService } from '@hive-flow/cli/memory';
 import { ThreatDetector } from '@hive-flow/cli/security';
 import { HNSWIndex } from '@hive-flow/embeddings';
 ```
@@ -6030,7 +6029,7 @@ cp -r ./data-backup-v2 ./data
 | Module | Description | Docs |
 |--------|-------------|------|
 | `@hive-flow/cli/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./src/hooks/) |
-| `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](../memory/) |
+| `@hive-flow/cli/memory` | HiveMemory unification with HNSW indexing | [Source](docs/memory/) |
 | `@hive-flow/cli/security` | CVE remediation & security patterns | [Source](./docs/security/README.md) |
 | `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./src/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](../cli/) |

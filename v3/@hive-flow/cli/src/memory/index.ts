@@ -1,14 +1,14 @@
 /**
- * @hive-flow/memory - V3 Unified Memory System
+ * @hive-flow/cli/memory - V3 Unified Memory System
  *
  * Provides a unified memory interface backed by local HNSW indexing
  * for fast HNSW-indexed vector search compared to brute-force approaches.
  *
- * @module @hive-flow/memory
+ * @module @hive-flow/cli/memory
  *
  * @example
  * ```typescript
- * import { UnifiedMemoryService, query, QueryTemplates } from '@hive-flow/memory';
+ * import { UnifiedMemoryService, query, QueryTemplates } from '@hive-flow/cli/memory';
  *
  * // Initialize the memory service
  * const memory = new UnifiedMemoryService({

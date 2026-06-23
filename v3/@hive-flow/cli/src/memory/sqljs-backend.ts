@@ -9,6 +9,7 @@
 
 import { EventEmitter } from 'node:events';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
 import initSqlJs from 'sql.js';
 // Database is a global class from sql.js; use any for cross-platform compatibility
@@ -30,6 +31,16 @@ import {
   generateMemoryId,
   createDefaultEntry,
 } from './types.js';
+
+const require = createRequire(import.meta.url);
+
+function resolveDefaultSqlJsWasmPath(): string | undefined {
+  try {
+    return require.resolve('sql.js/dist/sql-wasm.wasm');
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Configuration for SqlJs Backend
@@ -108,11 +119,11 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    // Load sql.js WASM
+    // Load sql.js WASM. In Node, use the package-local wasm file instead of a
+    // network URL so tests and offline installs do not depend on CDN access.
+    const wasmPath = this.config.wasmPath ?? resolveDefaultSqlJsWasmPath();
     this.SQL = await initSqlJs({
-      locateFile: this.config.wasmPath
-        ? () => this.config.wasmPath!
-        : (file) => `https://sql.js.org/dist/${file}`,
+      locateFile: () => wasmPath ?? 'sql-wasm.wasm',
     });
 
     // Ensure parent directory exists for file-based databases
@@ -287,7 +298,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
     this.stats.queryCount++;
     this.stats.totalQueryTime += duration;
 
-    if (!row || Object.keys(row).length === 0) {
+    if (!row || Object.keys(row).length === 0 || row.id == null) {
       return null;
     }
 
@@ -317,7 +328,7 @@ export class SqlJsBackend extends EventEmitter implements IMemoryBackend {
     this.stats.queryCount++;
     this.stats.totalQueryTime += duration;
 
-    if (!row || Object.keys(row).length === 0) {
+    if (!row || Object.keys(row).length === 0 || row.id == null) {
       return null;
     }
 

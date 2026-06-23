@@ -1380,7 +1380,7 @@ export function createDDDWorker(projectRoot: string): WorkerHandler {
       { mod: '@hive-flow/cli/mcp', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'mcp') },
       { mod: '@hive-flow/cli/integration', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'integration') },
       { mod: '@hive-flow/providers', srcPath: path.join(v3Path, '@hive-flow/providers', 'src') },
-      { mod: '@hive-flow/memory', srcPath: path.join(v3Path, '@hive-flow/memory', 'src') },
+      { mod: '@hive-flow/cli/memory', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'memory') },
       { mod: '@hive-flow/cli/security', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'security') },
     ];
 

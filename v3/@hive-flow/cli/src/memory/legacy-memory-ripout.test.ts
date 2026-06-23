@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { HNSWIndex } from './hnsw-index.js';
 import { HybridBackend, LocalVectorBackend, UnifiedMemoryService } from './index.js';
 
-const REPO_ROOT = resolve(__dirname, '../../..');
-const MEMORY_ROOT = resolve(REPO_ROOT, '@hive-flow/memory');
-const SRC_ROOT = resolve(MEMORY_ROOT, 'src');
-const V3_ROOT = REPO_ROOT;
+const REPO_ROOT = resolve(__dirname, '../../../../..');
+const CLI_ROOT = resolve(REPO_ROOT, 'v3/@hive-flow/cli');
+const SRC_ROOT = resolve(CLI_ROOT, 'src/memory');
+const V3_ROOT = resolve(REPO_ROOT, 'v3');
 
 const TEXT_EXTENSIONS = new Set(['.ts', '.js', '.d.ts']);
 const removedDbPackage = ['a', 'g', 'e', 'n', 't', 'd', 'b'].join('');
@@ -28,7 +28,6 @@ function walkSource(dir: string): string[] {
     }
 
     if (!entry.isFile()) return [];
-    if (entry.name.startsWith('DELETE_')) return [];
     if (entry.name.endsWith('.test.ts')) return [];
     if (!TEXT_EXTENSIONS.has(extname(entry.name))) return [];
     return [relativePath];
@@ -37,11 +36,12 @@ function walkSource(dir: string): string[] {
 
 describe('legacy memory backend rip-out contract', () => {
   it('removes legacy memory and vector dependencies, patches, and lockfile entries', () => {
-    const memoryPackage = JSON.parse(readFileSync(resolve(MEMORY_ROOT, 'package.json'), 'utf8'));
+    const cliPackage = JSON.parse(readFileSync(resolve(CLI_ROOT, 'package.json'), 'utf8'));
     const rootPackage = JSON.parse(readFileSync(resolve(V3_ROOT, 'package.json'), 'utf8'));
     const lockfile = readFileSync(resolve(V3_ROOT, 'pnpm-lock.yaml'), 'utf8');
 
-    expect(memoryPackage.dependencies ?? {}).not.toHaveProperty(removedDbPackage);
+    expect(cliPackage.dependencies ?? {}).not.toHaveProperty(removedDbPackage);
+    expect(cliPackage.optionalDependencies ?? {}).not.toHaveProperty(removedDbPackage);
     expect(JSON.stringify(rootPackage.pnpm?.patchedDependencies ?? {})).not.toMatch(new RegExp(removedDbPackage, 'i'));
     expect(existsSync(resolve(V3_ROOT, `patches/${removedDbPackage}@3.0.0-alpha.9.patch`))).toBe(false);
     expect(lockfile).not.toMatch(new RegExp(`\\b${removedDbPackage}\\b`, 'i'));

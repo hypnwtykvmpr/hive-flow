@@ -36,7 +36,6 @@ domains:
 # Required Hive Flow dependencies
 dependencies:
   required:
-    - "@hive-flow/memory": ">=3.0.0"
     - "@hive-flow/coordination": ">=3.0.0"
   optional:
     - "@hive-flow/embeddings": ">=3.0.0"  # For embedding generation

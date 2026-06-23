@@ -122,9 +122,15 @@ importers:
       semver:
         specifier: ^7.7.4
         version: 7.7.4
+      sql.js:
+        specifier: ^1.14.1
+        version: 1.14.1
       toml:
         specifier: ^3.0.0
         version: 3.0.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
@@ -141,31 +147,34 @@ importers:
       '@hive-flow/embeddings':
         specifier: workspace:*
         version: link:../embeddings
-      '@hive-flow/memory':
-        specifier: workspace:*
-        version: link:../memory
       '@hive-flow/plugin-gastown-bridge':
         specifier: workspace:*
         version: link:../../plugins/gastown-bridge
       '@hive-flow/providers':
         specifier: workspace:*
         version: link:../providers
+      better-sqlite3:
+        specifier: ^11.0.0
+        version: 11.10.0
     devDependencies:
       '@types/bcrypt':
         specifier: ^5.0.2
         version: 5.0.2
+      '@types/better-sqlite3':
+        specifier: ^7.6.11
+        version: 7.6.13
       '@types/cors':
         specifier: ^2.8.17
         version: 2.8.19
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
+      '@types/sql.js':
+        specifier: ^1.4.9
+        version: 1.4.9
       '@types/ws':
         specifier: ^8.5.10
         version: 8.18.1
-      sql.js:
-        specifier: ^1.14.1
-        version: 1.14.1
 
   '@hive-flow/embeddings':
     dependencies:
@@ -179,32 +188,6 @@ importers:
         specifier: ^1.14.1
         version: 1.14.1
     devDependencies:
-      vitest:
-        specifier: 4.1.0
-        version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  '@hive-flow/memory':
-    dependencies:
-      '@hive-flow/embeddings':
-        specifier: workspace:*
-        version: link:../embeddings
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
-      sql.js:
-        specifier: ^1.14.1
-        version: 1.14.1
-    optionalDependencies:
-      better-sqlite3:
-        specifier: ^11.0.0
-        version: 11.10.0
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.11
-        version: 7.6.13
-      '@types/sql.js':
-        specifier: ^1.4.9
-        version: 1.4.9
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)

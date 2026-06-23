@@ -1174,7 +1174,7 @@ export async function initializeMemoryDatabase(options: {
     // Try to use sql.js (WASM SQLite)
     // Minimal interface matching sql.js Database methods used here
     interface SqlJsDb {
-      run(sql: string, params?: unknown[]): void;
+      run(sql: string, params?: any): SqlJsDb;
       exec(sql: string): Array<{ columns: string[]; values: unknown[][] }>;
       export(): Uint8Array;
       close(): void;

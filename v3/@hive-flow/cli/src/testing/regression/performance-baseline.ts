@@ -183,7 +183,7 @@ export class PerformanceBaseline {
   private async simulateStartup(): Promise<void> {
     // Import key modules to simulate startup
     await import('@hive-flow/shared');
-    await import('@hive-flow/memory');
+    await import('@hive-flow/cli/memory');
   }
 
   /**

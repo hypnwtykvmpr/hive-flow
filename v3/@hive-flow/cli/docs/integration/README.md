@@ -242,7 +242,7 @@ import type {
 ## Related Packages
 
 - [@hive-flow/cli/neural](../neural/) - SONA learning module
-- [@hive-flow/memory](../memory) - HiveMemory memory
+- [@hive-flow/cli/memory](../memory) - HiveMemory memory
 - [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking
 
 ## License

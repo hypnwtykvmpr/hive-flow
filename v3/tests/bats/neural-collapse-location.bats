@@ -25,7 +25,7 @@ setup() {
 }
 
 @test "memory bridge loads neural through cli subpath" {
-  run grep -F "import('@hive-flow/cli/neural' as string)" "$REPO_ROOT/v3/@hive-flow/memory/src/learning-bridge.ts"
+  run grep -F "import('@hive-flow/cli/neural' as string)" "$REPO_ROOT/v3/@hive-flow/cli/src/memory/learning-bridge.ts"
   [ "$status" -eq 0 ]
 }
 
@@ -41,8 +41,8 @@ setup() {
     count=$((count + 1))
   done
 
-  [ "$count" -eq 5 ]
-  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 4 ]
+  run grep -F '4 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }
 

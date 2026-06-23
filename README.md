@@ -2766,7 +2766,7 @@ The binary backend has no native dependency and is tried first, so it wins by de
 RVF includes `HnswLite` — a pure TypeScript implementation of the HNSW (Hierarchical Navigable Small World) algorithm for fast nearest-neighbor search. It's used automatically when storing entries with embeddings.
 
 ```typescript
-import { BinaryBackend } from '@hive-flow/memory';
+import { BinaryBackend } from '@hive-flow/cli/memory';
 
 const backend = new BinaryBackend({ databasePath: './memory.rvf' });
 await backend.initialize();
@@ -2785,7 +2785,7 @@ Supports cosine, dot product, and Euclidean distance metrics. For large datasets
 The `BinaryMigrator` converts between JSON files, SQLite databases, and RVF:
 
 ```typescript
-import { BinaryMigrator } from '@hive-flow/memory';
+import { BinaryMigrator } from '@hive-flow/cli/memory';
 
 // Auto-detect format and migrate
 await BinaryMigrator.autoMigrate('./old-memory.db', './memory.rvf');
@@ -2813,7 +2813,7 @@ All write operations use atomic writes: data goes to a temporary file first, the
 Hive Flow stores reusable patterns and trajectories through the current memory and neural helper surfaces. Use `LearningBridge`, `ReasoningBank`, or `NeuralLearningSystem` depending on whether you are working from memory, neural helpers, or the CLI integration layer:
 
 ```typescript
-import { LearningBridge, UnifiedMemoryService } from '@hive-flow/memory';
+import { LearningBridge, UnifiedMemoryService } from '@hive-flow/cli/memory';
 import { createNeuralLearningSystem } from '@hive-flow/cli/neural';
 
 const memory = new UnifiedMemoryService();
@@ -4042,7 +4042,7 @@ Use Hive Flow packages directly in your TypeScript/JavaScript applications.
 <summary>🧠 <strong>Memory & Vector Search</strong></summary>
 
 ```typescript
-import { UnifiedMemoryService } from '@hive-flow/memory';
+import { UnifiedMemoryService } from '@hive-flow/cli/memory';
 
 // Initialize with HNSW indexing
 const memory = new UnifiedMemoryService({
@@ -4404,7 +4404,7 @@ console.log(`Hooks executed: ${result.hooksExecuted}`);
 
 | Package | Purpose | Main Exports |
 |---------|---------|--------------|
-| `@hive-flow/memory` | Vector storage, HNSW, memory graph, learning bridge | `UnifiedMemoryService`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
+| `@hive-flow/cli/memory` | Vector storage, HNSW, memory graph, learning bridge | `UnifiedMemoryService`, `AutoMemoryBridge`, `LearningBridge`, `MemoryGraph` |
 | `@hive-flow/cli/swarm` | Agent coordination | `createUnifiedSwarmCoordinator`, `UnifiedSwarmCoordinator` |
 | `@hive-flow/cli/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
@@ -4983,7 +4983,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@hive-flow/cli/hooks` | Event-driven lifecycle | ReasoningBank, lifecycle hooks, pattern learning |
-| `@hive-flow/memory` | Unified vector storage | UnifiedMemoryService, RVF binary format, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
+| `@hive-flow/cli/memory` | Unified vector storage | UnifiedMemoryService, RVF binary format, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
 | `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
 | `@hive-flow/cli/plugin-sdk` | Plugin SDK | Builders, registries, workers, hooks, providers |
@@ -6390,7 +6390,7 @@ import { hiveFlow, Agent, Memory } from 'hive-flow';
 
 // V3 (new)
 import { hiveFlowClient } from '@hive-flow/cli';
-import { UnifiedMemoryService } from '@hive-flow/memory';
+import { UnifiedMemoryService } from '@hive-flow/cli/memory';
 import { ThreatDetector } from '@hive-flow/cli/security';
 import { HNSWIndex } from '@hive-flow/embeddings';
 ```
@@ -6444,7 +6444,7 @@ cp -r ./data-backup-v2 ./data
 |--------|-------------|------|
 | `@hive-flow/cli/plugin-sdk` | Plugin SDK with workers, hooks, providers, security | [README](./v3/@hive-flow/cli/docs/plugin-sdk/README.md) |
 | `@hive-flow/cli/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/cli/src/hooks/) |
-| `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/memory/) |
+| `@hive-flow/cli/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/cli/docs/memory/) |
 | `@hive-flow/cli/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/cli/docs/security/README.md) |
 | `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/cli/src/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |

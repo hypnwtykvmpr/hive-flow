@@ -1,11 +1,11 @@
-# Local HiveMemory-Compatible Memory Backend
+# CLI-Owned HiveMemory-Compatible Memory Backend
 
-Hive Flow no longer installs or imports the external `hivememory` package. The memory module keeps the HiveMemory-compatible API names for existing callers, but all behavior routes through local fallback implementations.
+Hive Flow no longer installs or imports the external `hivememory` package. The CLI-owned memory module keeps the HiveMemory terminology for user-facing features, but the exported implementation is local to `@hive-flow/cli/memory`.
 
 ## Current Behavior
 
 - No external HiveMemory installation step is required.
-- `HiveMemoryBackend` initializes local storage and local vector search behavior.
+- `UnifiedMemoryService`, `HybridBackend`, and `LocalVectorBackend` initialize local storage and vector search behavior.
 - Missing external packages are not treated as errors.
 - Existing tests should assert local fallback behavior, not external package availability.
 

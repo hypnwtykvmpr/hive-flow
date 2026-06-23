@@ -25,7 +25,10 @@ import {
   MemoryType,
 } from './types.js';
 import { SQLiteBackend, SQLiteBackendConfig } from './sqlite-backend.js';
+import { SqlJsBackend, SqlJsBackendConfig } from './sqljs-backend.js';
 import { LocalVectorBackend, LocalVectorBackendConfig } from './local-vector-backend.js';
+
+type StructuredBackend = SQLiteBackend | SqlJsBackend;
 
 /**
  * Configuration for HybridBackend
@@ -152,7 +155,7 @@ export interface HybridQuery {
  * - Complex hybrid queries → Both backends with intelligent merging
  */
 export class HybridBackend extends EventEmitter implements IMemoryBackend {
-  private sqlite: SQLiteBackend;
+  private sqlite: StructuredBackend;
   private localVector: LocalVectorBackend;
   private config: Required<HybridBackendConfig>;
   private initialized: boolean = false;
@@ -183,11 +186,17 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
       embeddingGenerator: this.config.embeddingGenerator,
     });
 
-    // Forward events from both backends
+    this.forwardStructuredEvents();
+    this.forwardLocalVectorEvents();
+  }
+
+  private forwardStructuredEvents(): void {
     this.sqlite.on('entry:stored', (data) => this.emit('sqlite:stored', data));
     this.sqlite.on('entry:updated', (data) => this.emit('sqlite:updated', data));
     this.sqlite.on('entry:deleted', (data) => this.emit('sqlite:deleted', data));
+  }
 
+  private forwardLocalVectorEvents(): void {
     this.localVector.on('entry:stored', (data) => this.emit('localVector:stored', data));
     this.localVector.on('entry:updated', (data) => this.emit('localVector:updated', data));
     this.localVector.on('entry:deleted', (data) => this.emit('localVector:deleted', data));
@@ -201,7 +210,26 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    await Promise.all([this.sqlite.initialize(), this.localVector.initialize()]);
+    try {
+      await this.sqlite.initialize();
+    } catch (error) {
+      this.sqlite.removeAllListeners();
+      const sqliteConfig = this.config.sqlite;
+      this.sqlite = new SqlJsBackend({
+        databasePath: sqliteConfig.databasePath ?? ':memory:',
+        optimize: sqliteConfig.optimize ?? true,
+        defaultNamespace: this.config.defaultNamespace,
+        embeddingGenerator: this.config.embeddingGenerator,
+        maxEntries: sqliteConfig.maxEntries ?? 1000000,
+        verbose: sqliteConfig.verbose ?? false,
+        autoPersistInterval: 0,
+      } satisfies Partial<SqlJsBackendConfig>);
+      this.forwardStructuredEvents();
+      await this.sqlite.initialize();
+      this.emit('sqlite:fallback', { reason: error instanceof Error ? error.message : String(error) });
+    }
+
+    await this.localVector.initialize();
 
     this.initialized = true;
     this.emit('initialized');
@@ -757,7 +785,7 @@ export class HybridBackend extends EventEmitter implements IMemoryBackend {
   /**
    * Get underlying backends for advanced operations
    */
-  getSQLiteBackend(): SQLiteBackend {
+  getSQLiteBackend(): StructuredBackend {
     return this.sqlite;
   }
 

@@ -13,7 +13,7 @@
  */
 
 import { z } from 'zod';
-import Ajv from 'ajv';
+import { Ajv } from 'ajv';
 import * as path from 'path';
 
 /**

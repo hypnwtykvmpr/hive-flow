@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { HNSWIndex } from '../src/hnsw-index.js';
+import { HNSWIndex } from '../hnsw-index.js';
 
 // ---------------------------------------------------------------------------
 // Binary Quantization

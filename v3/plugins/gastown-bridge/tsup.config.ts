@@ -61,7 +61,7 @@ export default defineConfig([
     },
     external: [
       // Peer dependencies - not bundled
-      '@hive-flow/memory',
+      '@hive-flow/cli/memory',
       // WASM modules - loaded dynamically
       'gastown-formula-wasm',
       'gastown-gnn-wasm',

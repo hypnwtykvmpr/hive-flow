@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (5 packages)
+├── @hive-flow/                    # Modular packages (4 packages)
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
 │   │   ├── e2e/                     # CLI-owned integration tests
@@ -111,6 +111,7 @@ v3/
 │   │       ├── guidance/            # Governance control plane
 │   │       ├── hooks/               # 17 hooks + 12 background workers
 │   │       ├── integration/         # hive-flow integration bridge
+│   │       ├── memory/              # HiveMemory + HNSW vector search
 │   │       ├── mcp/                 # MCP server internals
 │   │       ├── mcp-tools/           # MCP tool definitions
 │   │       ├── neural/              # Neural/SONA helpers
@@ -120,12 +121,6 @@ v3/
 │   │       ├── swarm/               # Swarm coordination internals
 │   │       └── testing/             # CLI-owned testing helpers
 │   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
-│   ├── memory/                      # HiveMemory + HNSW vector search
-│   │   └── src/
-│   │       ├── hivememory-backend.ts
-│   │       ├── hnsw-index.ts
-│   │       ├── hybrid-backend.ts
-│   │       └── sqlite-backend.ts
 │   ├── providers/                   # LLM provider integrations
 │   └── shared/                      # Shared types, events, resilience
 │
@@ -149,19 +144,18 @@ const hash = await hasher.hash('password');
 const valid = await hasher.verify('password', hash);
 ```
 
-### @hive-flow/memory
+### @hive-flow/cli/memory
 Unified memory service with HiveMemory, HNSW indexing, and fast HNSW-indexed search.
 
 ```typescript
-import { HybridMemoryRepository, HNSWIndex } from '@hive-flow/memory';
+import { UnifiedMemoryService, HNSWIndex, createDefaultEntry } from '@hive-flow/cli/memory';
 
-const memory = new HybridMemoryRepository({
-  backend: 'hivememory',
-  vectorSearch: true
-});
+const memory = new UnifiedMemoryService({ dimensions: 384 });
+await memory.initialize();
 
-await memory.store({ key: 'knowledge', value: 'context', embedding: [...] });
-const results = await memory.search({ query: 'knowledge', limit: 10 });
+const embedding = new Float32Array(384);
+await memory.store(createDefaultEntry({ key: 'knowledge', content: 'context', embedding }));
+const results = await memory.search(embedding, { k: 10 });
 ```
 
 ### @hive-flow/cli/swarm
@@ -269,7 +263,7 @@ await swarm.initialize();
 // Import the package you need directly.
 import { UnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
 import { PasswordHasher } from '@hive-flow/cli/security';
-import { HNSWIndex } from '@hive-flow/memory';
+import { HNSWIndex } from '@hive-flow/cli/memory';
 ```
 
 ### MCP Server
@@ -350,7 +344,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 5 packages |
+| **Code** | Package count | 4 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -361,7 +355,7 @@ pnpm test:coverage
 
 ### Modules
 - [@hive-flow/cli/security](./@hive-flow/cli/docs/security/README.md)
-- [@hive-flow/memory](./@hive-flow/memory/)
+- [@hive-flow/cli/memory](./@hive-flow/cli/docs/memory/)
 - [@hive-flow/cli/swarm](./@hive-flow/cli/src/swarm/)
 - [@hive-flow/cli/integration](./@hive-flow/cli/src/integration/)
 - [@hive-flow/cli/performance](./@hive-flow/cli/docs/performance/)
@@ -371,8 +365,8 @@ pnpm test:coverage
 - [@hive-flow/shared](./@hive-flow/shared/)
 
 ### Examples
-- [HiveMemory Example](./@hive-flow/memory/examples/hivememory-example.ts)
-- [Cross-Platform Usage](./@hive-flow/memory/examples/cross-platform-usage.ts)
+- [HiveMemory Example](./@hive-flow/cli/docs/memory/examples/hivememory-example.ts)
+- [Cross-Platform Usage](./@hive-flow/cli/docs/memory/examples/cross-platform-usage.ts)
 
 ### MCP Tools
 - [CLI MCP Tool Registry](./@hive-flow/cli/src/mcp-client.ts)

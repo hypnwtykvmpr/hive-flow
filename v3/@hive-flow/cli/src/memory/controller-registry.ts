@@ -1,13 +1,13 @@
 /**
  * ControllerRegistry - Central controller lifecycle management
  *
- * Manages local Hive Flow controllers from @hive-flow/memory.
+ * Manages local Hive Flow controllers from @hive-flow/cli/memory.
  * Manages initialization (level-based ordering), health checks, and graceful shutdown.
  *
  * Controller surfaces that require the deferred Rust memory layer return
  * unavailable instead of importing rejected placeholder backends.
  *
- * @module @hive-flow/memory/controller-registry
+ * @module @hive-flow/cli/memory/controller-registry
  */
 
 import { EventEmitter } from 'node:events';
@@ -47,7 +47,7 @@ export type ExternalControllerName =
   | 'graphAdapter';
 
 /**
- * CLI-layer controllers (from @hive-flow/memory or new)
+ * CLI-layer controllers (from @hive-flow/cli/memory or new)
  */
 export type CLIControllerName =
   | 'learningBridge'

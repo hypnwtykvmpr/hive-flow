@@ -212,6 +212,26 @@
       "types": "./dist/src/codex/*.d.ts",
       "import": "./dist/src/codex/*.js"
     },
+    "./memory": {
+      "types": "./dist/src/memory/index.d.ts",
+      "import": "./dist/src/memory/index.js"
+    },
+    "./memory/application": {
+      "types": "./dist/src/memory/application/index.d.ts",
+      "import": "./dist/src/memory/application/index.js"
+    },
+    "./memory/domain": {
+      "types": "./dist/src/memory/domain/index.d.ts",
+      "import": "./dist/src/memory/domain/index.js"
+    },
+    "./memory/infrastructure": {
+      "types": "./dist/src/memory/infrastructure/index.d.ts",
+      "import": "./dist/src/memory/infrastructure/index.js"
+    },
+    "./memory/*": {
+      "types": "./dist/src/memory/*.d.ts",
+      "import": "./dist/src/memory/*.js"
+    },
     "./package.json": "./package.json",
     "./mcp-tools": {
       "types": "./dist/src/mcp-tools/index.d.ts",
@@ -357,11 +377,12 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/ws": "^8.5.10",
-    "sql.js": "^1.14.1"
+    "@types/sql.js": "^1.4.9",
+    "@types/ws": "^8.5.10"
   },
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
@@ -379,7 +400,9 @@
     "inquirer": "^9.2.0",
     "jsonc-parser": "^3.3.1",
     "semver": "^7.7.4",
+    "sql.js": "^1.14.1",
     "toml": "^3.0.0",
+    "typescript": "^5.7.0",
     "vitest": "^4.0.16",
     "ws": "^8.19.0",
     "yaml": "^2.8.2",
@@ -388,7 +411,7 @@
   "optionalDependencies": {
     "@hive-flow/providers": "workspace:*",
     "@hive-flow/embeddings": "workspace:*",
-    "@hive-flow/memory": "workspace:*",
+    "better-sqlite3": "^11.0.0",
     "@hive-flow/plugin-gastown-bridge": "workspace:*"
   },
   "publishConfig": {

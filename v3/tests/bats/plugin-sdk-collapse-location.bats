@@ -45,8 +45,8 @@ setup() {
   run find "$REPO_ROOT/v3/@hive-flow" -maxdepth 2 -name package.json -print
   [ "$status" -eq 0 ]
   count=$(printf "%s\n" "$output" | sed '/^$/d' | wc -l | tr -d ' ')
-  [ "$count" -eq 5 ]
+  [ "$count" -eq 4 ]
 
-  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
+  run grep -F '4 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

@@ -3,7 +3,7 @@
  * Intelligence Layer (ADR-050)
  *
  * Closes the intelligence loop by wiring PageRank-ranked memory into
- * the hook system. Pure CJS — no ESM imports of @hive-flow/memory.
+ * the hook system. Pure CJS — no ESM imports of the CLI memory module.
  *
  * Data files (all under .hive-flow/data/):
  *   auto-memory-store.json  — written by auto-memory-hook.mjs
@@ -217,7 +217,7 @@ function buildEdges(entries) {
 /**
  * If auto-memory-store.json is empty, bootstrap by parsing MEMORY.md and
  * topic files from the auto-memory directory. This removes the dependency
- * on @hive-flow/memory for the initial seed.
+ * on the CLI memory module for the initial seed.
  */
 function bootstrapFromMemoryFiles() {
   const entries = [];

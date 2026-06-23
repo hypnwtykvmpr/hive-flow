@@ -7,8 +7,8 @@ import { mkdtempSync, writeFileSync, rmSync, existsSync, readFileSync } from 'no
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { BinaryMigrator } from '../v3/@hive-flow/memory/src/binary-migration.js';
-import { BinaryBackend } from '../v3/@hive-flow/memory/src/binary-backend.js';
+import { BinaryMigrator } from '../v3/@hive-flow/cli/src/memory/binary-migration.js';
+import { BinaryBackend } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
 
 describe('BinaryMigrator', () => {
   let tmpDir: string;

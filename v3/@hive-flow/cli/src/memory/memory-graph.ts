@@ -1,5 +1,5 @@
 /**
- * Knowledge Graph Module for @hive-flow/memory
+ * Knowledge Graph Module for @hive-flow/cli/memory
  *
  * Builds a graph from MemoryEntry.references, computes PageRank,
  * detects communities via label propagation, and provides

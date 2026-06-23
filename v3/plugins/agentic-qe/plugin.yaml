@@ -31,7 +31,6 @@ metadata:
 dependencies:
   required:
     - "@hive-flow/cli": ">=3.0.0"
-    - "@hive-flow/memory": ">=3.0.0"
     - "@hive-flow/embeddings": ">=3.0.0"
   optional:
     - "@hive-flow/cli": ">=3.0.0"  # For E2E/visual testing

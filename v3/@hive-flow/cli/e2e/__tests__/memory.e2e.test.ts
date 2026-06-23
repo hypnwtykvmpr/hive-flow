@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SqlJsBackend, createDefaultEntry } from '@hive-flow/memory';
+import { SqlJsBackend, createDefaultEntry } from '@hive-flow/cli/memory';
 import { readJsonFixture, stableJson } from './helpers.js';
 
 const namespace = 'ca1-e2e-memory';

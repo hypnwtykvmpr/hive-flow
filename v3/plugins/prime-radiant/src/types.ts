@@ -526,7 +526,7 @@ export interface ConsensusParams {
 }
 
 // ============================================================================
-// Memory Types (Integration with @hive-flow/memory)
+// Memory Types (Integration with @hive-flow/cli/memory)
 // ============================================================================
 
 /**

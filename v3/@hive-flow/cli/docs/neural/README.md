@@ -172,11 +172,11 @@ const status = getNeuralCapabilityStatus();
 
 ## Dependencies
 
-- [@hive-flow/memory](../../../memory/) - Memory integration
+- [@hive-flow/cli/memory](../memory/) - Memory integration
 
 ## Related Packages
 
-- [@hive-flow/memory](../../../memory/) - Vector memory for patterns
+- [@hive-flow/cli/memory](../memory/) - Vector memory for patterns
 - [@hive-flow/cli/integration](../integration/) - local compatibility integration
 - [@hive-flow/cli/performance](../performance/) - Benchmarking
 

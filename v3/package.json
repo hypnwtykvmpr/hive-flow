@@ -25,7 +25,7 @@
     "test:hardening:deep": "HIVE_FLOW_PROPERTY_RUNS=1000 pnpm test:hardening:pr",
     "test:bats": "bash scripts/run-bats.sh",
     "test:security": "pnpm --filter @hive-flow/cli exec vitest run src/security/__tests__",
-    "test:memory": "pnpm --filter @hive-flow/memory test",
+    "test:memory": "pnpm --filter @hive-flow/cli exec vitest run src/memory",
     "test:swarm": "pnpm --filter @hive-flow/cli exec vitest run src/swarm/__tests__",
     "bench": "pnpm --filter @hive-flow/cli bench:performance",
     "bench:attention": "pnpm --filter @hive-flow/cli bench:performance:attention",
@@ -70,8 +70,7 @@
     "peerDependencyRules": {
       "ignoreMissing": [
         "@hive-flow/coordination",
-        "@hive-flow/embeddings",
-        "@hive-flow/memory"
+        "@hive-flow/embeddings"
       ]
     },
     "overrides": {

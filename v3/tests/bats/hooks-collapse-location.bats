@@ -61,8 +61,8 @@ setup() {
     count=$((count + 1))
   done
 
-  [ "$count" -eq 5 ]
-  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 4 ]
+  run grep -F '4 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }
 
@@ -75,7 +75,7 @@ setup() {
     "$REPO_ROOT/v3/@hive-flow/cli/README.md" \
     "$REPO_ROOT/v3/@hive-flow/cli/src" \
     "$REPO_ROOT/v3/@hive-flow/cli/docs/hooks/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/memory/README.md" \
+    "$REPO_ROOT/v3/@hive-flow/cli/docs/memory/README.md" \
     "$REPO_ROOT/v3/@hive-flow/shared/README.md"
   [ "$status" -eq 1 ]
 

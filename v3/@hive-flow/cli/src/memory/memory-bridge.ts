@@ -32,7 +32,7 @@ function getDbPath(customPath?: string): string {
 
 /**
  * Lazily initialize the ControllerRegistry singleton.
- * Returns null if @hive-flow/memory is not available.
+ * Returns null if the CLI memory controller registry is not available.
  */
 async function getRegistry(dbPath?: string): Promise<any | null> {
   if (bridgeAvailable === false) return null;
@@ -42,7 +42,7 @@ async function getRegistry(dbPath?: string): Promise<any | null> {
   if (!registryPromise) {
     registryPromise = (async () => {
       try {
-        const { ControllerRegistry } = await import('@hive-flow/memory');
+        const { ControllerRegistry } = await import('./index.js');
         const registry = new ControllerRegistry();
 
         // Suppress noisy console.log during init using a scoped flag

@@ -24,7 +24,7 @@ import type {
   QELogger,
 } from '../interfaces.js';
 
-// V3 Memory types (would be imported from @hive-flow/memory in production)
+// V3 Memory types (would be imported from @hive-flow/cli/memory in production)
 interface IMemoryService {
   createNamespace(name: string, config: NamespaceConfig): Promise<void>;
   store(entry: StoreEntry): Promise<string>;

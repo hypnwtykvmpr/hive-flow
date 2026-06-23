@@ -9,7 +9,7 @@ import {
   getPlatformInfo,
   getAvailableProviders,
   createDefaultEntry,
-} from '../src/index.js';
+} from '@hive-flow/cli/memory';
 
 /**
  * Example 1: Automatic Platform Detection

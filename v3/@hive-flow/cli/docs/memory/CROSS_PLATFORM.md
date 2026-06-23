@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `@hive-flow/memory` module provides **universal cross-platform support** through intelligent database provider selection. This ensures your application works seamlessly on Windows, macOS, and Linux without code changes.
+The `@hive-flow/cli/memory` module provides **universal cross-platform support** through intelligent database provider selection. This ensures your application works seamlessly on Windows, macOS, and Linux without code changes.
 
 ## Architecture
 
@@ -170,7 +170,7 @@ Linux:    better-sqlite3 → sql.js → JSON
 ### Example 1: Cross-Platform Application
 
 ```typescript
-import { createDatabase, getPlatformInfo } from '@hive-flow/memory';
+import { createDatabase, getPlatformInfo } from '@hive-flow/cli/memory';
 
 async function initDatabase() {
   const platform = getPlatformInfo();
@@ -189,7 +189,7 @@ async function initDatabase() {
 ### Example 2: Windows-Specific Setup
 
 ```typescript
-import { createDatabase } from '@hive-flow/memory';
+import { createDatabase } from '@hive-flow/cli/memory';
 
 async function windowsSetup() {
   // Force sql.js for Windows reliability
@@ -218,7 +218,7 @@ async function windowsSetup() {
 ### Example 3: Unix Performance Optimization
 
 ```typescript
-import { createDatabase, getAvailableProviders } from '@hive-flow/memory';
+import { createDatabase, getAvailableProviders } from '@hive-flow/cli/memory';
 
 async function unixSetup() {
   const available = await getAvailableProviders();
@@ -247,7 +247,7 @@ async function unixSetup() {
 ### Example 4: Migration Between Providers
 
 ```typescript
-import { createDatabase } from '@hive-flow/memory';
+import { createDatabase } from '@hive-flow/cli/memory';
 
 async function migrateDatabase() {
   // Load from JSON

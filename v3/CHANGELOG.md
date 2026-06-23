@@ -64,7 +64,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Command injection prevention
 - Cross-platform ACL/keychain integration
 
-#### 2. `@hive-flow/memory` - Memory Unification
+#### 2. `@hive-flow/cli/memory` - Memory Unification
 - HiveMemory as primary backend
 - HNSW vector indexing (fast)
 - Hybrid SQLite + vector storage
@@ -278,7 +278,7 @@ hive-flow init --v3
 corepack pnpm --dir v3 --filter @hive-flow/cli build
 
 # Start with unified memory
-npx @hive-flow/memory unify --backend hivememory
+npx @hive-flow/cli/memory unify --backend hivememory
 
 # Spawn v3 swarm
 hive-flow swarm coordinate --agents 15

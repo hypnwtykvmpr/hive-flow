@@ -45,7 +45,7 @@ describe('npx cache repair pruning', () => {
     expect(repairModule.isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/hive-flow/-/hive-flow-3.0.0.tgz'))).toBe(true);
     expect(repairModule.isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/@hive-flow/cli'))).toBe(true);
     expect(repairModule.isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/@hive-flow/cli/-/cli-3.0.0.tgz'))).toBe(true);
-    expect(repairModule.isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/@hive-flow/memory'))).toBe(true);
+    expect(repairModule.isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/@hive-flow/cli/memory'))).toBe(true);
 
     // ── FALSE: unrelated packages that must NOT be evicted ────────────────
     expect(repairModule.isHiveFlowCacheIndexEntry('https://registry.npmjs.org/left-pad')).toBe(false);

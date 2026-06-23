@@ -6,7 +6,7 @@
  * its own discoveries. The NeuralLearningSystem dependency is optional:
  * when unavailable, all operations degrade gracefully to no-ops.
  *
- * @module @hive-flow/memory/learning-bridge
+ * @module @hive-flow/cli/memory/learning-bridge
  */
 
 import { EventEmitter } from 'node:events';

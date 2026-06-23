@@ -308,7 +308,7 @@ export const PLUGIN_METADATA = {
   dependencies: {
     required: [
       '@hive-flow/cli/plugin-sdk',
-      '@hive-flow/memory',
+      '@hive-flow/cli/memory',
       '@hive-flow/embeddings',
     ],
     optional: [

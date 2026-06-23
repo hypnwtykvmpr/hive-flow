@@ -128,7 +128,7 @@ export class IntegrationRegressionSuite {
       critical: true,
       timeout: 5000,
       run: async () => {
-        const { UnifiedMemoryService, HybridBackend } = await import('@hive-flow/memory');
+        const { UnifiedMemoryService, HybridBackend } = await import('@hive-flow/cli/memory');
 
         // Create in-memory backend
         const backend = new HybridBackend({
@@ -164,7 +164,7 @@ export class IntegrationRegressionSuite {
       critical: true,
       timeout: 10000,
       run: async () => {
-        const { HybridBackend, UnifiedMemoryService } = await import('@hive-flow/memory');
+        const { HybridBackend, UnifiedMemoryService } = await import('@hive-flow/cli/memory');
 
         const backend = new HybridBackend({
           sqlite: { databasePath: ':memory:', walMode: false, optimize: true, defaultNamespace: 'test', maxEntries: 1000 },
@@ -370,7 +370,7 @@ export class IntegrationRegressionSuite {
       timeout: 5000,
       run: async () => {
         try {
-          const memory = await import('@hive-flow/memory');
+          const memory = await import('@hive-flow/cli/memory');
           return (
             typeof memory.UnifiedMemoryService === 'function' ||
             typeof memory.HybridBackend === 'function'

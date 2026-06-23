@@ -135,7 +135,7 @@ const V3_CLASSES: Record<string, MockClass> = {
 const IMPORT_ALIASES: Record<string, string> = {
   'hive-flow/hive-mind': '@hive-flow/cli/swarm',
   'hive-flow/swarm': '@hive-flow/cli/swarm',
-  'hive-flow/memory': '@hive-flow/memory',
+  'hive-flow/memory': '@hive-flow/cli/memory',
   'hive-flow/agents': '@hive-flow/agent-lifecycle',
   'hive-flow/tasks': '@hive-flow/task-execution',
   'hive-flow/hooks': '@hive-flow/cli/hooks',
@@ -213,10 +213,10 @@ describe('V2 API Compatibility', () => {
       expect(resolved).toBe('@hive-flow/cli/swarm');
     });
 
-    it('should resolve hive-flow/memory to @hive-flow/memory', () => {
+    it('should resolve hive-flow/memory to @hive-flow/cli/memory', () => {
       const resolved = mockRegistry.resolveImport('hive-flow/memory');
 
-      expect(resolved).toBe('@hive-flow/memory');
+      expect(resolved).toBe('@hive-flow/cli/memory');
     });
 
     it('should return null for unknown import paths', () => {

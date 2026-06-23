@@ -59,7 +59,6 @@
 .deno/
 .pnpm-store/
 .antigravitycli/
-v3/@hive-flow/memory/data/
 .env
 .env.*.local
 .env.local

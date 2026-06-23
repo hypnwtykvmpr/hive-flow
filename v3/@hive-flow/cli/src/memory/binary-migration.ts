@@ -1,7 +1,7 @@
 /**
  * Binary Migration Utility — bidirectional migration between RVF-compatible
  * binary files and legacy formats (JSON files, sql.js / better-sqlite3 databases).
- * @module @hive-flow/memory/binary-migration
+ * @module @hive-flow/cli/memory/binary-migration
  */
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';

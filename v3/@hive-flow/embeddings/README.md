@@ -361,7 +361,7 @@ try {
 
 ```typescript
 import { createEmbeddingService } from '@hive-flow/embeddings';
-import { HNSWIndex } from '@hive-flow/memory';
+import { HNSWIndex } from '@hive-flow/cli/memory';
 
 // Create embedding service
 const embeddings = createEmbeddingService({
@@ -630,7 +630,7 @@ hive-flow embeddings cache clear --older-than 7d
 
 ## Related Packages
 
-- [@hive-flow/memory](../memory) - HNSW indexing and vector storage
+- [@hive-flow/cli/memory](../cli/docs/memory) - HNSW indexing and vector storage
 - [@hive-flow/providers](../providers) - Multi-LLM provider system
 - [@hive-flow/cli/neural](../cli/docs/neural/) - SONA learning integration
 

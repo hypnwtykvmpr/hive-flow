@@ -262,7 +262,7 @@ export const pluginMetadata = {
   wasmSize: '92KB',
   dependencies: {
     required: [
-      '@hive-flow/memory',
+      '@hive-flow/cli/memory',
       '@hive-flow/coordination',
     ],
     optional: ['@hive-flow/embeddings', '@hive-flow/cli'],

@@ -2,9 +2,9 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const MEMORY_PACKAGE = new URL('../package.json', import.meta.url);
+const MEMORY_PACKAGE = new URL('../../package.json', import.meta.url);
 const MEMORY_INDEX = new URL('./index.ts', import.meta.url);
-const V3_ROOT = new URL('../../../', import.meta.url);
+const V3_ROOT = new URL('../../../../', import.meta.url);
 
 function readJson(path: URL): Record<string, unknown> {
   return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>;
@@ -45,7 +45,10 @@ describe('embedding service factory boundary', () => {
 
   it('declares the embeddings workspace dependency for the canonical factory', () => {
     const memoryPackage = readJson(MEMORY_PACKAGE);
-    const dependencies = memoryPackage.dependencies as Record<string, string>;
+    const dependencies = {
+      ...((memoryPackage.dependencies as Record<string, string> | undefined) ?? {}),
+      ...((memoryPackage.optionalDependencies as Record<string, string> | undefined) ?? {}),
+    };
 
     expect(dependencies['@hive-flow/embeddings']).toBe('workspace:*');
   });

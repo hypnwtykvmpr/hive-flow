@@ -84,7 +84,7 @@ neural training service.
 
 ## Memory Bridge
 
-`@hive-flow/memory` loads this subpath lazily through
+`@hive-flow/cli/memory` loads this subpath lazily through
 `@hive-flow/cli/neural` when no custom neural loader is provided. If the CLI
 subpath is unavailable, memory learning degrades to a no-op.
 

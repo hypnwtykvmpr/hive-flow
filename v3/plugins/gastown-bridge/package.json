@@ -71,10 +71,10 @@
     "node": ">=20.0.0"
   },
   "peerDependencies": {
-    "@hive-flow/memory": "workspace:*"
+    "@hive-flow/cli": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@hive-flow/memory": {
+    "@hive-flow/cli": {
       "optional": true
     }
   },

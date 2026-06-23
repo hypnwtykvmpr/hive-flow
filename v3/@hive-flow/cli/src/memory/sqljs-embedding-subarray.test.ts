@@ -13,16 +13,14 @@
  * store → retrieve round-trip through SqlJsBackend.
  */
 
-import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SqlJsBackend } from './sqljs-backend.js';
 import { createDefaultEntry } from './types.js';
 
 // Resolve the local sql-wasm.wasm so tests don't attempt a CDN fetch.
-const WASM_PATH = resolve(
-  __dirname,
-  '../../../node_modules/.pnpm/sql.js@1.14.1/node_modules/sql.js/dist/sql-wasm.wasm',
-);
+const require = createRequire(import.meta.url);
+const WASM_PATH = require.resolve('sql.js/dist/sql-wasm.wasm');
 
 describe('d9-002: SqlJsBackend embedding subarray round-trip', () => {
   let backend: SqlJsBackend;

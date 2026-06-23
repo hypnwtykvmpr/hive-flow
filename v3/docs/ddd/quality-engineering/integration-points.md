@@ -57,7 +57,7 @@ The QE domain shares the Memory domain's infrastructure for vector storage, HNSW
 ```typescript
 // v3/plugins/agentic-qe/src/infrastructure/memory-bridge.ts
 
-import type { IMemoryService, MemoryEntry } from '@hive-flow/memory';
+import type { IMemoryService, MemoryEntry } from '@hive-flow/cli/memory';
 import type { EmbeddingsService } from '@hive-flow/embeddings';
 
 export class QEMemoryBridge {

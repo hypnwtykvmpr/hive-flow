@@ -199,7 +199,7 @@ npm run bench:startup
 ```typescript
 // benchmarks/memory.bench.ts
 import { describe, bench } from 'vitest';
-import { HNSWIndex } from '@hive-flow/memory';
+import { HNSWIndex } from '@hive-flow/cli/memory';
 
 describe('Memory Benchmarks', () => {
   const index = new HNSWIndex({ dimensions: 1536 });
@@ -234,7 +234,7 @@ import type {
 
 ## Related Packages
 
-- [@hive-flow/memory](../memory) - Memory operations to benchmark
+- [@hive-flow/cli/memory](../memory) - Memory operations to benchmark
 - [@hive-flow/cli/swarm](../swarm) - Swarm coordination to benchmark
 - [@hive-flow/cli/neural](../neural/) - Neural operations to benchmark
 

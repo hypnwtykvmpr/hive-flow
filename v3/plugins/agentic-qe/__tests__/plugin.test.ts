@@ -73,7 +73,7 @@ class MockAQEPlugin {
       license: 'MIT',
       dependencies: [
         '@hive-flow/cli/plugin-sdk',
-        '@hive-flow/memory',
+        '@hive-flow/cli/memory',
         '@hive-flow/embeddings',
       ],
       tags: ['testing', 'quality', 'coverage', 'security', 'tdd'],
@@ -322,7 +322,7 @@ describe('AQEPlugin', () => {
 
     it('should have required dependencies', () => {
       expect(plugin.metadata.dependencies).toContain('@hive-flow/cli/plugin-sdk');
-      expect(plugin.metadata.dependencies).toContain('@hive-flow/memory');
+      expect(plugin.metadata.dependencies).toContain('@hive-flow/cli/memory');
       expect(plugin.metadata.dependencies).toContain('@hive-flow/embeddings');
     });
 

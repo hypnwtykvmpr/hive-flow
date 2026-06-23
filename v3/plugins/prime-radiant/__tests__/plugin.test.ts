@@ -91,7 +91,7 @@ class MockPrimeRadiantPlugin {
       author: 'Hive Flow',
       license: 'MIT',
       wasmSize: '92KB',
-      dependencies: ['@hive-flow/memory', '@hive-flow/coordination'],
+      dependencies: ['@hive-flow/cli/memory', '@hive-flow/coordination'],
       tags: [
         'sheaf-cohomology',
         'causal-inference',
@@ -432,7 +432,7 @@ describe('PrimeRadiantPlugin', () => {
     });
 
     it('should have required dependencies', () => {
-      expect(plugin.metadata.dependencies).toContain('@hive-flow/memory');
+      expect(plugin.metadata.dependencies).toContain('@hive-flow/cli/memory');
       expect(plugin.metadata.dependencies).toContain('@hive-flow/coordination');
     });
 

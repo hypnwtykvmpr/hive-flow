@@ -297,7 +297,7 @@ This package is a dependency of all other @hive-flow modules:
 
 - [@hive-flow/cli](../cli) - CLI module
 - [@hive-flow/cli/security](../cli/docs/security/README.md) - Security & validation
-- [@hive-flow/memory](../memory) - HiveMemory & HNSW indexing
+- [@hive-flow/cli/memory](../cli/docs/memory) - HiveMemory & HNSW indexing
 - [@hive-flow/cli/neural](../cli/docs/neural/) - SONA learning & RL algorithms
 - [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking & optimization
 - [@hive-flow/cli/swarm](../cli/docs/swarm) - 15-agent coordination

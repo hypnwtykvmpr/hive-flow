@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BinaryBackend } from '../v3/@hive-flow/memory/src/binary-backend.js';
+import { BinaryBackend } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
 import type {
   MemoryEntry,
   MemoryQuery,
   SearchOptions,
   IMemoryBackend,
-} from '../v3/@hive-flow/memory/src/types.js';
+} from '../v3/@hive-flow/cli/src/memory/types.js';
 
 // -- Helpers --
 

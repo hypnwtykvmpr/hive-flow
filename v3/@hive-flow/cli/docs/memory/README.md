@@ -1,4 +1,4 @@
-# @hive-flow/memory
+# @hive-flow/cli/memory
 
 
 > High-performance memory module for Hive Flow V3 - HiveMemory unification, HNSW indexing, vector search, self-learning knowledge graph, and hybrid SQLite+HiveMemory backend (ADR-009).
@@ -20,7 +20,7 @@
 ## Quick Start
 
 ```typescript
-import { HNSWIndex, UnifiedMemoryService, CacheManager } from '@hive-flow/memory';
+import { HNSWIndex, UnifiedMemoryService, CacheManager } from '@hive-flow/cli/memory';
 
 // Create HNSW index for vector search
 const index = new HNSWIndex({
@@ -44,7 +44,7 @@ const results = await index.search(queryVector, 10);
 ### HNSW Index
 
 ```typescript
-import { HNSWIndex } from '@hive-flow/memory';
+import { HNSWIndex } from '@hive-flow/cli/memory';
 
 const index = new HNSWIndex({
   dimensions: 1536,
@@ -86,7 +86,7 @@ const stats = index.getStats();
 ### Unified Memory Service
 
 ```typescript
-import { UnifiedMemoryService } from '@hive-flow/memory';
+import { UnifiedMemoryService } from '@hive-flow/cli/memory';
 
 const adapter = new UnifiedMemoryService({
   dimensions: 1536,
@@ -116,7 +116,7 @@ await adapter.shareWith('mem-123', 'agent-2');
 ### Cache Manager
 
 ```typescript
-import { CacheManager } from '@hive-flow/memory';
+import { CacheManager } from '@hive-flow/cli/memory';
 
 const cache = new CacheManager({
   maxSize: 1000,
@@ -139,7 +139,7 @@ const stats = cache.getStats();
 ### Query Builder
 
 ```typescript
-import { QueryBuilder } from '@hive-flow/memory';
+import { QueryBuilder } from '@hive-flow/cli/memory';
 
 const results = await new QueryBuilder()
   .semantic(queryVector)
@@ -154,7 +154,7 @@ const results = await new QueryBuilder()
 ### Migration
 
 ```typescript
-import { MemoryMigration } from '@hive-flow/memory';
+import { MemoryMigration } from '@hive-flow/cli/memory';
 
 const migration = new MemoryMigration({
   source: './data/v2-memory.db',
@@ -200,7 +200,7 @@ const productIndex = new HNSWIndex({
 ### Quick Start
 
 ```typescript
-import { AutoMemoryBridge } from '@hive-flow/memory';
+import { AutoMemoryBridge } from '@hive-flow/cli/memory';
 
 const bridge = new AutoMemoryBridge(memoryBackend, {
   workingDir: '/workspaces/my-project',
@@ -270,7 +270,7 @@ import {
   hashContent,           // SHA-256 truncated to 16 hex chars
   pruneTopicFile,        // Keep topic files under line limit
   hasSummaryLine,        // Exact bullet-prefix dedup check
-} from '@hive-flow/memory';
+} from '@hive-flow/cli/memory';
 ```
 
 ### Types
@@ -285,7 +285,7 @@ import type {
   PruneStrategy,
   SyncResult,
   ImportResult,
-} from '@hive-flow/memory';
+} from '@hive-flow/cli/memory';
 ```
 
 ## Self-Learning Bridge (ADR-049)
@@ -295,7 +295,7 @@ Connects insights to the `@hive-flow/cli/neural` learning pipeline. When neural 
 ### Quick Start
 
 ```typescript
-import { AutoMemoryBridge, LearningBridge } from '@hive-flow/memory';
+import { AutoMemoryBridge, LearningBridge } from '@hive-flow/cli/memory';
 
 const bridge = new AutoMemoryBridge(backend, {
   workingDir: '/workspaces/my-project',
@@ -322,7 +322,7 @@ await bridge.syncToAutoMemory(); // Calls consolidate() first
 ### Standalone Usage
 
 ```typescript
-import { LearningBridge } from '@hive-flow/memory';
+import { LearningBridge } from '@hive-flow/cli/memory';
 
 const lb = new LearningBridge(backend, {
   // Optional: inject neural loader for custom setups
@@ -363,7 +363,7 @@ Pure TypeScript knowledge graph with PageRank and community detection. No extern
 ### Quick Start
 
 ```typescript
-import { AutoMemoryBridge, MemoryGraph } from '@hive-flow/memory';
+import { AutoMemoryBridge, MemoryGraph } from '@hive-flow/cli/memory';
 
 const bridge = new AutoMemoryBridge(backend, {
   workingDir: '/workspaces/my-project',
@@ -384,7 +384,7 @@ await bridge.curateIndex();
 ### Standalone Usage
 
 ```typescript
-import { MemoryGraph } from '@hive-flow/memory';
+import { MemoryGraph } from '@hive-flow/cli/memory';
 
 const graph = new MemoryGraph({
   pageRankDamping: 0.85,
@@ -446,7 +446,7 @@ Maps Claude Code's 3-scope agent memory directories for per-agent knowledge isol
 ### Quick Start
 
 ```typescript
-import { createAgentBridge, transferKnowledge } from '@hive-flow/memory';
+import { createAgentBridge, transferKnowledge } from '@hive-flow/cli/memory';
 
 // Create a bridge for a specific agent scope
 const agentBridge = createAgentBridge(backend, {
@@ -489,7 +489,7 @@ import {
   createAgentBridge,       // Create scoped AutoMemoryBridge
   transferKnowledge,       // Cross-agent knowledge sharing
   listAgentScopes,         // Discover existing agent scopes
-} from '@hive-flow/memory';
+} from '@hive-flow/cli/memory';
 
 // Resolve path for an agent scope
 const dir = resolveAgentMemoryDir('my-agent', 'project');
@@ -545,7 +545,7 @@ import type {
   // Agent Scope (ADR-049)
   AgentMemoryScope, AgentScopedConfig,
   TransferOptions, TransferResult,
-} from '@hive-flow/memory';
+} from '@hive-flow/cli/memory';
 ```
 
 ## Dependencies

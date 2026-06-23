@@ -1,33 +1,27 @@
 /**
- * HiveMemory Backend Example
+ * Local Vector Memory Backend Example
  *
- * Demonstrates the local HiveMemory-compatible V3 memory backend
+ * Demonstrates the CLI-owned V3 memory backend
  */
 
-import { HiveMemoryBackend, HybridBackend, createDefaultEntry } from '../src/index.js';
+import { LocalVectorBackend, HybridBackend, createDefaultEntry } from '@hive-flow/cli/memory';
 
-// ===== Example 1: Basic HiveMemoryBackend Usage =====
+// ===== Example 1: Basic LocalVectorBackend Usage =====
 
 async function basicExample() {
-  console.log('\n=== Basic HiveMemoryBackend Example ===\n');
+  console.log('\n=== Basic LocalVectorBackend Example ===\n');
 
   // Initialize backend
-  const backend = new HiveMemoryBackend({
-    dbPath: ':memory:',
-    namespace: 'demo',
-    vectorDimension: 384, // Using MiniLM embeddings
+  const backend = new LocalVectorBackend({
+    defaultNamespace: 'demo',
+    dimensions: 384, // Using MiniLM embeddings
     hnswM: 16,
     hnswEfConstruction: 200,
   });
 
   await backend.initialize();
 
-  // Check if HiveMemory is available
-  if (backend.isAvailable()) {
-    console.log('✓ HiveMemory available with HNSW indexing');
-  } else {
-    console.log('⚠ HiveMemory not available, using fallback');
-  }
+  console.log('✓ Local vector backend available with HNSW indexing');
 
   // Store some entries
   const entries = [
@@ -99,7 +93,7 @@ async function basicExample() {
   console.log('\n✓ Backend shutdown complete');
 }
 
-// ===== Example 2: Hybrid Backend (SQLite + HiveMemory) =====
+// ===== Example 2: Hybrid Backend (SQLite + Local Vector Search) =====
 
 async function hybridExample() {
   console.log('\n=== Hybrid Backend Example ===\n');
@@ -119,9 +113,8 @@ async function hybridExample() {
     sqlite: {
       dbPath: ':memory:',
     },
-    hivememory: {
-      dbPath: ':memory:',
-      vectorDimension: 384,
+    localVector: {
+      dimensions: 384,
       hnswM: 16,
     },
     embeddingGenerator: mockEmbedding,
@@ -130,7 +123,7 @@ async function hybridExample() {
 
   await hybrid.initialize();
 
-  console.log('✓ Hybrid backend initialized (SQLite + HiveMemory)');
+  console.log('✓ Hybrid backend initialized (SQLite + local vector search)');
 
   // Store entries with embeddings
   console.log('\nStoring entries with embeddings...');
@@ -168,8 +161,8 @@ async function hybridExample() {
   });
   console.log(`Found ${structured.length} entries in 'patterns' namespace`);
 
-  // Semantic query (goes to HiveMemory)
-  console.log('\n--- Semantic Query (HiveMemory HNSW) ---');
+  // Semantic query (goes to local vector backend)
+  console.log('\n--- Semantic Query (Local HNSW) ---');
   const semantic = await hybrid.querySemantic({
     content: 'object creation patterns',
     k: 5,
@@ -202,7 +195,7 @@ async function hybridExample() {
   console.log('Entries by namespace:', hybridStats.entriesByNamespace);
   const hybridInternal = hybrid as unknown as { stats: Record<string, number> }; // SAFETY: accessing internal stats for demo logging
   console.log('SQLite queries:', hybridInternal.stats.sqliteQueries);
-  console.log('HiveMemory queries:', hybridInternal.stats.hivememoryQueries);
+  console.log('Local vector queries:', hybridInternal.stats.localVectorQueries);
   console.log('Hybrid queries:', hybridInternal.stats.hybridQueries);
 
   await hybrid.shutdown();
@@ -214,12 +207,10 @@ async function hybridExample() {
 async function vectorSearchExample() {
   console.log('\n=== Vector Search Performance Example ===\n');
 
-  const backend = new HiveMemoryBackend({
-    dbPath: ':memory:',
-    vectorDimension: 128, // Smaller for demo
+  const backend = new LocalVectorBackend({
+    dimensions: 128, // Smaller for demo
     hnswM: 16,
     hnswEfConstruction: 100,
-    hnswEfSearch: 50,
   });
 
   await backend.initialize();
@@ -279,20 +270,14 @@ async function vectorSearchExample() {
 async function gracefulDegradationExample() {
   console.log('\n=== Graceful Degradation Example ===\n');
 
-  // Create backend that might not have hivememory
-  const backend = new HiveMemoryBackend({
-    dbPath: ':memory:',
+  // Create backend without native SQLite requirements.
+  const backend = new LocalVectorBackend({
+    dimensions: 4,
   });
 
   await backend.initialize();
 
-  // Check availability
-  if (backend.isAvailable()) {
-    console.log('✓ HiveMemory available - using HNSW indexing');
-  } else {
-    console.log('⚠ HiveMemory not available - using fallback in-memory storage');
-    console.log('  (External hivememory package is detached; local fallback is used)');
-  }
+  console.log('✓ Local vector backend available without native SQLite');
 
   // Store entries (works either way)
   const entry = createDefaultEntry({
@@ -309,7 +294,7 @@ async function gracefulDegradationExample() {
   });
 
   console.log(`Search found ${results.length} results`);
-  console.log('Fallback behavior: ', backend.isAvailable() ? 'HNSW' : 'Brute-force');
+  console.log('Fallback behavior: local HNSW-compatible vector search');
 
   await backend.shutdown();
   console.log('\n✓ Graceful degradation demonstrated');
@@ -319,8 +304,8 @@ async function gracefulDegradationExample() {
 
 async function main() {
   console.log('╔═══════════════════════════════════════════════════════════╗');
-  console.log('║  HiveMemory Integration Examples                             ║');
-  console.log('║  V3 Memory Module with local HiveMemory-compatible backend    ║');
+  console.log('║  HiveMemory Integration Examples                          ║');
+  console.log('║  V3 Memory Module with CLI-owned local vector backend      ║');
   console.log('╚═══════════════════════════════════════════════════════════╝');
 
   try {
