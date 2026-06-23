@@ -5,7 +5,7 @@
  * Based on the V3 Architecture Decision Records and Swarm Implementation Plan
  */
 
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from './@hive-flow/cli/src/shared/core/config/defaults.js';
 
 // Core types defined inline (./shared/types not available at this level)
 export type TopologyType = 'hierarchical-mesh' | 'mesh' | 'hierarchical' | 'centralized';

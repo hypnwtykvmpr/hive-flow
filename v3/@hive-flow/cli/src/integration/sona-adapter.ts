@@ -23,7 +23,7 @@ import type {
   SONALearningStats,
   DEFAULT_SONA_CONFIG,
 } from './types.js';
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 /**
  * Mode-specific configurations for SONA learning

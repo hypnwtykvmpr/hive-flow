@@ -11,9 +11,9 @@ import { join, dirname } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
-import { sanitizePathId } from '@hive-flow/shared';
+import { sanitizePathId } from '../shared/index.js';
 import { appendTaskJournalEvent } from '@hive-flow/providers/scripts/agent-task-journal.mjs';
-import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '../shared/core/config/defaults.js';
 import {
   recordMcpAgentSpawn,
   recordMcpCallStart,

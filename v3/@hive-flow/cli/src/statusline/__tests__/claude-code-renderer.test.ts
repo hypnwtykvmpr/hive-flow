@@ -24,7 +24,7 @@ import { dirname, join } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 import { performance } from 'node:perf_hooks';
 
-import { sessionKeyFor } from '@hive-flow/shared';
+import { sessionKeyFor } from '../../shared/index.js';
 
 import {
   renderClaudeCodeStatusline,

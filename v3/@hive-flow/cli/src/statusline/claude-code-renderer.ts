@@ -56,7 +56,7 @@
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { sessionKeyFor } from '@hive-flow/shared';
+import { sessionKeyFor } from '../shared/index.js';
 
 import { resolveSessionId } from '../mcp-tools/session-id.js';
 import { parseStatuslineConfig, type StatuslineConfig } from './config.js';

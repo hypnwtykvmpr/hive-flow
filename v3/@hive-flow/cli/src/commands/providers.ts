@@ -7,7 +7,7 @@
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
-import { ProviderRegistry } from '@hive-flow/shared';
+import { ProviderRegistry } from '../shared/index.js';
 import {
   completeStrictApiProviderViaHolder,
   isStrictApiProvider,

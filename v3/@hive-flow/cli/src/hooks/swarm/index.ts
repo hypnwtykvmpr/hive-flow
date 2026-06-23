@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from 'node:events';
-import { generateSecureId } from '@hive-flow/shared';
+import { generateSecureId } from '../../shared/index.js';
 import { reasoningBank, type GuidancePattern } from '../reasoningbank/index.js';
 
 // ============================================================================

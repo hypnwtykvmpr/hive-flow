@@ -31,7 +31,7 @@
 //   - `removeMarker` is idempotent: removing an absent marker is a no-op.
 
 import { isAbsolute, join } from 'node:path';
-import { resolveHiveHome } from '@hive-flow/shared';
+import { resolveHiveHome } from '../shared/index.js';
 import {
   readJsonFile,
   readUserCacheJson,

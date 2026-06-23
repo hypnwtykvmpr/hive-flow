@@ -49,6 +49,6 @@ setup() {
     "$REPO_ROOT/v3/README.md" \
     "$REPO_ROOT/v3/@hive-flow/cli/README.md" \
     "$REPO_ROOT/v3/CHANGELOG.md" \
-    "$REPO_ROOT/v3/@hive-flow/shared/README.md"
+    "$REPO_ROOT/v3/@hive-flow/cli/docs/shared/README.md"
   [ "$status" -eq 1 ]
 }

@@ -11,7 +11,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import { executeWorkflowStep, getWorkflowHookDispatcher } from './workflow-executor.js';
 import type { WorkflowStepContext } from './workflow-executor.js';
-import { FLOW_REGISTRY, type FlowOptions, type WorkflowDefinition, type WorkflowModuleRef } from '@hive-flow/shared/workflow';
+import { FLOW_REGISTRY, type FlowOptions, type WorkflowDefinition, type WorkflowModuleRef } from '../shared/workflow/index.js';
 
 async function dispatchWorkflowHook(event: string, context: Record<string, unknown>): Promise<void> {
   const dispatcher = getWorkflowHookDispatcher();

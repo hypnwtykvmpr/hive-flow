@@ -13,7 +13,7 @@ import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { spawn as childSpawn, execSync } from 'child_process';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import { CANONICAL_AGENT_TYPES, DEFAULT_CANONICAL_AGENT_TYPE } from '../agents/roster.js';
 
 // Worker type definitions for prompt generation

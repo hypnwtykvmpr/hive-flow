@@ -11,7 +11,7 @@
  */
 
 import type { InitOptions } from './types.js';
-import { DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_QUEUE_DEPTH } from '../shared/core/config/defaults.js';
 
 /**
  * Generate optimized statusline script

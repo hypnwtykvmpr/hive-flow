@@ -8,7 +8,7 @@ import { output } from '../output.js';
 import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { storeCommand } from './transfer-store.js';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

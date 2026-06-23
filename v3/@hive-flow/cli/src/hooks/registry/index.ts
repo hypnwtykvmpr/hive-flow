@@ -14,7 +14,7 @@ import type {
   HookRegistryStats,
   HookListFilter,
 } from '../types.js';
-import { generateSecureId } from '@hive-flow/shared';
+import { generateSecureId } from '../../shared/index.js';
 
 /**
  * Hook Registry - manages hook registration and lookup

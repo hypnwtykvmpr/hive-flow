@@ -8,7 +8,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import type { AgentProvider } from './agent-tools.js';
 import { resolveClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
 import {

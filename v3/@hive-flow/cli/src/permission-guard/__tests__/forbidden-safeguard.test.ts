@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@hive-flow/shared', () => ({
+vi.mock('../../shared/index.js', () => ({
   resolveHiveHome: () => ({
     home: '/tmp/hive-flow',
     source: 'default',

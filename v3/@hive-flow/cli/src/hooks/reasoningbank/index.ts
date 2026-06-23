@@ -14,7 +14,7 @@
  */
 
 import { EventEmitter } from 'node:events';
-import { generateSecureId } from '@hive-flow/shared';
+import { generateSecureId } from '../../shared/index.js';
 import type { HookContext, HookEvent } from '../types.js';
 
 // Dynamic imports for optional dependencies

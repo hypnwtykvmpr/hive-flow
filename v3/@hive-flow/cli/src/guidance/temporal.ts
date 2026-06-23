@@ -32,7 +32,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 // ============================================================================
 // Types
@@ -895,4 +895,4 @@ function computeStatus(assertion: TemporalAssertion, referenceTime: number): Tem
   return 'future';
 }
 
-// clamp imported from @hive-flow/shared
+// clamp imported from @hive-flow/cli/shared

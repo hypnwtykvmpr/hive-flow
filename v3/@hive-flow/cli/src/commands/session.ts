@@ -7,7 +7,7 @@ import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { confirm, input, select } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
-import { CheckpointManager, CrashDetector } from '@hive-flow/shared';
+import { CheckpointManager, CrashDetector } from '../shared/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

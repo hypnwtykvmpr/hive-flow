@@ -22,10 +22,6 @@
     "v3/@hive-flow/cli/.claude/helpers/**",
     "v3/@hive-flow/cli/.claude/skills/**",
     "v3/@hive-flow/cli/.claude/settings.json",
-    "v3/@hive-flow/shared/dist/**/*.js",
-    "v3/@hive-flow/shared/dist/**/*.d.ts",
-    "!v3/@hive-flow/shared/dist/**/*.map",
-    "v3/@hive-flow/shared/package.json",
     ".claude-plugin/**",
     "!**/DELETE_*",
     "!**/.hive-flow/**",
@@ -62,7 +58,6 @@
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
     "@hive-flow/providers": "3.0.0-alpha.6",
-    "@hive-flow/shared": "3.0.0-alpha.6",
     "@noble/ed25519": "^3.0.0",
     "ajv": "^8.18.0",
     "cors": "^2.8.5",
@@ -75,7 +70,6 @@
     "zod": "^3.25.0"
   },
   "bundledDependencies": [
-    "@hive-flow/shared",
     "@hive-flow/providers"
   ],
   "overrides": {

@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   completeStrictApiProviderViaHolder: vi.fn(async () => ({ content: 'ok' })),
 }));
 
-vi.mock('@hive-flow/shared', () => ({
+vi.mock('../shared/index.js', () => ({
   ProviderRegistry: class {
     get size() {
       return 2;

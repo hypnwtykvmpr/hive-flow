@@ -33,7 +33,7 @@
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from '../../shared/core/config/defaults.js';
 
 import {
   collectActiveHiveRuntimeState,

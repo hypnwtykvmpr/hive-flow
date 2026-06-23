@@ -14,8 +14,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock @hive-flow/shared before any imports that depend on it
-vi.mock('@hive-flow/shared', () => ({
+// Mock @hive-flow/cli/shared before any imports that depend on it
+vi.mock('../../shared/index.js', () => ({
   resolveHiveHome: () => ({
     home: '/tmp/hive-flow',
     source: 'default',

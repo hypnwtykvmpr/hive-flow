@@ -7,7 +7,7 @@ import { openSync, readSync, closeSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { platform } from 'node:os';
 import { lstat, open as fsOpen } from 'node:fs/promises';
-import { resolveHiveHome } from '@hive-flow/shared';
+import { resolveHiveHome } from '../../shared/index.js';
 import type { HostCli } from '../../statusline/types.js';
 import type {
   AdapterTarget,

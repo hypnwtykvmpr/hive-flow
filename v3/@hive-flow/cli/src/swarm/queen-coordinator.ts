@@ -22,7 +22,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { DEFAULT_QUEUE_DEPTH, generateSecureId } from '@hive-flow/shared';
+import { DEFAULT_QUEUE_DEPTH, generateSecureId } from '../shared/index.js';
 import type {
   AgentState,
   AgentType,

@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { propertyRunsFromEnv } from './property-runs.js';
-import { sessionKeyFor } from '@hive-flow/shared';
+import { sessionKeyFor } from '../shared/index.js';
 
 const PROPERTY_RUNS = propertyRunsFromEnv(200);
 

@@ -21,7 +21,7 @@ const os = require('os');
 const crypto = require('crypto');
 
 // Configuration
-// keep in sync with @hive-flow/shared/core/config/defaults (DEFAULT_MAX_AGENTS=150, DEFAULT_QUEUE_DEPTH=30).
+// keep in sync with @hive-flow/cli/shared/core/config/defaults (DEFAULT_MAX_AGENTS=150, DEFAULT_QUEUE_DEPTH=30).
 // Long-term: replace with a runtime import once this .cjs migrates to ESM.
 const CONFIG = {
   maxAgents: 150,

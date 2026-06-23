@@ -10,7 +10,7 @@ import type { MCPTool } from './types.js';
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
+import { DEFAULT_MAX_AGENTS } from '../shared/index.js';
 import { classifyCurrentProgressAuthority } from '../progress/progress-authority-classifier.js';
 
 // Get project root - handles both src and dist paths

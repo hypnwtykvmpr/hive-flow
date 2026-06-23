@@ -19,7 +19,7 @@ const RUNTIME_FILES = [
   'v3/@hive-flow/cli/src/init/settings-generator.ts',
   'v3/@hive-flow/cli/src/mcp-tools/hive-store.ts',
   'v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts',
-  'v3/@hive-flow/shared/src/utils/resolve-hive-home.ts',
+  'v3/@hive-flow/cli/src/shared/utils/resolve-hive-home.ts',
 ] as const;
 
 const FORBIDDEN_ACTIVE_TMUX_PATTERNS: Array<[RegExp, string]> = [

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core';
+import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '../shared/core/index.js';
 
 export interface SwarmSnapshot {
   working: number;

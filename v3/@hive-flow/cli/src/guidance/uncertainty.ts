@@ -25,7 +25,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 // ============================================================================
 // Types
@@ -848,4 +848,4 @@ export function createUncertaintyAggregator(
 // Helpers
 // ============================================================================
 
-// clamp imported from @hive-flow/shared
+// clamp imported from @hive-flow/cli/shared

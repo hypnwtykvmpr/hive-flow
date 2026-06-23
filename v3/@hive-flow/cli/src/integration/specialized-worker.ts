@@ -24,7 +24,7 @@ import {
   WorkerArtifact,
 } from './worker-base.js';
 import type { Task } from './worker-task-types.js';
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 /**
  * Domain specialization types

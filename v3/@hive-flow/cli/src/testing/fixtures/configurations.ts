@@ -5,7 +5,7 @@
  * Following London School principle of explicit test data
  */
 
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
+import { DEFAULT_MAX_AGENTS } from '../../shared/core/index.js';
 
 /**
  * Security configuration interface

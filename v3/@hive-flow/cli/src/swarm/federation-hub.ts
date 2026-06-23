@@ -25,7 +25,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { generateSecureId } from '@hive-flow/shared';
+import { generateSecureId } from '../shared/index.js';
 
 // ============================================================================
 // Types

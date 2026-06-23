@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (4 packages)
+├── @hive-flow/                    # Modular packages (3 packages)
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
 │   │   ├── e2e/                     # CLI-owned integration tests
@@ -234,12 +234,12 @@ const mockAgent = createMockAgent({ type: 'coder' });
 const fixture = createTestFixture('swarm-coordination');
 ```
 
-### @hive-flow/shared
+### @hive-flow/cli/shared
 Common types, events, utilities, and core interfaces.
 
 ```typescript
-import { EventBus, Result, success, failure } from '@hive-flow/shared';
-import type { AgentId, TaskStatus } from '@hive-flow/shared/types';
+import { EventBus, Result, success, failure } from '@hive-flow/cli/shared';
+import type { AgentId, TaskStatus } from '@hive-flow/cli/shared/types';
 ```
 
 ## Usage
@@ -344,7 +344,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 4 packages |
+| **Code** | Package count | 3 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -362,7 +362,7 @@ pnpm test:coverage
 - [@hive-flow/cli/neural](./@hive-flow/cli/neural/)
 - [@hive-flow/cli](./@hive-flow/cli/)
 - [@hive-flow/cli/testing](./@hive-flow/cli/src/testing/)
-- [@hive-flow/shared](./@hive-flow/shared/)
+- [@hive-flow/cli/shared](./@hive-flow/cli/docs/shared/)
 
 ### Examples
 - [HiveMemory Example](./@hive-flow/cli/docs/memory/examples/hivememory-example.ts)

@@ -6,7 +6,7 @@ import {
   FLOW_REGISTRY,
   WorkflowStateMachine,
   listFlowNames,
-} from '@hive-flow/shared/workflow';
+} from '../../src/shared/workflow/index.js';
 
 const tempDirs: string[] = [];
 

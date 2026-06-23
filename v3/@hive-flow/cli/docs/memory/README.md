@@ -558,7 +558,7 @@ import type {
 ## Related Packages
 
 - [@hive-flow/cli/neural](../cli/docs/neural/) - Neural learning integration (SONA, ReasoningBank, EWC++)
-- [@hive-flow/shared](../shared) - Shared types and utilities
+- [@hive-flow/cli/shared](../shared) - Shared types and utilities
 - [@hive-flow/cli/hooks](../cli/docs/hooks/) - Session lifecycle hooks for auto memory sync
 
 ## License

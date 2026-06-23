@@ -6,9 +6,9 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vite
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { DirectiveInterpreter, DirectiveEvents } from '../../v3/@hive-flow/shared/src/directives/interpreter.js';
-import { writeDirective } from '../../v3/@hive-flow/shared/src/directives/reader.js';
-import type { IEventBus } from '../../v3/@hive-flow/shared/src/core/interfaces/event.interface.js';
+import { DirectiveInterpreter, DirectiveEvents } from '../../v3/@hive-flow/cli/src/shared/directives/interpreter.js';
+import { writeDirective } from '../../v3/@hive-flow/cli/src/shared/directives/reader.js';
+import type { IEventBus } from '../../v3/@hive-flow/cli/src/shared/core/interfaces/event.interface.js';
 
 function createMockEventBus(): IEventBus & { emit: Mock } {
   return {

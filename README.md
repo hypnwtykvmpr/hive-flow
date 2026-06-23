@@ -4991,7 +4991,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
-| `@hive-flow/shared` | Common utilities | Types, validation schemas, RvfEventLog, constants |
+| `@hive-flow/cli/shared` | Common utilities | Types, validation schemas, RvfEventLog, constants |
 | `@hive-flow/cli/browser` | Browser automation | 59 MCP tools, element refs, trajectory learning |
 
 ### Architecture Principles
@@ -6456,7 +6456,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/cli/integration` | Optional hive-flow integration | [Source](./v3/@hive-flow/cli/src/integration/) |
 | `@hive-flow/cli/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/cli/docs/performance/) |
 | `@hive-flow/cli/deployment` | Release helper internals | [Source](./v3/@hive-flow/cli/src/deployment/) |
-| `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/shared/) |
+| `@hive-flow/cli/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/cli/docs/shared/) |
 | `@hive-flow/cli/browser` | AI-optimized browser automation with agent-browser | [README](./v3/@hive-flow/cli/docs/browser/README.md) |
 
 ### Additional Resources

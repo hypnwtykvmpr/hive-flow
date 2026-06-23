@@ -7,7 +7,7 @@
  * @module v3/memory/types
  */
 
-import { generateSecureId as _generateSecureId } from '@hive-flow/shared';
+import { generateSecureId as _generateSecureId } from '../shared/index.js';
 
 // ===== Core Memory Entry Types =====
 

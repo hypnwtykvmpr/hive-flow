@@ -232,6 +232,50 @@
       "types": "./dist/src/memory/*.d.ts",
       "import": "./dist/src/memory/*.js"
     },
+    "./shared": {
+      "types": "./dist/src/shared/index.d.ts",
+      "import": "./dist/src/shared/index.js"
+    },
+    "./shared/types": {
+      "types": "./dist/src/shared/types/index.d.ts",
+      "import": "./dist/src/shared/types/index.js"
+    },
+    "./shared/core": {
+      "types": "./dist/src/shared/core/index.d.ts",
+      "import": "./dist/src/shared/core/index.js"
+    },
+    "./shared/core/config/defaults": {
+      "types": "./dist/src/shared/core/config/defaults.d.ts",
+      "import": "./dist/src/shared/core/config/defaults.js"
+    },
+    "./shared/events": {
+      "types": "./dist/src/shared/events/index.d.ts",
+      "import": "./dist/src/shared/events/index.js"
+    },
+    "./shared/hooks": {
+      "types": "./dist/src/shared/hooks/index.d.ts",
+      "import": "./dist/src/shared/hooks/index.js"
+    },
+    "./shared/mcp": {
+      "types": "./dist/src/shared/mcp/index.d.ts",
+      "import": "./dist/src/shared/mcp/index.js"
+    },
+    "./shared/security": {
+      "types": "./dist/src/shared/security/index.d.ts",
+      "import": "./dist/src/shared/security/index.js"
+    },
+    "./shared/resilience": {
+      "types": "./dist/src/shared/resilience/index.d.ts",
+      "import": "./dist/src/shared/resilience/index.js"
+    },
+    "./shared/utils/*": {
+      "types": "./dist/src/shared/utils/*.d.ts",
+      "import": "./dist/src/shared/utils/*.js"
+    },
+    "./shared/workflow": {
+      "types": "./dist/src/shared/workflow/index.d.ts",
+      "import": "./dist/src/shared/workflow/index.js"
+    },
     "./package.json": "./package.json",
     "./mcp-tools": {
       "types": "./dist/src/mcp-tools/index.d.ts",
@@ -386,7 +430,6 @@
   },
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
-    "@hive-flow/shared": "workspace:*",
     "@noble/ed25519": "^3.0.0",
     "agent-browser": "^0.6.0",
     "ajv": "^8.18.0",

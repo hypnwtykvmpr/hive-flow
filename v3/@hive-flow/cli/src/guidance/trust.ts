@@ -22,7 +22,7 @@
  * @module @hive-flow/cli/guidance/trust
  */
 
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 // ============================================================================
 // Types
@@ -628,4 +628,4 @@ function scoreToTier(score: number): TrustTier {
   return 'untrusted';
 }
 
-// clamp imported from @hive-flow/shared
+// clamp imported from @hive-flow/cli/shared

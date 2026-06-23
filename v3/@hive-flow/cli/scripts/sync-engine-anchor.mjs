@@ -27,7 +27,7 @@ function findUmbrellaRoot(startDir) {
           : Array.isArray(pkg.bundleDependencies)
             ? pkg.bundleDependencies
             : [];
-        if (pkg.name === 'hive-flow' && bundled.includes('@hive-flow/shared')) {
+        if (pkg.name === 'hive-flow' && bundled.includes('@hive-flow/providers')) {
           return current;
         }
       } catch {

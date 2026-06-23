@@ -4,7 +4,7 @@
  * agent taxonomy. Note: the role taxonomy is architectural and intentionally
  * 15 named roles; the runtime working/queued capacity is independent and is
  * defined by DEFAULT_MAX_AGENTS (150) + DEFAULT_QUEUE_DEPTH (30) in
- * @hive-flow/shared/core/config/defaults.
+ * @hive-flow/cli/shared/core/config/defaults.
  *
  * Based on ADR-002 (DDD) and the 15-role taxonomy.
  */

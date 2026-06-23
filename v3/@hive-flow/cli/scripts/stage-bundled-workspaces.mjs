@@ -3,7 +3,7 @@
  * stage-bundled-workspaces.mjs
  *
  * Stages the unpublished runtime workspace packages that the installed CLI dist
- * imports as BARE specifiers (e.g. `@hive-flow/shared`) into the umbrella
+ * imports as BARE workspace specifiers (e.g. `@hive-flow/providers`) into the umbrella
  * package's own `node_modules/@hive-flow/<pkg>`, so they resolve as real
  * dependencies once `hive-flow` is installed via `npm i -g`.
  *
@@ -24,7 +24,6 @@
  * workspace dependency.
  *
  * Eager runtime closure (traced from bin/cli.js -> dist/src/index.js):
- *   - @hive-flow/shared       (bare + /core/config/defaults + /workflow)  REQUIRED for every command
  *   - @hive-flow/providers    (/scripts/agent-task-journal.mjs)           REQUIRED for every command
  *   - guidance command code now lives inside @hive-flow/cli/dist/src/guidance
  *
@@ -58,7 +57,7 @@ function findUmbrellaRoot(startDir) {
           : Array.isArray(pkg.bundleDependencies)
             ? pkg.bundleDependencies
             : [];
-        if (pkg.name === 'hive-flow' && bundled.includes('@hive-flow/shared')) {
+        if (pkg.name === 'hive-flow' && bundled.includes('@hive-flow/providers')) {
           return current;
         }
       } catch {
@@ -82,7 +81,6 @@ const destRoot = join(repoRoot, 'node_modules', '@hive-flow');
 // `copy` lists the package-relative paths to stage (dist always; extra runtime
 // assets as needed).
 const BUNDLED = [
-  { name: 'shared', copy: ['dist'] },
   { name: 'providers', copy: ['dist', 'scripts'] },
 ];
 

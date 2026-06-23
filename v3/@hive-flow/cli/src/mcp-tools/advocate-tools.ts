@@ -1,6 +1,6 @@
 import type { MCPTool } from './types.js';
 import { loadHive } from './hive-store.js';
-import { WorkflowStateMachine } from '@hive-flow/shared/workflow';
+import { WorkflowStateMachine } from '../shared/workflow/index.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmdirSync, statSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 

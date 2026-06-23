@@ -4679,7 +4679,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/neural` | Self-learning | SONA, 9 RL algorithms, EWC++ memory preservation |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
-| `@hive-flow/shared` | Common utilities | Types, validation schemas, constants |
+| `@hive-flow/cli/shared` | Common utilities | Types, validation schemas, constants |
 | `@hive-flow/cli/browser` | Browser automation | 59 MCP tools, element refs, trajectory learning |
 
 ### Architecture Principles
@@ -6041,7 +6041,7 @@ cp -r ./data-backup-v2 ./data
 | `@hive-flow/cli/integration` | local compatibility API integration | [Source](./src/integration/) |
 | `@hive-flow/cli/performance` | Benchmarking & optimization | [Source](docs/performance/) |
 | `@hive-flow/cli/deployment` | Release helper internals | [Source](./src/deployment/) |
-| `@hive-flow/shared` | Shared utilities, types & V3ProgressService | [Source](../shared/) |
+| `@hive-flow/cli/shared` | Shared utilities, types & V3ProgressService | [Source](../shared/) |
 
 ### Additional Resources
 

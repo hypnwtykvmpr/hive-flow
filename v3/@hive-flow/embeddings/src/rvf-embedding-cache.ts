@@ -18,12 +18,18 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs';
+import { randomBytes } from 'crypto';
 import { dirname } from 'path';
-import { generateSecureId } from '@hive-flow/shared';
 
 /** Validate a file path is safe */
 function validatePath(p: string): void {
   if (p.includes('\0')) throw new Error('Cache path contains null bytes');
+}
+
+function generateSecureId(prefix?: string, length = 12): string {
+  const ts = Date.now().toString(36);
+  const rand = randomBytes(length).toString('hex');
+  return prefix ? `${prefix}_${ts}_${rand}` : `${ts}_${rand}`;
 }
 
 // ============================================================================

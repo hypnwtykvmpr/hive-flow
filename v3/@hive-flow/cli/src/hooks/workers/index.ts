@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { TimerManager, DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
+import { TimerManager, DEFAULT_MAX_AGENTS } from '../../shared/index.js';
 
 // ============================================================================
 // Security Constants

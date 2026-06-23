@@ -26,7 +26,7 @@ import { tmpdir } from 'node:os';
 import { BinaryBackend } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
 import type { BinaryBackendConfig } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
 import { HnswLite, cosineSimilarity } from '../v3/@hive-flow/cli/src/memory/hnsw-lite.js';
-import { RvfEventLog } from '../v3/@hive-flow/shared/src/events/rvf-event-log.js';
+import { RvfEventLog } from '../v3/@hive-flow/cli/src/shared/events/rvf-event-log.js';
 import { RvfEmbeddingCache } from '../v3/@hive-flow/embeddings/src/rvf-embedding-cache.js';
 import { RvfEmbeddingService } from '../v3/@hive-flow/embeddings/src/rvf-embedding-service.js';
 import { BinaryMigrator } from '../v3/@hive-flow/cli/src/memory/binary-migration.js';

@@ -23,7 +23,7 @@ import type {
   RetrievalRequest,
   RetrievalResult,
 } from './types.js';
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 // ============================================================================
 // Intent Classification

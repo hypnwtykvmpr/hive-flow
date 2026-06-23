@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { systemConfigToV3Config, v3ConfigToSystemConfig } from '../src/config-adapter.js';
-import type { SystemConfig } from '@hive-flow/shared';
+import type { SystemConfig } from '../src/shared/index.js';
 import type { V3Config } from '../src/types.js';
 
 describe('ConfigAdapter', () => {

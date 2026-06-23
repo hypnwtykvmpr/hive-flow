@@ -22,7 +22,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
-import { projectKeyFor, sessionKeyFor } from '@hive-flow/shared';
+import { projectKeyFor, sessionKeyFor } from '../shared/index.js';
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { readStatuslineStdin, renderClaudeCodeStatuslineWithMeta } from '../statusline/claude-code-renderer.js';

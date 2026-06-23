@@ -182,7 +182,7 @@ export class PerformanceBaseline {
    */
   private async simulateStartup(): Promise<void> {
     // Import key modules to simulate startup
-    await import('@hive-flow/shared');
+    await import('../../shared/index.js');
     await import('@hive-flow/cli/memory');
   }
 
@@ -250,7 +250,7 @@ export class PerformanceBaseline {
    * Benchmark event bus operations
    */
   private async benchmarkEventBus(): Promise<number> {
-    const { EventBus, createAgentSpawnedEvent } = await import('@hive-flow/shared');
+    const { EventBus, createAgentSpawnedEvent } = await import('../../shared/index.js');
     const eventBus = new EventBus();
 
     const iterations = 1000;
@@ -290,13 +290,13 @@ export class PerformanceBaseline {
    * Benchmark event throughput
    */
   private async benchmarkEventThroughput(): Promise<number> {
-    const { EventBus } = await import('@hive-flow/shared');
+    const { EventBus } = await import('../../shared/index.js');
     const eventBus = new EventBus();
 
     let count = 0;
     eventBus.subscribe('agent:spawned', () => { count++; });
 
-    const { createAgentSpawnedEvent } = await import('@hive-flow/shared');
+    const { createAgentSpawnedEvent } = await import('../../shared/index.js');
     const duration = 1000; // 1 second
     const start = Date.now();
 

@@ -215,7 +215,7 @@ const warnings = auditSecurityConfig({
 
 ## Related Packages
 
-- [@hive-flow/shared](../shared) - Shared types and utilities
+- [@hive-flow/cli/shared](../shared) - Shared types and utilities
 - [@hive-flow/cli/swarm](../cli/docs/swarm) - Swarm coordination (secure agent spawning)
 
 ## License

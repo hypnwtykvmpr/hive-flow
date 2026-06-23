@@ -75,7 +75,7 @@ vi.mock('../install/native-helper-installer.js', () => ({
   })),
 }));
 
-vi.mock('@hive-flow/shared', () => ({
+vi.mock('../shared/index.js', () => ({
   loadConfig: vi.fn(async () => ({})),
   ProviderRegistry: class {
     async initialize() {

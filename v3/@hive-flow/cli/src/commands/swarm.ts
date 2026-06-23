@@ -9,7 +9,7 @@ import { select, confirm, multiSelect } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 
 // Get dynamic swarm status from memory/session files
 function getSwarmStatus(swarmId?: string) {

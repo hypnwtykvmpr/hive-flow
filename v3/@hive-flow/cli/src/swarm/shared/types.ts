@@ -3,7 +3,7 @@
  * Core type definitions for multi-agent swarm coordination
  *
  * This file provides all types needed for standalone operation
- * without dependency on @hive-flow/shared
+ * without dependency on @hive-flow/cli/shared
  */
 
 // =============================================================================

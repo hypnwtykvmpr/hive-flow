@@ -24,18 +24,18 @@ import { executeBugHunterScan } from './bug-hunter.js';
 // ---------------------------------------------------------------------------
 // Shared Workflow Module Integration (Gap 2 + Gap 4)
 // ---------------------------------------------------------------------------
-// Import shared module types and factories. The @hive-flow/shared/workflow
+// Import shared module types and factories. The @hive-flow/cli/shared/workflow
 // subpath is resolved via the package.json "exports" map.
 
 import type {
   WorkflowModule,
   ModuleExecutionContext,
   ModuleExecutionResult,
-} from '@hive-flow/shared/workflow';
+} from '../shared/workflow/index.js';
 
 import {
   WorkflowStateMachine,
-} from '@hive-flow/shared/workflow';
+} from '../shared/workflow/index.js';
 
 import {
   createInvestigateModule,
@@ -46,7 +46,7 @@ import {
   createImplementModule,
   createAuditModule,
   createCommitModule,
-} from '@hive-flow/shared/workflow';
+} from '../shared/workflow/index.js';
 
 // ---------------------------------------------------------------------------
 // Per-workflow state machine store (B10)

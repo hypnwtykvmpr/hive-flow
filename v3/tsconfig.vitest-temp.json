@@ -29,18 +29,12 @@
       ],
       "@hive-flow/cli/*": [
         "./@hive-flow/cli/src/*"
-      ],
-      "@hive-flow/shared": [
-        "./@hive-flow/shared/src"
       ]
     },
     "emitDeclarationOnly": false,
     "tsBuildInfoFile": "/workspaces/hive-flow/v3/node_modules/.pnpm/vitest@1.6.1_@types+node@20.19.27/node_modules/vitest/dist/vendor/tsconfig.tmp.tsbuildinfo"
   },
   "references": [
-    {
-      "path": "./@hive-flow/shared"
-    },
     {
       "path": "./@hive-flow/cli"
     }

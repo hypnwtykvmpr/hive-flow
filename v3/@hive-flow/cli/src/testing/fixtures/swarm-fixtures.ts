@@ -7,7 +7,7 @@
  * Based on ADR-003 (Single Coordination Engine) and V3 swarm specifications.
  */
 import { vi, type Mock } from 'vitest';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core';
+import { DEFAULT_MAX_AGENTS } from '../../shared/core/index.js';
 import type { V3AgentType, AgentInstance, MockAgent, createMockAgent } from './agent-fixtures.js';
 
 /**

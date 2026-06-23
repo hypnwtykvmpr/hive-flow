@@ -13,7 +13,7 @@
 import { EventEmitter } from 'events';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { TimerManager } from '@hive-flow/shared';
+import { TimerManager } from '../shared/index.js';
 import {
   HeadlessWorkerExecutor,
   HEADLESS_WORKER_TYPES,

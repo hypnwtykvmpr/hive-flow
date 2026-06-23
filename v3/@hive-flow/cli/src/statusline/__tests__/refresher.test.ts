@@ -35,7 +35,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-import { sessionKeyFor } from '@hive-flow/shared';
+import { sessionKeyFor } from '../../shared/index.js';
 
 import { refreshStatuslineSnapshot } from '../refresher.js';
 import { globalStatuslinePaths, statuslinePaths } from '../paths.js';

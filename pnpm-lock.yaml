@@ -50,9 +50,6 @@ importers:
       '@hive-flow/providers':
         specifier: 3.0.0-alpha.6
         version: link:v3/@hive-flow/providers
-      '@hive-flow/shared':
-        specifier: 3.0.0-alpha.6
-        version: link:v3/@hive-flow/shared
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.1.0
@@ -111,9 +108,6 @@ importers:
       '@ast-grep/napi':
         specifier: ^0.43.0
         version: 0.43.0
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.1.0
@@ -209,9 +203,6 @@ importers:
 
   v3/@hive-flow/embeddings:
     dependencies:
-      '@hive-flow/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@xenova/transformers':
         specifier: ^2.17.2
         version: 2.17.2
@@ -238,43 +229,6 @@ importers:
       tsx:
         specifier: ^4.19.0
         version: 4.21.0
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  v3/@hive-flow/shared:
-    dependencies:
-      cors:
-        specifier: ^2.8.6
-        version: 2.8.6
-      express:
-        specifier: ^5.2.1
-        version: 5.2.1
-      helmet:
-        specifier: ^8.1.0
-        version: 8.1.0
-      sql.js:
-        specifier: ^1.14.1
-        version: 1.14.1
-      ws:
-        specifier: 8.21.0
-        version: 8.21.0
-      zod:
-        specifier: ^3.25.0
-        version: 3.25.76
-    devDependencies:
-      '@types/cors':
-        specifier: ^2.8.17
-        version: 2.8.19
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.25
-      '@types/sql.js':
-        specifier: ^1.4.9
-        version: 1.4.11
-      '@types/ws':
-        specifier: ^8.5.10
-        version: 8.18.1
       vitest:
         specifier: ^4.0.16
         version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)

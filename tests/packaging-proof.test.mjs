@@ -334,7 +334,7 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     // The installed CLI dist imports BARE `@hive-flow/*` specifiers (shared,
     // providers). `workspace:*` does not resolve once
     // installed, so these MUST ship as real node_modules/@hive-flow/* entries.
-    // Regression guard for ERR_MODULE_NOT_FOUND: Cannot find package '@hive-flow/shared'.
+    // Regression guard for ERR_MODULE_NOT_FOUND: Cannot find package '@hive-flow/cli/shared'.
     const REQUIRED_BUNDLED = ['shared', 'providers'];
     for (const name of REQUIRED_BUNDLED) {
       const pj = files.find(
@@ -399,7 +399,7 @@ describe('packaging proof: hive-flow (umbrella) tarball', () => {
     );
     // Broadened (Codex bounce): ZERO __tests__/ ANYWHERE in the umbrella tarball,
     // not just bundled node_modules. The root `files` directly allowlists
-    // `v3/@hive-flow/shared/dist/**/*.js`, which also pulled in dist/.../__tests__/;
+    // `v3/@hive-flow/cli/docs/shared/dist/**/*.js`, which also pulled in dist/.../__tests__/;
     // the root `!**/__tests__/**` negation now excludes them. Regression guard.
     const shippedTests = files.filter((p) => /(^|\/)__tests__\//.test(p));
     assert.deepEqual(
@@ -497,7 +497,7 @@ describe('install smoke: hive-flow tarball resolves bundled @hive-flow/* post-in
 
   it('installs the bundled @hive-flow/* packages into the package node_modules', () => {
     const nm = join(prefix, 'lib', 'node_modules', 'hive-flow', 'node_modules', '@hive-flow');
-    for (const name of ['shared', 'providers']) {
+    for (const name of ['providers']) {
       assert.ok(
         statSync(join(nm, name, 'package.json')).isFile(),
         `bundled @hive-flow/${name} did not install`,
@@ -512,12 +512,12 @@ describe('install smoke: hive-flow tarball resolves bundled @hive-flow/* post-in
 
   // HARD GATE — the actual Slice 2b invariant: bare @hive-flow/* specifiers
   // resolve from the installed package layout (the original bug was
-  // `Cannot find package '@hive-flow/shared'`). This is deterministic and does
+  // `Cannot find package '@hive-flow/cli/shared'`). This is deterministic and does
   // NOT depend on heavy/native command-tree deps (e.g. @ast-grep/napi).
   it('resolves bare @hive-flow/* imports from the installed layout', () => {
     const pkgDir = join(prefix, 'lib', 'node_modules', 'hive-flow');
     const script = [
-      "await import('@hive-flow/shared');",
+      "await import('@hive-flow/cli/shared');",
       "await import('./v3/@hive-flow/cli/dist/src/integration/index.js');",
       "await import('@hive-flow/providers/scripts/agent-task-journal.mjs');",
       "await import('./v3/@hive-flow/cli/dist/src/guidance/compiler.js');",

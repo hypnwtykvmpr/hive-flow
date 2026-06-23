@@ -3,11 +3,11 @@
  * Event-driven communication for multi-agent swarm coordination
  *
  * This file provides a complete event system for standalone operation
- * without dependency on @hive-flow/shared
+ * without dependency on @hive-flow/cli/shared
  */
 
 import type { SwarmEvent, EventType, EventHandler, AgentId } from './types.js';
-import { generateSecureId } from '@hive-flow/shared';
+import { generateSecureId } from '../../shared/index.js';
 
 // =============================================================================
 // Event Bus Interface

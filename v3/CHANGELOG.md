@@ -128,7 +128,7 @@ Complete restructure into 10 independent @hive-flow modules:
 - Rollback mechanisms
 - Health check monitoring
 
-#### 10. `@hive-flow/shared` - Shared Utilities
+#### 10. `@hive-flow/cli/shared` - Shared Utilities
 - Common types and interfaces
 - Platform detection and adaptation
 - Configuration management

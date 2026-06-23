@@ -3,19 +3,34 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@hive-flow/cli": ["./@hive-flow/cli/src"],
-      "@hive-flow/cli/*": ["./@hive-flow/cli/src/*"],
-      "@hive-flow/shared": ["./@hive-flow/shared/src"],
-      "@hive-flow/embeddings": ["./@hive-flow/embeddings/src"],
-      "@hive-flow/providers": ["./@hive-flow/providers/src"]
+      "@hive-flow/cli": [
+        "./@hive-flow/cli/src"
+      ],
+      "@hive-flow/cli/*": [
+        "./@hive-flow/cli/src/*"
+      ],
+      "@hive-flow/embeddings": [
+        "./@hive-flow/embeddings/src"
+      ],
+      "@hive-flow/providers": [
+        "./@hive-flow/providers/src"
+      ]
     }
   },
   "references": [
-    { "path": "./@hive-flow/shared" },
-    { "path": "./@hive-flow/cli" },
-    { "path": "./@hive-flow/embeddings" },
-    { "path": "./@hive-flow/providers" }
+    {
+      "path": "./@hive-flow/cli"
+    },
+    {
+      "path": "./@hive-flow/embeddings"
+    },
+    {
+      "path": "./@hive-flow/providers"
+    }
   ],
   "include": [],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

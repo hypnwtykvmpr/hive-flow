@@ -47,7 +47,7 @@ import {
   buildAndInstallNativeHelpers,
   ensureHelperBinOnPath,
 } from '../install/native-helper-installer.js';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 
 async function importConnectorAdapters(): Promise<void> {
   await Promise.all([

@@ -33,7 +33,7 @@
 import { lstat, open } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 
-import { sessionKeyFor } from '@hive-flow/shared';
+import { sessionKeyFor } from '../shared/index.js';
 
 import { loadStatuslineConfig, type StatuslineConfig } from './config.js';
 import { globalStatuslinePaths, statuslinePaths } from './paths.js';

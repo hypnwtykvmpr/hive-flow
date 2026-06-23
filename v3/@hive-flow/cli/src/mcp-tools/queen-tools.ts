@@ -14,7 +14,7 @@
 import { randomUUID } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
-import { sanitizePathId } from '@hive-flow/shared';
+import { sanitizePathId } from '../shared/index.js';
 import {
   transitionAgent,
   propagateEnforcementToSubAgent,

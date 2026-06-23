@@ -9,7 +9,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmdirSync, renameSync, statSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { sanitizePathId } from '@hive-flow/shared';
+import { sanitizePathId } from '../shared/index.js';
 
 // ---------------------------------------------------------------------------
 // Constants

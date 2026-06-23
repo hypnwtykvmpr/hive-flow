@@ -19,7 +19,7 @@
 
 import { EventEmitter } from 'events';
 import type { Task, TaskResult, AgentStatus, Message } from './worker-task-types.js';
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 /**
  * Worker configuration interface

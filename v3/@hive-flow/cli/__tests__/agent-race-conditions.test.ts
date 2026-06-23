@@ -52,7 +52,7 @@ import {
   mkdirSync,
   renameSync,
 } from 'node:fs';
-import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '../src/shared/core/config/defaults.js';
 import { agentTools, loadAgentStore, transitionAgent } from '../src/mcp-tools/agent-tools.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

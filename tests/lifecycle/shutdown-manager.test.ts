@@ -10,10 +10,10 @@ vi.mock('node:child_process');
 vi.mock('node:fs/promises');
 
 // Import after mocking
-import { ShutdownManager, ShutdownEvents } from '../../v3/@hive-flow/shared/src/lifecycle/shutdown-manager.js';
-import { ProcessGroupManager } from '../../v3/@hive-flow/shared/src/lifecycle/process-group-manager.js';
-import { ResourceCleaner } from '../../v3/@hive-flow/shared/src/lifecycle/resource-cleaner.js';
-import type { IEventBus } from '../../v3/@hive-flow/shared/src/core/interfaces/event.interface.js';
+import { ShutdownManager, ShutdownEvents } from '../../v3/@hive-flow/cli/src/shared/lifecycle/shutdown-manager.js';
+import { ProcessGroupManager } from '../../v3/@hive-flow/cli/src/shared/lifecycle/process-group-manager.js';
+import { ResourceCleaner } from '../../v3/@hive-flow/cli/src/shared/lifecycle/resource-cleaner.js';
+import type { IEventBus } from '../../v3/@hive-flow/cli/src/shared/core/interfaces/event.interface.js';
 
 /** Create a mock EventBus */
 function createMockEventBus(): IEventBus & { emit: Mock } {

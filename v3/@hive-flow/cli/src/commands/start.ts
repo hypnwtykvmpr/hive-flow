@@ -10,7 +10,7 @@ import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { loadSentinelConfig, SentinelConfigError } from '../sentinel/config.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 
 // Default configuration
 const DEFAULT_PORT = 3000;

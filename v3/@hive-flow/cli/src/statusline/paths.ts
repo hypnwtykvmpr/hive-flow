@@ -24,7 +24,7 @@
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 
-import { resolveHiveHome } from '@hive-flow/shared';
+import { resolveHiveHome } from '../shared/index.js';
 
 // ---------------------------------------------------------------------------
 // Project-scoped paths

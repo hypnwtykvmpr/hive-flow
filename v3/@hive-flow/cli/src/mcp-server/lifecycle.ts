@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { EventEmitter } from 'node:events';
-import { resolveHiveHome } from '@hive-flow/shared';
+import { resolveHiveHome } from '../shared/index.js';
 
 export interface CredentialHolderProbeLike {
   available: boolean;

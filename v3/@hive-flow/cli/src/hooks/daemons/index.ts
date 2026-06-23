@@ -14,7 +14,7 @@ import type {
   DaemonStatus,
   DaemonManagerConfig,
 } from '../types.js';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
+import { DEFAULT_MAX_AGENTS } from '../../shared/index.js';
 
 /**
  * Daemon instance

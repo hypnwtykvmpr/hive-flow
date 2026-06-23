@@ -4,7 +4,7 @@ import { mkdir, chmod, readFile } from 'node:fs/promises';
 import { atomicWrite } from './atomic-merge.js';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '@hive-flow/shared/core/config/defaults';
+import { DEFAULT_MAX_AGENTS, DEFAULT_QUEUE_DEPTH } from '../shared/core/config/defaults.js';
 
 /**
  * POSIX single-quote escaping for embedding a path into a bash single-quoted

@@ -10,7 +10,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { clamp } from '@hive-flow/shared';
+import { clamp } from '../shared/index.js';
 
 // ============================================================================
 // Types

@@ -3,8 +3,8 @@
  * Converts between SystemConfig and V3Config types
  */
 
-import type { SystemConfig } from '@hive-flow/shared';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared/core/config/defaults';
+import type { SystemConfig } from './shared/index.js';
+import { DEFAULT_MAX_AGENTS } from './shared/core/config/defaults.js';
 import type { V3Config } from './types.js';
 
 /**

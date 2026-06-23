@@ -16,7 +16,7 @@ import type {
   StatuslineData,
   StatuslineConfig,
 } from '../types.js';
-import { DEFAULT_MAX_AGENTS } from '@hive-flow/shared';
+import { DEFAULT_MAX_AGENTS } from '../../shared/index.js';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
