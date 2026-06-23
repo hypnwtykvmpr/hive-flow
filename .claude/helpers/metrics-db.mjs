@@ -209,7 +209,7 @@ function calculateModuleProgress(moduleDir) {
  * Check security file status
  */
 function checkSecurityFile(filename, minLines = 100) {
-  const filePath = join(V3_DIR, '@hive-flow/security/src', filename);
+  const filePath = join(V3_DIR, '@hive-flow/cli/src/security', filename);
   if (!existsSync(filePath)) return false;
 
   try {
@@ -389,7 +389,7 @@ function getMetricsJSON() {
 function exportToJSON() {
   const metrics = getMetricsJSON();
   const metricsDir = join(PROJECT_ROOT, '.hive-flow/metrics');
-  const securityDir = join(PROJECT_ROOT, '.hive-flow/security');
+  const securityDir = join(PROJECT_ROOT, '.hive-flow/cli/security');
 
   if (!existsSync(metricsDir)) mkdirSync(metricsDir, { recursive: true });
   if (!existsSync(securityDir)) mkdirSync(securityDir, { recursive: true });

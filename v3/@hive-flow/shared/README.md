@@ -296,7 +296,7 @@ export * from './types/mcp.types';
 This package is a dependency of all other @hive-flow modules:
 
 - [@hive-flow/cli](../cli) - CLI module
-- [@hive-flow/security](../security) - Security & validation
+- [@hive-flow/cli/security](../cli/docs/security/README.md) - Security & validation
 - [@hive-flow/memory](../memory) - HiveMemory & HNSW indexing
 - [@hive-flow/cli/neural](../cli/docs/neural/) - SONA learning & RL algorithms
 - [@hive-flow/cli/performance](../cli/docs/performance) - Benchmarking & optimization

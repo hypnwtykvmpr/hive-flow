@@ -204,7 +204,7 @@ The QE security-compliance context adapts to V3's security module patterns and u
 ```typescript
 // v3/plugins/agentic-qe/src/infrastructure/security-bridge.ts
 
-import type { SecurityModule } from '@hive-flow/security';
+import type { SecurityModule } from '@hive-flow/cli/security';
 
 export class QESecurityBridge {
   constructor(private security: SecurityModule) {}

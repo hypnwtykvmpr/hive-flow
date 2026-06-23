@@ -1381,7 +1381,7 @@ export function createDDDWorker(projectRoot: string): WorkerHandler {
       { mod: '@hive-flow/cli/integration', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'integration') },
       { mod: '@hive-flow/providers', srcPath: path.join(v3Path, '@hive-flow/providers', 'src') },
       { mod: '@hive-flow/memory', srcPath: path.join(v3Path, '@hive-flow/memory', 'src') },
-      { mod: '@hive-flow/security', srcPath: path.join(v3Path, '@hive-flow/security', 'src') },
+      { mod: '@hive-flow/cli/security', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'security') },
     ];
 
     // Process all modules in parallel for 70-90% speedup

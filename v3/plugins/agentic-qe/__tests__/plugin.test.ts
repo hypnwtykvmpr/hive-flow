@@ -74,7 +74,6 @@ class MockAQEPlugin {
       dependencies: [
         '@hive-flow/plugins',
         '@hive-flow/memory',
-        '@hive-flow/security',
         '@hive-flow/embeddings',
       ],
       tags: ['testing', 'quality', 'coverage', 'security', 'tdd'],
@@ -324,7 +323,7 @@ describe('AQEPlugin', () => {
     it('should have required dependencies', () => {
       expect(plugin.metadata.dependencies).toContain('@hive-flow/plugins');
       expect(plugin.metadata.dependencies).toContain('@hive-flow/memory');
-      expect(plugin.metadata.dependencies).toContain('@hive-flow/security');
+      expect(plugin.metadata.dependencies).toContain('@hive-flow/embeddings');
     });
 
     it('should have expected tags', () => {

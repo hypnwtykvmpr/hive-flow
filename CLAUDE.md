@@ -162,7 +162,7 @@ Automated watcher system that monitors hive worker progress without polling.
 | `@hive-flow/cli/guidance` | `v3/@hive-flow/cli/src/guidance/` | Governance control plane |
 | `@hive-flow/cli/hooks` | `v3/@hive-flow/cli/src/hooks/` | 17 hooks + 12 workers |
 | `@hive-flow/memory` | `v3/@hive-flow/memory/` | HiveMemory + HNSW search |
-| `@hive-flow/security` | `v3/@hive-flow/security/` | Input validation, CVE remediation |
+| `@hive-flow/cli/security` | `v3/@hive-flow/cli/src/security/` | Input validation, CVE remediation |
 
 ## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
 
@@ -611,7 +611,7 @@ claude -p --dangerously-skip-permissions "Fix all lint errors in src/"
 ### V3 Specialized Agents
 `security-architect`, `security-auditor`, `memory-specialist`, `performance-engineer`
 
-### @hive-flow/security Module
+### @hive-flow/cli/security Subpath
 CVE remediation, input validation, path security:
 - `InputValidator` — Zod-based validation at boundaries
 - `PathValidator` — Path traversal prevention
@@ -869,7 +869,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 | Plugin | Version | Description |
 |--------|---------|-------------|
 | `@hive-flow/embeddings` | 3.0.0-alpha.1 | Vector embeddings with sql.js, HNSW, hyperbolic support |
-| `@hive-flow/security` | 3.0.0-alpha.1 | Input validation, path security, CVE remediation |
+| `@hive-flow/cli/security` | 3.0.0-alpha.1 | Input validation, path security, CVE remediation |
 | `@hive-flow/cli/claims` | 3.1.0-alpha.52 | Preserved claims API subpath; live commands are built into `hive-flow claims` |
 | `@hive-flow/cli/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
 | `@hive-flow/plugins` | 3.0.0-alpha.1 | Plugin system core (manager, discovery, store) |

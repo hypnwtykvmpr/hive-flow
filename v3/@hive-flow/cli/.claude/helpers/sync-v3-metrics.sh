@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 V3_DIR="$PROJECT_ROOT/v3"
 METRICS_DIR="$PROJECT_ROOT/.hive-flow/metrics"
-SECURITY_DIR="$PROJECT_ROOT/.hive-flow/security"
+SECURITY_DIR="$PROJECT_ROOT/.hive-flow/cli/security"
 
 # Ensure directories exist
 mkdir -p "$METRICS_DIR" "$SECURITY_DIR"
@@ -73,7 +73,7 @@ calculate_module_progress() {
 # Check security CVE status
 check_security_status() {
     local cves_fixed=0
-    local security_dir="$V3_DIR/@hive-flow/security/src"
+    local security_dir="$V3_DIR/@hive-flow/cli/src/security"
 
     # CVE-1: Input validation - check for input-validator.ts
     if [ -f "$security_dir/input-validator.ts" ]; then
@@ -206,21 +206,21 @@ EOF
       "id": "CVE-1",
       "description": "Input validation bypass",
       "severity": "critical",
-      "status": "$([ -f "$V3_DIR/@hive-flow/security/src/input-validator.ts" ] && echo "fixed" || echo "pending")",
+      "status": "$([ -f "$V3_DIR/@hive-flow/cli/src/security/input-validator.ts" ] && echo "fixed" || echo "pending")",
       "fixedBy": "input-validator.ts"
     },
     {
       "id": "CVE-2",
       "description": "Path traversal vulnerability",
       "severity": "critical",
-      "status": "$([ -f "$V3_DIR/@hive-flow/security/src/path-validator.ts" ] && echo "fixed" || echo "pending")",
+      "status": "$([ -f "$V3_DIR/@hive-flow/cli/src/security/path-validator.ts" ] && echo "fixed" || echo "pending")",
       "fixedBy": "path-validator.ts"
     },
     {
       "id": "CVE-3",
       "description": "Command injection vulnerability",
       "severity": "critical",
-      "status": "$([ -f "$V3_DIR/@hive-flow/security/src/safe-executor.ts" ] && echo "fixed" || echo "pending")",
+      "status": "$([ -f "$V3_DIR/@hive-flow/cli/src/security/safe-executor.ts" ] && echo "fixed" || echo "pending")",
       "fixedBy": "safe-executor.ts"
     }
   ],

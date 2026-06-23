@@ -918,7 +918,6 @@ export const pluginsCommand: Command = {
     output.writeln();
     output.writeln(output.bold('Official Plugins:'));
     output.printList([
-      '@hive-flow/security            - Security scanning and CVE detection',
       '@hive-flow/embeddings          - Vector embeddings with hyperbolic support',
       '@hive-flow/plugin-perf-optimizer - Performance profiling and benchmarks',
       '@hive-flow/plugin-gastown-bridge - Gas Town orchestrator integration (WASM-accelerated)',

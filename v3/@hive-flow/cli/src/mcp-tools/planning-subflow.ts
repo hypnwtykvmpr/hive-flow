@@ -397,7 +397,7 @@ export function findReferenceCode(solutions: Solution[]): Solution[] {
       refs.push('v3/@hive-flow/cli/src/mcp-tools/');
     }
     if (lower.includes('security') || lower.includes('auth')) {
-      refs.push('v3/@hive-flow/security/src/');
+      refs.push('v3/@hive-flow/cli/src/security/');
     }
 
     // Note: in practice, use grep/glob MCP tools for real discovery
@@ -540,7 +540,7 @@ export function additionalResearch(gapAnalysis: GapAnalysis): GapAnalysis {
         return {
           ...gap,
           addressed: true,
-          research: 'Apply OWASP guidelines. Use @hive-flow/security InputValidator for boundary checks. Never hardcode secrets. Use parameterized queries.',
+          research: 'Apply OWASP guidelines. Use @hive-flow/cli/security InputValidator for boundary checks. Never hardcode secrets. Use parameterized queries.',
         };
       case 'blindspot':
         return {

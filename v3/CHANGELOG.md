@@ -56,7 +56,7 @@ Complete restructure into 10 independent @hive-flow modules:
 
 ### 🔧 New @hive-flow Modules
 
-#### 1. `@hive-flow/security` - Security Module
+#### 1. `@hive-flow/cli/security` - Security Module
 - CVE-1, CVE-2, CVE-3 remediation
 - Input validation and sanitization
 - Secure credential management
@@ -274,8 +274,8 @@ Complete restructure into 10 independent @hive-flow modules:
 # Initialize v3
 hive-flow init --v3
 
-# Run security audit
-npx @hive-flow/security audit
+# Build CLI security helpers
+corepack pnpm --dir v3 --filter @hive-flow/cli build
 
 # Start with unified memory
 npx @hive-flow/memory unify --backend hivememory

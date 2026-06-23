@@ -250,7 +250,7 @@ describe('PathValidator', () => {
   describe('normalize', () => {
     it('should delegate to path utils for normalization', () => {
       // Given
-      const path = './src/../src/file.ts';
+      const path = './src/../file.ts';
       mockPathUtils.normalize.mockReturnValue('/normalized/path');
 
       // When

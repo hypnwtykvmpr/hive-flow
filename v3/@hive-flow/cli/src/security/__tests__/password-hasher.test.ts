@@ -13,7 +13,7 @@ import {
   PasswordHasher,
   PasswordHashError,
   createPasswordHasher,
-} from '../src/password-hasher.js';
+} from '../password-hasher.js';
 
 describe('PasswordHasher', () => {
   let hasher: PasswordHasher;

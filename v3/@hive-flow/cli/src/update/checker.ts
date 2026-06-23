@@ -37,7 +37,6 @@ const DEFAULT_CONFIG: UpdateConfig = {
     major: false,
   },
   priority: {
-    '@hive-flow/security': 'critical',
     '@hive-flow/cli': 'high',
     '@hive-flow/embeddings': 'normal',
   },
@@ -48,7 +47,6 @@ const DEFAULT_CONFIG: UpdateConfig = {
 const HIVE_FLOW_PACKAGES = [
   '@hive-flow/cli',
   '@hive-flow/embeddings',
-  '@hive-flow/security',
 ];
 
 interface NpmPackageInfo {

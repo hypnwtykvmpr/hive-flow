@@ -24,7 +24,7 @@
     "test:hardening:pr": "pnpm --filter @hive-flow/cli test:testing && pnpm --filter @hive-flow/cli test:property && pnpm --filter @hive-flow/cli test:sentinel && pnpm --filter @hive-flow/cli test:enforcement && pnpm --filter @hive-flow/providers test:provider-hardening",
     "test:hardening:deep": "HIVE_FLOW_PROPERTY_RUNS=1000 pnpm test:hardening:pr",
     "test:bats": "bash scripts/run-bats.sh",
-    "test:security": "pnpm --filter @hive-flow/security test",
+    "test:security": "pnpm --filter @hive-flow/cli exec vitest run src/security/__tests__",
     "test:memory": "pnpm --filter @hive-flow/memory test",
     "test:swarm": "pnpm --filter @hive-flow/cli exec vitest run src/swarm/__tests__",
     "bench": "pnpm --filter @hive-flow/cli bench:performance",
@@ -72,8 +72,7 @@
         "@hive-flow/coordination",
         "@hive-flow/embeddings",
         "@hive-flow/memory",
-        "@hive-flow/plugins",
-        "@hive-flow/security"
+        "@hive-flow/plugins"
       ]
     },
     "overrides": {

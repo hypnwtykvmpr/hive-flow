@@ -22,7 +22,6 @@ interface PackageCompatibility {
 const COMPATIBILITY_MATRIX: Record<string, Record<string, PackageCompatibility>> = {
   '@hive-flow/cli': {
     '@hive-flow/embeddings': { minVersion: '3.0.0-alpha.1' },
-    '@hive-flow/security': { minVersion: '3.0.0-alpha.1' },
   },
   '@hive-flow/embeddings': {
     '@hive-flow/cli': { minVersion: '3.0.0-alpha.50' },

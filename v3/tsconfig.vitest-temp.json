@@ -24,9 +24,6 @@
     "incremental": true,
     "baseUrl": "./",
     "paths": {
-      "@hive-flow/security": [
-        "./@hive-flow/security/src"
-      ],
       "@hive-flow/memory": [
         "./@hive-flow/memory/src"
       ],
@@ -46,9 +43,6 @@
   "references": [
     {
       "path": "./@hive-flow/shared"
-    },
-    {
-      "path": "./@hive-flow/security"
     },
     {
       "path": "./@hive-flow/memory"

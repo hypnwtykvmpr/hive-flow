@@ -30,7 +30,7 @@ import {
   PathSchema,
   PATTERNS,
   LIMITS,
-} from '../src/input-validator.js';
+} from '../input-validator.js';
 
 describe('InputValidator', () => {
   describe('SafeStringSchema', () => {

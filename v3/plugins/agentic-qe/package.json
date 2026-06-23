@@ -47,17 +47,14 @@
   "peerDependencies": {
     "@hive-flow/plugins": "workspace:*",
     "@hive-flow/memory": "workspace:*",
-    "@hive-flow/security": "workspace:*",
-    "@hive-flow/embeddings": "workspace:*"
+    "@hive-flow/embeddings": "workspace:*",
+    "@hive-flow/cli": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@hive-flow/plugins": {
       "optional": true
     },
     "@hive-flow/memory": {
-      "optional": true
-    },
-    "@hive-flow/security": {
       "optional": true
     },
     "@hive-flow/embeddings": {

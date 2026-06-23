@@ -2232,7 +2232,7 @@ The statusline script reads stdin synchronously, falls back to local detection w
 - **Stdin JSON** — Model name, context %, cost, duration (from Claude Code)
 - `.hive-flow/metrics/v3-progress.json` — DDD domain progress
 - `.hive-flow/metrics/swarm-activity.json` — Active agent counts
-- `.hive-flow/security/audit-status.json` — CVE remediation status
+- `.hive-flow/cli/security/audit-status.json` — CVE remediation status
 - **HiveMemory files** — Vector count (estimated from file size), HNSW index status
 - Process detection via `ps aux` — Real-time memory and agent counts
 - Git branch via `git branch --show-current`
@@ -4221,7 +4221,7 @@ console.log(`Hooks executed: ${result.hooksExecuted}`);
 | `@hive-flow/cli/aidefence` | Threat detection | `isSafe`, `checkThreats`, `createAIDefence` |
 | `@hive-flow/embeddings` | Vector embeddings | `createEmbeddingService` |
 | `@hive-flow/cli/hooks` | Event hooks, learning | `HookRegistry`, `HookExecutor`, `ReasoningBank` |
-| `@hive-flow/security` | Input validation | `InputValidator`, `PathValidator` |
+| `@hive-flow/cli/security` | Input validation | `InputValidator`, `PathValidator` |
 | `@hive-flow/cli/neural` | Local pattern learning | `NeuralLearningSystem`, `createNeuralLearningSystem`, `ReasoningBank`, `PatternLearner` |
 | `@hive-flow/providers` | LLM providers | `ProviderRegistry`, `createProvider` |
 | `@hive-flow/plugins` | Plugin SDK | `PluginBuilder`, `createPlugin` |
@@ -4673,7 +4673,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 |--------|---------|--------------|
 | `@hive-flow/cli/hooks` | Event-driven lifecycle | ReasoningBank, 27 hooks, pattern learning |
 | `@hive-flow/memory` | Unified vector storage | HiveMemory, HNSW indexing, fast search, LearningBridge, MemoryGraph, AgentMemoryScope |
-| `@hive-flow/security` | CVE remediation | Input validation, path security, AIDefence |
+| `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/plugins` | WASM extensions | local vector plugins, semantic search, intent routing |
 | `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
@@ -5978,7 +5978,7 @@ import { HiveFlow, Agent, Memory } from 'hive-flow';
 // V3 (new)
 import { HiveFlowClient } from '@hive-flow/cli';
 import { HiveMemory } from '@hive-flow/memory';
-import { ThreatDetector } from '@hive-flow/security';
+import { ThreatDetector } from '@hive-flow/cli/security';
 import { HNSWIndex } from '@hive-flow/embeddings';
 ```
 
@@ -6031,7 +6031,7 @@ cp -r ./data-backup-v2 ./data
 |--------|-------------|------|
 | `@hive-flow/cli/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./src/hooks/) |
 | `@hive-flow/memory` | HiveMemory unification with HNSW indexing | [Source](../memory/) |
-| `@hive-flow/security` | CVE remediation & security patterns | [Source](../security/) |
+| `@hive-flow/cli/security` | CVE remediation & security patterns | [Source](./docs/security/README.md) |
 | `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./src/swarm/) |
 | `@hive-flow/cli` | CLI modernization | [Source](../cli/) |
 | `@hive-flow/cli/neural` | SONA learning integration | [Source](./src/neural/) |

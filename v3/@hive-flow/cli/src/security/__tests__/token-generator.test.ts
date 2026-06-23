@@ -15,7 +15,7 @@ import {
   createTokenGenerator,
   getDefaultGenerator,
   quickGenerate,
-} from '../src/token-generator.js';
+} from '../token-generator.js';
 
 describe('TokenGenerator', () => {
   let generator: TokenGenerator;

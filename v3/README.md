@@ -96,7 +96,7 @@ V3 represents a complete architectural overhaul:
 
 ```
 v3/
-├── @hive-flow/                    # Modular packages (8 packages)
+├── @hive-flow/                    # Modular packages (7 packages)
 │   ├── cli/                         # CLI module (40 commands)
 │   │   ├── bin/                     # Executable
 │   │   ├── e2e/                     # CLI-owned integration tests
@@ -143,11 +143,11 @@ v3/
 
 ## Modules
 
-### @hive-flow/security
+### @hive-flow/cli/security
 Security-first implementation with CVE fixes, input validation, and credential management.
 
 ```typescript
-import { PasswordHasher, validateInput, sanitizePath } from '@hive-flow/security';
+import { PasswordHasher, validateInput, sanitizePath } from '@hive-flow/cli/security';
 
 const hasher = new PasswordHasher();
 const hash = await hasher.hash('password');
@@ -273,7 +273,7 @@ await swarm.initialize();
 ```typescript
 // Import the package you need directly.
 import { UnifiedSwarmCoordinator } from '@hive-flow/cli/swarm';
-import { PasswordHasher } from '@hive-flow/security';
+import { PasswordHasher } from '@hive-flow/cli/security';
 import { HNSWIndex } from '@hive-flow/memory';
 ```
 
@@ -355,7 +355,7 @@ pnpm test:coverage
 | **Search** | HiveMemory HNSW | fast HNSW-indexed |
 | **Attention** | Flash Attention | Flash Attention optimization |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 8 packages |
+| **Code** | Package count | 7 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | SONA adaptation | low-latency |
 
@@ -365,7 +365,7 @@ pnpm test:coverage
 - [Helper System](./@hive-flow/cli/helpers/README.md)
 
 ### Modules
-- [@hive-flow/security](./@hive-flow/security/)
+- [@hive-flow/cli/security](./@hive-flow/cli/docs/security/README.md)
 - [@hive-flow/memory](./@hive-flow/memory/)
 - [@hive-flow/cli/swarm](./@hive-flow/cli/src/swarm/)
 - [@hive-flow/cli/integration](./@hive-flow/cli/src/integration/)

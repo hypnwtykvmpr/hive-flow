@@ -3,7 +3,6 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@hive-flow/security": ["./@hive-flow/security/src"],
       "@hive-flow/memory": ["./@hive-flow/memory/src"],
       "@hive-flow/cli": ["./@hive-flow/cli/src"],
       "@hive-flow/cli/*": ["./@hive-flow/cli/src/*"],
@@ -16,7 +15,6 @@
   },
   "references": [
     { "path": "./@hive-flow/shared" },
-    { "path": "./@hive-flow/security" },
     { "path": "./@hive-flow/memory" },
     { "path": "./@hive-flow/cli" },
     { "path": "./@hive-flow/codex" },

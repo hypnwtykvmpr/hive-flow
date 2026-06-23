@@ -263,7 +263,6 @@ export const pluginMetadata = {
   dependencies: {
     required: [
       '@hive-flow/memory',
-      '@hive-flow/security',
       '@hive-flow/coordination',
     ],
     optional: ['@hive-flow/embeddings', '@hive-flow/cli'],

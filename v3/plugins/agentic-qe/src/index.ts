@@ -309,7 +309,6 @@ export const PLUGIN_METADATA = {
     required: [
       '@hive-flow/plugins',
       '@hive-flow/memory',
-      '@hive-flow/security',
       '@hive-flow/embeddings',
     ],
     optional: [

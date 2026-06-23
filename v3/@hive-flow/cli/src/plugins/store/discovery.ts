@@ -220,7 +220,6 @@ export class PluginDiscoveryService {
       plugins,
       categories: [
         { id: 'ai-ml', name: 'AI/ML', description: 'AI and machine learning plugins', pluginCount: 1 },
-        { id: 'security', name: 'Security', description: 'Security and compliance plugins', pluginCount: 1 },
         { id: 'devops', name: 'DevOps', description: 'CI/CD and deployment plugins', pluginCount: 1 },
         { id: 'integrations', name: 'Integrations', description: 'Third-party integrations', pluginCount: 2 },
         { id: 'agents', name: 'Agents', description: 'Custom agent types', pluginCount: 1 },
@@ -238,13 +237,11 @@ export class PluginDiscoveryService {
       totalPlugins: plugins.length,
       totalDownloads: plugins.reduce((sum, p) => sum + p.downloads, 0),
       totalAuthors: 1,
-      featured: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant', '@hive-flow/security', '@hive-flow/teammate-plugin'],
+      featured: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant', '@hive-flow/teammate-plugin'],
       trending: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant'],
       newest: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant'],
-      official: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant', '@hive-flow/security'],
-      compatibilityMatrix: [
-        { pluginId: '@hive-flow/security', pluginVersion: '3.0.0', hiveFlowVersions: ['3.x'], tested: true },
-      ],
+      official: ['@hive-flow/plugin-agentic-qe', '@hive-flow/plugin-prime-radiant'],
+      compatibilityMatrix: [],
     };
 
     // Cache the demo registry
@@ -286,42 +283,6 @@ export class PluginDiscoveryService {
     };
 
     return [
-      {
-        id: '@hive-flow/security',
-        name: '@hive-flow/security',
-        displayName: 'Security Scanner',
-        description: 'Security scanning, CVE detection, and compliance auditing with threat modeling',
-        version: '3.0.0',
-        cid: 'bafybeisecurityplugin',
-        size: 180000,
-        checksum: 'sha256:def456security',
-        author: officialAuthor,
-        license: 'MIT',
-        categories: ['security'],
-        tags: ['security', 'cve', 'audit', 'compliance', 'threats'],
-        keywords: ['security', 'scanner'],
-        downloads: 12000,
-        rating: 4.8,
-        ratingCount: 189,
-        lastUpdated: baseTime,
-        createdAt: '2024-01-15T00:00:00Z',
-        minHiveFlowVersion: '3.0.0',
-        dependencies: [{ name: '@hive-flow/core', version: '^3.0.0' }],
-        type: 'command',
-        hooks: ['security:scan', 'security:audit'],
-        commands: ['security scan', 'security audit', 'security cve', 'security threats'],
-        permissions: ['filesystem', 'network'],
-        exports: ['SecurityScanner', 'CVEDetector', 'ThreatModeler'],
-        verified: true,
-        trustLevel: 'official',
-        securityAudit: {
-          auditor: 'hive-flow-security-team',
-          auditDate: '2024-12-01T00:00:00Z',
-          auditVersion: '3.0.0',
-          passed: true,
-          issues: [],
-        },
-      },
       {
         id: '@hive-flow/embeddings',
         name: '@hive-flow/embeddings',
@@ -990,7 +951,6 @@ export class PluginDiscoveryService {
     const realNpmPackages = [
       '@hive-flow/plugin-agentic-qe',
       '@hive-flow/plugin-prime-radiant',
-      '@hive-flow/security',
       '@hive-flow/plugins',
       '@hive-flow/embeddings',
       '@hive-flow/teammate-plugin',

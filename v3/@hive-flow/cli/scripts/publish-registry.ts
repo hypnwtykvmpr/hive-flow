@@ -193,7 +193,6 @@ async function generateRegistry(): Promise<PluginRegistry> {
     '@hive-flow/plugin-agentic-qe',
     '@hive-flow/plugin-prime-radiant',
     '@hive-flow/plugin-gastown-bridge',
-    '@hive-flow/security',
     '@hive-flow/embeddings',
     '@hive-flow/plugins',
   ];

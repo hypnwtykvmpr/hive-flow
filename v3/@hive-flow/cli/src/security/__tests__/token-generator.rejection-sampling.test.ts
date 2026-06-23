@@ -16,7 +16,7 @@ describe('TokenGenerator verification-code sampling', () => {
       .mockReturnValueOnce(Buffer.from([250]))
       .mockReturnValueOnce(Buffer.from([7]));
 
-    const { TokenGenerator } = await import('../src/token-generator.js');
+    const { TokenGenerator } = await import('../token-generator.js');
     const generator = new TokenGenerator();
 
     const code = generator.generateVerificationCode(1);
