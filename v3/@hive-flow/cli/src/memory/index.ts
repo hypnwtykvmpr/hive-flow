@@ -125,7 +125,7 @@ export type {
   PatternMatch,
 } from './learning-bridge.js';
 
-// ===== Binary Migration (RVF-Compatible Format) =====
+// ===== Binary Migration (Hive Flow Binary Format) =====
 export { BinaryMigrator } from './binary-migration.js';
 export type { BinaryMigrationOptions, BinaryMigrationResult } from './binary-migration.js';
 

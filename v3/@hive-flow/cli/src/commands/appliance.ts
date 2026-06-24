@@ -1,13 +1,13 @@
 /**
  * V3 CLI Appliance Command
- * Self-contained RVFA appliance management (build, inspect, verify, extract, run, sign, publish, update)
+ * Self-contained Hive Flow appliance management (build, inspect, verify, extract, run, sign, publish, update)
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 import { signCommand, publishCommand, updateAppCommand } from './appliance-advanced.js';
 
-interface RvfaSection {
+interface ApplianceSection {
   id: string;
   size: number;
   originalSize?: number;
@@ -15,14 +15,14 @@ interface RvfaSection {
   sha256?: string;
 }
 
-interface RvfaHeader {
+interface ApplianceHeader {
   name?: string;
   version?: string;
   arch?: string;
   profile?: string;
   created?: string;
   footerHash?: string;
-  sections?: RvfaSection[];
+  sections?: ApplianceSection[];
 }
 
 function fmtSize(bytes: number): string {
@@ -46,7 +46,7 @@ async function loadModule<T>(path: string, exportName: string, label: string): P
     const mod = await import(path);
     return mod[exportName] as T;
   } catch {
-    output.printError(`RVFA ${label} module not found`, 'Install the @hive-flow/appliance package with your configured package manager.');
+    output.printError(`Appliance ${label} module not found`, 'Install the @hive-flow/appliance package with your configured package manager.');
     return null;
   }
 }
@@ -79,10 +79,10 @@ async function runSteps(steps: string[], delay = 300): Promise<void> {
 // BUILD
 const buildCommand: Command = {
   name: 'build',
-  description: 'Build a self-contained hive-flow.rvf appliance',
+  description: 'Build a self-contained hive-flow.hfap appliance',
   options: [
     { name: 'profile', short: 'p', type: 'string', description: 'Build profile: cloud, hybrid, offline', default: 'cloud' },
-    { name: 'output', short: 'o', type: 'string', description: 'Output file path', default: 'hive-flow.rvf' },
+    { name: 'output', short: 'o', type: 'string', description: 'Output file path', default: 'hive-flow.hfap' },
     { name: 'arch', type: 'string', description: 'Target architecture', default: 'x86_64' },
     { name: 'models', short: 'm', type: 'array', description: 'Models to include (offline/hybrid)' },
     { name: 'api-keys', type: 'string', description: 'Path to .env file for API key vault' },
@@ -90,12 +90,12 @@ const buildCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const profile = ctx.flags.profile as string || 'cloud';
-    const outputPath = ctx.flags.output as string || 'hive-flow.rvf';
+    const outputPath = ctx.flags.output as string || 'hive-flow.hfap';
     const arch = ctx.flags.arch as string || 'x86_64';
     const models = ctx.flags.models as string[] || [];
     const apiKeysPath = ctx.flags['api-keys'] as string | undefined;
 
-    header('RVFA Appliance Builder');
+    header('Hive Flow Appliance Builder');
     output.printInfo(`Profile:  ${output.highlight(profile)}`);
     output.printInfo(`Arch:     ${arch}`);
     output.printInfo(`Output:   ${outputPath}`);
@@ -103,21 +103,21 @@ const buildCommand: Command = {
     output.writeln();
 
     const startTime = Date.now();
-    const RvfaBuilder = await loadModule<new (o: Record<string, unknown>) => {
+    const ApplianceBuilder = await loadModule<new (o: Record<string, unknown>) => {
       build: () => Promise<{ size: number; sections: Array<{ id: string; size: number }> }>;
-    }>('../appliance/rvfa-builder.js', 'RvfaBuilder', 'builder');
-    if (!RvfaBuilder) return { success: false, exitCode: 1 };
+    }>('../appliance/appliance-builder.js', 'ApplianceBuilder', 'builder');
+    if (!ApplianceBuilder) return { success: false, exitCode: 1 };
 
     const steps = [
       'Collecting kernel artifacts', 'Bundling runtime environment',
       'Packaging hive-flow CLI + MCP tools', 'Compressing sections',
-      'Computing SHA-256 checksums', 'Writing RVFA container',
+      'Computing SHA-256 checksums', 'Writing HFAP container',
     ];
     if (profile !== 'cloud' && models.length > 0) steps.splice(3, 0, 'Embedding model weights');
     if (apiKeysPath) steps.splice(steps.length - 1, 0, 'Sealing API key vault');
 
     try {
-      const builder = new RvfaBuilder({ profile, output: outputPath, arch, models, apiKeys: apiKeysPath });
+      const builder = new ApplianceBuilder({ profile, output: outputPath, arch, models, apiKeys: apiKeysPath });
       await runSteps(steps);
       const result = await builder.build();
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -145,22 +145,22 @@ const buildCommand: Command = {
 // INSPECT
 const inspectCommand: Command = {
   name: 'inspect',
-  description: 'Show RVFA appliance header and section manifest',
+  description: 'Show appliance header and section manifest',
   options: [
-    { name: 'file', short: 'f', type: 'string', description: 'Path to .rvf file', required: true },
+    { name: 'file', short: 'f', type: 'string', description: 'Path to .hfap file', required: true },
     { name: 'json', type: 'boolean', description: 'Output as JSON' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const file = ctx.flags.file as string;
     if (!file) return fail('--file is required');
 
-    const RvfaReader = await loadModule<{ fromFile: (p: string) => Promise<{ getHeader: () => RvfaHeader }> }>(
-      '../appliance/rvfa-format.js', 'RvfaReader', 'format');
-    if (!RvfaReader) return { success: false, exitCode: 1 };
+    const ApplianceReader = await loadModule<{ fromFile: (p: string) => Promise<{ getHeader: () => ApplianceHeader }> }>(
+      '../appliance/appliance-format.js', 'ApplianceReader', 'format');
+    if (!ApplianceReader) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
-      const reader = await RvfaReader.fromFile(file);
+      const reader = await ApplianceReader.fromFile(file);
       const hdr = reader.getHeader();
 
       if (ctx.flags.json) {
@@ -168,7 +168,7 @@ const inspectCommand: Command = {
         return { success: true, data: hdr };
       }
 
-      header('RVFA Appliance');
+      header('Hive Flow Appliance');
       for (const [label, value] of [
         ['Name', hdr.name || 'hive-flow'], ['Version', hdr.version || 'unknown'],
         ['Architecture', hdr.arch || 'x86_64'], ['Profile', hdr.profile || 'cloud'],
@@ -190,7 +190,7 @@ const inspectCommand: Command = {
             { key: 'compression', header: 'Compression', width: 12 },
             { key: 'sha256', header: 'SHA-256', width: 18 },
           ],
-          data: hdr.sections.map((s: RvfaSection) => ({
+          data: hdr.sections.map((s: ApplianceSection) => ({
             id: s.id,
             size: fmtSize(s.size),
             original: fmtSize(s.originalSize ?? s.size),
@@ -221,7 +221,7 @@ const verifyCommand: Command = {
   name: 'verify',
   description: 'Verify appliance integrity and run capability tests',
   options: [
-    { name: 'file', short: 'f', type: 'string', description: 'Path to .rvf file', required: true },
+    { name: 'file', short: 'f', type: 'string', description: 'Path to .hfap file', required: true },
     { name: 'quick', short: 'q', type: 'boolean', description: 'Quick check (integrity only, skip capability tests)' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
@@ -229,16 +229,16 @@ const verifyCommand: Command = {
     const quick = ctx.flags.quick as boolean;
     if (!file) return fail('--file is required');
 
-    const RvfaReader = await loadModule<{ fromFile: (p: string) => Promise<{
-      getHeader: () => RvfaHeader;
+    const ApplianceReader = await loadModule<{ fromFile: (p: string) => Promise<{
+      getHeader: () => ApplianceHeader;
       verify: () => { valid: boolean; errors: string[] };
-    }> }>('../appliance/rvfa-format.js', 'RvfaReader', 'format');
-    if (!RvfaReader) return { success: false, exitCode: 1 };
+    }> }>('../appliance/appliance-format.js', 'ApplianceReader', 'format');
+    if (!ApplianceReader) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
-      header('RVFA Verification');
-      const reader = await RvfaReader.fromFile(file);
+      header('Appliance Verification');
+      const reader = await ApplianceReader.fromFile(file);
       const hdr = reader.getHeader();
 
       // Integrity: magic, version, per-section checksums, and footer hash
@@ -254,7 +254,7 @@ const verifyCommand: Command = {
 
       // Capability tests
       let capOk = true;
-      if (!quick && hdr.sections?.find((s: RvfaSection) => s.id === 'verify')) {
+      if (!quick && hdr.sections?.find((s: ApplianceSection) => s.id === 'verify')) {
         const s3 = output.createSpinner({ text: 'Running capability tests...', spinner: 'dots' });
         s3.start();
         await new Promise(r => setTimeout(r, 500));
@@ -277,31 +277,31 @@ const verifyCommand: Command = {
 // EXTRACT
 const extractCommand: Command = {
   name: 'extract',
-  description: 'Extract all sections from an RVFA appliance',
+  description: 'Extract all sections from an appliance',
   options: [
-    { name: 'file', short: 'f', type: 'string', description: 'Path to .rvf file', required: true },
-    { name: 'output', short: 'o', type: 'string', description: 'Output directory', default: './rvfa-extracted' },
+    { name: 'file', short: 'f', type: 'string', description: 'Path to .hfap file', required: true },
+    { name: 'output', short: 'o', type: 'string', description: 'Output directory', default: './appliance-extracted' },
     { name: 'section', short: 's', type: 'string', description: 'Extract specific section only' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const file = ctx.flags.file as string;
-    const outputDir = ctx.flags.output as string || './rvfa-extracted';
+    const outputDir = ctx.flags.output as string || './appliance-extracted';
     const sectionFilter = ctx.flags.section as string | undefined;
     if (!file) return fail('--file is required');
 
-    const RvfaReader = await loadModule<{ fromFile: (p: string) => Promise<{
-      getHeader: () => RvfaHeader;
+    const ApplianceReader = await loadModule<{ fromFile: (p: string) => Promise<{
+      getHeader: () => ApplianceHeader;
       extractSection: (id: string) => Buffer;
-    }> }>('../appliance/rvfa-format.js', 'RvfaReader', 'format');
-    if (!RvfaReader) return { success: false, exitCode: 1 };
+    }> }>('../appliance/appliance-format.js', 'ApplianceReader', 'format');
+    if (!ApplianceReader) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
       const fs = await import('fs');
       const path = await import('path');
 
-      header('RVFA Extraction');
-      const reader = await RvfaReader.fromFile(file);
+      header('Appliance Extraction');
+      const reader = await ApplianceReader.fromFile(file);
       const hdr = reader.getHeader();
       const dest = path.resolve(outputDir);
       if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
@@ -317,9 +317,9 @@ const extractCommand: Command = {
       };
 
       if (sectionFilter) {
-        if (!hdr.sections?.find((s: RvfaSection) => s.id === sectionFilter)) {
+        if (!hdr.sections?.find((s: ApplianceSection) => s.id === sectionFilter)) {
           output.printError(`Section not found: ${sectionFilter}`);
-          output.printInfo(`Available: ${(hdr.sections || []).map((s: RvfaSection) => s.id).join(', ')}`);
+          output.printInfo(`Available: ${(hdr.sections || []).map((s: ApplianceSection) => s.id).join(', ')}`);
           return { success: false, exitCode: 1 };
         }
         const sp = output.createSpinner({ text: `Extracting ${sectionFilter}...`, spinner: 'dots' });
@@ -350,9 +350,9 @@ const extractCommand: Command = {
 // RUN
 const runCommand: Command = {
   name: 'run',
-  description: 'Boot and run an RVFA appliance',
+  description: 'Boot and run an appliance',
   options: [
-    { name: 'file', short: 'f', type: 'string', description: 'Path to .rvf file', required: true },
+    { name: 'file', short: 'f', type: 'string', description: 'Path to .hfap file', required: true },
     { name: 'mode', type: 'string', description: 'Run mode: cli, mcp, verify', default: 'cli' },
     { name: 'isolation', type: 'string', description: 'Isolation: container, native', default: 'native' },
   ],
@@ -362,28 +362,28 @@ const runCommand: Command = {
     const isolation = ctx.flags.isolation as string || 'native';
     if (!file) return fail('--file is required');
 
-    const RvfaRunner = await loadModule<{ fromFile: (p: string) => Promise<{
+    const ApplianceRunner = await loadModule<{ fromFile: (p: string) => Promise<{
       boot: (o: { mode: string; isolation: string }) => Promise<{
         exitCode: number; stdout: string; stderr: string; duration: number; pid?: number; port?: number;
       }>;
-    }> }>('../appliance/rvfa-runner.js', 'RvfaRunner', 'runner');
-    if (!RvfaRunner) return { success: false, exitCode: 1 };
+    }> }>('../appliance/appliance-runner.js', 'ApplianceRunner', 'runner');
+    if (!ApplianceRunner) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
-      header('RVFA Appliance Boot');
+      header('Hive Flow Appliance Boot');
       output.printInfo(`File:      ${file}`);
       output.printInfo(`Mode:      ${mode}`);
       output.printInfo(`Isolation: ${isolation}`);
       output.writeln();
 
       await runSteps([
-        'Loading RVFA container', 'Verifying integrity', 'Extracting kernel',
+        'Loading HFAP container', 'Verifying integrity', 'Extracting kernel',
         'Initializing runtime', `Starting ${mode} interface`,
       ], 250);
       output.writeln();
 
-      const runner = await RvfaRunner.fromFile(file);
+      const runner = await ApplianceRunner.fromFile(file);
       const result = await runner.boot({ mode, isolation });
       if (result.exitCode !== 0) {
         return fail('Boot failed', result.stderr || `exit code ${result.exitCode}`);
@@ -403,31 +403,31 @@ const runCommand: Command = {
 // Main command
 export const applianceCommand: Command = {
   name: 'appliance',
-  description: 'Self-contained RVFA appliance management (build, inspect, verify, extract, run)',
-  aliases: ['rvfa'],
+  description: 'Self-contained Hive Flow appliance management (build, inspect, verify, extract, run)',
+  aliases: [],
   subcommands: [buildCommand, inspectCommand, verifyCommand, extractCommand, runCommand, signCommand, publishCommand, updateAppCommand],
   examples: [
     { command: 'hive-flow appliance build -p cloud', description: 'Build a cloud appliance' },
-    { command: 'hive-flow appliance inspect -f hive-flow.rvf', description: 'Inspect appliance contents' },
-    { command: 'hive-flow appliance verify -f hive-flow.rvf', description: 'Verify integrity' },
-    { command: 'hive-flow appliance extract -f hive-flow.rvf', description: 'Extract sections' },
-    { command: 'hive-flow appliance run -f hive-flow.rvf', description: 'Boot and run appliance' },
-    { command: 'hive-flow appliance sign -f hive-flow.rvf --generate-keys', description: 'Generate keys and sign' },
-    { command: 'hive-flow appliance publish -f hive-flow.rvf', description: 'Publish to IPFS via Pinata' },
-    { command: 'hive-flow appliance update -f hive-flow.rvf -s hive-flow -d ./new-hive-flow.bin', description: 'Hot-patch a section' },
+    { command: 'hive-flow appliance inspect -f hive-flow.hfap', description: 'Inspect appliance contents' },
+    { command: 'hive-flow appliance verify -f hive-flow.hfap', description: 'Verify integrity' },
+    { command: 'hive-flow appliance extract -f hive-flow.hfap', description: 'Extract sections' },
+    { command: 'hive-flow appliance run -f hive-flow.hfap', description: 'Boot and run appliance' },
+    { command: 'hive-flow appliance sign -f hive-flow.hfap --generate-keys', description: 'Generate keys and sign' },
+    { command: 'hive-flow appliance publish -f hive-flow.hfap', description: 'Publish to IPFS via Pinata' },
+    { command: 'hive-flow appliance update -f hive-flow.hfap -s hive-flow -d ./new-hive-flow.bin', description: 'Hot-patch a section' },
   ],
   action: async (): Promise<CommandResult> => {
     output.writeln();
-    output.writeln(output.bold('Hive Flow Appliance (RVFA)'));
+    output.writeln(output.bold('Hive Flow Appliance'));
     output.writeln(output.dim('Self-contained deployment format for the full Hive Flow platform.'));
     output.writeln();
     output.writeln('Subcommands:');
     output.printList([
-      'build     - Build a self-contained hive-flow.rvf appliance',
+      'build     - Build a self-contained hive-flow.hfap appliance',
       'inspect   - Show appliance header and section manifest',
       'verify    - Verify appliance integrity and run capability tests',
       'extract   - Extract all sections from an appliance',
-      'run       - Boot and run an RVFA appliance',
+      'run       - Boot and run an appliance',
       'sign      - Sign an appliance with Ed25519 for tamper detection',
       'publish   - Publish an appliance to IPFS via Pinata',
       'update    - Hot-patch a section in an appliance',

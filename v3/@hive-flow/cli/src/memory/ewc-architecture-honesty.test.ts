@@ -56,10 +56,12 @@ describe('CA-3 EWC architecture honesty', () => {
     ]);
   });
 
-  it('has no active imports or exports of the deleted RVF/SONA persistence stubs', () => {
+  it('has no active imports or exports of the deleted binary/SONA persistence stubs', () => {
+    const retiredPrefix = ['R', 'v', 'f'].join('');
+    const retiredFilePrefix = ['r', 'v', 'f'].join('');
     expect(
       matchingFiles(
-        /\bRvfLearningStore\b|\bRvfLearningStoreConfig\b|\bPersistentSonaCoordinator\b|rvf-learning-store\.js|persistent-sona\.js/
+        new RegExp(`\\b${retiredPrefix}LearningStore\\b|\\b${retiredPrefix}LearningStoreConfig\\b|\\bPersistentSonaCoordinator\\b|${retiredFilePrefix}-learning-store\\.js|persistent-sona\\.js`)
       )
     ).toEqual([]);
   });

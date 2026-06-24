@@ -1,5 +1,5 @@
 /**
- * RVFA Appliance Builder -- Constructs self-contained .rvf appliance files.
+ * Hive Flow Appliance Builder -- Constructs self-contained .hfap appliance files.
  *
  * Creates a single binary containing kernel, runtime, Hive Flow CLI, models/keys,
  * HiveMemory data, and the verification suite. See ADR-058.
@@ -13,8 +13,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import {
-  RvfaWriter, type RvfaHeader, type RvfaBootConfig, type RvfaModelConfig,
-} from './rvfa-format.js';
+  ApplianceWriter, type ApplianceHeader, type ApplianceBootConfig, type ApplianceModelConfig,
+} from './appliance-format.js';
 
 // ── Public Interfaces ────────────────────────────────────────
 
@@ -77,7 +77,7 @@ function findCliRoot(startDir: string): string {
 
     const parent = dirname(current);
     if (parent === current) {
-      throw new Error('[rvfa-builder] unable to locate @hive-flow/cli package root');
+      throw new Error('[appliance-builder] unable to locate @hive-flow/cli package root');
     }
     current = parent;
   }
@@ -129,7 +129,7 @@ export function decryptApiKeys(buf: Buffer, passphrase: string): Record<string, 
 
 type SectionId = 'kernel' | 'runtime' | 'hive-flow' | 'models' | 'data' | 'verify';
 
-export class RvfaBuilder {
+export class ApplianceBuilder {
   private opts: Required<BuildOptions>;
 
   constructor(options: BuildOptions) {
@@ -146,7 +146,7 @@ export class RvfaBuilder {
 
   async build(): Promise<BuildResult> {
     const t0 = performance.now();
-    this.log(`Building RVFA appliance (profile=${this.opts.profile}, arch=${this.opts.arch})`);
+    this.log(`Building Hive Flow appliance (profile=${this.opts.profile}, arch=${this.opts.arch})`);
 
     const outDir = dirname(this.opts.output);
     if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
@@ -160,7 +160,7 @@ export class RvfaBuilder {
       { id: 'verify',  raw: this.buildVerifySection(),  label: 'Verify (test suite)' },
     ];
 
-    const writer = new RvfaWriter(this.buildHeaderPartial());
+    const writer = new ApplianceWriter(this.buildHeaderPartial());
     const summary: BuildResult['sections'] = [];
 
     for (const s of stages) {
@@ -176,7 +176,7 @@ export class RvfaBuilder {
     // Patch compressed sizes from the built header
     try {
       const hLen = binary.readUInt32LE(8);
-      const hdr = JSON.parse(binary.subarray(12, 12 + hLen).toString('utf-8')) as RvfaHeader;
+      const hdr = JSON.parse(binary.subarray(12, 12 + hLen).toString('utf-8')) as ApplianceHeader;
       for (const sec of hdr.sections) {
         const e = summary.find((x) => x.id === sec.id);
         if (e) e.size = sec.size;
@@ -187,7 +187,7 @@ export class RvfaBuilder {
     const duration = performance.now() - t0;
 
     this.log('');
-    this.log('RVFA appliance built successfully.');
+    this.log('Hive Flow appliance built successfully.');
     this.log(`  Output: ${this.opts.output}  Size: ${fmtBytes(binary.length)}  Duration: ${elapsed(t0)}`);
     for (const s of summary) {
       const r = s.originalSize > 0 && s.size > 0
@@ -279,33 +279,33 @@ export class RvfaBuilder {
       type: 'models', profile: 'offline', provider: 'local-llm', engine: 'local-llm',
       models: resolveModels(names),
       routing: { tier1: { handler: 'agent-booster-wasm', latency: '<1ms' }, tier2: { handler: 'phi-3-mini-q4', latency: '~200ms' }, tier3: { handler: 'qwen2.5-coder-3b-q4', latency: '~2s' }, fallbackToCloud: false },
-      kvCache: { backend: 'rvf', persistence: true },
+      kvCache: { backend: 'binary', persistence: true },
       note: 'Manifest-only: GGUF weights fetched during full build pipeline',
     });
   }
 
   private buildDataSection(): Buffer {
-    // Empty RVF database header (matches binary-backend.ts RVF\0 magic)
-    const rvfMagic = Buffer.from([0x52, 0x56, 0x46, 0x00]);
+    // Empty HFDB database header (matches binary-backend.ts writer magic)
+    const binaryMagic = Buffer.from('HFDB', 'ascii');
     const hdrJson = Buffer.from(JSON.stringify({
-      magic: 'RVF\0', version: 1, dimensions: 1536, metric: 'cosine',
+      magic: 'HFDB', version: 1, dimensions: 1536, metric: 'cosine',
       quantization: 'fp32', entryCount: 0, createdAt: Date.now(), updatedAt: Date.now(),
     }), 'utf-8');
     const hdrLen = Buffer.alloc(4);
     hdrLen.writeUInt32LE(hdrJson.length, 0);
-    const rvfDb = Buffer.concat([rvfMagic, hdrLen, hdrJson]);
+    const binaryDb = Buffer.concat([binaryMagic, hdrLen, hdrJson]);
 
     const manifest = jsonBuf({
       type: 'data',
       components: {
-        hivememory: { format: 'rvf', magicBytes: 'RVF\\0', databaseSize: rvfDb.length },
+        hivememory: { format: 'binary', magicBytes: 'HFDB', databaseSize: binaryDb.length },
         hnswIndex: { type: 'hnsw-index', dimensions: 1536, metric: 'cosine', m: 16, efConstruction: 200, maxElements: 100_000, vectorCount: 0 },
         sonaPatterns: { type: 'sona-patterns', version: 1, architecture: 'self-optimizing-neural', adaptationTime: 'low-latency', patterns: [], expertCount: 8, moeConfig: { topK: 2, capacityFactor: 1.25, loadBalancingLoss: 0.01 } },
         pluginRegistry: { source: 'ipfs', snapshotted: true, pluginCount: 20 },
       },
     });
 
-    return Buffer.concat([rvfDb, Buffer.from('\n---DATA-MANIFEST---\n'), manifest]);
+    return Buffer.concat([binaryDb, Buffer.from('\n---DATA-MANIFEST---\n'), manifest]);
   }
 
   private buildVerifySection(): Buffer {
@@ -338,20 +338,20 @@ export class RvfaBuilder {
 
   // ── Header ───────────────────────────────────────────────
 
-  private buildHeaderPartial(): Partial<RvfaHeader> {
-    const providerMap: Record<string, RvfaModelConfig['provider']> = { cloud: 'api-vault', hybrid: 'hybrid', offline: 'local-llm' };
-    const caps = ['cli-26-commands', 'agents-60-plus', 'hooks-17', 'workers-12', 'mcp-215-tools', 'hivememory-rvf', 'hnsw-search', 'sona-patterns', 'security-scanning', 'performance-profiling', 'hive-mind-consensus', 'plugin-registry'];
+  private buildHeaderPartial(): Partial<ApplianceHeader> {
+    const providerMap: Record<string, ApplianceModelConfig['provider']> = { cloud: 'api-vault', hybrid: 'hybrid', offline: 'local-llm' };
+    const caps = ['cli-26-commands', 'agents-60-plus', 'hooks-17', 'workers-12', 'mcp-215-tools', 'hivememory-binary', 'hnsw-search', 'sona-patterns', 'security-scanning', 'performance-profiling', 'hive-mind-consensus', 'plugin-registry'];
     if (this.opts.profile !== 'cloud') caps.push('local-inference-local-llm');
     if (this.opts.profile !== 'offline') caps.push('cloud-api-vault');
 
-    const boot: RvfaBootConfig = {
+    const boot: ApplianceBootConfig = {
       entrypoint: '/opt/hive-flow/bin/cli.js',
       args: ['--profile', this.opts.profile],
       env: { NODE_ENV: 'production', HIVE_FLOW_MEMORY_BACKEND: 'hybrid', HIVE_FLOW_LOG_LEVEL: 'info' },
       isolation: this.opts.profile === 'cloud' ? 'container' : 'native',
     };
 
-    const models: RvfaModelConfig = {
+    const models: ApplianceModelConfig = {
       provider: providerMap[this.opts.profile],
       engine: this.opts.profile === 'cloud' ? undefined : 'local-llm-0.1.0',
       models: this.opts.models.length > 0 ? this.opts.models : undefined,
@@ -359,14 +359,14 @@ export class RvfaBuilder {
     };
 
     return {
-      magic: 'RVFA', version: 1, name: 'hive-flow-appliance', appVersion: this.opts.hiveFlowVersion,
+      magic: 'HFAP', version: 1, name: 'hive-flow-appliance', appVersion: this.opts.hiveFlowVersion,
       arch: this.opts.arch, platform: 'linux', profile: this.opts.profile,
       created: new Date().toISOString(), boot, models, capabilities: caps,
     };
   }
 
   private log(msg: string): void {
-    if (this.opts.verbose) console.log(`[RvfaBuilder] ${msg}`);
+    if (this.opts.verbose) console.log(`[ApplianceBuilder] ${msg}`);
   }
 }
 

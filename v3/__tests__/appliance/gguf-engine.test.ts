@@ -359,7 +359,7 @@ describe('GgufEngine.generate (metadata-only)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. KV cache persistence (RVKV format)
+// 4. KV cache persistence (HFKV format)
 // ---------------------------------------------------------------------------
 
 describe('KV cache persistence', () => {
@@ -378,7 +378,7 @@ describe('KV cache persistence', () => {
     engine.setKvEntry('key-gamma', Buffer.from('value-gamma'));
 
     // Persist
-    const cachePath = tmpPath('.rvkv');
+    const cachePath = tmpPath('.hfkv');
     await engine.persistKvCache(cachePath);
 
     // Create a fresh engine and load the cache
@@ -394,7 +394,7 @@ describe('KV cache persistence', () => {
     await engine2.shutdown();
   });
 
-  it('RVKV file starts with magic "RVKV" (0x564B5652 LE)', async () => {
+  it('HFKV file starts with magic "HFKV" (0x564B4648 LE)', async () => {
     const engine = new GgufEngine({ verbose: false });
     await engine.initialize();
     const buf = buildGgufBuffer();
@@ -402,11 +402,11 @@ describe('KV cache persistence', () => {
 
     engine.setKvEntry('test', Buffer.from('data'));
 
-    const cachePath = tmpPath('.rvkv');
+    const cachePath = tmpPath('.hfkv');
     await engine.persistKvCache(cachePath);
 
     const data = readFileSync(cachePath);
-    assert.equal(data.readUInt32LE(0), 0x564B5652, 'Magic should be RVKV');
+    assert.equal(data.readUInt32LE(0), 0x564B4648, 'Magic should be HFKV');
     assert.equal(data.readUInt32LE(4), 1, 'Version should be 1');
 
     await engine.shutdown();
@@ -416,7 +416,7 @@ describe('KV cache persistence', () => {
     const engine = new GgufEngine({ verbose: false });
     await engine.initialize();
 
-    const badFile = tmpPath('.rvkv');
+    const badFile = tmpPath('.hfkv');
     const badBuf = Buffer.alloc(64);
     badBuf.writeUInt32LE(0xDEADBEEF, 0);
     writeFileSync(badFile, badBuf);
@@ -433,7 +433,7 @@ describe('KV cache persistence', () => {
     const engine = new GgufEngine({ verbose: false });
     await engine.initialize();
 
-    const smallFile = tmpPath('.rvkv');
+    const smallFile = tmpPath('.hfkv');
     writeFileSync(smallFile, Buffer.alloc(10));
 
     await assert.rejects(
@@ -452,7 +452,7 @@ describe('KV cache persistence', () => {
 
     engine.setKvEntry('important', Buffer.from('secret-data'));
 
-    const cachePath = tmpPath('.rvkv');
+    const cachePath = tmpPath('.hfkv');
     await engine.persistKvCache(cachePath);
 
     // Tamper with the SHA256 footer (last 32 bytes) to trigger hash mismatch
@@ -481,7 +481,7 @@ describe('KV cache persistence', () => {
     await engine.loadModel(writeGgufFile(ggufBuf));
 
     // No entries set -- persist should still work
-    const cachePath = tmpPath('.rvkv');
+    const cachePath = tmpPath('.hfkv');
     await engine.persistKvCache(cachePath);
 
     const engine2 = new GgufEngine({ verbose: false });

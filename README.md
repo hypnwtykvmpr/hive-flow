@@ -1019,7 +1019,7 @@ Hive Flow V3 integrates HiveMemory v3 (3.0.0-alpha.11), exposing memory controll
 | GuardedVectorBackend | — | Cryptographic proof-of-work before vector insert/search |
 | MutationGuard | — | Token-validated mutations with cryptographic proofs |
 | AttestationLog | — | Immutable audit trail of all memory operations |
-| RVFOptimizer | — | 4-bit adaptive quantization and progressive compression |
+| BinaryStorageOptimizer | — | 4-bit adaptive quantization and progressive compression |
 
 **MCP Tool Examples:**
 ```
@@ -1903,7 +1903,7 @@ hive-flow hooks worker status
 | `issues` | 10 | Human-agent claims (list, claim, release, handoff, status, stealable, steal, load, rebalance, board) |
 | `update` | 5 | Auto-update system (check, all, history, rollback, clear-cache) |
 | `process` | 5 | Background process management (daemon, monitor, workers, signals, logs) |
-| `appliance` | 8 | RVFA appliance management (build, inspect, verify, extract, run, sign, publish, update) |
+| `appliance` | 8 | HFAP appliance management (build, inspect, verify, extract, run, sign, publish, update) |
 | `setup` | 4 | Environment setup (global, providers, credentials, permission-guard) |
 | `signal` | 5 | Workflow control signals (pause, resume, skip, stop, mode) |
 
@@ -2722,18 +2722,18 @@ sqlite3 .hive-flow/data/transcript-archive.db \
 
 ---
 
-## 💾 Storage: RVF Binary Storage
+## 💾 Storage: Hive Flow Binary Storage
 
-Hive Flow uses RVF — a compact binary storage format that replaces the 18MB sql.js WASM dependency with pure TypeScript. No native compilation, no WASM downloads, works everywhere Node.js runs.
+Hive Flow uses compact binary storage formats that replace the 18MB sql.js WASM dependency with pure TypeScript. No native compilation, no WASM downloads, works everywhere Node.js runs.
 
 <details>
-<summary>💾 <strong>RVF Storage</strong> — Binary format, vector search, migration, and auto-selection</summary>
+<summary>💾 <strong>Hive Flow Binary Storage</strong> — Binary formats, vector search, migration, and auto-selection</summary>
 
-### Why RVF?
+### Why Hive Flow binary storage?
 
-Previous versions shipped sql.js (18MB WASM blob) for persistent storage. This caused slow cold starts, large installs, and compatibility issues on ARM/Alpine. RVF eliminates all of that:
+Previous versions shipped sql.js (18MB WASM blob) for persistent storage. This caused slow cold starts, large installs, and compatibility issues on ARM/Alpine. The binary backend removes that default dependency path:
 
-| | Before (sql.js) | After (RVF) |
+| | Before (sql.js) | After (binary backend) |
 |---|---|---|
 | **Install size** | +18MB WASM | 0 extra deps |
 | **Cold start** | slower (WASM compile) | Lower startup overhead |
@@ -2742,33 +2742,34 @@ Previous versions shipped sql.js (18MB WASM blob) for persistent storage. This c
 
 ### How it works
 
-RVF files use a simple binary layout: a 4-byte magic header (`RVF\0`), a JSON metadata section, then packed entries. Each module has its own format variant:
+Binary files use a simple layout: a 4-byte magic header, a JSON metadata section, then packed records. Each module has its own format variant:
 
 | Format | Magic Bytes | Used By | Purpose |
 |--------|-------------|---------|---------|
-| `RVF\0` | `0x52564600` | Memory backend | Entries + HNSW index |
-| `RVEC` | `0x52564543` | Embedding cache | Cached vectors with LRU eviction |
-| `RVFL` | `0x5256464C` | Event log | Append-only domain events |
-| `RVLS` | — | Learning store | Pattern records + trajectories |
+| `HFDB` | `0x48464442` | Memory backend | Entries + vector index metadata |
+| `HFEC` | `0x48464543` | Embedding cache | Cached vectors with LRU eviction |
+| `HFEL` | `0x4846454C` | Event log | Append-only domain events |
+
+Readers retain compatibility with older binary files, but new writes use the `HF*` tokens above.
 
 ### Storage auto-selection
 
 You don't need to pick a backend. The `DatabaseProvider` tries each option in order and uses the first one available:
 
 ```
-Binary backend (RVF-compatible, pure TypeScript) → better-sqlite3 (native) → sql.js (WASM) → JSON (fallback)
+Binary backend (pure TypeScript) → better-sqlite3 (native) → sql.js (WASM) → JSON (fallback)
 ```
 
-The binary backend has no native dependency and is tried first, so it wins by default and stores data in RVF-compatible files.
+The binary backend has no native dependency and is tried first, so it wins by default and stores data in `.hfdb` files.
 
 ### Vector search with HnswLite
 
-RVF includes `HnswLite` — a pure TypeScript implementation of the HNSW (Hierarchical Navigable Small World) algorithm for fast nearest-neighbor search. It's used automatically when storing entries with embeddings.
+The binary backend includes `HnswLite` — a pure TypeScript implementation of the HNSW (Hierarchical Navigable Small World) algorithm for nearest-neighbor search. It's used automatically when storing entries with embeddings.
 
 ```typescript
 import { BinaryBackend } from '@hive-flow/cli/memory';
 
-const backend = new BinaryBackend({ databasePath: './memory.rvf' });
+const backend = new BinaryBackend({ databasePath: './memory.hfdb' });
 await backend.initialize();
 
 // Store entries — embeddings are indexed automatically
@@ -2782,20 +2783,20 @@ Supports cosine, dot product, and Euclidean distance metrics. For large datasets
 
 ### Migrating from older formats
 
-The `BinaryMigrator` converts between JSON files, SQLite databases, and RVF:
+The `BinaryMigrator` converts between JSON files, SQLite databases, and Hive Flow binary storage:
 
 ```typescript
 import { BinaryMigrator } from '@hive-flow/cli/memory';
 
 // Auto-detect format and migrate
-await BinaryMigrator.autoMigrate('./old-memory.db', './memory.rvf');
+await BinaryMigrator.autoMigrate('./old-memory.db', './memory.hfdb');
 
 // Or be explicit
-await BinaryMigrator.fromJsonFile('./backup.json', './memory.rvf');
-await BinaryMigrator.fromSqlite('./legacy.db', './memory.rvf');
+await BinaryMigrator.fromJsonFile('./backup.json', './memory.hfdb');
+await BinaryMigrator.fromSqlite('./legacy.db', './memory.hfdb');
 
 // Export back to JSON for inspection
-await BinaryMigrator.toJsonFile('./memory.rvf', './export.json');
+await BinaryMigrator.toJsonFile('./memory.hfdb', './export.json');
 ```
 
 Format detection works by reading the first few bytes of the file — no file extension guessing.
@@ -2804,8 +2805,8 @@ Format detection works by reading the first few bytes of the file — no file ex
 
 All write operations use atomic writes: data goes to a temporary file first, then a single `rename()` call swaps it into place. If the process crashes mid-write, the old file stays intact.
 
-- **Memory backend**: `file.rvf.tmp` → `file.rvf`
-- **Embedding cache**: `file.rvec.tmp.{random}` → `file.rvec`
+- **Memory backend**: `file.hfdb.tmp` → `file.hfdb`
+- **Embedding cache**: `file.hfec.tmp.{random}` → `file.hfec`
 - **Event log**: Append-only (no overwrite needed)
 
 ### Pattern learning persistence
@@ -2831,7 +2832,7 @@ await neural.completeTask(trajectoryId, 0.9);
 
 ### Security
 
-RVF validates inputs at every boundary:
+Hive Flow binary storage validates inputs at every boundary:
 
 - **Path validation** — null bytes and traversal attempts are rejected
 - **Header validation** — corrupted files are detected before parsing
@@ -2843,7 +2844,7 @@ RVF validates inputs at every boundary:
 
 ```bash
 # Environment variables
-HIVE_FLOW_MEMORY_BACKEND=hybrid   # auto-selects RVF
+HIVE_FLOW_MEMORY_BACKEND=hybrid   # auto-selects the binary backend when available
 HIVE_FLOW_MEMORY_PATH=./data/memory
 
 # Or via CLI
@@ -4983,7 +4984,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | Module | Purpose | Key Features |
 |--------|---------|--------------|
 | `@hive-flow/cli/hooks` | Event-driven lifecycle | ReasoningBank, lifecycle hooks, pattern learning |
-| `@hive-flow/cli/memory` | Unified vector storage | UnifiedMemoryService, RVF binary format, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
+| `@hive-flow/cli/memory` | Unified vector storage | UnifiedMemoryService, Hive Flow binary storage, HnswLite, BinaryMigrator, LearningBridge, MemoryGraph |
 | `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
 | `@hive-flow/cli/plugin-sdk` | Plugin SDK | Builders, registries, workers, hooks, providers |
@@ -4991,7 +4992,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
-| `@hive-flow/cli/shared` | Common utilities | Types, validation schemas, RvfEventLog, constants |
+| `@hive-flow/cli/shared` | Common utilities | Types, validation schemas, BinaryEventLog, constants |
 | `@hive-flow/cli/browser` | Browser automation | 59 MCP tools, element refs, trajectory learning |
 
 ### Architecture Principles

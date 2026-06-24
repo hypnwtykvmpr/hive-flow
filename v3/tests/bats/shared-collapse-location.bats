@@ -13,7 +13,7 @@ setup() {
 @test "shared source and docs live under the cli package" {
   [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/index.ts" ]
   [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/core/config/defaults.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/events/rvf-event-log.ts" ]
+  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/events/binary-event-log.ts" ]
   [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/workflow/index.ts" ]
   [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/shared/README.md" ]
 }
@@ -49,7 +49,7 @@ setup() {
 @test "embeddings package remains independent from cli/shared cycle" {
   run rg -n "@hive-flow/(shared|cli/shared)" "$REPO_ROOT/v3/@hive-flow/embeddings/src" "$REPO_ROOT/v3/@hive-flow/embeddings/package.json" "$REPO_ROOT/v3/@hive-flow/embeddings/tsconfig.json"
   [ "$status" -eq 1 ]
-  run grep -F "function generateSecureId(prefix?: string, length = 12): string" "$REPO_ROOT/v3/@hive-flow/embeddings/src/rvf-embedding-cache.ts"
+  run grep -F "function generateSecureId(prefix?: string, length = 12): string" "$REPO_ROOT/v3/@hive-flow/embeddings/src/binary-embedding-cache.ts"
   [ "$status" -eq 0 ]
 }
 

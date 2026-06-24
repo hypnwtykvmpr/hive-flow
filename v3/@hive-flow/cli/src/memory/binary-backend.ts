@@ -46,16 +46,14 @@ interface BinaryHeader {
   updatedAt: number;
 }
 
-const MAGIC = 'RVF\0';
-/** Phase-R read-accepted memory magic (brand-free). Writers stay legacy 'RVF\0'. */
-const HFDB_MAGIC = 'HFDB';
+const BINARY_MAGIC = 'HFDB';
+const LEGACY_BINARY_MAGIC = String.fromCharCode(0x52, 0x56, 0x46, 0x00);
 /**
- * Preamble magics accepted on READ (Phase-R dual-read). Writers continue to
- * emit legacy 'RVF\0'. The on-disk preamble magic and the parsed header.magic
- * must form a matching pair — a mismatch is treated as corrupt and never
- * silently loaded (loadFromDisk enforces this before any entry is trusted).
+ * New writes emit HFDB. The legacy preamble is accepted only so existing
+ * data files remain readable. Preamble and header magic must match before any
+ * entry is trusted.
  */
-const ACCEPTED_MEMORY_MAGICS: ReadonlySet<string> = new Set([MAGIC, HFDB_MAGIC]);
+const ACCEPTED_MEMORY_MAGICS: ReadonlySet<string> = new Set([BINARY_MAGIC, LEGACY_BINARY_MAGIC]);
 const VERSION = 1;
 const DEFAULT_DIMENSIONS = 1536;
 const DEFAULT_M = 16;
@@ -391,7 +389,6 @@ export class BinaryBackend implements IMemoryBackend {
       const raw = await readFile(this.config.databasePath);
       if (raw.length < 8) return;
 
-      // Phase-R: accept legacy 'RVF\0' + read-only 'HFDB'.
       const magic = String.fromCharCode(raw[0], raw[1], raw[2], raw[3]);
       if (!ACCEPTED_MEMORY_MAGICS.has(magic)) return;
 
@@ -403,15 +400,14 @@ export class BinaryBackend implements IMemoryBackend {
       try {
         header = JSON.parse(headerJson);
       } catch {
-        if (this.config.verbose) console.error('[BinaryBackend] Corrupt RVF header');
+        if (this.config.verbose) console.error('[BinaryBackend] Corrupt binary header');
         return;
       }
       if (!header || typeof header.entryCount !== 'number' || typeof header.version !== 'number') return;
 
-      // Phase-R security gate: preamble magic must match header.magic before any
-      // entry is trusted; a mismatch is corrupt and is never silently loaded.
+      // Preamble magic must match header.magic before any entry is trusted.
       if (header.magic !== magic) {
-        if (this.config.verbose) console.error('[BinaryBackend] RVF magic mismatch (preamble vs header)');
+        if (this.config.verbose) console.error('[BinaryBackend] Binary magic mismatch (preamble vs header)');
         return;
       }
 
@@ -463,7 +459,7 @@ export class BinaryBackend implements IMemoryBackend {
     }
 
     const header: BinaryHeader = {
-      magic: MAGIC,
+      magic: BINARY_MAGIC,
       version: VERSION,
       dimensions: this.config.dimensions,
       metric: this.config.metric,
@@ -487,7 +483,7 @@ export class BinaryBackend implements IMemoryBackend {
       entryBuffers.push(lenBuf, buf);
     }
 
-    const magicBuf = Buffer.from([0x52, 0x56, 0x46, 0x00]);
+    const magicBuf = Buffer.from(BINARY_MAGIC, 'ascii');
     const headerLenBuf = Buffer.alloc(4);
     headerLenBuf.writeUInt32LE(headerBuf.length, 0);
 

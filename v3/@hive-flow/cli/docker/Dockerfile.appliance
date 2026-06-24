@@ -1,8 +1,8 @@
 # ============================================================
-# Hive Flow RVFA Appliance Builder
-# ADR-058: Self-Contained Hive Flow RVF Appliance
+# Hive Flow HFAP Appliance Builder
+# ADR-058: Self-Contained Hive Flow Appliance
 #
-# Builds the rootfs layers for an RVFA appliance.
+# Builds the rootfs layers for an HFAP appliance.
 # Usage:
 #   docker build -f Dockerfile.appliance -t hive-flow-appliance:build .
 #   docker run --rm hive-flow-appliance:build hive-flow --version

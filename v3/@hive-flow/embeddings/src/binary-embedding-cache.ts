@@ -1,5 +1,5 @@
 /**
- * RVF Embedding Cache - Pure TypeScript Binary File Cache
+ * Binary Embedding Cache - Pure TypeScript Binary File Cache
  *
  * Replaces the sql.js-based PersistentEmbeddingCache with a lightweight
  * pure-TS binary file format. No native dependencies required.
@@ -9,7 +9,7 @@
  * - LRU eviction tracked via access timestamps
  * - TTL support for cache entries
  * - Deterministic FNV-1a text hashing for keys
- * - Binary format: RVEC magic + entry records
+ * - Binary format: HFEC magic + entry records
  *
  * Binary entry format:
  *   [4-byte key-hash][4-byte dims][dims*4 bytes float32][8-byte timestamp][8-byte access-count]
@@ -37,9 +37,9 @@ function generateSecureId(prefix?: string, length = 12): string {
 // ============================================================================
 
 /**
- * Configuration for RVF embedding cache
+ * Configuration for binary embedding cache
  */
-export interface RvfEmbeddingCacheConfig {
+export interface BinaryEmbeddingCacheConfig {
   /** Path to the binary cache file */
   cachePath: string;
   /** Maximum number of entries (default: 10000) */
@@ -65,8 +65,10 @@ interface CacheEntry {
 // Constants
 // ============================================================================
 
-/** Binary file magic bytes: "RVEC" */
-const MAGIC = new Uint8Array([0x52, 0x56, 0x45, 0x43]); // R V E C
+/** Binary file magic bytes: "HFEC" */
+const MAGIC = new Uint8Array([0x48, 0x46, 0x45, 0x43]); // H F E C
+/** Legacy cache magic accepted for reads of existing cache files. */
+const LEGACY_MAGIC = new Uint8Array([0x52, 0x56, 0x45, 0x43]);
 
 /** Default TTL: 7 days in milliseconds */
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -84,7 +86,7 @@ const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
 
 // ============================================================================
-// RVF Embedding Cache
+// Binary Embedding Cache
 // ============================================================================
 
 /**
@@ -93,7 +95,7 @@ const FNV_PRIME = 0x01000193;
  * Stores embeddings as raw Float32Array bytes keyed by FNV-1a text hashes.
  * Uses an in-memory Map with periodic flush to a compact binary file.
  */
-export class RvfEmbeddingCache {
+export class BinaryEmbeddingCache {
   private readonly cachePath: string;
   private readonly maxSize: number;
   private readonly ttlMs: number;
@@ -105,7 +107,7 @@ export class RvfEmbeddingCache {
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private initialized = false;
 
-  constructor(config: RvfEmbeddingCacheConfig) {
+  constructor(config: BinaryEmbeddingCacheConfig) {
     this.cachePath = config.cachePath;
     this.maxSize = config.maxSize ?? DEFAULT_MAX_SIZE;
     this.ttlMs = config.ttlMs ?? DEFAULT_TTL_MS;
@@ -411,7 +413,7 @@ export class RvfEmbeddingCache {
    * Write all entries to the binary cache file.
    *
    * Format:
-   *   [4-byte magic "RVEC"]
+   *   [4-byte magic "HFEC"]
    *   For each entry:
    *     [4-byte key-hash (uint32)]
    *     [4-byte dims (uint32)]
@@ -483,7 +485,7 @@ export class RvfEmbeddingCache {
       this.dirty = false;
     } catch (error) {
       console.error(
-        '[rvf-embedding-cache] Flush error:',
+        '[binary-embedding-cache] Flush error:',
         error instanceof Error ? error.message : error
       );
     }
@@ -505,12 +507,12 @@ export class RvfEmbeddingCache {
       const bytes = new Uint8Array(buffer);
       let offset = 0;
 
-      // Verify magic
-      for (let i = 0; i < MAGIC.length; i++) {
-        if (bytes[offset + i] !== MAGIC[i]) {
-          console.warn('[rvf-embedding-cache] Invalid magic bytes, skipping load');
-          return;
-        }
+      // Verify magic. New writes use HFEC; legacy byte-token files remain readable.
+      const isCurrentMagic = MAGIC.every((value, index) => bytes[offset + index] === value);
+      const isLegacyMagic = LEGACY_MAGIC.every((value, index) => bytes[offset + index] === value);
+      if (!isCurrentMagic && !isLegacyMagic) {
+        console.warn('[binary-embedding-cache] Invalid magic bytes, skipping load');
+        return;
       }
       offset += MAGIC.length;
 
@@ -537,7 +539,7 @@ export class RvfEmbeddingCache {
           ? dims * 4 + 8 + 8 + 8   // v2: embedding + createdAt + accessedAt + accessCount
           : dims * 4 + 8 + 8;       // v1: embedding + accessedAt + accessCount
         if (offset + entryDataSize > buffer.byteLength) {
-          console.warn('[rvf-embedding-cache] Truncated entry, stopping load');
+          console.warn('[binary-embedding-cache] Truncated entry, stopping load');
           break;
         }
 
@@ -577,7 +579,7 @@ export class RvfEmbeddingCache {
       }
     } catch (error) {
       console.warn(
-        '[rvf-embedding-cache] Load error:',
+        '[binary-embedding-cache] Load error:',
         error instanceof Error ? error.message : error
       );
     }

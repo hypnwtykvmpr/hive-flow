@@ -1,17 +1,17 @@
 /**
- * RVF Comprehensive Capability Verification
+ * Binary Comprehensive Capability Verification
  *
- * Tests EVERY capability across all RVF modules to confirm 100% functionality:
+ * Tests EVERY capability across all Binary modules to confirm 100% functionality:
  * 1. BinaryBackend — IMemoryBackend contract (17 methods)
  * 2. HnswLite — Vector search (add, remove, search, metrics)
- * 3. RvfEventLog — Append-only event sourcing
- * 4. RvfEmbeddingCache — Binary file cache with LRU/TTL
- * 5. RvfEmbeddingService — Hash-based embedding generation
- * 6. BinaryMigrator — Bidirectional migration (JSON↔RVF, SQLite↔RVF)
+ * 3. BinaryEventLog — Append-only event sourcing
+ * 4. BinaryEmbeddingCache — Binary file cache with LRU/TTL
+ * 5. LocalEmbeddingService — Hash-based embedding generation
+ * 6. BinaryMigrator — Bidirectional migration (JSON↔Binary, SQLite↔Binary)
  * 7. Security — Path validation, input validation, atomic writes
  * 8. Performance — Timer unref, safe iteration, no stack overflow
  * 9. Forward/Backward compat — Binary format v1/v2
- * 10. DatabaseProvider — Auto-selection of RVF backend
+ * 10. DatabaseProvider — Auto-selection of Binary backend
  */
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
@@ -26,9 +26,9 @@ import { tmpdir } from 'node:os';
 import { BinaryBackend } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
 import type { BinaryBackendConfig } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
 import { HnswLite, cosineSimilarity } from '../v3/@hive-flow/cli/src/memory/hnsw-lite.js';
-import { RvfEventLog } from '../v3/@hive-flow/cli/src/shared/events/rvf-event-log.js';
-import { RvfEmbeddingCache } from '../v3/@hive-flow/embeddings/src/rvf-embedding-cache.js';
-import { RvfEmbeddingService } from '../v3/@hive-flow/embeddings/src/rvf-embedding-service.js';
+import { BinaryEventLog } from '../v3/@hive-flow/cli/src/shared/events/binary-event-log.js';
+import { BinaryEmbeddingCache } from '../v3/@hive-flow/embeddings/src/binary-embedding-cache.js';
+import { LocalEmbeddingService } from '../v3/@hive-flow/embeddings/src/local-embedding-service.js';
 import { BinaryMigrator } from '../v3/@hive-flow/cli/src/memory/binary-migration.js';
 
 // --- Helpers ---
@@ -58,8 +58,8 @@ describe('1. BinaryBackend — IMemoryBackend Contract', () => {
   let backend: BinaryBackend;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'rvf-cap-'));
-    backend = new BinaryBackend({ databasePath: tmp('mem.rvf'), dimensions: 64 });
+    tmpDir = mkdtempSync(join(tmpdir(), 'binary-cap-'));
+    backend = new BinaryBackend({ databasePath: tmp('mem.hfdb'), dimensions: 64 });
     await backend.initialize();
   });
 
@@ -176,7 +176,7 @@ describe('1. BinaryBackend — IMemoryBackend Contract', () => {
     await backend.shutdown();
 
     // Re-open
-    const b2 = new BinaryBackend({ databasePath: tmp('mem.rvf'), dimensions: 64 });
+    const b2 = new BinaryBackend({ databasePath: tmp('mem.hfdb'), dimensions: 64 });
     await b2.initialize();
     const entry = await b2.get('p1');
     assert.ok(entry);
@@ -242,14 +242,14 @@ describe('2. HnswLite — Vector Search', () => {
 });
 
 // =============================================================================
-// 3. RvfEventLog — Append-Only Event Sourcing
+// 3. BinaryEventLog — Append-Only Event Sourcing
 // =============================================================================
-describe('3. RvfEventLog — Event Sourcing', () => {
-  let log: RvfEventLog;
+describe('3. BinaryEventLog — Event Sourcing', () => {
+  let log: BinaryEventLog;
 
   beforeEach(async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'rvf-ev-'));
-    log = new RvfEventLog({ logPath: tmp('events.rvf') });
+    tmpDir = mkdtempSync(join(tmpdir(), 'binary-ev-'));
+    log = new BinaryEventLog({ logPath: tmp('events.hfdb') });
     await log.initialize();
   });
 
@@ -307,7 +307,7 @@ describe('3. RvfEventLog — Event Sourcing', () => {
     });
     await log.close();
 
-    const log2 = new RvfEventLog({ logPath: tmp('events.rvf') });
+    const log2 = new BinaryEventLog({ logPath: tmp('events.hfdb') });
     await log2.initialize();
     const events = await log2.getEvents('ag');
     assert.equal(events.length, 1);
@@ -329,14 +329,14 @@ describe('3. RvfEventLog — Event Sourcing', () => {
 });
 
 // =============================================================================
-// 4. RvfEmbeddingCache — Binary File Cache
+// 4. BinaryEmbeddingCache — Binary File Cache
 // =============================================================================
-describe('4. RvfEmbeddingCache — Binary Cache', () => {
-  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-ec-')); });
+describe('4. BinaryEmbeddingCache — Binary Cache', () => {
+  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'binary-ec-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
   it('set + get + has + delete + size + clear', async () => {
-    const cache = new RvfEmbeddingCache({ cachePath: tmp('cache.rvec'), dimensions: 4 });
+    const cache = new BinaryEmbeddingCache({ cachePath: tmp('cache.hfec'), dimensions: 4 });
     const emb = new Float32Array([1, 2, 3, 4]);
     await cache.set('hello', emb);
     assert.equal(await cache.size(), 1);
@@ -357,7 +357,7 @@ describe('4. RvfEmbeddingCache — Binary Cache', () => {
   });
 
   it('LRU eviction', async () => {
-    const cache = new RvfEmbeddingCache({ cachePath: tmp('lru.rvec'), maxSize: 5, dimensions: 2 });
+    const cache = new BinaryEmbeddingCache({ cachePath: tmp('lru.hfec'), maxSize: 5, dimensions: 2 });
     for (let i = 0; i < 10; i++) {
       await cache.set(`item-${i}`, new Float32Array([i, i]));
     }
@@ -367,7 +367,7 @@ describe('4. RvfEmbeddingCache — Binary Cache', () => {
   });
 
   it('TTL expiration', async () => {
-    const cache = new RvfEmbeddingCache({ cachePath: tmp('ttl.rvec'), ttlMs: 1, dimensions: 2 });
+    const cache = new BinaryEmbeddingCache({ cachePath: tmp('ttl.hfec'), ttlMs: 1, dimensions: 2 });
     await cache.set('expire', new Float32Array([1, 2]));
     // Wait 5ms for TTL
     await new Promise(r => setTimeout(r, 5));
@@ -377,21 +377,21 @@ describe('4. RvfEmbeddingCache — Binary Cache', () => {
   });
 
   it('binary persistence v2 with createdAt', async () => {
-    const cache = new RvfEmbeddingCache({ cachePath: tmp('v2.rvec'), dimensions: 2 });
+    const cache = new BinaryEmbeddingCache({ cachePath: tmp('v2.hfec'), dimensions: 2 });
     await cache.set('persist', new Float32Array([1, 2]));
     await cache.close();
 
-    // Verify file exists and starts with RVEC magic
-    const buf = readFileSync(tmp('v2.rvec'));
-    assert.equal(buf[0], 0x52); // R
-    assert.equal(buf[1], 0x56); // V
+    // Verify file exists and starts with HFEC magic
+    const buf = readFileSync(tmp('v2.hfec'));
+    assert.equal(buf[0], 0x48); // H
+    assert.equal(buf[1], 0x46); // F
     assert.equal(buf[2], 0x45); // E
     assert.equal(buf[3], 0x43); // C
     // Version should be 2 (uint32 LE at offset 4)
     assert.equal(buf.readUInt32LE(4), 2);
 
     // Re-open and verify
-    const cache2 = new RvfEmbeddingCache({ cachePath: tmp('v2.rvec'), dimensions: 2 });
+    const cache2 = new BinaryEmbeddingCache({ cachePath: tmp('v2.hfec'), dimensions: 2 });
     const got = await cache2.get('persist');
     assert.ok(got);
     assert.equal(got.length, 2);
@@ -414,9 +414,9 @@ describe('4. RvfEmbeddingCache — Binary Cache', () => {
     buf.writeDoubleLE(Date.now(), off); off += 8; // accessedAt
     buf.writeDoubleLE(5, off); // accessCount
 
-    writeFileSync(tmp('v1.rvec'), buf);
+    writeFileSync(tmp('v1.hfec'), buf);
 
-    const cache = new RvfEmbeddingCache({ cachePath: tmp('v1.rvec'), dimensions: 2 });
+    const cache = new BinaryEmbeddingCache({ cachePath: tmp('v1.hfec'), dimensions: 2 });
     // The v1 file should load without error (entries are keyed by hash, not text)
     const size = await cache.size();
     assert.equal(size, 1);
@@ -424,7 +424,7 @@ describe('4. RvfEmbeddingCache — Binary Cache', () => {
   });
 
   it('dimension validation', async () => {
-    const cache = new RvfEmbeddingCache({ cachePath: tmp('dim.rvec'), dimensions: 3 });
+    const cache = new BinaryEmbeddingCache({ cachePath: tmp('dim.hfec'), dimensions: 3 });
     await assert.rejects(
       () => cache.set('wrong', new Float32Array([1, 2])),
       /Dimension mismatch/,
@@ -434,11 +434,11 @@ describe('4. RvfEmbeddingCache — Binary Cache', () => {
 });
 
 // =============================================================================
-// 5. RvfEmbeddingService — Hash Embeddings
+// 5. LocalEmbeddingService — Hash Embeddings
 // =============================================================================
-describe('5. RvfEmbeddingService — Hash Embeddings', () => {
+describe('5. LocalEmbeddingService — Hash Embeddings', () => {
   it('deterministic output', async () => {
-    const svc = new RvfEmbeddingService({ dimensions: 64 });
+    const svc = new LocalEmbeddingService({ dimensions: 64 });
     const r1 = await svc.embed('hello world');
     const r2 = await svc.embed('hello world');
     assert.deepEqual(r1.embedding, r2.embedding);
@@ -446,7 +446,7 @@ describe('5. RvfEmbeddingService — Hash Embeddings', () => {
   });
 
   it('L2 normalized output', async () => {
-    const svc = new RvfEmbeddingService({ dimensions: 128 });
+    const svc = new LocalEmbeddingService({ dimensions: 128 });
     const { embedding } = await svc.embed('test normalization');
     let norm = 0;
     for (let i = 0; i < embedding.length; i++) norm += embedding[i] ** 2;
@@ -455,7 +455,7 @@ describe('5. RvfEmbeddingService — Hash Embeddings', () => {
   });
 
   it('embedBatch', async () => {
-    const svc = new RvfEmbeddingService({ dimensions: 32 });
+    const svc = new LocalEmbeddingService({ dimensions: 32 });
     const result = await svc.embedBatch(['a', 'b', 'c']);
     assert.equal(result.embeddings.length, 3);
     assert.ok(result.totalLatencyMs >= 0);
@@ -463,7 +463,7 @@ describe('5. RvfEmbeddingService — Hash Embeddings', () => {
   });
 
   it('in-memory LRU cache', async () => {
-    const svc = new RvfEmbeddingService({ dimensions: 16, cacheSize: 5 });
+    const svc = new LocalEmbeddingService({ dimensions: 16, cacheSize: 5 });
     await svc.embed('cached');
     const r2 = await svc.embed('cached');
     assert.equal(r2.cached, true);
@@ -472,16 +472,16 @@ describe('5. RvfEmbeddingService — Hash Embeddings', () => {
   });
 
   it('persistent cache integration', async () => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'rvf-svc-'));
-    const svc = new RvfEmbeddingService({
-      dimensions: 16, cachePath: join(tmpDir, 'svc-cache.rvec'),
+    tmpDir = mkdtempSync(join(tmpdir(), 'binary-svc-'));
+    const svc = new LocalEmbeddingService({
+      dimensions: 16, cachePath: join(tmpDir, 'svc-cache.hfec'),
     });
     await svc.embed('persist-me');
     await svc.shutdown();
 
     // Re-create with fresh in-memory cache but same persistent path
-    const svc2 = new RvfEmbeddingService({
-      dimensions: 16, cachePath: join(tmpDir, 'svc-cache.rvec'),
+    const svc2 = new LocalEmbeddingService({
+      dimensions: 16, cachePath: join(tmpDir, 'svc-cache.hfec'),
     });
     const r = await svc2.embed('persist-me');
     assert.equal(r.cached, true);
@@ -490,16 +490,16 @@ describe('5. RvfEmbeddingService — Hash Embeddings', () => {
   });
 
   it('input validation', async () => {
-    const svc = new RvfEmbeddingService({ dimensions: 16 });
+    const svc = new LocalEmbeddingService({ dimensions: 16 });
     await assert.rejects(() => svc.embed(123 as any), /string argument/);
     await assert.rejects(() => svc.embedBatch('not array' as any), /array of strings/);
     await svc.shutdown();
   });
 
   it('dimension validation in constructor', () => {
-    assert.throws(() => new RvfEmbeddingService({ dimensions: 0 }), /Invalid dimensions/);
-    assert.throws(() => new RvfEmbeddingService({ dimensions: -5 }), /Invalid dimensions/);
-    assert.throws(() => new RvfEmbeddingService({ dimensions: 3.5 }), /Invalid dimensions/);
+    assert.throws(() => new LocalEmbeddingService({ dimensions: 0 }), /Invalid dimensions/);
+    assert.throws(() => new LocalEmbeddingService({ dimensions: -5 }), /Invalid dimensions/);
+    assert.throws(() => new LocalEmbeddingService({ dimensions: 3.5 }), /Invalid dimensions/);
   });
 });
 
@@ -507,19 +507,19 @@ describe('5. RvfEmbeddingService — Hash Embeddings', () => {
 // 6. BinaryMigrator — Bidirectional Migration
 // =============================================================================
 describe('6. BinaryMigrator — Migration', () => {
-  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-mig-')); });
+  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'binary-mig-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('detectFormat: json, rvf, unknown', async () => {
+  it('detectFormat: json, binary, unknown', async () => {
     writeFileSync(tmp('j.json'), '[{"id":"1"}]');
     assert.equal(await BinaryMigrator.detectFormat(tmp('j.json')), 'json');
 
-    // Create RVF file
-    const b = new BinaryBackend({ databasePath: tmp('d.rvf') });
+    // Create Binary file
+    const b = new BinaryBackend({ databasePath: tmp('d.hfdb') });
     await b.initialize();
     await b.store(makeEntry('x'));
     await b.shutdown();
-    assert.equal(await BinaryMigrator.detectFormat(tmp('d.rvf')), 'rvf');
+    assert.equal(await BinaryMigrator.detectFormat(tmp('d.hfdb')), 'binary');
 
     assert.equal(await BinaryMigrator.detectFormat(tmp('no-exist')), 'unknown');
   });
@@ -529,11 +529,11 @@ describe('6. BinaryMigrator — Migration', () => {
     const embEntry = { ...entries[0], embedding: [0.1, 0.2, 0.3] };
     writeFileSync(tmp('src.json'), JSON.stringify([embEntry, entries[1]]));
 
-    const r1 = await BinaryMigrator.fromJsonFile(tmp('src.json'), tmp('out.rvf'));
+    const r1 = await BinaryMigrator.fromJsonFile(tmp('src.json'), tmp('out.hfdb'));
     assert.equal(r1.success, true);
     assert.equal(r1.entriesMigrated, 2);
 
-    const r2 = await BinaryMigrator.toJsonFile(tmp('out.rvf'), tmp('export.json'));
+    const r2 = await BinaryMigrator.toJsonFile(tmp('out.hfdb'), tmp('export.json'));
     assert.equal(r2.success, true);
     assert.equal(r2.entriesMigrated, 2);
 
@@ -543,7 +543,7 @@ describe('6. BinaryMigrator — Migration', () => {
 
   it('autoMigrate: json source', async () => {
     writeFileSync(tmp('auto.json'), JSON.stringify([makeEntry('a1')]));
-    const result = await BinaryMigrator.autoMigrate(tmp('auto.json'), tmp('auto.rvf'));
+    const result = await BinaryMigrator.autoMigrate(tmp('auto.json'), tmp('auto.hfdb'));
     assert.equal(result.success, true);
     assert.equal(result.sourceFormat, 'json');
   });
@@ -553,7 +553,7 @@ describe('6. BinaryMigrator — Migration', () => {
     writeFileSync(tmp('prog.json'), JSON.stringify(items));
 
     const progress: any[] = [];
-    await BinaryMigrator.fromJsonFile(tmp('prog.json'), tmp('prog.rvf'), {
+    await BinaryMigrator.fromJsonFile(tmp('prog.json'), tmp('prog.hfdb'), {
       batchSize: 5,
       onProgress: (p) => progress.push({ ...p }),
     });
@@ -565,11 +565,11 @@ describe('6. BinaryMigrator — Migration', () => {
 // 7. Security Verification
 // =============================================================================
 describe('7. Security — Validation & Atomic Writes', () => {
-  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-sec-')); });
+  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'binary-sec-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
   it('BinaryBackend rejects null bytes in path', () => {
-    assert.throws(() => new BinaryBackend({ databasePath: '/tmp/evil\0path.rvf' }), /null bytes/);
+    assert.throws(() => new BinaryBackend({ databasePath: '/tmp/evil\0path.hfdb' }), /null bytes/);
   });
 
   it('BinaryBackend allows :memory: path', () => {
@@ -577,45 +577,45 @@ describe('7. Security — Validation & Atomic Writes', () => {
     assert.ok(b); // no throw
   });
 
-  it('RvfEmbeddingCache rejects null bytes', () => {
+  it('BinaryEmbeddingCache rejects null bytes', () => {
     assert.throws(
-      () => new RvfEmbeddingCache({ cachePath: '/tmp/bad\0cache.rvec' }),
+      () => new BinaryEmbeddingCache({ cachePath: '/tmp/bad\0cache.hfec' }),
       /null bytes/,
     );
   });
 
-  it('RvfEventLog rejects null bytes', () => {
+  it('BinaryEventLog rejects null bytes', () => {
     assert.throws(
-      () => new RvfEventLog({ logPath: '/tmp/bad\0log.rvf' }),
+      () => new BinaryEventLog({ logPath: '/tmp/bad\0log.hfdb' }),
       /null bytes/,
     );
   });
 
   it('BinaryBackend uses atomic writes (no .tmp left behind)', async () => {
-    const b = new BinaryBackend({ databasePath: tmp('atomic.rvf'), autoPersistInterval: 0 });
+    const b = new BinaryBackend({ databasePath: tmp('atomic.hfdb'), autoPersistInterval: 0 });
     await b.initialize();
     await b.store(makeEntry('at1'));
     await b.shutdown();
 
-    assert.ok(existsSync(tmp('atomic.rvf')));
-    assert.ok(!existsSync(tmp('atomic.rvf.tmp')), '.tmp file should not remain');
+    assert.ok(existsSync(tmp('atomic.hfdb')));
+    assert.ok(!existsSync(tmp('atomic.hfdb.tmp')), '.tmp file should not remain');
   });
 
-  it('RvfEmbeddingCache uses atomic writes', async () => {
-    const cache = new RvfEmbeddingCache({ cachePath: tmp('atomic.rvec') });
+  it('BinaryEmbeddingCache uses atomic writes', async () => {
+    const cache = new BinaryEmbeddingCache({ cachePath: tmp('atomic.hfec') });
     await cache.set('x', new Float32Array([1, 2, 3]));
     await cache.close();
 
-    assert.ok(existsSync(tmp('atomic.rvec')));
-    assert.ok(!existsSync(tmp('atomic.rvec.tmp')), '.tmp file should not remain');
+    assert.ok(existsSync(tmp('atomic.hfec')));
+    assert.ok(!existsSync(tmp('atomic.hfec.tmp')), '.tmp file should not remain');
   });
 
-  it('RvfEventLog uses atomic writes for initial creation', async () => {
-    const log = new RvfEventLog({ logPath: tmp('atomic-log.rvf') });
+  it('BinaryEventLog uses atomic writes for initial creation', async () => {
+    const log = new BinaryEventLog({ logPath: tmp('atomic-log.hfdb') });
     await log.initialize();
 
-    assert.ok(existsSync(tmp('atomic-log.rvf')));
-    assert.ok(!existsSync(tmp('atomic-log.rvf.tmp')));
+    assert.ok(existsSync(tmp('atomic-log.hfdb')));
+    assert.ok(!existsSync(tmp('atomic-log.hfdb.tmp')));
     await log.close();
   });
 });
@@ -624,7 +624,7 @@ describe('7. Security — Validation & Atomic Writes', () => {
 // 8. Performance — Timer Unref, Safe Iteration
 // =============================================================================
 describe('8. Performance — Timers & Iteration', () => {
-  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-perf-')); });
+  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'binary-perf-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
   it('clearNamespace safely handles large datasets', async () => {
@@ -639,7 +639,7 @@ describe('8. Performance — Timers & Iteration', () => {
   });
 
   it('persistToDisk handles 10K entries without stack overflow', async () => {
-    const b = new BinaryBackend({ databasePath: tmp('big.rvf'), dimensions: 4, autoPersistInterval: 0 });
+    const b = new BinaryBackend({ databasePath: tmp('big.hfdb'), dimensions: 4, autoPersistInterval: 0 });
     await b.initialize();
     const entries = Array.from({ length: 10000 }, (_, i) => ({
       ...makeEntry(`lg${i}`),
@@ -649,7 +649,7 @@ describe('8. Performance — Timers & Iteration', () => {
     await b.shutdown(); // triggers persistToDisk — no stack overflow
 
     // Verify it persisted
-    const b2 = new BinaryBackend({ databasePath: tmp('big.rvf'), dimensions: 4 });
+    const b2 = new BinaryBackend({ databasePath: tmp('big.hfdb'), dimensions: 4 });
     await b2.initialize();
     assert.equal(await b2.count(), 10000);
     await b2.shutdown();
@@ -660,29 +660,29 @@ describe('8. Performance — Timers & Iteration', () => {
 // 9. DatabaseProvider — Auto-Selection
 // =============================================================================
 describe('9. DatabaseProvider Integration', () => {
-  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'rvf-db-')); });
+  beforeEach(() => { tmpDir = mkdtempSync(join(tmpdir(), 'binary-db-')); });
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
-  it('auto-selects RVF when available', async () => {
+  it('auto-selects Binary when available', async () => {
     const { createDatabase, getAvailableProviders } = await import('../v3/@hive-flow/cli/src/memory/database-provider.js');
     const providers = await getAvailableProviders();
-    assert.equal(providers.rvf, true);
+    assert.equal(providers.binary, true);
 
     const db = await createDatabase(tmp('auto.db'), { verbose: false });
     assert.ok(db);
-    // Path should be converted to .rvf
+    // Path should be converted to .hfdb
     await db.store(makeEntry('dp1'));
     const entry = await db.get('dp1');
     assert.ok(entry);
     await db.shutdown();
   });
 
-  it('converts .db extension to .rvf', async () => {
+  it('converts .db extension to .hfdb', async () => {
     const { createDatabase } = await import('../v3/@hive-flow/cli/src/memory/database-provider.js');
-    const db = await createDatabase(tmp('convert.db'), { provider: 'rvf' });
+    const db = await createDatabase(tmp('convert.db'), { provider: 'binary' });
     await db.store(makeEntry('cv1'));
     await db.shutdown();
-    assert.ok(existsSync(tmp('convert.rvf')));
+    assert.ok(existsSync(tmp('convert.hfdb')));
   });
 });
 
@@ -692,6 +692,6 @@ describe('9. DatabaseProvider Integration', () => {
 describe('CAPABILITY SUMMARY', () => {
   it('all 11 capability areas verified', () => {
     // This test exists purely as a marker — if we get here, all above passed.
-    assert.ok(true, 'All RVF capabilities confirmed');
+    assert.ok(true, 'All Binary capabilities confirmed');
   });
 });

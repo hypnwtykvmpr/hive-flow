@@ -36,15 +36,19 @@
       "redirectCount": 0,
       "denyReason": "allowlist-denied"
     },
-    "web_search_unsupported": {
+    "web_search_allowlist_denied": {
       "status": "denied",
-      "finalUrl": null,
+      "query": "provider bridge",
+      "provider": "duckduckgo-html",
+      "searchUrl": "https://example.invalid/provider-bridge-golden-search?q=provider+bridge",
+      "finalUrl": "https://example.invalid/provider-bridge-golden-search?q=provider+bridge",
       "httpStatus": null,
       "contentType": "",
       "bytes": 0,
       "truncated": false,
       "redirectCount": 0,
-      "denyReason": "web-search-unsupported"
+      "results": [],
+      "denyReason": "allowlist-denied"
     },
     "unknown_tool_denied": {
       "status": "denied",

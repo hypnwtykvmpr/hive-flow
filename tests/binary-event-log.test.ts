@@ -1,5 +1,5 @@
 /**
- * Tests for RvfEventLog (ADR-057 Phase 2)
+ * Tests for BinaryEventLog (ADR-057 Phase 2)
  *
  * Covers: initialize, append, getEvents, getAllEvents, snapshots,
  *         stats, persistence, close, and edge cases.
@@ -13,8 +13,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 // Use dynamic import — tsx handles TS source directly.
-const { RvfEventLog } = await import(
-  '../v3/@hive-flow/cli/src/shared/events/rvf-event-log.ts'
+const { BinaryEventLog } = await import(
+  '../v3/@hive-flow/cli/src/shared/events/binary-event-log.ts'
 );
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ type EventSnapshot = {
 let tmpCounter = 0;
 
 function makeTmpDir(): string {
-  const dir = join(tmpdir(), `rvf-test-${Date.now()}-${++tmpCounter}`);
+  const dir = join(tmpdir(), `binary-event-test-${Date.now()}-${++tmpCounter}`);
   mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -92,7 +92,7 @@ let logPath: string;
 
 beforeEach(() => {
   dir = makeTmpDir();
-  logPath = join(dir, 'events.rvf');
+  logPath = join(dir, 'events.hfel');
 });
 
 afterEach(() => {
@@ -105,38 +105,38 @@ afterEach(() => {
 // 1. Initialize
 // ===========================================================================
 
-describe('RvfEventLog#initialize', () => {
+describe('BinaryEventLog#initialize', () => {
   it('creates event file with magic header', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     assert.ok(existsSync(logPath));
     const buf = readFileSync(logPath);
-    assert.equal(buf.subarray(0, 4).toString(), 'RVFL');
+    assert.equal(buf.subarray(0, 4).toString(), 'HFEL');
 
     await log.close();
   });
 
   it('creates snapshot file alongside event file', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
-    const snapPath = logPath.replace(/\.rvf$/, '.snap.rvf');
+    const snapPath = logPath.replace(/\.hfel$/, '.snap.hfel');
     assert.ok(existsSync(snapPath));
     const buf = readFileSync(snapPath);
-    assert.equal(buf.subarray(0, 4).toString(), 'RVFL');
+    assert.equal(buf.subarray(0, 4).toString(), 'HFEL');
 
     await log.close();
   });
 
   it('rebuilds indexes on re-open', async () => {
-    const log1 = new RvfEventLog({ logPath });
+    const log1 = new BinaryEventLog({ logPath });
     await log1.initialize();
     await log1.append(makeEvent('agg-1', 'created'));
     await log1.append(makeEvent('agg-1', 'updated'));
     await log1.close();
 
-    const log2 = new RvfEventLog({ logPath });
+    const log2 = new BinaryEventLog({ logPath });
     await log2.initialize();
 
     const events = await log2.getEvents('agg-1');
@@ -148,7 +148,7 @@ describe('RvfEventLog#initialize', () => {
   });
 
   it('emits initialized event', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     let emitted = false;
     log.on('initialized', () => { emitted = true; });
     await log.initialize();
@@ -158,7 +158,7 @@ describe('RvfEventLog#initialize', () => {
   });
 
   it('is idempotent when called twice', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
     await log.initialize();
 
@@ -171,9 +171,9 @@ describe('RvfEventLog#initialize', () => {
 // 2. Append
 // ===========================================================================
 
-describe('RvfEventLog#append', () => {
+describe('BinaryEventLog#append', () => {
   it('assigns incrementing versions per aggregate', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const e1 = makeEvent('agg-A', 'step');
@@ -192,7 +192,7 @@ describe('RvfEventLog#append', () => {
   });
 
   it('persists to disk immediately', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
     await log.append(makeEvent('agg-1', 'op'));
 
@@ -204,7 +204,7 @@ describe('RvfEventLog#append', () => {
   });
 
   it('emits event:appended', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const captured: any[] = [];
@@ -220,7 +220,7 @@ describe('RvfEventLog#append', () => {
   });
 
   it('throws when not initialized', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await assert.rejects(
       () => log.append(makeEvent('x', 'y')),
       /not initialized/i,
@@ -232,9 +232,9 @@ describe('RvfEventLog#append', () => {
 // 3. GetEvents
 // ===========================================================================
 
-describe('RvfEventLog#getEvents', () => {
+describe('BinaryEventLog#getEvents', () => {
   it('filters by aggregateId', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     await log.append(makeEvent('agg-A', 'x'));
@@ -249,7 +249,7 @@ describe('RvfEventLog#getEvents', () => {
   });
 
   it('filters by fromVersion', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     await log.append(makeEvent('agg-A', 'a'));
@@ -265,7 +265,7 @@ describe('RvfEventLog#getEvents', () => {
   });
 
   it('returns empty array for unknown aggregate', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
     await log.append(makeEvent('agg-A', 'x'));
 
@@ -280,9 +280,9 @@ describe('RvfEventLog#getEvents', () => {
 // 4. GetAllEvents
 // ===========================================================================
 
-describe('RvfEventLog#getAllEvents', () => {
+describe('BinaryEventLog#getAllEvents', () => {
   it('returns all events sorted by timestamp when no filter', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const base = Date.now();
@@ -299,7 +299,7 @@ describe('RvfEventLog#getAllEvents', () => {
   });
 
   it('filters by eventTypes', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     await log.append(makeEvent('a', 'created'));
@@ -315,7 +315,7 @@ describe('RvfEventLog#getAllEvents', () => {
   });
 
   it('filters by timestamps (after/before)', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const base = 1000000;
@@ -334,7 +334,7 @@ describe('RvfEventLog#getAllEvents', () => {
   });
 
   it('supports pagination (offset + limit)', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const base = Date.now();
@@ -353,9 +353,9 @@ describe('RvfEventLog#getAllEvents', () => {
 // 5. Snapshots
 // ===========================================================================
 
-describe('RvfEventLog#snapshots', () => {
+describe('BinaryEventLog#snapshots', () => {
   it('saveSnapshot persists and getSnapshot retrieves', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const snap = makeSnapshot('agg-1', 5, { counter: 42 });
@@ -371,7 +371,7 @@ describe('RvfEventLog#snapshots', () => {
   });
 
   it('returns null for missing snapshot', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const result = await log.getSnapshot('nonexistent');
@@ -381,7 +381,7 @@ describe('RvfEventLog#snapshots', () => {
   });
 
   it('multiple snapshots: latest wins', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     await log.saveSnapshot(makeSnapshot('agg-1', 3, { v: 'old' }));
@@ -395,12 +395,12 @@ describe('RvfEventLog#snapshots', () => {
   });
 
   it('snapshots survive close and re-initialize', async () => {
-    const log1 = new RvfEventLog({ logPath });
+    const log1 = new BinaryEventLog({ logPath });
     await log1.initialize();
     await log1.saveSnapshot(makeSnapshot('agg-1', 10, { val: 99 }));
     await log1.close();
 
-    const log2 = new RvfEventLog({ logPath });
+    const log2 = new BinaryEventLog({ logPath });
     await log2.initialize();
     const snap = await log2.getSnapshot('agg-1');
     assert.ok(snap);
@@ -415,9 +415,9 @@ describe('RvfEventLog#snapshots', () => {
 // 6. Stats
 // ===========================================================================
 
-describe('RvfEventLog#getStats', () => {
+describe('BinaryEventLog#getStats', () => {
   it('returns correct statistics', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const base = 1000000;
@@ -440,7 +440,7 @@ describe('RvfEventLog#getStats', () => {
   });
 
   it('returns nulls for empty log', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const stats = await log.getStats();
@@ -456,16 +456,16 @@ describe('RvfEventLog#getStats', () => {
 // 7. Persistence
 // ===========================================================================
 
-describe('RvfEventLog persistence', () => {
+describe('BinaryEventLog persistence', () => {
   it('data survives close and re-initialize cycle', async () => {
-    const log1 = new RvfEventLog({ logPath });
+    const log1 = new BinaryEventLog({ logPath });
     await log1.initialize();
     await log1.append(makeEvent('agg-1', 'created'));
     await log1.append(makeEvent('agg-1', 'updated'));
     await log1.append(makeEvent('agg-2', 'created'));
     await log1.close();
 
-    const log2 = new RvfEventLog({ logPath });
+    const log2 = new BinaryEventLog({ logPath });
     await log2.initialize();
 
     const all = await log2.getAllEvents();
@@ -480,7 +480,7 @@ describe('RvfEventLog persistence', () => {
   });
 
   it('truncated records are handled gracefully', async () => {
-    const log1 = new RvfEventLog({ logPath });
+    const log1 = new BinaryEventLog({ logPath });
     await log1.initialize();
     await log1.append(makeEvent('agg-1', 'created'));
     await log1.close();
@@ -492,7 +492,7 @@ describe('RvfEventLog persistence', () => {
     appendFileSync(logPath, Buffer.concat([lengthBuf, Buffer.from('partial')]));
 
     // Re-open should recover the valid event and skip the truncated one.
-    const log2 = new RvfEventLog({ logPath });
+    const log2 = new BinaryEventLog({ logPath });
     await log2.initialize();
 
     const events = await log2.getEvents('agg-1');
@@ -507,9 +507,9 @@ describe('RvfEventLog persistence', () => {
 // 8. Close
 // ===========================================================================
 
-describe('RvfEventLog#close', () => {
+describe('BinaryEventLog#close', () => {
   it('clears in-memory state', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
     await log.append(makeEvent('agg-1', 'x'));
     await log.close();
@@ -521,7 +521,7 @@ describe('RvfEventLog#close', () => {
   });
 
   it('prevents append after close', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
     await log.close();
 
@@ -532,7 +532,7 @@ describe('RvfEventLog#close', () => {
   });
 
   it('emits shutdown event', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     let emitted = false;
@@ -543,7 +543,7 @@ describe('RvfEventLog#close', () => {
   });
 
   it('is idempotent', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
     await log.close();
     await log.close(); // should not throw
@@ -554,9 +554,9 @@ describe('RvfEventLog#close', () => {
 // 9. Edge Cases
 // ===========================================================================
 
-describe('RvfEventLog edge cases', () => {
+describe('BinaryEventLog edge cases', () => {
   it('empty log returns empty arrays', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     assert.deepEqual(await log.getEvents('anything'), []);
@@ -567,7 +567,7 @@ describe('RvfEventLog edge cases', () => {
 
   it('corrupt JSON records are skipped', async () => {
     // Create a valid file with magic header, then inject bad JSON.
-    writeFileSync(logPath, Buffer.from('RVFL'));
+    writeFileSync(logPath, Buffer.from('HFEL'));
     const badPayload = Buffer.from('{{{invalid json');
     const lenBuf = Buffer.allocUnsafe(4);
     lenBuf.writeUInt32BE(badPayload.length, 0);
@@ -582,10 +582,10 @@ describe('RvfEventLog edge cases', () => {
     appendFileSync(logPath, Buffer.concat([validLen, validJson]));
 
     // Also create the snapshot file so initialize does not fail.
-    const snapPath = logPath.replace(/\.rvf$/, '.snap.rvf');
-    writeFileSync(snapPath, Buffer.from('RVFL'));
+    const snapPath = logPath.replace(/\.hfel$/, '.snap.hfel');
+    writeFileSync(snapPath, Buffer.from('HFEL'));
 
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const events = await log.getEvents('agg-1');
@@ -596,7 +596,7 @@ describe('RvfEventLog edge cases', () => {
   });
 
   it('handles large number of events', async () => {
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await log.initialize();
 
     const count = 500;
@@ -615,15 +615,15 @@ describe('RvfEventLog edge cases', () => {
 
   it('invalid file header throws', async () => {
     writeFileSync(logPath, Buffer.from('BAAD'));
-    const snapPath = logPath.replace(/\.rvf$/, '.snap.rvf');
-    writeFileSync(snapPath, Buffer.from('RVFL'));
+    const snapPath = logPath.replace(/\.hfel$/, '.snap.hfel');
+    writeFileSync(snapPath, Buffer.from('HFEL'));
 
-    const log = new RvfEventLog({ logPath });
+    const log = new BinaryEventLog({ logPath });
     await assert.rejects(() => log.initialize(), /Invalid file header/);
   });
 
   it('snapshot:recommended emitted at threshold', async () => {
-    const log = new RvfEventLog({ logPath, snapshotThreshold: 3 });
+    const log = new BinaryEventLog({ logPath, snapshotThreshold: 3 });
     await log.initialize();
 
     const recommended: any[] = [];

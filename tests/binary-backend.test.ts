@@ -14,7 +14,7 @@ import type {
 // -- Helpers --
 
 function makeTmpDir(): string {
-  return mkdtempSync(join(tmpdir(), 'rvf-test-'));
+  return mkdtempSync(join(tmpdir(), 'binary-test-'));
 }
 
 function makeEntry(overrides: Partial<MemoryEntry> = {}): MemoryEntry {
@@ -56,7 +56,7 @@ describe('BinaryBackend', () => {
   beforeEach(async () => {
     tmpDir = makeTmpDir();
     backend = new BinaryBackend({
-      databasePath: join(tmpDir, 'test.rvf'),
+      databasePath: join(tmpDir, 'test.hfdb'),
       dimensions: 4,
       autoPersistInterval: 0, // disable timer in tests
     });
@@ -102,7 +102,7 @@ describe('BinaryBackend', () => {
     it('should persist file on shutdown when dirty', async () => {
       await backend.store(makeEntry());
       await backend.shutdown();
-      assert.ok(existsSync(join(tmpDir, 'test.rvf')));
+      assert.ok(existsSync(join(tmpDir, 'test.hfdb')));
     });
 
     it('should reload entries after shutdown + reinit', async () => {
@@ -111,7 +111,7 @@ describe('BinaryBackend', () => {
       await backend.shutdown();
 
       const b2 = new BinaryBackend({
-        databasePath: join(tmpDir, 'test.rvf'),
+        databasePath: join(tmpDir, 'test.hfdb'),
         dimensions: 4,
         autoPersistInterval: 0,
       });
@@ -363,15 +363,15 @@ describe('BinaryBackend', () => {
 
   // ---- 8. Persistence & Binary Format ----
   describe('persistence', () => {
-    it('persisted file starts with RVF magic bytes', async () => {
+    it('persisted file starts with Binary magic bytes', async () => {
       await backend.store(makeEntry({ id: 'magic-1' }));
       await backend.shutdown();
 
-      const buf = readFileSync(join(tmpDir, 'test.rvf'));
-      assert.equal(buf[0], 0x52); // R
-      assert.equal(buf[1], 0x56); // V
-      assert.equal(buf[2], 0x46); // F
-      assert.equal(buf[3], 0x00); // \0
+      const buf = readFileSync(join(tmpDir, 'test.hfdb'));
+      assert.equal(buf[0], 0x48); // H
+      assert.equal(buf[1], 0x46); // F
+      assert.equal(buf[2], 0x44); // D
+      assert.equal(buf[3], 0x42); // B
     });
 
     it('embeddings survive round-trip', async () => {
@@ -380,7 +380,7 @@ describe('BinaryBackend', () => {
       await backend.shutdown();
 
       const b2 = new BinaryBackend({
-        databasePath: join(tmpDir, 'test.rvf'),
+        databasePath: join(tmpDir, 'test.hfdb'),
         dimensions: 4,
         autoPersistInterval: 0,
       });
@@ -477,7 +477,7 @@ describe('BinaryBackend', () => {
     });
 
     it('init with missing file dir creates it on persist', async () => {
-      const deepPath = join(tmpDir, 'sub', 'dir', 'deep.rvf');
+      const deepPath = join(tmpDir, 'sub', 'dir', 'deep.hfdb');
       const b = new BinaryBackend({
         databasePath: deepPath,
         dimensions: 4,
@@ -490,9 +490,9 @@ describe('BinaryBackend', () => {
     });
 
     it('handles corrupt file without crashing', async () => {
-      const path = join(tmpDir, 'corrupt.rvf');
+      const path = join(tmpDir, 'corrupt.hfdb');
       const { writeFileSync } = await import('node:fs');
-      writeFileSync(path, Buffer.from('RVF\0garbage data here'));
+      writeFileSync(path, Buffer.from('BAD!garbage data here'));
 
       const b = new BinaryBackend({
         databasePath: path,

@@ -1,5 +1,5 @@
 /**
- * Binary Migration Utility — bidirectional migration between RVF-compatible
+ * Binary Migration Utility — bidirectional migration between Hive Flow binary
  * binary files and legacy formats (JSON files, sql.js / better-sqlite3 databases).
  * @module @hive-flow/cli/memory/binary-migration
  */
@@ -15,7 +15,7 @@ export interface BinaryMigrationOptions {
   verbose?: boolean;
   /** Entries per batch (default 500). */
   batchSize?: number;
-  /** Embedding dimensions for target RVF-compatible binary file (default 1536). */
+  /** Embedding dimensions for target binary file (default 1536). */
   dimensions?: number;
   onProgress?: (progress: { current: number; total: number; phase: string }) => void;
 }
@@ -143,13 +143,13 @@ async function readSqliteRows(dbPath: string): Promise<SqliteRow[]> {
 
 async function migrateBatches(
   items: Record<string, unknown>[],
-  rvfPath: string,
+  binaryPath: string,
   options: BinaryMigrationOptions,
   normalize?: (r: Record<string, unknown>) => Record<string, unknown>,
 ): Promise<{ migrated: number; errors: string[] }> {
   const batchSize = options.batchSize ?? 500;
   const dimensions = options.dimensions ?? 1536;
-  const backend = new BinaryBackend({ databasePath: rvfPath, dimensions, verbose: options.verbose });
+  const backend = new BinaryBackend({ databasePath: binaryPath, dimensions, verbose: options.verbose });
   await backend.initialize();
   let migrated = 0;
   const errors: string[] = [];
@@ -170,70 +170,69 @@ async function migrateBatches(
 }
 
 /**
- * Bidirectional migration utility between RVF-compatible binary and legacy memory formats.
+ * Bidirectional migration utility between Hive Flow binary and legacy memory formats.
  *
  * All methods are static — no instantiation required.
  */
 export class BinaryMigrator {
-  /** Migrate a JSON memory file to RVF format. */
+  /** Migrate a JSON memory file to Hive Flow binary format. */
   static async fromJsonFile(
-    jsonPath: string, rvfPath: string, options: BinaryMigrationOptions = {},
+    jsonPath: string, binaryPath: string, options: BinaryMigrationOptions = {},
   ): Promise<BinaryMigrationResult> {
     const start = Date.now();
     const raw = await readFile(jsonPath, 'utf-8');
     let parsed: unknown;
     try { parsed = JSON.parse(raw); }
-    catch (e) { return mkResult(false, 0, 'json', 'rvf', start, [`Invalid JSON: ${(e as Error).message}`]); }
+    catch (e) { return mkResult(false, 0, 'json', 'binary', start, [`Invalid JSON: ${(e as Error).message}`]); }
     const items = Array.isArray(parsed) ? parsed : [parsed as Record<string, unknown>];
-    const { migrated, errors } = await migrateBatches(items, rvfPath, options);
-    if (options.verbose) console.log(`[BinaryMigrator] Migrated ${migrated} entries from JSON to RVF`);
-    return mkResult(errors.length === 0, migrated, 'json', 'rvf', start, errors);
+    const { migrated, errors } = await migrateBatches(items, binaryPath, options);
+    if (options.verbose) console.log(`[BinaryMigrator] Migrated ${migrated} entries from JSON to binary`);
+    return mkResult(errors.length === 0, migrated, 'json', 'binary', start, errors);
   }
 
-  /** Migrate a SQLite (better-sqlite3 / sql.js) database to RVF. */
+  /** Migrate a SQLite (better-sqlite3 / sql.js) database to Hive Flow binary. */
   static async fromSqlite(
-    dbPath: string, rvfPath: string, options: BinaryMigrationOptions = {},
+    dbPath: string, binaryPath: string, options: BinaryMigrationOptions = {},
   ): Promise<BinaryMigrationResult> {
     const start = Date.now();
     let rows: SqliteRow[];
     try { rows = await readSqliteRows(dbPath); }
-    catch (e) { return mkResult(false, 0, 'sqlite', 'rvf', start, [(e as Error).message]); }
+    catch (e) { return mkResult(false, 0, 'sqlite', 'binary', start, [(e as Error).message]); }
     options.onProgress?.({ current: 0, total: rows.length, phase: 'reading' });
-    const { migrated, errors } = await migrateBatches(rows, rvfPath, options, normalizeSqliteRow);
-    if (options.verbose) console.log(`[BinaryMigrator] Migrated ${migrated} entries from SQLite to RVF`);
-    return mkResult(errors.length === 0, migrated, 'sqlite', 'rvf', start, errors);
+    const { migrated, errors } = await migrateBatches(rows, binaryPath, options, normalizeSqliteRow);
+    if (options.verbose) console.log(`[BinaryMigrator] Migrated ${migrated} entries from SQLite to binary`);
+    return mkResult(errors.length === 0, migrated, 'sqlite', 'binary', start, errors);
   }
 
-  /** Export an RVF file back to a JSON array (backward compatibility). */
-  static async toJsonFile(rvfPath: string, jsonPath: string): Promise<BinaryMigrationResult> {
+  /** Export a binary memory file back to a JSON array. */
+  static async toJsonFile(binaryPath: string, jsonPath: string): Promise<BinaryMigrationResult> {
     const start = Date.now();
-    const backend = new BinaryBackend({ databasePath: rvfPath });
+    const backend = new BinaryBackend({ databasePath: binaryPath });
     await backend.initialize();
     let entries: MemoryEntry[];
     try { entries = await backend.query({ type: 'hybrid', limit: Number.MAX_SAFE_INTEGER }); }
     finally { await backend.shutdown(); }
     const warnings: string[] = [];
-    if (entries.length === 0) warnings.push('Source RVF file contained no entries');
+    if (entries.length === 0) warnings.push('Source binary file contained no entries');
     await atomicWrite(jsonPath, JSON.stringify(entries.map(serializeForJson), null, 2));
-    return mkResult(true, entries.length, 'rvf', 'json', start, warnings);
+    return mkResult(true, entries.length, 'binary', 'json', start, warnings);
   }
 
   /**
    * Detect file format by magic bytes.
-   * - RVF\0 (0x52 0x56 0x46 0x00) -> 'rvf' (legacy)
-   * - HFDB  (0x48 0x46 0x44 0x42) -> 'rvf' (Phase-R read-accepted)
+   * - Legacy 0x52 0x56 0x46 0x00 -> 'binary'
+   * - HFDB  (0x48 0x46 0x44 0x42) -> 'binary'
    * - SQLi  (0x53 0x51 0x4C 0x69) -> 'sqlite'
    * - Leading [ or {              -> 'json'
    */
-  static async detectFormat(filePath: string): Promise<'rvf' | 'json' | 'sqlite' | 'unknown'> {
+  static async detectFormat(filePath: string): Promise<'binary' | 'json' | 'sqlite' | 'unknown'> {
     if (!existsSync(filePath)) return 'unknown';
     const fd = await import('node:fs').then(m => m.promises.open(filePath, 'r'));
     try {
       const buf = Buffer.alloc(16);
       await fd.read(buf, 0, 16, 0);
-      if (buf[0] === 0x52 && buf[1] === 0x56 && buf[2] === 0x46 && buf[3] === 0x00) return 'rvf';
-      // Phase-R: HFDB is the read-accepted memory magic (legacy RVF\0 above).
-      if (buf[0] === 0x48 && buf[1] === 0x46 && buf[2] === 0x44 && buf[3] === 0x42) return 'rvf';
+      if (buf[0] === 0x52 && buf[1] === 0x56 && buf[2] === 0x46 && buf[3] === 0x00) return 'binary';
+      if (buf[0] === 0x48 && buf[1] === 0x46 && buf[2] === 0x44 && buf[3] === 0x42) return 'binary';
       if (buf[0] === 0x53 && buf[1] === 0x51 && buf[2] === 0x4C && buf[3] === 0x69) return 'sqlite';
       const head = buf.toString('utf-8').trimStart();
       if (head.startsWith('[') || head.startsWith('{')) return 'json';
@@ -241,17 +240,17 @@ export class BinaryMigrator {
     } finally { await fd.close(); }
   }
 
-  /** Auto-detect source format and migrate to RVF. */
+  /** Auto-detect source format and migrate to Hive Flow binary. */
   static async autoMigrate(
-    sourcePath: string, targetRvfPath: string, options: BinaryMigrationOptions = {},
+    sourcePath: string, targetBinaryPath: string, options: BinaryMigrationOptions = {},
   ): Promise<BinaryMigrationResult> {
     const format = await BinaryMigrator.detectFormat(sourcePath);
     if (options.verbose) console.log(`[BinaryMigrator] Detected source format: ${format}`);
     switch (format) {
-      case 'json':   return BinaryMigrator.fromJsonFile(sourcePath, targetRvfPath, options);
-      case 'sqlite': return BinaryMigrator.fromSqlite(sourcePath, targetRvfPath, options);
-      case 'rvf':    return { success: true, entriesMigrated: 0, sourceFormat: 'rvf', targetFormat: 'rvf', durationMs: 0, errors: [] };
-      default:       return { success: false, entriesMigrated: 0, sourceFormat: 'unknown', targetFormat: 'rvf', durationMs: 0, errors: [`Unrecognized format: ${sourcePath}`] };
+      case 'json':   return BinaryMigrator.fromJsonFile(sourcePath, targetBinaryPath, options);
+      case 'sqlite': return BinaryMigrator.fromSqlite(sourcePath, targetBinaryPath, options);
+      case 'binary': return { success: true, entriesMigrated: 0, sourceFormat: 'binary', targetFormat: 'binary', durationMs: 0, errors: [] };
+      default:       return { success: false, entriesMigrated: 0, sourceFormat: 'unknown', targetFormat: 'binary', durationMs: 0, errors: [`Unrecognized format: ${sourcePath}`] };
     }
   }
 }

@@ -1,6 +1,6 @@
 /**
  * V3 CLI Appliance Advanced Commands (Phase 3-4)
- * Sign, publish, and hot-patch RVFA appliances.
+ * Sign, publish, and hot-patch Hive Flow appliances.
  */
 
 import type { Command, CommandContext, CommandResult } from '../types.js';
@@ -41,24 +41,24 @@ async function requireFile(file: string): Promise<boolean> {
 // SIGN
 export const signCommand: Command = {
   name: 'sign',
-  description: 'Sign an RVFA appliance with Ed25519 for tamper detection',
+  description: 'Sign an appliance with Ed25519 for tamper detection',
   options: [
-    { name: 'file', short: 'f', type: 'string', description: 'Path to .rvf file', required: true },
+    { name: 'file', short: 'f', type: 'string', description: 'Path to .hfap file', required: true },
     { name: 'key', short: 'k', type: 'string', description: 'Path to Ed25519 private key (PEM)' },
     { name: 'generate-keys', type: 'boolean', description: 'Generate a new key pair' },
-    { name: 'key-dir', type: 'string', description: 'Directory for key storage', default: '.rvfa-keys' },
+    { name: 'key-dir', type: 'string', description: 'Directory for key storage', default: '.hfap-keys' },
     { name: 'signer', type: 'string', description: 'Publisher name for signature metadata' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const file = ctx.flags.file as string;
     const keyPath = ctx.flags.key as string | undefined;
     const genKeys = ctx.flags['generate-keys'] as boolean;
-    const keyDir = ctx.flags['key-dir'] as string || '.rvfa-keys';
+    const keyDir = ctx.flags['key-dir'] as string || '.hfap-keys';
     const signer = ctx.flags.signer as string | undefined;
     if (!file) return fail('--file is required');
 
     try {
-      const signing = await import('../appliance/rvfa-signing.js');
+      const signing = await import('../appliance/appliance-signing.js');
 
       if (genKeys) {
         hdr('Generating Ed25519 Key Pair');
@@ -72,7 +72,7 @@ export const signCommand: Command = {
       }
 
       if (!(await requireFile(file))) return { success: false, exitCode: 1 };
-      hdr('Signing RVFA Appliance');
+      hdr('Signing Appliance');
 
       let privateKey: Buffer;
       if (keyPath) {
@@ -83,7 +83,7 @@ export const signCommand: Command = {
         privateKey = kp.privateKey;
       }
 
-      const s = new signing.RvfaSigner(privateKey);
+      const s = new signing.ApplianceSigner(privateKey);
       const meta = await s.signAppliance(file, signer);
       output.printSuccess('Appliance signed successfully');
       output.printInfo(`Algorithm:   ${meta.algorithm}`);
@@ -101,9 +101,9 @@ export const signCommand: Command = {
 // PUBLISH
 export const publishCommand: Command = {
   name: 'publish',
-  description: 'Publish an RVFA appliance to IPFS via Pinata',
+  description: 'Publish an appliance to IPFS via Pinata',
   options: [
-    { name: 'file', short: 'f', type: 'string', description: 'Path to .rvf file', required: true },
+    { name: 'file', short: 'f', type: 'string', description: 'Path to .hfap file', required: true },
     { name: 'name', short: 'n', type: 'string', description: 'Publication name' },
     { name: 'description', type: 'string', description: 'Description' },
   ],
@@ -113,9 +113,9 @@ export const publishCommand: Command = {
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
-      const dist = await import('../appliance/rvfa-distribution.js');
+      const dist = await import('../appliance/appliance-distribution.js');
 
-      hdr('Publishing RVFA to IPFS');
+      hdr('Publishing Appliance to IPFS');
       output.printInfo(`File: ${file}`);
       output.writeln();
 
@@ -139,11 +139,11 @@ export const publishCommand: Command = {
 // UPDATE (hot-patch)
 export const updateAppCommand: Command = {
   name: 'update',
-  description: 'Hot-patch a section in an RVFA appliance',
+  description: 'Hot-patch a section in an appliance',
   options: [
-    { name: 'file', short: 'f', type: 'string', description: 'Path to .rvf file', required: true },
+    { name: 'file', short: 'f', type: 'string', description: 'Path to .hfap file', required: true },
     { name: 'section', short: 's', type: 'string', description: 'Section to patch (e.g. hive-flow, models)', required: true },
-    { name: 'patch', short: 'p', type: 'string', description: 'Path to .rvfp patch file' },
+    { name: 'patch', short: 'p', type: 'string', description: 'Path to .hfpp patch file' },
     { name: 'data', short: 'd', type: 'string', description: 'Path to new section data (creates patch automatically)' },
     { name: 'version', type: 'string', description: 'Patch version', default: '0.0.1' },
     { name: 'no-backup', type: 'boolean', description: 'Skip backup creation' },
@@ -155,15 +155,15 @@ export const updateAppCommand: Command = {
     const patchPath = ctx.flags.patch as string | undefined;
     const dataPath = ctx.flags.data as string | undefined;
     if (!file || !section) return fail('--file and --section are required');
-    if (!patchPath && !dataPath) return fail('Provide --patch (RVFP file) or --data (raw section data)');
+    if (!patchPath && !dataPath) return fail('Provide --patch (HFPP file) or --data (raw section data)');
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
-      const dist = await import('../appliance/rvfa-distribution.js');
-      const { RvfaReader } = await import('../appliance/rvfa-format.js');
+      const dist = await import('../appliance/appliance-distribution.js');
+      const { ApplianceReader } = await import('../appliance/appliance-format.js');
       const fs = await import('fs');
 
-      hdr('RVFA Hot-Patch Update');
+      hdr('Appliance Hot-Patch Update');
       output.printInfo(`Appliance: ${file}`);
       output.printInfo(`Section:   ${section}`);
       output.writeln();
@@ -177,10 +177,10 @@ export const updateAppCommand: Command = {
       } else {
         if (!(await requireFile(dataPath!))) return { success: false, exitCode: 1 };
         const newData = fs.readFileSync(dataPath!);
-        const reader = await RvfaReader.fromFile(file);
+        const reader = await ApplianceReader.fromFile(file);
         const appHdr = reader.getHeader();
         output.printInfo(`Creating patch for section "${section}" (${fmtSize(newData.length)} new data)`);
-        patchBuf = await dist.RvfaPatcher.createPatch({
+        patchBuf = await dist.AppliancePatcher.createPatch({
           targetName: appHdr.name,
           targetVersion: appHdr.appVersion,
           sectionId: section,
@@ -197,7 +197,7 @@ export const updateAppCommand: Command = {
         pubKey = fs.readFileSync(pkPath);
       }
 
-      const result = await dist.RvfaPatcher.applyPatch(file, patchBuf, {
+      const result = await dist.AppliancePatcher.applyPatch(file, patchBuf, {
         backup: !(ctx.flags['no-backup'] as boolean),
         verify: true,
         publicKey: pubKey,

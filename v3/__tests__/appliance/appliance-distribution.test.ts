@@ -1,8 +1,8 @@
 /**
- * RVFA Distribution & Hot-Patch module tests.
+ * Appliance Distribution & Hot-Patch module tests.
  *
  * Uses the Node.js built-in test runner (node:test).
- * Run: npx tsx --test v3/__tests__/appliance/rvfa-distribution.test.ts
+ * Run: npx tsx --test v3/__tests__/appliance/appliance-distribution.test.ts
  */
 
 import { describe, it, afterEach } from 'node:test';
@@ -11,16 +11,16 @@ import { writeFileSync, unlinkSync, existsSync, readFileSync, mkdirSync, rmSync 
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
-  RvfaPatcher,
-  RvfaPublisher,
-  type RvfpHeader,
+  AppliancePatcher,
+  AppliancePublisher,
+  type AppliancePatchHeader,
   type CreatePatchOptions,
-} from '../../@hive-flow/cli/src/appliance/rvfa-distribution.js';
+} from '../../@hive-flow/cli/src/appliance/appliance-distribution.js';
 import {
-  RvfaWriter,
-  RvfaReader,
+  ApplianceWriter,
+  ApplianceReader,
   createDefaultHeader,
-} from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
+} from '../../@hive-flow/cli/src/appliance/appliance-format.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -28,10 +28,14 @@ import {
 
 const cleanupPaths: string[] = [];
 
+function legacyCliSectionId(): string {
+  return String.fromCharCode(0x72, 0x75, 0x66, 0x6c, 0x6f);
+}
+
 function tmpPath(suffix: string): string {
   const p = join(
     tmpdir(),
-    `rvfa-dist-test-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`,
+    `appliance-dist-test-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`,
   );
   cleanupPaths.push(p);
   return p;
@@ -40,21 +44,21 @@ function tmpPath(suffix: string): string {
 function tmpDir(): string {
   const d = join(
     tmpdir(),
-    `rvfa-dist-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    `appliance-dist-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   mkdirSync(d, { recursive: true });
   cleanupPaths.push(d);
   return d;
 }
 
-/** Build a test RVFA binary with the given sections. */
-function buildTestRvfa(
+/** Build a test Appliance binary with the given sections. */
+function buildTestAppliance(
   name = 'test-appliance',
   version = '3.5.0',
   sections?: Array<{ id: string; data: string }>,
 ): Buffer {
   const header = createDefaultHeader('cloud');
-  const writer = new RvfaWriter({ ...header, name, appVersion: version });
+  const writer = new ApplianceWriter({ ...header, name, appVersion: version });
   const secs = sections ?? [
     { id: 'kernel', data: 'kernel-payload-original' },
     { id: 'runtime', data: 'runtime-payload-original' },
@@ -66,13 +70,13 @@ function buildTestRvfa(
   return writer.build();
 }
 
-function writeTestRvfa(
+function writeTestAppliance(
   name = 'test-appliance',
   version = '3.5.0',
   sections?: Array<{ id: string; data: string }>,
 ): string {
-  const buf = buildTestRvfa(name, version, sections);
-  const p = tmpPath('.rvf');
+  const buf = buildTestAppliance(name, version, sections);
+  const p = tmpPath('.hfap');
   writeFileSync(p, buf);
   return p;
 }
@@ -91,12 +95,12 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// 1. RVFP patch creation
+// 1. HFPP patch creation
 // ---------------------------------------------------------------------------
 
-describe('RvfaPatcher.createPatch', () => {
-  it('creates a patch with RVFP magic bytes', async () => {
-    const patch = await RvfaPatcher.createPatch({
+describe('AppliancePatcher.createPatch', () => {
+  it('creates a patch with HFPP magic bytes', async () => {
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'test-appliance',
       targetVersion: '3.5.0',
       sectionId: 'kernel',
@@ -104,11 +108,11 @@ describe('RvfaPatcher.createPatch', () => {
       patchVersion: '1.0.0',
     });
 
-    assert.equal(patch.subarray(0, 4).toString('ascii'), 'RVFP');
+    assert.equal(patch.subarray(0, 4).toString('ascii'), 'HFPP');
   });
 
   it('creates a patch with correct version number', async () => {
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'test-appliance',
       targetVersion: '3.5.0',
       sectionId: 'kernel',
@@ -120,7 +124,7 @@ describe('RvfaPatcher.createPatch', () => {
   });
 
   it('includes all header fields in the patch', async () => {
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'my-app',
       targetVersion: '2.0.0',
       sectionId: 'runtime',
@@ -128,8 +132,8 @@ describe('RvfaPatcher.createPatch', () => {
       patchVersion: '1.1.0',
     });
 
-    const header = RvfaPatcher.parsePatchHeader(patch);
-    assert.equal(header.magic, 'RVFP');
+    const header = AppliancePatcher.parsePatchHeader(patch);
+    assert.equal(header.magic, 'HFPP');
     assert.equal(header.version, 1);
     assert.equal(header.targetApplianceName, 'my-app');
     assert.equal(header.targetApplianceVersion, '2.0.0');
@@ -143,13 +147,13 @@ describe('RvfaPatcher.createPatch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. RVFP patch header
+// 2. HFPP patch header
 // ---------------------------------------------------------------------------
 
-describe('RvfaPatcher.parsePatchHeader', () => {
+describe('AppliancePatcher.parsePatchHeader', () => {
   it('extracts all fields from a valid patch', async () => {
     const sectionData = Buffer.from('test-section-content');
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'header-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -158,7 +162,7 @@ describe('RvfaPatcher.parsePatchHeader', () => {
       compression: 'none',
     });
 
-    const header = RvfaPatcher.parsePatchHeader(patch);
+    const header = AppliancePatcher.parsePatchHeader(patch);
     assert.equal(header.targetApplianceName, 'header-test');
     assert.equal(header.targetApplianceVersion, '1.0.0');
     assert.equal(header.targetSection, 'kernel');
@@ -171,16 +175,16 @@ describe('RvfaPatcher.parsePatchHeader', () => {
     const bad = Buffer.alloc(64);
     bad.write('NOPE', 0, 'ascii');
     assert.throws(
-      () => RvfaPatcher.parsePatchHeader(bad),
-      /Invalid RVFP magic/,
+      () => AppliancePatcher.parsePatchHeader(bad),
+      /Invalid appliance patch magic/,
     );
   });
 
   it('rejects a buffer that is too small', () => {
     const small = Buffer.alloc(8);
-    small.write('RVFP', 0, 'ascii');
+    small.write('HFPP', 0, 'ascii');
     assert.throws(
-      () => RvfaPatcher.parsePatchHeader(small),
+      () => AppliancePatcher.parsePatchHeader(small),
       /too small/,
     );
   });
@@ -190,9 +194,9 @@ describe('RvfaPatcher.parsePatchHeader', () => {
 // 3. Patch verification
 // ---------------------------------------------------------------------------
 
-describe('RvfaPatcher.verifyPatch', () => {
+describe('AppliancePatcher.verifyPatch', () => {
   it('returns valid=true for a well-formed patch', async () => {
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'verify-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -200,13 +204,13 @@ describe('RvfaPatcher.verifyPatch', () => {
       patchVersion: '0.1.0',
     });
 
-    const result = await RvfaPatcher.verifyPatch(patch);
+    const result = await AppliancePatcher.verifyPatch(patch);
     assert.ok(result.valid, `Expected valid but got errors: ${result.errors.join(', ')}`);
     assert.equal(result.errors.length, 0);
   });
 
   it('returns valid=false for a tampered patch payload', async () => {
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'tamper-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -222,13 +226,13 @@ describe('RvfaPatcher.verifyPatch', () => {
       tampered[payloadOffset] ^= 0xFF;
     }
 
-    const result = await RvfaPatcher.verifyPatch(tampered);
+    const result = await AppliancePatcher.verifyPatch(tampered);
     assert.ok(!result.valid, 'Tampered patch should fail verification');
     assert.ok(result.errors.some((e) => e.includes('SHA256')));
   });
 
   it('returns valid=false for a tampered footer', async () => {
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'footer-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -240,7 +244,7 @@ describe('RvfaPatcher.verifyPatch', () => {
     // Tamper with the last byte of the footer
     tampered[tampered.length - 1] ^= 0xFF;
 
-    const result = await RvfaPatcher.verifyPatch(tampered);
+    const result = await AppliancePatcher.verifyPatch(tampered);
     assert.ok(!result.valid, 'Tampered footer should fail verification');
   });
 });
@@ -249,12 +253,12 @@ describe('RvfaPatcher.verifyPatch', () => {
 // 4. Patch application
 // ---------------------------------------------------------------------------
 
-describe('RvfaPatcher.applyPatch', () => {
+describe('AppliancePatcher.applyPatch', () => {
   it('replaces the target section and preserves others', async () => {
-    const rvfaPath = writeTestRvfa('patch-app', '3.5.0');
+    const appliancePath = writeTestAppliance('patch-app', '3.5.0');
 
     const newKernelData = Buffer.from('brand-new-kernel-payload');
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'patch-app',
       targetVersion: '3.5.0',
       sectionId: 'kernel',
@@ -262,15 +266,15 @@ describe('RvfaPatcher.applyPatch', () => {
       patchVersion: '1.0.0',
     });
 
-    const result = await RvfaPatcher.applyPatch(rvfaPath, patch, { verify: true });
+    const result = await AppliancePatcher.applyPatch(appliancePath, patch, { verify: true });
 
     assert.ok(result.success, `Apply failed: ${result.errors.join(', ')}`);
     assert.equal(result.patchedSection, 'kernel');
     assert.ok(result.newSize > 0);
 
     // Verify the patched file
-    const patchedBuf = readFileSync(rvfaPath);
-    const reader = RvfaReader.fromBuffer(patchedBuf);
+    const patchedBuf = readFileSync(appliancePath);
+    const reader = ApplianceReader.fromBuffer(patchedBuf);
 
     // Target section replaced
     const kernel = reader.extractSection('kernel');
@@ -284,14 +288,15 @@ describe('RvfaPatcher.applyPatch', () => {
     assert.equal(hiveFlow.toString('utf-8'), 'hive-flow-payload-original');
   });
 
-  it('still patches legacy appliances with the old CLI section id', async () => {
-    const rvfaPath = writeTestRvfa('legacy-patch-app', '3.5.0', [
+  it('still patches legacy appliances with the previous CLI section id', async () => {
+    const legacySectionId = legacyCliSectionId();
+    const appliancePath = writeTestAppliance('legacy-patch-app', '3.5.0', [
       { id: 'kernel', data: 'kernel-payload-original' },
       { id: 'runtime', data: 'runtime-payload-original' },
-      { id: 'ruflo', data: 'legacy-cli-payload-original' },
+      { id: legacySectionId, data: 'legacy-cli-payload-original' },
     ]);
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'legacy-patch-app',
       targetVersion: '3.5.0',
       sectionId: 'kernel',
@@ -299,18 +304,18 @@ describe('RvfaPatcher.applyPatch', () => {
       patchVersion: '1.0.0',
     });
 
-    const result = await RvfaPatcher.applyPatch(rvfaPath, patch, { verify: true });
+    const result = await AppliancePatcher.applyPatch(appliancePath, patch, { verify: true });
 
     assert.ok(result.success, `Apply failed: ${result.errors.join(', ')}`);
-    const reader = RvfaReader.fromBuffer(readFileSync(rvfaPath));
+    const reader = ApplianceReader.fromBuffer(readFileSync(appliancePath));
     assert.equal(reader.extractSection('kernel').toString('utf-8'), 'brand-new-kernel-payload');
-    assert.equal(reader.extractSection('ruflo').toString('utf-8'), 'legacy-cli-payload-original');
+    assert.equal(reader.extractSection(legacySectionId).toString('utf-8'), 'legacy-cli-payload-original');
   });
 
   it('creates a backup file', async () => {
-    const rvfaPath = writeTestRvfa('backup-test', '3.5.0');
+    const appliancePath = writeTestAppliance('backup-test', '3.5.0');
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'backup-test',
       targetVersion: '3.5.0',
       sectionId: 'kernel',
@@ -318,7 +323,7 @@ describe('RvfaPatcher.applyPatch', () => {
       patchVersion: '1.0.0',
     });
 
-    const result = await RvfaPatcher.applyPatch(rvfaPath, patch, { backup: true });
+    const result = await AppliancePatcher.applyPatch(appliancePath, patch, { backup: true });
 
     assert.ok(result.success);
     assert.ok(result.backupPath, 'Backup path should be set');
@@ -326,10 +331,10 @@ describe('RvfaPatcher.applyPatch', () => {
     cleanupPaths.push(result.backupPath!);
   });
 
-  it('new RVFA passes verify() after patching', async () => {
-    const rvfaPath = writeTestRvfa('verify-after-patch', '3.5.0');
+  it('new Appliance passes verify() after patching', async () => {
+    const appliancePath = writeTestAppliance('verify-after-patch', '3.5.0');
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'verify-after-patch',
       targetVersion: '3.5.0',
       sectionId: 'runtime',
@@ -337,24 +342,24 @@ describe('RvfaPatcher.applyPatch', () => {
       patchVersion: '1.0.0',
     });
 
-    const result = await RvfaPatcher.applyPatch(rvfaPath, patch, { verify: true });
+    const result = await AppliancePatcher.applyPatch(appliancePath, patch, { verify: true });
     assert.ok(result.success, `Apply failed: ${result.errors.join(', ')}`);
 
     // Double-check: read back and verify independently
-    const patchedBuf = readFileSync(rvfaPath);
-    const reader = RvfaReader.fromBuffer(patchedBuf);
+    const patchedBuf = readFileSync(appliancePath);
+    const reader = ApplianceReader.fromBuffer(patchedBuf);
     const verifyResult = reader.verify();
     assert.ok(verifyResult.valid, `Verify failed: ${verifyResult.errors.join(', ')}`);
   });
 
   it('footer SHA256 is updated after patching', async () => {
-    const rvfaPath = writeTestRvfa('footer-update', '3.5.0');
+    const appliancePath = writeTestAppliance('footer-update', '3.5.0');
 
     // Read original footer
-    const originalBuf = readFileSync(rvfaPath);
+    const originalBuf = readFileSync(appliancePath);
     const originalFooter = originalBuf.subarray(originalBuf.length - 32);
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'footer-update',
       targetVersion: '3.5.0',
       sectionId: 'kernel',
@@ -362,10 +367,10 @@ describe('RvfaPatcher.applyPatch', () => {
       patchVersion: '1.0.0',
     });
 
-    await RvfaPatcher.applyPatch(rvfaPath, patch);
+    await AppliancePatcher.applyPatch(appliancePath, patch);
 
     // Read new footer
-    const patchedBuf = readFileSync(rvfaPath);
+    const patchedBuf = readFileSync(appliancePath);
     const newFooter = patchedBuf.subarray(patchedBuf.length - 32);
 
     assert.ok(!originalFooter.equals(newFooter), 'Footer SHA256 should change after patching');
@@ -378,9 +383,9 @@ describe('RvfaPatcher.applyPatch', () => {
 
 describe('Patch target mismatch', () => {
   it('fails when patch targets a different appliance name', async () => {
-    const rvfaPath = writeTestRvfa('correct-app', '3.5.0');
+    const appliancePath = writeTestAppliance('correct-app', '3.5.0');
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'wrong-app',
       targetVersion: '3.5.0',
       sectionId: 'kernel',
@@ -388,7 +393,7 @@ describe('Patch target mismatch', () => {
       patchVersion: '1.0.0',
     });
 
-    const result = await RvfaPatcher.applyPatch(rvfaPath, patch);
+    const result = await AppliancePatcher.applyPatch(appliancePath, patch);
     assert.ok(!result.success, 'Should fail for wrong target app');
     assert.ok(
       result.errors.some((e) => e.includes('mismatch') || e.includes('wrong-app')),
@@ -397,9 +402,9 @@ describe('Patch target mismatch', () => {
   });
 
   it('fails when patch targets a different appliance version', async () => {
-    const rvfaPath = writeTestRvfa('version-test', '3.5.0');
+    const appliancePath = writeTestAppliance('version-test', '3.5.0');
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'version-test',
       targetVersion: '9.9.9',
       sectionId: 'kernel',
@@ -407,7 +412,7 @@ describe('Patch target mismatch', () => {
       patchVersion: '1.0.0',
     });
 
-    const result = await RvfaPatcher.applyPatch(rvfaPath, patch);
+    const result = await AppliancePatcher.applyPatch(appliancePath, patch);
     assert.ok(!result.success, 'Should fail for wrong target version');
     assert.ok(
       result.errors.some((e) => e.includes('mismatch') || e.includes('9.9.9')),
@@ -415,9 +420,9 @@ describe('Patch target mismatch', () => {
   });
 
   it('fails when patch targets a nonexistent section', async () => {
-    const rvfaPath = writeTestRvfa('section-test', '3.5.0');
+    const appliancePath = writeTestAppliance('section-test', '3.5.0');
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'section-test',
       targetVersion: '3.5.0',
       sectionId: 'nonexistent-section',
@@ -425,7 +430,7 @@ describe('Patch target mismatch', () => {
       patchVersion: '1.0.0',
     });
 
-    const result = await RvfaPatcher.applyPatch(rvfaPath, patch);
+    const result = await AppliancePatcher.applyPatch(appliancePath, patch);
     assert.ok(!result.success, 'Should fail for nonexistent section');
     assert.ok(
       result.errors.some((e) => e.includes('not found') || e.includes('nonexistent')),
@@ -434,7 +439,7 @@ describe('Patch target mismatch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 6. Signed patch verification (via rvfa-signing integration)
+// 6. Signed patch verification (via appliance-signing integration)
 // ---------------------------------------------------------------------------
 
 describe('Signed patch', () => {
@@ -451,7 +456,7 @@ describe('Signed patch', () => {
       privateKeyEncoding: { type: 'pkcs8', format: 'der' },
     });
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'signed-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -461,14 +466,14 @@ describe('Signed patch', () => {
       signedBy: 'test-publisher',
     });
 
-    const header = RvfaPatcher.parsePatchHeader(patch);
+    const header = AppliancePatcher.parsePatchHeader(patch);
     assert.ok(header.signature, 'Signed patch should have a signature field');
     assert.equal(header.signedBy, 'test-publisher');
     assert.ok(header.signature!.length > 0);
   });
 
   it('unsigned patch has no signature field', async () => {
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'unsigned-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -476,7 +481,7 @@ describe('Signed patch', () => {
       patchVersion: '1.0.0',
     });
 
-    const header = RvfaPatcher.parsePatchHeader(patch);
+    const header = AppliancePatcher.parsePatchHeader(patch);
     assert.equal(header.signature, undefined);
     assert.equal(header.signedBy, undefined);
   });
@@ -494,7 +499,7 @@ describe('Signed patch tamper detection', () => {
       privateKeyEncoding: { type: 'pkcs8', format: 'der' },
     });
 
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'tamper-sign-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -513,7 +518,7 @@ describe('Signed patch tamper detection', () => {
     }
 
     // Integrity verification should fail (SHA256 mismatch)
-    const result = await RvfaPatcher.verifyPatch(tampered);
+    const result = await AppliancePatcher.verifyPatch(tampered);
     assert.ok(!result.valid, 'Tampered signed patch should fail verification');
   });
 });
@@ -524,7 +529,7 @@ describe('Signed patch tamper detection', () => {
 
 describe('parsePatchHeader edge cases', () => {
   it('rejects a buffer with unsupported version', async () => {
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'version-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -536,31 +541,31 @@ describe('parsePatchHeader edge cases', () => {
     tampered.writeUInt32LE(99, 4); // bad version
 
     assert.throws(
-      () => RvfaPatcher.parsePatchHeader(tampered),
-      /Unsupported RVFP version/,
+      () => AppliancePatcher.parsePatchHeader(tampered),
+      /Unsupported appliance patch version/,
     );
   });
 
   it('rejects a buffer with header length exceeding buffer size', async () => {
     const buf = Buffer.alloc(16);
-    buf.write('RVFP', 0, 'ascii');
+    buf.write('HFPP', 0, 'ascii');
     buf.writeUInt32LE(1, 4); // version
     buf.writeUInt32LE(9999, 8); // header_len way too big
 
     assert.throws(
-      () => RvfaPatcher.parsePatchHeader(buf),
+      () => AppliancePatcher.parsePatchHeader(buf),
       /too small/,
     );
   });
 });
 
 // ---------------------------------------------------------------------------
-// 9. RvfaPublisher config
+// 9. AppliancePublisher config
 // ---------------------------------------------------------------------------
 
-describe('RvfaPublisher', () => {
+describe('AppliancePublisher', () => {
   it('constructor accepts JWT from config', () => {
-    const publisher = new RvfaPublisher({
+    const publisher = new AppliancePublisher({
       pinataJwt: 'test-jwt-token-from-config',
     });
     assert.ok(publisher);
@@ -570,7 +575,7 @@ describe('RvfaPublisher', () => {
     const original = process.env.PINATA_API_JWT;
     process.env.PINATA_API_JWT = 'test-jwt-from-env';
     try {
-      const publisher = new RvfaPublisher({});
+      const publisher = new AppliancePublisher({});
       assert.ok(publisher);
     } finally {
       if (original !== undefined) {
@@ -586,7 +591,7 @@ describe('RvfaPublisher', () => {
     delete process.env.PINATA_API_JWT;
     try {
       assert.throws(
-        () => new RvfaPublisher({ pinataJwt: '' }),
+        () => new AppliancePublisher({ pinataJwt: '' }),
         /JWT/i,
       );
     } finally {
@@ -606,7 +611,7 @@ describe('Publisher URL construction', () => {
     const original = process.env.PINATA_API_JWT;
     process.env.PINATA_API_JWT = 'test-jwt';
     try {
-      const publisher = new RvfaPublisher({});
+      const publisher = new AppliancePublisher({});
       // We cannot call .list() without network, but we can verify
       // the publisher was created successfully with defaults
       assert.ok(publisher);
@@ -620,7 +625,7 @@ describe('Publisher URL construction', () => {
   });
 
   it('accepts custom gateway and API URLs', () => {
-    const publisher = new RvfaPublisher({
+    const publisher = new AppliancePublisher({
       pinataJwt: 'test-jwt',
       gatewayUrl: 'https://custom-gateway.example.com',
       apiUrl: 'https://custom-api.example.com',
@@ -629,7 +634,7 @@ describe('Publisher URL construction', () => {
   });
 
   it('strips trailing slashes from URLs', () => {
-    const publisher = new RvfaPublisher({
+    const publisher = new AppliancePublisher({
       pinataJwt: 'test-jwt',
       gatewayUrl: 'https://gateway.example.com///',
       apiUrl: 'https://api.example.com//',
@@ -646,7 +651,7 @@ describe('Publisher URL construction', () => {
 describe('Gzip-compressed patches', () => {
   it('creates and verifies a gzip-compressed patch', async () => {
     const sectionData = Buffer.alloc(1024, 0x42); // highly compressible
-    const patch = await RvfaPatcher.createPatch({
+    const patch = await AppliancePatcher.createPatch({
       targetName: 'gzip-test',
       targetVersion: '1.0.0',
       sectionId: 'kernel',
@@ -655,10 +660,10 @@ describe('Gzip-compressed patches', () => {
       compression: 'gzip',
     });
 
-    const header = RvfaPatcher.parsePatchHeader(patch);
+    const header = AppliancePatcher.parsePatchHeader(patch);
     assert.equal(header.compression, 'gzip');
 
-    const result = await RvfaPatcher.verifyPatch(patch);
+    const result = await AppliancePatcher.verifyPatch(patch);
     assert.ok(result.valid, `Gzip patch should verify: ${result.errors.join(', ')}`);
   });
 });

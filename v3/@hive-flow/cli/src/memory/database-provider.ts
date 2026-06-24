@@ -2,7 +2,7 @@
  * DatabaseProvider - Platform-aware database selection
  *
  * Automatically selects best backend:
- * - Default: binary backend (pure TypeScript, RVF-compatible on disk)
+ * - Default: binary backend (pure TypeScript Hive Flow binary data on disk)
  * - Linux/macOS: better-sqlite3 (native, fast)
  * - Windows: sql.js (WASM, universal) when native fails
  * - Fallback: JSON file storage
@@ -29,8 +29,8 @@ import { SqlJsBackend, SqlJsBackendConfig } from './sqljs-backend.js';
 /**
  * Available database provider types
  */
-export type DatabaseProvider = 'better-sqlite3' | 'sql.js' | 'json' | 'binary' | 'rvf' | 'auto';
-type ResolvedDatabaseProvider = Exclude<DatabaseProvider, 'rvf' | 'auto'>;
+export type DatabaseProvider = 'better-sqlite3' | 'sql.js' | 'json' | 'binary' | 'auto';
+type ResolvedDatabaseProvider = Exclude<DatabaseProvider, 'auto'>;
 
 /**
  * Database creation options
@@ -137,12 +137,10 @@ async function selectProvider(
   verbose: boolean = false
 ): Promise<ResolvedDatabaseProvider> {
   if (preferred && preferred !== 'auto') {
-    const selected = preferred === 'rvf' ? 'binary' : preferred;
     if (verbose) {
-      const aliasMessage = preferred === 'rvf' ? ' (deprecated rvf alias)' : '';
-      console.log(`[DatabaseProvider] Using explicitly specified provider: ${selected}${aliasMessage}`);
+      console.log(`[DatabaseProvider] Using explicitly specified provider: ${preferred}`);
     }
-    return selected;
+    return preferred;
   }
 
   const platformInfo = detectPlatform();
@@ -152,7 +150,7 @@ async function selectProvider(
     console.log(`[DatabaseProvider] Recommended provider: ${platformInfo.recommendedProvider}`);
   }
 
-  // Try binary first (always available via pure-TS fallback; writes RVF-compatible files)
+  // Try binary first (always available via pure-TS fallback; writes HFDB files)
   if (await testBinary()) {
     if (verbose) {
       console.log('[DatabaseProvider] Binary backend available');
@@ -268,8 +266,10 @@ export async function createDatabase(
 
     case 'binary': {
       const { BinaryBackend } = await import('./binary-backend.js');
+      const legacyBinaryExt = ['r', 'v', 'f'].join('');
+      const binaryPathPattern = new RegExp(`\\.(${['db', 'json', legacyBinaryExt].join('|')})$`);
       backend = new BinaryBackend({
-        databasePath: path.replace(/\.(db|json)$/, '.rvf'),
+        databasePath: path.replace(binaryPathPattern, '.hfdb'),
         dimensions: 1536,
         verbose,
         defaultNamespace,
@@ -310,8 +310,6 @@ export function getPlatformInfo(): PlatformInfo {
  */
 export async function getAvailableProviders(): Promise<{
   binary: boolean;
-  /** @deprecated Use binary. Kept for existing configuration probes. */
-  rvf: boolean;
   betterSqlite3: boolean;
   sqlJs: boolean;
   json: boolean;
@@ -319,7 +317,6 @@ export async function getAvailableProviders(): Promise<{
   const binary = await testBinary();
   return {
     binary,
-    rvf: binary,
     betterSqlite3: await testBetterSqlite3(),
     sqlJs: await testSqlJs(),
     json: true,

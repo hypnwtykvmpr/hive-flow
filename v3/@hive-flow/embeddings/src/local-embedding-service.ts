@@ -1,5 +1,5 @@
 /**
- * RVF Embedding Service - Lightweight Hash-Based Embeddings
+ * Local Embedding Service - Lightweight Hash-Based Embeddings
  *
  * Provides deterministic, sub-millisecond embedding generation using
  * FNV-1a hash-based vectors. No neural model or external API required.
@@ -9,7 +9,7 @@
  * - FNV-1a hash seeding with multi-round mixing
  * - L2-normalized output vectors
  * - Sub-millisecond generation (<0.1ms typical)
- * - RvfEmbeddingCache for binary file persistence
+ * - BinaryEmbeddingCache for binary file persistence
  * - Zero external dependencies
  *
  * Use cases:
@@ -30,10 +30,10 @@ import type {
   EmbeddingEvent,
   EmbeddingEventListener,
   NormalizationType,
-  RvfEmbeddingConfig,
+  LocalEmbeddingConfig,
 } from './types.js';
 import { normalize } from './normalization.js';
-import { RvfEmbeddingCache } from './rvf-embedding-cache.js';
+import { BinaryEmbeddingCache } from './binary-embedding-cache.js';
 
 // ============================================================================
 // Constants
@@ -114,7 +114,7 @@ class LRUCache<K, V> {
 }
 
 // ============================================================================
-// RVF Embedding Service
+// Local Embedding Service
 // ============================================================================
 
 /**
@@ -127,16 +127,16 @@ class LRUCache<K, V> {
  * Extends EventEmitter and implements IEmbeddingService for drop-in
  * compatibility with other providers.
  */
-export class RvfEmbeddingService extends EventEmitter implements IEmbeddingService {
-  readonly provider: EmbeddingProvider = 'rvf';
+export class LocalEmbeddingService extends EventEmitter implements IEmbeddingService {
+  readonly provider: EmbeddingProvider = 'local';
 
   private readonly dimensions: number;
   private readonly cache: LRUCache<string, Float32Array>;
   private readonly normalizationType: NormalizationType;
   private readonly embeddingListeners: Set<EmbeddingEventListener> = new Set();
-  private persistentCache: RvfEmbeddingCache | null = null;
+  private persistentCache: BinaryEmbeddingCache | null = null;
 
-  constructor(config: RvfEmbeddingConfig) {
+  constructor(config: LocalEmbeddingConfig) {
     super();
     this.dimensions = config.dimensions ?? DEFAULT_DIMENSIONS;
     if (this.dimensions <= 0 || !Number.isInteger(this.dimensions)) {
@@ -145,9 +145,9 @@ export class RvfEmbeddingService extends EventEmitter implements IEmbeddingServi
     this.cache = new LRUCache(config.cacheSize ?? DEFAULT_CACHE_SIZE);
     this.normalizationType = config.normalization ?? 'none';
 
-    // Initialize persistent RVF cache if a path is provided
+    // Initialize persistent binary cache if a path is provided
     if (config.cachePath) {
-      this.persistentCache = new RvfEmbeddingCache({
+      this.persistentCache = new BinaryEmbeddingCache({
         cachePath: config.cachePath,
         maxSize: config.cacheSize ?? 10000,
         dimensions: this.dimensions,

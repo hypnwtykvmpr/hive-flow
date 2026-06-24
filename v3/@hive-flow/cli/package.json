@@ -395,7 +395,8 @@
   "scripts": {
     "build:helpers-src": "node scripts/copy-helper-sources.mjs",
     "build:guidance-assets": "node scripts/copy-guidance-assets.mjs",
-    "build": "tsc && npm run build:helpers-src && npm run build:guidance-assets && node scripts/sync-engine-anchor.mjs",
+    "build": "npm run clean:dist && tsc && npm run build:helpers-src && npm run build:guidance-assets && node scripts/sync-engine-anchor.mjs",
+    "clean:dist": "node scripts/clean-dist.mjs",
     "sync:engine": "node scripts/sync-engine-anchor.mjs",
     "test": "vitest run",
     "test:e2e": "vitest run --config e2e/vitest.config.ts",

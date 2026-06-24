@@ -63,7 +63,7 @@ export type CLIControllerName =
   | 'batchOperations'
   | 'contextSynthesizer'
   | 'gnnService'
-  | 'rvfOptimizer'
+  | 'binaryStorageOptimizer'
   | 'mmrDiversityRanker'
   | 'guardedVectorBackend';
 
@@ -169,7 +169,7 @@ export const INIT_LEVELS: InitLevel[] = [
   // Level 4: Causal & routing
   { level: 4, controllers: ['causalGraph', 'nightlyLearner', 'learningSystem', 'semanticRouter'] },
   // Level 5: Advanced services
-  { level: 5, controllers: ['graphTransformer', 'sonaTrajectory', 'contextSynthesizer', 'rvfOptimizer', 'mmrDiversityRanker', 'guardedVectorBackend'] },
+  { level: 5, controllers: ['graphTransformer', 'sonaTrajectory', 'contextSynthesizer', 'binaryStorageOptimizer', 'mmrDiversityRanker', 'guardedVectorBackend'] },
   // Level 6: Session management
   { level: 6, controllers: ['federatedSession', 'graphAdapter'] },
 ];
@@ -451,7 +451,7 @@ export class ControllerRegistry extends EventEmitter {
       case 'memoryConsolidation':
       case 'batchOperations':
       case 'contextSynthesizer':
-      case 'rvfOptimizer':
+      case 'binaryStorageOptimizer':
       case 'mmrDiversityRanker':
         return false;
 
@@ -602,7 +602,7 @@ export class ControllerRegistry extends EventEmitter {
       case 'batchOperations':
       case 'contextSynthesizer':
       case 'gnnService':
-      case 'rvfOptimizer':
+      case 'binaryStorageOptimizer':
       case 'mmrDiversityRanker':
       case 'guardedVectorBackend': {
         return null;

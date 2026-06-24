@@ -24,9 +24,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const providersRoot = resolve(here, '..');
 const cliRoot = resolve(here, '../../cli');
-const sharedRoot = resolve(here, '../../shared');
 const providersDistPath = resolve(providersRoot, 'dist');
 const cliPermissionGuardDistPath = resolve(cliRoot, 'dist/src/permission-guard');
+const cliSharedUtilsDistPath = resolve(cliRoot, 'dist/src/shared/utils');
 
 function makeProjectRoot(prefix = 'hf-bridge-single-path-') {
   const root = mkdtempSync(join(tmpdir(), prefix));
@@ -95,7 +95,6 @@ function makeInstallLayout({ fakeMcpClient = false } = {}) {
   const scopeDir = join(installRoot, 'node_modules', '@hive-flow');
   const nodeProviders = join(scopeDir, 'providers');
   const nodeCli = join(scopeDir, 'cli');
-  const nodeShared = join(scopeDir, 'shared');
   const nodeScripts = join(nodeProviders, 'scripts');
 
   mkdirSync(nodeScripts, { recursive: true });
@@ -112,12 +111,12 @@ function makeInstallLayout({ fakeMcpClient = false } = {}) {
     copyFileSync(resolve(providersRoot, 'scripts', scriptName), join(nodeScripts, scriptName));
   }
   safeSymlinkDir(providersDistPath, join(nodeProviders, 'dist'));
-  safeSymlinkDir(sharedRoot, nodeShared);
   if (existsSync(join(providersRoot, 'node_modules', 'undici'))) {
     mkdirSync(join(nodeProviders, 'node_modules'), { recursive: true });
     safeSymlinkDir(realpathSync.native(join(providersRoot, 'node_modules', 'undici')), join(nodeProviders, 'node_modules', 'undici'));
   }
   cpSync(cliPermissionGuardDistPath, join(nodeCli, 'dist', 'src', 'permission-guard'), { recursive: true });
+  cpSync(cliSharedUtilsDistPath, join(nodeCli, 'dist', 'src', 'shared', 'utils'), { recursive: true });
   copyFileSync(
     resolve(cliRoot, 'dist/src/install/portable-prompt.js'),
     join(nodeCli, 'dist', 'src', 'install', 'portable-prompt.js'),
@@ -634,7 +633,10 @@ const STRICT_TOOL_CASES = [
     toolName: 'web_search',
     toolArgs: () => ({ query: 'current OpenRouter MiniMax M3 model slug' }),
     taskText: 'Search the web for the current OpenRouter MiniMax M3 model slug using the web_search bridge tool.',
-    expectContent: (content) => expect(content).toContain('web-search-unsupported'),
+    expectContent: (content) => {
+      expect(content).toContain('"provider":"duckduckgo-html"');
+      expect(content).not.toContain('web-search-unsupported');
+    },
   },
 ];
 
@@ -714,11 +716,11 @@ describe('provider bridge single tool execution path', () => {
         'list_directory',
         'grep',
         'find_file',
+        'run_shell',
         'run_command',
         'web_fetch',
         'web_search',
       ]);
-      expect(firstToolNames).not.toContain('run_shell');
       // DeepSeek (thinking mode) rejects tool_choice:"required" with HTTP 400, so the
       // bridge must NOT send it for deepseek; grounding is still enforced by the
       // UNGROUNDED_TOOL_TASK floor (covered by the fail-closed test below).
@@ -859,7 +861,8 @@ describe('provider bridge single tool execution path', () => {
       expect(requests[0].tool_choice).not.toBe('required');
       expect(result.success).toBe(true);
       expect(result.toolUse).toMatchObject({ iterations: 2, tools: ['web_search'] });
-      expect(result.content).toContain('web-search-unsupported');
+      expect(result.content).toContain('"provider":"duckduckgo-html"');
+      expect(result.content).not.toContain('web-search-unsupported');
       expect(result.content).not.toMatch(/UNGROUNDED_TOOL_TASK/);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -922,7 +925,6 @@ describe('provider bridge single tool execution path', () => {
             for (const expectedName of STRICT_TOOL_CASES.map((entry) => entry.toolName)) {
               expect(firstToolNames).toContain(expectedName);
             }
-            expect(firstToolNames).not.toContain('run_shell');
             expect(requests[0].tool_choice).not.toBe('required');
             expect(result.success).toBe(true);
             expect(result.toolUse).toMatchObject({ iterations: 2, tools: [toolCase.toolName] });

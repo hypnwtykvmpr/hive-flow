@@ -1,5 +1,5 @@
 /**
- * Tests for RvfEmbeddingCache and RvfEmbeddingService
+ * Tests for BinaryEmbeddingCache and LocalEmbeddingService
  *
  * Covers CRUD, LRU eviction, TTL expiry, binary persistence,
  * dimension validation, deterministic hashing, L2 normalization,
@@ -12,8 +12,8 @@ import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-import { RvfEmbeddingCache } from '../v3/@hive-flow/embeddings/src/rvf-embedding-cache.js';
-import { RvfEmbeddingService } from '../v3/@hive-flow/embeddings/src/rvf-embedding-service.js';
+import { BinaryEmbeddingCache } from '../v3/@hive-flow/embeddings/src/binary-embedding-cache.js';
+import { LocalEmbeddingService } from '../v3/@hive-flow/embeddings/src/local-embedding-service.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,7 +22,7 @@ import { RvfEmbeddingService } from '../v3/@hive-flow/embeddings/src/rvf-embeddi
 let tmpDir: string;
 
 function makeTmpDir(): string {
-  return mkdtempSync(join(tmpdir(), 'rvf-test-'));
+  return mkdtempSync(join(tmpdir(), 'binary-test-'));
 }
 
 function makeEmbedding(dims: number, fill = 0.5): Float32Array {
@@ -38,10 +38,10 @@ function l2Norm(v: Float32Array): number {
 }
 
 // ---------------------------------------------------------------------------
-// RvfEmbeddingCache
+// BinaryEmbeddingCache
 // ---------------------------------------------------------------------------
 
-describe('RvfEmbeddingCache', () => {
+describe('BinaryEmbeddingCache', () => {
   beforeEach(() => {
     tmpDir = makeTmpDir();
   });
@@ -54,8 +54,8 @@ describe('RvfEmbeddingCache', () => {
 
   describe('CRUD operations', () => {
     it('set/get stores and retrieves an embedding', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         dimensions: 4,
       });
       const emb = makeEmbedding(4, 0.25);
@@ -69,8 +69,8 @@ describe('RvfEmbeddingCache', () => {
     });
 
     it('has returns true for existing keys and false for missing keys', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         dimensions: 4,
       });
       await cache.set('exists', makeEmbedding(4));
@@ -81,8 +81,8 @@ describe('RvfEmbeddingCache', () => {
     });
 
     it('delete removes an entry and returns correct boolean', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         dimensions: 4,
       });
       await cache.set('key1', makeEmbedding(4));
@@ -94,8 +94,8 @@ describe('RvfEmbeddingCache', () => {
     });
 
     it('clear removes all entries', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         dimensions: 4,
       });
       await cache.set('a', makeEmbedding(4));
@@ -109,8 +109,8 @@ describe('RvfEmbeddingCache', () => {
     });
 
     it('size returns the number of entries', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         dimensions: 4,
       });
       assert.equal(await cache.size(), 0);
@@ -126,8 +126,8 @@ describe('RvfEmbeddingCache', () => {
 
   describe('LRU eviction', () => {
     it('evicts oldest entries when maxSize is exceeded', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         maxSize: 5,
         dimensions: 4,
       });
@@ -148,8 +148,8 @@ describe('RvfEmbeddingCache', () => {
 
   describe('TTL expiry', () => {
     it('returns null for expired entries', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         ttlMs: 1, // 1ms TTL - will expire almost instantly
         dimensions: 4,
       });
@@ -164,8 +164,8 @@ describe('RvfEmbeddingCache', () => {
     });
 
     it('has returns false for expired entries', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'cache.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'cache.hfec'),
         ttlMs: 1,
         dimensions: 4,
       });
@@ -181,11 +181,11 @@ describe('RvfEmbeddingCache', () => {
 
   describe('binary persistence', () => {
     it('data survives close and reinit cycle', async () => {
-      const cachePath = join(tmpDir, 'persist.rvec');
+      const cachePath = join(tmpDir, 'persist.hfec');
       const emb = makeEmbedding(4, 0.42);
 
       // Write
-      const cache1 = new RvfEmbeddingCache({
+      const cache1 = new BinaryEmbeddingCache({
         cachePath,
         dimensions: 4,
       });
@@ -193,7 +193,7 @@ describe('RvfEmbeddingCache', () => {
       await cache1.close();
 
       // Reopen and read
-      const cache2 = new RvfEmbeddingCache({
+      const cache2 = new BinaryEmbeddingCache({
         cachePath,
         dimensions: 4,
       });
@@ -209,9 +209,9 @@ describe('RvfEmbeddingCache', () => {
   // -- Binary Format -------------------------------------------------------
 
   describe('binary format', () => {
-    it('file starts with RVEC magic bytes (0x52 0x56 0x45 0x43)', async () => {
-      const cachePath = join(tmpDir, 'magic.rvec');
-      const cache = new RvfEmbeddingCache({
+    it('file starts with HFEC magic bytes (0x48 0x46 0x45 0x43)', async () => {
+      const cachePath = join(tmpDir, 'magic.hfec');
+      const cache = new BinaryEmbeddingCache({
         cachePath,
         dimensions: 4,
       });
@@ -220,8 +220,8 @@ describe('RvfEmbeddingCache', () => {
 
       assert.ok(existsSync(cachePath), 'Cache file should exist');
       const buf = readFileSync(cachePath);
-      assert.equal(buf[0], 0x52, 'R');
-      assert.equal(buf[1], 0x56, 'V');
+      assert.equal(buf[0], 0x48, 'H');
+      assert.equal(buf[1], 0x46, 'F');
       assert.equal(buf[2], 0x45, 'E');
       assert.equal(buf[3], 0x43, 'C');
     });
@@ -231,8 +231,8 @@ describe('RvfEmbeddingCache', () => {
 
   describe('dimension validation', () => {
     it('throws error when embedding dimensions do not match configured dimensions', async () => {
-      const cache = new RvfEmbeddingCache({
-        cachePath: join(tmpDir, 'dim.rvec'),
+      const cache = new BinaryEmbeddingCache({
+        cachePath: join(tmpDir, 'dim.hfec'),
         dimensions: 4,
       });
 
@@ -251,10 +251,10 @@ describe('RvfEmbeddingCache', () => {
 });
 
 // ---------------------------------------------------------------------------
-// RvfEmbeddingService
+// LocalEmbeddingService
 // ---------------------------------------------------------------------------
 
-describe('RvfEmbeddingService', () => {
+describe('LocalEmbeddingService', () => {
   beforeEach(() => {
     tmpDir = makeTmpDir();
   });
@@ -267,7 +267,7 @@ describe('RvfEmbeddingService', () => {
 
   describe('embed()', () => {
     it('returns a Float32Array of correct dimensions', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 64 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 64 });
       const result = await svc.embed('test input');
 
       assert.ok(result.embedding instanceof Float32Array);
@@ -277,7 +277,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('uses default 384 dimensions when not specified', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf' });
+      const svc = new LocalEmbeddingService({ provider: 'local' });
       const result = await svc.embed('default dims');
 
       assert.equal(result.embedding.length, 384);
@@ -285,7 +285,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('is deterministic - same input produces same output', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 32 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 32 });
 
       // Clear cache between calls to force regeneration
       const r1 = await svc.embed('determinism check');
@@ -301,7 +301,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('produces different embeddings for different inputs', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 32 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 32 });
       const r1 = await svc.embed('apple');
       const r2 = await svc.embed('banana');
 
@@ -320,7 +320,7 @@ describe('RvfEmbeddingService', () => {
 
   describe('L2 normalization', () => {
     it('output vectors are unit length (norm approximately 1.0)', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 128 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 128 });
       const result = await svc.embed('normalization test');
       const norm = l2Norm(result.embedding as Float32Array);
 
@@ -332,7 +332,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('multiple different texts all produce unit vectors', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 64 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 64 });
       const texts = ['alpha', 'bravo', 'charlie', 'delta', 'echo'];
 
       for (const text of texts) {
@@ -351,7 +351,7 @@ describe('RvfEmbeddingService', () => {
 
   describe('embedBatch()', () => {
     it('returns the correct number of embeddings', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 32 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 32 });
       const texts = ['one', 'two', 'three', 'four'];
       const result = await svc.embedBatch(texts);
 
@@ -362,7 +362,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('reports cache hits for previously embedded texts', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 32 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 32 });
 
       // Pre-embed some texts
       await svc.embed('cached-a');
@@ -382,7 +382,7 @@ describe('RvfEmbeddingService', () => {
 
   describe('caching', () => {
     it('second call for same text returns cached result', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 32 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 32 });
 
       const r1 = await svc.embed('cache me');
       assert.ok(!r1.cached, 'First call should not be cached');
@@ -398,11 +398,11 @@ describe('RvfEmbeddingService', () => {
 
   describe('persistent cache integration', () => {
     it('with cachePath, data persists across service instances', async () => {
-      const cachePath = join(tmpDir, 'svc-persist.rvec');
+      const cachePath = join(tmpDir, 'svc-persist.hfec');
 
       // First instance: embed and shutdown
-      const svc1 = new RvfEmbeddingService({
-        provider: 'rvf',
+      const svc1 = new LocalEmbeddingService({
+        provider: 'local',
         dimensions: 32,
         cachePath,
       });
@@ -410,8 +410,8 @@ describe('RvfEmbeddingService', () => {
       await svc1.shutdown();
 
       // Second instance: should find the persistent entry
-      const svc2 = new RvfEmbeddingService({
-        provider: 'rvf',
+      const svc2 = new LocalEmbeddingService({
+        provider: 'local',
         dimensions: 32,
         cachePath,
       });
@@ -436,13 +436,13 @@ describe('RvfEmbeddingService', () => {
   // -- IEmbeddingService Interface -----------------------------------------
 
   describe('IEmbeddingService interface', () => {
-    it('provider property is "rvf"', () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf' });
-      assert.equal(svc.provider, 'rvf');
+    it('provider property is "local"', () => {
+      const svc = new LocalEmbeddingService({ provider: 'local' });
+      assert.equal(svc.provider, 'local');
     });
 
     it('implements all required methods', () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf' });
+      const svc = new LocalEmbeddingService({ provider: 'local' });
       assert.equal(typeof svc.embed, 'function');
       assert.equal(typeof svc.embedBatch, 'function');
       assert.equal(typeof svc.clearCache, 'function');
@@ -455,8 +455,8 @@ describe('RvfEmbeddingService', () => {
 
   describe('getCacheStats()', () => {
     it('returns correct hit/miss structure after operations', async () => {
-      const svc = new RvfEmbeddingService({
-        provider: 'rvf',
+      const svc = new LocalEmbeddingService({
+        provider: 'local',
         dimensions: 16,
         cacheSize: 100,
       });
@@ -483,7 +483,7 @@ describe('RvfEmbeddingService', () => {
 
   describe('shutdown()', () => {
     it('clears in-memory cache', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 16 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 16 });
       await svc.embed('before-shutdown');
 
       const statsBefore = svc.getCacheStats();
@@ -496,10 +496,10 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('closes persistent cache without error', async () => {
-      const svc = new RvfEmbeddingService({
-        provider: 'rvf',
+      const svc = new LocalEmbeddingService({
+        provider: 'local',
         dimensions: 16,
-        cachePath: join(tmpDir, 'shutdown.rvec'),
+        cachePath: join(tmpDir, 'shutdown.hfec'),
       });
       await svc.embed('shutdown-persist');
 
@@ -508,7 +508,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('removes event listeners on shutdown', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 16 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 16 });
       let called = false;
       svc.addEventListener(() => { called = true; });
       await svc.embed('pre-shutdown');
@@ -528,7 +528,7 @@ describe('RvfEmbeddingService', () => {
 
   describe('event system', () => {
     it('fires embed_start and embed_complete for new embeddings', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 16 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 16 });
       const events: string[] = [];
       svc.addEventListener((e) => events.push(e.type));
 
@@ -540,7 +540,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('fires cache_hit for cached embeddings', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 16 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 16 });
       const events: string[] = [];
       await svc.embed('hit-test'); // first call (miss)
 
@@ -552,7 +552,7 @@ describe('RvfEmbeddingService', () => {
     });
 
     it('removeEventListener stops delivering events', async () => {
-      const svc = new RvfEmbeddingService({ provider: 'rvf', dimensions: 16 });
+      const svc = new LocalEmbeddingService({ provider: 'local', dimensions: 16 });
       let count = 0;
       const listener = () => { count++; };
 

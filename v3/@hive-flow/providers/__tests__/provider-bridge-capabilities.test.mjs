@@ -62,6 +62,7 @@ const STRICT_API_TOOL_NAMES = [
   'list_directory',
   'grep',
   'find_file',
+  'run_shell',
   'run_command',
   'web_fetch',
   'web_search',
@@ -218,11 +219,12 @@ const EXPECTED_DEFINITIONS = {
     type: 'function',
     function: {
       name: 'web_search',
-      description: 'Unsupported in provider bridge. Returns a clear web-search-unsupported denial; open web search is intentionally not available.',
+      description: 'Search the web through the bridge-owned guarded HTTPS search endpoint. Returns query, provider, searchUrl, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and parsed results.',
       parameters: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'Search query. Currently denied by policy.' },
+          query: { type: 'string', description: 'Search query.' },
+          maxResults: { type: 'number', description: 'Maximum parsed results to return, capped by the bridge.' },
         },
         required: ['query'],
         additionalProperties: false,
@@ -276,13 +278,12 @@ describe('provider bridge capability manifest', () => {
     }
   });
 
-  it('keeps strict API exposure explicit across write, read, guarded-network, and deny-only tools', () => {
+  it('keeps strict API exposure explicit across write, read, exec, and guarded-network tools', () => {
     const manifest = bridge.bridgeToolCapabilityManifest();
     const strictNames = namesOf(bridge.bridgeToolDefinitionsForProviderMode('strict-api'));
     for (const name of strictNames) {
       expect(manifest[name].exposeStrictApi).toBe(true);
-      expect(['write', 'read', 'network', 'unsupported']).toContain(manifest[name].authority);
-      expect(manifest[name].requiresEnforcementExecGate).toBe(false);
+      expect(['write', 'read', 'exec', 'network']).toContain(manifest[name].authority);
       if (manifest[name].authority === 'write') {
         expect(['write_file', 'edit_file']).toContain(name);
         expect(manifest[name].requiresProtectedWriteGate).toBe(true);
@@ -291,8 +292,16 @@ describe('provider bridge capability manifest', () => {
       } else {
         expect(manifest[name].requiresEnforcementWriteGate).toBe(false);
       }
+      if (manifest[name].authority === 'exec') {
+        expect(name).toBe('run_shell');
+        expect(manifest[name].requiresPermissionGuard).toBe(true);
+        expect(manifest[name].requiresSandbox).toBe(true);
+        expect(manifest[name].requiresEnforcementExecGate).toBe(true);
+      } else {
+        expect(manifest[name].requiresEnforcementExecGate).toBe(false);
+      }
       if (manifest[name].authority === 'network') {
-        expect(name).toBe('web_fetch');
+        expect(['web_fetch', 'web_search']).toContain(name);
         expect(manifest[name].requiresAllowlist).toBe(true);
         expect(manifest[name].requiresSsrfGuard).toBe(true);
         expect(manifest[name].requiresEnforcementFetchGate).toBe(true);
@@ -321,7 +330,7 @@ describe('provider bridge capability manifest', () => {
     expect(manifest.run_shell).toMatchObject({
       authority: 'exec',
       exposeDefault: true,
-      exposeStrictApi: false,
+      exposeStrictApi: true,
       requiresPermissionGuard: true,
       requiresSandbox: true,
       requiresEnforcementExecGate: true,
@@ -341,17 +350,20 @@ describe('provider bridge capability manifest', () => {
       requiresEnforcementFetchGate: true,
     });
     expect(manifest.web_search).toMatchObject({
-      authority: 'unsupported',
+      authority: 'network',
       exposeDefault: true,
       exposeStrictApi: true,
-      alwaysDenied: true,
+      requiresAllowlist: true,
+      requiresSsrfGuard: true,
+      requiresEnforcementFetchGate: true,
     });
   });
 
-  it('DO-NOT-REVERT: strict API providers keep write/edit and web grounding tools without shell exposure', () => {
+  it('DO-NOT-REVERT: strict API providers keep write/edit, sandboxed shell, and web grounding tools', () => {
     const strictNames = namesOf(bridge.bridgeToolDefinitionsForProviderMode('strict-api'));
     expect(strictNames).toContain('write_file');
     expect(strictNames).toContain('edit_file');
+    expect(strictNames).toContain('run_shell');
     expect(strictNames).toContain('web_fetch');
     expect(strictNames).toContain('web_search');
 
@@ -363,8 +375,8 @@ describe('provider bridge capability manifest', () => {
     );
 
     fc.assert(
-      fc.property(fc.constantFrom('run_shell'), (blockedName) => {
-        expect(strictNames).not.toContain(blockedName);
+      fc.property(fc.constantFrom('run_shell'), (sandboxedName) => {
+        expect(strictNames).toContain(sandboxedName);
       }),
       { numRuns: 30 },
     );
@@ -389,11 +401,12 @@ describe('provider bridge capability manifest', () => {
           expect(entry.requiresEnforcementWriteGate).toBe(true);
         }
         if (entry.authority === 'exec') {
-          expect(entry.exposeStrictApi).toBe(false);
-          expect(entry.requiresPermissionGuard || entry.requiresReadOnlyAllowlist).toBe(true);
+          expect(entry.exposeStrictApi).toBe(true);
+          expect(entry.requiresPermissionGuard).toBe(true);
+          expect(entry.requiresSandbox).toBe(true);
         }
         if (entry.authority === 'network') {
-          expect(name).toBe('web_fetch');
+          expect(['web_fetch', 'web_search']).toContain(name);
           expect(entry.exposeStrictApi).toBe(true);
           expect(entry.requiresAllowlist).toBe(true);
           expect(entry.requiresSsrfGuard).toBe(true);

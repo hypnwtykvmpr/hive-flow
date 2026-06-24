@@ -5,7 +5,7 @@
  *   1. GGUF binary header parsing (metadata without loading weights)
  *   2. Model loading abstraction (node-llama-cpp when available, metadata-only fallback)
  *   3. Token generation interface with async iterator streaming
- *   4. KV-cache persistence to RVF-compatible binary format
+ *   4. KV-cache persistence to Hive Flow binary format
  *
  * Zero external dependencies. node-llama-cpp is an optional peer.
  *
@@ -24,8 +24,9 @@ const enum GgufValueType {
 }
 
 const GGUF_MAGIC = 0x46554747; // "GGUF" in little-endian
-const RVKV_MAGIC = 0x564B5652; // "RVKV" in little-endian
-const RVKV_VERSION = 1;
+const HFKV_MAGIC = 0x564B4648; // "HFKV" in little-endian
+const LEGACY_KV_CACHE_MAGIC = 0x564B5652;
+const HFKV_VERSION = 1;
 
 // ── Public Interfaces ───────────────────────────────────────
 
@@ -353,8 +354,8 @@ export class GgufEngine {
   }
 
   /**
-   * Persist the KV cache to an RVF-compatible binary file.
-   * Format: RVKV magic | version u32 | model SHA-256 (32B) | entry count u32
+   * Persist the KV cache to a Hive Flow binary file.
+   * Format: HFKV magic | version u32 | model SHA-256 (32B) | entry count u32
    *         entries: [key_len u32, key, val_len u32, val] | footer SHA-256 (32B)
    */
   async persistKvCache(outputPath: string): Promise<void> {
@@ -374,8 +375,8 @@ export class GgufEngine {
     const footer = createHash('sha256').update(entryData).digest();
 
     const header = Buffer.alloc(44);
-    header.writeUInt32LE(RVKV_MAGIC, 0);
-    header.writeUInt32LE(RVKV_VERSION, 4);
+    header.writeUInt32LE(HFKV_MAGIC, 0);
+    header.writeUInt32LE(HFKV_VERSION, 4);
     modelHash.copy(header, 8);
     header.writeUInt32LE(this.kvCache.size, 40);
 
@@ -383,15 +384,17 @@ export class GgufEngine {
     if (this.config.verbose) console.log(`[gguf-engine] KV cache persisted: ${this.kvCache.size} entries`);
   }
 
-  /** Restore KV cache from an RVF-compatible binary file. */
+  /** Restore KV cache from a Hive Flow binary file. */
   async loadKvCache(inputPath: string): Promise<void> {
     const data = await readFile(inputPath);
     if (data.length < 44) throw new Error('KV cache file too small');
 
     const magic = data.readUInt32LE(0);
-    if (magic !== RVKV_MAGIC) throw new Error(`Invalid KV cache magic: 0x${magic.toString(16)}`);
+    if (magic !== HFKV_MAGIC && magic !== LEGACY_KV_CACHE_MAGIC) {
+      throw new Error(`Invalid KV cache magic: 0x${magic.toString(16)}`);
+    }
     const version = data.readUInt32LE(4);
-    if (version !== RVKV_VERSION) throw new Error(`Unsupported KV cache version: ${version}`);
+    if (version !== HFKV_VERSION) throw new Error(`Unsupported KV cache version: ${version}`);
 
     const entryCount = data.readUInt32LE(40);
     let offset = 44;

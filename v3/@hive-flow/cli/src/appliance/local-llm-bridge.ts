@@ -21,7 +21,7 @@ export interface LocalLlmConfig {
   maxTokens?: number;        // Default max tokens
   temperature?: number;      // Default temperature
   contextSize?: number;      // KV-cache context size (default 4096)
-  kvCachePath?: string;      // Path to persist KV-cache as RVF
+  kvCachePath?: string;      // Path to persist KV-cache as Hive Flow binary
   verbose?: boolean;
 }
 

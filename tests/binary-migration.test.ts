@@ -1,5 +1,5 @@
 /**
- * RVF Migration Utility Tests
+ * Binary Migration Utility Tests
  */
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
@@ -14,7 +14,7 @@ describe('BinaryMigrator', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'rvf-mig-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'binary-mig-'));
   });
 
   afterEach(() => {
@@ -22,11 +22,11 @@ describe('BinaryMigrator', () => {
   });
 
   describe('detectFormat', () => {
-    it('detects RVF format by magic bytes', async () => {
-      const p = join(tmpDir, 'test.rvf');
-      // RVF magic: 0x52 0x56 0x46 0x00
+    it('detects Binary format by magic bytes', async () => {
+      const p = join(tmpDir, 'test.hfdb');
+      // Binary magic: 0x52 0x56 0x46 0x00
       writeFileSync(p, Buffer.from([0x52, 0x56, 0x46, 0x00, 0x00, 0x00, 0x00, 0x00]));
-      assert.equal(await BinaryMigrator.detectFormat(p), 'rvf');
+      assert.equal(await BinaryMigrator.detectFormat(p), 'binary');
     });
 
     it('detects JSON format', async () => {
@@ -53,9 +53,9 @@ describe('BinaryMigrator', () => {
   });
 
   describe('fromJsonFile', () => {
-    it('migrates a JSON array to RVF', async () => {
+    it('migrates a JSON array to Binary', async () => {
       const jsonPath = join(tmpDir, 'source.json');
-      const rvfPath = join(tmpDir, 'target.rvf');
+      const binaryPath = join(tmpDir, 'target.hfdb');
 
       const entries = [
         { id: 'e1', key: 'k1', content: 'hello world', namespace: 'test', type: 'semantic', tags: ['a'], metadata: {} },
@@ -63,16 +63,16 @@ describe('BinaryMigrator', () => {
       ];
       writeFileSync(jsonPath, JSON.stringify(entries));
 
-      const result = await BinaryMigrator.fromJsonFile(jsonPath, rvfPath);
+      const result = await BinaryMigrator.fromJsonFile(jsonPath, binaryPath);
       assert.equal(result.success, true);
       assert.equal(result.entriesMigrated, 2);
       assert.equal(result.sourceFormat, 'json');
-      assert.equal(result.targetFormat, 'rvf');
+      assert.equal(result.targetFormat, 'binary');
       assert.equal(result.errors.length, 0);
       assert.ok(result.durationMs >= 0);
 
-      // Verify the RVF file is readable
-      const backend = new BinaryBackend({ databasePath: rvfPath });
+      // Verify the Binary file is readable
+      const backend = new BinaryBackend({ databasePath: binaryPath });
       await backend.initialize();
       const e1 = await backend.get('e1');
       assert.ok(e1);
@@ -82,20 +82,20 @@ describe('BinaryMigrator', () => {
 
     it('migrates single JSON object (not array)', async () => {
       const jsonPath = join(tmpDir, 'single.json');
-      const rvfPath = join(tmpDir, 'single.rvf');
+      const binaryPath = join(tmpDir, 'single.hfdb');
 
       writeFileSync(jsonPath, JSON.stringify({ id: 'solo', key: 'k', content: 'one entry', namespace: 'ns' }));
-      const result = await BinaryMigrator.fromJsonFile(jsonPath, rvfPath);
+      const result = await BinaryMigrator.fromJsonFile(jsonPath, binaryPath);
       assert.equal(result.success, true);
       assert.equal(result.entriesMigrated, 1);
     });
 
     it('reports error on invalid JSON', async () => {
       const jsonPath = join(tmpDir, 'bad.json');
-      const rvfPath = join(tmpDir, 'bad.rvf');
+      const binaryPath = join(tmpDir, 'bad.hfdb');
       writeFileSync(jsonPath, 'not valid json{{{');
 
-      const result = await BinaryMigrator.fromJsonFile(jsonPath, rvfPath);
+      const result = await BinaryMigrator.fromJsonFile(jsonPath, binaryPath);
       assert.equal(result.success, false);
       assert.equal(result.entriesMigrated, 0);
       assert.ok(result.errors.length > 0);
@@ -103,14 +103,14 @@ describe('BinaryMigrator', () => {
 
     it('fills in default fields for sparse entries', async () => {
       const jsonPath = join(tmpDir, 'sparse.json');
-      const rvfPath = join(tmpDir, 'sparse.rvf');
+      const binaryPath = join(tmpDir, 'sparse.hfdb');
 
       writeFileSync(jsonPath, JSON.stringify([{ content: 'minimal' }]));
-      const result = await BinaryMigrator.fromJsonFile(jsonPath, rvfPath);
+      const result = await BinaryMigrator.fromJsonFile(jsonPath, binaryPath);
       assert.equal(result.success, true);
       assert.equal(result.entriesMigrated, 1);
 
-      const backend = new BinaryBackend({ databasePath: rvfPath });
+      const backend = new BinaryBackend({ databasePath: binaryPath });
       await backend.initialize();
       const entries = await backend.query({ type: 'hybrid', limit: 100 });
       assert.equal(entries.length, 1);
@@ -122,7 +122,7 @@ describe('BinaryMigrator', () => {
 
     it('reports progress via callback', async () => {
       const jsonPath = join(tmpDir, 'progress.json');
-      const rvfPath = join(tmpDir, 'progress.rvf');
+      const binaryPath = join(tmpDir, 'progress.hfdb');
 
       const entries = Array.from({ length: 10 }, (_, i) => ({
         id: `e${i}`, key: `k${i}`, content: `content ${i}`,
@@ -130,7 +130,7 @@ describe('BinaryMigrator', () => {
       writeFileSync(jsonPath, JSON.stringify(entries));
 
       const progressCalls: Array<{ current: number; total: number; phase: string }> = [];
-      await BinaryMigrator.fromJsonFile(jsonPath, rvfPath, {
+      await BinaryMigrator.fromJsonFile(jsonPath, binaryPath, {
         batchSize: 3,
         onProgress: (p) => progressCalls.push({ ...p }),
       });
@@ -141,12 +141,12 @@ describe('BinaryMigrator', () => {
   });
 
   describe('toJsonFile', () => {
-    it('exports RVF to JSON and back', async () => {
-      const rvfPath = join(tmpDir, 'roundtrip.rvf');
+    it('exports Binary to JSON and back', async () => {
+      const binaryPath = join(tmpDir, 'roundtrip.hfdb');
       const jsonPath = join(tmpDir, 'export.json');
 
-      // Create RVF with entries
-      const backend = new BinaryBackend({ databasePath: rvfPath });
+      // Create Binary with entries
+      const backend = new BinaryBackend({ databasePath: binaryPath });
       await backend.initialize();
       await backend.store({
         id: 'rt1', key: 'k1', content: 'roundtrip test', namespace: 'ns',
@@ -157,10 +157,10 @@ describe('BinaryMigrator', () => {
       await backend.shutdown();
 
       // Export to JSON
-      const result = await BinaryMigrator.toJsonFile(rvfPath, jsonPath);
+      const result = await BinaryMigrator.toJsonFile(binaryPath, jsonPath);
       assert.equal(result.success, true);
       assert.equal(result.entriesMigrated, 1);
-      assert.equal(result.sourceFormat, 'rvf');
+      assert.equal(result.sourceFormat, 'binary');
       assert.equal(result.targetFormat, 'json');
 
       // Verify JSON file
@@ -175,24 +175,24 @@ describe('BinaryMigrator', () => {
   describe('autoMigrate', () => {
     it('auto-detects JSON and migrates', async () => {
       const jsonPath = join(tmpDir, 'auto.json');
-      const rvfPath = join(tmpDir, 'auto.rvf');
+      const binaryPath = join(tmpDir, 'auto.hfdb');
 
       writeFileSync(jsonPath, JSON.stringify([
         { id: 'am1', key: 'k', content: 'auto migrate test' },
       ]));
 
-      const result = await BinaryMigrator.autoMigrate(jsonPath, rvfPath);
+      const result = await BinaryMigrator.autoMigrate(jsonPath, binaryPath);
       assert.equal(result.success, true);
       assert.equal(result.entriesMigrated, 1);
       assert.equal(result.sourceFormat, 'json');
     });
 
-    it('returns no-op for RVF source', async () => {
-      const rvfPath = join(tmpDir, 'existing.rvf');
-      const targetPath = join(tmpDir, 'target.rvf');
+    it('returns no-op for Binary source', async () => {
+      const binaryPath = join(tmpDir, 'existing.hfdb');
+      const targetPath = join(tmpDir, 'target.hfdb');
 
-      // Create a valid RVF file with at least one entry so it persists
-      const backend = new BinaryBackend({ databasePath: rvfPath });
+      // Create a valid Binary file with at least one entry so it persists
+      const backend = new BinaryBackend({ databasePath: binaryPath });
       await backend.initialize();
       await backend.store({
         id: 'x', key: 'k', content: 'test', type: 'semantic', namespace: 'ns',
@@ -202,14 +202,14 @@ describe('BinaryMigrator', () => {
       });
       await backend.shutdown();
 
-      const result = await BinaryMigrator.autoMigrate(rvfPath, targetPath);
+      const result = await BinaryMigrator.autoMigrate(binaryPath, targetPath);
       assert.equal(result.success, true);
       assert.equal(result.entriesMigrated, 0);
-      assert.equal(result.sourceFormat, 'rvf');
+      assert.equal(result.sourceFormat, 'binary');
     });
 
     it('returns error for unknown format', async () => {
-      const result = await BinaryMigrator.autoMigrate(join(tmpDir, 'nonexistent'), join(tmpDir, 'out.rvf'));
+      const result = await BinaryMigrator.autoMigrate(join(tmpDir, 'nonexistent'), join(tmpDir, 'out.hfdb'));
       assert.equal(result.success, false);
       assert.ok(result.errors.length > 0);
     });
@@ -218,7 +218,7 @@ describe('BinaryMigrator', () => {
   describe('embeddings migration', () => {
     it('preserves embeddings through JSON roundtrip', async () => {
       const jsonPath = join(tmpDir, 'emb.json');
-      const rvfPath = join(tmpDir, 'emb.rvf');
+      const binaryPath = join(tmpDir, 'emb.hfdb');
       const jsonOutPath = join(tmpDir, 'emb-out.json');
 
       const embedding = [0.1, 0.2, 0.3, 0.4];
@@ -226,8 +226,8 @@ describe('BinaryMigrator', () => {
         { id: 'emb1', key: 'k', content: 'with embedding', embedding },
       ]));
 
-      await BinaryMigrator.fromJsonFile(jsonPath, rvfPath);
-      await BinaryMigrator.toJsonFile(rvfPath, jsonOutPath);
+      await BinaryMigrator.fromJsonFile(jsonPath, binaryPath);
+      await BinaryMigrator.toJsonFile(binaryPath, jsonOutPath);
 
       const exported = JSON.parse(readFileSync(jsonOutPath, 'utf-8'));
       assert.equal(exported.length, 1);

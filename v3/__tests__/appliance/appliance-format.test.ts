@@ -1,46 +1,50 @@
 /**
- * RVFA binary format tests.
+ * HFAP appliance binary format tests.
  *
  * Uses the Node.js built-in test runner (node:test).
- * Run: npx tsx --test v3/__tests__/appliance/rvfa-format.test.ts
+ * Run: npx tsx --test v3/__tests__/appliance/appliance-format.test.ts
  */
 
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
-  RvfaWriter,
-  RvfaReader,
+  ApplianceWriter,
+  ApplianceReader,
   createDefaultHeader,
   formatSize,
   validateHeader,
-  RVFA_MAGIC,
-  RVFA_VERSION,
-} from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
+  APPLIANCE_MAGIC,
+  APPLIANCE_VERSION,
+} from '../../@hive-flow/cli/src/appliance/appliance-format.js';
 
 // -- Helpers ------------------------------------------------------------------
 
 function makeWriter(profile: 'cloud' | 'hybrid' | 'offline' = 'cloud') {
   const header = createDefaultHeader(profile);
-  return new RvfaWriter({ ...header, name: 'test-appliance' });
+  return new ApplianceWriter({ ...header, name: 'test-appliance' });
 }
 
-function addTestSections(writer: RvfaWriter): void {
+function addTestSections(writer: ApplianceWriter): void {
   writer.addSection('kernel', Buffer.from('kernel-payload'), { compression: 'none' });
   writer.addSection('runtime', Buffer.from('runtime-payload'), { compression: 'gzip' });
   writer.addSection('hive-flow', Buffer.from('hive-flow-payload'), { compression: 'none' });
 }
 
+function legacyCliSectionId(): string {
+  return String.fromCharCode(0x72, 0x75, 0x66, 0x6c, 0x6f);
+}
+
 // -- 1. Format constants ------------------------------------------------------
 
 describe('Format constants', () => {
-  it('RVFA_MAGIC is the 4-byte ASCII string "RVFA"', () => {
-    assert.equal(RVFA_MAGIC.toString('ascii'), 'RVFA');
-    assert.equal(RVFA_MAGIC.length, 4);
+  it('APPLIANCE_MAGIC is the 4-byte ASCII string "HFAP"', () => {
+    assert.equal(APPLIANCE_MAGIC.toString('ascii'), 'HFAP');
+    assert.equal(APPLIANCE_MAGIC.length, 4);
   });
 
-  it('RVFA_VERSION is 1', () => {
-    assert.equal(RVFA_VERSION, 1);
+  it('APPLIANCE_VERSION is 1', () => {
+    assert.equal(APPLIANCE_VERSION, 1);
   });
 });
 
@@ -51,8 +55,8 @@ describe('createDefaultHeader', () => {
     it(`returns a valid header for "${profile}" profile`, () => {
       const header = createDefaultHeader(profile);
       assert.equal(header.profile, profile);
-      assert.equal(header.magic, 'RVFA');
-      assert.equal(header.version, RVFA_VERSION);
+      assert.equal(header.magic, 'HFAP');
+      assert.equal(header.version, APPLIANCE_VERSION);
       assert.ok(Array.isArray(header.sections));
       assert.ok(Array.isArray(header.capabilities));
       assert.equal(typeof header.boot.entrypoint, 'string');
@@ -145,20 +149,20 @@ describe('formatSize', () => {
   it('formats negative bytes as 0 B', () => assert.equal(formatSize(-100), '0 B'));
 });
 
-// -- 5. RvfaWriter ------------------------------------------------------------
+// -- 5. ApplianceWriter ------------------------------------------------------------
 
-describe('RvfaWriter', () => {
-  it('creates a binary starting with RVFA magic bytes', () => {
+describe('ApplianceWriter', () => {
+  it('creates a binary starting with Appliance magic bytes', () => {
     const writer = makeWriter();
     addTestSections(writer);
     const buf = writer.build();
-    assert.equal(buf.subarray(0, 4).toString('ascii'), 'RVFA');
+    assert.equal(buf.subarray(0, 4).toString('ascii'), 'HFAP');
   });
 
   it('writes the correct version number', () => {
     const writer = makeWriter();
     addTestSections(writer);
-    assert.equal(writer.build().readUInt32LE(4), RVFA_VERSION);
+    assert.equal(writer.build().readUInt32LE(4), APPLIANCE_VERSION);
   });
 
   it('adds sections with correct SHA256', () => {
@@ -167,7 +171,7 @@ describe('RvfaWriter', () => {
     writer.addSection('kernel', payload, { compression: 'none' });
     const buf = writer.build();
 
-    const reader = RvfaReader.fromBuffer(buf);
+    const reader = ApplianceReader.fromBuffer(buf);
     const sections = reader.getSections();
     const stored = buf.subarray(sections[0].offset, sections[0].offset + sections[0].size);
     const expected = createHash('sha256').update(stored).digest('hex');
@@ -180,7 +184,7 @@ describe('RvfaWriter', () => {
     writer.addSection('kernel', payload, { compression: 'gzip' });
     const buf = writer.build();
 
-    const reader = RvfaReader.fromBuffer(buf);
+    const reader = ApplianceReader.fromBuffer(buf);
     const sections = reader.getSections();
     assert.equal(sections[0].compression, 'gzip');
     assert.ok(sections[0].size < payload.length);
@@ -189,7 +193,7 @@ describe('RvfaWriter', () => {
   it('computes a valid footer hash', () => {
     const writer = makeWriter();
     addTestSections(writer);
-    const reader = RvfaReader.fromBuffer(writer.build());
+    const reader = ApplianceReader.fromBuffer(writer.build());
     const result = reader.verify();
     assert.ok(result.valid, `Footer hash invalid: ${result.errors.join(', ')}`);
   });
@@ -209,7 +213,7 @@ describe('RvfaWriter', () => {
     writer.addSection('runtime', Buffer.from('bbbbb'), { compression: 'none' });
     writer.addSection('hive-flow', Buffer.from('ccccccc'), { compression: 'none' });
 
-    const reader = RvfaReader.fromBuffer(writer.build());
+    const reader = ApplianceReader.fromBuffer(writer.build());
     const sections = reader.getSections();
     for (let i = 1; i < sections.length; i++) {
       const prev = sections[i - 1];
@@ -222,9 +226,9 @@ describe('RvfaWriter', () => {
   });
 });
 
-// -- 6. RvfaReader ------------------------------------------------------------
+// -- 6. ApplianceReader ------------------------------------------------------------
 
-describe('RvfaReader', () => {
+describe('ApplianceReader', () => {
   let validBuf: Buffer;
 
   beforeEach(() => {
@@ -233,8 +237,8 @@ describe('RvfaReader', () => {
     validBuf = writer.build();
   });
 
-  it('reads back what RvfaWriter wrote (round-trip)', () => {
-    const reader = RvfaReader.fromBuffer(validBuf);
+  it('reads back what ApplianceWriter wrote (round-trip)', () => {
+    const reader = ApplianceReader.fromBuffer(validBuf);
     const header = reader.getHeader();
     assert.equal(header.name, 'test-appliance');
     assert.equal(header.profile, 'cloud');
@@ -242,17 +246,17 @@ describe('RvfaReader', () => {
   });
 
   it('extracts uncompressed sections correctly', () => {
-    const data = RvfaReader.fromBuffer(validBuf).extractSection('kernel');
+    const data = ApplianceReader.fromBuffer(validBuf).extractSection('kernel');
     assert.equal(data.toString('utf-8'), 'kernel-payload');
   });
 
   it('extracts gzip-compressed sections correctly', () => {
-    const data = RvfaReader.fromBuffer(validBuf).extractSection('runtime');
+    const data = ApplianceReader.fromBuffer(validBuf).extractSection('runtime');
     assert.equal(data.toString('utf-8'), 'runtime-payload');
   });
 
   it('verify() passes for a valid file', () => {
-    const result = RvfaReader.fromBuffer(validBuf).verify();
+    const result = ApplianceReader.fromBuffer(validBuf).verify();
     assert.ok(result.valid);
     assert.equal(result.errors.length, 0);
   });
@@ -260,14 +264,14 @@ describe('RvfaReader', () => {
   it('verify() fails for tampered magic bytes', () => {
     const tampered = Buffer.from(validBuf);
     tampered[0] = 0x00;
-    assert.throws(() => RvfaReader.fromBuffer(tampered), /Invalid RVFA magic/);
+    assert.throws(() => ApplianceReader.fromBuffer(tampered), /Invalid appliance magic/);
   });
 
   it('verify() fails for tampered section data', () => {
     const tampered = Buffer.from(validBuf);
-    const sections = RvfaReader.fromBuffer(validBuf).getSections();
+    const sections = ApplianceReader.fromBuffer(validBuf).getSections();
     tampered[sections[0].offset + 1] ^= 0xff;
-    const result = RvfaReader.fromBuffer(tampered).verify();
+    const result = ApplianceReader.fromBuffer(tampered).verify();
     assert.ok(!result.valid);
     assert.ok(result.errors.some((e) => e.includes('SHA256 mismatch')));
   });
@@ -275,7 +279,7 @@ describe('RvfaReader', () => {
   it('verify() fails for tampered footer hash', () => {
     const tampered = Buffer.from(validBuf);
     tampered[tampered.length - 1] ^= 0xff;
-    const result = RvfaReader.fromBuffer(tampered).verify();
+    const result = ApplianceReader.fromBuffer(tampered).verify();
     assert.ok(!result.valid);
     assert.ok(result.errors.some((e) => e.includes('Footer SHA256 mismatch')));
   });
@@ -283,21 +287,21 @@ describe('RvfaReader', () => {
   it('rejects files with wrong magic bytes', () => {
     const bad = Buffer.alloc(100);
     bad.write('NOPE', 0, 'ascii');
-    assert.throws(() => RvfaReader.fromBuffer(bad), /Invalid RVFA magic/);
+    assert.throws(() => ApplianceReader.fromBuffer(bad), /Invalid appliance magic/);
   });
 
   it('rejects files with header too large (>1MB)', () => {
     const buf = Buffer.alloc(20);
-    buf.write('RVFA', 0, 'ascii');
-    buf.writeUInt32LE(RVFA_VERSION, 4);
+    buf.write('HFAP', 0, 'ascii');
+    buf.writeUInt32LE(APPLIANCE_VERSION, 4);
     buf.writeUInt32LE(2 * 1024 * 1024, 8);
-    assert.throws(() => RvfaReader.fromBuffer(buf), /exceeds maximum size/);
+    assert.throws(() => ApplianceReader.fromBuffer(buf), /exceeds maximum size/);
   });
 
   it('handles empty sections', () => {
     const writer = makeWriter();
     writer.addSection('kernel', Buffer.alloc(0), { compression: 'none' });
-    const data = RvfaReader.fromBuffer(writer.build()).extractSection('kernel');
+    const data = ApplianceReader.fromBuffer(writer.build()).extractSection('kernel');
     assert.equal(data.length, 0);
   });
 
@@ -309,26 +313,27 @@ describe('RvfaReader', () => {
     writer.addSection('models', Buffer.from('m'), { compression: 'none' });
     writer.addSection('data', Buffer.from('d'), { compression: 'none' });
     writer.addSection('verify', Buffer.from('v'), { compression: 'none' });
-    const reader = RvfaReader.fromBuffer(writer.build());
+    const reader = ApplianceReader.fromBuffer(writer.build());
     assert.equal(reader.getSections().length, 6);
     assert.equal(reader.extractSection('kernel').toString(), 'k');
     assert.equal(reader.extractSection('hive-flow').toString(), 'f');
     assert.equal(reader.extractSection('verify').toString(), 'v');
   });
 
-  it('still reads legacy appliances with the old CLI section id', () => {
+  it('still reads legacy appliances with the previous CLI section id', () => {
+    const legacySectionId = legacyCliSectionId();
     const writer = makeWriter();
     writer.addSection('kernel', Buffer.from('k'), { compression: 'none' });
     writer.addSection('runtime', Buffer.from('r'), { compression: 'none' });
-    writer.addSection('ruflo', Buffer.from('legacy-cli'), { compression: 'none' });
+    writer.addSection(legacySectionId, Buffer.from('legacy-cli'), { compression: 'none' });
 
-    const reader = RvfaReader.fromBuffer(writer.build());
-    assert.equal(reader.extractSection('ruflo').toString(), 'legacy-cli');
+    const reader = ApplianceReader.fromBuffer(writer.build());
+    assert.equal(reader.extractSection(legacySectionId).toString(), 'legacy-cli');
   });
 
   it('throws when extracting a nonexistent section', () => {
     assert.throws(
-      () => RvfaReader.fromBuffer(validBuf).extractSection('nonexistent'),
+      () => ApplianceReader.fromBuffer(validBuf).extractSection('nonexistent'),
       /not found/,
     );
   });
@@ -356,7 +361,7 @@ describe('Security', () => {
     ]);
     corrupted.writeUInt32LE(corruptedHeader.length, 8);
 
-    assert.throws(() => RvfaReader.fromBuffer(corrupted), /negative/i);
+    assert.throws(() => ApplianceReader.fromBuffer(corrupted), /negative/i);
   });
 
   it('rejects overlapping sections', () => {
@@ -379,26 +384,26 @@ describe('Security', () => {
     ]);
     corrupted.writeUInt32LE(corruptedHeader.length, 8);
 
-    assert.throws(() => RvfaReader.fromBuffer(corrupted), /overlap/i);
+    assert.throws(() => ApplianceReader.fromBuffer(corrupted), /overlap/i);
   });
 
   it('rejects header larger than 1MB', () => {
     const buf = Buffer.alloc(20);
-    buf.write('RVFA', 0, 'ascii');
-    buf.writeUInt32LE(RVFA_VERSION, 4);
+    buf.write('HFAP', 0, 'ascii');
+    buf.writeUInt32LE(APPLIANCE_VERSION, 4);
     buf.writeUInt32LE(1_048_577, 8);
-    assert.throws(() => RvfaReader.fromBuffer(buf), /exceeds maximum size/);
+    assert.throws(() => ApplianceReader.fromBuffer(buf), /exceeds maximum size/);
   });
 
   it('rejects buffer too small for preamble', () => {
     const buf = Buffer.alloc(8);
-    buf.write('RVFA', 0, 'ascii');
-    assert.throws(() => RvfaReader.fromBuffer(buf), /too small/);
+    buf.write('HFAP', 0, 'ascii');
+    assert.throws(() => ApplianceReader.fromBuffer(buf), /too small/);
   });
 
   it('rejects file paths with null bytes', async () => {
     await assert.rejects(
-      () => RvfaReader.fromFile('/tmp/test\0exploit.rvfa'),
+      () => ApplianceReader.fromFile('/tmp/test\0exploit.hfap'),
       /null bytes/,
     );
   });

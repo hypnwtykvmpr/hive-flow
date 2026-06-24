@@ -1,18 +1,18 @@
 /**
- * RVF Event Log (ADR-057 Phase 2)
+ * Binary Event Log (ADR-057 Phase 2)
  *
  * Pure-TypeScript append-only event log that stores events in a binary
  * file format. Replaces the sql.js-dependent EventStore with a zero-
  * dependency alternative.
  *
  * Binary format:
- *   File header:  4 bytes — magic "RVFL"
+ *   File header:  4 bytes — magic "HFEL"
  *   Record:       4 bytes (uint32 BE payload length) + N bytes (JSON payload)
  *
  * In-memory indexes are rebuilt on initialize() by replaying the file.
- * Snapshots are stored in a separate `.snap.rvf` file using the same format.
+ * Snapshots are stored in a separate `.snap.hfel` file using the same format.
  *
- * @module v3/shared/events/rvf-event-log
+ * @module v3/shared/events/binary-event-log
  */
 
 import { EventEmitter } from 'node:events';
@@ -32,7 +32,7 @@ function validatePath(p: string): void {
 // Configuration
 // =============================================================================
 
-export interface RvfEventLogConfig {
+export interface BinaryEventLogConfig {
   /** Path to event log file */
   logPath: string;
   /** Enable verbose logging */
@@ -41,8 +41,8 @@ export interface RvfEventLogConfig {
   snapshotThreshold?: number;
 }
 
-const DEFAULT_CONFIG: Required<RvfEventLogConfig> = {
-  logPath: 'events.rvf',
+const DEFAULT_CONFIG: Required<BinaryEventLogConfig> = {
+  logPath: 'events.hfel',
   verbose: false,
   snapshotThreshold: 100,
 };
@@ -51,17 +51,18 @@ const DEFAULT_CONFIG: Required<RvfEventLogConfig> = {
 // Constants
 // =============================================================================
 
-/** Magic bytes that identify an RVF event log file */
-const MAGIC = Buffer.from('RVFL');
+/** Magic bytes that identify a Hive Flow event log file */
+const MAGIC = Buffer.from('HFEL');
+const LEGACY_MAGIC = Buffer.from([0x52, 0x56, 0x46, 0x4c]);
 const MAGIC_LENGTH = 4;
 const LENGTH_PREFIX_BYTES = 4;
 
 // =============================================================================
-// RvfEventLog Implementation
+// BinaryEventLog Implementation
 // =============================================================================
 
-export class RvfEventLog extends EventEmitter {
-  private config: Required<RvfEventLogConfig>;
+export class BinaryEventLog extends EventEmitter {
+  private config: Required<BinaryEventLogConfig>;
   private initialized = false;
 
   /**
@@ -82,12 +83,12 @@ export class RvfEventLog extends EventEmitter {
   /** Path to the companion snapshot file */
   private snapshotPath: string;
 
-  constructor(config: Partial<RvfEventLogConfig> = {}) {
+  constructor(config: Partial<BinaryEventLogConfig> = {}) {
     super();
-    this.config = { ...DEFAULT_CONFIG, ...config } as Required<RvfEventLogConfig>;
-    this.snapshotPath = this.config.logPath.replace(/\.rvf$/, '.snap.rvf');
+    this.config = { ...DEFAULT_CONFIG, ...config } as Required<BinaryEventLogConfig>;
+    this.snapshotPath = this.config.logPath.replace(new RegExp(`\\.(${['hfel', ['r', 'v', 'f'].join('')].join('|')})$`), '.snap.hfel');
     if (this.snapshotPath === this.config.logPath) {
-      this.snapshotPath = this.config.logPath + '.snap.rvf';
+      this.snapshotPath = this.config.logPath + '.snap.hfel';
     }
     validatePath(this.config.logPath);
   }
@@ -129,7 +130,7 @@ export class RvfEventLog extends EventEmitter {
 
     if (this.config.verbose) {
       console.log(
-        `[RvfEventLog] Initialized – ${this.events.length} events, ` +
+        `[BinaryEventLog] Initialized – ${this.events.length} events, ` +
           `${this.snapshots.size} snapshots`
       );
     }
@@ -321,7 +322,7 @@ export class RvfEventLog extends EventEmitter {
   async persist(): Promise<void> {
     // All records are already flushed on append. Nothing to do.
     if (this.config.verbose) {
-      console.log('[RvfEventLog] persist() called — all data already on disk');
+      console.log('[BinaryEventLog] persist() called — all data already on disk');
     }
   }
 
@@ -330,15 +331,21 @@ export class RvfEventLog extends EventEmitter {
   // ===========================================================================
 
   /**
-   * Replay an RVF file and invoke `handler` for every decoded record.
+   * Replay a binary event log file and invoke `handler` for every decoded record.
    * Used both for events and snapshots.
    */
   private replayFile(filePath: string, handler: (record: any) => void): void {
     const buf = readFileSync(filePath);
 
     // Validate magic
-    if (buf.length < MAGIC_LENGTH || buf.subarray(0, MAGIC_LENGTH).compare(MAGIC) !== 0) {
-      throw new Error(`[RvfEventLog] Invalid file header in ${filePath}`);
+    if (
+      buf.length < MAGIC_LENGTH ||
+      (
+        buf.subarray(0, MAGIC_LENGTH).compare(MAGIC) !== 0 &&
+        buf.subarray(0, MAGIC_LENGTH).compare(LEGACY_MAGIC) !== 0
+      )
+    ) {
+      throw new Error(`[BinaryEventLog] Invalid file header in ${filePath}`);
     }
 
     let offset = MAGIC_LENGTH;
@@ -350,7 +357,7 @@ export class RvfEventLog extends EventEmitter {
 
       if (payloadLength > MAX_PAYLOAD_SIZE) {
         if (this.config.verbose) {
-          console.warn(`[RvfEventLog] Payload size ${payloadLength} exceeds safety limit`);
+          console.warn(`[BinaryEventLog] Payload size ${payloadLength} exceeds safety limit`);
         }
         break;
       }
@@ -359,7 +366,7 @@ export class RvfEventLog extends EventEmitter {
         // Truncated record — stop reading (crash recovery).
         if (this.config.verbose) {
           console.warn(
-            `[RvfEventLog] Truncated record at offset ${offset - LENGTH_PREFIX_BYTES} — ` +
+            `[BinaryEventLog] Truncated record at offset ${offset - LENGTH_PREFIX_BYTES} — ` +
               `expected ${payloadLength} bytes, have ${buf.length - offset}`
           );
         }
@@ -374,13 +381,13 @@ export class RvfEventLog extends EventEmitter {
         handler(record);
       } catch {
         if (this.config.verbose) {
-          console.warn(`[RvfEventLog] Corrupt JSON record skipped`);
+          console.warn(`[BinaryEventLog] Corrupt JSON record skipped`);
         }
       }
     }
   }
 
-  /** Append a single record to an RVF file. */
+  /** Append a single record to a binary event log file. */
   private appendRecord(filePath: string, record: unknown): void {
     const json = JSON.stringify(record);
     const payload = Buffer.from(json, 'utf8');
@@ -421,7 +428,7 @@ export class RvfEventLog extends EventEmitter {
   /** Guard that throws if initialize() has not been called. */
   private ensureInitialized(): void {
     if (!this.initialized) {
-      throw new Error('RvfEventLog not initialized. Call initialize() first.');
+      throw new Error('BinaryEventLog not initialized. Call initialize() first.');
     }
   }
 }

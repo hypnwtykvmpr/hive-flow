@@ -53,15 +53,15 @@ let tmpDir: string;
 
 describe('Provider Selection', () => {
   before(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'rvf-prov-'));
+    tmpDir = mkdtempSync(join(tmpdir(), 'binary-prov-'));
   });
   after(() => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('createDatabase with provider "rvf" creates an BinaryBackend', async () => {
-    const db = await createDatabase(join(tmpDir, 'test-rvf.rvf'), {
-      provider: 'rvf',
+  it('createDatabase with provider "binary" creates an BinaryBackend', async () => {
+    const db = await createDatabase(join(tmpDir, 'test-binary.hfdb'), {
+      provider: 'binary',
     });
     // BinaryBackend exposes healthCheck that reports index component
     const health = await db.healthCheck();
@@ -86,11 +86,11 @@ describe('Provider Selection', () => {
     await db.shutdown();
   });
 
-  it('createDatabase with provider "auto" selects RVF', async () => {
+  it('createDatabase with provider "auto" selects Binary', async () => {
     const db = await createDatabase(join(tmpDir, 'test-auto.db'), {
       provider: 'auto',
     });
-    // Because testRvf() always returns true, auto should pick rvf.
+    // The pure TypeScript binary backend is always available, so auto should pick it.
     // Store + get round-trip proves it initialised correctly.
     const entry = makeEntry('auto-1', 'ns', 'k', 'hello');
     await db.store(entry);
@@ -100,41 +100,41 @@ describe('Provider Selection', () => {
     await db.shutdown();
   });
 
-  it('getAvailableProviders returns rvf: true and json: true', async () => {
+  it('getAvailableProviders returns binary: true and json: true', async () => {
     const providers = await getAvailableProviders();
-    assert.equal(providers.rvf, true);
+    assert.equal(providers.binary, true);
     assert.equal(providers.json, true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// 2. RVF Path Extension
+// 2. Binary Path Extension
 // ---------------------------------------------------------------------------
 
-describe('RVF Path Extension', () => {
+describe('Binary Path Extension', () => {
   let db: IMemoryBackend;
   let dir: string;
 
   before(async () => {
-    dir = mkdtempSync(join(tmpdir(), 'rvf-ext-'));
-    db = await createDatabase(join(dir, 'foo.db'), { provider: 'rvf' });
+    dir = mkdtempSync(join(tmpdir(), 'binary-ext-'));
+    db = await createDatabase(join(dir, 'foo.db'), { provider: 'binary' });
   });
   after(async () => {
     await db.shutdown();
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('input path foo.db is converted to foo.rvf for rvf provider', async () => {
+  it('input path foo.db is converted to foo.hfdb for binary provider', async () => {
     // Store an entry and shutdown to force persist, then check file exists.
     const entry = makeEntry('ext-1', 'ns', 'k', 'data');
     await db.store(entry);
     await db.shutdown();
 
     const { existsSync } = await import('node:fs');
-    // The .db extension should have been replaced with .rvf
+    // The .db extension should have been replaced with .hfdb
     assert.ok(
-      existsSync(join(dir, 'foo.rvf')),
-      'Expected foo.rvf to exist on disk',
+      existsSync(join(dir, 'foo.hfdb')),
+      'Expected foo.hfdb to exist on disk',
     );
     assert.ok(
       !existsSync(join(dir, 'foo.db')),
@@ -142,21 +142,21 @@ describe('RVF Path Extension', () => {
     );
 
     // Re-open for later cleanup
-    db = await createDatabase(join(dir, 'foo.db'), { provider: 'rvf' });
+    db = await createDatabase(join(dir, 'foo.db'), { provider: 'binary' });
   });
 });
 
 // ---------------------------------------------------------------------------
-// 3. Full IMemoryBackend Contract (RVF via createDatabase)
+// 3. Full IMemoryBackend Contract (Binary via createDatabase)
 // ---------------------------------------------------------------------------
 
-describe('IMemoryBackend Contract (RVF)', () => {
+describe('IMemoryBackend Contract (Binary)', () => {
   let db: IMemoryBackend;
   let dir: string;
 
   before(async () => {
-    dir = mkdtempSync(join(tmpdir(), 'rvf-contract-'));
-    db = await createDatabase(join(dir, 'contract.rvf'), { provider: 'rvf' });
+    dir = mkdtempSync(join(tmpdir(), 'binary-contract-'));
+    db = await createDatabase(join(dir, 'contract.hfdb'), { provider: 'binary' });
   });
   after(async () => {
     await db.shutdown();
@@ -273,14 +273,14 @@ describe('IMemoryBackend Contract (RVF)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Data Migration Scenario (JSON -> RVF)
+// 4. Data Migration Scenario (JSON -> Binary)
 // ---------------------------------------------------------------------------
 
-describe('Data Migration (JSON -> RVF)', () => {
+describe('Data Migration (JSON -> Binary)', () => {
   let dir: string;
 
   before(() => {
-    dir = mkdtempSync(join(tmpdir(), 'rvf-migrate-'));
+    dir = mkdtempSync(join(tmpdir(), 'binary-migrate-'));
   });
   after(() => {
     rmSync(dir, { recursive: true, force: true });
@@ -299,34 +299,34 @@ describe('Data Migration (JSON -> RVF)', () => {
     await jsonDb.bulkInsert(entries);
 
     // Step 2: Create BinaryBackend
-    const rvfDb = await createDatabase(join(dir, 'dest.rvf'), {
-      provider: 'rvf',
+    const binaryDb = await createDatabase(join(dir, 'dest.hfdb'), {
+      provider: 'binary',
     });
 
-    // Step 3: Copy entries from JSON to RVF
+    // Step 3: Copy entries from JSON to Binary
     for (const entry of entries) {
-      await rvfDb.store(entry);
+      await binaryDb.store(entry);
     }
 
-    // Step 4: Verify all entries accessible in RVF
+    // Step 4: Verify all entries accessible in Binary
     for (const entry of entries) {
-      const got = await rvfDb.get(entry.id);
-      assert.ok(got, `Entry ${entry.id} should exist in RVF`);
+      const got = await binaryDb.get(entry.id);
+      assert.ok(got, `Entry ${entry.id} should exist in Binary`);
       assert.equal(got.content, entry.content);
       assert.equal(got.namespace, entry.namespace);
     }
 
     // Verify namespaces preserved
-    const namespaces = await rvfDb.listNamespaces();
+    const namespaces = await binaryDb.listNamespaces();
     assert.ok(namespaces.includes('migrate'));
     assert.ok(namespaces.includes('other'));
 
     // Verify counts
-    assert.equal(await rvfDb.count('migrate'), 2);
-    assert.equal(await rvfDb.count('other'), 1);
+    assert.equal(await binaryDb.count('migrate'), 2);
+    assert.equal(await binaryDb.count('other'), 1);
 
     await jsonDb.shutdown();
-    await rvfDb.shutdown();
+    await binaryDb.shutdown();
   });
 });
 
@@ -339,9 +339,9 @@ describe('Concurrent Operations', () => {
   let dir: string;
 
   before(async () => {
-    dir = mkdtempSync(join(tmpdir(), 'rvf-concurrent-'));
-    db = await createDatabase(join(dir, 'concurrent.rvf'), {
-      provider: 'rvf',
+    dir = mkdtempSync(join(tmpdir(), 'binary-concurrent-'));
+    db = await createDatabase(join(dir, 'concurrent.hfdb'), {
+      provider: 'binary',
     });
   });
   after(async () => {

@@ -174,6 +174,18 @@ async function startHttpsFixture() {
       res.end();
       return;
     }
+    if (req.url?.startsWith('/search?')) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`
+        <html><body>
+          <a class="result__a" href="https://example.com/alpha?x=1&amp;y=2">Alpha Result</a>
+          <div class="result__snippet">First grounded snippet</div>
+          <a class="result__a" href="/l/?uddg=https%3A%2F%2Fexample.org%2Fbeta">Beta Result</a>
+          <div class="result__snippet">Second grounded snippet</div>
+        </body></html>
+      `);
+      return;
+    }
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end('not found');
   });
@@ -227,6 +239,39 @@ function expectDeniedContract(result) {
     'finalUrl',
     'httpStatus',
     'redirectCount',
+    'status',
+    'truncated',
+  ]);
+}
+
+function expectSearchContract(result) {
+  expect(Object.keys(result).sort()).toEqual([
+    'bytes',
+    'contentType',
+    'finalUrl',
+    'httpStatus',
+    'provider',
+    'query',
+    'redirectCount',
+    'results',
+    'searchUrl',
+    'status',
+    'truncated',
+  ]);
+}
+
+function expectSearchDeniedContract(result) {
+  expect(Object.keys(result).sort()).toEqual([
+    'bytes',
+    'contentType',
+    'denyReason',
+    'finalUrl',
+    'httpStatus',
+    'provider',
+    'query',
+    'redirectCount',
+    'results',
+    'searchUrl',
     'status',
     'truncated',
   ]);
@@ -449,22 +494,55 @@ describe('provider bridge web_fetch contract and SSRF guard', () => {
     }
   });
 
-  it('keeps web_search as an explicit unsupported deny stub, not open search', async () => {
+  it('searches through the bridge-owned guarded HTTPS search endpoint', async () => {
     const { root, bridge } = await makeBridge(0);
     try {
       const result = decodeToolResult(await bridge.evaluateToolCall('web_search', {
         query: 'provider bridge ssrf',
+        maxResults: 2,
+      }, {
+        webOptions: fixtureWebOptions(fixture, {
+          searchEndpoint: `https://fixture.test:${fixture.port}/search`,
+          maxBytes: 4096,
+        }),
       }));
 
-      expectDeniedContract(result);
+      expectSearchContract(result);
       expect(result).toMatchObject({
-        status: 'denied',
-        denyReason: 'web-search-unsupported',
-        finalUrl: null,
-        httpStatus: null,
-        bytes: 0,
+        status: 'searched',
+        query: 'provider bridge ssrf',
+        provider: 'duckduckgo-html',
+        finalUrl: expect.stringContaining('/search?q=provider+bridge+ssrf'),
+        httpStatus: 200,
         truncated: false,
         redirectCount: 0,
+        results: [
+          { title: 'Alpha Result', url: 'https://example.com/alpha?x=1&y=2', snippet: 'First grounded snippet' },
+          { title: 'Beta Result', url: 'https://example.org/beta', snippet: 'Second grounded snippet' },
+        ],
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('denies web_search through the same fetch restrictions as web_fetch', async () => {
+    const { root, bridge } = await makeBridge(0, ['fetch']);
+    try {
+      const result = decodeToolResult(await bridge.evaluateToolCall('web_search', {
+        query: 'provider bridge ssrf',
+      }, {
+        webOptions: fixtureWebOptions(fixture, {
+          searchEndpoint: `https://fixture.test:${fixture.port}/search`,
+        }),
+      }));
+
+      expectSearchDeniedContract(result);
+      expect(result).toMatchObject({
+        status: 'denied',
+        query: 'provider bridge ssrf',
+        denyReason: 'restricted-fetch-or-exec',
+        results: [],
       });
     } finally {
       rmSync(root, { recursive: true, force: true });

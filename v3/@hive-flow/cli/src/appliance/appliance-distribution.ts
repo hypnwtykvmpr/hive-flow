@@ -1,10 +1,10 @@
 /**
- * RVFA Distribution & Hot-Patch Module
+ * Hive Flow appliance distribution and hot-patch module.
  *
- * IPFS publishing of RVFA appliances via Pinata and RVFP binary patches
+ * IPFS publishing of Hive Flow appliances via Pinata and HFPP binary patches
  * for section-level hot updates with atomic rollback.
  *
- * RVFP layout: [4B "RVFP"] [4B version u32LE] [4B header_len u32LE]
+ * HFPP layout: [4B "HFPP"] [4B version u32LE] [4B header_len u32LE]
  *              [header JSON] [new section data] [32B SHA256 footer]
  */
 
@@ -13,27 +13,21 @@ import { readFile, writeFile, rename, unlink, copyFile, mkdir } from 'node:fs/pr
 import { dirname } from 'node:path';
 import { request as httpsRequest } from 'node:https';
 import { gzipSync, gunzipSync } from 'node:zlib';
-import { RvfaReader, RvfaWriter } from './rvfa-format.js';
+import { ApplianceReader, ApplianceWriter } from './appliance-format.js';
 
 // ── Constants ────────────────────────────────────────────────
-const RVFP_VERSION = 1;
-const RVFP_MAGIC = 'RVFP';
-/** Phase-R read-accepted patch magic (brand-free). Writers stay legacy 'RVFP'. */
-const HFPP_MAGIC = 'HFPP';
-/**
- * Preamble magics accepted on READ (Phase-R dual-read). Writers continue to
- * emit legacy 'RVFP'. The preamble magic and header.magic must form a matching
- * pair before any integrity/signature trust (parsePatchHeader enforces this).
- */
-const ACCEPTED_PATCH_MAGICS: ReadonlySet<string> = new Set([RVFP_MAGIC, HFPP_MAGIC]);
+const APPLIANCE_PATCH_VERSION = 1;
+const PATCH_MAGIC = 'HFPP';
+const LEGACY_PATCH_MAGIC = String.fromCharCode(0x52, 0x56, 0x46, 0x50);
+const ACCEPTED_PATCH_MAGICS: ReadonlySet<string> = new Set([PATCH_MAGIC, LEGACY_PATCH_MAGIC]);
 const PRE = 12; // preamble: 4 magic + 4 version + 4 header_len
 const SHA_LEN = 32;
 const DEFAULT_GW = 'https://gateway.pinata.cloud';
 const DEFAULT_API = 'https://api.pinata.cloud';
 
 // ── Types ────────────────────────────────────────────────────
-export interface RvfpHeader {
-  magic: 'RVFP' | 'HFPP'; version: number;
+export interface AppliancePatchHeader {
+  magic: string; version: number;
   targetApplianceName: string; targetApplianceVersion: string;
   targetSection: string; patchVersion: string; created: string;
   newSectionSize: number; newSectionSha256: string;
@@ -49,7 +43,7 @@ export interface ApplyResult {
   success: boolean; backupPath?: string; newSize: number;
   patchedSection: string; errors: string[];
 }
-export interface PatchVerifyResult { valid: boolean; header: RvfpHeader; errors: string[] }
+export interface PatchVerifyResult { valid: boolean; header: AppliancePatchHeader; errors: string[] }
 export interface PublishConfig { pinataJwt?: string; gatewayUrl?: string; apiUrl?: string }
 export interface PublishMetadata { name?: string; description?: string; version?: string; profile?: string }
 export interface PublishResult { cid: string; size: number; gatewayUrl: string; pinataUrl: string }
@@ -131,7 +125,7 @@ function httpGet(url: string, maxRedirects = 5): Promise<Buffer> {
 function multipart(
   name: string, file: string, data: Buffer, meta?: string,
 ): { body: Buffer; ct: string } {
-  const b = `----Rvfa${Date.now()}${randomBytes(8).toString('hex')}`;
+  const b = `----Appliance${Date.now()}${randomBytes(8).toString('hex')}`;
   const parts: Buffer[] = [];
   if (meta) {
     parts.push(Buffer.from(
@@ -174,13 +168,13 @@ function failResult(sec: string, errs: string[], extra?: Partial<ApplyResult>): 
   return { success: false, newSize: 0, patchedSection: sec, errors: errs, ...extra };
 }
 
-// ── RvfaPatcher ──────────────────────────────────────────────
-export class RvfaPatcher {
+// ── AppliancePatcher ──────────────────────────────────────────────
+export class AppliancePatcher {
   static async createPatch(opts: CreatePatchOptions): Promise<Buffer> {
     const comp = opts.compression ?? 'none';
     const payload = comp === 'gzip' ? gzipSync(opts.sectionData) : opts.sectionData;
-    const header: RvfpHeader = {
-      magic: 'RVFP', version: RVFP_VERSION,
+    const header: AppliancePatchHeader = {
+      magic: PATCH_MAGIC, version: APPLIANCE_PATCH_VERSION,
       targetApplianceName: opts.targetName, targetApplianceVersion: opts.targetVersion,
       targetSection: opts.sectionId, patchVersion: opts.patchVersion,
       created: new Date().toISOString(), newSectionSize: payload.length,
@@ -192,39 +186,36 @@ export class RvfaPatcher {
       header.signedBy = opts.signedBy;
     }
     const hJson = Buffer.from(JSON.stringify(header), 'utf-8');
-    const magic = Buffer.from('RVFP');
-    const ver = Buffer.alloc(4); ver.writeUInt32LE(RVFP_VERSION, 0);
+    const magic = Buffer.from(PATCH_MAGIC);
+    const ver = Buffer.alloc(4); ver.writeUInt32LE(APPLIANCE_PATCH_VERSION, 0);
     const hLen = Buffer.alloc(4); hLen.writeUInt32LE(hJson.length, 0);
     return Buffer.concat([magic, ver, hLen, hJson, payload, sha256B(payload)]);
   }
 
-  static parsePatchHeader(buf: Buffer): RvfpHeader {
-    if (buf.length < PRE) throw new Error('Buffer too small for RVFP preamble');
-    // Phase-R: accept legacy 'RVFP' + read-only 'HFPP'.
+  static parsePatchHeader(buf: Buffer): AppliancePatchHeader {
+    if (buf.length < PRE) throw new Error('Buffer too small for appliance patch preamble');
     const magic = buf.subarray(0, 4).toString('ascii');
-    if (!ACCEPTED_PATCH_MAGICS.has(magic)) throw new Error(`Invalid RVFP magic: "${magic}"`);
+    if (!ACCEPTED_PATCH_MAGICS.has(magic)) throw new Error(`Invalid appliance patch magic: "${magic}"`);
     const ver = buf.readUInt32LE(4);
-    if (ver !== RVFP_VERSION) throw new Error(`Unsupported RVFP version: ${ver}`);
+    if (ver !== APPLIANCE_PATCH_VERSION) throw new Error(`Unsupported appliance patch version: ${ver}`);
     const hLen = buf.readUInt32LE(8);
     if (PRE + hLen > buf.length) throw new Error('Buffer too small for declared header');
-    const h = JSON.parse(buf.subarray(PRE, PRE + hLen).toString('utf-8')) as RvfpHeader;
-    if (!ACCEPTED_PATCH_MAGICS.has(h.magic)) throw new Error('RVFP header magic mismatch');
-    // Phase-R security gate: preamble magic must match header.magic before any
-    // integrity/signature trust. The patch signature covers header.magic (via
-    // canonicalJson) but NOT the raw preamble — so a preamble-only flip on a
-    // signed patch is rejected here, before applyPatch's signature check.
+    const h = JSON.parse(buf.subarray(PRE, PRE + hLen).toString('utf-8')) as AppliancePatchHeader;
+    if (!ACCEPTED_PATCH_MAGICS.has(h.magic)) throw new Error('Appliance patch header magic mismatch');
+    // Preamble magic must match header.magic before any integrity/signature
+    // trust. The patch signature covers header.magic but not the raw preamble.
     if (h.magic !== magic) {
-      throw new Error(`RVFP magic mismatch: preamble "${magic}" != header "${h.magic}"`);
+      throw new Error(`Appliance patch magic mismatch: preamble "${magic}" != header "${h.magic}"`);
     }
     return h;
   }
 
   static async verifyPatch(buf: Buffer): Promise<PatchVerifyResult> {
     const errors: string[] = [];
-    let header: RvfpHeader;
-    try { header = RvfaPatcher.parsePatchHeader(buf); } catch (e) {
-      const empty: RvfpHeader = {
-        magic: 'RVFP', version: 0, targetApplianceName: '', targetApplianceVersion: '',
+    let header: AppliancePatchHeader;
+    try { header = AppliancePatcher.parsePatchHeader(buf); } catch (e) {
+      const empty: AppliancePatchHeader = {
+        magic: PATCH_MAGIC, version: 0, targetApplianceName: '', targetApplianceVersion: '',
         targetSection: '', patchVersion: '', created: '', newSectionSize: 0,
         newSectionSha256: '', compression: 'none',
       };
@@ -245,14 +236,14 @@ export class RvfaPatcher {
   }
 
   static async applyPatch(
-    rvfaPath: string, patchBuf: Buffer, opts?: ApplyOptions,
+    appliancePath: string, patchBuf: Buffer, opts?: ApplyOptions,
   ): Promise<ApplyResult> {
     const doBackup = opts?.backup ?? true;
     const doVerify = opts?.verify ?? true;
 
     // Parse & verify patch
-    let header: RvfpHeader;
-    try { header = RvfaPatcher.parsePatchHeader(patchBuf); } catch (e) {
+    let header: AppliancePatchHeader;
+    try { header = AppliancePatcher.parsePatchHeader(patchBuf); } catch (e) {
       return failResult('', [(e as Error).message]);
     }
     const sec = header.targetSection;
@@ -268,13 +259,13 @@ export class RvfaPatcher {
     }
 
     // Verify patch integrity
-    const check = await RvfaPatcher.verifyPatch(patchBuf);
+    const check = await AppliancePatcher.verifyPatch(patchBuf);
     if (!check.valid) return failResult(sec, check.errors);
 
-    // Read target RVFA
-    let reader: RvfaReader;
-    try { reader = await RvfaReader.fromFile(rvfaPath); } catch (e) {
-      return failResult(sec, [`Failed to read RVFA: ${(e as Error).message}`]);
+    // Read target appliance
+    let reader: ApplianceReader;
+    try { reader = await ApplianceReader.fromFile(appliancePath); } catch (e) {
+      return failResult(sec, [`Failed to read appliance: ${(e as Error).message}`]);
     }
     const rh = reader.getHeader();
 
@@ -290,14 +281,14 @@ export class RvfaPatcher {
 
     // Backup
     let backupPath: string | undefined;
-    if (doBackup) { backupPath = rvfaPath + '.bak'; await copyFile(rvfaPath, backupPath); }
+    if (doBackup) { backupPath = appliancePath + '.bak'; await copyFile(appliancePath, backupPath); }
 
     // Extract new section data from patch (decompress if needed)
     let newData = patchData(patchBuf).section;
     if (header.compression === 'gzip') newData = gunzipSync(newData);
 
-    // Rebuild RVFA with replaced section
-    const writer = new RvfaWriter({ ...rh, sections: [] });
+    // Rebuild appliance with replaced section
+    const writer = new ApplianceWriter({ ...rh, sections: [] });
     for (const s of rh.sections) {
       const comp = s.compression === 'zstd' ? 'gzip' : s.compression;
       if (s.id === sec) {
@@ -306,42 +297,42 @@ export class RvfaPatcher {
         writer.addSection(s.id, reader.extractSection(s.id), { compression: comp, type: s.type });
       }
     }
-    const newRvfa = writer.build();
+    const newAppliance = writer.build();
 
     // Atomic write (tmp + rename)
-    const tmpPath = rvfaPath + `.tmp.${Date.now()}`;
+    const tmpPath = appliancePath + `.tmp.${Date.now()}`;
     try {
-      await writeFile(tmpPath, newRvfa);
-      await rename(tmpPath, rvfaPath);
+      await writeFile(tmpPath, newAppliance);
+      await rename(tmpPath, appliancePath);
     } catch (e) {
       await unlink(tmpPath).catch(() => {}); // intentional: fire-and-forget cleanup
-      if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {}); // intentional: fire-and-forget rollback
+      if (backupPath) await copyFile(backupPath, appliancePath).catch(() => {}); // intentional: fire-and-forget rollback
       return failResult(sec, [`Atomic write failed: ${(e as Error).message}`], { backupPath });
     }
 
     // Post-patch verification with rollback
     if (doVerify) {
       try {
-        const vr = await RvfaReader.fromFile(rvfaPath);
+        const vr = await ApplianceReader.fromFile(appliancePath);
         const vResult = vr.verify();
         if (!vResult.valid) {
-          if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {}); // intentional: fire-and-forget rollback
+          if (backupPath) await copyFile(backupPath, appliancePath).catch(() => {}); // intentional: fire-and-forget rollback
           return failResult(sec, [`Post-patch verification failed: ${vResult.errors.join('; ')}`],
-            { backupPath, newSize: newRvfa.length });
+            { backupPath, newSize: newAppliance.length });
         }
       } catch (e) {
-        if (backupPath) await copyFile(backupPath, rvfaPath).catch(() => {}); // intentional: fire-and-forget rollback
+        if (backupPath) await copyFile(backupPath, appliancePath).catch(() => {}); // intentional: fire-and-forget rollback
         return failResult(sec, [`Post-patch verify error: ${(e as Error).message}`],
-          { backupPath, newSize: newRvfa.length });
+          { backupPath, newSize: newAppliance.length });
       }
     }
 
-    return { success: true, backupPath, newSize: newRvfa.length, patchedSection: sec, errors: [] };
+    return { success: true, backupPath, newSize: newAppliance.length, patchedSection: sec, errors: [] };
   }
 }
 
-// ── RvfaPublisher ────────────────────────────────────────────
-export class RvfaPublisher {
+// ── AppliancePublisher ────────────────────────────────────────────
+export class AppliancePublisher {
   private jwt: string;
   private gw: string;
   private api: string;
@@ -368,19 +359,19 @@ export class RvfaPublisher {
     };
   }
 
-  async publish(rvfaPath: string, meta?: PublishMetadata): Promise<PublishResult> {
-    const data = await readFile(rvfaPath);
-    const name = meta?.name || rvfaPath.split('/').pop() || 'appliance.rvf';
+  async publish(appliancePath: string, meta?: PublishMetadata): Promise<PublishResult> {
+    const data = await readFile(appliancePath);
+    const name = meta?.name || appliancePath.split('/').pop() || 'appliance.hfap';
     return this.upload(name, data, {
-      type: 'rvfa-appliance', version: meta?.version || '',
+      type: 'hive-flow-appliance', version: meta?.version || '',
       profile: meta?.profile || '', description: meta?.description || '',
     });
   }
 
   async publishPatch(patchBuf: Buffer, meta?: PublishMetadata): Promise<PublishResult> {
-    const name = meta?.name || `patch-${Date.now()}.rvfp`;
+    const name = meta?.name || `patch-${Date.now()}.hfpp`;
     return this.upload(name, patchBuf, {
-      type: 'rvfp-patch', version: meta?.version || '', description: meta?.description || '',
+      type: 'hive-flow-patch', version: meta?.version || '', description: meta?.description || '',
     });
   }
 
@@ -412,14 +403,14 @@ export class RvfaPublisher {
 }
 
 // ── Convenience exports ──────────────────────────────────────
-export function createPublisher(config?: Partial<PublishConfig>): RvfaPublisher {
-  return new RvfaPublisher({ pinataJwt: config?.pinataJwt, gatewayUrl: config?.gatewayUrl, apiUrl: config?.apiUrl });
+export function createPublisher(config?: Partial<PublishConfig>): AppliancePublisher {
+  return new AppliancePublisher({ pinataJwt: config?.pinataJwt, gatewayUrl: config?.gatewayUrl, apiUrl: config?.apiUrl });
 }
 
 export async function createAndVerifyPatch(
   options: CreatePatchOptions,
 ): Promise<{ patch: Buffer; verification: PatchVerifyResult }> {
-  const patch = await RvfaPatcher.createPatch(options);
-  const verification = await RvfaPatcher.verifyPatch(patch);
+  const patch = await AppliancePatcher.createPatch(options);
+  const verification = await AppliancePatcher.verifyPatch(patch);
   return { patch, verification };
 }

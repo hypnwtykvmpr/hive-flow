@@ -64,7 +64,7 @@ const commandLoaders: Record<string, CommandLoader> = {
   benchmark: () => import('./benchmark.js'),
   // Guidance Control Plane
   guidance: () => import('./guidance.js'),
-  // RVFA Appliance Management
+  // Hive Flow Appliance Management
   appliance: () => import('./appliance.js'),
   // Context Manager
   'context-manager': () => import('./context-manager.js'),

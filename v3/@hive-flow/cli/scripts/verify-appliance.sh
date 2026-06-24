@@ -1,7 +1,7 @@
 #!/bin/sh
 # ═══════════════════════════════════════════════════════════════
-# Hive Flow RVFA Appliance — Full Capability Verification Suite
-# ADR-058: Self-Contained Hive Flow RVF Appliance
+# Hive Flow HFAP Appliance — Full Capability Verification Suite
+# ADR-058: Self-Contained Hive Flow Appliance
 #
 # Tests ALL 35 categories (95+ checks) to verify every capability
 # of the Hive Flow system works correctly.
@@ -185,7 +185,7 @@ fi
 
 # ── 4. Memory Operations ─────────────────────────────────────
 if should_run "memory"; then
-  section 4 "Memory Operations (HiveMemory + RVF)"
+  section 4 "Memory Operations (HiveMemory + binary storage)"
   check "memory init" $HIVE_FLOW_CMD memory init --force
   check "memory store key-1" $HIVE_FLOW_CMD memory store --key "verify-1" --value "Capability verification entry one" --namespace verify
   check "memory store key-2" $HIVE_FLOW_CMD memory store --key "verify-2" --value "Vector search verification entry" --namespace verify
@@ -403,24 +403,24 @@ if should_run "integration"; then
   check "integration: cleanup" $HIVE_FLOW_CMD memory delete --key "int-verify" --namespace integration
 fi
 
-# ── 26. RVF Format Verification ───────────────────────────────
-if should_run "rvf"; then
-  section 26 "RVF Format Verification"
-  RVF_DIR="/tmp/hive-flow-rvf-verify-$$"
-  mkdir -p "$RVF_DIR"
+# ── 26. Binary Format Verification ────────────────────────────
+if should_run "binary"; then
+  section 26 "Binary Format Verification"
+  BINARY_DIR="/tmp/hive-flow-binary-verify-$$"
+  mkdir -p "$BINARY_DIR"
 
-  # Test RVF backend by writing and reading data
-  check "rvf: memory init creates backend" $HIVE_FLOW_CMD memory init --force
-  check "rvf: store creates data file" $HIVE_FLOW_CMD memory store --key "rvf-test" --value "RVF binary format verification" --namespace rvf-verify
-  check_contains "rvf: retrieve confirms persistence" "RVF binary" $HIVE_FLOW_CMD memory retrieve --key "rvf-test" --namespace rvf-verify
-  check "rvf: multiple entries" sh -c "$HIVE_FLOW_CMD memory store --key 'rvf-2' --value 'Second entry' --namespace rvf-verify && $HIVE_FLOW_CMD memory store --key 'rvf-3' --value 'Third entry' --namespace rvf-verify"
-  check_contains "rvf: list shows entries" "3" $HIVE_FLOW_CMD memory list --namespace rvf-verify
-  check "rvf: delete works" $HIVE_FLOW_CMD memory delete --key "rvf-test" --namespace rvf-verify
-  check_contains "rvf: list after delete" "2" $HIVE_FLOW_CMD memory list --namespace rvf-verify
+  # Test binary backend by writing and reading data
+  check "binary: memory init creates backend" $HIVE_FLOW_CMD memory init --force
+  check "binary: store creates data file" $HIVE_FLOW_CMD memory store --key "binary-test" --value "Binary format verification" --namespace binary-verify
+  check_contains "binary: retrieve confirms persistence" "Binary format" $HIVE_FLOW_CMD memory retrieve --key "binary-test" --namespace binary-verify
+  check "binary: multiple entries" sh -c "$HIVE_FLOW_CMD memory store --key 'binary-2' --value 'Second entry' --namespace binary-verify && $HIVE_FLOW_CMD memory store --key 'binary-3' --value 'Third entry' --namespace binary-verify"
+  check_contains "binary: list shows entries" "3" $HIVE_FLOW_CMD memory list --namespace binary-verify
+  check "binary: delete works" $HIVE_FLOW_CMD memory delete --key "binary-test" --namespace binary-verify
+  check_contains "binary: list after delete" "2" $HIVE_FLOW_CMD memory list --namespace binary-verify
   # Cleanup
-  $HIVE_FLOW_CMD memory delete --key "rvf-2" --namespace rvf-verify >/dev/null 2>&1 || true
-  $HIVE_FLOW_CMD memory delete --key "rvf-3" --namespace rvf-verify >/dev/null 2>&1 || true
-  rm -rf "$RVF_DIR"
+  $HIVE_FLOW_CMD memory delete --key "binary-2" --namespace binary-verify >/dev/null 2>&1 || true
+  $HIVE_FLOW_CMD memory delete --key "binary-3" --namespace binary-verify >/dev/null 2>&1 || true
+  rm -rf "$BINARY_DIR"
 fi
 
 # ── 27. Local Model Inference (local LLM from hivector) ──────────

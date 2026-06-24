@@ -152,8 +152,13 @@ async function buildGoldenTranscript() {
       }, {
         webOptions: { allowlist: ['https://fixture.test'] },
       })),
-      web_search_unsupported: decode(await bridge.evaluateToolCall('web_search', {
+      web_search_allowlist_denied: decode(await bridge.evaluateToolCall('web_search', {
         query: 'provider bridge',
+      }, {
+        webOptions: {
+          searchEndpoint: 'https://example.invalid/provider-bridge-golden-search',
+          allowlist: ['https://fixture.test'],
+        },
       })),
       unknown_tool_denied: await bridge.executeBridgeTool('unknown_runtime_tool', { unsafe: true }, {
         source: 'golden-test',

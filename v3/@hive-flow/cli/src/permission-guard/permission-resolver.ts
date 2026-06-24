@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveHiveHome, sessionKeyFor } from '../shared/index.js';
+import { resolveHiveHome, sessionKeyFor } from '../shared/utils/resolve-hive-home.js';
 import { DEFAULT_PERMISSION_CONFIG } from './default-config.js';
 import { resolveProjectRoot as resolveProtectedProjectRoot } from './protected-paths.js';
 import type {

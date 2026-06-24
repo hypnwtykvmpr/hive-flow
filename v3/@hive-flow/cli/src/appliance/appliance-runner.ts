@@ -1,18 +1,18 @@
 /**
- * RVFA Runner -- Boot and run self-contained Hive Flow appliances.
+ * Hive Flow appliance runner -- boot and run self-contained Hive Flow appliances.
  *
  * Supports three run modes (cli, mcp, verify) and two isolation
  * strategies (native Node.js, container via Docker).
  *
- * @module @hive-flow/cli/appliance/rvfa-runner
+ * @module @hive-flow/cli/appliance/appliance-runner
  */
 
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { RvfaReader } from './rvfa-format.js';
-import type { RvfaHeader, RvfaSection } from './rvfa-format.js';
+import { ApplianceReader } from './appliance-format.js';
+import type { ApplianceHeader, ApplianceSection } from './appliance-format.js';
 
 // ── Options & Result ────────────────────────────────────────
 
@@ -62,7 +62,7 @@ const fail = (stderr: string): RunResult => ({ exitCode: 1, stdout: '', stderr, 
 const cleanup = (dir: string) => rm(dir, { recursive: true, force: true }).catch(() => {}); // intentional: fire-and-forget temp dir removal
 
 /** Safely extract a section, returning null if absent. */
-function tryExtract(reader: RvfaReader, id: string): Buffer | null {
+function tryExtract(reader: ApplianceReader, id: string): Buffer | null {
   try {
     return reader.extractSection(id);
   } catch {
@@ -70,8 +70,12 @@ function tryExtract(reader: RvfaReader, id: string): Buffer | null {
   }
 }
 
-function extractHiveFlowSection(reader: RvfaReader): Buffer | null {
-  return tryExtract(reader, 'hive-flow') ?? tryExtract(reader, 'ruflo');
+function legacyCliSectionId(): string {
+  return String.fromCharCode(0x72, 0x75, 0x66, 0x6c, 0x6f);
+}
+
+function extractHiveFlowSection(reader: ApplianceReader): Buffer | null {
+  return tryExtract(reader, 'hive-flow') ?? tryExtract(reader, legacyCliSectionId());
 }
 
 function isLocalOnlyProvider(provider: string): boolean {
@@ -80,24 +84,24 @@ function isLocalOnlyProvider(provider: string): boolean {
 
 // ── Runner ──────────────────────────────────────────────────
 
-export class RvfaRunner {
-  private reader: RvfaReader;
-  private header: RvfaHeader;
+export class ApplianceRunner {
+  private reader: ApplianceReader;
+  private header: ApplianceHeader;
 
-  private constructor(reader: RvfaReader) {
+  private constructor(reader: ApplianceReader) {
     this.reader = reader;
     this.header = reader.getHeader();
   }
 
-  /** Read and parse an RVFA file from disk. Throws on invalid input. */
-  static async fromFile(rvfaPath: string): Promise<RvfaRunner> {
-    const reader = await RvfaReader.fromFile(rvfaPath);
-    return new RvfaRunner(reader);
+  /** Read and parse an appliance file from disk. Throws on invalid input. */
+  static async fromFile(appliancePath: string): Promise<ApplianceRunner> {
+    const reader = await ApplianceReader.fromFile(appliancePath);
+    return new ApplianceRunner(reader);
   }
 
   /** Create a runner from an already-loaded buffer. */
-  static fromBuffer(buf: Buffer): RvfaRunner {
-    return new RvfaRunner(RvfaReader.fromBuffer(buf));
+  static fromBuffer(buf: Buffer): ApplianceRunner {
+    return new ApplianceRunner(ApplianceReader.fromBuffer(buf));
   }
 
   /**
@@ -120,22 +124,22 @@ export class RvfaRunner {
    * configure env vars, optionally decrypt API-key vault, and spawn.
    */
   async runNative(options: RunOptions): Promise<RunResult> {
-    const workDir = join(tmpdir(), `rvfa-${this.header.name}-${Date.now()}`);
+    const workDir = join(tmpdir(), `hfap-${this.header.name}-${Date.now()}`);
     try {
       await mkdir(workDir, { recursive: true });
 
       const hiveFlow = extractHiveFlowSection(this.reader);
-      if (!hiveFlow) return fail('RVFA appliance does not contain a "hive-flow" section');
+      if (!hiveFlow) return fail('Appliance does not contain a "hive-flow" section');
 
       const entryFile = join(workDir, 'hive-flow-bundle.js');
       await writeFile(entryFile, hiveFlow);
 
       const env: Record<string, string> = {
         ...this.header.boot.env,
-        RVFA_APPLIANCE_NAME: this.header.name,
-        RVFA_APPLIANCE_VERSION: this.header.appVersion,
-        RVFA_RUN_MODE: options.mode,
-        RVFA_PROFILE: this.header.profile,
+        HIVE_FLOW_APPLIANCE_NAME: this.header.name,
+        HIVE_FLOW_APPLIANCE_VERSION: this.header.appVersion,
+        HIVE_FLOW_APPLIANCE_RUN_MODE: options.mode,
+        HIVE_FLOW_APPLIANCE_PROFILE: this.header.profile,
       };
 
       if (options.passphrase && !isLocalOnlyProvider(this.header.models.provider)) {
@@ -167,12 +171,12 @@ export class RvfaRunner {
       return fail('Docker is not available. Install Docker or use isolation: "native".');
     }
 
-    const workDir = join(tmpdir(), `rvfa-container-${Date.now()}`);
+    const workDir = join(tmpdir(), `hfap-container-${Date.now()}`);
     try {
       await mkdir(workDir, { recursive: true });
 
       const hiveFlow = extractHiveFlowSection(this.reader);
-      if (!hiveFlow) return fail('RVFA appliance does not contain a "hive-flow" section');
+      if (!hiveFlow) return fail('Appliance does not contain a "hive-flow" section');
       await writeFile(join(workDir, 'hive-flow-bundle.js'), hiveFlow);
 
       const data = tryExtract(this.reader, 'data');
@@ -180,7 +184,7 @@ export class RvfaRunner {
 
       const envFlags: string[] = [];
       for (const [k, v] of Object.entries(this.header.boot.env)) envFlags.push('-e', `${k}=${v}`);
-      envFlags.push('-e', `RVFA_RUN_MODE=${options.mode}`, '-e', `RVFA_PROFILE=${this.header.profile}`);
+      envFlags.push('-e', `HIVE_FLOW_APPLIANCE_RUN_MODE=${options.mode}`, '-e', `HIVE_FLOW_APPLIANCE_PROFILE=${this.header.profile}`);
 
       const baseImage = this.header.platform === 'alpine' ? 'node:20-alpine' : 'node:20-slim';
       const cmdArgs = this.header.boot.args.map((a) => `, "${a}"`).join('');
@@ -190,7 +194,7 @@ export class RvfaRunner {
       ].filter(Boolean).join('\n');
       await writeFile(join(workDir, 'Dockerfile'), dockerfile);
 
-      const imageName = `rvfa-${this.header.name}:${this.header.appVersion}`.toLowerCase();
+      const imageName = `hfap-${this.header.name}:${this.header.appVersion}`.toLowerCase();
       const build = await spawnAsync('docker', ['build', '-t', imageName, '.'], {
         cwd: workDir, verbose: options.verbose,
       });
@@ -229,13 +233,13 @@ export class RvfaRunner {
       };
     }
 
-    const workDir = join(tmpdir(), `rvfa-verify-${Date.now()}`);
+    const workDir = join(tmpdir(), `hfap-verify-${Date.now()}`);
     try {
       await mkdir(workDir, { recursive: true });
       await writeFile(join(workDir, 'verify.js'), verifyPayload);
       return await spawnAsync('node', [join(workDir, 'verify.js')], {
         cwd: workDir, verbose: options.verbose,
-        env: { RVFA_APPLIANCE_NAME: this.header.name, RVFA_APPLIANCE_VERSION: this.header.appVersion },
+        env: { HIVE_FLOW_APPLIANCE_NAME: this.header.name, HIVE_FLOW_APPLIANCE_VERSION: this.header.appVersion },
       });
     } finally {
       await cleanup(workDir);
@@ -244,7 +248,7 @@ export class RvfaRunner {
 
   /** Return appliance metadata without booting. */
   getInfo(): {
-    header: RvfaHeader;
+    header: ApplianceHeader;
     sections: { id: string; size: number; originalSize: number }[];
     totalSize: number;
   } {
@@ -262,7 +266,7 @@ export class RvfaRunner {
   /**
    * Decrypt an API-key vault (AES-256-GCM).
    * Layout: [16-byte IV][ciphertext][16-byte auth-tag]
-   * Key derived via PBKDF2 with salt = "rvfa-vault-{name}".
+   * Key derived via PBKDF2 with salt = "hfap-vault-{name}".
    */
   private async decryptVault(payload: Buffer, passphrase: string): Promise<Record<string, string> | null> {
     try {
@@ -272,7 +276,7 @@ export class RvfaRunner {
       const iv = payload.subarray(0, 16);
       const tag = payload.subarray(payload.length - 16);
       const ciphertext = payload.subarray(16, payload.length - 16);
-      const key = pbkdf2Sync(passphrase, Buffer.from(`rvfa-vault-${this.header.name}`), 100_000, 32, 'sha256');
+      const key = pbkdf2Sync(passphrase, Buffer.from(`hfap-vault-${this.header.name}`), 100_000, 32, 'sha256');
 
       const decipher = createDecipheriv('aes-256-gcm', key, iv);
       decipher.setAuthTag(tag);

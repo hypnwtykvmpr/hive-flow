@@ -1859,7 +1859,7 @@ hive-flow hooks worker status
 | `issues` | 10 | Human-agent claims (list, claim, release, handoff, status, stealable, steal, load, rebalance, board) |
 | `update` | 5 | Auto-update system (check, all, history, rollback, clear-cache) |
 | `process` | 5 | Background process management (daemon, monitor, workers, signals, logs) |
-| `appliance` | 8 | RVFA appliance management (build, inspect, verify, extract, run, sign, publish, update) |
+| `appliance` | 8 | HFAP appliance management (build, inspect, verify, extract, run, sign, publish, update) |
 | `setup` | 4 | Environment setup (global, providers, credentials, permission-guard) |
 | `signal` | 5 | Workflow control signals (pause, resume, skip, stop, mode) |
 

@@ -68,8 +68,8 @@ hive-flow embeddings batch documents.txt -o embeddings.json
 # Similarity search
 hive-flow embeddings search "query" --index ./vectors
 
-# Initialize hive-flow model
-hive-flow embeddings init --provider rvf
+# Initialize local deterministic embeddings
+hive-flow embeddings init --provider local
 ```
 
 ## API Reference
@@ -92,8 +92,8 @@ const service = createEmbeddingService({
 
 // Async: Auto-select best provider with fallback
 const autoService = await createEmbeddingServiceAsync({
-  provider: 'auto',       // hive-flow → transformers → mock
-  autoInstall: true,      // Install hive-flow if missing
+  provider: 'auto',       // local → transformers → mock
+  autoInstall: true,      // Install local model support if missing
   fallback: 'transformers', // Custom fallback
 });
 
@@ -123,13 +123,13 @@ const result = await service.embed('Your text here');
 console.log('Tokens used:', result.usage?.totalTokens);
 ```
 
-### RVF Local Provider (FNV-1a hash-based)
+### Local Provider (FNV-1a hash-based)
 
 ```typescript
-import { RvfEmbeddingService } from '@hive-flow/embeddings';
+import { LocalEmbeddingService } from '@hive-flow/embeddings';
 
-const service = new RvfEmbeddingService({
-  provider: 'rvf',
+const service = new LocalEmbeddingService({
+  provider: 'local',
   cacheSize: 256,
 });
 

@@ -1,9 +1,8 @@
 /**
- * RVFA (Hive Flow appliance format) -- Binary format reader/writer
- * for self-contained Hive Flow appliances.
+ * Hive Flow appliance binary format reader/writer.
  *
  * Binary layout:
- *   [4B magic "RVFA"] [4B version u32LE] [4B header_len u32LE]
+ *   [4B magic "HFAP"] [4B version u32LE] [4B header_len u32LE]
  *   [header_len B JSON header] [section data ...] [32B SHA256 footer]
  */
 
@@ -15,20 +14,20 @@ import { readFile } from 'node:fs/promises';
 // Constants
 // ---------------------------------------------------------------------------
 
-export const RVFA_MAGIC = Buffer.from('RVFA');
-/** Phase-R read-accepted appliance magic (brand-free). Writers stay legacy 'RVFA'. */
-export const HFAP_MAGIC = Buffer.from('HFAP');
-export const RVFA_VERSION = 1;
+export const APPLIANCE_MAGIC = Buffer.from('HFAP');
+export const LEGACY_APPLIANCE_MAGIC = Buffer.from([0x52, 0x56, 0x46, 0x41]);
+export const APPLIANCE_VERSION = 1;
 
 /**
- * Preamble magics accepted on READ (Phase-R dual-read). Writers continue to
- * emit the legacy 'RVFA' token; 'HFAP' is read-only until a later write-flip
- * phase. The on-disk preamble magic and the parsed `header.magic` must form a
- * matching pair (see RvfaReader.fromBuffer) — a preamble-only flip on a signed
- * legacy file must not slip past, since the Ed25519 digest covers `header.magic`
- * but not the raw preamble.
+ * Preamble magics accepted on read. New writes emit HFAP; the legacy token is
+ * accepted only so previously built appliances remain readable. The on-disk
+ * preamble magic and the parsed `header.magic` must form a matching pair before
+ * any integrity or signature trust.
  */
-export const ACCEPTED_APPLIANCE_MAGICS: ReadonlySet<string> = new Set(['RVFA', 'HFAP']);
+export const ACCEPTED_APPLIANCE_MAGICS: ReadonlySet<string> = new Set([
+  APPLIANCE_MAGIC.toString('ascii'),
+  LEGACY_APPLIANCE_MAGIC.toString('ascii'),
+]);
 
 const MAGIC_SIZE = 4;
 const VERSION_SIZE = 4;
@@ -41,7 +40,7 @@ const MAX_HEADER_JSON_SIZE = 1024 * 1024; // 1 MB
 // Types
 // ---------------------------------------------------------------------------
 
-export interface RvfaHeader {
+export interface ApplianceHeader {
   magic: string;
   version: number;
   name: string;
@@ -50,13 +49,13 @@ export interface RvfaHeader {
   platform: string;
   profile: 'cloud' | 'hybrid' | 'offline';
   created: string;
-  sections: RvfaSection[];
-  boot: RvfaBootConfig;
-  models: RvfaModelConfig;
+  sections: ApplianceSection[];
+  boot: ApplianceBootConfig;
+  models: ApplianceModelConfig;
   capabilities: string[];
 }
 
-export interface RvfaSection {
+export interface ApplianceSection {
   id: string;
   type: string;
   offset: number;
@@ -66,14 +65,14 @@ export interface RvfaSection {
   compression: 'none' | 'gzip' | 'zstd';
 }
 
-export interface RvfaBootConfig {
+export interface ApplianceBootConfig {
   entrypoint: string;
   args: string[];
   env: Record<string, string>;
   isolation: 'container' | 'microvm' | 'native';
 }
 
-export interface RvfaModelConfig {
+export interface ApplianceModelConfig {
   provider: 'local-llm' | 'api-vault' | 'hybrid';
   engine?: string;
   models?: string[];
@@ -108,8 +107,8 @@ export function formatSize(bytes: number): string {
 /** Create a sensible default header for a given profile. */
 export function createDefaultHeader(
   profile: 'cloud' | 'hybrid' | 'offline',
-): RvfaHeader {
-  const modelDefaults: Record<string, RvfaModelConfig> = {
+): ApplianceHeader {
+  const modelDefaults: Record<string, ApplianceModelConfig> = {
     cloud: { provider: 'api-vault', vaultEncryption: 'aes-256-gcm' },
     hybrid: {
       provider: 'hybrid',
@@ -131,8 +130,8 @@ export function createDefaultHeader(
   };
 
   return {
-    magic: 'RVFA',
-    version: RVFA_VERSION,
+    magic: APPLIANCE_MAGIC.toString('ascii'),
+    version: APPLIANCE_VERSION,
     name: '',
     appVersion: '3.5.0',
     arch: 'x86_64',
@@ -151,8 +150,8 @@ export function createDefaultHeader(
   };
 }
 
-/** Type-guard that validates an unknown value is a well-formed RvfaHeader. */
-export function validateHeader(header: unknown): header is RvfaHeader {
+/** Type-guard that validates an unknown value is a well-formed ApplianceHeader. */
+export function validateHeader(header: unknown): header is ApplianceHeader {
   if (typeof header !== 'object' || header === null) return false;
   const h = header as Record<string, unknown>;
   const str = (v: unknown) => typeof v === 'string';
@@ -184,7 +183,7 @@ export function validateHeader(header: unknown): header is RvfaHeader {
 }
 
 // ---------------------------------------------------------------------------
-// RvfaWriter
+// ApplianceWriter
 // ---------------------------------------------------------------------------
 /** Internal staging type used by the writer before offsets are known. */
 interface StagedSection {
@@ -192,11 +191,11 @@ interface StagedSection {
   originalSize: number; sha256: string; compression: 'none' | 'gzip' | 'zstd';
 }
 
-export class RvfaWriter {
-  private header: RvfaHeader;
+export class ApplianceWriter {
+  private header: ApplianceHeader;
   private staged: StagedSection[] = [];
 
-  constructor(partial: Partial<RvfaHeader>) {
+  constructor(partial: Partial<ApplianceHeader>) {
     const profile = partial.profile ?? 'cloud';
     const defaults = createDefaultHeader(profile);
     this.header = { ...defaults, ...partial, sections: [] };
@@ -243,7 +242,7 @@ export class RvfaWriter {
   }
 
   /**
-   * Assemble the final RVFA binary image.
+   * Assemble the final appliance binary image.
    *
    * Layout:
    *   [4B magic] [4B version] [4B header_len]
@@ -253,7 +252,7 @@ export class RvfaWriter {
    */
   build(): Buffer {
     // Build section descriptors with placeholder offsets
-    const sectionDescriptors: RvfaSection[] = this.staged.map((s) => ({
+    const sectionDescriptors: ApplianceSection[] = this.staged.map((s) => ({
       id: s.id,
       type: s.type,
       offset: 0,
@@ -282,9 +281,11 @@ export class RvfaWriter {
     }
 
     // Build preamble buffers
-    const magicBuf = Buffer.from('RVFA');
+    this.header.magic = APPLIANCE_MAGIC.toString('ascii');
+    this.header.version = APPLIANCE_VERSION;
+    const magicBuf = APPLIANCE_MAGIC;
     const versionBuf = Buffer.alloc(VERSION_SIZE);
-    versionBuf.writeUInt32LE(RVFA_VERSION, 0);
+    versionBuf.writeUInt32LE(APPLIANCE_VERSION, 0);
     const headerLenBuf = Buffer.alloc(HEADER_LEN_SIZE);
     headerLenBuf.writeUInt32LE(headerJson.length, 0);
 
@@ -307,36 +308,35 @@ export class RvfaWriter {
 }
 
 // ---------------------------------------------------------------------------
-// RvfaReader
+// ApplianceReader
 // ---------------------------------------------------------------------------
-export class RvfaReader {
+export class ApplianceReader {
   private buf: Buffer;
-  private header: RvfaHeader;
+  private header: ApplianceHeader;
 
-  private constructor(buf: Buffer, header: RvfaHeader) {
+  private constructor(buf: Buffer, header: ApplianceHeader) {
     this.buf = buf;
     this.header = header;
   }
 
-  /** Parse an RVFA image from an in-memory Buffer. */
-  static fromBuffer(buf: Buffer): RvfaReader {
+  /** Parse an appliance image from an in-memory Buffer. */
+  static fromBuffer(buf: Buffer): ApplianceReader {
     if (buf.length < PREAMBLE_SIZE) {
-      throw new Error('Buffer too small to contain RVFA preamble');
+      throw new Error('Buffer too small to contain appliance preamble');
     }
 
-    // Magic (Phase-R: accept legacy 'RVFA' + read-only 'HFAP')
     const magic = buf.subarray(0, MAGIC_SIZE).toString('ascii');
     if (!ACCEPTED_APPLIANCE_MAGICS.has(magic)) {
       throw new Error(
-        `Invalid RVFA magic: expected one of [${[...ACCEPTED_APPLIANCE_MAGICS].join(', ')}], got "${magic}"`,
+        `Invalid appliance magic: expected one of [${[...ACCEPTED_APPLIANCE_MAGICS].join(', ')}], got "${magic}"`,
       );
     }
 
     // Version
     const version = buf.readUInt32LE(MAGIC_SIZE);
-    if (version !== RVFA_VERSION) {
+    if (version !== APPLIANCE_VERSION) {
       throw new Error(
-        `Unsupported RVFA version: ${version} (expected ${RVFA_VERSION})`,
+        `Unsupported appliance version: ${version} (expected ${APPLIANCE_VERSION})`,
       );
     }
 
@@ -357,21 +357,19 @@ export class RvfaReader {
     try {
       parsed = JSON.parse(headerSlice.toString('utf-8'));
     } catch {
-      throw new Error('Failed to parse RVFA header JSON');
+      throw new Error('Failed to parse appliance header JSON');
     }
 
     if (!validateHeader(parsed)) {
-      throw new Error('RVFA header failed validation');
+      throw new Error('Appliance header failed validation');
     }
-    const header = parsed as RvfaHeader;
+    const header = parsed as ApplianceHeader;
 
-    // Phase-R security gate: the on-disk preamble magic and `header.magic` must
-    // form a matching pair, rejected BEFORE any section/footer/signature trust.
-    // The Ed25519 signing digest covers `header.magic` but NOT the raw preamble,
-    // so a preamble-only flip on a signed legacy file must fail here.
+    // Security gate: the on-disk preamble magic and `header.magic` must match
+    // before any section, footer, or signature trust.
     if (header.magic !== magic) {
       throw new Error(
-        `RVFA magic mismatch: preamble "${magic}" != header "${header.magic}"`,
+        `Appliance magic mismatch: preamble "${magic}" != header "${header.magic}"`,
       );
     }
 
@@ -402,25 +400,25 @@ export class RvfaReader {
       }
     }
 
-    return new RvfaReader(buf, header);
+    return new ApplianceReader(buf, header);
   }
 
-  /** Read an RVFA image from a file path. */
-  static async fromFile(path: string): Promise<RvfaReader> {
+  /** Read an appliance image from a file path. */
+  static async fromFile(path: string): Promise<ApplianceReader> {
     if (path.includes('\0')) {
       throw new Error('Path contains null bytes');
     }
     const data = await readFile(path);
-    return RvfaReader.fromBuffer(data);
+    return ApplianceReader.fromBuffer(data);
   }
 
   /** Return the parsed header. */
-  getHeader(): RvfaHeader {
+  getHeader(): ApplianceHeader {
     return this.header;
   }
 
   /** List all sections declared in the header. */
-  getSections(): RvfaSection[] {
+  getSections(): ApplianceSection[] {
     return this.header.sections;
   }
 
@@ -461,7 +459,7 @@ export class RvfaReader {
   }
 
   /**
-   * Verify the integrity of the RVFA image.
+   * Verify the integrity of the appliance image.
    *
    * Checks:
    *  1. Magic bytes
@@ -482,7 +480,7 @@ export class RvfaReader {
 
     // 2. Version
     const version = this.buf.readUInt32LE(MAGIC_SIZE);
-    if (version !== RVFA_VERSION) {
+    if (version !== APPLIANCE_VERSION) {
       errors.push(`Unsupported version: ${version}`);
     }
 

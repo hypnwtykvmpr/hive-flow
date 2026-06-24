@@ -19,7 +19,7 @@
 /**
  * Supported embedding providers
  */
-export type EmbeddingProvider = 'openai' | 'transformers' | 'mock' | 'rvf';
+export type EmbeddingProvider = 'openai' | 'transformers' | 'mock' | 'local';
 
 /**
  * Normalization type for embeddings
@@ -118,11 +118,11 @@ export interface MockEmbeddingConfig extends EmbeddingBaseConfig {
 }
 
 /**
- * RVF provider configuration
+ * Local provider configuration
  * Lightweight hash-based embeddings (no neural model, sub-ms latency)
  */
-export interface RvfEmbeddingConfig extends EmbeddingBaseConfig {
-  provider: 'rvf';
+export interface LocalEmbeddingConfig extends EmbeddingBaseConfig {
+  provider: 'local';
 
   /** Embedding dimensions (default: 384) */
   dimensions?: number;
@@ -141,7 +141,7 @@ export type EmbeddingConfig =
   | OpenAIEmbeddingConfig
   | TransformersEmbeddingConfig
   | MockEmbeddingConfig
-  | RvfEmbeddingConfig;
+  | LocalEmbeddingConfig;
 
 // ============================================================================
 // Result Types

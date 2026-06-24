@@ -175,7 +175,7 @@ describe('packaging proof: @hive-flow/cli tarball', () => {
     assert.ok(has(/^helpers\/templates\/config-validator\.sh$/), 'missing helpers/templates/config-validator.sh');
   });
 
-  it('ships the appliance verification script used by RVFA builds', () => {
+  it('ships the appliance verification script used by Appliance builds', () => {
     const has = (re) => files.some((p) => re.test(p));
     assert.ok(has(/^scripts\/verify-appliance\.sh$/), 'missing scripts/verify-appliance.sh');
   });

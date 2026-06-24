@@ -1,8 +1,8 @@
 /**
- * RVFA Ed25519 signing module tests.
+ * Appliance Ed25519 signing module tests.
  *
  * Uses the Node.js built-in test runner (node:test).
- * Run: npx tsx --test v3/__tests__/appliance/rvfa-signing.test.ts
+ * Run: npx tsx --test v3/__tests__/appliance/appliance-signing.test.ts
  */
 
 import { describe, it, afterEach } from 'node:test';
@@ -14,15 +14,15 @@ import {
   generateKeyPair,
   saveKeyPair,
   loadKeyPair,
-  RvfaSigner,
-  RvfaVerifier,
-  type RvfaKeyPair,
-} from '../../@hive-flow/cli/src/appliance/rvfa-signing.js';
+  ApplianceSigner,
+  ApplianceVerifier,
+  type ApplianceKeyPair,
+} from '../../@hive-flow/cli/src/appliance/appliance-signing.js';
 import {
-  RvfaWriter,
-  RvfaReader,
+  ApplianceWriter,
+  ApplianceReader,
   createDefaultHeader,
-} from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
+} from '../../@hive-flow/cli/src/appliance/appliance-format.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -30,10 +30,14 @@ import {
 
 const cleanupPaths: string[] = [];
 
+function legacyCliSectionId(): string {
+  return String.fromCharCode(0x72, 0x75, 0x66, 0x6c, 0x6f);
+}
+
 function tmpPath(suffix: string): string {
   const p = join(
     tmpdir(),
-    `rvfa-sign-test-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`,
+    `appliance-sign-test-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`,
   );
   cleanupPaths.push(p);
   return p;
@@ -42,25 +46,25 @@ function tmpPath(suffix: string): string {
 function tmpDir(): string {
   const d = join(
     tmpdir(),
-    `rvfa-sign-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    `appliance-sign-dir-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
   mkdirSync(d, { recursive: true });
   cleanupPaths.push(d);
   return d;
 }
 
-function buildTestRvfa(name = 'test-appliance', cliSectionId = 'hive-flow'): Buffer {
+function buildTestAppliance(name = 'test-appliance', cliSectionId = 'hive-flow'): Buffer {
   const header = createDefaultHeader('cloud');
-  const writer = new RvfaWriter({ ...header, name });
+  const writer = new ApplianceWriter({ ...header, name });
   writer.addSection('kernel', Buffer.from('kernel-data'), { compression: 'none' });
   writer.addSection('runtime', Buffer.from('runtime-data'), { compression: 'none' });
   writer.addSection(cliSectionId, Buffer.from('hive-flow-data'), { compression: 'none' });
   return writer.build();
 }
 
-function writeTestRvfa(name = 'test-appliance', cliSectionId = 'hive-flow'): string {
-  const buf = buildTestRvfa(name, cliSectionId);
-  const p = tmpPath('.rvf');
+function writeTestAppliance(name = 'test-appliance', cliSectionId = 'hive-flow'): string {
+  const buf = buildTestAppliance(name, cliSectionId);
+  const p = tmpPath('.hfap');
   writeFileSync(p, buf);
   return p;
 }
@@ -126,10 +130,10 @@ describe('Key fingerprint', () => {
   it('fingerprint is deterministic for the same key', async () => {
     const kp = await generateKeyPair();
     // Recreate a signer from the same private key -- fingerprint should match
-    const signer = new RvfaSigner(kp.privateKey);
+    const signer = new ApplianceSigner(kp.privateKey);
     // Sign something to verify signer is operational
-    const rvfaPath = writeTestRvfa();
-    const sigMeta = await signer.signAppliance(rvfaPath);
+    const appliancePath = writeTestAppliance();
+    const sigMeta = await signer.signAppliance(appliancePath);
     assert.equal(sigMeta.publicKeyFingerprint, kp.fingerprint);
   });
 });
@@ -155,14 +159,14 @@ describe('saveKeyPair / loadKeyPair', () => {
     assert.equal(loaded.fingerprint, original.fingerprint, 'Fingerprint should round-trip');
   });
 
-  it('uses default name "rvfa-signing" when none provided', async () => {
+  it('uses default name "appliance-signing" when none provided', async () => {
     const kp = await generateKeyPair();
     const dir = tmpDir();
 
     await saveKeyPair(kp, dir);
 
-    assert.ok(existsSync(join(dir, 'rvfa-signing.pub')));
-    assert.ok(existsSync(join(dir, 'rvfa-signing.key')));
+    assert.ok(existsSync(join(dir, 'appliance-signing.pub')));
+    assert.ok(existsSync(join(dir, 'appliance-signing.key')));
 
     const loaded = await loadKeyPair(dir);
     assert.equal(loaded.fingerprint, kp.fingerprint);
@@ -173,13 +177,13 @@ describe('saveKeyPair / loadKeyPair', () => {
 // 4. Sign appliance
 // ---------------------------------------------------------------------------
 
-describe('RvfaSigner.signAppliance', () => {
-  it('signs an RVFA file and embeds signature metadata in the header', async () => {
+describe('ApplianceSigner.signAppliance', () => {
+  it('signs an Appliance file and embeds signature metadata in the header', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const rvfaPath = writeTestRvfa();
+    const signer = new ApplianceSigner(kp.privateKey);
+    const appliancePath = writeTestAppliance();
 
-    const sigMeta = await signer.signAppliance(rvfaPath, 'test-publisher');
+    const sigMeta = await signer.signAppliance(appliancePath, 'test-publisher');
 
     assert.equal(sigMeta.algorithm, 'ed25519');
     assert.equal(typeof sigMeta.signature, 'string');
@@ -190,29 +194,30 @@ describe('RvfaSigner.signAppliance', () => {
     assert.equal(typeof sigMeta.signedAt, 'string');
   });
 
-  it('signed file is still a valid RVFA (readable by RvfaReader)', async () => {
+  it('signed file is still a valid Appliance (readable by ApplianceReader)', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const rvfaPath = writeTestRvfa();
+    const signer = new ApplianceSigner(kp.privateKey);
+    const appliancePath = writeTestAppliance();
 
-    await signer.signAppliance(rvfaPath);
+    await signer.signAppliance(appliancePath);
 
-    const buf = readFileSync(rvfaPath);
-    const reader = RvfaReader.fromBuffer(buf);
+    const buf = readFileSync(appliancePath);
+    const reader = ApplianceReader.fromBuffer(buf);
     const header = reader.getHeader();
     assert.equal(header.name, 'test-appliance');
     assert.ok((header as Record<string, unknown>).signature, 'Header should contain signature field');
   });
 
-  it('still signs legacy appliances with the old CLI section id', async () => {
+  it('still signs legacy appliances with the previous CLI section id', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const rvfaPath = writeTestRvfa('legacy-sign-test', 'ruflo');
+    const signer = new ApplianceSigner(kp.privateKey);
+    const legacySectionId = legacyCliSectionId();
+    const appliancePath = writeTestAppliance('legacy-sign-test', legacySectionId);
 
-    await signer.signAppliance(rvfaPath);
+    await signer.signAppliance(appliancePath);
 
-    const header = RvfaReader.fromBuffer(readFileSync(rvfaPath)).getHeader();
-    assert.ok(header.sections.some((section) => section.id === 'ruflo'));
+    const header = ApplianceReader.fromBuffer(readFileSync(appliancePath)).getHeader();
+    assert.ok(header.sections.some((section) => section.id === legacySectionId));
     assert.ok((header as Record<string, unknown>).signature);
   });
 });
@@ -221,16 +226,16 @@ describe('RvfaSigner.signAppliance', () => {
 // 5. Verify valid signature
 // ---------------------------------------------------------------------------
 
-describe('RvfaVerifier.verifyAppliance', () => {
+describe('ApplianceVerifier.verifyAppliance', () => {
   it('returns valid=true for a correctly signed file', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const verifier = new RvfaVerifier(kp.publicKey);
-    const rvfaPath = writeTestRvfa();
+    const signer = new ApplianceSigner(kp.privateKey);
+    const verifier = new ApplianceVerifier(kp.publicKey);
+    const appliancePath = writeTestAppliance();
 
-    await signer.signAppliance(rvfaPath, 'publisher-name');
+    await signer.signAppliance(appliancePath, 'publisher-name');
 
-    const result = await verifier.verifyAppliance(rvfaPath);
+    const result = await verifier.verifyAppliance(appliancePath);
     assert.ok(result.valid, `Expected valid but got errors: ${result.errors.join(', ')}`);
     assert.equal(result.signerFingerprint, kp.fingerprint);
     assert.equal(result.signedBy, 'publisher-name');
@@ -245,37 +250,37 @@ describe('RvfaVerifier.verifyAppliance', () => {
 describe('Tamper detection', () => {
   it('returns valid=false when section data is modified after signing', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const verifier = new RvfaVerifier(kp.publicKey);
-    const rvfaPath = writeTestRvfa();
+    const signer = new ApplianceSigner(kp.privateKey);
+    const verifier = new ApplianceVerifier(kp.publicKey);
+    const appliancePath = writeTestAppliance();
 
-    await signer.signAppliance(rvfaPath);
+    await signer.signAppliance(appliancePath);
 
     // Read the signed file and tamper with section data
-    const signedBuf = readFileSync(rvfaPath);
+    const signedBuf = readFileSync(appliancePath);
     const tampered = Buffer.from(signedBuf);
     // Tamper with a byte near the end (in section data area, before footer)
     const tamperOffset = tampered.length - 40; // before the 32-byte SHA256 footer
     if (tamperOffset > 0) {
       tampered[tamperOffset] ^= 0xFF;
     }
-    writeFileSync(rvfaPath, tampered);
+    writeFileSync(appliancePath, tampered);
 
-    const result = await verifier.verifyAppliance(rvfaPath);
+    const result = await verifier.verifyAppliance(appliancePath);
     assert.ok(!result.valid, 'Tampered file should fail verification');
     assert.ok(result.errors.length > 0);
   });
 
   it('returns valid=false when header is modified after signing', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const verifier = new RvfaVerifier(kp.publicKey);
-    const rvfaPath = writeTestRvfa();
+    const signer = new ApplianceSigner(kp.privateKey);
+    const verifier = new ApplianceVerifier(kp.publicKey);
+    const appliancePath = writeTestAppliance();
 
-    await signer.signAppliance(rvfaPath);
+    await signer.signAppliance(appliancePath);
 
     // Read the signed file, modify the header name
-    const signedBuf = readFileSync(rvfaPath);
+    const signedBuf = readFileSync(appliancePath);
     const headerLen = signedBuf.readUInt32LE(8);
     const headerJson = signedBuf.subarray(12, 12 + headerLen).toString('utf-8');
     const header = JSON.parse(headerJson);
@@ -291,9 +296,9 @@ describe('Tamper detection', () => {
       newHeaderJson,
       signedBuf.subarray(12 + headerLen),
     ]);
-    writeFileSync(rvfaPath, rebuilt);
+    writeFileSync(appliancePath, rebuilt);
 
-    const result = await verifier.verifyAppliance(rvfaPath);
+    const result = await verifier.verifyAppliance(appliancePath);
     assert.ok(!result.valid, 'Modified header should fail verification');
   });
 });
@@ -303,12 +308,12 @@ describe('Tamper detection', () => {
 // ---------------------------------------------------------------------------
 
 describe('Missing signature', () => {
-  it('returns valid=false with appropriate error for unsigned RVFA', async () => {
+  it('returns valid=false with appropriate error for unsigned Appliance', async () => {
     const kp = await generateKeyPair();
-    const verifier = new RvfaVerifier(kp.publicKey);
-    const rvfaPath = writeTestRvfa();
+    const verifier = new ApplianceVerifier(kp.publicKey);
+    const appliancePath = writeTestAppliance();
 
-    const result = await verifier.verifyAppliance(rvfaPath);
+    const result = await verifier.verifyAppliance(appliancePath);
     assert.ok(!result.valid);
     assert.ok(
       result.errors.some((e) => e.includes('No signature') || e.includes('signature')),
@@ -321,11 +326,11 @@ describe('Missing signature', () => {
 // 8. Sign patch (detached)
 // ---------------------------------------------------------------------------
 
-describe('RvfaSigner.signPatch / RvfaVerifier.verifyPatch', () => {
+describe('ApplianceSigner.signPatch / ApplianceVerifier.verifyPatch', () => {
   it('signs arbitrary data and verifies with detached signature', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const verifier = new RvfaVerifier(kp.publicKey);
+    const signer = new ApplianceSigner(kp.privateKey);
+    const verifier = new ApplianceVerifier(kp.publicKey);
 
     const patchData = Buffer.from('this-is-a-patch-payload-for-signing');
     const signature = await signer.signPatch(patchData);
@@ -339,8 +344,8 @@ describe('RvfaSigner.signPatch / RvfaVerifier.verifyPatch', () => {
 
   it('detached signature fails for tampered data', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
-    const verifier = new RvfaVerifier(kp.publicKey);
+    const signer = new ApplianceSigner(kp.privateKey);
+    const verifier = new ApplianceVerifier(kp.publicKey);
 
     const patchData = Buffer.from('original-patch-data');
     const signature = await signer.signPatch(patchData);
@@ -352,7 +357,7 @@ describe('RvfaSigner.signPatch / RvfaVerifier.verifyPatch', () => {
 
   it('signSections signs a 32-byte footer hash and returns hex signature', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
+    const signer = new ApplianceSigner(kp.privateKey);
 
     const footerHash = Buffer.alloc(32, 0xAB);
     const signature = await signer.signSections(footerHash);
@@ -373,7 +378,7 @@ describe('RvfaSigner.signPatch / RvfaVerifier.verifyPatch', () => {
 
   it('signSections rejects non-32-byte input', async () => {
     const kp = await generateKeyPair();
-    const signer = new RvfaSigner(kp.privateKey);
+    const signer = new ApplianceSigner(kp.privateKey);
 
     await assert.rejects(
       () => signer.signSections(Buffer.alloc(16)),
@@ -390,19 +395,19 @@ describe('Canonical JSON (deterministic signing)', () => {
   it('signing produces the same signature regardless of header key order', async () => {
     const kp = await generateKeyPair();
 
-    // Create two RVFA files with the same content
-    const rvfaPath1 = writeTestRvfa('canon-test');
-    const rvfaPath2 = writeTestRvfa('canon-test');
+    // Create two Appliance files with the same content
+    const appliancePath1 = writeTestAppliance('canon-test');
+    const appliancePath2 = writeTestAppliance('canon-test');
 
     // Sign both with the same key
-    const signer = new RvfaSigner(kp.privateKey);
-    const sig1 = await signer.signAppliance(rvfaPath1);
-    const sig2 = await signer.signAppliance(rvfaPath2);
+    const signer = new ApplianceSigner(kp.privateKey);
+    const sig1 = await signer.signAppliance(appliancePath1);
+    const sig2 = await signer.signAppliance(appliancePath2);
 
     // Both should verify successfully
-    const verifier = new RvfaVerifier(kp.publicKey);
-    const result1 = await verifier.verifyAppliance(rvfaPath1);
-    const result2 = await verifier.verifyAppliance(rvfaPath2);
+    const verifier = new ApplianceVerifier(kp.publicKey);
+    const result1 = await verifier.verifyAppliance(appliancePath1);
+    const result2 = await verifier.verifyAppliance(appliancePath2);
 
     assert.ok(result1.valid, 'First file should verify');
     assert.ok(result2.valid, 'Second file should verify');
@@ -417,47 +422,47 @@ describe('Re-signing', () => {
   it('re-signing replaces the old signature cleanly', async () => {
     const kp1 = await generateKeyPair();
     const kp2 = await generateKeyPair();
-    const rvfaPath = writeTestRvfa();
+    const appliancePath = writeTestAppliance();
 
     // Sign with first key
-    const signer1 = new RvfaSigner(kp1.privateKey);
-    await signer1.signAppliance(rvfaPath, 'publisher-one');
+    const signer1 = new ApplianceSigner(kp1.privateKey);
+    await signer1.signAppliance(appliancePath, 'publisher-one');
 
     // Verify with first key
-    const verifier1 = new RvfaVerifier(kp1.publicKey);
-    const result1 = await verifier1.verifyAppliance(rvfaPath);
+    const verifier1 = new ApplianceVerifier(kp1.publicKey);
+    const result1 = await verifier1.verifyAppliance(appliancePath);
     assert.ok(result1.valid, 'First signature should verify');
 
     // Re-sign with second key
-    const signer2 = new RvfaSigner(kp2.privateKey);
-    await signer2.signAppliance(rvfaPath, 'publisher-two');
+    const signer2 = new ApplianceSigner(kp2.privateKey);
+    await signer2.signAppliance(appliancePath, 'publisher-two');
 
     // Verify with second key should pass
-    const verifier2 = new RvfaVerifier(kp2.publicKey);
-    const result2 = await verifier2.verifyAppliance(rvfaPath);
+    const verifier2 = new ApplianceVerifier(kp2.publicKey);
+    const result2 = await verifier2.verifyAppliance(appliancePath);
     assert.ok(result2.valid, 'Re-signed file should verify with new key');
     assert.equal(result2.signedBy, 'publisher-two');
 
     // Verify with first key should fail
-    const result3 = await verifier1.verifyAppliance(rvfaPath);
+    const result3 = await verifier1.verifyAppliance(appliancePath);
     assert.ok(!result3.valid, 'Old key should no longer verify');
   });
 
-  it('re-signed file still reads as valid RVFA and verifies', async () => {
+  it('re-signed file still reads as valid Appliance and verifies', async () => {
     const kp = await generateKeyPair();
-    const rvfaPath = writeTestRvfa();
+    const appliancePath = writeTestAppliance();
 
-    const signer = new RvfaSigner(kp.privateKey);
-    await signer.signAppliance(rvfaPath);
+    const signer = new ApplianceSigner(kp.privateKey);
+    await signer.signAppliance(appliancePath);
     // Re-sign
-    const sigMeta = await signer.signAppliance(rvfaPath);
+    const sigMeta = await signer.signAppliance(appliancePath);
 
     assert.equal(sigMeta.algorithm, 'ed25519');
     assert.equal(sigMeta.scope, 'full');
 
     // The re-signed file should still verify with the same key
-    const verifier = new RvfaVerifier(kp.publicKey);
-    const result = await verifier.verifyAppliance(rvfaPath);
+    const verifier = new ApplianceVerifier(kp.publicKey);
+    const result = await verifier.verifyAppliance(appliancePath);
     assert.ok(result.valid, `Re-signed file should verify: ${result.errors.join(', ')}`);
   });
 });

@@ -1,8 +1,8 @@
 /**
- * RVFA Builder pipeline tests.
+ * Appliance Builder pipeline tests.
  *
  * Uses the Node.js built-in test runner (node:test).
- * Run: npx tsx --test v3/__tests__/appliance/rvfa-builder.test.ts
+ * Run: npx tsx --test v3/__tests__/appliance/appliance-builder.test.ts
  */
 
 import { describe, it, afterEach } from 'node:test';
@@ -11,11 +11,11 @@ import { writeFileSync, unlinkSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
-  RvfaBuilder,
+  ApplianceBuilder,
   encryptApiKeys,
   decryptApiKeys,
-} from '../../@hive-flow/cli/src/appliance/rvfa-builder.js';
-import { RvfaReader } from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
+} from '../../@hive-flow/cli/src/appliance/appliance-builder.js';
+import { ApplianceReader } from '../../@hive-flow/cli/src/appliance/appliance-format.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -27,7 +27,7 @@ const EXPECTED_SECTION_IDS = ['kernel', 'runtime', 'hive-flow', 'models', 'data'
 const cleanupPaths: string[] = [];
 
 function tmpPath(suffix: string): string {
-  const p = join(tmpdir(), `rvfa-test-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`);
+  const p = join(tmpdir(), `appliance-test-${Date.now()}-${Math.random().toString(36).slice(2)}${suffix}`);
   cleanupPaths.push(p);
   return p;
 }
@@ -38,11 +38,11 @@ function writeEnvFile(content: string): string {
   return p;
 }
 
-function makeBuilder(profile: 'cloud' | 'hybrid' | 'offline' = 'cloud'): RvfaBuilder {
-  return new RvfaBuilder({
+function makeBuilder(profile: 'cloud' | 'hybrid' | 'offline' = 'cloud'): ApplianceBuilder {
+  return new ApplianceBuilder({
     profile,
     arch: 'x86_64',
-    output: tmpPath('.rvfa'),
+    output: tmpPath('.hfap'),
     verbose: false,
   });
 }
@@ -58,8 +58,8 @@ afterEach(() => {
 // Builder tests
 // ---------------------------------------------------------------------------
 
-describe('RvfaBuilder', () => {
-  it('creates a valid RVFA for cloud profile', async () => {
+describe('ApplianceBuilder', () => {
+  it('creates a valid Appliance for cloud profile', async () => {
     const builder = makeBuilder('cloud');
     const result = await builder.build();
     assert.ok(result.size > 0);
@@ -67,27 +67,27 @@ describe('RvfaBuilder', () => {
     assert.ok(existsSync(result.outputPath));
   });
 
-  it('creates a valid RVFA for hybrid profile', async () => {
+  it('creates a valid Appliance for hybrid profile', async () => {
     const builder = makeBuilder('hybrid');
     const result = await builder.build();
     assert.equal(result.profile, 'hybrid');
     assert.ok(result.size > 0);
   });
 
-  it('creates a valid RVFA for offline profile', async () => {
+  it('creates a valid Appliance for offline profile', async () => {
     const builder = makeBuilder('offline');
     const result = await builder.build();
     assert.equal(result.profile, 'offline');
     assert.ok(result.size > 0);
   });
 
-  it('output file is readable by RvfaReader', async () => {
+  it('output file is readable by ApplianceReader', async () => {
     const builder = makeBuilder('cloud');
     const result = await builder.build();
     const buf = readFileSync(result.outputPath);
-    const reader = RvfaReader.fromBuffer(buf);
+    const reader = ApplianceReader.fromBuffer(buf);
     const header = reader.getHeader();
-    assert.equal(header.magic, 'RVFA');
+    assert.equal(header.magic, 'HFAP');
     assert.equal(header.profile, 'cloud');
   });
 
@@ -104,7 +104,7 @@ describe('RvfaBuilder', () => {
   it('round-trips the Hive Flow section written by the builder', async () => {
     const builder = makeBuilder('cloud');
     const result = await builder.build();
-    const reader = RvfaReader.fromBuffer(readFileSync(result.outputPath));
+    const reader = ApplianceReader.fromBuffer(readFileSync(result.outputPath));
     assert.deepEqual(reader.getSections().map((s) => s.id), EXPECTED_SECTION_IDS);
     const section = JSON.parse(reader.extractSection('hive-flow').toString('utf-8')) as Record<string, unknown>;
     assert.equal(section.type, 'hive-flow');
@@ -116,7 +116,7 @@ describe('RvfaBuilder', () => {
     const builder = makeBuilder('cloud');
     const result = await builder.build();
     const buf = readFileSync(result.outputPath);
-    const reader = RvfaReader.fromBuffer(buf);
+    const reader = ApplianceReader.fromBuffer(buf);
     const verification = reader.verify();
     assert.ok(verification.valid, `Checksum errors: ${verification.errors.join(', ')}`);
   });

@@ -19,7 +19,7 @@ import type {
   OpenAIEmbeddingConfig,
   TransformersEmbeddingConfig,
   MockEmbeddingConfig,
-  RvfEmbeddingConfig,
+  LocalEmbeddingConfig,
   EmbeddingResult,
   BatchEmbeddingResult,
   IEmbeddingService,
@@ -32,7 +32,7 @@ import type {
 } from './types.js';
 import { normalize } from './normalization.js';
 import { PersistentEmbeddingCache } from './persistent-cache.js';
-import { RvfEmbeddingService } from './rvf-embedding-service.js';
+import { LocalEmbeddingService } from './local-embedding-service.js';
 
 // ============================================================================
 // LRU Cache Implementation
@@ -624,8 +624,8 @@ export function createEmbeddingService(config: EmbeddingConfig): IEmbeddingServi
       return new TransformersEmbeddingService(config as TransformersEmbeddingConfig);
     case 'mock':
       return new MockEmbeddingService(config as MockEmbeddingConfig);
-    case 'rvf':
-      return new RvfEmbeddingService(config as RvfEmbeddingConfig);
+    case 'local':
+      return new LocalEmbeddingService(config as LocalEmbeddingConfig);
     default:
       console.warn(`Unknown provider, using mock`);
       return new MockEmbeddingService({ provider: 'mock', dimensions: 384 });
@@ -636,7 +636,7 @@ export function createEmbeddingService(config: EmbeddingConfig): IEmbeddingServi
  * Extended config with auto provider option
  */
 export interface AutoEmbeddingConfig {
-  /** Provider: 'auto' will pick best available (rvf > transformers > mock) */
+  /** Provider: 'auto' will pick best available (local > transformers > mock) */
   provider: EmbeddingProvider | 'auto';
   /** Fallback provider if primary fails */
   fallback?: EmbeddingProvider;
@@ -656,7 +656,7 @@ export interface AutoEmbeddingConfig {
  * Create embedding service with automatic provider detection and fallback
  *
  * Features:
- * - 'auto' provider picks best available: rvf > transformers > mock
+ * - 'auto' provider picks best available: local > transformers > mock
  * - Automatic fallback if primary provider fails to initialize
  * - Pre-validates provider availability before returning
  *
@@ -671,10 +671,10 @@ export async function createEmbeddingServiceAsync(
 
   // Auto provider selection
   if (provider === 'auto') {
-    // Try RVF first (52KB, always available, fast hash embeddings)
+    // Try the local provider first (always available, fast hash embeddings)
     try {
-      const service = new RvfEmbeddingService({
-        provider: 'rvf',
+      const service = new LocalEmbeddingService({
+        provider: 'local',
         dimensions: rest.dimensions ?? 384,
         cacheSize: rest.cacheSize,
       });
@@ -697,7 +697,7 @@ export async function createEmbeddingServiceAsync(
     }
 
     // Fallback to mock (always works)
-    console.warn('[embeddings] Using mock provider - configure rvf, transformers, or OpenAI for production embeddings');
+    console.warn('[embeddings] Using mock provider - configure local, transformers, or OpenAI for production embeddings');
     return new MockEmbeddingService({
       dimensions: rest.dimensions ?? 384,
       cacheSize: rest.cacheSize,
@@ -721,9 +721,9 @@ export async function createEmbeddingServiceAsync(
           dimensions: rest.dimensions,
           cacheSize: rest.cacheSize,
         });
-      case 'rvf':
-        return new RvfEmbeddingService({
-          provider: 'rvf',
+      case 'local':
+        return new LocalEmbeddingService({
+          provider: 'local',
           dimensions: rest.dimensions ?? 384,
           cacheSize: rest.cacheSize,
         });

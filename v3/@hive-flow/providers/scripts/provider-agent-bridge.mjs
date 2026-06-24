@@ -2850,6 +2850,34 @@ async function readResponseCapped(body, limit) {
   return { bytes, truncated };
 }
 
+async function readResponseTextCapped(body, limit) {
+  let bytes = 0;
+  let truncated = false;
+  const chunks = [];
+  for await (const chunk of body) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    if (bytes + buffer.length > limit) {
+      const remaining = Math.max(0, limit - bytes);
+      if (remaining > 0) {
+        chunks.push(buffer.subarray(0, remaining));
+        bytes += remaining;
+      } else {
+        bytes = limit;
+      }
+      truncated = true;
+      if (typeof body.destroy === 'function') body.destroy();
+      break;
+    }
+    chunks.push(buffer);
+    bytes += buffer.length;
+  }
+  return {
+    bytes,
+    truncated,
+    text: Buffer.concat(chunks).toString('utf8'),
+  };
+}
+
 async function fetchOneHop(undici, url, record, options) {
   const dispatcher = buildResolvedDispatcher(undici, url, record, options);
   try {
@@ -2947,8 +2975,164 @@ async function webFetchTool(rawArgs, ctx = {}) {
   }
 }
 
-async function webSearchTool() {
-  return webDenied('web-search-unsupported');
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+function stripHtml(value) {
+  return decodeHtmlEntities(String(value || '').replace(/<[^>]*>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractAttr(tag, attr) {
+  const match = String(tag || '').match(new RegExp(`${attr}\\s*=\\s*(["'])(.*?)\\1`, 'i'));
+  return match ? decodeHtmlEntities(match[2]) : '';
+}
+
+function normalizeSearchResultUrl(rawHref, baseUrl) {
+  if (!rawHref) return '';
+  try {
+    const url = new URL(rawHref, baseUrl);
+    const nested = url.searchParams.get('uddg') || url.searchParams.get('u');
+    if (nested) {
+      try {
+        return new URL(nested).href;
+      } catch {
+        return nested;
+      }
+    }
+    return url.href;
+  } catch {
+    return rawHref;
+  }
+}
+
+function parseSearchResultsFromHtml(html, baseUrl, maxResults) {
+  const results = [];
+  const anchorPattern = /<a\b[^>]*href=["'][^"']+["'][^>]*>[\s\S]*?<\/a>/gi;
+  const anchors = String(html || '').match(anchorPattern) || [];
+  for (const anchor of anchors) {
+    const title = stripHtml(anchor);
+    const url = normalizeSearchResultUrl(extractAttr(anchor, 'href'), baseUrl);
+    if (!title || !url || !/^https?:\/\//i.test(url)) continue;
+    if (results.some((entry) => entry.url === url)) continue;
+    results.push({ title: title.slice(0, 220), url, snippet: '' });
+    if (results.length >= maxResults) break;
+  }
+
+  const snippets = [...String(html || '').matchAll(/<[^>]*class=["'][^"']*(?:result__snippet|snippet|result-snippet)[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/gi)]
+    .map((match) => stripHtml(match[1]))
+    .filter(Boolean);
+  for (let index = 0; index < results.length && index < snippets.length; index += 1) {
+    results[index].snippet = snippets[index].slice(0, 500);
+  }
+  return results;
+}
+
+function webSearchDenied(query, denyReason, fields = {}) {
+  return {
+    status: 'denied',
+    query,
+    provider: 'duckduckgo-html',
+    searchUrl: null,
+    results: [],
+    ...webResultBase(),
+    ...fields,
+    denyReason,
+  };
+}
+
+function buildSearchEndpoint(rawEndpoint) {
+  const endpoint = String(rawEndpoint || process.env.HIVE_FLOW_PROVIDER_WEB_SEARCH_ENDPOINT || 'https://html.duckduckgo.com/html/')
+    .trim();
+  try {
+    const url = new URL(endpoint);
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+async function webSearchTool(rawArgs, ctx = {}) {
+  const query = String(rawArgs?.query || '').trim();
+  if (!query) return webSearchDenied('', 'invalid-query');
+
+  const fetchBlockReason = bridgeFetchBlockReason();
+  if (fetchBlockReason) {
+    return webSearchDenied(query, 'restricted-fetch-or-exec');
+  }
+
+  const rawOptions = ctx.webOptions && typeof ctx.webOptions === 'object' ? ctx.webOptions : {};
+  const endpoint = buildSearchEndpoint(rawOptions.searchEndpoint);
+  if (!endpoint) return webSearchDenied(query, 'invalid-search-endpoint');
+
+  const options = normalizeWebOptions(rawOptions);
+  const searchUrl = new URL(endpoint.href);
+  searchUrl.searchParams.set('q', query.slice(0, 500));
+
+  const effectiveOptions = options.allowlist.length > 0
+    ? options
+    : {
+        ...options,
+        allowlist: [{ kind: 'origin', value: searchUrl.origin.toLowerCase() }],
+      };
+  const maxResults = clampInteger(rawArgs?.maxResults, 5, 10);
+  const undici = await importUndiciDispatcher(effectiveOptions);
+  if (!undici) return webSearchDenied(query, 'dispatcher-unavailable', { searchUrl: searchUrl.href });
+
+  const validated = validateWebFetchUrl(searchUrl.href, effectiveOptions);
+  if (validated.denyReason) {
+    return webSearchDenied(query, validated.denyReason, {
+      searchUrl: searchUrl.href,
+      finalUrl: validated.finalUrl || null,
+    });
+  }
+
+  const resolved = await resolveWebHost(validated.url, effectiveOptions);
+  if (resolved.denyReason) {
+    return webSearchDenied(query, resolved.denyReason, {
+      searchUrl: searchUrl.href,
+      finalUrl: validated.url.href,
+    });
+  }
+
+  let response;
+  try {
+    response = await fetchOneHop(undici, validated.url, resolved.record, effectiveOptions);
+  } catch {
+    return webSearchDenied(query, 'search-failed', {
+      searchUrl: searchUrl.href,
+      finalUrl: validated.url.href,
+    });
+  }
+
+  const statusCode = Number(response.statusCode || 0);
+  const readResult = await readResponseTextCapped(response.body, effectiveOptions.maxBytes);
+  const results = statusCode >= 200 && statusCode < 300
+    ? parseSearchResultsFromHtml(readResult.text, validated.url.href, maxResults)
+    : [];
+  return {
+    status: 'searched',
+    query,
+    provider: 'duckduckgo-html',
+    searchUrl: searchUrl.href,
+    finalUrl: validated.url.href,
+    httpStatus: statusCode,
+    contentType: headerValue(response.headers, 'content-type'),
+    bytes: readResult.bytes,
+    truncated: readResult.truncated,
+    redirectCount: 0,
+    results,
+  };
 }
 
 // SEC-002/HIGH-003: Bridge tool blocklist — provider agents are restricted to operational tools.
@@ -3513,7 +3697,7 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
     capability: 'process.exec.sandboxed',
     authority: 'exec',
     exposeDefault: true,
-    exposeStrictApi: false,
+    exposeStrictApi: true,
     requiresPermissionGuard: true,
     requiresSandbox: true,
     requiresEnforcementExecGate: true,
@@ -3599,24 +3783,28 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
     },
   },
   web_search: {
-    capability: 'network.search.unsupported',
-    authority: 'unsupported',
+    capability: 'network.search.guarded',
+    authority: 'network',
     exposeDefault: true,
-    // DO-NOT-REVERT: expose the denial-shaped search tool so strict providers
-    // can ground "search" attempts honestly instead of hallucinating results.
+    // DO-NOT-REVERT: strict API agents need a real guarded search tool for
+    // external grounding. The handler uses a fixed HTTPS search endpoint by
+    // default and still applies fetch restrictions plus SSRF checks.
     exposeStrictApi: true,
-    alwaysDenied: true,
+    requiresAllowlist: true,
+    requiresSsrfGuard: true,
+    requiresEnforcementFetchGate: true,
     outputRedaction: 'structured-redactor',
     idempotent: true,
     definition: {
       type: 'function',
       function: {
         name: 'web_search',
-        description: 'Unsupported in provider bridge. Returns a clear web-search-unsupported denial; open web search is intentionally not available.',
+        description: 'Search the web through the bridge-owned guarded HTTPS search endpoint. Returns query, provider, searchUrl, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and parsed results.',
         parameters: {
           type: 'object',
           properties: {
-            query: { type: 'string', description: 'Search query. Currently denied by policy.' },
+            query: { type: 'string', description: 'Search query.' },
+            maxResults: { type: 'number', description: 'Maximum parsed results to return, capped by the bridge.' },
           },
           required: ['query'],
           additionalProperties: false,
@@ -4495,7 +4683,7 @@ async function main() {
     const executedTools = [];
     // FIX 3 (single-path regression): the UNGROUNDED_TOOL_TASK floor must fire ONLY
     // when the model answered from priors (emitted ZERO tool calls). A tool call that
-    // ran but returned a structured denial (web_fetch denied, web_search unsupported,
+    // ran but returned a structured denial (web_fetch/web_search denied by gate,
     // unknown/blocked tool) is still grounded — the model DID invoke a bridge tool.
     // `executedTools` stays success-gated (MUST-FIX-1); `attemptedTools` tracks EVERY
     // tool call the model actually emitted (denied/error included) and is what the

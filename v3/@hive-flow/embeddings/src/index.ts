@@ -4,7 +4,7 @@
  * Production embedding service:
  * - OpenAI provider (text-embedding-3-small/large)
  * - Transformers.js provider (local ONNX models)
- * - RVF provider (local deterministic embeddings)
+ * - Local provider (deterministic embeddings)
  * - Mock provider (development/testing)
  *
  * Additional features:
@@ -36,14 +36,14 @@ export {
 
 export type { AutoEmbeddingConfig } from './embedding-service.js';
 
-// RVF embedding service (pure-TS hash-based embeddings)
-export { RvfEmbeddingService } from './rvf-embedding-service.js';
+// Local embedding service (pure-TS hash-based embeddings)
+export { LocalEmbeddingService } from './local-embedding-service.js';
 
-// RVF embedding cache (binary file persistence)
+// Binary embedding cache (file persistence)
 export {
-  RvfEmbeddingCache,
-  type RvfEmbeddingCacheConfig,
-} from './rvf-embedding-cache.js';
+  BinaryEmbeddingCache,
+  type BinaryEmbeddingCacheConfig,
+} from './binary-embedding-cache.js';
 
 // Chunking utilities
 export {
@@ -113,7 +113,7 @@ export type {
   OpenAIEmbeddingConfig,
   TransformersEmbeddingConfig,
   MockEmbeddingConfig,
-  RvfEmbeddingConfig,
+  LocalEmbeddingConfig,
   EmbeddingResult,
   BatchEmbeddingResult,
   IEmbeddingService,

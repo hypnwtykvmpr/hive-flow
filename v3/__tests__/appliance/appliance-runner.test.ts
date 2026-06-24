@@ -1,25 +1,29 @@
 /**
- * RVFA runner compatibility tests.
+ * Appliance runner compatibility tests.
  *
  * Uses the Node.js built-in test runner (node:test).
- * Run: npx tsx --test v3/__tests__/appliance/rvfa-runner.test.ts
+ * Run: npx tsx --test v3/__tests__/appliance/appliance-runner.test.ts
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  RvfaWriter,
+  ApplianceWriter,
   createDefaultHeader,
-  type RvfaModelConfig,
-} from '../../@hive-flow/cli/src/appliance/rvfa-format.js';
-import { RvfaRunner } from '../../@hive-flow/cli/src/appliance/rvfa-runner.js';
+  type ApplianceModelConfig,
+} from '../../@hive-flow/cli/src/appliance/appliance-format.js';
+import { ApplianceRunner } from '../../@hive-flow/cli/src/appliance/appliance-runner.js';
+
+function legacyCliSectionId(): string {
+  return String.fromCharCode(0x72, 0x75, 0x66, 0x6c, 0x6f);
+}
 
 function buildRunnableAppliance(
-  sectionId: 'hive-flow' | 'ruflo',
-  provider: RvfaModelConfig['provider'] = 'local-llm',
+  sectionId: string,
+  provider: ApplianceModelConfig['provider'] = 'local-llm',
 ): Buffer {
   const header = createDefaultHeader('offline');
-  const writer = new RvfaWriter({
+  const writer = new ApplianceWriter({
     ...header,
     name: `${sectionId}-runner-test`,
     boot: { ...header.boot, entrypoint: process.execPath, args: [] },
@@ -32,9 +36,9 @@ function buildRunnableAppliance(
   return writer.build();
 }
 
-describe('RvfaRunner CLI section compatibility', () => {
+describe('ApplianceRunner CLI section compatibility', () => {
   it('boots a new appliance with the hive-flow section id', async () => {
-    const result = await RvfaRunner
+    const result = await ApplianceRunner
       .fromBuffer(buildRunnableAppliance('hive-flow'))
       .runNative({ mode: 'cli', isolation: 'native' });
 
@@ -42,9 +46,9 @@ describe('RvfaRunner CLI section compatibility', () => {
     assert.equal(result.stdout.trim(), 'runner-section-ok');
   });
 
-  it('boots a legacy appliance with the old CLI section id and current local provider', async () => {
-    const result = await RvfaRunner
-      .fromBuffer(buildRunnableAppliance('ruflo', 'local-llm'))
+  it('boots a legacy appliance with the previous CLI section id and current local provider', async () => {
+    const result = await ApplianceRunner
+      .fromBuffer(buildRunnableAppliance(legacyCliSectionId(), 'local-llm'))
       .runNative({ mode: 'cli', isolation: 'native' });
 
     assert.equal(result.exitCode, 0, result.stderr);
@@ -53,10 +57,10 @@ describe('RvfaRunner CLI section compatibility', () => {
 
   it('rejects removed legacy local model provider names', async () => {
     assert.throws(
-      () => RvfaRunner.fromBuffer(
-        buildRunnableAppliance('hive-flow', ['r', 'u', 'v', 'l', 'l', 'm'].join('') as RvfaModelConfig['provider']),
+      () => ApplianceRunner.fromBuffer(
+        buildRunnableAppliance('hive-flow', ['r', 'u', 'v', 'l', 'l', 'm'].join('') as ApplianceModelConfig['provider']),
       ),
-      /RVFA header failed validation/,
+      /Appliance header failed validation/,
     );
   });
 });

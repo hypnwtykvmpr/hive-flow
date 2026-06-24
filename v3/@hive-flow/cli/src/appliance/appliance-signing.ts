@@ -1,10 +1,10 @@
 /**
- * RVFA Ed25519 Code Signing -- Digital signatures for RVFA appliance files.
+ * Appliance Ed25519 Code Signing -- Digital signatures for Hive Flow appliance files.
  *
  * Provides tamper detection and publisher identity verification using
  * Ed25519 (RFC 8032) via Node.js native crypto. Zero external dependencies.
  *
- * @module @hive-flow/cli/appliance/rvfa-signing
+ * @module @hive-flow/cli/appliance/appliance-signing
  */
 
 import {
@@ -14,7 +14,7 @@ import {
 } from 'node:crypto';
 import { readFile, writeFile, stat, chmod, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { ACCEPTED_APPLIANCE_MAGICS } from './rvfa-format.js';
+import { ACCEPTED_APPLIANCE_MAGICS } from './appliance-format.js';
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -24,7 +24,7 @@ const KEY_FILE_MODE = 0o600;
 
 // ── Public Interfaces ────────────────────────────────────────
 
-export interface RvfaKeyPair {
+export interface ApplianceKeyPair {
   publicKey: Buffer;
   privateKey: Buffer;
   fingerprint: string;
@@ -58,9 +58,9 @@ function computeFingerprint(publicKeyPem: string): string {
 }
 
 /**
- * Generate a new Ed25519 key pair for RVFA signing.
+ * Generate a new Ed25519 key pair for appliance signing.
  */
-export async function generateKeyPair(): Promise<RvfaKeyPair> {
+export async function generateKeyPair(): Promise<ApplianceKeyPair> {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
     publicKeyEncoding: { type: 'spki', format: 'pem' },
     privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
@@ -78,13 +78,13 @@ export async function generateKeyPair(): Promise<RvfaKeyPair> {
  *
  * @param keyPair  The key pair to persist.
  * @param dir      Directory to write files into.
- * @param name     Base name for the key files (default: 'rvfa-signing').
+ * @param name     Base name for the key files (default: 'appliance-signing').
  * @returns Paths to the written public and private key files.
  */
 export async function saveKeyPair(
-  keyPair: RvfaKeyPair,
+  keyPair: ApplianceKeyPair,
   dir: string,
-  name = 'rvfa-signing',
+  name = 'appliance-signing',
 ): Promise<{ publicKeyPath: string; privateKeyPath: string }> {
   await mkdir(dir, { recursive: true });
 
@@ -104,12 +104,12 @@ export async function saveKeyPair(
  * Load a key pair from PEM files on disk.
  *
  * @param dir   Directory containing the key files.
- * @param name  Base name for the key files (default: 'rvfa-signing').
+ * @param name  Base name for the key files (default: 'appliance-signing').
  */
 export async function loadKeyPair(
   dir: string,
-  name = 'rvfa-signing',
-): Promise<RvfaKeyPair> {
+  name = 'appliance-signing',
+): Promise<ApplianceKeyPair> {
   const pubPath = `${dir}/${name}.pub`;
   const privPath = `${dir}/${name}.key`;
 
@@ -121,7 +121,7 @@ export async function loadKeyPair(
   const mode = privStat.mode & 0o777;
   if (mode & 0o077) {
     console.warn(
-      `[rvfa-signing] WARNING: Private key ${privPath} has open permissions ` +
+      `[appliance-signing] WARNING: Private key ${privPath} has open permissions ` +
       `(${mode.toString(8)}). Consider running: chmod 600 ${privPath}`,
     );
   }
@@ -157,10 +157,10 @@ function canonicalJson(value: unknown): string {
 }
 
 /**
- * Parse an RVFA binary into its components without full validation.
+ * Parse an appliance binary into its components without full validation.
  * Returns the header object, header JSON bytes, section data region, and footer.
  */
-function parseRvfaBinary(buf: Buffer): {
+function parseApplianceBinary(buf: Buffer): {
   header: Record<string, unknown>;
   headerStart: number;
   headerEnd: number;
@@ -168,14 +168,13 @@ function parseRvfaBinary(buf: Buffer): {
   footer: Buffer;
 } {
   if (buf.length < PREAMBLE_SIZE + SHA256_SIZE) {
-    throw new Error('Buffer too small to be a valid RVFA file');
+    throw new Error('Buffer too small to be a valid appliance file');
   }
 
-  // Phase-R: accept legacy 'RVFA' + read-only 'HFAP' on the preamble.
   const magic = buf.subarray(0, 4).toString('ascii');
   if (!ACCEPTED_APPLIANCE_MAGICS.has(magic)) {
     throw new Error(
-      `Invalid RVFA magic: expected one of [${[...ACCEPTED_APPLIANCE_MAGICS].join(', ')}], got "${magic}"`,
+      `Invalid appliance magic: expected one of [${[...ACCEPTED_APPLIANCE_MAGICS].join(', ')}], got "${magic}"`,
     );
   }
 
@@ -192,15 +191,13 @@ function parseRvfaBinary(buf: Buffer): {
   try {
     header = JSON.parse(headerJson) as Record<string, unknown>;
   } catch {
-    throw new Error('Failed to parse RVFA header JSON');
+    throw new Error('Failed to parse appliance header JSON');
   }
 
-  // Phase-R security gate: preamble magic must match header.magic BEFORE any
-  // digest/signature trust. The Ed25519 digest covers header.magic, not the raw
-  // preamble — so a preamble-only flip on a signed legacy file is rejected here.
+  // Preamble magic must match header.magic before any digest/signature trust.
   if (header.magic !== magic) {
     throw new Error(
-      `RVFA magic mismatch: preamble "${magic}" != header "${String(header.magic)}"`,
+      `Appliance magic mismatch: preamble "${magic}" != header "${String(header.magic)}"`,
     );
   }
 
@@ -211,7 +208,7 @@ function parseRvfaBinary(buf: Buffer): {
 }
 
 /**
- * Compute the signing digest for an RVFA file.
+ * Compute the signing digest for an appliance file.
  *
  * The digest is SHA256 of: canonical_header_json (without signature field)
  *                         + section_data_bytes
@@ -248,12 +245,12 @@ function toPublicKeyObject(key: Buffer | string): KeyObject {
 }
 
 /**
- * Rebuild the RVFA binary with an updated header.
+ * Rebuild the appliance binary with an updated header.
  *
  * Preserves the original preamble version, recalculates header length,
  * and keeps section data and footer intact.
  */
-function rebuildRvfa(
+function rebuildAppliance(
   originalBuf: Buffer,
   newHeader: Record<string, unknown>,
   sectionData: Buffer,
@@ -269,12 +266,12 @@ function rebuildRvfa(
   return Buffer.concat([preamble, headerJson, sectionData, footer]);
 }
 
-// ── RvfaSigner ───────────────────────────────────────────────
+// ── ApplianceSigner ───────────────────────────────────────────────
 
 /**
- * Signs RVFA appliance files and data with Ed25519.
+ * Signs Hive Flow appliance files and data with Ed25519.
  */
-export class RvfaSigner {
+export class ApplianceSigner {
   private readonly keyObj: KeyObject;
   private readonly fingerprint: string;
 
@@ -288,23 +285,23 @@ export class RvfaSigner {
   }
 
   /**
-   * Sign an RVFA appliance file in-place.
+   * Sign an appliance file in-place.
    *
    * Algorithm:
-   *  1. Read and parse the RVFA binary
+   *  1. Read and parse the appliance binary
    *  2. Strip any existing signature from the header
    *  3. Compute SHA256 of [canonical_header + section_data + footer]
    *  4. Sign the digest with Ed25519
    *  5. Embed signature metadata into the header
    *  6. Write the updated binary back to the file
    *
-   * @param rvfaPath   Path to the .rvf appliance file.
+   * @param appliancePath   Path to the appliance file.
    * @param signedBy   Optional publisher name.
    * @returns The signature metadata that was embedded.
    */
-  async signAppliance(rvfaPath: string, signedBy?: string): Promise<SignatureMetadata> {
-    const buf = await readFile(rvfaPath);
-    const { header, sectionData, footer } = parseRvfaBinary(buf);
+  async signAppliance(appliancePath: string, signedBy?: string): Promise<SignatureMetadata> {
+    const buf = await readFile(appliancePath);
+    const { header, sectionData, footer } = parseApplianceBinary(buf);
 
     // Compute digest over header (without signature) + sections + footer
     const digest = computeSigningDigest(header, sectionData, footer);
@@ -323,8 +320,8 @@ export class RvfaSigner {
 
     // Embed signature in header and rebuild
     header.signature = metadata;
-    const rebuilt = rebuildRvfa(buf, header, sectionData, footer);
-    await writeFile(rvfaPath, rebuilt);
+    const rebuilt = rebuildAppliance(buf, header, sectionData, footer);
+    await writeFile(appliancePath, rebuilt);
 
     return metadata;
   }
@@ -332,7 +329,7 @@ export class RvfaSigner {
   /**
    * Sign a section footer hash (detached signature).
    *
-   * @param footerHash  The 32-byte SHA256 footer hash from an RVFA file.
+   * @param footerHash  The 32-byte SHA256 footer hash from an appliance file.
    * @returns Hex-encoded Ed25519 signature.
    */
   async signSections(footerHash: Buffer): Promise<string> {
@@ -346,7 +343,7 @@ export class RvfaSigner {
   }
 
   /**
-   * Sign an RVFP patch file (detached signature).
+   * Sign an appliance patch file (detached signature).
    *
    * @param patchData  The raw patch binary data.
    * @returns Hex-encoded Ed25519 signature.
@@ -358,12 +355,12 @@ export class RvfaSigner {
   }
 }
 
-// ── RvfaVerifier ─────────────────────────────────────────────
+// ── ApplianceVerifier ─────────────────────────────────────────────
 
 /**
- * Verifies Ed25519 signatures on RVFA appliance files and data.
+ * Verifies Ed25519 signatures on Hive Flow appliance files and data.
  */
-export class RvfaVerifier {
+export class ApplianceVerifier {
   private readonly keyObj: KeyObject;
   private readonly fingerprint: string;
 
@@ -374,26 +371,26 @@ export class RvfaVerifier {
   }
 
   /**
-   * Verify the Ed25519 signature embedded in an RVFA appliance file.
+   * Verify the Ed25519 signature embedded in an appliance file.
    *
-   * @param rvfaPath  Path to the .rvf appliance file.
+   * @param appliancePath  Path to the appliance file.
    * @returns Verification result with details and any errors.
    */
-  async verifyAppliance(rvfaPath: string): Promise<VerifyResult> {
+  async verifyAppliance(appliancePath: string): Promise<VerifyResult> {
     const errors: string[] = [];
 
     let buf: Buffer;
     try {
-      buf = await readFile(rvfaPath);
+      buf = await readFile(appliancePath);
     } catch (err) {
       return { valid: false, errors: [`Failed to read file: ${(err as Error).message}`] };
     }
 
-    let parsed: ReturnType<typeof parseRvfaBinary>;
+    let parsed: ReturnType<typeof parseApplianceBinary>;
     try {
-      parsed = parseRvfaBinary(buf);
+      parsed = parseApplianceBinary(buf);
     } catch (err) {
-      return { valid: false, errors: [`Invalid RVFA file: ${(err as Error).message}`] };
+      return { valid: false, errors: [`Invalid appliance file: ${(err as Error).message}`] };
     }
 
     const { header, sectionData, footer } = parsed;
@@ -401,7 +398,7 @@ export class RvfaVerifier {
     // Extract signature metadata from header
     const sigRaw = header.signature;
     if (!sigRaw || typeof sigRaw !== 'object') {
-      return { valid: false, errors: ['No signature found in RVFA header'] };
+      return { valid: false, errors: ['No signature found in appliance header'] };
     }
 
     const sigMeta = sigRaw as Record<string, unknown>;
@@ -461,7 +458,7 @@ export class RvfaVerifier {
   }
 
   /**
-   * Verify an RVFP patch file signature.
+   * Verify an appliance patch file signature.
    *
    * @param patchData  The raw patch binary data.
    * @param signature  Hex-encoded Ed25519 signature.

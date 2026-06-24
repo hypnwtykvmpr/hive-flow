@@ -6,10 +6,6 @@ import { isScannedTextFile, REPO_ROOT, trackedFilesForShippedSurfaces } from './
 
 const CLASSIFIED_STATIC_EXCEPTIONS: ReadonlyMap<string, string> = new Map([
   [
-    'v3/@hive-flow/cli/src/appliance/rvfa-runner.ts:content:dropped legacy umbrella brand',
-    'RVFA reader section identity is deferred to DB-RVFA dual-read migration.',
-  ],
-  [
     'scripts/install.sh:content:npm install guidance',
     'Installer performs the package-manager install operation; user-facing URL/install guidance is otherwise removed.',
   ],
@@ -41,7 +37,7 @@ describe('DB-5 static prohibited debrand sweep', () => {
     expect(hits, '[DB-5 grep-zero] prohibited debrand strings in widened shipped surfaces').toEqual([]);
   });
 
-  it('keeps static exception list synchronized with real deferred RVFA hits', () => {
+  it('keeps static exception list synchronized with real classified hits', () => {
     const findingKeys = new Set(collectStaticFindings().map(({ key }) => key));
     const stale = [...CLASSIFIED_STATIC_EXCEPTIONS.keys()].filter((key) => !findingKeys.has(key));
 
@@ -212,6 +208,7 @@ function isAllowedRuntimeUrl(rawUrl: string): boolean {
     host === 'api.openai.com' ||
     host === 'api.anthropic.com' ||
     host === 'api.cohere.ai' ||
+    host === 'html.duckduckgo.com' ||
     host === 'generativelanguage.googleapis.com' ||
     host === 'api.deepseek.com' ||
     host === 'openrouter.ai' ||

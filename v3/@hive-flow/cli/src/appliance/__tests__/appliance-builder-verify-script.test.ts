@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { RvfaBuilder, resolveVerifyApplianceScript } from '../rvfa-builder.js';
+import { ApplianceBuilder, resolveVerifyApplianceScript } from '../appliance-builder.js';
 
-describe('RVFA appliance verify script bundling', () => {
+describe('Appliance appliance verify script bundling', () => {
   it('resolves the verify script from the CLI package root in source and dist layouts', () => {
     expect(resolveVerifyApplianceScript(join(process.cwd(), 'src', 'appliance')))
       .toBe(join(process.cwd(), 'scripts', 'verify-appliance.sh'));
@@ -12,10 +12,10 @@ describe('RVFA appliance verify script bundling', () => {
   });
 
   it('bundles the real appliance verification script instead of the fallback stub', async () => {
-    const builder = new RvfaBuilder({
+    const builder = new ApplianceBuilder({
       profile: 'cloud',
       arch: 'x86_64',
-      output: 'unused.rvf',
+      output: 'unused.hfap',
       hiveFlowVersion: 'test',
     }) as unknown as { buildVerifySection(): Buffer };
 
