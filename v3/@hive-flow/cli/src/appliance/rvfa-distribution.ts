@@ -17,6 +17,15 @@ import { RvfaReader, RvfaWriter } from './rvfa-format.js';
 
 // ── Constants ────────────────────────────────────────────────
 const RVFP_VERSION = 1;
+const RVFP_MAGIC = 'RVFP';
+/** Phase-R read-accepted patch magic (brand-free). Writers stay legacy 'RVFP'. */
+const HFPP_MAGIC = 'HFPP';
+/**
+ * Preamble magics accepted on READ (Phase-R dual-read). Writers continue to
+ * emit legacy 'RVFP'. The preamble magic and header.magic must form a matching
+ * pair before any integrity/signature trust (parsePatchHeader enforces this).
+ */
+const ACCEPTED_PATCH_MAGICS: ReadonlySet<string> = new Set([RVFP_MAGIC, HFPP_MAGIC]);
 const PRE = 12; // preamble: 4 magic + 4 version + 4 header_len
 const SHA_LEN = 32;
 const DEFAULT_GW = 'https://gateway.pinata.cloud';
@@ -24,7 +33,7 @@ const DEFAULT_API = 'https://api.pinata.cloud';
 
 // ── Types ────────────────────────────────────────────────────
 export interface RvfpHeader {
-  magic: 'RVFP'; version: number;
+  magic: 'RVFP' | 'HFPP'; version: number;
   targetApplianceName: string; targetApplianceVersion: string;
   targetSection: string; patchVersion: string; created: string;
   newSectionSize: number; newSectionSha256: string;
@@ -191,14 +200,22 @@ export class RvfaPatcher {
 
   static parsePatchHeader(buf: Buffer): RvfpHeader {
     if (buf.length < PRE) throw new Error('Buffer too small for RVFP preamble');
+    // Phase-R: accept legacy 'RVFP' + read-only 'HFPP'.
     const magic = buf.subarray(0, 4).toString('ascii');
-    if (magic !== 'RVFP') throw new Error(`Invalid RVFP magic: "${magic}"`);
+    if (!ACCEPTED_PATCH_MAGICS.has(magic)) throw new Error(`Invalid RVFP magic: "${magic}"`);
     const ver = buf.readUInt32LE(4);
     if (ver !== RVFP_VERSION) throw new Error(`Unsupported RVFP version: ${ver}`);
     const hLen = buf.readUInt32LE(8);
     if (PRE + hLen > buf.length) throw new Error('Buffer too small for declared header');
     const h = JSON.parse(buf.subarray(PRE, PRE + hLen).toString('utf-8')) as RvfpHeader;
-    if (h.magic !== 'RVFP') throw new Error('RVFP header magic mismatch');
+    if (!ACCEPTED_PATCH_MAGICS.has(h.magic)) throw new Error('RVFP header magic mismatch');
+    // Phase-R security gate: preamble magic must match header.magic before any
+    // integrity/signature trust. The patch signature covers header.magic (via
+    // canonicalJson) but NOT the raw preamble — so a preamble-only flip on a
+    // signed patch is rejected here, before applyPatch's signature check.
+    if (h.magic !== magic) {
+      throw new Error(`RVFP magic mismatch: preamble "${magic}" != header "${h.magic}"`);
+    }
     return h;
   }
 
