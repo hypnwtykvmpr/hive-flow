@@ -3,12 +3,7 @@
 const crypto = require('crypto');
 const os = require('os');
 const path = require('path');
-
-function stringValue(value) {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
+const { defaultClientKind, envSessionValue, stringValue, wakeClientKind } = require('./client-kind.cjs');
 
 function absoluteEnvPath(value) {
   const raw = stringValue(value);
@@ -40,17 +35,8 @@ function sessionValue(input, env = process.env) {
   const fromInput = sessionInputValue(input);
   return (
     fromInput.value ||
-    stringValue(env.CODEX_SESSION_ID) ||
-    stringValue(env.CODEX_THREAD_ID) ||
-    stringValue(env.CLAUDE_SESSION_ID) ||
-    stringValue(env.HIVE_FLOW_SESSION_ID)
+    envSessionValue(env)
   );
-}
-
-function defaultClientKind(env = process.env) {
-  if (stringValue(env.CODEX_SESSION_ID) || stringValue(env.CODEX_THREAD_ID)) return 'codex';
-  if (stringValue(env.CLAUDE_SESSION_ID) || stringValue(env.CLAUDE_PROJECT_DIR)) return 'claude-code';
-  return 'claude-code';
 }
 
 function sessionKeyFor(input, env = process.env) {
@@ -60,7 +46,7 @@ function sessionKeyFor(input, env = process.env) {
     fromInput.clientKind ||
     stringValue(env.HIVE_FLOW_CLIENT_KIND) ||
     stringValue(env.CLAUDE_CODE_ENTRYPOINT) ||
-    defaultClientKind(env);
+    wakeClientKind(defaultClientKind(env));
   return `s_${crypto.createHash('sha256').update(`${clientKind}\0${rawSession}`).digest('hex').slice(0, 32)}`;
 }
 

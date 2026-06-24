@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { isAlreadyAcked, appendPendingWithAck } = require('./dedup-marker.cjs');
 const { wakeSessionPaths } = require('./wake-paths.cjs');
+const { defaultClientKind, wakeClientKind } = require('./client-kind.cjs');
 
 const DEFAULT_MAX_WAIT_MS = 30 * 60 * 1000;
 const DEFAULT_POLL_MS = 1500;
@@ -40,15 +41,15 @@ function readStdin() {
   }
 }
 
-function extractSessionInput(raw) {
+function extractSessionInput(raw, env = process.env) {
   try {
     const obj = JSON.parse(raw || '{}');
     return {
       session_id: obj?.session_id || obj?.sessionId || obj?.transcript_path || obj?.transcriptPath,
-      client_kind: obj?.client_kind || obj?.clientKind || 'claude-code',
+      client_kind: obj?.client_kind || obj?.clientKind || wakeClientKind(defaultClientKind(env)) || 'claude-code',
     };
   } catch {
-    return { client_kind: 'claude-code' };
+    return { client_kind: wakeClientKind(defaultClientKind(env)) || 'claude-code' };
   }
 }
 
@@ -313,7 +314,7 @@ async function main() {
 
   const dir = projectDir();
   const dataDir = path.join(dir, '.hive-flow', 'data');
-  const wake = wakeSessionPaths(extractSessionInput(raw), process.env);
+  const wake = wakeSessionPaths(extractSessionInput(raw, process.env), process.env);
   const globalDataDir = wake?.sessionDir || null;
   const dataDirs = globalDataDir ? [dataDir, globalDataDir] : [dataDir];
   const donePath = path.join(dataDir, `hive-${sanitized}.done`);

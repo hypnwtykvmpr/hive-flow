@@ -27,6 +27,21 @@ JSON
   [ -f "$PROJECT_DIR/.hive-flow/data/task-task-bats-1.notified" ]
 }
 
+@test "agent-task-rewake targets opencode parent from operator env" {
+  cat > "$PROJECT_DIR/.hive-flow/tasks/task-opencode-parent.result.json" <<'JSON'
+{"success":true,"result":{"agentId":"agent-bats","content":"done"}}
+JSON
+
+  run env -u CODEX_SESSION_ID -u CODEX_THREAD_ID -u HIVE_FLOW_CLIENT_KIND OPENCODE_SESSION_ID="opencode-bats-session" node "$SCRIPT" <<'JSON'
+{"tool_response":"{\"success\":true,\"taskId\":\"task-opencode-parent\",\"status\":\"running\"}"}
+JSON
+
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"[TASK COMPLETE: task-opencode-parent]"* ]]
+  run grep '"targetAgent":"opencode"' "$PROJECT_DIR/.hive-flow/data/pending-notifications.jsonl"
+  [ "$status" -eq 0 ]
+}
+
 @test "agent-task-rewake no-ops for payloads without a task id" {
   run node "$SCRIPT" <<'JSON'
 {"tool_response":"{\"success\":true,\"status\":\"running\"}"}

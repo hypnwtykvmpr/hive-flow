@@ -180,6 +180,56 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
+  it('routes task completion to new parent-client wake queues from persisted ownership', () => {
+    const root = makeTempProject();
+    const home = makeTempProject();
+    try {
+      const taskId = 'task-opencode-owner-rewake';
+      writeTracking(root, taskId, {
+        taskId,
+        agentId: 'opencode-owned-agent',
+        ownerSessionId: 'opencode-persisted-session',
+        ownerClientKind: 'opencode',
+      });
+      writeResult(root, taskId, { success: true, result: { agentId: 'opencode-owned-agent', content: 'done' } });
+
+      const result = agentRewake.notifyCompletedTaskIfReady(root, taskId, {
+        sessionInput: {
+          session_id: 'claude-hook-session',
+          client_kind: 'claude-code',
+        },
+        env: {
+          HIVE_FLOW_HOME: home,
+        },
+      });
+
+      expect(result.notified).toBe(true);
+
+      const localPending = join(root, '.hive-flow', 'data', 'pending-notifications.jsonl');
+      const opencodePending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor({ session_id: 'opencode-persisted-session', client_kind: 'opencode' }, {}),
+        'pending-notifications.jsonl',
+      );
+      const wrongClaudePending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor({ session_id: 'claude-hook-session', client_kind: 'claude-code' }, {}),
+        'pending-notifications.jsonl',
+      );
+
+      expect(readFileSync(localPending, 'utf8')).toContain('"targetAgent":"opencode"');
+      expect(readFileSync(opencodePending, 'utf8')).toContain('"ownerSessionId":"opencode-persisted-session"');
+      expect(existsSync(wrongClaudePending)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('defaults Claude hook ownership and wake session keys to Claude when client kind is absent', () => {
     const root = makeTempProject();
     const home = makeTempProject();
@@ -284,6 +334,50 @@ describe('sentinel agent task rewake', () => {
       expect(remaining).toContain('task-codex-owned');
       expect(remaining).toContain('task-stale-target-codex-owned');
       expect(remaining).not.toContain('task-claude-owned');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('drains only the current new parent-client notifications and preserves the rest', () => {
+    const root = makeTempProject();
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      writeFileSync(
+        join(dataDir, 'pending-notifications.jsonl'),
+        [
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-opencode-owned',
+            targetAgent: 'opencode',
+            summary: '[TASK COMPLETE: task-opencode-owned] done',
+          }),
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-forge-owned',
+            targetAgent: 'forgecode',
+            summary: '[TASK COMPLETE: task-forge-owned] done',
+          }),
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-antigravity-owned',
+            ownerClientKind: 'agy',
+            summary: '[TASK COMPLETE: task-antigravity-owned] done',
+          }),
+        ].join('\n') + '\n',
+      );
+
+      const output = drain.drainNotifications(root, { client_kind: 'forge' });
+      const context = output.hookSpecificOutput.additionalContext;
+      expect(context).toContain('task-forge-owned');
+      expect(context).not.toContain('task-opencode-owned');
+      expect(context).not.toContain('task-antigravity-owned');
+
+      const remaining = readFileSync(join(dataDir, 'pending-notifications.jsonl'), 'utf8');
+      expect(remaining).toContain('task-opencode-owned');
+      expect(remaining).toContain('task-antigravity-owned');
+      expect(remaining).not.toContain('task-forge-owned');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

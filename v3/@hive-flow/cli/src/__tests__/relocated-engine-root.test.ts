@@ -12,6 +12,7 @@ const enforcementSource = resolve(here, '../../../../../.claude/helpers/enforcem
 const roleSource = resolve(here, '../../../../../.claude/helpers/role-enforcement.cjs');
 const hookHandlerSource = resolve(here, '../../../../../.claude/helpers/hook-handler.cjs');
 const providerTrackerSource = resolve(here, '../../../../../.claude/helpers/provider-tracker.cjs');
+const clientKindSource = resolve(here, '../../../../../.claude/helpers/client-kind.cjs');
 const sessionIdSource = resolve(here, '../../../../../.claude/helpers/session-id.cjs');
 const policySource = resolve(here, '../permission-guard/protected-paths.cjs');
 const policyJsonSource = resolve(here, '../permission-guard/protected-paths.policy.json');
@@ -43,6 +44,7 @@ function makeProject(): { root: string; bin: string } {
   copyFileSync(roleSource, join(bin, 'role-enforcement.cjs'));
   copyFileSync(hookHandlerSource, join(bin, 'hook-handler.cjs'));
   copyFileSync(providerTrackerSource, join(bin, 'provider-tracker.cjs'));
+  copyFileSync(clientKindSource, join(bin, 'client-kind.cjs'));
   copyFileSync(sessionIdSource, join(bin, 'session-id.cjs'));
   copyFileSync(policySource, join(bin, 'protected-paths.cjs'));
   copyFileSync(policyJsonSource, join(bin, 'protected-paths.policy.json'));

@@ -27,6 +27,11 @@ import * as os from 'os';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { loadHive, saveHive, listHives, type HiveRecord, type HiveStatus } from './mcp-tools/hive-store.js';
+import {
+  normalizeClientKind as normalizeOperatorClientKind,
+  resolveClientKindFromEnv,
+  type OperatorClientKind,
+} from './mcp-tools/session-id.js';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -97,7 +102,7 @@ const DEFAULT_OPTIONS: Required<MCPServerOptions> = {
   timeout: 30000,
 };
 
-export type MCPClientKind = 'claude' | 'codex' | 'gemini' | 'cursor' | 'unknown';
+export type MCPClientKind = OperatorClientKind;
 
 type HiveStatusNotificationInput = Pick<HiveRecord, 'hiveId' | 'queenId' | 'status' | 'updatedAt' | 'completedAt' | 'error'>;
 
@@ -113,17 +118,14 @@ function readNestedString(value: unknown, keys: readonly string[]): string | und
 }
 
 function normalizeClientKind(value: string | undefined): MCPClientKind {
-  if (!value) return 'unknown';
-  const normalized = value.toLowerCase().trim();
-  if (normalized === 'claude' || normalized === 'claude-code') return 'claude';
-  if (normalized === 'codex' || normalized === 'codex-cli') return 'codex';
-  if (normalized === 'gemini' || normalized === 'gemini-cli') return 'gemini';
-  if (normalized === 'cursor' || normalized === 'cursor-cli' || normalized === 'cursor-agent') return 'cursor';
-  return 'unknown';
+  return normalizeOperatorClientKind(value);
 }
 
 function classifyClientText(text: string): MCPClientKind {
   const normalized = text.toLowerCase();
+  if (normalized.includes('forgecode') || normalized.includes('forge-code') || normalized.includes('forge code')) return 'forgecode';
+  if (normalized.includes('opencode') || normalized.includes('open-code') || normalized.includes('open code')) return 'opencode';
+  if (normalized.includes('antigravity') || /\bagy\b/.test(normalized)) return 'antigravity';
   if (normalized.includes('cursor-agent') || normalized.includes('cursor-cli') || normalized.includes('cursor')) return 'cursor';
   if (normalized.includes('gemini-cli') || normalized.includes('gemini')) return 'gemini';
   if (normalized.includes('codex')) return 'codex';
@@ -149,6 +151,9 @@ export function classifyMCPClient(
   const explicitKind = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
   if (explicitKind !== 'unknown') return explicitKind;
 
+  const envKind = resolveClientKindFromEnv(env);
+  if (envKind !== 'unknown') return envKind;
+
   const envText = [
     env.CODEX_HOME ? `CODEX_HOME ${env.CODEX_HOME}` : undefined,
     env.CODEX_SANDBOX ? `CODEX_SANDBOX ${env.CODEX_SANDBOX}` : undefined,
@@ -157,6 +162,12 @@ export function classifyMCPClient(
     env.GEMINI_HOME ? `GEMINI_HOME ${env.GEMINI_HOME}` : undefined,
     env.CURSOR_API_KEY ? 'CURSOR_API_KEY configured' : undefined,
     env.CURSOR_HOME ? `CURSOR_HOME ${env.CURSOR_HOME}` : undefined,
+    env.AGENT_SESSION_ID ? `AGENT_SESSION_ID ${env.AGENT_SESSION_ID} cursor` : undefined,
+    env.AGY_SESSION_ID ? `AGY_SESSION_ID ${env.AGY_SESSION_ID} agy` : undefined,
+    env.ANTIGRAVITY_SESSION_ID ? `ANTIGRAVITY_SESSION_ID ${env.ANTIGRAVITY_SESSION_ID}` : undefined,
+    env.OPENCODE_SESSION_ID ? `OPENCODE_SESSION_ID ${env.OPENCODE_SESSION_ID}` : undefined,
+    env.FORGECODE_SESSION_ID ? `FORGECODE_SESSION_ID ${env.FORGECODE_SESSION_ID}` : undefined,
+    env.FORGE_SESSION_ID ? `FORGE_SESSION_ID ${env.FORGE_SESSION_ID} forgecode` : undefined,
     env.CLAUDE_PROJECT_DIR ? `CLAUDE_PROJECT_DIR ${env.CLAUDE_PROJECT_DIR}` : undefined,
     env.CLAUDECODE ? `CLAUDECODE ${env.CLAUDECODE}` : undefined,
     env.CLAUDE_CODE ? `CLAUDE_CODE ${env.CLAUDE_CODE}` : undefined,
@@ -180,7 +191,13 @@ export function buildHiveStatusNotification(
         ? 'Gemini should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
         : clientKind === 'cursor'
           ? 'Cursor should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
-          : 'Call hive_poll_workers or queen_collect_results to review.';
+          : clientKind === 'antigravity'
+            ? 'Antigravity should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
+            : clientKind === 'opencode'
+              ? 'OpenCode should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
+              : clientKind === 'forgecode'
+                ? 'ForgeCode should call hive_poll_workers or queen_collect_results to pick up the finished hive.'
+                : 'Call hive_poll_workers or queen_collect_results to review.';
 
   return {
     jsonrpc: '2.0' as const,

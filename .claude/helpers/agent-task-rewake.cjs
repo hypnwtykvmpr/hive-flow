@@ -36,6 +36,12 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { wakeSessionPaths } = require('./wake-paths.cjs');
+const {
+  defaultClientKind,
+  normalizeClientKind,
+  targetAgentFromClientKind,
+  wakeClientKind,
+} = require('./client-kind.cjs');
 
 const DEFAULT_MAX_WAIT_MS = 30 * 60 * 1000;
 const DEFAULT_POLL_MS = 1500;
@@ -122,20 +128,6 @@ function nonEmptyString(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function targetAgentFromClientKind(kind) {
-  const raw = String(kind || '').toLowerCase();
-  if (raw.includes('codex')) return 'codex';
-  if (raw.includes('claude')) return 'claude';
-  return null;
-}
-
-function wakeClientKind(kind) {
-  const raw = String(kind || '').toLowerCase();
-  if (raw.includes('codex')) return 'codex';
-  if (raw.includes('claude')) return 'claude-code';
-  return kind || null;
-}
-
 function ownerFromObject(obj) {
   if (!obj || typeof obj !== 'object') return {};
   const ownerClientKind = nonEmptyString(obj.ownerClientKind || obj.owner_client_kind || obj.clientKind || obj.client_kind);
@@ -191,16 +183,13 @@ function targetAgentFromInputOrEnv(sessionInput = null, env = process.env) {
   const fromInput = sessionInput && typeof sessionInput === 'object' && !Array.isArray(sessionInput)
     ? (sessionInput.clientKind || sessionInput.client_kind)
     : null;
-  const raw = String(
-    fromInput ||
-    env.HIVE_FLOW_CLIENT_KIND ||
-    env.CLAUDE_CODE_ENTRYPOINT ||
-    '',
-  ).toLowerCase();
-  if (raw.includes('codex')) return 'codex';
-  if (raw.includes('claude')) return 'claude';
-  if (env.CODEX_SESSION_ID || env.CODEX_THREAD_ID) return 'codex';
-  return 'claude';
+  return (
+    targetAgentFromClientKind(fromInput) ||
+    targetAgentFromClientKind(env.HIVE_FLOW_CLIENT_KIND) ||
+    targetAgentFromClientKind(env.CLAUDE_CODE_ENTRYPOINT) ||
+    targetAgentFromClientKind(defaultClientKind(env)) ||
+    'claude'
+  );
 }
 
 function pendingDataDirs(projectRoot, sessionInput = null, env = process.env) {
@@ -299,16 +288,16 @@ function appendTaskCompletionPendingOnce(dataDir, taskId, line) {
   return { appended: true };
 }
 
-function extractSessionInput(raw) {
+function extractSessionInput(raw, env = process.env) {
   try {
     const parsed = JSON.parse(raw);
     return {
       session_id: parsed?.session_id || parsed?.sessionId,
       transcript_path: parsed?.transcript_path || parsed?.transcriptPath,
-      client_kind: parsed?.client_kind || parsed?.clientKind || 'claude-code',
+      client_kind: parsed?.client_kind || parsed?.clientKind || wakeClientKind(defaultClientKind(env)) || 'claude-code',
     };
   } catch {
-    return { client_kind: 'claude-code' };
+    return { client_kind: wakeClientKind(defaultClientKind(env)) || 'claude-code' };
   }
 }
 
@@ -406,7 +395,7 @@ async function main() {
   if (isAgentTaskResultPayload(raw)) {
     clearTimeoutCheck(dataDir, taskId);
   }
-  const sessionInput = extractSessionInput(raw);
+  const sessionInput = extractSessionInput(raw, process.env);
 
   const deadline = Date.now() + MAX_WAIT_MS;
   while (Date.now() < deadline) {
@@ -455,6 +444,7 @@ module.exports = {
   extractSessionInput,
   nonEmptyString,
   targetAgentFromClientKind,
+  normalizeClientKind,
   wakeClientKind,
   ownerFromObject,
   firstOwnerWithValue,

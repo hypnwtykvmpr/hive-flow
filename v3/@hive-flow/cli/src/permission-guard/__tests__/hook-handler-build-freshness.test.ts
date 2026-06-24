@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 
 const repoRoot = resolve(__dirname, '..', '..', '..', '..', '..', '..');
 const hookHandlerSource = join(repoRoot, '.claude', 'helpers', 'hook-handler.cjs');
+const clientKindSource = join(repoRoot, '.claude', 'helpers', 'client-kind.cjs');
 const sessionIdSource = join(repoRoot, '.claude', 'helpers', 'session-id.cjs');
 const protectedPathsSource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
 const protectedPathsPolicySource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.policy.json');
@@ -24,6 +25,7 @@ function makeHookProject(): string {
   mkdirSync(helperDir, { recursive: true });
   mkdirSync(sourceDir, { recursive: true });
   copyFileSync(hookHandlerSource, join(helperDir, 'hook-handler.cjs'));
+  copyFileSync(clientKindSource, join(helperDir, 'client-kind.cjs'));
   copyFileSync(sessionIdSource, join(helperDir, 'session-id.cjs'));
   copyFileSync(protectedPathsSource, join(helperDir, 'protected-paths.cjs'));
   copyFileSync(protectedPathsPolicySource, join(helperDir, 'protected-paths.policy.json'));
@@ -37,6 +39,7 @@ function makeRelocatedHookBinWithoutPolicy(): string {
   const helperDir = join(root, '.hive-flow', 'enforcement', 'bin');
   mkdirSync(helperDir, { recursive: true });
   copyFileSync(hookHandlerSource, join(helperDir, 'hook-handler.cjs'));
+  copyFileSync(clientKindSource, join(helperDir, 'client-kind.cjs'));
   copyFileSync(sessionIdSource, join(helperDir, 'session-id.cjs'));
   return root;
 }

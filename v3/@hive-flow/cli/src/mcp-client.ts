@@ -49,6 +49,7 @@ import { workflowEnforcerTools } from './mcp-tools/workflow-enforcer.js';
 import { queenTools } from './mcp-tools/queen-tools.js';
 import { advocateTools } from './mcp-tools/advocate-tools.js';
 import { checkMCPEnforcement, checkModelEnforcement } from './mcp-tools/mcp-enforcement-gate.js';
+import { normalizeClientKind, operatorSessionEnvKeys, resolveClientKindFromEnv } from './mcp-tools/session-id.js';
 
 /**
  * MCP Tool Registry
@@ -163,10 +164,7 @@ function nonEmpty(value: unknown): string | null {
 
 function hasSessionIdentity(context: Record<string, unknown> | null | undefined): boolean {
   return Boolean(
-    nonEmpty(process.env.CODEX_SESSION_ID)
-    || nonEmpty(process.env.CODEX_THREAD_ID)
-    || nonEmpty(process.env.CLAUDE_SESSION_ID)
-    || nonEmpty(process.env.HIVE_FLOW_SESSION_ID)
+    operatorSessionEnvKeys().some((key) => nonEmpty(process.env[key]))
     || nonEmpty(context?.session_id)
     || nonEmpty(context?.sessionId)
   );
@@ -181,10 +179,10 @@ function hasClientKind(context: Record<string, unknown> | null | undefined): boo
 }
 
 function inferClientKind(): string {
-  const explicit = nonEmpty(process.env.HIVE_FLOW_CLIENT_KIND);
-  if (explicit) return explicit;
-  if (nonEmpty(process.env.CODEX_SESSION_ID) || nonEmpty(process.env.CODEX_THREAD_ID)) return 'codex';
-  if (nonEmpty(process.env.CLAUDE_SESSION_ID) || nonEmpty(process.env.CLAUDE_PROJECT_DIR)) return 'claude';
+  const explicit = normalizeClientKind(process.env.HIVE_FLOW_CLIENT_KIND);
+  if (explicit !== 'unknown') return explicit;
+  const envKind = resolveClientKindFromEnv(process.env);
+  if (envKind !== 'unknown') return envKind;
   // A standalone CLI invocation still needs an owner lane. Claude is the
   // default operator lane for local/global installs when no richer host signal
   // exists, matching the statusboard notification fallback.

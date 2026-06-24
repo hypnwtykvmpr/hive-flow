@@ -8,6 +8,9 @@ describe('MCP hive completion notifications', () => {
     expect(classifyMCPClient({ clientInfo: { name: 'codex-cli', version: '0.0.0' } })).toBe('codex');
     expect(classifyMCPClient({ clientInfo: { name: 'gemini-cli', version: '0.30.0' } })).toBe('gemini');
     expect(classifyMCPClient({ clientInfo: { name: 'cursor-agent', version: '1.0.0' } })).toBe('cursor');
+    expect(classifyMCPClient({ clientInfo: { name: 'agy', version: '1.0.0' } })).toBe('antigravity');
+    expect(classifyMCPClient({ clientInfo: { name: 'opencode', version: '1.0.0' } })).toBe('opencode');
+    expect(classifyMCPClient({ clientInfo: { name: 'forgecode', version: '1.0.0' } })).toBe('forgecode');
     expect(classifyMCPClient({ clientInfo: { name: 'generic-mcp-client' } }, {})).toBe('unknown');
     expect(classifyMCPClient(null, {})).toBe('unknown');
   });
@@ -18,6 +21,9 @@ describe('MCP hive completion notifications', () => {
     expect(classifyMCPClient({}, { CODEX_HOME: '/Users/test/.codex' })).toBe('codex');
     expect(classifyMCPClient({}, { GEMINI_API_KEY: 'configured' })).toBe('gemini');
     expect(classifyMCPClient({}, { CURSOR_API_KEY: 'configured' })).toBe('cursor');
+    expect(classifyMCPClient({}, { AGY_SESSION_ID: 'agy-session' })).toBe('antigravity');
+    expect(classifyMCPClient({}, { OPENCODE_SESSION_ID: 'opencode-session' })).toBe('opencode');
+    expect(classifyMCPClient({}, { FORGE_SESSION_ID: 'forge-session' })).toBe('forgecode');
     expect(classifyMCPClient({}, { CLAUDE_PROJECT_DIR: '/repo' })).toBe('claude');
   });
 
@@ -82,5 +88,27 @@ describe('MCP hive completion notifications', () => {
     expect(gemini.params.data.message).toContain('Gemini');
     expect(cursor.params.data.clientKind).toBe('cursor');
     expect(cursor.params.data.message).toContain('Cursor');
+  });
+
+  it('keeps Antigravity, OpenCode, and ForgeCode hive completion guidance CLI-specific', () => {
+    const base = {
+      hiveId: 'hive-789',
+      queenId: 'queen-1',
+      status: 'completed' as const,
+      completedAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
+      error: undefined,
+    };
+
+    const antigravity = buildHiveStatusNotification(base, 'antigravity');
+    const opencode = buildHiveStatusNotification(base, 'opencode');
+    const forgecode = buildHiveStatusNotification(base, 'forgecode');
+
+    expect(antigravity.params.data.clientKind).toBe('antigravity');
+    expect(antigravity.params.data.message).toContain('Antigravity');
+    expect(opencode.params.data.clientKind).toBe('opencode');
+    expect(opencode.params.data.message).toContain('OpenCode');
+    expect(forgecode.params.data.clientKind).toBe('forgecode');
+    expect(forgecode.params.data.message).toContain('ForgeCode');
   });
 });

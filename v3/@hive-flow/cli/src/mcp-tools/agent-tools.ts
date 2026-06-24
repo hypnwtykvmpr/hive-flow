@@ -23,7 +23,7 @@ import {
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
-import { normalizeClientKind, resolveClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
+import { normalizeClientKind, operatorSessionEnvKeys, resolveClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -479,9 +479,7 @@ const BRIDGE_BASE_ENV_KEYS = new Set([
   'HIVE_FLOW_PROJECT_ROOT',
   'HIVE_FLOW_SESSION_ID',
   'HIVE_FLOW_CLIENT_KIND',
-  'CLAUDE_SESSION_ID',
-  'CODEX_SESSION_ID',
-  'CODEX_THREAD_ID',
+  ...operatorSessionEnvKeys(),
   'HIVE_FLOW_CONFIG',
   'HIVE_FLOW_LOG_LEVEL',
   // Proxy configuration — required for CLI providers in proxied/corporate networks
@@ -540,13 +538,11 @@ function buildProviderBridgeEnv(
   childEnv.CLAUDE_AGENT_ID = agentId;
   childEnv.HIVE_FLOW_SESSION_ID = ownerSessionId;
   childEnv.HIVE_FLOW_CLIENT_KIND = ownerClientKind;
-  if (ownerClientKind === 'codex') {
-    childEnv.CODEX_SESSION_ID = ownerSessionId;
-    delete childEnv.CLAUDE_SESSION_ID;
-  } else if (ownerClientKind === 'claude') {
-    childEnv.CLAUDE_SESSION_ID = ownerSessionId;
-    delete childEnv.CODEX_SESSION_ID;
-    delete childEnv.CODEX_THREAD_ID;
+  for (const key of operatorSessionEnvKeys()) {
+    if (key !== 'HIVE_FLOW_SESSION_ID') delete childEnv[key];
+  }
+  for (const key of operatorSessionEnvKeys(ownerClientKind)) {
+    childEnv[key] = ownerSessionId;
   }
   if (agentToken) childEnv.HIVE_FLOW_AGENT_TOKEN = agentToken;
   if (agentRole?.hiveId) childEnv.HIVE_FLOW_HIVE_ID = agentRole.hiveId;
@@ -702,7 +698,7 @@ export const agentTools: MCPTool[] = [
         return {
           success: false,
           code: 'missing-owner-session',
-          error: 'agent_spawn requires an owner session id; set CODEX_SESSION_ID, CODEX_THREAD_ID, CLAUDE_SESSION_ID, HIVE_FLOW_SESSION_ID, pass session_id, or provide operator MCP context.sessionId.',
+          error: 'agent_spawn requires an owner session id; set a supported operator session env (CODEX_SESSION_ID, CLAUDE_SESSION_ID, CURSOR_SESSION_ID/AGENT_SESSION_ID, AGY_SESSION_ID/ANTIGRAVITY_SESSION_ID, OPENCODE_SESSION_ID, FORGECODE_SESSION_ID/FORGE_SESSION_ID), set HIVE_FLOW_SESSION_ID with HIVE_FLOW_CLIENT_KIND, pass session_id, or provide operator MCP context.sessionId.',
         };
       }
 
@@ -1334,14 +1330,14 @@ export const agentTools: MCPTool[] = [
         const ownerSessionId = persistedOwnerSessionId(agent);
         if (!ownerSessionId) {
           return {
-            error: 'Agent is missing ownerSessionId; respawn it from Claude/Codex with a real operator session before dispatching tasks.',
+            error: 'Agent is missing ownerSessionId; respawn it from a supported operator client with a real operator session before dispatching tasks.',
             code: 'missing-owner-session',
           };
         }
         const ownerClientKind = persistedOwnerClientKind(agent);
         if (!ownerClientKind) {
           return {
-            error: 'Agent is missing ownerClientKind; respawn it from Claude/Codex so task completions route to the owning operator.',
+            error: 'Agent is missing ownerClientKind; respawn it from a supported operator client so task completions route to the owning operator.',
             code: 'missing-owner-client-kind',
           };
         }

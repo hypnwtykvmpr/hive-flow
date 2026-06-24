@@ -2,6 +2,7 @@
 'use strict';
 
 const path = require('node:path');
+const { envSessionValue } = require('./client-kind.cjs');
 
 function loadProtectedPathPolicyModule() {
   const projectRoot = path.resolve(__dirname, '..', '..');
@@ -49,10 +50,7 @@ function resolveSessionId(input = null, env = process.env, context = null) {
   const source =
     asNonEmptyString(input && input.session_id)
     || asNonEmptyString(input && input.sessionId)
-    || asNonEmptyString(env && env.CODEX_SESSION_ID)
-    || asNonEmptyString(env && env.CODEX_THREAD_ID)
-    || asNonEmptyString(env && env.CLAUDE_SESSION_ID)
-    || asNonEmptyString(env && env.HIVE_FLOW_SESSION_ID)
+    || envSessionValue(env)
     || asOperatorContextSessionId(context && context.session_id)
     || asOperatorContextSessionId(context && context.sessionId);
 

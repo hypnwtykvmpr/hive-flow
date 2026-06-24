@@ -11,7 +11,32 @@ const notifyScript = resolve(root, '.claude/helpers/hive-sentinel-notify.cjs');
 const hookHandlerScript = resolve(root, '.claude/helpers/hook-handler.cjs');
 const standaloneHiveCheckScript = resolve(root, 'scripts/hive-check-complete.cjs');
 const dedupMarkerScript = resolve(root, '.claude/helpers/dedup-marker.cjs');
+const clientKindScript = resolve(root, '.claude/helpers/client-kind.cjs');
 const sessionIdScript = resolve(root, '.claude/helpers/session-id.cjs');
+
+function scrubParentSessionEnv(env: NodeJS.ProcessEnv): void {
+  for (const key of [
+    'CODEX_SESSION_ID',
+    'CODEX_THREAD_ID',
+    'HIVE_FLOW_SESSION_ID',
+    'HIVE_FLOW_CLIENT_KIND',
+    'CURSOR_SESSION_ID',
+    'CURSOR_THREAD_ID',
+    'AGENT_SESSION_ID',
+    'ANTIGRAVITY_SESSION_ID',
+    'ANTIGRAVITY_THREAD_ID',
+    'AGY_SESSION_ID',
+    'AGY_THREAD_ID',
+    'OPENCODE_SESSION_ID',
+    'OPENCODE_THREAD_ID',
+    'FORGECODE_SESSION_ID',
+    'FORGECODE_THREAD_ID',
+    'FORGE_CODE_SESSION_ID',
+    'FORGE_SESSION_ID',
+  ]) {
+    delete env[key];
+  }
+}
 
 function makeProject(): string {
   return mkdtempSync(join(tmpdir(), 'hive-flow-owner-ack-'));
@@ -37,6 +62,7 @@ function runNotify(project: string, sessionId: string | null, command = 'teammat
     CLAUDE_PROJECT_DIR: project,
     HIVE_FLOW_PROJECT_ROOT: project,
   };
+  scrubParentSessionEnv(env);
   if (sessionId === null) {
     delete env.CLAUDE_SESSION_ID;
   } else {
@@ -60,6 +86,7 @@ function runHookHandlerHiveCheck(project: string, sessionId: string | null) {
     CLAUDE_PROJECT_DIR: project,
     HIVE_FLOW_PROJECT_ROOT: project,
   };
+  scrubParentSessionEnv(env);
   if (sessionId === null) {
     delete env.CLAUDE_SESSION_ID;
   } else {
@@ -84,6 +111,7 @@ function installStandaloneHiveCheck(project: string): string {
   mkdirSync(helpersDir, { recursive: true });
   writeFileSync(join(scriptsDir, 'hive-check-complete.cjs'), readFileSync(standaloneHiveCheckScript, 'utf8'), 'utf8');
   writeFileSync(join(helpersDir, 'dedup-marker.cjs'), readFileSync(dedupMarkerScript, 'utf8'), 'utf8');
+  writeFileSync(join(helpersDir, 'client-kind.cjs'), readFileSync(clientKindScript, 'utf8'), 'utf8');
   writeFileSync(join(helpersDir, 'session-id.cjs'), readFileSync(sessionIdScript, 'utf8'), 'utf8');
   return join(scriptsDir, 'hive-check-complete.cjs');
 }
@@ -95,6 +123,7 @@ function runStandaloneHiveCheck(project: string, sessionId: string | null) {
     CLAUDE_PROJECT_DIR: project,
     HIVE_FLOW_PROJECT_ROOT: project,
   };
+  scrubParentSessionEnv(env);
   if (sessionId === null) {
     delete env.CLAUDE_SESSION_ID;
   } else {
@@ -138,14 +167,17 @@ function expectHookContextContains(output: Record<string, unknown>, ...needles: 
 
 function runNotifyAsync(project: string, sessionId: string): Promise<{ claimed: boolean; output: string }> {
   return new Promise((resolvePromise, reject) => {
+    const env = {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: project,
+      HIVE_FLOW_PROJECT_ROOT: project,
+      CLAUDE_SESSION_ID: sessionId,
+    };
+    scrubParentSessionEnv(env);
+    env.CLAUDE_SESSION_ID = sessionId;
     const child = spawn(process.execPath, [notifyScript, 'teammate-idle'], {
       cwd: project,
-      env: {
-        ...process.env,
-        CLAUDE_PROJECT_DIR: project,
-        HIVE_FLOW_PROJECT_ROOT: project,
-        CLAUDE_SESSION_ID: sessionId,
-      },
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';

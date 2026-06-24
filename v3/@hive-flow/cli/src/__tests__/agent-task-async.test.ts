@@ -282,6 +282,36 @@ describe('agent_task_async handler', () => {
     }
   });
 
+  it('passes new parent-client ownership to the bridge process env without stale Claude/Codex aliases', async () => {
+    const agent = makeAgent({
+      ownerSessionId: 'opencode-owner-session',
+      ownerClientKind: 'opencode',
+    });
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(12345);
+    process.env.CLAUDE_SESSION_ID = 'wrong-claude-session';
+    process.env.CODEX_SESSION_ID = 'wrong-codex-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'claude-code';
+
+    try {
+      const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+
+      expect(result.success).toBe(true);
+      const [, , options] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(options.env.HIVE_FLOW_SESSION_ID).toBe('opencode-owner-session');
+      expect(options.env.HIVE_FLOW_CLIENT_KIND).toBe('opencode');
+      expect(options.env.OPENCODE_SESSION_ID).toBe('opencode-owner-session');
+      expect(options.env.OPENCODE_THREAD_ID).toBe('opencode-owner-session');
+      expect(options.env.CLAUDE_SESSION_ID).toBeUndefined();
+      expect(options.env.CODEX_SESSION_ID).toBeUndefined();
+      expect(options.env.CODEX_THREAD_ID).toBeUndefined();
+    } finally {
+      delete process.env.CLAUDE_SESSION_ID;
+      delete process.env.CODEX_SESSION_ID;
+      delete process.env.HIVE_FLOW_CLIENT_KIND;
+    }
+  });
+
   it('refuses to dispatch legacy ownerless agents before spawning the bridge', async () => {
     const agent = makeAgent({ ownerSessionId: undefined });
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));

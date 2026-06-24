@@ -49,6 +49,7 @@ function makeProjectRoot(): string {
     '.claude/helpers/hook-handler.cjs',
     '.claude/helpers/settings-reconciler.cjs',
     '.claude/helpers/provider-tracker.cjs',
+    '.claude/helpers/client-kind.cjs',
     '.claude/helpers/session-id.cjs',
     'v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs',
     'v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json',

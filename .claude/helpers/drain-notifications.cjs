@@ -18,6 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 const { wakeSessionPaths } = require('./wake-paths.cjs');
+const { defaultClientKind, targetAgentFromClientKind } = require('./client-kind.cjs');
 
 function projectDir() {
   return process.env.CLAUDE_PROJECT_DIR || process.cwd();
@@ -43,16 +44,13 @@ function currentTargetAgent(sessionInput = null, env = process.env) {
   const explicit = sessionInput && typeof sessionInput === 'object' && !Array.isArray(sessionInput)
     ? (sessionInput.clientKind || sessionInput.client_kind)
     : null;
-  const raw = String(
-    explicit ||
-    env.HIVE_FLOW_CLIENT_KIND ||
-    env.CLAUDE_CODE_ENTRYPOINT ||
-    '',
-  ).toLowerCase();
-  if (raw.includes('codex')) return 'codex';
-  if (raw.includes('claude')) return 'claude';
-  if (env.CODEX_SESSION_ID || env.CODEX_THREAD_ID) return 'codex';
-  return 'claude';
+  return (
+    targetAgentFromClientKind(explicit) ||
+    targetAgentFromClientKind(env.HIVE_FLOW_CLIENT_KIND) ||
+    targetAgentFromClientKind(env.CLAUDE_CODE_ENTRYPOINT) ||
+    targetAgentFromClientKind(defaultClientKind(env)) ||
+    'claude'
+  );
 }
 
 function readJsonFile(file) {
@@ -64,10 +62,7 @@ function readJsonFile(file) {
 }
 
 function targetAgentFromKind(kind) {
-  const raw = String(kind || '').toLowerCase();
-  if (raw.includes('codex')) return 'codex';
-  if (raw.includes('claude')) return 'claude';
-  return null;
+  return targetAgentFromClientKind(kind);
 }
 
 function agentIdFromNotification(obj) {
@@ -108,8 +103,8 @@ function notificationTargetsAgent(obj, targetAgent, projectRoot = projectDir()) 
   const explicit = String(obj?.targetAgent || obj?.target_agent || '').trim().toLowerCase();
   if (explicit) return explicit === targetAgent;
   const kind = String(obj?.clientKind || obj?.client_kind || obj?.ownerClientKind || obj?.owner_client_kind || '').toLowerCase();
-  if (kind.includes('codex')) return targetAgent === 'codex';
-  if (kind.includes('claude')) return targetAgent === 'claude';
+  const kindTarget = targetAgentFromKind(kind);
+  if (kindTarget) return targetAgent === kindTarget;
   return true;
 }
 

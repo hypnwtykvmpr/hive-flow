@@ -70,6 +70,13 @@ const originalEnv = {
   CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
+  CURSOR_SESSION_ID: process.env.CURSOR_SESSION_ID,
+  AGENT_SESSION_ID: process.env.AGENT_SESSION_ID,
+  ANTIGRAVITY_SESSION_ID: process.env.ANTIGRAVITY_SESSION_ID,
+  AGY_SESSION_ID: process.env.AGY_SESSION_ID,
+  OPENCODE_SESSION_ID: process.env.OPENCODE_SESSION_ID,
+  FORGECODE_SESSION_ID: process.env.FORGECODE_SESSION_ID,
+  FORGE_SESSION_ID: process.env.FORGE_SESSION_ID,
 };
 
 let root = '';
@@ -159,6 +166,13 @@ beforeEach(() => {
   process.env.CLAUDE_PROJECT_DIR = root;
   delete process.env.CODEX_SESSION_ID;
   delete process.env.CODEX_THREAD_ID;
+  delete process.env.CURSOR_SESSION_ID;
+  delete process.env.AGENT_SESSION_ID;
+  delete process.env.ANTIGRAVITY_SESSION_ID;
+  delete process.env.AGY_SESSION_ID;
+  delete process.env.OPENCODE_SESSION_ID;
+  delete process.env.FORGECODE_SESSION_ID;
+  delete process.env.FORGE_SESSION_ID;
   process.env.CLAUDE_SESSION_ID = 'env-session';
   process.env.HIVE_FLOW_SESSION_ID = 'provider-session';
   resetAgentStore();
@@ -211,10 +225,46 @@ describe('R-sid multi-session enabler', () => {
         expected: 'env-session',
       },
       {
+        input: {},
+        env: { OPENCODE_SESSION_ID: 'opencode-parent-session', CLAUDE_SESSION_ID: 'claude-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'opencode-parent-session',
+      },
+      {
+        input: {},
+        env: { AGENT_SESSION_ID: 'generic-agent-session', CLAUDE_SESSION_ID: 'claude-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'claude-session',
+      },
+      {
         input: null,
         env: { HIVE_FLOW_SESSION_ID: 'provider-session' },
         context: { sessionId: 'context-session' },
         expected: 'provider-session',
+      },
+      {
+        input: {},
+        env: { AGENT_SESSION_ID: 'cursor-parent-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'cursor-parent-session',
+      },
+      {
+        input: {},
+        env: { AGY_SESSION_ID: 'antigravity-parent-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'antigravity-parent-session',
+      },
+      {
+        input: {},
+        env: { OPENCODE_SESSION_ID: 'opencode-parent-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'opencode-parent-session',
+      },
+      {
+        input: {},
+        env: { FORGE_SESSION_ID: 'forge-parent-session', HIVE_FLOW_SESSION_ID: 'provider-session' },
+        context: { sessionId: 'context-session' },
+        expected: 'forge-parent-session',
       },
       {
         input: {},
@@ -252,6 +302,11 @@ describe('R-sid multi-session enabler', () => {
     expect(normalizeClientKind('codex-cli')).toBe('codex');
     expect(normalizeClientKind('gemini-cli')).toBe('gemini');
     expect(normalizeClientKind('cursor-agent')).toBe('cursor');
+    expect(normalizeClientKind('agent')).toBe('cursor');
+    expect(normalizeClientKind('agy')).toBe('antigravity');
+    expect(normalizeClientKind('antigravity-cli')).toBe('antigravity');
+    expect(normalizeClientKind('open-code')).toBe('opencode');
+    expect(normalizeClientKind('forge')).toBe('forgecode');
     expect(normalizeClientKind('not-a-client')).toBe('unknown');
 
     expect(resolveClientKind(
@@ -277,6 +332,36 @@ describe('R-sid multi-session enabler', () => {
       { CODEX_THREAD_ID: 'codex-thread', CLAUDE_SESSION_ID: 'claude-session' },
       {},
     )).toBe('codex');
+
+    expect(resolveClientKind(
+      {},
+      { CURSOR_SESSION_ID: 'cursor-session', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('cursor');
+
+    expect(resolveClientKind(
+      {},
+      { AGENT_SESSION_ID: 'generic-agent-session', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('claude');
+
+    expect(resolveClientKind(
+      {},
+      { AGY_SESSION_ID: 'antigravity-session', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('antigravity');
+
+    expect(resolveClientKind(
+      {},
+      { OPENCODE_SESSION_ID: 'opencode-session', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('opencode');
+
+    expect(resolveClientKind(
+      {},
+      { FORGE_SESSION_ID: 'forge-session', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('forgecode');
 
     expect(resolveClientKind(
       {},

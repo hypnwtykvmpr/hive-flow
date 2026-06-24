@@ -18,6 +18,7 @@ const ENGINE_FILES = [
   { name: 'hook-handler.cjs', source: join(repoRoot, '.claude', 'helpers', 'hook-handler.cjs') },
   { name: 'settings-reconciler.cjs', source: join(repoRoot, '.claude', 'helpers', 'settings-reconciler.cjs') },
   { name: 'provider-tracker.cjs', source: join(repoRoot, '.claude', 'helpers', 'provider-tracker.cjs') },
+  { name: 'client-kind.cjs', source: join(repoRoot, '.claude', 'helpers', 'client-kind.cjs') },
   { name: 'session-id.cjs', source: join(repoRoot, '.claude', 'helpers', 'session-id.cjs') },
   { name: 'protected-paths.cjs', source: join(cliRoot, 'src', 'permission-guard', 'protected-paths.cjs') },
   { name: 'protected-paths.policy.json', source: join(cliRoot, 'src', 'permission-guard', 'protected-paths.policy.json') },
@@ -95,7 +96,7 @@ function writeInstalledVersion(binDir: string, sourceRoot: string): void {
 }
 
 describe('P1 engine packaging anchor', () => {
-  it('packs the complete 9-file engine anchor and manifest', () => {
+  it('packs the complete 10-file engine anchor and manifest', () => {
     const files = packFileList();
 
     for (const { name } of ENGINE_FILES) {
@@ -124,7 +125,7 @@ describe('P1 engine packaging anchor', () => {
     }
   });
 
-  it('resolves @hive-flow/cli/package.json to an anchor containing all 9 files', () => {
+  it('resolves @hive-flow/cli/package.json to an anchor containing all 10 files', () => {
     const requireFromCli = createRequire(join(cliRoot, 'dist', 'src', 'index.js'));
     const resolvedPackageJson = requireFromCli.resolve('@hive-flow/cli/package.json');
     expect(resolvedPackageJson).toBe(packageJsonPath);

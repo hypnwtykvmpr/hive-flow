@@ -160,6 +160,7 @@ describe('init settings enforcement chain', () => {
         'hook-handler.cjs',
         'settings-reconciler.cjs',
         'provider-tracker.cjs',
+        'client-kind.cjs',
         'session-id.cjs',
         'protected-paths.cjs',
         'protected-paths.policy.json',

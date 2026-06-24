@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-06-21T23:07:08.487Z",
+  "syncedAt": "2026-06-24T06:41:24.125Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -27,8 +27,12 @@
       "sha256": "41ce7aba580572e5357f1fd4d6335f0af637136618ff70ecf4fe8b819c68f949"
     },
     {
+      "name": "client-kind.cjs",
+      "sha256": "f4cb22beed7865520dbfd2a6f258db765d3ab611f8aeb544d56db078c77e1ba2"
+    },
+    {
       "name": "session-id.cjs",
-      "sha256": "54be8d40e66f94f713e9e0e63a61757b827379d92a674774b2879b38021439d7"
+      "sha256": "2de66d5aad4de090f371c1393ddae02fe86fe1950cbd0381a11c2fa1aa83f38a"
     },
     {
       "name": "protected-paths.cjs",

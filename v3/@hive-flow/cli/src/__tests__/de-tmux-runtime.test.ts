@@ -82,4 +82,26 @@ describe('de-tmux runtime invariant', () => {
       HIVE_FLOW_SESSION_ID: 'hive-session',
     })).toBe('codex-session');
   });
+
+  it('routes wake sessions by supported parent-client env ids without tmux state', () => {
+    const wakePaths = requireFromHere(resolve(repoRoot, '.claude/helpers/wake-paths.cjs')) as {
+      sessionValue: (input?: unknown, env?: Record<string, string | undefined>) => string | null;
+      defaultClientKind: (env?: Record<string, string | undefined>) => string;
+    };
+
+    expect(wakePaths.sessionValue(null, {
+      AGENT_SESSION_ID: 'cursor-session',
+      TMUX_PANE: '%1',
+    })).toBe('cursor-session');
+    expect(wakePaths.defaultClientKind({
+      AGY_SESSION_ID: 'antigravity-session',
+      TMUX_PANE: '%1',
+    })).toBe('antigravity');
+    expect(wakePaths.defaultClientKind({
+      OPENCODE_SESSION_ID: 'opencode-session',
+    })).toBe('opencode');
+    expect(wakePaths.defaultClientKind({
+      FORGE_SESSION_ID: 'forge-session',
+    })).toBe('forgecode');
+  });
 });

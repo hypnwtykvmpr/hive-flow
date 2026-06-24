@@ -13,6 +13,13 @@ const ORIGINAL_ENV = {
   HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
   HIVE_FLOW_PROJECT_ROOT: process.env.HIVE_FLOW_PROJECT_ROOT,
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+  CURSOR_SESSION_ID: process.env.CURSOR_SESSION_ID,
+  AGENT_SESSION_ID: process.env.AGENT_SESSION_ID,
+  ANTIGRAVITY_SESSION_ID: process.env.ANTIGRAVITY_SESSION_ID,
+  AGY_SESSION_ID: process.env.AGY_SESSION_ID,
+  OPENCODE_SESSION_ID: process.env.OPENCODE_SESSION_ID,
+  FORGECODE_SESSION_ID: process.env.FORGECODE_SESSION_ID,
+  FORGE_SESSION_ID: process.env.FORGE_SESSION_ID,
 };
 
 function restoreEnv(): void {
@@ -33,6 +40,13 @@ function clearSessionEnv(): void {
   delete process.env.HIVE_FLOW_CLIENT_KIND;
   delete process.env.HIVE_FLOW_PROJECT_ROOT;
   delete process.env.CLAUDE_PROJECT_DIR;
+  delete process.env.CURSOR_SESSION_ID;
+  delete process.env.AGENT_SESSION_ID;
+  delete process.env.ANTIGRAVITY_SESSION_ID;
+  delete process.env.AGY_SESSION_ID;
+  delete process.env.OPENCODE_SESSION_ID;
+  delete process.env.FORGECODE_SESSION_ID;
+  delete process.env.FORGE_SESSION_ID;
 }
 
 function readAgent(root: string, agentId: string): Record<string, unknown> | undefined {
@@ -75,6 +89,23 @@ describe('CLI MCP client owner context', () => {
 
     expect(context.sessionId).toBeUndefined();
     expect(context.clientKind).toBe('codex');
+  });
+
+  it('infers non-Claude parent clients from their session env markers', () => {
+    process.env.AGENT_SESSION_ID = 'cursor-agent-session';
+    expect(buildDefaultMCPContext().clientKind).toBe('cursor');
+
+    clearSessionEnv();
+    process.env.AGY_SESSION_ID = 'antigravity-session';
+    expect(buildDefaultMCPContext().clientKind).toBe('antigravity');
+
+    clearSessionEnv();
+    process.env.OPENCODE_SESSION_ID = 'opencode-session';
+    expect(buildDefaultMCPContext().clientKind).toBe('opencode');
+
+    clearSessionEnv();
+    process.env.FORGE_SESSION_ID = 'forge-session';
+    expect(buildDefaultMCPContext().clientKind).toBe('forgecode');
   });
 
   it('stamps installed CLI agent spawns with a deterministic owner instead of creating ownerless agents', async () => {

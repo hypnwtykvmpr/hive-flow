@@ -158,6 +158,7 @@ const RELOCATED_HELPER_FILES = [
   'hook-handler.cjs',
   'settings-reconciler.cjs',
   'provider-tracker.cjs',
+  'client-kind.cjs',
   'session-id.cjs',
 ];
 

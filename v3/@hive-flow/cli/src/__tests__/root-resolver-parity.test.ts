@@ -9,6 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../../');
 const sentinelRecoverySource = join(repoRoot, '.claude', 'helpers', 'sentinel-recovery.cjs');
 const hookHandlerSource = join(repoRoot, '.claude', 'helpers', 'hook-handler.cjs');
+const clientKindSource = join(repoRoot, '.claude', 'helpers', 'client-kind.cjs');
 const sessionIdSource = join(repoRoot, '.claude', 'helpers', 'session-id.cjs');
 const protectedPathsSource = join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
 
@@ -20,6 +21,7 @@ function installHelper(projectRoot: string, fileName: string, sourcePath: string
   const helperDir = join(projectRoot, '.claude', 'helpers');
   mkdirSync(helperDir, { recursive: true });
   writeFileSync(join(helperDir, fileName), readFileSync(sourcePath, 'utf8'), 'utf8');
+  writeFileSync(join(helperDir, 'client-kind.cjs'), readFileSync(clientKindSource, 'utf8'), 'utf8');
   writeFileSync(join(helperDir, 'session-id.cjs'), readFileSync(sessionIdSource, 'utf8'), 'utf8');
   writeFileSync(join(helperDir, 'protected-paths.cjs'), readFileSync(protectedPathsSource, 'utf8'), 'utf8');
   return join(helperDir, fileName);
