@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { chmod } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -20,6 +21,7 @@ export const ENGINE_SOURCE_FILES = [
 ] as const;
 
 export const ENGINE_TARGET_FILES = ENGINE_SOURCE_FILES.map(([, target]) => target);
+export const ENGINE_MANIFEST_FILE = '.engine-manifest.json';
 
 const GUARDED_TOOL_MATCHER = [
   'Bash',
@@ -318,6 +320,21 @@ function resolveEngineSourcePath(projectRoot: string, sourceRel: string): string
   return null;
 }
 
+function sha256(filePath: string): string {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+}
+
+function writeInstalledEngineManifest(projectRoot: string, binDir: string): void {
+  writeFileSync(join(binDir, ENGINE_MANIFEST_FILE), JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    source: projectRoot,
+    files: ENGINE_TARGET_FILES.map((name) => ({
+      name,
+      sha256: sha256(join(binDir, name)),
+    })),
+  }, null, 2) + '\n', { mode: 0o600 });
+}
+
 function hasEngineSources(projectRoot: string): boolean {
   return ENGINE_SOURCE_FILES.every(([sourceRel]) => resolveEngineSourcePath(projectRoot, sourceRel));
 }
@@ -358,7 +375,9 @@ export async function copyEngineFiles(projectRoot: string, binDir: string, optio
     source: projectRoot,
     files: ENGINE_TARGET_FILES,
   }, null, 2) + '\n', { mode: 0o600 });
+  writeInstalledEngineManifest(projectRoot, binDir);
   if (platform !== 'win32') await chmodFile(versionPath, 0o600);
+  if (platform !== 'win32') await chmodFile(join(binDir, ENGINE_MANIFEST_FILE), 0o600);
 }
 
 export async function installRelocatedEnforcement(options: InstallRelocatedOptions = {}) {
@@ -373,6 +392,7 @@ export async function installRelocatedEnforcement(options: InstallRelocatedOptio
     `Type INSTALL HIVE FLOW ENFORCEMENT to install user-level hooks for ${projectRoot}: `,
     {
       yes: options.yes,
+      headlessDefault: true,
       platform: options.platform,
       confirmText: options.confirmText || 'INSTALL HIVE FLOW ENFORCEMENT',
     }

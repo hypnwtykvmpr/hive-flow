@@ -4,6 +4,7 @@ import readline from 'node:readline';
 
 export interface PortableConfirmOptions {
   yes?: boolean;
+  headlessDefault?: boolean;
   platform?: NodeJS.Platform;
   stdinIsTTY?: boolean;
   ttyAvailable?: boolean;
@@ -32,15 +33,27 @@ async function askReadline(question: string, source: 'tty' | 'stdin'): Promise<s
     const ttyIn = createReadStream('/dev/tty');
     const ttyOut = createWriteStream('/dev/tty');
     const rl = readline.createInterface({ input: ttyIn, output: ttyOut });
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      let settled = false;
       const finish = (answer = '') => {
+        if (settled) return;
+        settled = true;
         rl.close();
         ttyIn.destroy();
         ttyOut.destroy();
         resolve(answer);
       };
-      ttyIn.on('error', () => finish(''));
-      ttyOut.on('error', () => finish(''));
+      const fail = (error: unknown) => {
+        if (settled) return;
+        settled = true;
+        rl.close();
+        ttyIn.destroy();
+        ttyOut.destroy();
+        reject(error);
+      };
+      ttyIn.on('error', fail);
+      ttyOut.on('error', fail);
+      rl.on('error', fail);
       rl.question(question, finish);
     });
   }
@@ -74,7 +87,7 @@ export async function portableConfirm(question: string, options: PortableConfirm
       return defaultConfirmMatcher(await ask(question, 'tty'), options.confirmText);
     } catch (error) {
       if (!isTtyUnavailableError(error)) throw error;
-      if (!stdinIsTTY) return false;
+      if (!stdinIsTTY) return options.headlessDefault === true;
     }
   }
 
@@ -82,7 +95,7 @@ export async function portableConfirm(question: string, options: PortableConfirm
     return defaultConfirmMatcher(await ask(question, 'stdin'), options.confirmText);
   }
 
-  return false;
+  return options.headlessDefault === true;
 }
 
 export async function readSecret(prompt: string, options: ReadSecretOptions = {}): Promise<string> {

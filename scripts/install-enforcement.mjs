@@ -10,6 +10,7 @@
  * a separate verified migration step after the user-level hook is observed live.
  */
 
+import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream, copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { chmod } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -51,6 +52,7 @@ const ENGINE_FILES = [
   ['v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs', 'protected-paths.cjs'],
   ['v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json', 'protected-paths.policy.json'],
 ];
+const ENGINE_MANIFEST_FILE = '.engine-manifest.json';
 
 function repoRoot() {
   return resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -201,7 +203,17 @@ export async function copyEngineFiles(projectRoot, binDir, options = {}) {
     source: projectRoot,
     files: ENGINE_FILES.map(([, target]) => target),
   }, null, 2) + '\n', { mode: 0o600 });
+  const manifestPath = join(binDir, ENGINE_MANIFEST_FILE);
+  writeFileSync(manifestPath, JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    source: projectRoot,
+    files: ENGINE_FILES.map(([, target]) => ({
+      name: target,
+      sha256: createHash('sha256').update(readFileSync(join(binDir, target))).digest('hex'),
+    })),
+  }, null, 2) + '\n', { mode: 0o600 });
   if (platform !== 'win32') await chmodFile(versionPath, 0o600);
+  if (platform !== 'win32') await chmodFile(manifestPath, 0o600);
 }
 
 async function askReadline(question, source) {
@@ -209,15 +221,27 @@ async function askReadline(question, source) {
     const ttyIn = createReadStream('/dev/tty');
     const ttyOut = createWriteStream('/dev/tty');
     const rl = readline.createInterface({ input: ttyIn, output: ttyOut });
-    return new Promise((resolveAnswer) => {
+    return new Promise((resolveAnswer, reject) => {
+      let settled = false;
       const finish = (answer = '') => {
+        if (settled) return;
+        settled = true;
         rl.close();
         ttyIn.destroy();
         ttyOut.destroy();
         resolveAnswer(answer);
       };
-      ttyIn.on('error', () => finish(''));
-      ttyOut.on('error', () => finish(''));
+      const fail = (error) => {
+        if (settled) return;
+        settled = true;
+        rl.close();
+        ttyIn.destroy();
+        ttyOut.destroy();
+        reject(error);
+      };
+      ttyIn.on('error', fail);
+      ttyOut.on('error', fail);
+      rl.on('error', fail);
       rl.question(question, finish);
     });
   }
@@ -240,8 +264,14 @@ export async function portableConfirm(question, options = {}) {
   const confirmText = options.confirmText || /^(y|yes)$/i;
 
   if (platform !== 'win32' && ttyAvailable) {
-    const answer = (await ask(question, 'tty')).trim();
-    return confirmText instanceof RegExp ? confirmText.test(answer) : answer === confirmText;
+    try {
+      const answer = (await ask(question, 'tty')).trim();
+      return confirmText instanceof RegExp ? confirmText.test(answer) : answer === confirmText;
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error ? String(error.code || '') : '';
+      if (!['ENXIO', 'ENODEV', 'ENOTTY', 'EIO'].includes(code)) throw error;
+      if (!stdinIsTTY) return options.headlessDefault === true;
+    }
   }
 
   if (stdinIsTTY) {
@@ -249,6 +279,7 @@ export async function portableConfirm(question, options = {}) {
     return confirmText instanceof RegExp ? confirmText.test(answer) : answer === confirmText;
   }
 
+  if (options.headlessDefault === true) return true;
   process.stderr.write('[hive-flow] No interactive TTY available — rerun with --yes for non-interactive install.\n');
   return false;
 }
@@ -295,6 +326,7 @@ async function main(argv = process.argv.slice(2)) {
 
   const confirmed = await portableConfirm(`Type INSTALL HIVE FLOW ENFORCEMENT to install user-level hooks for ${resolve(projectRoot)}: `, {
     yes,
+    headlessDefault: true,
     confirmText: 'INSTALL HIVE FLOW ENFORCEMENT',
   });
   if (!confirmed) {

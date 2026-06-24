@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path, { dirname, join } from 'node:path';
 import { portableConfirm, readRequiredSecret } from '../portable-prompt.js';
 import {
+  ENGINE_MANIFEST_FILE,
   ENGINE_TARGET_FILES,
   buildRelocatedCommand,
   copyEngineFiles,
@@ -13,6 +15,10 @@ import {
 } from '../enforcement-installer.js';
 import { getPlatformProviderForPlatform } from '../../permission-guard/biometric-override.js';
 import { installCommand } from '../../commands/install.js';
+
+function sha256(filePath: string): string {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+}
 
 function makeProjectRoot(): string {
   const projectRoot = mkdtempSync(join(tmpdir(), 'hf-p2-project-'));
@@ -75,19 +81,28 @@ describe('cross-platform enforcement installer', () => {
       expect(existsSync(join(binDir, 'provider-tracker.cjs'))).toBe(true);
       expect(existsSync(join(binDir, 'client-kind.cjs'))).toBe(true);
       expect(existsSync(join(binDir, 'session-id.cjs'))).toBe(true);
+      expect(existsSync(join(binDir, ENGINE_MANIFEST_FILE))).toBe(true);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
       rmSync(binDir, { recursive: true, force: true });
     }
   });
 
-  it('fails closed for headless confirmation unless --yes is supplied', async () => {
+  it('fails closed for headless confirmation unless --yes or headless default is supplied', async () => {
     await expect(portableConfirm('Install enforcement?', {
       yes: false,
       platform: 'linux',
       ttyAvailable: false,
       stdinIsTTY: false,
     })).resolves.toBe(false);
+
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      headlessDefault: true,
+      platform: 'linux',
+      ttyAvailable: false,
+      stdinIsTTY: false,
+    })).resolves.toBe(true);
 
     await expect(portableConfirm('Install enforcement?', {
       yes: true,
@@ -119,6 +134,20 @@ describe('cross-platform enforcement installer', () => {
       },
     })).resolves.toBe(false);
     expect(sources).toEqual(['tty']);
+
+    const headlessDefaultSources: string[] = [];
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      headlessDefault: true,
+      platform: 'linux',
+      ttyAvailable: true,
+      stdinIsTTY: false,
+      ask: async (_question, source) => {
+        headlessDefaultSources.push(source);
+        throw err;
+      },
+    })).resolves.toBe(true);
+    expect(headlessDefaultSources).toEqual(['tty']);
 
     const fallbackSources: string[] = [];
     await expect(portableConfirm('Install enforcement?', {
@@ -168,6 +197,12 @@ describe('cross-platform enforcement installer', () => {
       }
       expect(ENGINE_TARGET_FILES).toHaveLength(10);
       expect(existsSync(join(binDir, '.version'))).toBe(true);
+      const manifest = JSON.parse(readFileSync(join(binDir, ENGINE_MANIFEST_FILE), 'utf8')) as {
+        files: Array<{ name: string; sha256: string }>;
+      };
+      expect(manifest.files.map((file) => file.name).sort()).toEqual([...ENGINE_TARGET_FILES].sort());
+      const clientKind = manifest.files.find((file) => file.name === 'client-kind.cjs');
+      expect(clientKind?.sha256).toBe(sha256(join(binDir, 'client-kind.cjs')));
 
       const settings = JSON.parse(readFileSync(join(homeDir, '.claude', 'settings.json'), 'utf8'));
       const commands = allHookCommands(settings);
