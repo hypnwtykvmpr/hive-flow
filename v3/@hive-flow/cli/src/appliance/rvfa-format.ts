@@ -16,7 +16,19 @@ import { readFile } from 'node:fs/promises';
 // ---------------------------------------------------------------------------
 
 export const RVFA_MAGIC = Buffer.from('RVFA');
+/** Phase-R read-accepted appliance magic (brand-free). Writers stay legacy 'RVFA'. */
+export const HFAP_MAGIC = Buffer.from('HFAP');
 export const RVFA_VERSION = 1;
+
+/**
+ * Preamble magics accepted on READ (Phase-R dual-read). Writers continue to
+ * emit the legacy 'RVFA' token; 'HFAP' is read-only until a later write-flip
+ * phase. The on-disk preamble magic and the parsed `header.magic` must form a
+ * matching pair (see RvfaReader.fromBuffer) — a preamble-only flip on a signed
+ * legacy file must not slip past, since the Ed25519 digest covers `header.magic`
+ * but not the raw preamble.
+ */
+export const ACCEPTED_APPLIANCE_MAGICS: ReadonlySet<string> = new Set(['RVFA', 'HFAP']);
 
 const MAGIC_SIZE = 4;
 const VERSION_SIZE = 4;
@@ -147,7 +159,7 @@ export function validateHeader(header: unknown): header is RvfaHeader {
   const obj = (v: unknown) => typeof v === 'object' && v !== null;
   const oneOf = (v: unknown, vals: string[]) => vals.includes(v as string);
 
-  if (h.magic !== 'RVFA' || typeof h.version !== 'number' || h.version < 1) return false;
+  if (!ACCEPTED_APPLIANCE_MAGICS.has(h.magic as string) || typeof h.version !== 'number' || h.version < 1) return false;
   if (!str(h.name) || !str(h.appVersion) || !str(h.arch) || !str(h.platform)) return false;
   if (!oneOf(h.profile, ['cloud', 'hybrid', 'offline'])) return false;
   if (!str(h.created) || !Array.isArray(h.sections) || !Array.isArray(h.capabilities)) return false;
@@ -312,10 +324,12 @@ export class RvfaReader {
       throw new Error('Buffer too small to contain RVFA preamble');
     }
 
-    // Magic
+    // Magic (Phase-R: accept legacy 'RVFA' + read-only 'HFAP')
     const magic = buf.subarray(0, MAGIC_SIZE).toString('ascii');
-    if (magic !== 'RVFA') {
-      throw new Error(`Invalid RVFA magic: expected "RVFA", got "${magic}"`);
+    if (!ACCEPTED_APPLIANCE_MAGICS.has(magic)) {
+      throw new Error(
+        `Invalid RVFA magic: expected one of [${[...ACCEPTED_APPLIANCE_MAGICS].join(', ')}], got "${magic}"`,
+      );
     }
 
     // Version
@@ -350,6 +364,16 @@ export class RvfaReader {
       throw new Error('RVFA header failed validation');
     }
     const header = parsed as RvfaHeader;
+
+    // Phase-R security gate: the on-disk preamble magic and `header.magic` must
+    // form a matching pair, rejected BEFORE any section/footer/signature trust.
+    // The Ed25519 signing digest covers `header.magic` but NOT the raw preamble,
+    // so a preamble-only flip on a signed legacy file must fail here.
+    if (header.magic !== magic) {
+      throw new Error(
+        `RVFA magic mismatch: preamble "${magic}" != header "${header.magic}"`,
+      );
+    }
 
     // Bounds-check every section offset
     const totalSize = buf.length;
@@ -448,10 +472,12 @@ export class RvfaReader {
   verify(): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    // 1. Magic
+    // 1. Magic (accept legacy + Phase-R token; preamble must match header.magic)
     const magic = this.buf.subarray(0, MAGIC_SIZE).toString('ascii');
-    if (magic !== 'RVFA') {
+    if (!ACCEPTED_APPLIANCE_MAGICS.has(magic)) {
       errors.push(`Invalid magic: "${magic}"`);
+    } else if (magic !== this.header.magic) {
+      errors.push(`Magic mismatch: preamble "${magic}" != header "${this.header.magic}"`);
     }
 
     // 2. Version

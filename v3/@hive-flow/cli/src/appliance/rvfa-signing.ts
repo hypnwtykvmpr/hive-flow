@@ -14,6 +14,7 @@ import {
 } from 'node:crypto';
 import { readFile, writeFile, stat, chmod, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { ACCEPTED_APPLIANCE_MAGICS } from './rvfa-format.js';
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -170,9 +171,12 @@ function parseRvfaBinary(buf: Buffer): {
     throw new Error('Buffer too small to be a valid RVFA file');
   }
 
+  // Phase-R: accept legacy 'RVFA' + read-only 'HFAP' on the preamble.
   const magic = buf.subarray(0, 4).toString('ascii');
-  if (magic !== 'RVFA') {
-    throw new Error(`Invalid RVFA magic: expected "RVFA", got "${magic}"`);
+  if (!ACCEPTED_APPLIANCE_MAGICS.has(magic)) {
+    throw new Error(
+      `Invalid RVFA magic: expected one of [${[...ACCEPTED_APPLIANCE_MAGICS].join(', ')}], got "${magic}"`,
+    );
   }
 
   const headerLen = buf.readUInt32LE(8);
@@ -189,6 +193,15 @@ function parseRvfaBinary(buf: Buffer): {
     header = JSON.parse(headerJson) as Record<string, unknown>;
   } catch {
     throw new Error('Failed to parse RVFA header JSON');
+  }
+
+  // Phase-R security gate: preamble magic must match header.magic BEFORE any
+  // digest/signature trust. The Ed25519 digest covers header.magic, not the raw
+  // preamble — so a preamble-only flip on a signed legacy file is rejected here.
+  if (header.magic !== magic) {
+    throw new Error(
+      `RVFA magic mismatch: preamble "${magic}" != header "${String(header.magic)}"`,
+    );
   }
 
   const footer = buf.subarray(buf.length - SHA256_SIZE);
