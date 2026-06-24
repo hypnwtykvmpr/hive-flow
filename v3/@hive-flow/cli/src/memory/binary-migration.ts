@@ -220,7 +220,8 @@ export class BinaryMigrator {
 
   /**
    * Detect file format by magic bytes.
-   * - RVF\0 (0x52 0x56 0x46 0x00) -> 'rvf'
+   * - RVF\0 (0x52 0x56 0x46 0x00) -> 'rvf' (legacy)
+   * - HFDB  (0x48 0x46 0x44 0x42) -> 'rvf' (Phase-R read-accepted)
    * - SQLi  (0x53 0x51 0x4C 0x69) -> 'sqlite'
    * - Leading [ or {              -> 'json'
    */
@@ -231,6 +232,8 @@ export class BinaryMigrator {
       const buf = Buffer.alloc(16);
       await fd.read(buf, 0, 16, 0);
       if (buf[0] === 0x52 && buf[1] === 0x56 && buf[2] === 0x46 && buf[3] === 0x00) return 'rvf';
+      // Phase-R: HFDB is the read-accepted memory magic (legacy RVF\0 above).
+      if (buf[0] === 0x48 && buf[1] === 0x46 && buf[2] === 0x44 && buf[3] === 0x42) return 'rvf';
       if (buf[0] === 0x53 && buf[1] === 0x51 && buf[2] === 0x4C && buf[3] === 0x69) return 'sqlite';
       const head = buf.toString('utf-8').trimStart();
       if (head.startsWith('[') || head.startsWith('{')) return 'json';

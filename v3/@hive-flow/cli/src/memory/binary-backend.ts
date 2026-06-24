@@ -47,6 +47,15 @@ interface BinaryHeader {
 }
 
 const MAGIC = 'RVF\0';
+/** Phase-R read-accepted memory magic (brand-free). Writers stay legacy 'RVF\0'. */
+const HFDB_MAGIC = 'HFDB';
+/**
+ * Preamble magics accepted on READ (Phase-R dual-read). Writers continue to
+ * emit legacy 'RVF\0'. The on-disk preamble magic and the parsed header.magic
+ * must form a matching pair — a mismatch is treated as corrupt and never
+ * silently loaded (loadFromDisk enforces this before any entry is trusted).
+ */
+const ACCEPTED_MEMORY_MAGICS: ReadonlySet<string> = new Set([MAGIC, HFDB_MAGIC]);
 const VERSION = 1;
 const DEFAULT_DIMENSIONS = 1536;
 const DEFAULT_M = 16;
@@ -382,8 +391,9 @@ export class BinaryBackend implements IMemoryBackend {
       const raw = await readFile(this.config.databasePath);
       if (raw.length < 8) return;
 
+      // Phase-R: accept legacy 'RVF\0' + read-only 'HFDB'.
       const magic = String.fromCharCode(raw[0], raw[1], raw[2], raw[3]);
-      if (magic !== MAGIC) return;
+      if (!ACCEPTED_MEMORY_MAGICS.has(magic)) return;
 
       const headerLen = raw.readUInt32LE(4);
       const MAX_HEADER_SIZE = 10 * 1024 * 1024; // 10MB max header
@@ -397,6 +407,13 @@ export class BinaryBackend implements IMemoryBackend {
         return;
       }
       if (!header || typeof header.entryCount !== 'number' || typeof header.version !== 'number') return;
+
+      // Phase-R security gate: preamble magic must match header.magic before any
+      // entry is trusted; a mismatch is corrupt and is never silently loaded.
+      if (header.magic !== magic) {
+        if (this.config.verbose) console.error('[BinaryBackend] RVF magic mismatch (preamble vs header)');
+        return;
+      }
 
       let offset = 8 + headerLen;
       for (let i = 0; i < header.entryCount; i++) {
