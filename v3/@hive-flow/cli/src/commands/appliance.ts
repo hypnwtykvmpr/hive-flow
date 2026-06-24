@@ -104,7 +104,7 @@ const buildCommand: Command = {
 
     const startTime = Date.now();
     const RvfaBuilder = await loadModule<new (o: Record<string, unknown>) => {
-      build: () => Promise<{ totalSize: number; sections: Array<{ id: string; size: number }> }>;
+      build: () => Promise<{ size: number; sections: Array<{ id: string; size: number }> }>;
     }>('../appliance/rvfa-builder.js', 'RvfaBuilder', 'builder');
     if (!RvfaBuilder) return { success: false, exitCode: 1 };
 
@@ -117,7 +117,7 @@ const buildCommand: Command = {
     if (apiKeysPath) steps.splice(steps.length - 1, 0, 'Sealing API key vault');
 
     try {
-      const builder = new RvfaBuilder({ profile, outputPath, arch, models, apiKeysPath });
+      const builder = new RvfaBuilder({ profile, output: outputPath, arch, models, apiKeys: apiKeysPath });
       await runSteps(steps);
       const result = await builder.build();
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -134,7 +134,7 @@ const buildCommand: Command = {
       }
       output.writeln();
       output.printSuccess(`Appliance written to ${output.bold(outputPath)}`);
-      output.printInfo(`Total size: ${output.bold(fmtSize(result.totalSize))}  Duration: ${duration}s`);
+      output.printInfo(`Total size: ${output.bold(fmtSize(result.size))}  Duration: ${duration}s`);
       return { success: true, data: result };
     } catch (err) {
       return fail('Build failed', errMsg(err));
@@ -154,14 +154,14 @@ const inspectCommand: Command = {
     const file = ctx.flags.file as string;
     if (!file) return fail('--file is required');
 
-    const RvfaReader = await loadModule<new (p: string) => { parse: () => Promise<RvfaHeader> }>(
+    const RvfaReader = await loadModule<{ fromFile: (p: string) => Promise<{ getHeader: () => RvfaHeader }> }>(
       '../appliance/rvfa-format.js', 'RvfaReader', 'format');
     if (!RvfaReader) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
-      const reader = new RvfaReader(file);
-      const hdr = await reader.parse();
+      const reader = await RvfaReader.fromFile(file);
+      const hdr = reader.getHeader();
 
       if (ctx.flags.json) {
         output.printJson(hdr);
@@ -229,38 +229,28 @@ const verifyCommand: Command = {
     const quick = ctx.flags.quick as boolean;
     if (!file) return fail('--file is required');
 
-    const RvfaReader = await loadModule<new (p: string) => {
-      parse: () => Promise<RvfaHeader>;
-      verifyChecksums: () => Promise<Array<{ section: string; valid: boolean }>>;
-      verifyFooter: () => Promise<boolean>;
-    }>('../appliance/rvfa-format.js', 'RvfaReader', 'format');
+    const RvfaReader = await loadModule<{ fromFile: (p: string) => Promise<{
+      getHeader: () => RvfaHeader;
+      verify: () => { valid: boolean; errors: string[] };
+    }> }>('../appliance/rvfa-format.js', 'RvfaReader', 'format');
     if (!RvfaReader) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
     try {
       header('RVFA Verification');
-      const reader = new RvfaReader(file);
-      const hdr = await reader.parse();
+      const reader = await RvfaReader.fromFile(file);
+      const hdr = reader.getHeader();
 
-      // Section checksums
-      const s1 = output.createSpinner({ text: 'Verifying section checksums...', spinner: 'dots' });
+      // Integrity: magic, version, per-section checksums, and footer hash
+      const s1 = output.createSpinner({ text: 'Verifying appliance integrity...', spinner: 'dots' });
       s1.start();
-      const checksums = await reader.verifyChecksums();
-      const allValid = checksums.every(r => r.valid);
-      if (allValid) {
-        s1.succeed(`Section checksums: ${output.success('PASS')} (${checksums.length} sections)`);
+      const { valid: integrityOk, errors } = reader.verify();
+      if (integrityOk) {
+        s1.succeed(`Integrity (magic, sections, footer): ${output.success('PASS')} (${hdr.sections?.length ?? 0} sections)`);
       } else {
-        const bad = checksums.filter(r => !r.valid);
-        s1.fail(`Section checksums: ${output.error('FAIL')} (${bad.length} corrupted)`);
-        bad.forEach(f => output.writeln(`  ${output.error('X')} ${f.section}`));
+        s1.fail(`Integrity: ${output.error('FAIL')} (${errors.length} error${errors.length === 1 ? '' : 's'})`);
+        errors.forEach(e => output.writeln(`  ${output.error('X')} ${e}`));
       }
-
-      // Footer hash
-      const s2 = output.createSpinner({ text: 'Verifying footer hash...', spinner: 'dots' });
-      s2.start();
-      const footerOk = await reader.verifyFooter();
-      footerOk ? s2.succeed(`Footer hash: ${output.success('PASS')}`)
-               : s2.fail(`Footer hash: ${output.error('FAIL')}`);
 
       // Capability tests
       let capOk = true;
@@ -274,7 +264,7 @@ const verifyCommand: Command = {
       }
 
       output.writeln();
-      const pass = allValid && footerOk && capOk;
+      const pass = integrityOk && capOk;
       pass ? output.printSuccess('Appliance verification passed')
            : output.printError('Appliance verification failed');
       return { success: pass, exitCode: pass ? 0 : 1 };
@@ -299,11 +289,10 @@ const extractCommand: Command = {
     const sectionFilter = ctx.flags.section as string | undefined;
     if (!file) return fail('--file is required');
 
-    const RvfaReader = await loadModule<new (p: string) => {
-      parse: () => Promise<RvfaHeader>;
-      extractSection: (id: string, dest: string) => Promise<{ size: number }>;
-      extractAll: (dest: string) => Promise<Array<{ id: string; size: number; path: string }>>;
-    }>('../appliance/rvfa-format.js', 'RvfaReader', 'format');
+    const RvfaReader = await loadModule<{ fromFile: (p: string) => Promise<{
+      getHeader: () => RvfaHeader;
+      extractSection: (id: string) => Buffer;
+    }> }>('../appliance/rvfa-format.js', 'RvfaReader', 'format');
     if (!RvfaReader) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
@@ -312,12 +301,20 @@ const extractCommand: Command = {
       const path = await import('path');
 
       header('RVFA Extraction');
-      const reader = new RvfaReader(file);
-      const hdr = await reader.parse();
+      const reader = await RvfaReader.fromFile(file);
+      const hdr = reader.getHeader();
       const dest = path.resolve(outputDir);
       if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
       output.printInfo(`Destination: ${dest}`);
       output.writeln();
+
+      // Real reader returns a decompressed Buffer per section; the command owns the file write.
+      const writeSection = (id: string): { id: string; size: number; path: string } => {
+        const buf = reader.extractSection(id);
+        const outPath = path.join(dest, id);
+        fs.writeFileSync(outPath, buf);
+        return { id, size: buf.length, path: outPath };
+      };
 
       if (sectionFilter) {
         if (!hdr.sections?.find((s: RvfaSection) => s.id === sectionFilter)) {
@@ -327,11 +324,11 @@ const extractCommand: Command = {
         }
         const sp = output.createSpinner({ text: `Extracting ${sectionFilter}...`, spinner: 'dots' });
         sp.start();
-        const r = await reader.extractSection(sectionFilter, dest);
+        const r = writeSection(sectionFilter);
         sp.succeed(`${sectionFilter}: ${fmtSize(r.size)}`);
       } else {
-        const results = await reader.extractAll(dest);
-        for (const r of results) {
+        for (const s of hdr.sections ?? []) {
+          const r = writeSection(s.id);
           output.printSuccess(`${r.id.padEnd(14)} ${fmtSize(r.size).padStart(10)}  -> ${r.path}`);
         }
       }
@@ -365,9 +362,11 @@ const runCommand: Command = {
     const isolation = ctx.flags.isolation as string || 'native';
     if (!file) return fail('--file is required');
 
-    const RvfaRunner = await loadModule<new (o: Record<string, unknown>) => {
-      boot: () => Promise<{ pid?: number; port?: number }>;
-    }>('../appliance/rvfa-runner.js', 'RvfaRunner', 'runner');
+    const RvfaRunner = await loadModule<{ fromFile: (p: string) => Promise<{
+      boot: (o: { mode: string; isolation: string }) => Promise<{
+        exitCode: number; stdout: string; stderr: string; duration: number; pid?: number; port?: number;
+      }>;
+    }> }>('../appliance/rvfa-runner.js', 'RvfaRunner', 'runner');
     if (!RvfaRunner) return { success: false, exitCode: 1 };
     if (!(await requireFile(file))) return { success: false, exitCode: 1 };
 
@@ -384,8 +383,11 @@ const runCommand: Command = {
       ], 250);
       output.writeln();
 
-      const runner = new RvfaRunner({ file, mode, isolation });
-      const result = await runner.boot();
+      const runner = await RvfaRunner.fromFile(file);
+      const result = await runner.boot({ mode, isolation });
+      if (result.exitCode !== 0) {
+        return fail('Boot failed', result.stderr || `exit code ${result.exitCode}`);
+      }
 
       if (mode === 'mcp' && result.port) output.printSuccess(`MCP server listening on port ${result.port}`);
       else if (mode === 'verify') output.printSuccess('Verification complete');
