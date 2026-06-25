@@ -13,7 +13,7 @@ The `@hive-flow/cli/hooks` subpath provides a comprehensive hooks system for int
 - 👷 **Background Workers** - 12 specialized workers for analysis, optimization, and automation
 - 📊 **Statusline Integration** - Real-time status display for Claude Code
 - 🧠 **ReasoningBank Learning** - Intelligent task routing based on learned patterns
-- 🔧 **MCP Tools** - 13 MCP tools for programmatic hooks access
+- 🔧 **MCP Tools** - Programmatic hooks and worker access
 - 🔄 **V2 Compatibility** - Backward compatible with V2 hook commands
 
 ## Installation
@@ -61,13 +61,12 @@ console.log(`Hooks executed: ${result.hooksExecuted}`);
 import { initializeHooks } from '@hive-flow/cli/hooks';
 
 // Initialize full system with background daemons
-const { registry, executor, statusline } = await initializeHooks({
+const { registry, executor } = await initializeHooks({
   enableDaemons: true,
-  enableStatusline: true,
 });
 
-// Generate statusline
-console.log(statusline.generateStatusline());
+// Use the CLI for statusline rendering:
+// hive-flow hooks statusline
 ```
 
 ### Using MCP Tools
@@ -265,7 +264,6 @@ Workers are automatically triggered via the `UserPromptSubmit` hook when prompt 
 | `hooks/pre-command` | Assess command risk |
 | `hooks/post-command` | Record command outcome |
 | `hooks/daemon-status` | Get daemon status |
-| `hooks/statusline` | Get statusline data |
 | `hooks/worker-list` | List all 12 background workers |
 | `hooks/worker-dispatch` | Dispatch a worker by trigger type |
 | `hooks/worker-status` | Get status of running workers |
@@ -350,25 +348,6 @@ class DaemonManager {
 }
 ```
 
-### StatuslineGenerator
-
-```typescript
-class StatuslineGenerator {
-  // Register data sources
-  registerDataSources(sources: StatuslineDataSources): void;
-
-  // Generate output
-  generateData(): StatuslineData;
-  generateStatusline(): string;
-  generateJSON(): string;
-  generateCompactJSON(): string;
-
-  // Configuration
-  updateConfig(config: Partial<StatuslineConfig>): void;
-  invalidateCache(): void;
-}
-```
-
 ## Environment Variables
 
 | Variable | Description | Default |
@@ -377,9 +356,6 @@ class StatuslineGenerator {
 | `HIVE_FLOW_REASONINGBANK_ENABLED` | Enable ReasoningBank | `true` |
 | `HIVE_FLOW_HOOKS_NAMESPACE` | Learning namespace | `hooks-learning` |
 | `HIVE_FLOW_HOOKS_LOG_LEVEL` | Logging level | `info` |
-| `HIVE_FLOW_SHOW_HOOKS_METRICS` | Show hooks in statusline | `true` |
-| `HIVE_FLOW_SHOW_SWARM_ACTIVITY` | Show swarm in statusline | `true` |
-| `HIVE_FLOW_SHOW_PERFORMANCE` | Show performance targets | `true` |
 
 ## Integration with Claude Code
 

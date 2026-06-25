@@ -403,36 +403,11 @@ export const daemonStatusTool: MCPTool = {
   },
 };
 
-/**
- * Statusline data MCP tool
- */
-export const statuslineTool: MCPTool = {
-  name: 'hooks/statusline',
-  description: 'Get statusline data for display.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      format: {
-        type: 'string',
-        enum: ['json', 'text'],
-        description: 'Output format',
-        default: 'json',
-      },
-    },
-  },
-  handler: async (input: Record<string, unknown>): Promise<unknown> => {
-    const { StatuslineGenerator } = await import('../statusline/index.js');
-    const generator = new StatuslineGenerator();
-
-    const format = (input.format as string) || 'json';
-
-    if (format === 'text') {
-      return { statusline: generator.generateStatusline() };
-    }
-
-    return generator.generateData();
-  },
-};
+// The `hooks/statusline` MCP tool was removed in statusboard Slice C. It used
+// the legacy StatuslineGenerator fabricator (ps-aux counts, byte-size derived
+// metrics) which has been deleted. Statusline rendering is served exclusively
+// by the canonical renderer in `src/statusline/claude-code-renderer.ts`, wired
+// through `hive-flow statusline` / `hive-flow hooks statusline`.
 
 /**
  * All hooks MCP tools
@@ -445,7 +420,6 @@ export const hooksMCPTools: MCPTool[] = [
   preCommandTool,
   postCommandTool,
   daemonStatusTool,
-  statuslineTool,
 ];
 
 /**

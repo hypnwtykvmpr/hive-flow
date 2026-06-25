@@ -84,10 +84,6 @@
       "types": "./dist/src/hooks/daemons/index.d.ts",
       "import": "./dist/src/hooks/daemons/index.js"
     },
-    "./hooks/statusline": {
-      "types": "./dist/src/hooks/statusline/index.d.ts",
-      "import": "./dist/src/hooks/statusline/index.js"
-    },
     "./hooks/mcp": {
       "types": "./dist/src/hooks/mcp/index.d.ts",
       "import": "./dist/src/hooks/mcp/index.js"

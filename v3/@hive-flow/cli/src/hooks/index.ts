@@ -58,13 +58,9 @@ export {
   defaultDaemonManager,
 } from './daemons/index.js';
 
-// Statusline
-export {
-  StatuslineGenerator,
-  createShellStatusline,
-  parseStatuslineData,
-  defaultStatuslineGenerator,
-} from './statusline/index.js';
+// Statusline: the legacy fabricator (StatuslineGenerator) was removed in
+// statusboard Slice C. The canonical renderer lives in
+// `src/statusline/claude-code-renderer.ts` and is the only honest source.
 
 // MCP Tools
 export {
@@ -77,7 +73,6 @@ export {
   preCommandTool,
   postCommandTool,
   daemonStatusTool,
-  statuslineTool,
   type MCPTool,
 } from './mcp/index.js';
 
@@ -176,20 +171,16 @@ export const VERSION = '3.0.0-alpha.1';
  */
 export async function initializeHooks(options?: {
   enableDaemons?: boolean;
-  enableStatusline?: boolean;
 }): Promise<{
   registry: import('./registry/index.js').HookRegistry;
   executor: import('./executor/index.js').HookExecutor;
-  statusline: import('./statusline/index.js').StatuslineGenerator;
 }> {
   const { HookRegistry } = await import('./registry/index.js');
   const { HookExecutor } = await import('./executor/index.js');
-  const { StatuslineGenerator } = await import('./statusline/index.js');
   const { DaemonManager, MetricsDaemon, SwarmMonitorDaemon, HooksLearningDaemon } = await import('./daemons/index.js');
 
   const registry = new HookRegistry();
   const executor = new HookExecutor(registry);
-  const statusline = new StatuslineGenerator();
 
   // Start daemons if enabled
   if (options?.enableDaemons !== false) {
@@ -205,7 +196,7 @@ export async function initializeHooks(options?: {
     ]);
   }
 
-  return { registry, executor, statusline };
+  return { registry, executor };
 }
 
 /**
