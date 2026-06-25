@@ -23,7 +23,7 @@ import {
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
-import { normalizeClientKind, operatorSessionEnvKeys, resolveClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
+import { normalizeClientKind, operatorSessionEnvKeys, resolveOwnerClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -683,7 +683,7 @@ export const agentTools: MCPTool[] = [
       const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
       const config = (input.config as Record<string, unknown>) || {};
       const ownerSessionId = resolveSessionId(input, process.env, context);
-      const resolvedOwnerClientKind = resolveClientKind(input, process.env, context);
+      const resolvedOwnerClientKind = resolveOwnerClientKind(input, process.env, context, ownerSessionId);
       const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> =
         resolvedOwnerClientKind === 'unknown' ? 'claude' : resolvedOwnerClientKind;
 

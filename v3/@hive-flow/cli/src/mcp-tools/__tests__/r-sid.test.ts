@@ -48,7 +48,7 @@ vi.mock('../agent-tools.js', () => {
 
 import { queenTools } from '../queen-tools.js';
 import { loadHive } from '../hive-store.js';
-import { normalizeClientKind, resolveClientKind, resolveSessionId } from '../session-id.js';
+import { normalizeClientKind, resolveClientKind, resolveOwnerClientKind, resolveSessionId } from '../session-id.js';
 import { setWorkflowHookDispatcher } from '../workflow-executor.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -382,6 +382,30 @@ describe('R-sid multi-session enabler', () => {
     )).toBe('claude');
 
     expect(resolveClientKind({}, {}, {})).toBe('unknown');
+  });
+
+  it('resolves owner client kind from the chosen owner session before ambient MCP env', () => {
+    expect(resolveOwnerClientKind(
+      { session_id: 'claude-pane-session' },
+      {
+        HIVE_FLOW_CLIENT_KIND: 'codex',
+        CODEX_THREAD_ID: 'codex-thread-from-reconnect',
+        CLAUDE_SESSION_ID: 'claude-pane-session',
+      },
+      { clientKind: 'codex' },
+      'claude-pane-session',
+    )).toBe('claude');
+
+    expect(resolveOwnerClientKind(
+      { session_id: 'codex-thread-from-reconnect' },
+      {
+        HIVE_FLOW_CLIENT_KIND: 'claude',
+        CODEX_THREAD_ID: 'codex-thread-from-reconnect',
+        CLAUDE_SESSION_ID: 'claude-pane-session',
+      },
+      { clientKind: 'claude' },
+      'codex-thread-from-reconnect',
+    )).toBe('codex');
   });
 
   it('stamps ownerSessionId and ignores deprecated pane inputs during queen_mission_assign', async () => {

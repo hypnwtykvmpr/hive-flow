@@ -146,6 +146,53 @@ export function resolveClientKindFromEnv(env: SessionEnv = process.env): Operato
   return 'unknown';
 }
 
+export function resolveClientKindForSessionId(
+  sessionId: unknown,
+  env: SessionEnv = process.env,
+): OperatorClientKind {
+  const ownerSessionId = sanitizeSessionId(sessionId);
+  if (!ownerSessionId) return 'unknown';
+  for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
+    if (sanitizeSessionId(env[key]) === ownerSessionId) return kind;
+  }
+  if (sanitizeSessionId(env.HIVE_FLOW_SESSION_ID) === ownerSessionId) {
+    const explicit = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
+    if (explicit !== 'unknown') return explicit;
+  }
+  return 'unknown';
+}
+
+export function resolveOwnerClientKind(
+  input: Record<string, unknown> | null | undefined = null,
+  env: SessionEnv = process.env,
+  context: Record<string, unknown> | null | undefined = null,
+  ownerSessionId: unknown = null,
+): OperatorClientKind {
+  const inputCandidates: unknown[] = [
+    input?.client_kind,
+    input?.clientKind,
+    input?.ownerClientKind,
+  ];
+  for (const candidate of inputCandidates) {
+    const kind = normalizeClientKind(candidate);
+    if (kind !== 'unknown') return kind;
+  }
+
+  const sessionKind = resolveClientKindForSessionId(ownerSessionId, env);
+  if (sessionKind !== 'unknown') return sessionKind;
+
+  const contextCandidates: unknown[] = [
+    context?.client_kind,
+    context?.clientKind,
+  ];
+  for (const candidate of contextCandidates) {
+    const kind = normalizeClientKind(candidate);
+    if (kind !== 'unknown') return kind;
+  }
+
+  return resolveClientKindFromEnv(env);
+}
+
 export function resolveClientKind(
   input: Record<string, unknown> | null | undefined = null,
   env: SessionEnv = process.env,

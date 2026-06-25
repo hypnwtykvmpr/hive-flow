@@ -10,7 +10,7 @@ import type { MCPTool } from './types.js';
 import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
 import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import type { AgentProvider } from './agent-tools.js';
-import { resolveClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
+import { resolveOwnerClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -247,7 +247,7 @@ export const hiveMindTools: MCPTool[] = [
           error: 'hive-mind_spawn requires an owner session id before creating worker agents.',
         };
       }
-      const resolvedOwnerClientKind = resolveClientKind(input, process.env, context);
+      const resolvedOwnerClientKind = resolveOwnerClientKind(input, process.env, context, ownerSessionId);
       const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> =
         resolvedOwnerClientKind === 'unknown' ? 'claude' : resolvedOwnerClientKind;
 

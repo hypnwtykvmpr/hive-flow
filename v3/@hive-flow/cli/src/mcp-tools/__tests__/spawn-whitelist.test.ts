@@ -16,6 +16,7 @@ const ORIGINAL_ENV = {
   CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
+  HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
 };
 
 function readSpawnedTypes(root: string): string[] {
@@ -52,6 +53,7 @@ describe('agent_spawn canonical roster whitelist', () => {
     delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_SESSION_ID;
     delete process.env.HIVE_FLOW_SESSION_ID;
+    delete process.env.HIVE_FLOW_CLIENT_KIND;
   });
 
   afterEach(() => {
@@ -186,6 +188,27 @@ describe('agent_spawn canonical roster whitelist', () => {
     });
     expect(readAgentRecord(tmpRoot, 'context-codex-owned-agent')?.ownerSessionId).toBe('context-session');
     expect(readAgentRecord(tmpRoot, 'context-codex-owned-agent')?.ownerClientKind).toBe('codex');
+  });
+
+  it('derives ownerClientKind from explicit owner session instead of ambient MCP server env', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    process.env.CODEX_THREAD_ID = 'codex-thread-from-reconnect';
+    process.env.CLAUDE_SESSION_ID = 'claude-pane-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+
+    const result = await spawnTool.handler({
+      agentId: 'claude-session-owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      session_id: 'claude-pane-session',
+    }, { sessionId: 'mcp-transport-session', clientKind: 'codex' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'claude-session-owned-agent',
+    });
+    expect(readAgentRecord(tmpRoot, 'claude-session-owned-agent')?.ownerSessionId).toBe('claude-pane-session');
+    expect(readAgentRecord(tmpRoot, 'claude-session-owned-agent')?.ownerClientKind).toBe('claude');
   });
 
   it('refuses generated MCP transport ids as agent_spawn owner identity', async () => {
