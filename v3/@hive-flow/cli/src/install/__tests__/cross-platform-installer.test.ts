@@ -31,6 +31,7 @@ function makeProjectRoot(): string {
     '.claude/helpers/provider-tracker.cjs',
     '.claude/helpers/client-kind.cjs',
     '.claude/helpers/session-id.cjs',
+    '.claude/helpers/statusline.cjs',
     'v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs',
     'v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json',
   ]) {
@@ -172,7 +173,7 @@ describe('cross-platform enforcement installer', () => {
     })).rejects.toThrow(/credential vault unlock|non-interactive|empty secret/i);
   });
 
-  it('performs engine-only then hooks-only install with the complete 10-file relocated set', async () => {
+  it('performs engine-only then hooks-only install with the complete 11-file relocated set', async () => {
     const projectRoot = makeProjectRoot();
     const homeDir = mkdtempSync(join(tmpdir(), 'hf-p2-e2e-home-'));
     try {
@@ -195,7 +196,7 @@ describe('cross-platform enforcement installer', () => {
       for (const file of ENGINE_TARGET_FILES) {
         expect(existsSync(join(binDir, file)), file).toBe(true);
       }
-      expect(ENGINE_TARGET_FILES).toHaveLength(10);
+      expect(ENGINE_TARGET_FILES).toHaveLength(11);
       expect(existsSync(join(binDir, '.version'))).toBe(true);
       const manifest = JSON.parse(readFileSync(join(binDir, ENGINE_MANIFEST_FILE), 'utf8')) as {
         files: Array<{ name: string; sha256: string }>;

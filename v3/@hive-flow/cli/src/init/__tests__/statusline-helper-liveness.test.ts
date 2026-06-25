@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../../../');
 const rootHelper = resolve(repoRoot, '.claude/helpers/statusline.cjs');
 const packagedHelper = resolve(repoRoot, 'v3/@hive-flow/cli/.claude/helpers/statusline.cjs');
+const hooksStatuslineBin = resolve(repoRoot, 'v3/@hive-flow/cli/bin/hooks-statusline.js');
 
 function stripAnsi(value: string): string {
   // eslint-disable-next-line no-control-regex
@@ -34,6 +35,16 @@ function runStatusline(scriptPath: string, cwd: string): string {
   }));
 }
 
+function expectDelegatingHelper(source: string): void {
+  expect(source).toContain('bin/statusline.js');
+  expect(source).toContain('canonical @hive-flow/cli');
+  expect(source).not.toContain('function getGitInfo');
+  expect(source).not.toContain('v3-progress.json');
+  expect(source).not.toContain('dbSizeKB');
+  expect(source).not.toContain('ADRs');
+  expect(source).not.toContain('ps aux');
+}
+
 describe('generated statusline helper liveness', () => {
   let projectRoot: string;
 
@@ -48,6 +59,18 @@ describe('generated statusline helper liveness', () => {
     writeFileSync(scriptPath, generateStatuslineScript(DEFAULT_INIT_OPTIONS), { mode: 0o755 });
     return scriptPath;
   }
+
+  it('generated helper delegates instead of carrying stale collectors', () => {
+    expectDelegatingHelper(generateStatuslineScript(DEFAULT_INIT_OPTIONS));
+  });
+
+  it('legacy hooks-statusline binary delegates to the canonical renderer', () => {
+    const source = readFileSync(hooksStatuslineBin, 'utf8');
+
+    expect(source).toContain('../dist/src/statusline/claude-code-renderer.js');
+    expect(source).not.toContain('../dist/src/hooks/statusline/index.js');
+    expect(source).not.toContain('new StatuslineGenerator');
+  });
 
   function writeNoLiveStore(): void {
     writeJson(join(projectRoot, '.hive-flow', 'agents', 'store.json'), {
@@ -145,6 +168,7 @@ describe('generated statusline helper liveness', () => {
     writeNoLiveStore();
     writeFreshSwarmMetrics();
 
+    expectDelegatingHelper(readFileSync(rootHelper, 'utf8'));
     const output = runStatusline(rootHelper, projectRoot);
 
     expect(output).not.toContain('Swarm');
@@ -155,6 +179,7 @@ describe('generated statusline helper liveness', () => {
     writeNoLiveStore();
     writeFreshSwarmMetrics();
 
+    expectDelegatingHelper(readFileSync(packagedHelper, 'utf8'));
     const output = runStatusline(packagedHelper, projectRoot);
 
     expect(output).not.toContain('Swarm');

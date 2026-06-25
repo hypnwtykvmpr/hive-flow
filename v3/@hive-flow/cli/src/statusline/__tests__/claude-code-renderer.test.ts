@@ -392,6 +392,24 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(plain).toMatch(/Sessions\s+2/);
   });
 
+  it('inline merge does not render stale cached sessions under a fresh timestamp', async () => {
+    writeSnapshot(fix.projectRoot, {
+      generatedAt: '2020-01-01T00:00:00.000Z',
+      sessions: {
+        active: 2,
+        degraded: 0,
+        stale: 0,
+        byHost: {},
+      },
+    });
+
+    const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
+    const plain = stripAnsi(output);
+
+    expect(plain).not.toMatch(/Sessions\s+2/);
+    expect(plain).toContain('data fresh');
+  });
+
   it('snapshot mode falls back to the global project/session cache from a non-project cwd', async () => {
     const launchCwd = mkdtempSync(join(tmpdir(), 'hf-render-launch-'));
     try {

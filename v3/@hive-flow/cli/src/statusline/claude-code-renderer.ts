@@ -528,13 +528,14 @@ function materializeInlineSnapshot(
  * back to the cache so a transient probe miss never blanks a populated row.
  */
 function mergeSnapshots(cached: StatuslineSnapshotV1, inline: StatuslineSnapshotV1): StatuslineSnapshotV1 {
-  const base = withoutCachedSwarm(cached);
+  const { sessions: _cachedSessions, ...base } = withoutCachedSwarm(cached);
   return {
     ...base,
     ...(inline.git !== undefined ? { git: inline.git } : {}),
     ...(inline.swarm !== undefined ? { swarm: inline.swarm } : {}),
     ...(inline.daemon !== undefined ? { daemon: inline.daemon } : {}),
     ...(inline.scoreboard !== undefined ? { scoreboard: inline.scoreboard } : {}),
+    ...(inline.sessions !== undefined ? { sessions: inline.sessions } : {}),
     ...(inline.memory !== undefined ? { memory: inline.memory } : {}),
     ...(inline.tests !== undefined ? { tests: inline.tests } : {}),
     ...(inline.attention !== undefined ? { attention: inline.attention } : {}),
