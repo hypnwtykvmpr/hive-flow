@@ -169,6 +169,29 @@ function writeSnapshot(projectRoot: string, overrides: Partial<StatuslineSnapsho
   return snapshot;
 }
 
+function writeAgentStore(projectRoot: string, agents: Record<string, Record<string, unknown>>): void {
+  mkdirSync(join(projectRoot, '.hive-flow', 'agents'), { recursive: true });
+  writeFileSync(
+    join(projectRoot, '.hive-flow', 'agents', 'store.json'),
+    JSON.stringify({ version: '1.0', agents }),
+    'utf8',
+  );
+}
+
+function liveAgent(
+  id: string,
+  status: 'busy' | 'idle' = 'busy',
+  agentType = 'coder',
+): Record<string, unknown> {
+  return {
+    agentId: id,
+    agentType,
+    status,
+    ownerSessionId: 'session-a',
+    currentTaskPid: process.pid,
+  };
+}
+
 /**
  * Standard Claude Code stdin payload used by most tests.
  */
@@ -205,6 +228,17 @@ describe('claude-code statusline renderer (Phase 12)', () => {
   // 1. Snapshot mode — happy path
   // -------------------------------------------------------------------------
   it('snapshot mode: pre-populated fresh cache.json drives all rows', async () => {
+    writeAgentStore(fix.projectRoot, {
+      w1: liveAgent('w1'),
+      w2: liveAgent('w2'),
+      w3: liveAgent('w3'),
+      w4: liveAgent('w4'),
+      w5: liveAgent('w5'),
+      w6: liveAgent('w6'),
+      w7: liveAgent('w7'),
+      q1: liveAgent('queen-1', 'busy', 'queen'),
+      q2: liveAgent('queen-2', 'idle', 'queen'),
+    });
     writeSnapshot(fix.projectRoot, {
       git: { branch: 'main', staged: 2, modified: 1, untracked: 0, ahead: 3, behind: 0 },
       scoreboard: {
@@ -213,12 +247,12 @@ describe('claude-code statusline renderer (Phase 12)', () => {
         stale: false,
       },
       swarm: {
-        activeAgents: 7,
+        activeAgents: 99,
         idleAgents: 0,
         queuedAgents: 0,
         maxAgents: 150,
-        activeQueens: 2,
-        executingQueens: 1,
+        activeQueens: 99,
+        executingQueens: 99,
       },
       memory: {
         embeddings: { count: 290, source: 'hivememory', observedAt: new Date().toISOString() },
@@ -275,6 +309,13 @@ describe('claude-code statusline renderer (Phase 12)', () => {
   });
 
   it('swarm slot displays live spawned agents, not executing-only agents, without redundant detail text', async () => {
+    writeAgentStore(fix.projectRoot, {
+      w1: liveAgent('w1', 'idle'),
+      w2: liveAgent('w2', 'idle'),
+      w3: liveAgent('w3', 'idle'),
+      w4: liveAgent('w4', 'idle'),
+      w5: liveAgent('w5', 'idle'),
+    });
     writeSnapshot(fix.projectRoot, {
       swarm: {
         activeAgents: 0,
@@ -302,6 +343,38 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(plain).toMatch(/\[\s*5\/150\]/);
     expect(plain).not.toMatch(/\[\s*0\/150\]/);
     expect(plain).not.toContain('agents off');
+  });
+
+  it('fresh cache cannot render a stale Swarm row without current live process evidence', async () => {
+    writeAgentStore(fix.projectRoot, {
+      ownerless: {
+        agentId: 'ownerless',
+        agentType: 'tester',
+        status: 'busy',
+        currentTaskPid: process.pid,
+      },
+      noPid: {
+        agentId: 'no-pid',
+        agentType: 'tester',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+      },
+    });
+    writeSnapshot(fix.projectRoot, {
+      swarm: {
+        activeAgents: 1,
+        idleAgents: 0,
+        queuedAgents: 0,
+        maxAgents: 150,
+        activeQueens: 0,
+        executingQueens: 0,
+      },
+    });
+
+    const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
+    const plain = stripAnsi(output);
+
+    expect(plain).not.toContain('Swarm');
   });
 
   it('snapshot mode reads sessions instead of treating them as dead cache data', async () => {
@@ -359,6 +432,11 @@ describe('claude-code statusline renderer (Phase 12)', () => {
           executingQueens: 0,
         },
       };
+      writeAgentStore(fix.projectRoot, {
+        w1: liveAgent('w1'),
+        w2: liveAgent('w2'),
+        w3: liveAgent('w3'),
+      });
       writeFileSync(cachePath, JSON.stringify(snapshot), 'utf8');
 
       const origCwd = process.cwd();
@@ -431,7 +509,7 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(record?.mode).toBe('inline-collector');
   });
 
-  it('inline-collector mode renders only owned current-session live agents', async () => {
+  it('inline-collector mode renders all owned live agents regardless of stdin session', async () => {
     mkdirSync(join(fix.projectRoot, '.hive-flow', 'agents'), { recursive: true });
     writeFileSync(
       join(fix.projectRoot, '.hive-flow', 'agents', 'store.json'),
@@ -485,8 +563,8 @@ describe('claude-code statusline renderer (Phase 12)', () => {
 
     expect(plain).toContain('Swarm ◉');
     expect(plain).not.toContain('Swarm ○');
-    expect(plain).toMatch(/\[\s*1\/150\]/);
-    expect(plain).not.toMatch(/\[\s*2\/150\]/);
+    expect(plain).toMatch(/\[\s*2\/150\]/);
+    expect(plain).not.toMatch(/\[\s*1\/150\]/);
     expect(plain).not.toMatch(/\[\s*5\/150\]/);
     expect(plain).not.toContain('unowned');
   });
@@ -742,6 +820,14 @@ describe('claude-code statusline renderer (Phase 12)', () => {
   //     Claude-statusline-design-final-2026-05-20.md §2-§3.
   // -------------------------------------------------------------------------
   it('render output is the documented multi-row box (newlines + separator rules + ordered rows)', async () => {
+    writeAgentStore(fix.projectRoot, {
+      w1: liveAgent('w1'),
+      w2: liveAgent('w2'),
+      w3: liveAgent('w3'),
+      w4: liveAgent('w4'),
+      w5: liveAgent('w5'),
+      q1: liveAgent('queen-1', 'busy', 'queen'),
+    });
     writeSnapshot(fix.projectRoot, {
       git: { branch: 'main', staged: 0, modified: 0, untracked: 0, ahead: 0, behind: 0 },
       scoreboard: {
@@ -1010,6 +1096,37 @@ describe('claude-code statusline renderer (Phase 12)', () => {
   //     back to 'stale'.
   // -------------------------------------------------------------------------
   it('patch C: terminal agents (terminated/failed/complete/cancelled) are dropped from Active row', async () => {
+    writeAgentStore(fix.projectRoot, {
+      w1: liveAgent('W1', 'busy'),
+      w2: {
+        agentId: 'W2',
+        agentType: 'coder',
+        status: 'terminated',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      w3: {
+        agentId: 'W3',
+        agentType: 'tester',
+        status: 'failed',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      w4: {
+        agentId: 'W4',
+        agentType: 'reviewer',
+        status: 'complete',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+      w5: {
+        agentId: 'W5',
+        agentType: 'analyst',
+        status: 'cancelled',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+    });
     writeSnapshot(fix.projectRoot, {
       swarm: {
         activeAgents: 1,

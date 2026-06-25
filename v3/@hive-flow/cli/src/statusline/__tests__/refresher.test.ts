@@ -848,6 +848,73 @@ describe('refreshStatuslineSnapshot', () => {
     }
   });
 
+  it('ignores ambient operator env when no stdin is provided for swarm and global cache keying', async () => {
+    const home = mkdtempSync(join(tmpdir(), 'hf-refresher-ambient-home-'));
+    const origHome = process.env.HIVE_FLOW_HOME;
+    const origClientKind = process.env.HIVE_FLOW_CLIENT_KIND;
+    const origCodexThread = process.env.CODEX_THREAD_ID;
+    const origCodexSession = process.env.CODEX_SESSION_ID;
+    process.env.HIVE_FLOW_HOME = home;
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+    process.env.CODEX_THREAD_ID = 'ambient-codex-thread';
+    process.env.CODEX_SESSION_ID = 'ambient-codex-session';
+    try {
+      populateAllLedgers(root);
+      mkdirSync(join(root, '.hive-flow', 'agents'), { recursive: true });
+      writeFileSync(
+        join(root, '.hive-flow', 'agents', 'store.json'),
+        JSON.stringify({
+          version: '1.0',
+          agents: {
+            liveClaude: {
+              agentId: 'live-claude',
+              agentType: 'tester',
+              status: 'busy',
+              ownerSessionId: 'claude-session-a',
+              currentTaskPid: process.pid,
+            },
+          },
+        }),
+        'utf8',
+      );
+
+      const snapshot = await refreshStatuslineSnapshot({
+        projectRoot: root,
+        now: FIXED_NOW,
+        force: true,
+      });
+
+      expect(snapshot.swarm?.activeAgents).toBe(1);
+
+      const defaultPaths = globalStatuslinePaths(
+        snapshot.projectKey,
+        sessionKeyFor(undefined, {}),
+        { HIVE_FLOW_HOME: home } as NodeJS.ProcessEnv,
+      );
+      const ambientPaths = globalStatuslinePaths(
+        snapshot.projectKey,
+        sessionKeyFor(undefined, {
+          CODEX_SESSION_ID: 'ambient-codex-session',
+          HIVE_FLOW_CLIENT_KIND: 'codex',
+        } as NodeJS.ProcessEnv),
+        { HIVE_FLOW_HOME: home } as NodeJS.ProcessEnv,
+      );
+
+      expect(existsSync(defaultPaths.cache)).toBe(true);
+      expect(existsSync(ambientPaths.cache)).toBe(false);
+    } finally {
+      if (origHome !== undefined) process.env.HIVE_FLOW_HOME = origHome;
+      else delete process.env.HIVE_FLOW_HOME;
+      if (origClientKind !== undefined) process.env.HIVE_FLOW_CLIENT_KIND = origClientKind;
+      else delete process.env.HIVE_FLOW_CLIENT_KIND;
+      if (origCodexThread !== undefined) process.env.CODEX_THREAD_ID = origCodexThread;
+      else delete process.env.CODEX_THREAD_ID;
+      if (origCodexSession !== undefined) process.env.CODEX_SESSION_ID = origCodexSession;
+      else delete process.env.CODEX_SESSION_ID;
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   // -------------------------------------------------------------------------
   // Additional: rendererHints are stamped from config
   // -------------------------------------------------------------------------

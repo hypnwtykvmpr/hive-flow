@@ -3,7 +3,7 @@ import fc from 'fast-check';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { normalizeClientKind, operatorSessionEnvKeys } from '../mcp-tools/session-id.js';
+import { normalizeClientKind, operatorSessionEnvKeys, resolveClientKindFromEnv } from '../mcp-tools/session-id.js';
 import { propertyRunsFromEnv } from './property-runs.js';
 
 const PROPERTY_RUNS = propertyRunsFromEnv(200);
@@ -14,6 +14,7 @@ const requireFromHere = createRequire(import.meta.url);
 const cjsClientKind = requireFromHere(resolve(repoRoot, '.claude/helpers/client-kind.cjs')) as {
   normalizeClientKind: (value: unknown) => string | null;
   operatorSessionEnvKeys: (kind?: string | null) => string[];
+  clientKindFromEnv: (env?: Record<string, string | undefined>) => string | null;
 };
 
 const ALIASES: Array<{ alias: string; kind: string }> = [
@@ -67,5 +68,29 @@ describe('operator parent client kind aliases', () => {
       expect(cjsClientKind.operatorSessionEnvKeys(kind)).toEqual(operatorSessionEnvKeys(kind as never));
     }
     expect(cjsClientKind.operatorSessionEnvKeys()).toEqual(operatorSessionEnvKeys());
+  });
+
+  it('aligns explicit client kind with the session env that actually owns the agent', () => {
+    const staleCodexInClaudeEnv = {
+      HIVE_FLOW_CLIENT_KIND: 'codex',
+      CLAUDE_SESSION_ID: 'claude-session',
+    };
+    expect(resolveClientKindFromEnv(staleCodexInClaudeEnv)).toBe('claude');
+    expect(cjsClientKind.clientKindFromEnv(staleCodexInClaudeEnv)).toBe('claude');
+
+    const realCodexEnv = {
+      HIVE_FLOW_CLIENT_KIND: 'codex',
+      CODEX_THREAD_ID: 'codex-session',
+      CLAUDE_SESSION_ID: 'claude-session',
+    };
+    expect(resolveClientKindFromEnv(realCodexEnv)).toBe('codex');
+    expect(cjsClientKind.clientKindFromEnv(realCodexEnv)).toBe('codex');
+
+    const providerSessionEnv = {
+      HIVE_FLOW_CLIENT_KIND: 'opencode',
+      HIVE_FLOW_SESSION_ID: 'explicit-provider-session',
+    };
+    expect(resolveClientKindFromEnv(providerSessionEnv)).toBe('opencode');
+    expect(cjsClientKind.clientKindFromEnv(providerSessionEnv)).toBe('opencode');
   });
 });

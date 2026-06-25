@@ -161,6 +161,35 @@ describe('statusline R7 swarm session tag', () => {
     expect(withHives).toBe(baseline);
   });
 
+  it('does not let ambient Codex env hide live agents when stdin has no session id', async () => {
+    process.env.CODEX_THREAD_ID = 'ambient-codex-session';
+    writeSwarmStore(projectRoot, 'sid-current');
+
+    const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot), projectRoot));
+
+    expect(row).toContain('Swarm ◉');
+    expect(row).toMatch(/\[\s*1\/150\]/);
+  });
+
+  it('does not let ambient Codex env hide live agents when stdin is absent', async () => {
+    process.env.CODEX_THREAD_ID = 'ambient-codex-session';
+    writeSwarmStore(projectRoot, 'sid-current');
+
+    const row = swarmRow(await renderClaudeCodeStatusline(undefined, projectRoot));
+
+    expect(row).toContain('Swarm ◉');
+    expect(row).toMatch(/\[\s*1\/150\]/);
+  });
+
+  it('keeps the live Swarm row visible even when stdin has a different session id', async () => {
+    writeSwarmStore(projectRoot, 'sid-current');
+
+    const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-other'), projectRoot));
+
+    expect(row).toContain('Swarm ◉');
+    expect(row).toMatch(/\[\s*1\/150\]/);
+  });
+
   it('leaves the swarm row unchanged when every active hive belongs to the current session', async () => {
     writeSwarmStore(projectRoot, 'sid-current');
     const baseline = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));

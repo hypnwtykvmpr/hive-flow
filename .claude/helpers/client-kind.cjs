@@ -90,7 +90,18 @@ function envSessionValue(env = process.env) {
 
 function clientKindFromEnv(env = process.env) {
   const explicit = normalizeClientKind(env && env.HIVE_FLOW_CLIENT_KIND);
-  if (explicit) return explicit;
+  if (explicit) {
+    const explicitHasSession = operatorSessionEnvKeys(explicit)
+      .some((key) => Boolean(stringValue(env && env[key])));
+    if (explicitHasSession || stringValue(env && env.HIVE_FLOW_SESSION_ID)) return explicit;
+
+    const sessionKinds = new Set();
+    for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
+      if (stringValue(env && env[key])) sessionKinds.add(kind);
+    }
+    if (sessionKinds.size === 1) return Array.from(sessionKinds)[0] || explicit;
+    return explicit;
+  }
   for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
     if (stringValue(env && env[key])) return kind;
   }

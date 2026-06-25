@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-06-24T06:41:24.125Z",
+  "syncedAt": "2026-06-24T23:42:01.645Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -28,7 +28,7 @@
     },
     {
       "name": "client-kind.cjs",
-      "sha256": "f4cb22beed7865520dbfd2a6f258db765d3ab611f8aeb544d56db078c77e1ba2"
+      "sha256": "2e1122b887183d1999191631ba220283a492b4069dabdb99ae9ae7b404dbc2bc"
     },
     {
       "name": "session-id.cjs",

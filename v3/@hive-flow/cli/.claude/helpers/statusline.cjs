@@ -291,26 +291,73 @@ function getSecurityStatus() {
 }
 
 // Swarm status (pure file reads, NO ps aux)
+function isPositiveInteger(value) {
+  return typeof value === 'number' && Number.isInteger(value) && value > 1;
+}
+
+function isPidDefinitelyDead(pid) {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return err && err.code === 'ESRCH';
+  }
+}
+
+function hasLiveProcessEvidence(agent) {
+  return isPositiveInteger(agent.currentTaskPid) && !isPidDefinitelyDead(agent.currentTaskPid);
+}
+
+function hasOwnerSession(agent) {
+  return typeof agent.ownerSessionId === 'string' && agent.ownerSessionId.trim().length > 0;
+}
+
+function readStoreAgents() {
+  try {
+    const storePath = path.join(CWD, '.hive-flow', 'agents', 'store.json');
+    if (!fs.existsSync(storePath)) return [];
+    const store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+    if (store?.agents && typeof store.agents === 'object' && !Array.isArray(store.agents)) {
+      return Object.values(store.agents).filter(v => v && typeof v === 'object');
+    }
+    if (Array.isArray(store?.agents)) return store.agents;
+    if (Array.isArray(store?.entries)) return store.entries;
+    if (Array.isArray(store)) return store;
+    if (store && typeof store === 'object') {
+      return Object.values(store).filter(v => v && typeof v === 'object' && 'status' in v);
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
 function getSwarmStatus() {
-  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
-  if (activityData?.swarm) {
-    return {
-      activeAgents: activityData.swarm.agent_count || 0,
-      maxAgents: CONFIG.maxAgents,
-      coordinationActive: activityData.swarm.coordination_active || activityData.swarm.active || false,
-    };
+  const storeAgents = readStoreAgents();
+  if (storeAgents.length > 0) {
+    const live = storeAgents.filter(agent =>
+      agent.status !== 'terminated' &&
+      agent.status !== 'failed' &&
+      hasOwnerSession(agent) &&
+      hasLiveProcessEvidence(agent)
+    );
+    if (live.length > 0) {
+      const executing = live.filter(agent => agent.status === 'running' || agent.status === 'busy');
+      const queens = live.filter(agent => agent.agentType === 'queen');
+      const executingQueens = queens.filter(agent => agent.status === 'running' || agent.status === 'busy');
+      const workers = live.filter(agent => agent.agentType !== 'queen');
+      return {
+        activeAgents: workers.length,
+        executingAgents: executing.length - executingQueens.length,
+        activeQueens: queens.length,
+        executingQueens: executingQueens.length,
+        maxAgents: CONFIG.maxAgents,
+        coordinationActive: true,
+      };
+    }
   }
 
-  const progressData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'v3-progress.json'));
-  if (progressData?.swarm) {
-    return {
-      activeAgents: progressData.swarm.activeAgents || progressData.swarm.agent_count || 0,
-      maxAgents: progressData.swarm.totalAgents || CONFIG.maxAgents,
-      coordinationActive: progressData.swarm.active || (progressData.swarm.activeAgents > 0),
-    };
-  }
-
-  return { activeAgents: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false };
+  // Do not fall back to aggregate metrics. Swarm is a live-process surface;
+  // metrics can be fresh while the agent processes they counted are gone.
+  return { activeAgents: 0, executingAgents: 0, activeQueens: 0, executingQueens: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false };
 }
 
 // System metrics (uses process.memoryUsage() — no shell spawn)
@@ -674,15 +721,28 @@ function generateStatusline() {
   );
 
   // Line 2: Swarm + Hooks + CVE + Memory + Intelligence
-  const swarmInd = swarm.coordinationActive ? `${c.brightGreen}\u25C9${c.reset}` : `${c.dim}\u25CB${c.reset}`;
-  const agentsColor = swarm.activeAgents > 0 ? c.brightGreen : c.red;
+  const swarmExecuting = (swarm.executingAgents || 0) > 0;
+  const swarmHasAgents = swarm.activeAgents > 0;
+  const swarmInd = swarmExecuting
+    ? `${c.brightGreen}\u25C9${c.reset}`
+    : swarmHasAgents
+      ? `${c.brightYellow}\u25CB${c.reset}`
+      : `${c.dim}\u25CB${c.reset}`;
+  const agentsColor = swarmExecuting ? c.brightGreen : swarmHasAgents ? c.brightYellow : c.dim;
+  const queenCount = swarm.activeQueens || 0;
+  const queenSegment = queenCount > 0
+    ? ` ${swarm.executingQueens > 0 ? c.brightCyan : c.brightYellow}\u265B${queenCount}${c.reset}`
+    : '';
+  const swarmSegment = swarmHasAgents || queenCount > 0
+    ? `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${queenSegment}  `
+    : '';
   const secIcon = security.status === 'CLEAN' ? '\uD83D\uDFE2' : security.status === 'IN_PROGRESS' ? '\uD83D\uDFE1' : '\uD83D\uDD34';
   const secColor = security.status === 'CLEAN' ? c.brightGreen : security.status === 'IN_PROGRESS' ? c.brightYellow : c.brightRed;
   const hooksColor = hooks.enabled > 0 ? c.brightGreen : c.dim;
   const intellColor = system.intelligencePct >= 80 ? c.brightGreen : system.intelligencePct >= 40 ? c.brightYellow : c.dim;
 
   lines.push(
-    `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]  ` +
+    swarmSegment +
     `${c.brightPurple}\uD83D\uDC65 ${system.subAgents}${c.reset}    ` +
     `${c.brightBlue}\uD83E\uDE9D ${hooksColor}${hooks.enabled}${c.reset}/${c.brightWhite}${hooks.total}${c.reset}    ` +
     `${secIcon} ${secColor}CVE ${security.cvesFixed}${c.reset}/${c.brightWhite}${security.totalCves}${c.reset}    ` +

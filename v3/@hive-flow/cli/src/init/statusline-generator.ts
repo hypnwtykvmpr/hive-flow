@@ -287,9 +287,30 @@ function getSecurityStatus() {
 // Swarm status (pure file reads, NO ps aux).
 // Read order: live agent store first (always current, no staleness window),
 // then metrics files as fallback (rejected if older than 10 min) so stale
-// writes can't mask an active live hive. Counts non-terminated/non-failed
-// agents including idle workers — idle is the steady state of an active
-// hive between tasks, not a "never active" default.
+// writes can't mask an active live hive. Counts only owned agents with live
+// process evidence; completed/idle records without a live pid are retained in
+// store.json for history but must never keep the live Swarm row visible.
+function isPositiveInteger(value) {
+  return typeof value === 'number' && Number.isInteger(value) && value > 1;
+}
+
+function isPidDefinitelyDead(pid) {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return err && err.code === 'ESRCH';
+  }
+}
+
+function hasLiveProcessEvidence(agent) {
+  return isPositiveInteger(agent.currentTaskPid) && !isPidDefinitelyDead(agent.currentTaskPid);
+}
+
+function hasOwnerSession(agent) {
+  return typeof agent.ownerSessionId === 'string' && agent.ownerSessionId.trim().length > 0;
+}
+
 function getSwarmStatus() {
   // PRIMARY: live agent store written by MCP agent_spawn / queen_mission_assign.
   // Returns both 'active' (non-terminated) and 'executing' (running/busy) so the
@@ -306,8 +327,13 @@ function getSwarmStatus() {
       } else if (store && Array.isArray(store.entries)) {
         agents = store.entries;
       }
-      const active = agents.filter(a => a.status !== 'terminated' && a.status !== 'failed');
-      const executing = agents.filter(a => a.status === 'running' || a.status === 'busy');
+      const active = agents.filter(a =>
+        a.status !== 'terminated' &&
+        a.status !== 'failed' &&
+        hasOwnerSession(a) &&
+        hasLiveProcessEvidence(a)
+      );
+      const executing = active.filter(a => a.status === 'running' || a.status === 'busy');
       if (active.length > 0) {
         return {
           activeAgents: active.length,
@@ -319,35 +345,9 @@ function getSwarmStatus() {
     }
   } catch { /* fall through to metrics-file fallbacks */ }
 
-  const FRESH_MS = 10 * 60 * 1000;
-  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
-  if (activityData && activityData.swarm) {
-    const t = activityData.lastUpdated ? Date.parse(activityData.lastUpdated) : 0;
-    if (!t || Date.now() - t < FRESH_MS) {
-      const count = activityData.swarm.agent_count || 0;
-      return {
-        activeAgents: count,
-        executingAgents: count,
-        maxAgents: CONFIG.maxAgents,
-        coordinationActive: activityData.swarm.coordination_active || activityData.swarm.active || false,
-      };
-    }
-  }
-
-  const progressData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'v3-progress.json'));
-  if (progressData && progressData.swarm && progressData.lastUpdated) {
-    const t = Date.parse(progressData.lastUpdated);
-    if (Date.now() - t < FRESH_MS) {
-      const count = progressData.swarm.activeAgents || progressData.swarm.agent_count || 0;
-      return {
-        activeAgents: count,
-        executingAgents: count,
-        maxAgents: progressData.swarm.totalAgents || CONFIG.maxAgents,
-        coordinationActive: progressData.swarm.active || (progressData.swarm.activeAgents > 0),
-      };
-    }
-  }
-
+  // Do not fall back to aggregate metrics here. Swarm is a live-process
+  // surface; metrics files can be fresh and still describe agents that have
+  // already exited.
   return { activeAgents: 0, executingAgents: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false };
 }
 
@@ -719,9 +719,12 @@ function generateStatusline() {
   const secColor = security.status === 'CLEAN' ? c.brightGreen : security.status === 'IN_PROGRESS' ? c.warn : c.brightRed;
   const hooksColor = hooks.enabled > 0 ? c.brightGreen : c.dim;
   const intellColor = system.intelligencePct >= 80 ? c.brightGreen : system.intelligencePct >= 40 ? c.warn : c.dim;
+  const swarmSegment = swarmHasAgents || queenCount > 0
+    ? c.warn + '\\uD83E\\uDD16 Swarm' + c.reset + '  ' + swarmInd + ' [' + agentsColor + String(swarm.activeAgents).padStart(2) + c.reset + '/' + c.brightWhite + swarm.maxAgents + c.reset + ']' + queenSegment + '  '
+    : '';
 
   lines.push(
-    c.warn + '\\uD83E\\uDD16 Swarm' + c.reset + '  ' + swarmInd + ' [' + agentsColor + String(swarm.activeAgents).padStart(2) + c.reset + '/' + c.brightWhite + swarm.maxAgents + c.reset + ']' + queenSegment + '  ' +
+    swarmSegment +
     c.brightPurple + '\\uD83D\\uDC65 ' + system.subAgents + c.reset + '    ' +
     c.brightBlue + '\\uD83E\\uDE9D ' + hooksColor + hooks.enabled + c.reset + '/' + c.brightWhite + hooks.total + c.reset + '    ' +
     secIcon + ' ' + secColor + 'CVE ' + security.cvesFixed + c.reset + '/' + c.brightWhite + security.totalCves + c.reset + '    ' +

@@ -64,6 +64,7 @@ interface AgentRecord {
   model?: string;
   ownerSessionId?: string;
   ownerClientKind?: string;
+  currentTaskPid?: number;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -533,6 +534,49 @@ describe('agent_task_result handler', () => {
     expect(result.result).toEqual(resultData);
   });
 
+  it('clears a stale task pid when a result is consumed after the agent was already idled', async () => {
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'idle', currentTaskPid: LIVE_PID });
+    let currentStore = makeStore({ [AGENT_ID]: agent });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
+    const resultData = { success: true, response: 'already idled before consumption' };
+
+    baseExistsMock([`${TASK_ID}.json`, `${TASK_ID}.result.json`]);
+
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(currentStore);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.result.json`)) return JSON.stringify(resultData);
+      return JSON.stringify({});
+    });
+
+    const tmpWrites = new Map<string, string>();
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
+      if (typeof p === 'string' && p.includes('.tmp.')) {
+        tmpWrites.set(p, data);
+      }
+    });
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        currentStore = JSON.parse(data);
+        tmpWrites.delete(src);
+      }
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (unlinkSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      status: 'completed',
+    });
+    expect(currentStore.agents[AGENT_ID].status).toBe('idle');
+    expect(currentStore.agents[AGENT_ID].currentTaskPid).toBeUndefined();
+  });
+
   it('does not read the observability journal to decide terminal result authority', async () => {
     const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
@@ -682,6 +726,53 @@ describe('agent_task_result handler', () => {
     expect(result.taskId).toBe(TASK_ID);
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.error).toMatch(/Process exited without producing a result/i);
+
+    killSpy.mockRestore();
+  });
+
+  it('clears a stale task pid when a dead child is observed after the agent was already idled', async () => {
+    const DEAD_PID = 99999;
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'idle', currentTaskPid: DEAD_PID });
+    let currentStore = makeStore({ [AGENT_ID]: agent });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: DEAD_PID };
+
+    baseExistsMock([`${TASK_ID}.json`]);
+
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(currentStore);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      return JSON.stringify({});
+    });
+
+    const tmpWrites = new Map<string, string>();
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
+      if (typeof p === 'string' && p.includes('.tmp.')) {
+        tmpWrites.set(p, data);
+      }
+    });
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        currentStore = JSON.parse(data);
+        tmpWrites.delete(src);
+      }
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid: number, _sig: number | NodeJS.Signals) => {
+      throw Object.assign(new Error('no such process'), { code: 'ESRCH' });
+    });
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      taskId: TASK_ID,
+      agentId: AGENT_ID,
+      status: 'failed',
+    });
+    expect(currentStore.agents[AGENT_ID].status).toBe('idle');
+    expect(currentStore.agents[AGENT_ID].currentTaskPid).toBeUndefined();
 
     killSpy.mockRestore();
   });

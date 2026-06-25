@@ -127,7 +127,18 @@ export function normalizeClientKind(value: unknown): OperatorClientKind {
 
 export function resolveClientKindFromEnv(env: SessionEnv = process.env): OperatorClientKind {
   const explicit = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
-  if (explicit !== 'unknown') return explicit;
+  if (explicit !== 'unknown') {
+    const explicitHasSession = operatorSessionEnvKeys(explicit)
+      .some((key) => Boolean(asNonEmptyString(env[key])));
+    if (explicitHasSession || asNonEmptyString(env.HIVE_FLOW_SESSION_ID)) return explicit;
+
+    const sessionKinds = new Set<Exclude<OperatorClientKind, 'unknown'>>();
+    for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
+      if (asNonEmptyString(env[key])) sessionKinds.add(kind);
+    }
+    if (sessionKinds.size === 1) return [...sessionKinds][0] ?? explicit;
+    return explicit;
+  }
   for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
     if (asNonEmptyString(env[key])) return kind;
   }
@@ -146,7 +157,6 @@ export function resolveClientKind(
     input?.ownerClientKind,
     context?.client_kind,
     context?.clientKind,
-    env.HIVE_FLOW_CLIENT_KIND,
   ];
   for (const candidate of candidates) {
     const kind = normalizeClientKind(candidate);

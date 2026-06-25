@@ -1581,13 +1581,19 @@ export const agentTools: MCPTool[] = [
         tracking.status = 'completed';
         writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
 
-        // Reset agent to idle
+        // Reset agent to idle and clear the (now-stale) task pid. The result is
+        // consumed, so currentTaskPid is definitively dead. Clearing only on the
+        // busy->idle transition leaves a dead pid behind whenever another path
+        // (reaper/hook/idle-reconcile) already idled the agent without clearing
+        // it — which makes read-side liveness count a completed agent as live.
         await withBridgeLock(tracking.agentId, () => {
           const store = loadAgentStore();
           const agent = store.agents[tracking.agentId];
-          if (agent && agent.status === 'busy') {
-            transitionAgent(agent, 'idle');
-            saveAgentStore(store);
+          if (agent) {
+            let changed = false;
+            if (agent.status === 'busy') { transitionAgent(agent, 'idle'); changed = true; }
+            if (agent.currentTaskPid !== undefined) { delete agent.currentTaskPid; changed = true; }
+            if (changed) saveAgentStore(store);
           }
         });
 
@@ -1648,13 +1654,18 @@ export const agentTools: MCPTool[] = [
           tracking.status = 'failed';
           writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
 
-          // Reset agent to idle
+          // Reset agent to idle and clear the stale (dead) task pid. The child
+          // exited without a result; a lingering currentTaskPid must not be
+          // counted as live by the statusboard even if another path already
+          // idled the agent without clearing it.
           await withBridgeLock(tracking.agentId, () => {
             const store = loadAgentStore();
             const agent = store.agents[tracking.agentId];
-            if (agent && agent.status === 'busy') {
-              transitionAgent(agent, 'idle');
-              saveAgentStore(store);
+            if (agent) {
+              let changed = false;
+              if (agent.status === 'busy') { transitionAgent(agent, 'idle'); changed = true; }
+              if (agent.currentTaskPid !== undefined) { delete agent.currentTaskPid; changed = true; }
+              if (changed) saveAgentStore(store);
             }
           });
 

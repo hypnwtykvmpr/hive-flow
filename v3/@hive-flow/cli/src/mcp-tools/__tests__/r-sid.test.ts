@@ -329,6 +329,18 @@ describe('R-sid multi-session enabler', () => {
 
     expect(resolveClientKind(
       {},
+      { HIVE_FLOW_CLIENT_KIND: 'codex', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('claude');
+
+    expect(resolveClientKind(
+      {},
+      { HIVE_FLOW_CLIENT_KIND: 'codex', CODEX_THREAD_ID: 'codex-thread', CLAUDE_SESSION_ID: 'claude-session' },
+      {},
+    )).toBe('codex');
+
+    expect(resolveClientKind(
+      {},
       { CODEX_THREAD_ID: 'codex-thread', CLAUDE_SESSION_ID: 'claude-session' },
       {},
     )).toBe('codex');

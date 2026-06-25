@@ -61,6 +61,7 @@ import { sessionKeyFor } from '../shared/index.js';
 import { resolveSessionId } from '../mcp-tools/session-id.js';
 import { parseStatuslineConfig, type StatuslineConfig } from './config.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
+import { collectSwarm } from './collectors/swarm.js';
 import { collectEnforcementStatus, type EnforcementLiveStatus } from './enforcement-installed.js';
 import {
   type LastRenderMode,
@@ -353,11 +354,13 @@ function numberAt(value: unknown, path: ReadonlyArray<string>): number | undefin
 }
 
 function resolveStatuslineSessionId(stdin: Record<string, unknown> | undefined): string | undefined {
-  return resolveSessionId(stdin ?? null, process.env) ?? undefined;
+  if (stdin === undefined) return undefined;
+  return resolveSessionId(stdin, {}) ?? undefined;
 }
 
 function resolveStatuslineSessionKey(stdin: Record<string, unknown> | undefined): string {
-  return sessionKeyFor(stdin ?? {}, process.env);
+  if (stdin === undefined) return sessionKeyFor({}, {});
+  return sessionKeyFor(stdin, {});
 }
 
 // ---------------------------------------------------------------------------
@@ -385,26 +388,25 @@ async function resolveModeForRender(
   const paths = statuslinePaths(scope.projectRoot);
   const globalPaths = globalStatuslinePaths(scope.projectKey, resolveStatuslineSessionKey(stdin));
   const hiveFlowExists = existsSync(paths.root);
-  const sessionId = resolveStatuslineSessionId(stdin);
-
   // Try the snapshot path first when cache.json is present.
   const cached = await tryReadSnapshot(paths.cache).catch(() => undefined);
   if (cached !== undefined) {
     if (isSnapshotFreshEnough(cached, snapshotMaxAgeMs)) {
-      // Snapshot mode — happy path.
-      return { snapshot: cached, mode: 'snapshot' };
+      // Snapshot mode — happy path for stable rows. Swarm is live-process
+      // state, so a fresh cache still cannot keep dead/no-PID records visible.
+      return { snapshot: await revalidateCachedSwarm(scope, cached), mode: 'snapshot' };
     }
     // Snapshot present but stale. Fall through to inline-collector if
     // `.hive-flow/` exists; otherwise stick with the stale snapshot as
     // header-only-style data (we still prefer ANY cache over inventing rows).
     if (hiveFlowExists) {
-      const inline = await tryInlineCollect(scope, deadlineMs, sessionId);
+      const inline = await tryInlineCollect(scope, deadlineMs);
       if (inline !== undefined) {
         return { snapshot: mergeSnapshots(cached, inline), mode: 'inline-collector' };
       }
     }
     // No inline available — degrade to header-only using cached header bits.
-    return { snapshot: cached, mode: 'header-only' };
+    return { snapshot: withoutCachedSwarm(cached), mode: 'header-only' };
   }
 
   // No project-local cache. Fall back to the global project/session index so
@@ -413,15 +415,15 @@ async function resolveModeForRender(
   const globalCached = await tryReadSnapshot(globalPaths.cache).catch(() => undefined);
   if (globalCached !== undefined) {
     if (isSnapshotFreshEnough(globalCached, snapshotMaxAgeMs)) {
-      return { snapshot: globalCached, mode: 'snapshot' };
+      return { snapshot: await revalidateCachedSwarm(scope, globalCached), mode: 'snapshot' };
     }
     if (hiveFlowExists) {
-      const inline = await tryInlineCollect(scope, deadlineMs, sessionId);
+      const inline = await tryInlineCollect(scope, deadlineMs);
       if (inline !== undefined) {
         return { snapshot: mergeSnapshots(globalCached, inline), mode: 'inline-collector' };
       }
     }
-    return { snapshot: globalCached, mode: 'header-only' };
+    return { snapshot: withoutCachedSwarm(globalCached), mode: 'header-only' };
   }
 
   // No cache anywhere. If `.hive-flow/` is absent, header-only.
@@ -433,7 +435,7 @@ async function resolveModeForRender(
   }
 
   // `.hive-flow/` present, no cache: inline-collector mode.
-  const inline = await tryInlineCollect(scope, deadlineMs, sessionId);
+  const inline = await tryInlineCollect(scope, deadlineMs);
   if (inline !== undefined) {
     return { snapshot: inline, mode: 'inline-collector' };
   }
@@ -468,14 +470,12 @@ function isSnapshotFreshEnough(snapshot: StatuslineSnapshotV1, maxAgeMs: number)
 async function tryInlineCollect(
   scope: ProjectScope,
   deadlineMs: number,
-  sessionId: string | undefined,
 ): Promise<StatuslineSnapshotV1 | undefined> {
   const remaining = deadlineMs - Date.now();
   if (remaining <= 25) return undefined;
   const inline = await collectInlineSnapshot({
     projectRoot: scope.projectRoot,
     ...(scope.worktreeRoot !== undefined ? { worktreeRoot: scope.worktreeRoot } : {}),
-    ...(sessionId !== undefined ? { sessionId } : {}),
     deadlineMs: remaining,
   }).catch(() => undefined);
   if (inline === undefined) return undefined;
@@ -528,8 +528,9 @@ function materializeInlineSnapshot(
  * back to the cache so a transient probe miss never blanks a populated row.
  */
 function mergeSnapshots(cached: StatuslineSnapshotV1, inline: StatuslineSnapshotV1): StatuslineSnapshotV1 {
+  const base = withoutCachedSwarm(cached);
   return {
-    ...cached,
+    ...base,
     ...(inline.git !== undefined ? { git: inline.git } : {}),
     ...(inline.swarm !== undefined ? { swarm: inline.swarm } : {}),
     ...(inline.daemon !== undefined ? { daemon: inline.daemon } : {}),
@@ -539,6 +540,43 @@ function mergeSnapshots(cached: StatuslineSnapshotV1, inline: StatuslineSnapshot
     ...(inline.attention !== undefined ? { attention: inline.attention } : {}),
     ...(inline.mcp !== undefined ? { mcp: inline.mcp } : {}),
     generatedAt: inline.generatedAt ?? cached.generatedAt,
+  };
+}
+
+async function revalidateCachedSwarm(
+  scope: ProjectScope,
+  cached: StatuslineSnapshotV1,
+): Promise<StatuslineSnapshotV1> {
+  const liveSwarm = await collectLiveSwarm(scope).catch(() => undefined);
+  const base = withoutCachedSwarm(cached);
+  return liveSwarm !== undefined ? { ...base, swarm: liveSwarm } : base;
+}
+
+async function collectLiveSwarm(scope: ProjectScope): Promise<SwarmSummary | undefined> {
+  const s = await collectSwarm({ projectRoot: scope.projectRoot });
+  if (s.workersAlive <= 0 && s.queensAlive <= 0) return undefined;
+  const idleAgents = Math.max(0, s.workersAlive - s.workersExecuting);
+  const agentsList: NormalizedAgentRow[] = s.agents.map((row) => ({ ...row }));
+  return {
+    activeAgents: s.workersExecuting,
+    idleAgents,
+    queuedAgents: 0,
+    maxAgents: s.cap,
+    activeQueens: s.queensAlive,
+    executingQueens: s.queensExecuting,
+    ...(agentsList.length > 0 ? { agents: agentsList } : {}),
+    ...(s.activeHives !== undefined ? { activeHives: s.activeHives } : {}),
+  };
+}
+
+function withoutCachedSwarm(snapshot: StatuslineSnapshotV1): StatuslineSnapshotV1 {
+  const { swarm: _discardSwarm, sources, ...rest } = snapshot;
+  const { swarm: _discardSwarmSource, ...remainingSources } = sources;
+  void _discardSwarm;
+  void _discardSwarmSource;
+  return {
+    ...rest,
+    sources: remainingSources,
   };
 }
 

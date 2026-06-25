@@ -51,7 +51,6 @@ import { collectSessions } from './collectors/sessions.js';
 import { collectSwarm } from './collectors/swarm.js';
 import { collectTests } from './collectors/tests.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
-import { resolveSessionId } from '../mcp-tools/session-id.js';
 import { updateMemoryStats } from './recorders/memory.js';
 import { updateMcpHealth } from './recorders/mcp.js';
 import type {
@@ -196,7 +195,6 @@ export async function refreshStatuslineSnapshot(
 
   // Step 4: ADR-051 context. Stdin-first, then autopilot-state fallback.
   const stdinObject = asPlainObject(opts.stdinData);
-  const sessionId = resolveSessionId(stdinObject ?? null, process.env) ?? undefined;
   const stdinContext = contextFromStdin(stdinObject, generatedAt);
   const autopilotContext = await readAutopilotContext(scope.projectRoot, generatedAt);
   const context = mergeContext(stdinContext, autopilotContext);
@@ -217,11 +215,10 @@ export async function refreshStatuslineSnapshot(
     runCollector('sessions', () => collectSessions({ projectRoot: scope.projectRoot, nowMs })),
     runCollector('tests', () => collectTests({ projectRoot: scope.projectRoot })),
     runCollector('attention', () => collectAttention({ projectRoot: scope.projectRoot })),
-    runCollector('swarm', () => collectSwarm({ projectRoot: scope.projectRoot, sessionId })),
+    runCollector('swarm', () => collectSwarm({ projectRoot: scope.projectRoot })),
     runCollector('git', () => collectInlineSnapshot({
       projectRoot: scope.projectRoot,
       ...(scope.worktreeRoot !== undefined ? { worktreeRoot: scope.worktreeRoot } : {}),
-      sessionId,
       deadlineMs: 150,
     })),
   ]);
@@ -434,7 +431,7 @@ export async function refreshStatuslineSnapshot(
   // every other materialized current.json — write-to-temp + fsync + rename.
   await atomicWriteJson(paths.cache, snapshot);
   await atomicWriteJson(
-    globalStatuslinePaths(scope.projectKey, sessionKeyFor(opts.stdinData, process.env)).cache,
+    globalStatuslinePaths(scope.projectKey, sessionKeyFor(stdinObject, {})).cache,
     snapshot,
   ).catch(() => undefined);
 

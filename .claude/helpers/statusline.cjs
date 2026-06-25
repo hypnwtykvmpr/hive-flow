@@ -334,6 +334,27 @@ function getSecurityStatus() {
 //   1. Modern dict: { agents: { <id>: { status, agentType, ... }, ... }, version: 1 }
 //   2. Legacy array: { agents: [...] } | { entries: [...] } | top-level array
 //   3. Top-level dict-of-records (very old): { <id>: { status, ... }, ... }
+function isPositiveInteger(value) {
+  return typeof value === 'number' && Number.isInteger(value) && value > 1;
+}
+
+function isPidDefinitelyDead(pid) {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (err) {
+    return err && err.code === 'ESRCH';
+  }
+}
+
+function hasLiveProcessEvidence(agent) {
+  return isPositiveInteger(agent.currentTaskPid) && !isPidDefinitelyDead(agent.currentTaskPid);
+}
+
+function hasOwnerSession(agent) {
+  return Boolean(sanitizeScopeId(agent.ownerSessionId));
+}
+
 function getAgentStoreCount() {
   try {
     const storePath = path.join(CWD, '.hive-flow', 'agents', 'store.json');
@@ -354,7 +375,12 @@ function getAgentStoreCount() {
       }
 
       if (all.length > 0) {
-        const live = all.filter(a => a.status !== 'terminated' && a.status !== 'failed');
+        const live = all.filter(a =>
+          a.status !== 'terminated' &&
+          a.status !== 'failed' &&
+          hasOwnerSession(a) &&
+          hasLiveProcessEvidence(a)
+        );
         const isQueen = (a) => a.agentType === 'queen';
         const workers = live.filter(a => !isQueen(a));
         const queens = live.filter(isQueen);
@@ -374,12 +400,8 @@ function getAgentStoreCount() {
 }
 
 // Swarm status (pure file reads, NO ps aux).
-// Read order: store.json (live, no staleness window) → swarm-activity.json
-// → v3-progress.json (both gated by 10-min freshness). Previous order put the
-// stale metrics files first, so a multi-day-old v3-progress.json with
-// activeAgents:0 would short-circuit a live hive's store.json (CLAUDE-LF-002).
-const SWARM_FRESHNESS_MS = 10 * 60 * 1000;
-
+// Only the live agent store can drive the Swarm row. Metrics files are
+// aggregate history and must never keep dead/no-PID agents visible.
 function getSwarmStatus() {
   // PRIMARY: live agent store. Always current — written by MCP agent_spawn /
   // queen_mission_assign. Returns workers (active/executing) AND queens
@@ -395,43 +417,6 @@ function getSwarmStatus() {
       maxAgents: CONFIG.maxAgents,
       coordinationActive: true,
     };
-  }
-
-  // FALLBACK 1: swarm-activity.json — fresh-only. Legacy collector doesn't
-  // differentiate executing from active or queens from workers; treat the count
-  // as workers and assume reported agents are executing.
-  const activityData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'swarm-activity.json'));
-  if (activityData?.swarm) {
-    const updated = activityData.lastUpdated ? Date.parse(activityData.lastUpdated) : 0;
-    if (!updated || Date.now() - updated < SWARM_FRESHNESS_MS) {
-      const count = activityData.swarm.agent_count || 0;
-      return {
-        activeAgents: count,
-        executingAgents: count,
-        activeQueens: 0,
-        executingQueens: 0,
-        maxAgents: CONFIG.maxAgents,
-        coordinationActive: activityData.swarm.coordination_active || activityData.swarm.active || false,
-      };
-    }
-  }
-
-  // FALLBACK 2: v3-progress.json — fresh-only. Stale writes (older than 10 min)
-  // are ignored so they cannot mask an active live store.
-  const progressData = readJSON(path.join(CWD, '.hive-flow', 'metrics', 'v3-progress.json'));
-  if (progressData?.swarm) {
-    const updated = progressData.lastUpdated ? Date.parse(progressData.lastUpdated) : 0;
-    if (updated && Date.now() - updated < SWARM_FRESHNESS_MS) {
-      const count = progressData.swarm.activeAgents || progressData.swarm.agent_count || 0;
-      return {
-        activeAgents: count,
-        executingAgents: count,
-        activeQueens: 0,
-        executingQueens: 0,
-        maxAgents: progressData.swarm.totalAgents || CONFIG.maxAgents,
-        coordinationActive: progressData.swarm.active || (progressData.swarm.activeAgents > 0),
-      };
-    }
   }
 
   return { activeAgents: 0, executingAgents: 0, activeQueens: 0, executingQueens: 0, maxAgents: CONFIG.maxAgents, coordinationActive: false };
@@ -1061,6 +1046,9 @@ function generateStatusline() {
     queenSegment = ` ${queenColor}♛${queenCount}${c.reset}`;
   }
   const hooksColor = (hooks.categories > 0 || hooks.commands > 0) ? c.brightGreen : c.dim;
+  const swarmSegment = swarmHasAgents || queenCount > 0
+    ? `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${queenSegment}`
+    : '';
 
   // Advocate indicator (Row 23 KEEP-CONDITIONAL \u2014 already gated by indicator non-empty)
   const advocateIndicator = advocate.indicator ? ` ${advocate.color}${advocate.indicator}${c.reset}` : '';
@@ -1078,7 +1066,7 @@ function generateStatusline() {
   }
 
   lines.push(
-    `${c.brightYellow}\uD83E\uDD16 Swarm${c.reset}  ${swarmInd} [${agentsColor}${String(swarm.activeAgents).padStart(2)}${c.reset}/${c.brightWhite}${swarm.maxAgents}${c.reset}]${queenSegment}${advocateIndicator}  ` +
+    `${swarmSegment}${advocateIndicator}${swarmSegment || advocateIndicator ? '  ' : ''}` +
     `${c.brightBlue}\uD83E\uDE9D ${hooksColor}${hooksDisplay}${c.reset}`
   );
 
