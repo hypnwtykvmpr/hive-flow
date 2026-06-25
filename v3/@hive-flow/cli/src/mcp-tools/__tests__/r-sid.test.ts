@@ -384,9 +384,9 @@ describe('R-sid multi-session enabler', () => {
     expect(resolveClientKind({}, {}, {})).toBe('unknown');
   });
 
-  it('resolves owner client kind from the chosen owner session before ambient MCP env', () => {
+  it('resolves owner client kind from parent assignment, not forgeable input labels', () => {
     expect(resolveOwnerClientKind(
-      { session_id: 'claude-pane-session' },
+      { session_id: 'claude-pane-session', ownerClientKind: 'codex' },
       {
         HIVE_FLOW_CLIENT_KIND: 'codex',
         CODEX_THREAD_ID: 'codex-thread-from-reconnect',
@@ -406,6 +406,26 @@ describe('R-sid multi-session enabler', () => {
       { clientKind: 'claude' },
       'codex-thread-from-reconnect',
     )).toBe('codex');
+
+    expect(resolveOwnerClientKind(
+      { session_id: 'claude-pane-session', ownerClientKind: 'codex' },
+      {
+        HIVE_FLOW_CLIENT_KIND: 'codex',
+        CODEX_THREAD_ID: 'codex-thread-from-reconnect',
+        CLAUDE_PROJECT_DIR: '/repo',
+        CLAUDE_CODE_ENTRYPOINT: 'cli',
+        CLAUDE_CODE_SESSION_ID: 'actual-claude-code-session',
+      },
+      { clientKind: 'codex' },
+      'claude-pane-session',
+    )).toBe('claude');
+
+    expect(resolveOwnerClientKind(
+      { session_id: 'unmapped-owner-session', ownerClientKind: 'codex' },
+      {},
+      {},
+      'unmapped-owner-session',
+    )).toBe('unknown');
   });
 
   it('stamps ownerSessionId and ignores deprecated pane inputs during queen_mission_assign', async () => {

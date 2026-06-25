@@ -248,8 +248,14 @@ export const hiveMindTools: MCPTool[] = [
         };
       }
       const resolvedOwnerClientKind = resolveOwnerClientKind(input, process.env, context, ownerSessionId);
-      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> =
-        resolvedOwnerClientKind === 'unknown' ? 'claude' : resolvedOwnerClientKind;
+      if (resolvedOwnerClientKind === 'unknown') {
+        return {
+          success: false,
+          code: 'missing-owner-client-kind',
+          error: 'hive-mind_spawn requires an owner client kind from the assigning parent before creating worker agents.',
+        };
+      }
+      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> = resolvedOwnerClientKind;
 
       const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
       const role = (input.role as string) || 'worker';

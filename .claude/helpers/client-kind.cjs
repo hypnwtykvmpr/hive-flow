@@ -24,7 +24,7 @@ for (const [kind, aliases] of Object.entries(CLIENT_KIND_ALIASES)) {
 
 const SESSION_ENV_KEYS_BY_KIND = Object.freeze({
   codex: ['CODEX_SESSION_ID', 'CODEX_THREAD_ID'],
-  claude: ['CLAUDE_SESSION_ID'],
+  claude: ['CLAUDE_SESSION_ID', 'CLAUDE_CODE_SESSION_ID'],
   gemini: ['GEMINI_SESSION_ID', 'GEMINI_THREAD_ID'],
   cursor: ['CURSOR_SESSION_ID', 'CURSOR_THREAD_ID', 'AGENT_SESSION_ID'],
   antigravity: ['ANTIGRAVITY_SESSION_ID', 'ANTIGRAVITY_THREAD_ID', 'AGY_SESSION_ID', 'AGY_THREAD_ID'],
@@ -50,6 +50,7 @@ const SESSION_ENV_KEY_PRIORITY = Object.freeze([
   ['CURSOR_SESSION_ID', 'cursor'],
   ['CURSOR_THREAD_ID', 'cursor'],
   ['CLAUDE_SESSION_ID', 'claude'],
+  ['CLAUDE_CODE_SESSION_ID', 'claude'],
   ['AGENT_SESSION_ID', 'cursor'],
 ]);
 
@@ -67,6 +68,15 @@ function normalizeClientKind(value) {
   const raw = stringValue(value);
   if (!raw) return null;
   return CLIENT_KIND_BY_ALIAS.get(raw.toLowerCase()) || null;
+}
+
+function hasClaudeRuntimeEnv(env = process.env) {
+  return Boolean(
+    stringValue(env && env.CLAUDECODE)
+    || stringValue(env && env.CLAUDE_CODE)
+    || stringValue(env && env.CLAUDE_CODE_ENTRYPOINT)
+    || stringValue(env && env.CLAUDE_CODE_SESSION_ID)
+  );
 }
 
 function operatorSessionEnvKeys(kind = null) {
@@ -89,6 +99,13 @@ function envSessionValue(env = process.env) {
 }
 
 function clientKindFromEnv(env = process.env) {
+  if (
+    hasClaudeRuntimeEnv(env)
+    && (stringValue(env && env.CLAUDE_PROJECT_DIR) || stringValue(env && env.CLAUDE_CODE_SESSION_ID))
+  ) {
+    return 'claude';
+  }
+
   const explicit = normalizeClientKind(env && env.HIVE_FLOW_CLIENT_KIND);
   if (explicit) {
     const explicitHasSession = operatorSessionEnvKeys(explicit)

@@ -92,5 +92,15 @@ describe('operator parent client kind aliases', () => {
     };
     expect(resolveClientKindFromEnv(providerSessionEnv)).toBe('opencode');
     expect(cjsClientKind.clientKindFromEnv(providerSessionEnv)).toBe('opencode');
+
+    const codexReconnectInClaudeRuntimeEnv = {
+      HIVE_FLOW_CLIENT_KIND: 'codex',
+      CODEX_THREAD_ID: 'codex-thread-from-reconnect',
+      CLAUDE_PROJECT_DIR: '/repo',
+      CLAUDE_CODE_ENTRYPOINT: 'cli',
+      CLAUDE_CODE_SESSION_ID: 'claude-code-session',
+    };
+    expect(resolveClientKindFromEnv(codexReconnectInClaudeRuntimeEnv)).toBe('claude');
+    expect(cjsClientKind.clientKindFromEnv(codexReconnectInClaudeRuntimeEnv)).toBe('claude');
   });
 });

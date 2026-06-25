@@ -28,7 +28,7 @@ for (const [kind, aliases] of Object.entries(CLIENT_KIND_ALIASES) as Array<[Excl
 
 const SESSION_ENV_KEYS_BY_KIND: Record<Exclude<OperatorClientKind, 'unknown'>, readonly string[]> = {
   codex: ['CODEX_SESSION_ID', 'CODEX_THREAD_ID'],
-  claude: ['CLAUDE_SESSION_ID'],
+  claude: ['CLAUDE_SESSION_ID', 'CLAUDE_CODE_SESSION_ID'],
   gemini: ['GEMINI_SESSION_ID', 'GEMINI_THREAD_ID'],
   cursor: ['CURSOR_SESSION_ID', 'CURSOR_THREAD_ID', 'AGENT_SESSION_ID'],
   antigravity: ['ANTIGRAVITY_SESSION_ID', 'ANTIGRAVITY_THREAD_ID', 'AGY_SESSION_ID', 'AGY_THREAD_ID'],
@@ -54,6 +54,7 @@ const SESSION_ENV_KEY_PRIORITY = Object.freeze([
   ['CURSOR_SESSION_ID', 'cursor'],
   ['CURSOR_THREAD_ID', 'cursor'],
   ['CLAUDE_SESSION_ID', 'claude'],
+  ['CLAUDE_CODE_SESSION_ID', 'claude'],
   ['AGENT_SESSION_ID', 'cursor'],
 ] as const satisfies ReadonlyArray<readonly [string, Exclude<OperatorClientKind, 'unknown'>]>);
 
@@ -125,7 +126,23 @@ export function normalizeClientKind(value: unknown): OperatorClientKind {
   return CLIENT_KIND_BY_ALIAS.get(raw.toLowerCase()) ?? 'unknown';
 }
 
+function hasClaudeRuntimeEnv(env: SessionEnv): boolean {
+  return Boolean(
+    asNonEmptyString(env.CLAUDECODE)
+    || asNonEmptyString(env.CLAUDE_CODE)
+    || asNonEmptyString(env.CLAUDE_CODE_ENTRYPOINT)
+    || asNonEmptyString(env.CLAUDE_CODE_SESSION_ID),
+  );
+}
+
 export function resolveClientKindFromEnv(env: SessionEnv = process.env): OperatorClientKind {
+  if (
+    hasClaudeRuntimeEnv(env)
+    && (asNonEmptyString(env.CLAUDE_PROJECT_DIR) || asNonEmptyString(env.CLAUDE_CODE_SESSION_ID))
+  ) {
+    return 'claude';
+  }
+
   const explicit = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
   if (explicit !== 'unknown') {
     const explicitHasSession = operatorSessionEnvKeys(explicit)
@@ -168,18 +185,11 @@ export function resolveOwnerClientKind(
   context: Record<string, unknown> | null | undefined = null,
   ownerSessionId: unknown = null,
 ): OperatorClientKind {
-  const inputCandidates: unknown[] = [
-    input?.client_kind,
-    input?.clientKind,
-    input?.ownerClientKind,
-  ];
-  for (const candidate of inputCandidates) {
-    const kind = normalizeClientKind(candidate);
-    if (kind !== 'unknown') return kind;
-  }
-
   const sessionKind = resolveClientKindForSessionId(ownerSessionId, env);
   if (sessionKind !== 'unknown') return sessionKind;
+
+  const envKind = resolveClientKindFromEnv(env);
+  if (envKind === 'claude' && hasClaudeRuntimeEnv(env)) return envKind;
 
   const contextCandidates: unknown[] = [
     context?.client_kind,
@@ -190,7 +200,9 @@ export function resolveOwnerClientKind(
     if (kind !== 'unknown') return kind;
   }
 
-  return resolveClientKindFromEnv(env);
+  if (envKind !== 'unknown') return envKind;
+
+  return 'unknown';
 }
 
 export function resolveClientKind(

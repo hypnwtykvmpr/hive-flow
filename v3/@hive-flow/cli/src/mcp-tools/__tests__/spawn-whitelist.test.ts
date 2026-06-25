@@ -15,6 +15,10 @@ const ORIGINAL_ENV = {
   CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
   CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
   CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
+  CLAUDE_CODE_SESSION_ID: process.env.CLAUDE_CODE_SESSION_ID,
+  CLAUDE_CODE_ENTRYPOINT: process.env.CLAUDE_CODE_ENTRYPOINT,
+  CLAUDECODE: process.env.CLAUDECODE,
+  CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
   HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
   HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
 };
@@ -52,6 +56,10 @@ describe('agent_spawn canonical roster whitelist', () => {
     process.env.CODEX_SESSION_ID = 'spawn-test-session';
     delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.CLAUDE_CODE_SESSION_ID;
+    delete process.env.CLAUDE_CODE_ENTRYPOINT;
+    delete process.env.CLAUDECODE;
+    delete process.env.CLAUDE_PROJECT_DIR;
     delete process.env.HIVE_FLOW_SESSION_ID;
     delete process.env.HIVE_FLOW_CLIENT_KIND;
   });
@@ -150,7 +158,7 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecord(tmpRoot, 'codex-thread-owned-agent')?.ownerClientKind).toBe('codex');
   });
 
-  it('falls back to MCP context for agent_spawn ownership when no session env exists', async () => {
+  it('requires MCP context client kind with context owner session when no session env exists', async () => {
     delete process.env.CODEX_SESSION_ID;
     delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_SESSION_ID;
@@ -162,12 +170,9 @@ describe('agent_spawn canonical roster whitelist', () => {
       provider: 'anthropic',
     }, { sessionId: 'context-session' }) as Record<string, unknown>;
 
-    expect(result).toMatchObject({
-      success: true,
-      agentId: 'context-owned-agent',
-    });
-    expect(readAgentRecord(tmpRoot, 'context-owned-agent')?.ownerSessionId).toBe('context-session');
-    expect(readAgentRecord(tmpRoot, 'context-owned-agent')?.ownerClientKind).toBe('claude');
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('missing-owner-client-kind');
+    expect(readAgentRecord(tmpRoot, 'context-owned-agent')).toBeUndefined();
   });
 
   it('uses MCP context clientKind for agent_spawn owner lane when no client env exists', async () => {
@@ -211,25 +216,47 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecord(tmpRoot, 'claude-session-owned-agent')?.ownerClientKind).toBe('claude');
   });
 
-  it('uses MCP transport client kind when owner session is not in reconnect env', async () => {
+  it('uses Claude runtime parent assignment over stale Codex reconnect metadata', async () => {
     delete process.env.CODEX_SESSION_ID;
     delete process.env.CLAUDE_SESSION_ID;
     process.env.CODEX_THREAD_ID = 'codex-thread-from-reconnect';
     process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+    process.env.CLAUDE_PROJECT_DIR = tmpRoot;
+    process.env.CLAUDE_CODE_ENTRYPOINT = 'cli';
+    process.env.CLAUDE_CODE_SESSION_ID = 'actual-claude-code-session';
 
     const result = await spawnTool.handler({
-      agentId: 'claude-transport-owned-agent',
+      agentId: 'claude-runtime-owned-agent',
       agentType: 'tester',
       provider: 'anthropic',
       session_id: 'claude-pane-session-not-in-env',
-    }, { sessionId: 'mcp-transport-session', clientKind: 'claude' }) as Record<string, unknown>;
+      ownerClientKind: 'codex',
+    }, { sessionId: 'mcp-transport-session', clientKind: 'codex' }) as Record<string, unknown>;
 
     expect(result).toMatchObject({
       success: true,
-      agentId: 'claude-transport-owned-agent',
+      agentId: 'claude-runtime-owned-agent',
     });
-    expect(readAgentRecord(tmpRoot, 'claude-transport-owned-agent')?.ownerSessionId).toBe('claude-pane-session-not-in-env');
-    expect(readAgentRecord(tmpRoot, 'claude-transport-owned-agent')?.ownerClientKind).toBe('claude');
+    expect(readAgentRecord(tmpRoot, 'claude-runtime-owned-agent')?.ownerSessionId).toBe('claude-pane-session-not-in-env');
+    expect(readAgentRecord(tmpRoot, 'claude-runtime-owned-agent')?.ownerClientKind).toBe('claude');
+  });
+
+  it('refuses agent_spawn when an owner session exists but no parent owner kind can be resolved', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await spawnTool.handler({
+      agentId: 'owner-kind-missing-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      session_id: 'operator-session-without-kind',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('missing-owner-client-kind');
+    expect(readAgentRecord(tmpRoot, 'owner-kind-missing-agent')).toBeUndefined();
   });
 
   it('refuses generated MCP transport ids as agent_spawn owner identity', async () => {

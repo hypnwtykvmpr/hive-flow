@@ -684,8 +684,6 @@ export const agentTools: MCPTool[] = [
       const config = (input.config as Record<string, unknown>) || {};
       const ownerSessionId = resolveSessionId(input, process.env, context);
       const resolvedOwnerClientKind = resolveOwnerClientKind(input, process.env, context, ownerSessionId);
-      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> =
-        resolvedOwnerClientKind === 'unknown' ? 'claude' : resolvedOwnerClientKind;
 
       if (!isCanonicalAgentType(agentType)) {
         return {
@@ -701,6 +699,14 @@ export const agentTools: MCPTool[] = [
           error: 'agent_spawn requires an owner session id; set a supported operator session env (CODEX_SESSION_ID, CLAUDE_SESSION_ID, CURSOR_SESSION_ID/AGENT_SESSION_ID, AGY_SESSION_ID/ANTIGRAVITY_SESSION_ID, OPENCODE_SESSION_ID, FORGECODE_SESSION_ID/FORGE_SESSION_ID), set HIVE_FLOW_SESSION_ID with HIVE_FLOW_CLIENT_KIND, pass session_id, or provide operator MCP context.sessionId.',
         };
       }
+      if (resolvedOwnerClientKind === 'unknown') {
+        return {
+          success: false,
+          code: 'missing-owner-client-kind',
+          error: 'agent_spawn requires an owner client kind from the assigning parent; provide supported operator MCP context.clientKind or matching parent session env before spawning agents.',
+        };
+      }
+      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> = resolvedOwnerClientKind;
 
       // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 180).
       // The runbook specifies a 150 working + 30 queued cap; without a persistent
