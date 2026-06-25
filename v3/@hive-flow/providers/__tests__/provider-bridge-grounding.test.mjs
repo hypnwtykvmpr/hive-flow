@@ -589,7 +589,9 @@ describe('exact-args shape gate (FIX 2: wrong-tool / multi-tool must not execute
   it('PART 1: a NO-TOOL exact-args response is handled by the fidelity gate, not the no-tool break', () => {
     // The normalized `calls` array drives the gate so a no-tool exact-args response is
     // intercepted (no-tool-call violation) instead of falling to the UNGROUNDED branch.
-    expect(src).toMatch(/const calls = Array\.isArray\(response\.toolCalls\) \? response\.toolCalls : \[\];/);
+    // HF-16: construction now routes through normalizeProviderToolCalls, which also
+    // drops malformed entries before any .function deref.
+    expect(src).toMatch(/const calls = normalizeProviderToolCalls\(response\.toolCalls\);/);
     expect(src).toMatch(/calls\.length === 0 \? 'no-tool-call' : 'multi-tool-call'/);
   });
 

@@ -3249,11 +3249,13 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     }
     const content = readFileSync(safePath, 'utf-8');
     if (old_string === '') {
-      return `Error: old_string must be non-empty for ${safePath}`;
+      // Throw → evaluateToolCall wraps as {status:'error', tool:'edit_file'} so a
+      // failed edit cannot count as grounded success (HF-8).
+      throw new Error(`old_string must be non-empty for ${safePath}`);
     }
     const occurrences = content.split(old_string).length - 1;
     if (occurrences === 0) {
-      return `Error: old_string not found in ${safePath}`;
+      throw new Error(`old_string not found in ${safePath}`);
     }
     if (occurrences > 1) {
       stderrLogger.warn('edit_file old_string matched multiple times; replacing all occurrences', {
@@ -3932,34 +3934,57 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
  * results MUST NOT count toward grounding, otherwise UNGROUNDED_TOOL_TASK can
  * falsely pass when the model only ever triggered blocked/failed tool calls.
  *
+ * Success is STATUS-SPECIFIC and EVIDENCE-SPECIFIC, not "anything not explicitly
+ * denied/error". An object/JSON result counts ONLY when its `status` is a genuine
+ * bridge-success status AND its evidence confirms success:
+ *  - executed (run_command/run_shell) → exitCode === 0 AND not timedOut
+ *  - fetched   (web_fetch)            → httpStatus in [200,300)
+ *  - searched  (web_search)           → grounded; HTTP gating lives in the tool
+ *  - ok        (synthetic/test)       → success
+ * Bare handler STRINGS (filesystem tools: "File written: …", file contents, grep
+ * output) have no status and are the plain success path.
+ *
  * Result shapes (from evaluateToolCall):
- *  - string  → success (evaluateToolCall stringifies object handler results, but a
- *              plain handler string result is the success path). NOTE: denied results
- *              are objects that get JSON-stringified by evaluateToolCall, so a string
- *              that parses to {status:'denied'|'error'} must NOT count.
- *  - object {status:'denied'} → NOT successful
- *  - object {status:'error'}  → NOT successful
- *  - any other object         → successful
+ *  - plain non-JSON string                       → success (filesystem handlers)
+ *  - string encoding {status:'denied'|'error'}   → NOT successful
+ *  - string encoding {status:'executed'|…} JSON  → gated by the rules above
+ *  - object {status:'denied'|'error'}            → NOT successful
+ *  - object with non-allowlisted/absent status   → NOT successful (closes the
+ *                                                   "any other object = success" hole)
  */
+const BRIDGE_GROUNDING_SUCCESS_STATUSES = new Set(['executed', 'fetched', 'searched', 'ok']);
+
+function bridgeResultObjectGrounds(parsed) {
+  if (!parsed || typeof parsed !== 'object') return false;
+  const { status } = parsed;
+  if (!BRIDGE_GROUNDING_SUCCESS_STATUSES.has(status)) return false;
+  if (status === 'executed') {
+    return parsed.exitCode === 0 && parsed.timedOut !== true;
+  }
+  if (status === 'fetched') {
+    const code = Number(parsed.httpStatus);
+    return Number.isFinite(code) && code >= 200 && code < 300;
+  }
+  // 'searched' / 'ok' carry their own evidence (results already gated upstream).
+  return true;
+}
+
 export function isSuccessfulBridgeToolResult(result) {
   if (result === null || result === undefined) return false;
   if (typeof result === 'string') {
-    // evaluateToolCall JSON-stringifies object handler results (incl. denied/error),
-    // so a string may actually encode a non-success status. Parse defensively.
+    // evaluateToolCall JSON-stringifies object handler results, so a string may
+    // actually encode a structured (possibly non-success) status. Parse defensively;
+    // a string that is NOT a JSON object is a plain successful handler result.
     const trimmed = result.trim();
     if (trimmed.startsWith('{')) {
       try {
-        const parsed = JSON.parse(trimmed);
-        if (parsed && typeof parsed === 'object' &&
-            (parsed.status === 'denied' || parsed.status === 'error')) {
-          return false;
-        }
+        return bridgeResultObjectGrounds(JSON.parse(trimmed));
       } catch { /* not JSON — treat as a plain successful string result */ }
     }
     return true;
   }
   if (typeof result === 'object') {
-    return result.status !== 'denied' && result.status !== 'error';
+    return bridgeResultObjectGrounds(result);
   }
   return false;
 }
@@ -4458,6 +4483,38 @@ export function parseToolCallArguments(rawArguments) {
   return null;
 }
 
+/**
+ * HF-16: Normalize a provider's `response.toolCalls[]` so the exec loop and the
+ * exact-args gate can dereference `.function.name` / `.function.arguments` without
+ * a TypeError or hard-abort. Malformed entries (not an object, missing `function`,
+ * missing/non-string `function.name`, or non-string `function.arguments`) are
+ * DROPPED rather than crashing the agent run. `function.arguments` is coerced to a
+ * JSON string so downstream string-only consumers (logging slices, parseToolCallArguments)
+ * are safe. A fully-malformed array normalizes to [] (fail-closed, no throw).
+ */
+export function normalizeProviderToolCalls(toolCalls) {
+  if (!Array.isArray(toolCalls)) return [];
+  const normalized = [];
+  for (const call of toolCalls) {
+    if (!call || typeof call !== 'object') continue;
+    const fn = call.function;
+    if (!fn || typeof fn !== 'object') continue;
+    if (typeof fn.name !== 'string' || fn.name.trim() === '') continue;
+    let args = fn.arguments;
+    if (typeof args !== 'string') {
+      if (args === null || args === undefined) {
+        args = '{}';
+      } else if (typeof args === 'object') {
+        try { args = JSON.stringify(args); } catch { continue; }
+      } else {
+        continue;
+      }
+    }
+    normalized.push({ ...call, function: { ...fn, name: fn.name, arguments: args } });
+  }
+  return normalized;
+}
+
 // ===== Main =====
 
 async function main() {
@@ -4918,7 +4975,11 @@ async function main() {
       // about NO-TOOL responses too. A NO-TOOL exact-args response must reach the
       // bounded fidelity path (retry / ARG_FIDELITY_EXHAUSTED), NOT the generic
       // no-tool break that would fail it as UNGROUNDED_TOOL_TASK.
-      const calls = Array.isArray(response.toolCalls) ? response.toolCalls : [];
+      // HF-16: normalizeProviderToolCalls drops/repairs malformed entries (missing
+      // function, missing name, non-string arguments) BEFORE any downstream
+      // `.function.name` / `.function.arguments` deref in the gate or exec loop, so
+      // a malformed provider tool-call cannot TypeError / hard-abort the run.
+      const calls = normalizeProviderToolCalls(response.toolCalls);
 
       // Exact-args fidelity gate: when the task carries a 'Use these exact arguments:'
       // block for a single named strict tool, validate the response SHAPE BEFORE any
