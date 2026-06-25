@@ -12,6 +12,7 @@
 import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { resolveOwnerStampOrError, type OperatorClientKind } from './session-id.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -27,6 +28,8 @@ interface DAAAgent {
   learningRate: number;
   memory: boolean;
   capabilities: string[];
+  ownerSessionId: string;
+  ownerClientKind: Exclude<OperatorClientKind, 'unknown'>;
   metrics: {
     tasksCompleted: number;
     successRate: number;
@@ -102,7 +105,10 @@ export const daaTools: MCPTool[] = [
       },
       required: ['id'],
     },
-    handler: async (input) => {
+    handler: async (input, context) => {
+      const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'daa_agent_create');
+      if (!ownerStamp.success) return ownerStamp;
+
       const store = loadDAAStore();
       const id = input.id as string;
 
@@ -115,6 +121,8 @@ export const daaTools: MCPTool[] = [
         learningRate: (input.learningRate as number) || 0.01,
         memory: (input.enableMemory as boolean) ?? true,
         capabilities: (input.capabilities as string[]) || ['reasoning', 'learning'],
+        ownerSessionId: ownerStamp.ownerSessionId,
+        ownerClientKind: ownerStamp.ownerClientKind,
         metrics: {
           tasksCompleted: 0,
           successRate: 1.0,
@@ -136,6 +144,8 @@ export const daaTools: MCPTool[] = [
           status: agent.status,
           cognitivePattern: agent.cognitivePattern,
           capabilities: agent.capabilities,
+          ownerSessionId: agent.ownerSessionId,
+          ownerClientKind: agent.ownerClientKind,
         },
         createdAt: agent.createdAt,
       };

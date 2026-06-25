@@ -117,7 +117,7 @@ function clientKindFromEnv(env = process.env) {
       if (stringValue(env && env[key])) sessionKinds.add(kind);
     }
     if (sessionKinds.size === 1) return Array.from(sessionKinds)[0] || explicit;
-    return explicit;
+    return null;
   }
   for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
     if (stringValue(env && env[key])) return kind;

@@ -1,8 +1,42 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { buildHiveStatusNotification, classifyMCPClient, clientKindForMCPToolContext } from '../mcp-server.js';
+import { operatorSessionEnvKeys } from '../mcp-tools/session-id.js';
+
+const OWNER_ENV_KEYS = Array.from(new Set([
+  ...operatorSessionEnvKeys(),
+  'HIVE_FLOW_CLIENT_KIND',
+  'CLAUDECODE',
+  'CLAUDE_CODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CLAUDE_PROJECT_DIR',
+  'CODEX_HOME',
+  'GEMINI_API_KEY',
+  'CURSOR_API_KEY',
+]));
+const ORIGINAL_ENV = Object.fromEntries(
+  OWNER_ENV_KEYS.map((key) => [key, process.env[key]]),
+) as Record<string, string | undefined>;
+
+function clearOwnerEnv(): void {
+  for (const key of OWNER_ENV_KEYS) delete process.env[key];
+}
 
 describe('MCP hive completion notifications', () => {
+  beforeEach(() => {
+    clearOwnerEnv();
+  });
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  });
+
   it('classifies Claude and Codex MCP clients from initialize params', () => {
     expect(classifyMCPClient({ clientInfo: { name: 'claude-code', version: '2.1.157' } })).toBe('claude');
     expect(classifyMCPClient({ clientInfo: { name: 'codex-cli', version: '0.0.0' } })).toBe('codex');
@@ -16,8 +50,9 @@ describe('MCP hive completion notifications', () => {
   });
 
   it('falls back to runtime env markers when initialize params omit the caller', () => {
-    expect(classifyMCPClient({}, { HIVE_FLOW_CLIENT_KIND: 'gemini' })).toBe('gemini');
-    expect(classifyMCPClient({}, { HIVE_FLOW_CLIENT_KIND: 'cursor-cli' })).toBe('cursor');
+    expect(classifyMCPClient({}, { HIVE_FLOW_CLIENT_KIND: 'gemini', HIVE_FLOW_SESSION_ID: 'provider-session' })).toBe('gemini');
+    expect(classifyMCPClient({}, { HIVE_FLOW_CLIENT_KIND: 'cursor-cli', HIVE_FLOW_SESSION_ID: 'provider-session' })).toBe('cursor');
+    expect(classifyMCPClient({}, { HIVE_FLOW_CLIENT_KIND: 'gemini' })).toBe('unknown');
     expect(classifyMCPClient({}, { CODEX_HOME: '/Users/test/.codex' })).toBe('codex');
     expect(classifyMCPClient({}, { GEMINI_API_KEY: 'configured' })).toBe('gemini');
     expect(classifyMCPClient({}, { CURSOR_API_KEY: 'configured' })).toBe('cursor');
@@ -25,6 +60,20 @@ describe('MCP hive completion notifications', () => {
     expect(classifyMCPClient({}, { OPENCODE_SESSION_ID: 'opencode-session' })).toBe('opencode');
     expect(classifyMCPClient({}, { FORGE_SESSION_ID: 'forge-session' })).toBe('forgecode');
     expect(classifyMCPClient({}, { CLAUDE_PROJECT_DIR: '/repo' })).toBe('claude');
+  });
+
+  it('prefers Claude Code runtime identity over stale initialize metadata', () => {
+    expect(classifyMCPClient(
+      { clientInfo: { name: 'codex-cli', version: '0.0.0' } },
+      {
+        HIVE_FLOW_CLIENT_KIND: 'codex',
+        CODEX_THREAD_ID: 'codex-thread-from-reconnect',
+        CLAUDE_PROJECT_DIR: '/repo',
+        CLAUDE_CODE_ENTRYPOINT: 'cli',
+        CLAUDE_CODE_SESSION_ID: 'claude-code-session',
+      },
+      { trustEnvFallback: false },
+    )).toBe('claude');
   });
 
   it('does not trust ambient env markers for stdio MCP transport identity', () => {

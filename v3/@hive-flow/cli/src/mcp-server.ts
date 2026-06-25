@@ -28,7 +28,6 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { loadHive, saveHive, listHives, type HiveRecord, type HiveStatus } from './mcp-tools/hive-store.js';
 import {
-  normalizeClientKind as normalizeOperatorClientKind,
   resolveClientKindFromEnv,
   type OperatorClientKind,
 } from './mcp-tools/session-id.js';
@@ -120,8 +119,13 @@ function readNestedString(value: unknown, keys: readonly string[]): string | und
   return typeof current === 'string' ? current : undefined;
 }
 
-function normalizeClientKind(value: string | undefined): MCPClientKind {
-  return normalizeOperatorClientKind(value);
+function hasClaudeRuntimeMarker(env: Record<string, string | undefined>): boolean {
+  return Boolean(
+    env.CLAUDECODE
+    || env.CLAUDE_CODE
+    || env.CLAUDE_CODE_ENTRYPOINT
+    || env.CLAUDE_CODE_SESSION_ID
+  );
 }
 
 function classifyClientText(text: string): MCPClientKind {
@@ -141,6 +145,9 @@ export function classifyMCPClient(
   env: Record<string, string | undefined> = process.env,
   options: MCPClientClassificationOptions = {},
 ): MCPClientKind {
+  const runtimeKind = resolveClientKindFromEnv(env);
+  if (runtimeKind === 'claude' && hasClaudeRuntimeMarker(env)) return 'claude';
+
   const clientInfoText = [
     readNestedString(params, ['clientInfo', 'name']),
     readNestedString(params, ['clientInfo', 'title']),
@@ -156,11 +163,7 @@ export function classifyMCPClient(
     return 'unknown';
   }
 
-  const explicitKind = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
-  if (explicitKind !== 'unknown') return explicitKind;
-
-  const envKind = resolveClientKindFromEnv(env);
-  if (envKind !== 'unknown') return envKind;
+  if (runtimeKind !== 'unknown') return runtimeKind;
 
   const envText = [
     env.CODEX_HOME ? `CODEX_HOME ${env.CODEX_HOME}` : undefined,

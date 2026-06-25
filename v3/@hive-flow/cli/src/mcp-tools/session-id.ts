@@ -11,6 +11,23 @@ export type OperatorClientKind =
   | 'forgecode'
   | 'unknown';
 
+export interface OwnerStamp {
+  ownerSessionId: string;
+  ownerClientKind: Exclude<OperatorClientKind, 'unknown'>;
+}
+
+export type OwnerStampErrorCode = 'missing-owner-session' | 'missing-owner-client-kind';
+
+export interface OwnerStampError {
+  success: false;
+  code: OwnerStampErrorCode;
+  error: string;
+}
+
+export type OwnerStampResult =
+  | ({ success: true } & OwnerStamp)
+  | OwnerStampError;
+
 const CLIENT_KIND_ALIASES: Record<Exclude<OperatorClientKind, 'unknown'>, readonly string[]> = {
   claude: ['claude', 'claude-code', 'anthropic-cli'],
   codex: ['codex', 'codex-cli'],
@@ -154,7 +171,7 @@ export function resolveClientKindFromEnv(env: SessionEnv = process.env): Operato
       if (asNonEmptyString(env[key])) sessionKinds.add(kind);
     }
     if (sessionKinds.size === 1) return [...sessionKinds][0] ?? explicit;
-    return explicit;
+    return 'unknown';
   }
   for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
     if (asNonEmptyString(env[key])) return kind;
@@ -185,24 +202,58 @@ export function resolveOwnerClientKind(
   context: Record<string, unknown> | null | undefined = null,
   ownerSessionId: unknown = null,
 ): OperatorClientKind {
+  const normalizedOwnerSessionId = sanitizeSessionId(ownerSessionId);
+  if (!normalizedOwnerSessionId) return 'unknown';
+
   const sessionKind = resolveClientKindForSessionId(ownerSessionId, env);
   if (sessionKind !== 'unknown') return sessionKind;
 
-  const envKind = resolveClientKindFromEnv(env);
-  if (envKind === 'claude' && hasClaudeRuntimeEnv(env)) return envKind;
-
-  const contextCandidates: unknown[] = [
-    context?.client_kind,
-    context?.clientKind,
-  ];
-  for (const candidate of contextCandidates) {
-    const kind = normalizeClientKind(candidate);
-    if (kind !== 'unknown') return kind;
+  const contextSessionId =
+    sanitizeSessionId(asOperatorContextSessionId(context?.session_id))
+    ?? sanitizeSessionId(asOperatorContextSessionId(context?.sessionId));
+  if (contextSessionId === normalizedOwnerSessionId) {
+    const contextCandidates: unknown[] = [
+      context?.client_kind,
+      context?.clientKind,
+    ];
+    for (const candidate of contextCandidates) {
+      const kind = normalizeClientKind(candidate);
+      if (kind !== 'unknown') return kind;
+    }
   }
 
-  if (envKind !== 'unknown') return envKind;
-
   return 'unknown';
+}
+
+export function resolveOwnerStampOrError(
+  input: Record<string, unknown> | null | undefined = null,
+  env: SessionEnv = process.env,
+  context: Record<string, unknown> | null | undefined = null,
+  surface = 'agent',
+): OwnerStampResult {
+  const ownerSessionId = resolveSessionId(input, env, context);
+  if (!ownerSessionId) {
+    return {
+      success: false,
+      code: 'missing-owner-session',
+      error: `${surface} requires an owner session id before creating agent records.`,
+    };
+  }
+
+  const resolvedOwnerClientKind = resolveOwnerClientKind(input, env, context, ownerSessionId);
+  if (resolvedOwnerClientKind === 'unknown') {
+    return {
+      success: false,
+      code: 'missing-owner-client-kind',
+      error: `${surface} requires an owner client kind from the assigning parent before creating agent records.`,
+    };
+  }
+
+  return {
+    success: true,
+    ownerSessionId,
+    ownerClientKind: resolvedOwnerClientKind,
+  };
 }
 
 export function resolveClientKind(

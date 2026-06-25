@@ -48,7 +48,13 @@ vi.mock('../agent-tools.js', () => {
 
 import { queenTools } from '../queen-tools.js';
 import { loadHive } from '../hive-store.js';
-import { normalizeClientKind, resolveClientKind, resolveOwnerClientKind, resolveSessionId } from '../session-id.js';
+import {
+  normalizeClientKind,
+  operatorSessionEnvKeys,
+  resolveClientKind,
+  resolveOwnerClientKind,
+  resolveSessionId,
+} from '../session-id.js';
 import { setWorkflowHookDispatcher } from '../workflow-executor.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,22 +70,23 @@ const cjsSession = requireFromHere(join(repoRoot, '.claude/helpers/session-id.cj
 };
 
 const originalCwd = process.cwd();
-const originalEnv = {
-  CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
-  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
-  CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
-  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
-  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
-  CURSOR_SESSION_ID: process.env.CURSOR_SESSION_ID,
-  AGENT_SESSION_ID: process.env.AGENT_SESSION_ID,
-  ANTIGRAVITY_SESSION_ID: process.env.ANTIGRAVITY_SESSION_ID,
-  AGY_SESSION_ID: process.env.AGY_SESSION_ID,
-  OPENCODE_SESSION_ID: process.env.OPENCODE_SESSION_ID,
-  FORGECODE_SESSION_ID: process.env.FORGECODE_SESSION_ID,
-  FORGE_SESSION_ID: process.env.FORGE_SESSION_ID,
-};
+const OWNER_ENV_KEYS = Array.from(new Set([
+  ...operatorSessionEnvKeys(),
+  'HIVE_FLOW_CLIENT_KIND',
+  'CLAUDECODE',
+  'CLAUDE_CODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CLAUDE_PROJECT_DIR',
+]));
+const originalEnv = Object.fromEntries(
+  OWNER_ENV_KEYS.map((key) => [key, process.env[key]]),
+) as Record<string, string | undefined>;
 
 let root = '';
+
+function clearOwnerEnv(): void {
+  for (const key of OWNER_ENV_KEYS) delete process.env[key];
+}
 
 function resetAgentStore(): void {
   mockAgentState.store = {
@@ -163,16 +170,8 @@ module.exports = {
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'r-sid-'));
   process.chdir(root);
+  clearOwnerEnv();
   process.env.CLAUDE_PROJECT_DIR = root;
-  delete process.env.CODEX_SESSION_ID;
-  delete process.env.CODEX_THREAD_ID;
-  delete process.env.CURSOR_SESSION_ID;
-  delete process.env.AGENT_SESSION_ID;
-  delete process.env.ANTIGRAVITY_SESSION_ID;
-  delete process.env.AGY_SESSION_ID;
-  delete process.env.OPENCODE_SESSION_ID;
-  delete process.env.FORGECODE_SESSION_ID;
-  delete process.env.FORGE_SESSION_ID;
   process.env.CLAUDE_SESSION_ID = 'env-session';
   process.env.HIVE_FLOW_SESSION_ID = 'provider-session';
   resetAgentStore();
@@ -184,9 +183,9 @@ afterEach(() => {
   process.chdir(originalCwd);
   for (const [key, value] of Object.entries(originalEnv)) {
     if (value === undefined) {
-      delete process.env[key as keyof typeof originalEnv];
+      delete process.env[key];
     } else {
-      process.env[key as keyof typeof originalEnv] = value;
+      process.env[key] = value;
     }
   }
   if (root) rmSync(root, { recursive: true, force: true });
@@ -325,7 +324,7 @@ describe('R-sid multi-session enabler', () => {
       {},
       { HIVE_FLOW_CLIENT_KIND: 'gemini' },
       {},
-    )).toBe('gemini');
+    )).toBe('unknown');
 
     expect(resolveClientKind(
       {},
@@ -408,6 +407,19 @@ describe('R-sid multi-session enabler', () => {
     )).toBe('codex');
 
     expect(resolveOwnerClientKind(
+      { session_id: 'actual-claude-code-session', ownerClientKind: 'codex' },
+      {
+        HIVE_FLOW_CLIENT_KIND: 'codex',
+        CODEX_THREAD_ID: 'codex-thread-from-reconnect',
+        CLAUDE_PROJECT_DIR: '/repo',
+        CLAUDE_CODE_ENTRYPOINT: 'cli',
+        CLAUDE_CODE_SESSION_ID: 'actual-claude-code-session',
+      },
+      { clientKind: 'codex' },
+      'actual-claude-code-session',
+    )).toBe('claude');
+
+    expect(resolveOwnerClientKind(
       { session_id: 'claude-pane-session', ownerClientKind: 'codex' },
       {
         HIVE_FLOW_CLIENT_KIND: 'codex',
@@ -418,13 +430,20 @@ describe('R-sid multi-session enabler', () => {
       },
       { clientKind: 'codex' },
       'claude-pane-session',
-    )).toBe('claude');
+    )).toBe('unknown');
 
     expect(resolveOwnerClientKind(
       { session_id: 'unmapped-owner-session', ownerClientKind: 'codex' },
       {},
       {},
       'unmapped-owner-session',
+    )).toBe('unknown');
+
+    expect(resolveOwnerClientKind(
+      { session_id: 'label-only-session', ownerClientKind: 'codex' },
+      { HIVE_FLOW_CLIENT_KIND: 'codex' },
+      {},
+      'label-only-session',
     )).toBe('unknown');
   });
 
@@ -436,15 +455,16 @@ describe('R-sid multi-session enabler', () => {
       session_id: 'payload-session',
       ownerTmuxPane: '%42',
       tmuxPane: '%43',
-    }) as Record<string, unknown>;
+    }, { sessionId: 'payload-session', clientKind: 'claude' }) as Record<string, unknown>;
 
     expect(result.success).toBe(true);
     const hive = loadHive(String(result.hiveId));
     expect(hive?.ownerSessionId).toBe('payload-session');
+    expect(hive?.ownerClientKind).toBe('claude');
     expect(hive).not.toHaveProperty('ownerTmuxPane');
   });
 
-  it('stamps ownerSessionId from MCP context when queen_mission_assign has no caller session env', async () => {
+  it('stamps ownerSessionId and ownerClientKind from MCP context when queen_mission_assign has no caller session env', async () => {
     delete process.env.CODEX_SESSION_ID;
     delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_SESSION_ID;
@@ -454,11 +474,34 @@ describe('R-sid multi-session enabler', () => {
       queenId: 'queen-1',
       scope: 'R-sid context mission',
       description: 'Verify context owner session fallback',
-    }, { sessionId: 'context-session' }) as Record<string, unknown>;
+    }, { sessionId: 'context-session', clientKind: 'opencode' }) as Record<string, unknown>;
 
     expect(result.success).toBe(true);
     const hive = loadHive(String(result.hiveId));
     expect(hive?.ownerSessionId).toBe('context-session');
+    expect(hive?.ownerClientKind).toBe('opencode');
+  });
+
+  it('refuses queen_mission_assign when owner client kind cannot be resolved and writes no hive', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'owner kind missing mission',
+      description: 'Verify hives cannot be created without owner client kind',
+      session_id: 'session-without-kind',
+      ownerClientKind: 'codex',
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      code: 'missing-owner-client-kind',
+    });
+    expect(result.hiveId).toBeUndefined();
+    expect(loadHive('session-without-kind')).toBeNull();
   });
 
   it('refuses generated MCP transport ids as queen_mission_assign owner identity', async () => {

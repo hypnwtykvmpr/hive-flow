@@ -23,7 +23,7 @@ import {
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
-import { normalizeClientKind, operatorSessionEnvKeys, resolveOwnerClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
+import { normalizeClientKind, operatorSessionEnvKeys, resolveOwnerStampOrError, resolveSessionId, type OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -682,8 +682,7 @@ export const agentTools: MCPTool[] = [
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
       const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
       const config = (input.config as Record<string, unknown>) || {};
-      const ownerSessionId = resolveSessionId(input, process.env, context);
-      const resolvedOwnerClientKind = resolveOwnerClientKind(input, process.env, context, ownerSessionId);
+      const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'agent_spawn');
 
       if (!isCanonicalAgentType(agentType)) {
         return {
@@ -692,21 +691,8 @@ export const agentTools: MCPTool[] = [
           error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
         };
       }
-      if (!ownerSessionId) {
-        return {
-          success: false,
-          code: 'missing-owner-session',
-          error: 'agent_spawn requires an owner session id; set a supported operator session env (CODEX_SESSION_ID, CLAUDE_SESSION_ID, CURSOR_SESSION_ID/AGENT_SESSION_ID, AGY_SESSION_ID/ANTIGRAVITY_SESSION_ID, OPENCODE_SESSION_ID, FORGECODE_SESSION_ID/FORGE_SESSION_ID), set HIVE_FLOW_SESSION_ID with HIVE_FLOW_CLIENT_KIND, pass session_id, or provide operator MCP context.sessionId.',
-        };
-      }
-      if (resolvedOwnerClientKind === 'unknown') {
-        return {
-          success: false,
-          code: 'missing-owner-client-kind',
-          error: 'agent_spawn requires an owner client kind from the assigning parent; provide supported operator MCP context.clientKind or matching parent session env before spawning agents.',
-        };
-      }
-      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> = resolvedOwnerClientKind;
+      if (!ownerStamp.success) return ownerStamp;
+      const { ownerSessionId, ownerClientKind } = ownerStamp;
 
       // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 180).
       // The runbook specifies a 150 working + 30 queued cap; without a persistent
@@ -860,6 +846,8 @@ export const agentTools: MCPTool[] = [
         provider: agent.provider,
         resolvedModel: agent.resolvedModel,
         modelRoutedBy: routingResult.routedBy,
+        ownerSessionId: agent.ownerSessionId,
+        ownerClientKind: agent.ownerClientKind,
         status: 'spawned',
         createdAt: agent.createdAt,
       };
@@ -1160,7 +1148,7 @@ export const agentTools: MCPTool[] = [
       },
       required: ['action'],
     },
-    handler: async (input) => {
+    handler: async (input, context) => {
       const store = loadAgentStore();
       const agents = Object.values(store.agents).filter(a => a.status !== 'terminated');
       const action = (input.action as string) || 'status';  // Default to status
@@ -1213,6 +1201,9 @@ export const agentTools: MCPTool[] = [
             error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
           };
         }
+        const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'agent_pool scale');
+        if (!ownerStamp.success) return { action, ...ownerStamp };
+        const { ownerSessionId, ownerClientKind } = ownerStamp;
 
         return withStoreLock(() => {
           const freshStore = loadAgentStore();
@@ -1233,6 +1224,8 @@ export const agentTools: MCPTool[] = [
                 taskCount: 0,
                 config: {},
                 createdAt: new Date().toISOString(),
+                ownerSessionId,
+                ownerClientKind,
               };
               added.push(agentId);
             }

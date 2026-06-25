@@ -39,7 +39,7 @@ import {
   recomputeDelegationMetrics,
 } from './hive-store.js';
 import { getWorkflowHookDispatcher } from './workflow-executor.js';
-import { resolveSessionId } from './session-id.js';
+import { resolveOwnerStampOrError } from './session-id.js';
 
 // ---------------------------------------------------------------------------
 // Workflow hooks (fire-and-forget)
@@ -232,14 +232,9 @@ const missionAssignTool: MCPTool = {
     const workerDependencies = input.workerDependencies as Record<string, string[]> | undefined;
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
     const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
-    const ownerSessionId = resolveSessionId(input as Record<string, unknown>, process.env, context);
-    if (!ownerSessionId) {
-      return {
-        success: false,
-        code: 'missing-owner-session',
-        error: 'queen_mission_assign requires an owner session id; set CODEX_SESSION_ID, CODEX_THREAD_ID, CLAUDE_SESSION_ID, HIVE_FLOW_SESSION_ID, pass session_id, or provide operator MCP context.sessionId.',
-      };
-    }
+    const ownerStamp = resolveOwnerStampOrError(input as Record<string, unknown>, process.env, context, 'queen_mission_assign');
+    if (!ownerStamp.success) return ownerStamp;
+    const { ownerSessionId, ownerClientKind } = ownerStamp;
 
     // (1) Hard minimum of 5 workers
     if (maxWorkers < 5) {
@@ -276,7 +271,12 @@ const missionAssignTool: MCPTool = {
     if (stalenessTimeout) config.stalenessTimeout = stalenessTimeout;
     if (providers && providers.length > 0) config.defaultProvider = providers[0];
 
-    const hive = createHive(queenId, budget, Object.keys(config).length > 0 ? config : undefined);
+    const hive = createHive(
+      queenId,
+      budget,
+      Object.keys(config).length > 0 ? config : undefined,
+      { ownerSessionId, ownerClientKind },
+    );
 
     // Assign mission
     const mission: HiveMission = {
@@ -293,6 +293,7 @@ const missionAssignTool: MCPTool = {
       const record = loadHive(hive.hiveId);
       if (!record) throw new Error('Hive record disappeared after creation');
       record.ownerSessionId = ownerSessionId;
+      record.ownerClientKind = ownerClientKind;
       record.mission = mission;
       record.status = 'active';
       appendHiveAudit(record, {
@@ -411,6 +412,8 @@ const missionAssignTool: MCPTool = {
           const workerRecord: HiveWorkerRecord = {
             workerId,
             agentId,
+            ownerSessionId: spawnResult.ownerSessionId as string,
+            ownerClientKind: spawnResult.ownerClientKind as string,
             role,
             provider: workerProvider,
             status: 'idle',
@@ -644,6 +647,8 @@ const spawnWorkerTool: MCPTool = {
       const workerRecord: HiveWorkerRecord = {
         workerId,
         agentId: spawnResult.agentId as string,
+        ownerSessionId: spawnResult.ownerSessionId as string,
+        ownerClientKind: spawnResult.ownerClientKind as string,
         role,
         provider,
         status: 'idle',

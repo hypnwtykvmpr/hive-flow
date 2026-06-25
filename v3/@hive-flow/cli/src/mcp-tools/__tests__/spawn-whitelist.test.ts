@@ -6,22 +6,31 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CANONICAL_AGENT_TYPES } from '../../agents/roster.js';
 import { agentCommand } from '../../commands/agent.js';
 import { agentTools } from '../agent-tools.js';
+import { operatorSessionEnvKeys } from '../session-id.js';
 
 const spawnTool = agentTools.find(tool => tool.name === 'agent_spawn')!;
+const poolTool = agentTools.find(tool => tool.name === 'agent_pool')!;
 const listTool = agentTools.find(tool => tool.name === 'agent_list')!;
 const statusTool = agentTools.find(tool => tool.name === 'agent_status')!;
 const ORIGINAL_CWD = process.cwd();
-const ORIGINAL_ENV = {
-  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
-  CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
-  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
-  CLAUDE_CODE_SESSION_ID: process.env.CLAUDE_CODE_SESSION_ID,
-  CLAUDE_CODE_ENTRYPOINT: process.env.CLAUDE_CODE_ENTRYPOINT,
-  CLAUDECODE: process.env.CLAUDECODE,
-  CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
-  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
-  HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
-};
+const OWNER_ENV_KEYS = Array.from(new Set([
+  ...operatorSessionEnvKeys(),
+  'HIVE_FLOW_CLIENT_KIND',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CLAUDECODE',
+  'CLAUDE_CODE',
+  'CLAUDE_PROJECT_DIR',
+]));
+const ORIGINAL_ENV = Object.fromEntries(
+  OWNER_ENV_KEYS.map(key => [key, process.env[key]]),
+) as Record<string, string | undefined>;
+
+const PARENT_KINDS = ['claude', 'codex', 'gemini', 'cursor', 'antigravity', 'opencode', 'forgecode'] as const;
+type ParentKind = typeof PARENT_KINDS[number];
+
+function clearOwnerEnv(): void {
+  for (const key of OWNER_ENV_KEYS) delete process.env[key];
+}
 
 function readSpawnedTypes(root: string): string[] {
   const storePath = join(root, '.hive-flow', 'agents', 'store.json');
@@ -41,6 +50,15 @@ function readAgentRecord(root: string, agentId: string): Record<string, unknown>
   return store.agents?.[agentId];
 }
 
+function readAgentRecords(root: string): Array<Record<string, unknown>> {
+  const storePath = join(root, '.hive-flow', 'agents', 'store.json');
+  if (!existsSync(storePath)) return [];
+  const store = JSON.parse(readFileSync(storePath, 'utf8')) as {
+    agents?: Record<string, Record<string, unknown>>;
+  };
+  return Object.values(store.agents ?? {});
+}
+
 function cliSpawnChoices(): string[] {
   const spawn = agentCommand.subcommands?.find(command => command.name === 'spawn');
   const typeOption = spawn?.options?.find(option => option.name === 'type');
@@ -53,24 +71,17 @@ describe('agent_spawn canonical roster whitelist', () => {
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'hive-flow-spawn-whitelist-'));
     process.chdir(tmpRoot);
+    clearOwnerEnv();
     process.env.CODEX_SESSION_ID = 'spawn-test-session';
-    delete process.env.CODEX_THREAD_ID;
-    delete process.env.CLAUDE_SESSION_ID;
-    delete process.env.CLAUDE_CODE_SESSION_ID;
-    delete process.env.CLAUDE_CODE_ENTRYPOINT;
-    delete process.env.CLAUDECODE;
-    delete process.env.CLAUDE_PROJECT_DIR;
-    delete process.env.HIVE_FLOW_SESSION_ID;
-    delete process.env.HIVE_FLOW_CLIENT_KIND;
   });
 
   afterEach(() => {
     process.chdir(ORIGINAL_CWD);
     for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
       if (value === undefined) {
-        delete process.env[key as keyof typeof ORIGINAL_ENV];
+        delete process.env[key];
       } else {
-        process.env[key as keyof typeof ORIGINAL_ENV] = value;
+        process.env[key] = value;
       }
     }
     rmSync(tmpRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
@@ -229,7 +240,7 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentId: 'claude-runtime-owned-agent',
       agentType: 'tester',
       provider: 'anthropic',
-      session_id: 'claude-pane-session-not-in-env',
+      session_id: 'actual-claude-code-session',
       ownerClientKind: 'codex',
     }, { sessionId: 'mcp-transport-session', clientKind: 'codex' }) as Record<string, unknown>;
 
@@ -237,8 +248,30 @@ describe('agent_spawn canonical roster whitelist', () => {
       success: true,
       agentId: 'claude-runtime-owned-agent',
     });
-    expect(readAgentRecord(tmpRoot, 'claude-runtime-owned-agent')?.ownerSessionId).toBe('claude-pane-session-not-in-env');
+    expect(readAgentRecord(tmpRoot, 'claude-runtime-owned-agent')?.ownerSessionId).toBe('actual-claude-code-session');
     expect(readAgentRecord(tmpRoot, 'claude-runtime-owned-agent')?.ownerClientKind).toBe('claude');
+  });
+
+  it('refuses Claude runtime labels when the requested owner session does not match parent evidence', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    process.env.CODEX_THREAD_ID = 'codex-thread-from-reconnect';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+    process.env.CLAUDE_PROJECT_DIR = tmpRoot;
+    process.env.CLAUDE_CODE_ENTRYPOINT = 'cli';
+    process.env.CLAUDE_CODE_SESSION_ID = 'actual-claude-code-session';
+
+    const result = await spawnTool.handler({
+      agentId: 'claude-runtime-mismatch-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      session_id: 'attacker-picked-session',
+      ownerClientKind: 'claude',
+    }, { sessionId: 'mcp-transport-session', clientKind: 'codex' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('missing-owner-client-kind');
+    expect(readAgentRecord(tmpRoot, 'claude-runtime-mismatch-agent')).toBeUndefined();
   });
 
   it('refuses agent_spawn when an owner session exists but no parent owner kind can be resolved', async () => {
@@ -252,11 +285,29 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentType: 'tester',
       provider: 'anthropic',
       session_id: 'operator-session-without-kind',
+      ownerClientKind: 'codex',
+      client_kind: 'codex',
     }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     expect(result.code).toBe('missing-owner-client-kind');
     expect(readAgentRecord(tmpRoot, 'owner-kind-missing-agent')).toBeUndefined();
+  });
+
+  it('refuses client kind labels that have no parent session evidence', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+
+    const result = await spawnTool.handler({
+      agentId: 'label-only-owner-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      session_id: 'attacker-selected-session',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('missing-owner-client-kind');
+    expect(readAgentRecord(tmpRoot, 'label-only-owner-agent')).toBeUndefined();
   });
 
   it('refuses generated MCP transport ids as agent_spawn owner identity', async () => {
@@ -387,5 +438,142 @@ describe('agent_spawn canonical roster whitelist', () => {
       ),
       { numRuns: 50 },
     );
+  });
+
+  it('property: agent_spawn never persists without a complete parent owner stamp', async () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'.split('');
+    const token = fc.array(fc.constantFrom(...chars), { minLength: 3, maxLength: 18 }).map(parts => parts.join(''));
+    const scenario = fc.constantFrom(
+      'context-complete',
+      'env-complete',
+      'hive-env-complete',
+      'input-session-only',
+      'context-kind-only',
+      'label-only-with-input-session',
+      'forged-input-kind-only',
+      'generated-transport-id',
+    );
+    const ownerKindWithEnvKey = fc.constantFrom(...PARENT_KINDS)
+      .chain(kind => fc.tuple(fc.constant(kind), fc.constantFrom(...operatorSessionEnvKeys(kind))));
+
+    await fc.assert(
+      fc.asyncProperty(
+        scenario,
+        ownerKindWithEnvKey,
+        token,
+        token,
+        fc.boolean(),
+        async (mode, [kind, envKey], suffix, ownerSessionSuffix, mismatchLabel) => {
+          clearOwnerEnv();
+          const agentId = `prop-owner-${mode}-${kind}-${suffix}`;
+          const ownerSessionId = `parent-${kind}-${ownerSessionSuffix}`;
+          const mismatchedKind = PARENT_KINDS.find(candidate => candidate !== kind) ?? 'codex';
+          const input: Record<string, unknown> = {
+            agentId,
+            agentType: 'tester',
+            provider: 'anthropic',
+            ownerClientKind: 'codex',
+            client_kind: 'codex',
+          };
+          const context: Record<string, unknown> = {};
+
+          let shouldPersist = false;
+          let expectedOwnerSessionId = ownerSessionId;
+          let expectedOwnerClientKind: ParentKind = kind;
+
+          switch (mode) {
+            case 'context-complete':
+              context.sessionId = ownerSessionId;
+              context.clientKind = kind;
+              shouldPersist = true;
+              break;
+            case 'env-complete':
+              process.env[envKey] = ownerSessionId;
+              process.env.HIVE_FLOW_CLIENT_KIND = mismatchLabel ? mismatchedKind : kind;
+              shouldPersist = true;
+              break;
+            case 'hive-env-complete':
+              process.env.HIVE_FLOW_SESSION_ID = ownerSessionId;
+              process.env.HIVE_FLOW_CLIENT_KIND = kind;
+              shouldPersist = true;
+              break;
+            case 'input-session-only':
+              input.session_id = ownerSessionId;
+              break;
+            case 'context-kind-only':
+              context.clientKind = kind;
+              break;
+            case 'label-only-with-input-session':
+              input.session_id = ownerSessionId;
+              process.env.HIVE_FLOW_CLIENT_KIND = kind;
+              break;
+            case 'forged-input-kind-only':
+              input.session_id = ownerSessionId;
+              input.ownerClientKind = kind;
+              input.client_kind = kind;
+              break;
+            case 'generated-transport-id':
+              context.sessionId = `mcp-1790000000000-${suffix}`;
+              context.clientKind = kind;
+              expectedOwnerSessionId = '';
+              break;
+          }
+
+          const result = await spawnTool.handler(input, context) as Record<string, unknown>;
+          const record = readAgentRecord(tmpRoot, agentId);
+
+          if (shouldPersist) {
+            expect(result.success).toBe(true);
+            expect(record?.ownerSessionId).toBe(expectedOwnerSessionId);
+            expect(record?.ownerClientKind).toBe(expectedOwnerClientKind);
+          } else {
+            expect(result.success).toBe(false);
+            expect(record).toBeUndefined();
+          }
+        },
+      ),
+      { seed: 20_625, numRuns: 96 },
+    );
+  });
+
+  it('agent_pool scale refuses ownerless pool growth before persisting records', async () => {
+    clearOwnerEnv();
+
+    const result = await poolTool.handler({
+      action: 'scale',
+      targetSize: 2,
+      agentType: 'tester',
+      session_id: 'attacker-picked-session',
+      ownerClientKind: 'codex',
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      action: 'scale',
+      success: false,
+      code: 'missing-owner-client-kind',
+    });
+    expect(readAgentRecords(tmpRoot)).toHaveLength(0);
+  });
+
+  it('agent_pool scale stamps every grown pool agent with a real parent owner', async () => {
+    clearOwnerEnv();
+    process.env.OPENCODE_THREAD_ID = 'pool-parent-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+
+    const result = await poolTool.handler({
+      action: 'scale',
+      targetSize: 2,
+      agentType: 'tester',
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      action: 'scale',
+      targetSize: 2,
+      added: expect.any(Array),
+    });
+    const agents = readAgentRecords(tmpRoot);
+    expect(agents).toHaveLength(2);
+    expect(agents.every(agent => agent.ownerSessionId === 'pool-parent-session')).toBe(true);
+    expect(agents.every(agent => agent.ownerClientKind === 'opencode')).toBe(true);
   });
 });

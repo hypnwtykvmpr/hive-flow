@@ -3,7 +3,7 @@ import fc from 'fast-check';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { normalizeClientKind, operatorSessionEnvKeys, resolveClientKindFromEnv } from '../mcp-tools/session-id.js';
+import { OPERATOR_CLIENT_KINDS, normalizeClientKind, operatorSessionEnvKeys, resolveClientKindFromEnv } from '../mcp-tools/session-id.js';
 import { propertyRunsFromEnv } from './property-runs.js';
 
 const PROPERTY_RUNS = propertyRunsFromEnv(200);
@@ -39,6 +39,16 @@ const ALIASES: Array<{ alias: string; kind: string }> = [
   { alias: 'forge', kind: 'forgecode' },
 ];
 
+const EXPECTED_SESSION_ENV_KEYS: Record<string, string[]> = {
+  codex: ['CODEX_SESSION_ID', 'CODEX_THREAD_ID'],
+  claude: ['CLAUDE_SESSION_ID', 'CLAUDE_CODE_SESSION_ID'],
+  gemini: ['GEMINI_SESSION_ID', 'GEMINI_THREAD_ID'],
+  cursor: ['CURSOR_SESSION_ID', 'CURSOR_THREAD_ID', 'AGENT_SESSION_ID'],
+  antigravity: ['ANTIGRAVITY_SESSION_ID', 'ANTIGRAVITY_THREAD_ID', 'AGY_SESSION_ID', 'AGY_THREAD_ID'],
+  opencode: ['OPENCODE_SESSION_ID', 'OPENCODE_THREAD_ID'],
+  forgecode: ['FORGECODE_SESSION_ID', 'FORGECODE_THREAD_ID', 'FORGE_CODE_SESSION_ID', 'FORGE_SESSION_ID'],
+};
+
 function randomizeCase(value: string, mask: boolean[]): string {
   return value
     .split('')
@@ -64,10 +74,39 @@ describe('operator parent client kind aliases', () => {
   });
 
   it('keeps CJS and TypeScript session-env keys in parity for every canonical parent kind', () => {
-    for (const kind of ['claude', 'codex', 'gemini', 'cursor', 'antigravity', 'opencode', 'forgecode']) {
+    for (const kind of OPERATOR_CLIENT_KINDS) {
       expect(cjsClientKind.operatorSessionEnvKeys(kind)).toEqual(operatorSessionEnvKeys(kind as never));
     }
     expect(cjsClientKind.operatorSessionEnvKeys()).toEqual(operatorSessionEnvKeys());
+  });
+
+  it('pins the explicit session-env key set for every canonical parent kind', () => {
+    for (const kind of OPERATOR_CLIENT_KINDS) {
+      expect(operatorSessionEnvKeys(kind)).toEqual(EXPECTED_SESSION_ENV_KEYS[kind]);
+      expect(cjsClientKind.operatorSessionEnvKeys(kind)).toEqual(EXPECTED_SESSION_ENV_KEYS[kind]);
+    }
+    expect(operatorSessionEnvKeys()).toEqual([
+      'CODEX_SESSION_ID',
+      'CODEX_THREAD_ID',
+      'OPENCODE_SESSION_ID',
+      'OPENCODE_THREAD_ID',
+      'FORGECODE_SESSION_ID',
+      'FORGECODE_THREAD_ID',
+      'FORGE_CODE_SESSION_ID',
+      'FORGE_SESSION_ID',
+      'ANTIGRAVITY_SESSION_ID',
+      'ANTIGRAVITY_THREAD_ID',
+      'AGY_SESSION_ID',
+      'AGY_THREAD_ID',
+      'GEMINI_SESSION_ID',
+      'GEMINI_THREAD_ID',
+      'CURSOR_SESSION_ID',
+      'CURSOR_THREAD_ID',
+      'CLAUDE_SESSION_ID',
+      'CLAUDE_CODE_SESSION_ID',
+      'AGENT_SESSION_ID',
+      'HIVE_FLOW_SESSION_ID',
+    ]);
   });
 
   it('aligns explicit client kind with the session env that actually owns the agent', () => {
@@ -92,6 +131,12 @@ describe('operator parent client kind aliases', () => {
     };
     expect(resolveClientKindFromEnv(providerSessionEnv)).toBe('opencode');
     expect(cjsClientKind.clientKindFromEnv(providerSessionEnv)).toBe('opencode');
+
+    const labelOnlyEnv = {
+      HIVE_FLOW_CLIENT_KIND: 'codex',
+    };
+    expect(resolveClientKindFromEnv(labelOnlyEnv)).toBe('unknown');
+    expect(cjsClientKind.clientKindFromEnv(labelOnlyEnv)).toBe(null);
 
     const codexReconnectInClaudeRuntimeEnv = {
       HIVE_FLOW_CLIENT_KIND: 'codex',

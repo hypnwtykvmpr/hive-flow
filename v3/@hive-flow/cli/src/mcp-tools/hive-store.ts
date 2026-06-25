@@ -42,6 +42,8 @@ export interface HiveBudget {
 export interface HiveWorkerRecord {
   workerId: string;
   agentId: string;
+  ownerSessionId?: string;
+  ownerClientKind?: string;
   role: string;
   provider: string;
   status: 'spawning' | 'idle' | 'busy' | 'error' | 'terminated';
@@ -110,6 +112,8 @@ export interface HiveRecord {
   queenId: string;
   /** Session that launched this hive, used for multi-session completion routing. */
   ownerSessionId?: string | null;
+  /** Parent client that launched this hive, used for owned worker top-ups. */
+  ownerClientKind?: string | null;
   status: HiveStatus;
   /** Error message when status is 'failed' (Condition 4) */
   error?: string;
@@ -221,13 +225,20 @@ export async function withHiveLock<T>(hiveId: string, fn: () => T | Promise<T>):
  * Create a new hive record. Does NOT acquire lock — caller should use
  * `withHiveLock` if concurrent creation is possible.
  */
-export function createHive(queenId: string, budget: Partial<HiveBudget> = {}, config?: ModuleHiveConfig): HiveRecord {
+export function createHive(
+  queenId: string,
+  budget: Partial<HiveBudget> = {},
+  config?: ModuleHiveConfig,
+  owner?: { ownerSessionId?: string | null; ownerClientKind?: string | null },
+): HiveRecord {
   const hiveId = `hive-${randomUUID()}`;
   const now = new Date().toISOString();
 
   const record: HiveRecord = {
     hiveId,
     queenId,
+    ...(owner?.ownerSessionId ? { ownerSessionId: owner.ownerSessionId } : {}),
+    ...(owner?.ownerClientKind ? { ownerClientKind: owner.ownerClientKind } : {}),
     status: 'pending',
     workers: [],
     budget: {

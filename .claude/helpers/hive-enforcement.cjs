@@ -95,7 +95,7 @@ const TRIGGER_TOOLS = new Set([
 ]);
 
 // Worker role templates for auto-spawning
-const WORKER_ROLES = ['coder', 'reviewer', 'tester', 'researcher'];
+const WORKER_ROLES = ['implementer', 'verifier', 'tester', 'researcher'];
 
 // ---------------------------------------------------------------------------
 // Enforcement level check
@@ -700,6 +700,19 @@ async function processPostToolUse(input) {
       return {};
     }
 
+    if (!ownerSessionId) {
+      releaseLock(lockPath);
+      appendAuditLog({
+        event: 'hive-enforcement-skipped',
+        hiveId: sanitizedId,
+        tool: toolName,
+        reason: 'missing-owner-session',
+        liveWorkers: currentAllocated,
+        deficit,
+      });
+      return {};
+    }
+
     record.budget.workersAllocated = currentAllocated + deficit;
     saveHiveRecord(sanitizedId, record);
   } catch (err) {
@@ -786,6 +799,8 @@ async function processPostToolUse(input) {
       freshRecord.workers.push({
         workerId,
         agentId: spawnResult.agentId,
+        ownerSessionId: spawnResult.ownerSessionId || null,
+        ownerClientKind: spawnResult.ownerClientKind || null,
         role,
         provider,
         status: 'idle',

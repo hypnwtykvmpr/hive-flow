@@ -27,6 +27,7 @@ vi.mock('../mcp-tools/mcp-enforcement-gate.js', () => ({
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { loadAgentStore, saveAgentStore, agentTools } from '../mcp-tools/agent-tools.js';
 import { hiveMindTools } from '../mcp-tools/hive-mind-tools.js';
+import { operatorSessionEnvKeys } from '../mcp-tools/session-id.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -156,13 +157,21 @@ function setupFsMocks(
  * completed result, exactly as the old synchronous handler would have returned.
  */
 let _dispatchCallTracker: ReturnType<typeof vi.fn> | null = null;
-const originalOwnerEnv = {
-  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
-  CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
-  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
-  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
-  HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
-};
+const OWNER_ENV_KEYS = Array.from(new Set([
+  ...operatorSessionEnvKeys(),
+  'HIVE_FLOW_CLIENT_KIND',
+  'CLAUDECODE',
+  'CLAUDE_CODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CLAUDE_PROJECT_DIR',
+]));
+const originalOwnerEnv = Object.fromEntries(
+  OWNER_ENV_KEYS.map((key) => [key, process.env[key]]),
+) as Record<string, string | undefined>;
+
+function clearOwnerEnv(): void {
+  for (const key of OWNER_ENV_KEYS) delete process.env[key];
+}
 
 function setMockAgentTask(resultFactory: (input: Record<string, unknown>) => unknown) {
   // Wrap resultFactory in a vi.fn so tests can assert call counts / args
@@ -244,19 +253,17 @@ describe('Provider-Hive Compatibility', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearMockAgentTask();
+    clearOwnerEnv();
     process.env.CODEX_SESSION_ID = 'provider-hive-codex-session';
     process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
-    delete process.env.CODEX_THREAD_ID;
-    delete process.env.CLAUDE_SESSION_ID;
-    delete process.env.HIVE_FLOW_SESSION_ID;
   });
 
   afterEach(() => {
     for (const [key, value] of Object.entries(originalOwnerEnv)) {
       if (value === undefined) {
-        delete process.env[key as keyof typeof originalOwnerEnv];
+        delete process.env[key];
       } else {
-        process.env[key as keyof typeof originalOwnerEnv] = value;
+        process.env[key] = value;
       }
     }
   });
@@ -315,6 +322,30 @@ describe('Provider-Hive Compatibility', () => {
       expect(result).toMatchObject({
         success: false,
         code: 'missing-owner-session',
+      });
+      expect(getSaveAgentStoreCalls()).toHaveLength(0);
+    });
+
+    it('hive-mind spawn refuses forged client-kind labels without parent session evidence', async () => {
+      delete process.env.CODEX_SESSION_ID;
+      delete process.env.CODEX_THREAD_ID;
+      delete process.env.CLAUDE_SESSION_ID;
+      delete process.env.HIVE_FLOW_SESSION_ID;
+      process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+      const { getSaveAgentStoreCalls } = setupFsMocks(makeHiveState());
+      const spawnTool = getTool('hive-mind_spawn');
+
+      const result = await spawnTool.handler({
+        count: 1,
+        agentType: 'implementer',
+        prefix: 'forged-owner',
+        session_id: 'attacker-picked-session',
+        ownerClientKind: 'codex',
+      }) as AnyResult;
+
+      expect(result).toMatchObject({
+        success: false,
+        code: 'missing-owner-client-kind',
       });
       expect(getSaveAgentStoreCalls()).toHaveLength(0);
     });
@@ -622,7 +653,19 @@ describe('Provider-Hive Compatibility', () => {
 
   describe('Provider-aware join', () => {
     it('join with explicit provider stores in HiveWorker', async () => {
-      setupFsMocks(makeHiveState());
+      const { getHiveState } = setupFsMocks(makeHiveState(), {
+        agents: {
+          'ext-agent-1': {
+            agentId: 'ext-agent-1',
+            provider: 'codex-cli',
+            resolvedModel: 'gpt-5.5',
+            status: 'idle',
+            ownerSessionId: 'provider-hive-codex-session',
+            ownerClientKind: 'codex',
+          },
+        },
+        version: '3.0.0',
+      });
       const joinTool = getTool('hive-mind_join');
 
       const result = await joinTool.handler({
@@ -636,6 +679,9 @@ describe('Provider-Hive Compatibility', () => {
       expect(result.provider).toBe('gemini-cli');
       expect(result.model).toBe('gemini-3.1-pro-preview');
       expect(result.role).toBe('specialist');
+      const worker = (getHiveState()?.workers as HiveWorkerView[])[0];
+      expect(worker.ownerSessionId).toBe('provider-hive-codex-session');
+      expect(worker.ownerClientKind).toBe('codex');
     });
 
     it('join without provider auto-lookups from agent store', async () => {
@@ -646,6 +692,8 @@ describe('Provider-Hive Compatibility', () => {
             provider: 'codex-cli',
             resolvedModel: 'gpt-5.5',
             status: 'idle',
+            ownerSessionId: 'provider-hive-codex-session',
+            ownerClientKind: 'codex',
           },
         },
         version: '3.0.0',
@@ -661,21 +709,59 @@ describe('Provider-Hive Compatibility', () => {
       expect(result.model).toBe('gpt-5.5');
     });
 
-    it('join without provider or store record creates bare HiveWorker', async () => {
-      setupFsMocks(makeHiveState(), { agents: {}, version: '3.0.0' });
+    it('join refuses phantom agent ids before persisting a HiveWorker', async () => {
+      const { getHiveState } = setupFsMocks(makeHiveState(), { agents: {}, version: '3.0.0' });
       const joinTool = getTool('hive-mind_join');
 
       const result = await joinTool.handler({
         agentId: 'bare-agent',
       }) as AnyResult;
 
-      expect(result.success).toBe(true);
-      expect(result.provider).toBeUndefined();
-      expect(result.model).toBeUndefined();
+      expect(result).toMatchObject({
+        success: false,
+        code: 'agent-not-found',
+      });
+      expect((getHiveState()?.workers as unknown[])).toHaveLength(0);
+    });
+
+    it('join refuses legacy ownerless agent records before persisting a HiveWorker', async () => {
+      const { getHiveState } = setupFsMocks(makeHiveState(), {
+        agents: {
+          'ownerless-agent': {
+            agentId: 'ownerless-agent',
+            provider: 'codex-cli',
+            resolvedModel: 'gpt-5.5',
+            status: 'idle',
+          },
+        },
+        version: '3.0.0',
+      });
+      const joinTool = getTool('hive-mind_join');
+
+      const result = await joinTool.handler({
+        agentId: 'ownerless-agent',
+      }) as AnyResult;
+
+      expect(result).toMatchObject({
+        success: false,
+        code: 'missing-owner-session',
+      });
+      expect((getHiveState()?.workers as unknown[])).toHaveLength(0);
     });
 
     it('duplicate join is idempotent', async () => {
-      setupFsMocks(makeHiveState());
+      setupFsMocks(makeHiveState(), {
+        agents: {
+          'dup-agent': {
+            agentId: 'dup-agent',
+            provider: 'gemini-cli',
+            status: 'idle',
+            ownerSessionId: 'provider-hive-codex-session',
+            ownerClientKind: 'codex',
+          },
+        },
+        version: '3.0.0',
+      });
       const joinTool = getTool('hive-mind_join');
 
       const result1 = await joinTool.handler({

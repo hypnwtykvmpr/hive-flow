@@ -289,6 +289,19 @@ describe('Delegation metrics', () => {
     return tool;
   }
 
+  it('writes owner stamp in the initial createHive record when provided', () => {
+    const hive = createHive(
+      'queen-owned-create',
+      { maxWorkers: 8 },
+      undefined,
+      { ownerSessionId: 'owner-session', ownerClientKind: 'opencode' },
+    );
+
+    const loaded = loadHive(hive.hiveId);
+    expect(loaded?.ownerSessionId).toBe('owner-session');
+    expect(loaded?.ownerClientKind).toBe('opencode');
+  });
+
   async function seedHiveRecord(overrides: Partial<HiveRecord> = {}): Promise<HiveRecord> {
     const hive = createHive('queen-delegation-1', { maxWorkers: 8 });
     await withHiveLock(hive.hiveId, () => {

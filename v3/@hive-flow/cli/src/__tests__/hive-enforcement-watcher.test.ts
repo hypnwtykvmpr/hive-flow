@@ -62,36 +62,11 @@ fs.writeFileSync(path.join(dataDir, 'watcher-spawned.json'), JSON.stringify({
   );
 }
 
-function installFakeAgentTools(root: string): void {
-  const packageDir = join(root, 'v3', '@hive-flow', 'cli');
-  const distDir = join(packageDir, 'dist', 'src', 'mcp-tools');
-  mkdirSync(distDir, { recursive: true });
-  writeFileSync(join(packageDir, 'package.json'), JSON.stringify({ type: 'module' }), 'utf8');
-  writeFileSync(
-    join(distDir, 'agent-tools.js'),
-    `
-import fs from 'node:fs';
-import path from 'node:path';
-
-export const agentTools = [{
-  name: 'agent_spawn',
-  handler: async (input) => {
-    const dataDir = path.join(process.cwd(), '.hive-flow', 'data');
-    fs.mkdirSync(dataDir, { recursive: true });
-    fs.writeFileSync(path.join(dataDir, 'fake-agent-spawn.json'), JSON.stringify(input, null, 2));
-    return { success: true, agentId: input.agentId };
-  },
-}];
-`,
-    'utf8',
-  );
-}
-
 function writeHiveRecord(
   root: string,
   hiveId: string,
   workerCount = 5,
-  owner: { ownerSessionId?: string; ownerTmuxPane?: string } = {},
+  owner: { ownerSessionId?: string; ownerClientKind?: string; ownerTmuxPane?: string } = {},
 ): void {
   const hiveDir = join(root, '.hive-flow', 'hives', hiveId);
   mkdirSync(hiveDir, { recursive: true });
@@ -121,6 +96,7 @@ function writeHiveRecordWithWorkers(
   hiveId: string,
   workers: Array<{ workerId: string; agentId: string; status: string }>,
   workersAllocated = workers.length,
+  owner: { ownerSessionId?: string; ownerClientKind?: string } = {},
 ): void {
   const hiveDir = join(root, '.hive-flow', 'hives', hiveId);
   mkdirSync(hiveDir, { recursive: true });
@@ -130,6 +106,7 @@ function writeHiveRecordWithWorkers(
       {
         hiveId,
         queenId: 'queen-1',
+        ...owner,
         budget: { workersAllocated },
         workers,
       },
@@ -157,6 +134,39 @@ function invokeHookWithToolResponse(root: string, toolResponse: unknown, hiveHom
 
 function invokeHook(root: string, hiveId: string, hiveHome: string): string {
   return invokeHookWithToolResponse(root, { hiveId }, hiveHome);
+}
+
+function invokeSourceHookWithToolResponse(
+  root: string,
+  toolResponse: unknown,
+  hiveHome: string,
+  extraEnv: Record<string, string> = {},
+): string {
+  const payload = {
+    hook_event_name: 'PostToolUse',
+    tool_name: 'mcp__hive-flow__queen_mission_assign',
+    tool_response: typeof toolResponse === 'string' ? toolResponse : JSON.stringify(toolResponse),
+  };
+  const minimalEnv = {
+    PATH: process.env.PATH || '',
+    HOME: hiveHome,
+    HIVE_FLOW_HOME: hiveHome,
+    CLAUDE_PROJECT_DIR: root,
+    ...extraEnv,
+  };
+  return execFileSync(process.execPath, [sourceHook], {
+    cwd: root,
+    env: minimalEnv,
+    input: JSON.stringify(payload),
+    encoding: 'utf8',
+    timeout: 5000,
+  });
+}
+
+function readAgentStore(root: string): Record<string, unknown> {
+  const storePath = join(root, '.hive-flow', 'agents', 'store.json');
+  if (!existsSync(storePath)) return { agents: {} };
+  return JSON.parse(readFileSync(storePath, 'utf8')) as Record<string, unknown>;
 }
 
 function readAuditRecords(hiveHome: string): Array<Record<string, unknown>> {
@@ -262,7 +272,7 @@ describe('hive enforcement watcher launch', () => {
         { workerId: 'worker-3', agentId: 'agent-3', status: 'idle' },
         { workerId: 'worker-4', agentId: 'agent-4', status: 'idle' },
         { workerId: 'worker-5', agentId: 'agent-5', status: 'error' },
-      ], 4);
+      ], 4, { ownerSessionId: 'owner-session', ownerClientKind: 'opencode' });
 
       expect(invokeHook(root, hiveId, hiveHome)).toBe('{}');
 
@@ -278,27 +288,73 @@ describe('hive enforcement watcher launch', () => {
     }
   });
 
-  it('propagates hive ownerSessionId into enforcement top-up agent_spawn input', () => {
+  it('does not create a top-up worker when the hive owner session has no matching parent env', () => {
+    const root = makeTempProject();
+    try {
+      const hiveHome = join(root, 'global-home');
+      const hiveId = 'hive-owner-env-missing';
+      writeHiveRecord(root, hiveId, 4, { ownerSessionId: 'owner-session', ownerClientKind: 'opencode' });
+
+      expect(invokeSourceHookWithToolResponse(root, { hiveId }, hiveHome)).toBe('{}');
+
+      const store = readAgentStore(root) as { agents?: Record<string, unknown> };
+      expect(Object.keys(store.agents ?? {})).toHaveLength(0);
+      expect(readAuditEvents(hiveHome)).toContain('worker-spawn-failed');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not create a top-up worker for legacy hives with an empty owner session', () => {
+    const root = makeTempProject();
+    try {
+      const hiveHome = join(root, 'global-home');
+      const hiveId = 'hive-empty-owner';
+      writeHiveRecord(root, hiveId, 4, { ownerClientKind: 'opencode' });
+
+      expect(invokeSourceHookWithToolResponse(root, { hiveId }, hiveHome, {
+        OPENCODE_SESSION_ID: 'ambient-hook-session',
+      })).toBe('{}');
+
+      const store = readAgentStore(root) as { agents?: Record<string, unknown> };
+      expect(Object.keys(store.agents ?? {})).toHaveLength(0);
+      expect(readAuditRecords(hiveHome).at(-1)).toMatchObject({
+        event: 'hive-enforcement-skipped',
+        reason: 'missing-owner-session',
+        hiveId,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('creates a top-up worker through the real agent_spawn handler when parent env matches the hive owner', () => {
     const root = makeTempProject();
     try {
       const hiveHome = join(root, 'global-home');
       const hiveId = 'hive-owned-top-up';
-      installHookAndWatcher(root);
-      installFakeAgentTools(root);
-      writeHiveRecord(root, hiveId, 4, { ownerSessionId: 'owner-session' });
+      writeHiveRecord(root, hiveId, 4, { ownerSessionId: 'owner-session', ownerClientKind: 'opencode' });
 
-      expect(invokeHook(root, hiveId, hiveHome)).toContain('Auto-spawned 1 worker');
+      expect(invokeSourceHookWithToolResponse(root, { hiveId }, hiveHome, {
+        OPENCODE_SESSION_ID: 'owner-session',
+      })).toContain('Auto-spawned 1 worker');
 
-      const spawnInput = JSON.parse(
-        readFileSync(join(root, '.hive-flow', 'data', 'fake-agent-spawn.json'), 'utf8'),
-      );
-      expect(spawnInput).toMatchObject({
-        session_id: 'owner-session',
+      const store = readAgentStore(root) as { agents?: Record<string, Record<string, unknown>> };
+      const agents = Object.values(store.agents ?? {});
+      expect(agents).toHaveLength(1);
+      expect(agents[0]).toMatchObject({
+        ownerSessionId: 'owner-session',
+        ownerClientKind: 'opencode',
         config: {
           autoSpawnedBy: 'hive-enforcement',
           hiveId,
           queenId: 'queen-1',
         },
+      });
+      const hive = JSON.parse(readFileSync(join(root, '.hive-flow', 'hives', hiveId, 'hive.json'), 'utf8'));
+      expect(hive.workers.at(-1)).toMatchObject({
+        ownerSessionId: 'owner-session',
+        ownerClientKind: 'opencode',
       });
     } finally {
       rmSync(root, { recursive: true, force: true });

@@ -10,7 +10,7 @@ import type { MCPTool } from './types.js';
 import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
 import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import type { AgentProvider } from './agent-tools.js';
-import { resolveOwnerClientKind, resolveSessionId, type OperatorClientKind } from './session-id.js';
+import { resolveOwnerStampOrError, type OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -239,23 +239,9 @@ export const hiveMindTools: MCPTool[] = [
       if (!state.initialized) {
         return { success: false, error: 'Hive-mind not initialized. Run hive-mind/init first.' };
       }
-      const ownerSessionId = resolveSessionId(input, process.env, context);
-      if (!ownerSessionId) {
-        return {
-          success: false,
-          code: 'missing-owner-session',
-          error: 'hive-mind_spawn requires an owner session id before creating worker agents.',
-        };
-      }
-      const resolvedOwnerClientKind = resolveOwnerClientKind(input, process.env, context, ownerSessionId);
-      if (resolvedOwnerClientKind === 'unknown') {
-        return {
-          success: false,
-          code: 'missing-owner-client-kind',
-          error: 'hive-mind_spawn requires an owner client kind from the assigning parent before creating worker agents.',
-        };
-      }
-      const ownerClientKind: Exclude<OperatorClientKind, 'unknown'> = resolvedOwnerClientKind;
+      const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'hive-mind_spawn');
+      if (!ownerStamp.success) return ownerStamp;
+      const { ownerSessionId, ownerClientKind } = ownerStamp;
 
       const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
       const role = (input.role as string) || 'worker';
@@ -472,24 +458,51 @@ export const hiveMindTools: MCPTool[] = [
       },
       required: ['agentId'],
     },
-    handler: async (input) => {
+    handler: async (input, context) => {
       const state = loadHiveState();
       const agentId = input.agentId as string;
       if (!state.initialized) return { success: false, error: 'Hive-mind not initialized' };
 
       if (!state.workers.find(w => w.agentId === agentId)) {
-        // Resolve provider: explicit param > agent store lookup > undefined
-        let provider = input.provider as AgentProvider | undefined;
-        let model = input.model as string | undefined;
-        if (!provider) {
-          try {
-            const agentStore = loadAgentStore();
-            const rec = agentStore.agents[agentId];
-            if (rec) { provider = rec.provider; model = model || rec.resolvedModel || rec.model; }
-          } catch { /* non-fatal */ }
+        const agentStore = loadAgentStore();
+        const rec = agentStore.agents[agentId];
+        if (!rec) {
+          return {
+            success: false,
+            code: 'agent-not-found',
+            error: `hive-mind_join requires an existing owned agent record before joining worker ${agentId}.`,
+          };
         }
+        if (!rec.ownerSessionId || !rec.ownerClientKind) {
+          return {
+            success: false,
+            code: 'missing-owner-session',
+            error: `hive-mind_join requires existing agent ${agentId} to have an owner stamp before it can join the hive.`,
+          };
+        }
+        const ownerStamp = resolveOwnerStampOrError(
+          { ...input, session_id: rec.ownerSessionId },
+          process.env,
+          context,
+          'hive-mind_join',
+        );
+        if (!ownerStamp.success) return ownerStamp;
+        if (
+          ownerStamp.ownerSessionId !== rec.ownerSessionId
+          || ownerStamp.ownerClientKind !== rec.ownerClientKind
+        ) {
+          return {
+            success: false,
+            code: 'owner-stamp-mismatch',
+            error: `hive-mind_join owner context does not match existing agent ${agentId}.`,
+          };
+        }
+        const provider = (input.provider as AgentProvider | undefined) ?? rec.provider;
+        const model = (input.model as string | undefined) ?? rec.resolvedModel ?? rec.model;
         state.workers.push({
           agentId, provider, model,
+          ownerSessionId: rec.ownerSessionId,
+          ownerClientKind: rec.ownerClientKind,
           role: (input.role as string) || 'worker',
           joinedAt: new Date().toISOString(), status: 'idle',
         });
