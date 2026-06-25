@@ -75,6 +75,8 @@ const agentSpawnTool = agentTools.find((t) => t.name === 'agent_spawn')!;
 const agentTaskTool = agentTools.find((t) => t.name === 'agent_task')!;
 const spawnHandler = agentSpawnTool.handler;
 const handler = agentTaskTool.handler;
+const agentUpdateTool = agentTools.find((t) => t.name === 'agent_update')!;
+const updateHandler = agentUpdateTool.handler;
 
 /** The bridge path that the handler will compute from the mocked fileURLToPath */
 const EXPECTED_BRIDGE_PATH = '/providers/scripts/provider-agent-bridge.mjs';
@@ -254,6 +256,61 @@ describe('agent_spawn handler model normalization', () => {
     expect(persisted.provider).toBe('codex-cli');
     expect(persisted.model).toBe('opus');
     expect(persisted.resolvedModel).toBe('gpt-5.5');
+  });
+});
+
+// ── HF-1: writeAuthority spawn→store plumbing + agent_update forgery resistance ──
+describe('HF-1 writeAuthority grant (agent_spawn / agent_update)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("persists a top-level writeAuthority:'source' grant from agent_spawn", async () => {
+    const { getPersistedStore } = setupStoreMocks(makeStore());
+    const result = await spawnHandler({
+      agentType: 'implementer',
+      provider: 'codex-cli',
+      writeAuthority: 'source',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord & { writeAuthority?: string };
+    expect(persisted.writeAuthority).toBe('source');
+    // The grant must be top-level, NOT smuggled into config.
+    expect((persisted.config as Record<string, unknown>)?.writeAuthority).toBeUndefined();
+  });
+
+  it('does NOT grant writeAuthority from config or from malformed values', async () => {
+    for (const bad of [
+      { config: { writeAuthority: 'source' } },
+      { writeAuthority: 'all' },
+      { writeAuthority: true },
+    ]) {
+      const { getPersistedStore } = setupStoreMocks(makeStore());
+      const result = await spawnHandler({
+        agentType: 'implementer',
+        provider: 'codex-cli',
+        ...(bad as Record<string, unknown>),
+      }) as Record<string, unknown>;
+      expect(result.success).toBe(true);
+      const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord & { writeAuthority?: string };
+      expect(persisted.writeAuthority).toBeUndefined();
+    }
+  });
+
+  it('agent_update cannot grant writeAuthority via config merge', async () => {
+    const agent = makeAgent({ agentId: 'wa-agent' });
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+
+    const result = await updateHandler({
+      agentId: 'wa-agent',
+      config: { writeAuthority: 'source' },
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const persisted = getPersistedStore().agents['wa-agent'] as AgentRecord & { writeAuthority?: string };
+    // config merge must not promote to a top-level grant
+    expect(persisted.writeAuthority).toBeUndefined();
   });
 });
 

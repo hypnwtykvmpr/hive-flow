@@ -63,6 +63,11 @@ export interface AgentRecord {
   ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
   ownerClientKind?: Exclude<OperatorClientKind, 'unknown'>;  // Owning operator lane for completion routing
   currentTaskPid?: number;  // Provider bridge child pid for read-side liveness checks
+  // HF-1: top-level, persisted, operator-only write-authority grant. Only the
+  // literal value 'source' grants tracked-source writes in the provider bridge.
+  // Accepted ONLY as a top-level agent_spawn input — never via config (which
+  // agent_update can merge), model args, or tool calls. Legacy/malformed → none.
+  writeAuthority?: 'source';
 }
 
 export interface AgentStore {
@@ -675,6 +680,11 @@ export const agentTools: MCPTool[] = [
         task: { type: 'string', description: 'Task description for intelligent model routing' },
         session_id: { type: 'string', description: 'Optional operator session id for ownership routing' },
         sessionId: { type: 'string', description: 'Optional operator session id fallback for ownership routing' },
+        writeAuthority: {
+          type: 'string',
+          enum: ['source'],
+          description: "Operator-only grant. 'source' lets this agent overwrite git-tracked source files via the provider bridge. Omit to default-deny tracked-source writes. Control-plane paths stay denied regardless.",
+        },
       },
       required: ['agentType'],
     },
@@ -795,6 +805,13 @@ export const agentTools: MCPTool[] = [
       // Stored on the agent record so task bridges can pass it explicitly.
       const spawnToken = randomUUID();
 
+      // HF-1: write-authority grant. Only a top-level input value of exactly
+      // 'source' grants it. config.writeAuthority, model args, and any other
+      // value are ignored so the grant cannot be forged via the config channel
+      // (which agent_update can merge) or by the model/tool layer.
+      const writeAuthority: AgentRecord['writeAuthority'] =
+        input.writeAuthority === 'source' ? 'source' : undefined;
+
       const agent: AgentRecord = {
         agentId,
         agentType,
@@ -816,6 +833,7 @@ export const agentTools: MCPTool[] = [
           : routingResult.routedBy,
         ownerSessionId,
         ownerClientKind,
+        ...(writeAuthority ? { writeAuthority } : {}),
       };
 
       // Transition spawning → idle (setup complete)

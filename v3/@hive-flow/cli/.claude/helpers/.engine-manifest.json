@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-06-25T14:59:30.183Z",
+  "syncedAt": "2026-06-25T21:29:47.034Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -40,11 +40,11 @@
     },
     {
       "name": "protected-paths.cjs",
-      "sha256": "0da8b98da3799e81fa939840d4db74c2a2157693e9f32cbb053a3265c6419dde"
+      "sha256": "821c26ece581cb0c7c881e3599e9936f09b07d8b6b8acbfbaa136d52d51425e3"
     },
     {
       "name": "protected-paths.policy.json",
-      "sha256": "f823da01ae4fc35b95fe361fb1d7a00c6c7c88db75a71536f4d1b92957c92add"
+      "sha256": "956ae84fde1a2502eeec294780f136d676f2d40c460355a5a6e4a39793d0ae3e"
     }
   ]
 }

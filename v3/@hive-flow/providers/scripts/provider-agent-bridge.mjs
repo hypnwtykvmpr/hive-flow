@@ -1726,6 +1726,114 @@ function isProtectedPath(filePath) {
   return protectedPathPolicy.isProtectedWritePath(filePath, PROJECT_ROOT);
 }
 
+// HF-5: control-plane store dirs are NEVER writable through the provider bridge
+// tools, even for an agent that holds a writeAuthority:'source' grant. This is
+// enforced directly here (not only via the protected-path policy) so the
+// guarantee holds even where the policy mirror has not yet been updated.
+const BRIDGE_CONTROL_PLANE_DIRS = [
+  resolve(PROJECT_ROOT, '.hive-flow', 'agents'),
+  resolve(PROJECT_ROOT, '.hive-flow', 'hives'),
+  resolve(PROJECT_ROOT, '.hive-flow', 'tasks'),
+  resolve(PROJECT_ROOT, '.hive-flow', 'terminals'),
+];
+
+function bridgeIsControlPlanePath(safePath) {
+  return BRIDGE_CONTROL_PLANE_DIRS.some((dir) => {
+    const rel = relative(dir, safePath);
+    return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+  });
+}
+
+// HF-1: read the agent's persisted, top-level writeAuthority from the agent
+// store. The agent identity comes from HIVE_FLOW_AGENT_ID/CLAUDE_AGENT_ID, which
+// are set by the parent operator in buildProviderBridgeEnv() and cannot be
+// forged by the model running inside this bridge (dev-override env was already
+// stripped at startup). The store file itself is control-plane protected, so the
+// model cannot rewrite its own grant. Only the literal value 'source' grants
+// authority; legacy records, missing fields, and malformed values deny.
+function bridgeAgentHasSourceWriteAuthority() {
+  try {
+    const agentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
+    if (!agentId) return false;
+    const storePath = resolve(PROJECT_ROOT, '.hive-flow', 'agents', 'store.json');
+    if (!existsSync(storePath)) return false;
+    const store = JSON.parse(readFileSync(storePath, 'utf-8'));
+    const record = store?.agents?.[agentId];
+    return record?.writeAuthority === 'source';
+  } catch {
+    // Fail closed: any read/parse error means no grant.
+    return false;
+  }
+}
+
+function bridgeGitErrorMessage(err) {
+  if (!err) return '';
+  const stderr = Buffer.isBuffer(err.stderr) ? err.stderr.toString('utf8') : String(err.stderr || '');
+  const stdout = Buffer.isBuffer(err.stdout) ? err.stdout.toString('utf8') : String(err.stdout || '');
+  return `${stderr}\n${stdout}\n${String(err.message || '')}`;
+}
+
+function bridgeGitErrorLooksAbsentOrNoWorktree(err) {
+  if (err?.code === 'ENOENT') return true;
+  return /not a git repository|not a git work tree/i.test(bridgeGitErrorMessage(err));
+}
+
+// HF-1: detect whether a path is a git-tracked file under PROJECT_ROOT. Uses
+// `git ls-files --error-unmatch` via argv (never a shell string), with the `--`
+// separator so filenames containing spaces or beginning with `-` are handled
+// safely. Returns false (skip the tracked check) when PROJECT_ROOT is not a git
+// worktree — protected/control-plane enforcement still applies independently.
+function bridgeProjectGitWorktreeState() {
+  try {
+    execFileSync(
+      'git',
+      ['-C', PROJECT_ROOT, 'rev-parse', '--is-inside-work-tree'],
+      { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' },
+    );
+    return 'worktree';
+  } catch (err) {
+    if (bridgeGitErrorLooksAbsentOrNoWorktree(err)) return 'not-worktree';
+    return 'error';
+  }
+}
+
+function bridgeIsTrackedSourceFile(safePath) {
+  const rel = relative(PROJECT_ROOT, safePath);
+  // Outside the project root → fail closed (treat as tracked → deny).
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return true;
+  const worktreeState = bridgeProjectGitWorktreeState();
+  if (worktreeState === 'not-worktree') return false;
+  if (worktreeState === 'error') return true;
+  try {
+    execFileSync(
+      'git',
+      ['-C', PROJECT_ROOT, 'ls-files', '--error-unmatch', '--', rel],
+      { stdio: 'ignore' },
+    );
+    return true; // exit 0 → tracked
+  } catch (err) {
+    // Normal non-match (exit 1) → untracked. Any other git failure is an
+    // integrity problem (corrupt index, permission error, timeout, etc.); fail
+    // closed so a broken tracking check cannot become write authority.
+    if (err && err.status === 1) return false;
+    return true;
+  }
+}
+
+// HF-1/HF-5: shared write-gate for write_file/edit_file. Throws (→ structured
+// error result that does not ground) when the write must be denied.
+function assertBridgeWriteAllowed(safePath, filePath) {
+  if (bridgeIsControlPlanePath(safePath)) {
+    throw new Error(`Write blocked: ${filePath} is a protected path (control-plane store)`);
+  }
+  if (bridgeIsTrackedSourceFile(safePath) && !bridgeAgentHasSourceWriteAuthority()) {
+    throw new Error(
+      `Write blocked: ${filePath} is a git-tracked source file and this agent has no write authority. ` +
+      `Re-spawn the agent with writeAuthority:'source' to permit tracked-source writes.`,
+    );
+  }
+}
+
 function isProtectedReadPath(filePath) {
   return protectedPathPolicy.isProtectedReadPath(filePath, PROJECT_ROOT);
 }
@@ -3230,6 +3338,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     if (isProtectedPath(safePath)) {
       throw new Error(`Write blocked: ${filePath} is a protected path`);
     }
+    assertBridgeWriteAllowed(safePath, filePath);
     const writeBlockReason = bridgeWriteBlockReason();
     if (writeBlockReason) {
       throw new Error(writeBlockReason);
@@ -3243,6 +3352,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     if (isProtectedPath(safePath)) {
       throw new Error(`Write blocked: ${filePath} is a protected path`);
     }
+    assertBridgeWriteAllowed(safePath, filePath);
     const writeBlockReason = bridgeWriteBlockReason();
     if (writeBlockReason) {
       throw new Error(writeBlockReason);
