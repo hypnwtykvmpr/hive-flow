@@ -1684,7 +1684,15 @@ async function createProviderConfig(providerName, model, timeoutMs, agentToken) 
 
 // ===== Bridge Filesystem Security Guardrails =====
 
-const PROJECT_ROOT = resolve(process.cwd());
+// HF-2: realpath PROJECT_ROOT once at module init so the jail, control-plane,
+// and tracked-source checks all compare on the SAME real basis as the
+// realpath'd safePaths that validateFilePath returns. On macOS the OS temp dir
+// is symlinked (/var → /private/var); a lexical root vs realpath'd safePath
+// would either break every legit write or open a control-plane bypass.
+function realpathProjectRoot(p) {
+  try { return realpathSync.native(p); } catch { return p; }
+}
+const PROJECT_ROOT = realpathProjectRoot(resolve(process.cwd()));
 const FAIL_CLOSED_ENFORCEMENT_LEVEL = 2;
 
 // Enforcement state/home layout — MUST mirror `.claude/helpers/enforcement.cjs`
@@ -1715,11 +1723,27 @@ function validateFilePath(filePath) {
   if (typeof filePath !== 'string' || filePath.trim() === '') {
     throw new Error('Missing required file path');
   }
-  const resolved = resolve(filePath);
-  if (!resolved.startsWith(PROJECT_ROOT + '/') && resolved !== PROJECT_ROOT) {
+  // Keep the lexical `..` traversal rejection (cheap, catches the obvious case).
+  // NOTE: a legitimate path can lie outside the realpath'd PROJECT_ROOT
+  // lexically when the root is reached through a symlinked component (e.g. cwd
+  // is a symlink to the real root). So reject only explicit `..` segments here;
+  // the realpath jail below is the authoritative containment check.
+  if (/(^|[/\\])\.\.([/\\]|$)/.test(filePath)) {
     throw new Error(`Path traversal blocked: ${filePath} resolves outside project root`);
   }
-  return resolved;
+  // HF-2: jail on the REAL path (follows in-root symlinks whose target is
+  // outside). resolveRealPathForBridge realpaths the deepest existing ancestor
+  // and appends the non-existent tail, so new files/dirs still validate.
+  // ponytail: residual TOCTOU remains between this check and the syscall —
+  // acceptable: the bridge imports no symlinkSync (L30) and the model can't
+  // shell out to create a swap link mid-call. Out-of-band only = weaker threat.
+  // ponytail: hardlinks are invisible to realpath (no linkSync imported either),
+  // so a pre-existing hardlink to a tracked/outside inode is not caught here.
+  const safePath = resolveRealPathForBridge(filePath);
+  if (!safePath.startsWith(PROJECT_ROOT + sep) && safePath !== PROJECT_ROOT) {
+    throw new Error(`Path traversal blocked: ${filePath} resolves outside project root`);
+  }
+  return safePath;
 }
 
 function isProtectedPath(filePath) {
