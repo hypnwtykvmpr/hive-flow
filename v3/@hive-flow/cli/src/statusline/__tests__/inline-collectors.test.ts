@@ -34,6 +34,7 @@ import {
   collectInlineSnapshot,
   DEFAULT_INLINE_DEADLINE_MS,
 } from '../inline-collectors.js';
+import { collectSwarm } from '../collectors/swarm.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -999,5 +1000,117 @@ describe('collectInlineSnapshot — materialized-summary probes', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Statusboard audit Slice A — inline/canonical parity for the hive-worker
+// counting fixes (SB-4 entries shape, F2 completed hive worker, F3 queen
+// prefix). These guarantee the inline renderer agrees with collectSwarm.
+// ---------------------------------------------------------------------------
+
+describe('collectInlineSnapshot (Slice A parity with collectSwarm)', () => {
+  let fix: Fixture;
+  beforeEach(() => {
+    fix = setupFixture();
+  });
+  afterEach(() => {
+    cleanup(fix);
+    vi.restoreAllMocks();
+  });
+
+  // SB-4 — an `entries`-only legacy store must produce the SAME swarm count in
+  // both the canonical collector and the inline probe. Before the fix, inline
+  // probeSwarm read only `.agents` and omitted the swarm row entirely.
+  it("honors the legacy 'entries' store shape for parity with collectSwarm", async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    // Note: an `entries`-shaped store (no `agents` key).
+    writeFileSync(
+      fix.storePath,
+      JSON.stringify({
+        version: '1.0',
+        entries: {
+          w1: {
+            agentId: 'w1',
+            agentType: 'coder',
+            status: 'busy',
+            ownerSessionId: 'session-a',
+            currentTaskPid: process.pid,
+          },
+          w2: {
+            agentId: 'w2',
+            agentType: 'tester',
+            status: 'busy',
+            ownerSessionId: 'session-a',
+            currentTaskPid: process.pid,
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+
+    const canonical = await collectSwarm({ projectRoot: fix.projectRoot });
+    const inline = await collectInlineSnapshot({ projectRoot: fix.projectRoot, deadlineMs: 500 });
+
+    // Canonical already honored `entries`; inline now matches.
+    expect(canonical.workersAlive).toBe(2);
+    expect(inline.swarm).toBeDefined();
+    expect(inline.swarm?.activeAgents).toBe(2);
+    expect(inline.swarm?.agents?.map((a) => a.id)).toEqual(['w1', 'w2']);
+  });
+
+  // F2 mirror — inline path must also drop a completed hive worker with a
+  // lingering live pid.
+  it('does NOT count a completed hive worker with a live pid (inline F2 mirror)', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      done: {
+        agentId: 'done-worker',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        config: { hiveId: 'h1' },
+        lastResult: { completedAt: '2026-06-20T19:38:09.227Z' },
+      },
+      live: {
+        agentId: 'live-worker',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        config: { hiveId: 'h1' },
+      },
+    });
+    writeHive(fix.projectRoot, 'h1', [
+      { agentId: 'done-worker', workerId: 'done-worker', status: 'busy', currentTaskPid: process.pid },
+      { agentId: 'live-worker', workerId: 'live-worker', status: 'busy', currentTaskPid: process.pid },
+    ], 'queen-h1', 'session-a');
+
+    const snap = await collectInlineSnapshot({ projectRoot: fix.projectRoot, deadlineMs: 500 });
+    expect(snap.swarm?.agents?.map((a) => a.id)).toEqual(['live-worker']);
+  });
+
+  // F3 mirror — inline path must classify a 'queen-*' record with agentType
+  // worker as a WORKER, not a queen.
+  it("classifies 'queen-*' agentType worker as a worker (inline F3 mirror)", async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      tricky: {
+        agentId: 'queen-bee',
+        agentType: 'worker',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+    });
+
+    const snap = await collectInlineSnapshot({ projectRoot: fix.projectRoot, deadlineMs: 500 });
+    expect(snap.swarm?.activeQueens).toBe(0);
+    expect(snap.swarm?.activeAgents).toBe(1);
+    expect(snap.swarm?.agents?.map((a) => a.id)).toEqual(['queen-bee']);
   });
 });

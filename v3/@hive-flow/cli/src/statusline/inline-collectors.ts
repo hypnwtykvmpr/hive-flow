@@ -419,6 +419,8 @@ function spawnGit(ctx: GitProbeContext, args: ReadonlyArray<string>): string | u
 
 interface RawStoreShape {
   agents?: unknown;
+  /** Legacy store shape — honored for parity with collectors/swarm.ts extractRecords (SB-4). */
+  entries?: unknown;
 }
 
 interface RawAgentRecord {
@@ -465,6 +467,26 @@ function ownerSessionIdOf(rec: RawAgentRecord): string | null {
   return sanitizeSessionId(rec.ownerSessionId);
 }
 
+/**
+ * Mirror of `collectors/swarm.ts isQueenRecord` (F3 fix). Type fields take
+ * precedence over the `queen-` agentId prefix:
+ *  - any of agentType/type/role === 'queen'  -> queen.
+ *  - any of them === 'worker'                 -> NOT a queen even when named
+ *    `queen-*` (the reported F3 case).
+ *  - otherwise (coordinator-typed queens, or no type field) the `queen-`
+ *    prefix is honored as the queen signal.
+ */
+function isQueenRecord(rec: RawAgentRecord): boolean {
+  const typeFields: ReadonlyArray<unknown> = [rec.agentType, rec.type, rec.role];
+  for (const field of typeFields) {
+    if (typeof field === 'string' && field.toLowerCase() === 'queen') return true;
+  }
+  for (const field of typeFields) {
+    if (typeof field === 'string' && field.toLowerCase() === 'worker') return false;
+  }
+  return typeof rec.agentId === 'string' && rec.agentId.startsWith('queen-');
+}
+
 function rawAgentHiveId(rec: RawAgentRecord): string {
   if (!rec.config || typeof rec.config !== 'object' || Array.isArray(rec.config)) return '';
   const hiveId = (rec.config as { hiveId?: unknown }).hiveId;
@@ -496,8 +518,14 @@ function hasCompletedLastResult(rec: RawAgentRecord): boolean {
   );
 }
 
-function isCompletedDirectAgent(rec: RawAgentRecord, status: NormalizedAgentRow['status']): boolean {
-  if (rawAgentHiveId(rec) !== '') return false;
+/**
+ * Mirror of `collectors/swarm.ts isCompletedAgent` (F2 fix): a record with a
+ * terminal `lastResult` must not count as live unless it is genuinely busy on
+ * a live task pid. Applies to hive agents too (the prior `rawAgentHiveId!==''`
+ * early-return let a completed idle hive worker with a lingering live pid be
+ * counted), so the two renderers agree.
+ */
+function isCompletedAgent(rec: RawAgentRecord, status: NormalizedAgentRow['status']): boolean {
   if (!hasCompletedLastResult(rec)) return false;
   return !(status === 'busy' && isPositiveInteger(rec.currentTaskPid));
 }
@@ -521,11 +549,17 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
       records.push(value as RawAgentRecord);
     }
   };
-  const agentsField = (raw as RawStoreShape).agents;
-  if (Array.isArray(agentsField)) {
-    for (const item of agentsField) pushIf(item);
-  } else if (agentsField && typeof agentsField === 'object') {
-    for (const item of Object.values(agentsField as Record<string, unknown>)) {
+  // Honor `agents` (canonical) then fall back to the legacy `entries` key so
+  // this inline path agrees with collectors/swarm.ts extractRecords for an
+  // `entries`-only store (SB-4 parity).
+  const store = raw as RawStoreShape;
+  let source: unknown;
+  if (store.agents !== undefined && store.agents !== null) source = store.agents;
+  else if (store.entries !== undefined && store.entries !== null) source = store.entries;
+  if (Array.isArray(source)) {
+    for (const item of source) pushIf(item);
+  } else if (source && typeof source === 'object') {
+    for (const item of Object.values(source as Record<string, unknown>)) {
       pushIf(item);
     }
   }
@@ -552,13 +586,9 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
         ? rec.agentId
         : `agent-${rows.length}`;
     if (!shouldKeepRuntimeAgent(rec, id, runtimeState)) continue;
-    if (isCompletedDirectAgent(rec, status)) continue;
+    if (isCompletedAgent(rec, status)) continue;
     if (!hasLiveProcessEvidence(rec)) continue;
-    const isQueen =
-      (typeof rec.agentId === 'string' && rec.agentId.startsWith('queen-')) ||
-      (typeof rec.agentType === 'string' && rec.agentType.toLowerCase() === 'queen') ||
-      (typeof rec.type === 'string' && rec.type.toLowerCase() === 'queen') ||
-      (typeof rec.role === 'string' && rec.role.toLowerCase() === 'queen');
+    const isQueen = isQueenRecord(rec);
 
     const role = isQueen
       ? 'queen'

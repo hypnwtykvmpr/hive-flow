@@ -74,6 +74,7 @@ function writeHive(
   workers: Array<Record<string, unknown>>,
   queenId?: string,
   ownerSessionId?: string,
+  status: string = 'active',
 ): void {
   const hiveRoot = join(projectRoot, '.hive-flow', 'hives', hiveId);
   mkdirSync(hiveRoot, { recursive: true });
@@ -81,7 +82,7 @@ function writeHive(
     join(hiveRoot, 'hive.json'),
     JSON.stringify({
       hiveId,
-      status: 'active',
+      status,
       queenId,
       ...(ownerSessionId !== undefined ? { ownerSessionId } : {}),
       workers,
@@ -616,5 +617,188 @@ describe('collectSwarm (C1 BLOCKER regression suite)', () => {
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
     expect(result.workersAlive).toBe(2);
     expect(result.workersExecuting).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Statusboard audit Slice A — hive-worker over-count regression suite.
+// Covers F1/F4 (terminated-hive worker), F2 (completed hive worker), and
+// F3 (queen-prefix misclassification).
+// ---------------------------------------------------------------------------
+
+describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
+  let fix: Fixture;
+  beforeEach(() => {
+    fix = setupFixture();
+  });
+  afterEach(() => {
+    rmSync(fix.projectRoot, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  // F1/F4 — a worker whose store record has an empty/absent config.hiveId,
+  // belonging to a now-TERMINATED hive, with a live pid, must NOT be counted
+  // once at least one OTHER hive is active. Before the fix, hiveAgentIds was
+  // populated only from active hives, so the terminated hive's orphan worker
+  // fell through the empty-hiveId branch and was kept.
+  it('does NOT count a terminated-hive worker (empty config.hiveId, live pid)', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      orphan: {
+        agentId: 'orphan-worker',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        // NOTE: no config.hiveId on the store record.
+      },
+      liveWorker: {
+        agentId: 'live-worker',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        config: { hiveId: 'active-hive' },
+      },
+    });
+    // The orphan belongs to a now-FAILED hive (status !== active).
+    writeHive(
+      fix.projectRoot,
+      'term-hive',
+      [{ agentId: 'orphan-worker', workerId: 'orphan-worker', status: 'idle' }],
+      'queen-term',
+      'session-a',
+      'failed',
+    );
+    // A second hive is active so `inspected > 0` and the empty-hiveId branch engages.
+    writeHive(
+      fix.projectRoot,
+      'active-hive',
+      [{ agentId: 'live-worker', workerId: 'live-worker', status: 'busy', currentTaskPid: process.pid }],
+      'queen-active',
+      'session-a',
+      'active',
+    );
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.agents.map((a) => a.id)).toEqual(['live-worker']);
+    expect(result.workersAlive).toBe(1);
+  });
+
+  // F1/F4 control — the SAME orphan with config.hiveId present is already
+  // excluded by the existing active-hive branch; this pins that the fix did
+  // not regress that path.
+  it('control: terminated-hive worker WITH config.hiveId is also excluded', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      orphan: {
+        agentId: 'orphan-worker',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        config: { hiveId: 'term-hive' },
+      },
+      liveWorker: {
+        agentId: 'live-worker',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        config: { hiveId: 'active-hive' },
+      },
+    });
+    writeHive(fix.projectRoot, 'term-hive', [
+      { agentId: 'orphan-worker', workerId: 'orphan-worker', status: 'idle' },
+    ], 'queen-term', 'session-a', 'failed');
+    writeHive(fix.projectRoot, 'active-hive', [
+      { agentId: 'live-worker', workerId: 'live-worker', status: 'busy', currentTaskPid: process.pid },
+    ], 'queen-active', 'session-a', 'active');
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+    expect(result.agents.map((a) => a.id)).toEqual(['live-worker']);
+    expect(result.workersAlive).toBe(1);
+  });
+
+  // F2 — a completed (terminal lastResult) hive worker with a lingering live
+  // pid must NOT be counted. Before the fix isCompletedDirectAgent exempted
+  // hive agents (rawAgentHiveId !== '').
+  it('does NOT count a completed hive worker with a lingering live pid', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      completedHiveWorker: {
+        agentId: 'done-worker',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        config: { hiveId: 'h1' },
+        lastResult: { completedAt: '2026-06-20T19:38:09.227Z' },
+      },
+      liveHiveWorker: {
+        agentId: 'live-worker',
+        agentType: 'coder',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+        config: { hiveId: 'h1' },
+      },
+    });
+    // Hive h1 is active and lists BOTH workers as live so the active-hive
+    // branch keeps them; only the completed-lastResult filter should drop one.
+    writeHive(fix.projectRoot, 'h1', [
+      { agentId: 'done-worker', workerId: 'done-worker', status: 'busy', currentTaskPid: process.pid },
+      { agentId: 'live-worker', workerId: 'live-worker', status: 'busy', currentTaskPid: process.pid },
+    ], 'queen-h1', 'session-a', 'active');
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.agents.map((a) => a.id)).toEqual(['live-worker']);
+    expect(result.workersAlive).toBe(1);
+  });
+
+  // F3 — a record with agentId 'queen-*' but agentType 'worker' must count as
+  // a WORKER, not a queen (type field is authoritative; prefix is fallback).
+  it("classifies agentId 'queen-*' with agentType worker as a WORKER not a queen", async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      tricky: {
+        agentId: 'queen-bee',
+        agentType: 'worker',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+    });
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.queensAlive).toBe(0);
+    expect(result.workersAlive).toBe(1);
+    expect(result.agents.map((a) => a.id)).toEqual(['queen-bee']);
+  });
+
+  // F3 fallback — a 'queen-*' record with NO type field still counts as a queen.
+  it("classifies agentId 'queen-*' with no type field as a queen (prefix fallback)", async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeStoreDict(fix.storePath, {
+      q: {
+        agentId: 'queen-root',
+        status: 'busy',
+        ownerSessionId: 'session-a',
+        currentTaskPid: process.pid,
+      },
+    });
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.queensAlive).toBe(1);
+    expect(result.workersAlive).toBe(0);
   });
 });

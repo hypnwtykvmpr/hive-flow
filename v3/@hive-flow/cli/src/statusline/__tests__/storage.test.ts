@@ -12,7 +12,7 @@
 //   - file permissions 0o600 on sensitive markers
 //   - listSpoolFiles ordering deterministic by mtime
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   chmodSync,
   existsSync,
@@ -26,6 +26,7 @@ import {
   utimesSync,
   writeFileSync,
 } from 'node:fs';
+import * as fsPromises from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 

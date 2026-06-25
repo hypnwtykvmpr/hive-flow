@@ -206,12 +206,21 @@ function extractRecords(raw: unknown): RawAgentRecord[] {
  * an older store layout still classify correctly.
  */
 function isQueenRecord(rec: RawAgentRecord): boolean {
-  if (typeof rec.agentId === 'string' && rec.agentId.startsWith('queen-')) return true;
+  // Type fields take precedence over the agentId prefix (F3 fix).
+  //  - any of agentType/type/role === 'queen'  -> queen.
+  //  - any of them === 'worker'                 -> NOT a queen, even when the
+  //    agentId is `queen-*` (the reported F3 case: a worker deliberately named
+  //    `queen-*`). An explicit worker role overrides the prefix.
+  //  - otherwise (coordinator-typed queens, or no type field) the `queen-`
+  //    agentId prefix is honored as the queen signal.
   const typeFields: ReadonlyArray<unknown> = [rec.agentType, rec.type, rec.role];
   for (const field of typeFields) {
     if (typeof field === 'string' && field.toLowerCase() === 'queen') return true;
   }
-  return false;
+  for (const field of typeFields) {
+    if (typeof field === 'string' && field.toLowerCase() === 'worker') return false;
+  }
+  return typeof rec.agentId === 'string' && rec.agentId.startsWith('queen-');
 }
 
 function rawAgentHiveId(rec: RawAgentRecord): string {
@@ -245,8 +254,14 @@ function hasCompletedLastResult(rec: RawAgentRecord): boolean {
   );
 }
 
-function isCompletedDirectAgent(rec: RawAgentRecord, row: NormalizedAgentRow): boolean {
-  if (rawAgentHiveId(rec) !== '') return false;
+/**
+ * A record whose `lastResult` is terminal is "completed" and must not count
+ * as a live agent — UNLESS it is genuinely busy on a live task pid (a worker
+ * that finished one task and immediately picked up another). F2 fix: this
+ * applies to hive agents too; the prior early-return for `rawAgentHiveId!==''`
+ * let a completed idle hive worker with a lingering live pid be counted.
+ */
+function isCompletedAgent(rec: RawAgentRecord, row: NormalizedAgentRow): boolean {
   if (!hasCompletedLastResult(rec)) return false;
   return !(row.status === 'busy' && isPositiveInteger(rec.currentTaskPid));
 }
@@ -437,7 +452,7 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
     index++;
     if (built === undefined) continue;
     if (!shouldKeepRuntimeAgent(rec, built.row.id, runtimeState)) continue;
-    if (isCompletedDirectAgent(rec, built.row)) continue;
+    if (isCompletedAgent(rec, built.row)) continue;
     if (!hasLiveProcessEvidence(rec)) continue;
     const isExecuting =
       built.row.status === 'busy' && isPositiveInteger(rec.currentTaskPid);

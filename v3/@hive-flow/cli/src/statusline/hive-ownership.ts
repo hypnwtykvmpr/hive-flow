@@ -138,6 +138,26 @@ function workerAgentId(worker: HiveWorkerShape): string | null {
   return null;
 }
 
+/**
+ * Record the worker + queen agent ids of ANY hive record (active OR
+ * terminated/failed) into `hiveAgentIds`. This set marks an agent as
+ * "belongs to some hive" so the empty-`config.hiveId` branch in
+ * `shouldKeepRuntimeAgent` can exclude an orphaned worker once its hive is no
+ * longer active. Accepts `unknown` because terminated records do not pass
+ * `isActiveHiveRecord`; parses defensively and is a no-op on garbage input.
+ */
+function registerHiveAgentIds(record: unknown, hiveAgentIds: Set<string>): void {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return;
+  const shape = record as HiveRecordShape;
+  for (const worker of extractWorkers(shape)) {
+    const agentId = workerAgentId(worker);
+    if (agentId !== null) hiveAgentIds.add(agentId);
+  }
+  if (typeof shape.queenId === 'string' && shape.queenId.trim()) {
+    hiveAgentIds.add(shape.queenId.trim());
+  }
+}
+
 export async function collectActiveHiveRuntimeState(
   projectRoot: string,
 ): Promise<ActiveHiveRuntimeState | undefined> {
@@ -173,16 +193,26 @@ export async function collectActiveHiveRuntimeState(
     const record = await readJsonFile<unknown>(join(hivesRoot, entry.name, 'hive.json')).catch(
       () => undefined,
     );
+
+    // F1/F4 fix: a worker belonging to a TERMINATED/failed hive must still be
+    // recognized as hive-associated so the empty-hiveId branch in
+    // `shouldKeepRuntimeAgent` (collectors/swarm.ts) excludes it once its hive
+    // is no longer active. Populate `hiveAgentIds` from EVERY hive record
+    // (active + terminated) before the active-only guard; the active-only sets
+    // (`activeAgentIds` / `activeHiveIds` / `active` count) stay gated below.
+    registerHiveAgentIds(record, hiveAgentIds);
+
     if (!isActiveHiveRecord(record)) continue;
 
     const ownerSessionId = sanitizeSessionId(record.ownerSessionId);
     if (ownerSessionId === null) continue;
 
+    // `hiveAgentIds` for this record's workers/queen was already populated by
+    // `registerHiveAgentIds` above; here we only gate the active-only sets.
     const workers = extractWorkers(record);
     let hasLiveWorker = false;
     for (const worker of workers) {
       const agentId = workerAgentId(worker);
-      if (agentId !== null) hiveAgentIds.add(agentId);
       if (!(await isWorkerLive(tasksRoot, worker))) continue;
       hasLiveWorker = true;
       if (agentId !== null) activeAgentIds.add(agentId);
@@ -190,7 +220,6 @@ export async function collectActiveHiveRuntimeState(
     const hasLiveQueen = isLivePid(recordQueenPid(record));
     if (typeof record.queenId === 'string' && record.queenId.trim()) {
       const queenId = record.queenId.trim();
-      hiveAgentIds.add(queenId);
       if (hasLiveWorker || hasLiveQueen) activeAgentIds.add(queenId);
     }
     if (!hasLiveWorker && !hasLiveQueen) continue;

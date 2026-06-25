@@ -30,7 +30,6 @@ import {
   lstat,
   mkdir,
   open,
-  readFile,
   readdir,
   rename,
   stat,
@@ -52,6 +51,8 @@ const MAX_JSONL_LINE_BYTES = 256 * 1024;
 const MAX_SPOOL_BYTES = 256 * 1024;
 const MAX_SPOOL_ENTRIES = 1000;
 const MAX_JSON_FILE_BYTES = 1 * 1024 * 1024;
+/** Lock bodies are ~50 bytes (`pid=...\nstartedAt=...`); 4 KiB is generous. */
+const LOCK_BODY_MAX_BYTES = 4 * 1024;
 /**
  * Default stale-lock threshold: 10 minutes. A lock owned by a dead PID is
  * always reclaimable; a lock owned by an unknown / no-PID body is reclaimable
@@ -289,17 +290,16 @@ export async function readJsonFileStrict<T = unknown>(
   if (safety.kind === 'symlinked') return { kind: 'symlinked' };
   if (safety.kind === 'not-regular') return { kind: 'not-regular' };
   if (safety.kind === 'oversize') return { kind: 'oversize', size: safety.size };
-  let raw: string;
-  try {
-    raw = await readFile(filePath, 'utf8');
-  } catch (error: unknown) {
-    if (errorCode(error) === 'ENOENT') return { kind: 'absent' };
-    return { kind: 'error', message: error instanceof Error ? error.message : String(error) };
-  }
-  // Defence-in-depth: lstat raced against read.
-  if (Buffer.byteLength(raw, 'utf8') > maxBytes) {
-    return { kind: 'oversize', size: Buffer.byteLength(raw, 'utf8') };
-  }
+  // Bounded read (NOT readFile): the classify() lstat above is informational —
+  // a hostile writer can swap a small "safe" file for a multi-GB payload in the
+  // TOCTOU window before this read, and readFile() would materialize the whole
+  // post-swap file before any post-hoc size guard could fire. The bounded loop
+  // allocates exactly `maxBytes + 1` and aborts the instant it overflows.
+  const bounded = await readBoundedUtf8(filePath, maxBytes);
+  if (bounded.kind === 'absent') return { kind: 'absent' };
+  if (bounded.kind === 'oversize') return { kind: 'oversize', size: maxBytes + 1 };
+  if (bounded.kind === 'error') return { kind: 'error', message: bounded.message };
+  const raw = bounded.text;
   try {
     return { kind: 'ok', value: JSON.parse(raw) as T };
   } catch (error: unknown) {
@@ -393,14 +393,24 @@ function pidIsAlive(pid: number): boolean {
 }
 
 async function isLockStale(lockPath: string, staleAfterMs: number): Promise<boolean> {
-  let body: string;
+  // Bounded read: lock bodies are ~50 bytes (`pid=...\nstartedAt=...`). A
+  // hostile swap to a multi-GB file must never be slurped via readFile() — cap
+  // the body at LOCK_BODY_MAX_BYTES. An overflow (`undefined` text) means the
+  // file is not a real lock body, so we treat the lock as stale/reclaimable.
+  let bounded: BoundedReadResult;
   let st;
   try {
-    [body, st] = await Promise.all([readFile(lockPath, 'utf8'), stat(lockPath)]);
+    [bounded, st] = await Promise.all([
+      readBoundedUtf8(lockPath, LOCK_BODY_MAX_BYTES),
+      stat(lockPath),
+    ]);
   } catch {
     // Lock file vanished between EEXIST and the read — treat as stale.
     return true;
   }
+  // Non-text outcome (absent / oversize / read error): treat as stale so a
+  // corrupt or hostile lock body never wedges the lock forever.
+  const body = bounded.kind === 'ok' ? bounded.text : '';
   const pidMatch = body.match(/pid=(\d+)/);
   const pid = pidMatch ? Number(pidMatch[1]) : -1;
   const ageMs = Date.now() - st.mtimeMs;
@@ -527,17 +537,16 @@ export async function readJsonl<T = unknown>(
   if (st.size > maxBytes) {
     return { events: [], corrupt: 1 };
   }
-  let raw: string;
-  try {
-    raw = await readFile(filePath, 'utf8');
-  } catch (error: unknown) {
-    if (errorCode(error) === 'ENOENT') return { events: [], corrupt: 0 };
-    return { events: [], corrupt: 0 };
-  }
-  // Defence-in-depth against a racing append.
-  if (Buffer.byteLength(raw, 'utf8') > maxBytes) {
-    return { events: [], corrupt: 1 };
-  }
+  // Bounded read (NOT readFile): the lstat above is informational — a racing
+  // append (or hostile swap) can grow the file past `maxBytes` in the TOCTOU
+  // window, and readFile() would slurp the whole post-growth payload into
+  // memory before any post-hoc guard. The bounded loop caps allocation at
+  // `maxBytes + 1` and treats overflow as a single corrupt marker.
+  const bounded = await readBoundedUtf8(filePath, maxBytes);
+  if (bounded.kind === 'absent') return { events: [], corrupt: 0 };
+  if (bounded.kind === 'error') return { events: [], corrupt: 0 };
+  if (bounded.kind === 'oversize') return { events: [], corrupt: 1 };
+  const raw = bounded.text;
   const events: T[] = [];
   let corrupt = 0;
   for (const line of raw.split(/\r?\n/)) {
@@ -673,7 +682,16 @@ export async function readSpoolEntries<T = unknown>(
         continue;
       }
       try {
-        const event = JSON.parse(await readFile(path, 'utf8')) as T;
+        // Bounded read: the double-lstat above narrows but does not close the
+        // TOCTOU window — a swap after the claimed-file lstat would still feed
+        // readFile() an oversized payload. Cap at MAX_SPOOL_BYTES so a grown
+        // entry quarantines instead of materializing.
+        const bounded = await readBoundedUtf8(path, MAX_SPOOL_BYTES);
+        if (bounded.kind !== 'ok') {
+          await rename(path, `${originalPath}.oversized-${Date.now()}`).catch(() => {});
+          continue;
+        }
+        const event = JSON.parse(bounded.text) as T;
         out.push({ path, originalPath, event });
       } catch {
         await rename(path, `${originalPath}.corrupt-${Date.now()}`).catch(() => {});
@@ -1335,11 +1353,54 @@ async function readBoundedUserCacheUtf8(
   absPath: string,
   maxBytes: number,
 ): Promise<string | undefined> {
+  const result = await readBoundedUtf8(absPath, maxBytes);
+  return result.kind === 'ok' ? result.text : undefined;
+}
+
+/**
+ * Discriminated outcome of {@link readBoundedUtf8}.
+ *  - `ok`       — the file was read in full within the cap.
+ *  - `absent`   — the file did not exist (ENOENT on open).
+ *  - `oversize` — the file exceeded `maxBytes` (grew past the cap mid-read).
+ *  - `error`    — any other open/read failure (EACCES, EIO, ...).
+ */
+type BoundedReadResult =
+  | { kind: 'ok'; text: string }
+  | { kind: 'absent' }
+  | { kind: 'oversize' }
+  | { kind: 'error'; message: string };
+
+/**
+ * Hard-bounded UTF-8 read — the single TOCTOU-safe primitive every
+ * `.hive-flow/`-scoped AND user-cache read routes through.
+ *
+ * Allocates exactly `maxBytes + 1` bytes once and streams the file through it
+ * in capped chunks. The instant the accumulator exceeds `maxBytes`, the handle
+ * is closed and `{ kind: 'oversize' }` is returned. Memory usage is therefore
+ * O(`maxBytes`) regardless of how the file grew between a caller's `lstat()`
+ * size probe and this read (TOCTOU defence): we never load more than
+ * `maxBytes + 1` bytes into memory.
+ *
+ * We do NOT use `readFile()` here because `readFile` slurps the entire file
+ * into memory before any post-read size check can run; a hostile or
+ * grown-since-stat file could push heap usage well past the documented cap
+ * before the function rejects it.
+ *
+ * This pattern mirrors `readBoundedUtf8` in `junit-import.ts` (Wave 6.4B2+C)
+ * and `readBoundedAutopilotJson` in `refresher.ts`. Those file-private helpers
+ * stay duplicated (they predate this consolidation and a cross-file refactor
+ * would widen scope); within storage.ts, all bounded reads share THIS loop.
+ */
+async function readBoundedUtf8(
+  absPath: string,
+  maxBytes: number,
+): Promise<BoundedReadResult> {
   let handle: Awaited<ReturnType<typeof open>>;
   try {
     handle = await open(absPath, 'r');
-  } catch {
-    return undefined;
+  } catch (error: unknown) {
+    if (errorCode(error) === 'ENOENT') return { kind: 'absent' };
+    return { kind: 'error', message: error instanceof Error ? error.message : String(error) };
   }
   try {
     // Fixed allocation: `maxBytes + 1` lets us detect the overflow byte
@@ -1356,8 +1417,8 @@ async function readBoundedUserCacheUtf8(
       let chunk: { bytesRead: number };
       try {
         chunk = await handle.read(buf, totalRead, want, null);
-      } catch {
-        return undefined;
+      } catch (error: unknown) {
+        return { kind: 'error', message: error instanceof Error ? error.message : String(error) };
       }
       if (chunk.bytesRead === 0) break;
       totalRead += chunk.bytesRead;
@@ -1365,10 +1426,10 @@ async function readBoundedUserCacheUtf8(
         // Hard cap: abort BEFORE the next read can grow `buf` further.
         // The buffer itself is `maxBytes + 1` bytes, so even the
         // overflow byte is bounded.
-        return undefined;
+        return { kind: 'oversize' };
       }
     }
-    return buf.subarray(0, totalRead).toString('utf8');
+    return { kind: 'ok', text: buf.subarray(0, totalRead).toString('utf8') };
   } finally {
     try {
       await handle.close();
