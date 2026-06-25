@@ -211,6 +211,27 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecord(tmpRoot, 'claude-session-owned-agent')?.ownerClientKind).toBe('claude');
   });
 
+  it('uses MCP transport client kind when owner session is not in reconnect env', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    process.env.CODEX_THREAD_ID = 'codex-thread-from-reconnect';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+
+    const result = await spawnTool.handler({
+      agentId: 'claude-transport-owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      session_id: 'claude-pane-session-not-in-env',
+    }, { sessionId: 'mcp-transport-session', clientKind: 'claude' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'claude-transport-owned-agent',
+    });
+    expect(readAgentRecord(tmpRoot, 'claude-transport-owned-agent')?.ownerSessionId).toBe('claude-pane-session-not-in-env');
+    expect(readAgentRecord(tmpRoot, 'claude-transport-owned-agent')?.ownerClientKind).toBe('claude');
+  });
+
   it('refuses generated MCP transport ids as agent_spawn owner identity', async () => {
     delete process.env.CODEX_SESSION_ID;
     delete process.env.CODEX_THREAD_ID;

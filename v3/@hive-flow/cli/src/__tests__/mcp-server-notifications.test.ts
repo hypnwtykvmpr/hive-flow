@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildHiveStatusNotification, classifyMCPClient } from '../mcp-server.js';
+import { buildHiveStatusNotification, classifyMCPClient, clientKindForMCPToolContext } from '../mcp-server.js';
 
 describe('MCP hive completion notifications', () => {
   it('classifies Claude and Codex MCP clients from initialize params', () => {
@@ -25,6 +25,26 @@ describe('MCP hive completion notifications', () => {
     expect(classifyMCPClient({}, { OPENCODE_SESSION_ID: 'opencode-session' })).toBe('opencode');
     expect(classifyMCPClient({}, { FORGE_SESSION_ID: 'forge-session' })).toBe('forgecode');
     expect(classifyMCPClient({}, { CLAUDE_PROJECT_DIR: '/repo' })).toBe('claude');
+  });
+
+  it('does not trust ambient env markers for stdio MCP transport identity', () => {
+    const reconnectEnv = {
+      HIVE_FLOW_CLIENT_KIND: 'codex',
+      CODEX_THREAD_ID: 'codex-thread-from-reconnect',
+      CODEX_HOME: '/Users/test/.codex',
+    };
+
+    expect(classifyMCPClient({}, reconnectEnv, { trustEnvFallback: false })).toBe('unknown');
+    expect(classifyMCPClient(null, reconnectEnv, { trustEnvFallback: false })).toBe('unknown');
+    expect(classifyMCPClient({
+      clientInfo: { name: 'opencode', version: '1.0.0' },
+    }, reconnectEnv, { trustEnvFallback: false })).toBe('opencode');
+  });
+
+  it('uses a stable local default for unclassified MCP tool context', () => {
+    expect(clientKindForMCPToolContext('unknown')).toBe('claude');
+    expect(clientKindForMCPToolContext('codex')).toBe('codex');
+    expect(clientKindForMCPToolContext('opencode')).toBe('opencode');
   });
 
   it('emits standard MCP logging notifications for Codex hive completion', () => {

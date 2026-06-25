@@ -105,6 +105,9 @@ const DEFAULT_OPTIONS: Required<MCPServerOptions> = {
 export type MCPClientKind = OperatorClientKind;
 
 type HiveStatusNotificationInput = Pick<HiveRecord, 'hiveId' | 'queenId' | 'status' | 'updatedAt' | 'completedAt' | 'error'>;
+type MCPClientClassificationOptions = {
+  trustEnvFallback?: boolean;
+};
 
 function readNestedString(value: unknown, keys: readonly string[]): string | undefined {
   let current = value;
@@ -136,6 +139,7 @@ function classifyClientText(text: string): MCPClientKind {
 export function classifyMCPClient(
   params: unknown,
   env: Record<string, string | undefined> = process.env,
+  options: MCPClientClassificationOptions = {},
 ): MCPClientKind {
   const clientInfoText = [
     readNestedString(params, ['clientInfo', 'name']),
@@ -147,6 +151,10 @@ export function classifyMCPClient(
 
   const clientInfoKind = classifyClientText(clientInfoText);
   if (clientInfoKind !== 'unknown') return clientInfoKind;
+
+  if (options.trustEnvFallback === false) {
+    return 'unknown';
+  }
 
   const explicitKind = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
   if (explicitKind !== 'unknown') return explicitKind;
@@ -176,6 +184,16 @@ export function classifyMCPClient(
     .join(' ');
 
   return classifyClientText(envText);
+}
+
+export function clientKindForMCPToolContext(clientKind: MCPClientKind): Exclude<MCPClientKind, 'unknown'> {
+  if (clientKind !== 'unknown') return clientKind;
+  // Stdio MCP process env can belong to the operator that reconnected the
+  // server, not the operator that owns this MCP connection. Avoid leaking stale
+  // ambient Codex/Cursor/etc. markers into agent ownership; unclassified local
+  // MCP clients use the Claude-compatible default and explicit tool inputs can
+  // still override it.
+  return 'claude';
 }
 
 export function buildHiveStatusNotification(
@@ -511,7 +529,7 @@ export class MCPServerManager extends EventEmitter {
           try {
             const message = JSON.parse(line);
             if (message && typeof message === 'object' && message.method === 'initialize') {
-              clientKind = classifyMCPClient(message.params);
+              clientKind = classifyMCPClient(message.params, process.env, { trustEnvFallback: false });
             }
             const response = await this.handleMCPMessage(message, sessionId, clientKind);
             if (response) {
@@ -610,7 +628,10 @@ export class MCPServerManager extends EventEmitter {
 
         // Not terminal — invoke hive_poll_workers to check result files + auto-transition
         try {
-          const pollResult = await callMCPTool('hive_poll_workers', { hiveId }, { sessionId, clientKind }) as Record<string, unknown> | null;
+          const pollResult = await callMCPTool('hive_poll_workers', { hiveId }, {
+            sessionId,
+            clientKind: clientKindForMCPToolContext(clientKind),
+          }) as Record<string, unknown> | null;
           if (pollResult && (pollResult.allWorkersSettled || pollResult.allComplete)) {
             // Re-read hive — hive_poll_workers may have transitioned it to completed
             const freshHive = loadHive(hiveId);
@@ -810,7 +831,10 @@ export class MCPServerManager extends EventEmitter {
           }
 
           try {
-            const result = await callMCPTool(toolName, toolParams, { sessionId, clientKind });
+            const result = await callMCPTool(toolName, toolParams, {
+              sessionId,
+              clientKind: clientKindForMCPToolContext(clientKind),
+            });
             
             // Intercept queen_mission_assign success to auto-register hive for monitoring
             if (toolName === 'queen_mission_assign' && result && typeof result === 'object' && 'success' in result && result.success === true) {
