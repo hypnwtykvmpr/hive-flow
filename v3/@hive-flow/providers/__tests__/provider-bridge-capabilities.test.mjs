@@ -73,7 +73,7 @@ const EXPECTED_DEFINITIONS = {
     type: 'function',
     function: {
       name: 'read_file',
-      description: 'Read the contents of a file.',
+      description: 'Read the contents of a file. Large files are truncated to a head+tail window; a [FILE TRUNCATED] marker is inserted showing total size. Use offset/limit parameters for specific sections.',
       parameters: {
         type: 'object',
         properties: {
@@ -87,7 +87,7 @@ const EXPECTED_DEFINITIONS = {
     type: 'function',
     function: {
       name: 'write_file',
-      description: 'Write content to a file, creating parent directories if needed.',
+      description: 'Write content to a file, creating parent directories if needed. Supplying empty content truncates the file to 0 bytes — the file is not deleted (the bridge has no delete tool).',
       parameters: {
         type: 'object',
         properties: {
@@ -204,7 +204,7 @@ const EXPECTED_DEFINITIONS = {
     type: 'function',
     function: {
       name: 'web_fetch',
-      description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Requires project allowlist; follows redirects manually; returns status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and denyReason on denial.',
+      description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Returns metadata only (status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount) — no body text is delivered. Requires project allowlist; follows redirects manually. truncated:true means the body exceeded the byte cap and was discarded, not delivered.',
       parameters: {
         type: 'object',
         properties: {

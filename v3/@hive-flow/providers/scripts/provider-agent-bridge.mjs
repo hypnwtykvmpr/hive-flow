@@ -877,6 +877,17 @@ function assertCredentialHolderSocketIdentity(socketPath) {
   if ((stat.mode & 0o077) !== 0) {
     throw new Error('credential holder identity check failed: socket permissions must not grant group/other access');
   }
+  // HF-14: cheap runtime-directory ownership/mode check (POSIX-only — win32
+  // named-pipe path early-returns above; this block is unreachable on win32).
+  // Prevents an attacker from placing a rogue socket in a world-writable dir.
+  const dir = dirname(socketPath);
+  const dstat = lstatSync(dir);
+  if (process.getuid && dstat.uid !== process.getuid()) {
+    throw new Error('credential holder identity check failed: runtime directory owner does not match current user');
+  }
+  if ((dstat.mode & 0o022) !== 0) {
+    throw new Error('credential holder identity check failed: runtime directory must not be group/world-writable');
+  }
 }
 
 function sendCredentialHolderCommand(socketPath, command) {
@@ -3099,6 +3110,7 @@ function normalizeWebOptions(rawOptions = {}) {
     allowlist: normalizeWebAllowlist(options.allowlist),
     allowInsecureTls: options.allowInsecureTls === true,
     allowPrivateFixtureIPs: options.allowPrivateFixtureIPs === true,
+    allowNonStandardPort: options.allowNonStandardPort === true,
     forceDispatcherUnavailable: options.forceDispatcherUnavailable === true,
     maxBytes: clampInteger(options.maxBytes, WEB_FETCH_DEFAULT_MAX_BYTES, WEB_FETCH_MAX_BYTES),
     timeoutMs: clampInteger(options.timeoutMs, WEB_FETCH_DEFAULT_TIMEOUT_MS, WEB_FETCH_MAX_TIMEOUT_MS),
@@ -3243,6 +3255,20 @@ function validateWebFetchUrl(rawUrl, options) {
 
   if (isIP(hostname) && ipIsBlocked(hostname)) {
     return { denyReason: 'blocked-ip', finalUrl: url.href };
+  }
+
+  // HF-7: allow only the default HTTPS port (443). url.port is '' when the port
+  // is omitted (scheme default). Any explicit non-443 port reaches internal
+  // services on non-standard ports (e.g. :9200 Elasticsearch) regardless of
+  // allowlist entry type. Guard runs BEFORE the allowlist check so it wins
+  // unconditionally. Placed after SSRF/localhost/blocked-IP checks so those
+  // more-specific denials win for private-network URLs on non-443 ports.
+  // allowPrivateFixtureIPs and allowNonStandardPort are test-only escape hatches
+  // for fixture HTTPS servers on dynamic ports (same pattern already used for
+  // private-IP bypass). Production contexts never set these flags.
+  const effectivePort = url.port === '' ? 443 : Number(url.port);
+  if (effectivePort !== 443 && !options.allowPrivateFixtureIPs && !options.allowNonStandardPort) {
+    return { denyReason: 'non-standard-port', finalUrl: url.href };
   }
 
   if (!allowlistMatches(url, options.allowlist)) {
@@ -4470,9 +4496,21 @@ export function bridgeToolRegistryNames() {
   return Object.freeze(Object.keys(BRIDGE_TOOL_REGISTRY).sort());
 }
 
+// HF-10-E: 1MB cap on tool args. Checked BEFORE JSON.parse to avoid DoS.
+const BRIDGE_MAX_TOOL_ARGS_BYTES = 1024 * 1024;
+
+// HF-10-D: Symbol key is unforgeable from JSON — a model emitting valid JSON
+// with a string key "__bridgeMalformedArgs" cannot trigger the sentinel.
+const BRIDGE_MALFORMED_ARGS = Symbol('bridgeMalformedArgs');
+
 function parseBridgeToolArgs(toolArgs) {
   if (typeof toolArgs === 'string') {
-    try { return JSON.parse(toolArgs); } catch { return {}; }
+    // HF-10-E: size cap — check bytes before parsing
+    if (Buffer.byteLength(toolArgs, 'utf8') > BRIDGE_MAX_TOOL_ARGS_BYTES) {
+      return { [BRIDGE_MALFORMED_ARGS]: true, reason: 'args-too-large' };
+    }
+    // HF-10-D: non-JSON → structured sentinel instead of silent {}
+    try { return JSON.parse(toolArgs); } catch { return { [BRIDGE_MALFORMED_ARGS]: true }; }
   }
   return toolArgs || {};
 }
@@ -4521,8 +4559,16 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
     );
   }
 
+  // HF-10-D/E: check for malformed/oversized args BEFORE calling handler
+  const parsedArgs = parseBridgeToolArgs(toolArgs);
+  if (parsedArgs && parsedArgs[BRIDGE_MALFORMED_ARGS]) {
+    const denyReason = parsedArgs.reason === 'args-too-large' ? 'args-too-large' : 'malformed-args';
+    stderrLogger.warn(`Tool args denied (${denyReason}): ${toolName}`);
+    return bridgeDeniedTool(toolName, denyReason, `Tool '${toolName}' args ${denyReason === 'args-too-large' ? 'exceed 1MB size cap' : 'are not valid JSON'}.`);
+  }
+
   try {
-    const result = await handler(parseBridgeToolArgs(toolArgs), ctx);
+    const result = await handler(parsedArgs, ctx);
     if (
       result &&
       typeof result === 'object' &&
@@ -5110,11 +5156,23 @@ export function parseToolCallArguments(rawArguments) {
 export function normalizeProviderToolCalls(toolCalls) {
   if (!Array.isArray(toolCalls)) return [];
   const normalized = [];
+  // HF-10-F: dedup by call.id — keep first occurrence, drop later duplicates.
+  // Dropped count is logged (observable evidence required by Codex ruling).
+  const seenIds = new Set();
+  let droppedDuplicates = 0;
   for (const call of toolCalls) {
     if (!call || typeof call !== 'object') continue;
     const fn = call.function;
     if (!fn || typeof fn !== 'object') continue;
     if (typeof fn.name !== 'string' || fn.name.trim() === '') continue;
+    // Dedup: only apply when id is a non-empty string (no-id calls always kept)
+    if (typeof call.id === 'string' && call.id !== '') {
+      if (seenIds.has(call.id)) {
+        droppedDuplicates++;
+        continue;
+      }
+      seenIds.add(call.id);
+    }
     let args = fn.arguments;
     if (typeof args !== 'string') {
       if (args === null || args === undefined) {
@@ -5126,6 +5184,10 @@ export function normalizeProviderToolCalls(toolCalls) {
       }
     }
     normalized.push({ ...call, function: { ...fn, name: fn.name, arguments: args } });
+  }
+  if (droppedDuplicates > 0) {
+    // ponytail: observable log required by HF-10-F — must not be silent
+    stderrLogger.warn(`normalizeProviderToolCalls: dropped ${droppedDuplicates} duplicate tool_call id(s)`);
   }
   return normalized;
 }
