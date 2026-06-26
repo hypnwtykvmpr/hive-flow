@@ -2682,13 +2682,24 @@ function normalizeRunCommandArgs(rawArgs) {
 function looksLikeRunCommandPathArg(value) {
   const text = String(value || '');
   if (!text || text.startsWith('-')) return false;
-  if (/^\d+$/.test(text)) return false;
-  if (/^[+~]?\d+[kKmMgG]?$/.test(text)) return false;
   return true;
 }
 
-function assertRunCommandPathArgs(argv, startIndex = 1) {
-  for (const arg of argv.slice(startIndex)) {
+// Command-aware path validation. For cat/wc/ls every non-flag positional is a
+// path (even numeric/size-named ones — BE-7), so validate them all. For
+// head/tail the value consumed by -n/-c/-C is a COUNT, not a path: skip that one
+// token but validate every other positional.
+function assertRunCommandPathArgs(argv, executable) {
+  const countOptions = (executable === 'head' || executable === 'tail')
+    ? new Set(['-n', '-c', '-C'])
+    : null;
+  for (let i = 1; i < argv.length; i += 1) {
+    const arg = String(argv[i] ?? '');
+    // For head/tail, the token after a bare -n/-c/-C is a count → skip it.
+    if (countOptions && countOptions.has(arg)) {
+      i += 1;
+      continue;
+    }
     if (!looksLikeRunCommandPathArg(arg)) continue;
     const safePath = validateFilePath(arg);
     assertReadableByBridge(safePath, 'run_command');
@@ -2702,31 +2713,82 @@ function denyUnsafeReadOnlyCommand(argv) {
   if (executable === 'git') {
     const firstSubcommandIndex = argv.findIndex((entry, index) => index > 0 && !String(entry).startsWith('-'));
     const subcommand = firstSubcommandIndex === -1 ? '' : String(argv[firstSubcommandIndex]).toLowerCase();
+    // Fix 1: blob readers (show, cat-file) removed — they exist only to emit
+    // blob contents (e.g. `git show HEAD:.env`), the BE-1 secret-exfil vector.
     const allowedGitSubcommands = new Set([
       'status',
-      'diff',
-      'log',
-      'show',
       'rev-parse',
       'ls-files',
       'describe',
-      'cat-file',
+      'log',
+      'diff',
     ]);
     if (!allowedGitSubcommands.has(subcommand)) {
       return `run_command git subcommand '${subcommand || '<missing>'}' is not in the read-only allowlist`;
     }
+    // Fix 2: block jail-escape options (BE-2) in every form: bare, =-attached,
+    // and bundled-no-space. -C is cwd escape (uppercase), -c is config injection
+    // (lowercase). Inspect only pre-subcommand option tokens are not enough —
+    // git accepts these before the subcommand, so scan all argv tokens.
     for (const arg of argv.slice(1)) {
       const text = String(arg);
       if (
-        text === '-c' ||
-        text.startsWith('-c=') ||
+        text === '-C' || text.startsWith('-C') ||           // cwd escape (bare + bundled -C<path>)
+        text === '--git-dir' || text.startsWith('--git-dir=') ||
+        text === '--work-tree' || text.startsWith('--work-tree=') ||
+        text === '-c' || (text.startsWith('-c') && !text.startsWith('--') && text.length > 2) || // config injection (bare + short -c<key>=...); not --c* long opts
+        text === '--namespace' || text.startsWith('--namespace=') ||
+        text === '--super-prefix' || text.startsWith('--super-prefix=') ||
         text.startsWith('--exec-path') ||
         text.startsWith('--upload-pack') ||
         text.startsWith('--receive-pack') ||
         text.startsWith('--output') ||
-        text === '--no-index'
+        text === '--no-index' ||
+        text === '--help' || text === '--man' || text === '--web'
       ) {
         return `run_command git option '${text}' is not available`;
+      }
+    }
+    // Fix 3 (FAIL-CLOSED): diff/log can emit file CONTENTS (patches), leaking
+    // protected tracked secrets. A content-DENYLIST is structurally unsound — it
+    // keeps missing flags (merge-diff family, --binary, --ext-diff, --textconv,
+    // --submodule=diff, --check, future git flags). Invert to a SAFE-METADATA
+    // ALLOWLIST: any `-`-prefixed token not provably content-safe → DENY.
+    if (subcommand === 'diff' || subcommand === 'log') {
+      // Flags that provably cannot emit file contents or run repo-configured
+      // helpers. `=`-form variants handled via SAFE_METADATA_PREFIXES below.
+      const SAFE_METADATA_FLAGS = new Set([
+        '--stat', '--compact-summary', '--cumulative', '--numstat', '--shortstat',
+        '--name-only', '--name-status', '--summary', '--dirstat', '--oneline',
+        '--format', '--pretty', '--abbrev-commit', '--graph', '--decorate',
+        '--no-color', '--color', '--merges', '--no-merges', '--min-parents',
+        '--max-parents', '--diff-filter', '--max-count',
+        '-n', '--date', '--author', '--grep', '--since', '--until', '--reverse',
+        '--all', '--first-parent',
+      ]);
+      const SAFE_METADATA_PREFIXES = [
+        '--dirstat=', '--format=', '--pretty=', '--decorate=', '--color=',
+        '--min-parents=', '--max-parents=', '--diff-filter=',
+        '--max-count=', '-n=', '--date=', '--author=', '--grep=',
+        '--since=', '--until=',
+      ];
+      const isSafeMetadataFlag = (t) =>
+        SAFE_METADATA_FLAGS.has(t) ||
+        /^-\d+$/.test(t) ||                       // count shorthand: -5
+        SAFE_METADATA_PREFIXES.some((p) => t.startsWith(p));
+      let hasMetadataFlag = false;
+      for (const arg of argv.slice(1)) {
+        const text = String(arg);
+        if (text === '--') break; // pathspec separator — only flags before it gate
+        if (text === subcommand) continue; // the subcommand token itself
+        if (!text.startsWith('-')) continue; // revisions/refs/pathspecs are content-safe
+        if (!isSafeMetadataFlag(text)) {
+          return `run_command git ${subcommand} flag '${text}' is not in the metadata-only allowlist; it may emit file contents — use read_file`;
+        }
+        hasMetadataFlag = true;
+      }
+      if (subcommand === 'diff' && !hasMetadataFlag) {
+        return 'run_command git diff defaults to patch output; pass a metadata flag (--stat/--name-only/...) or use read_file';
       }
     }
     return null;
@@ -2742,7 +2804,7 @@ function denyUnsafeReadOnlyCommand(argv) {
 
   const pathReadExecutables = new Set(['cat', 'head', 'tail', 'wc', 'ls']);
   if (pathReadExecutables.has(executable)) {
-    assertRunCommandPathArgs(argv, 1);
+    assertRunCommandPathArgs(argv, executable);
     return null;
   }
 
