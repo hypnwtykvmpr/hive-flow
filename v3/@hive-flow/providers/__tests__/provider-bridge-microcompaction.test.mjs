@@ -54,6 +54,12 @@ function textMessageTokens(content, estimator = bridge.estimateTokensFromText) {
   return estimator(content) + 10;
 }
 
+function contentForEstimate(content) {
+  if (typeof content === 'string') return content;
+  if (content == null) return '';
+  return JSON.stringify(content);
+}
+
 function expectedWarningThreshold(maxTokens) {
   return Math.max(
     Math.floor(maxTokens * 0.5),
@@ -62,7 +68,7 @@ function expectedWarningThreshold(maxTokens) {
 }
 
 function totalTokens(messages, estimator = bridge.estimateTokensFromText) {
-  return messages.reduce((sum, msg) => sum + textMessageTokens(String(msg.content ?? ''), estimator), 0);
+  return messages.reduce((sum, msg) => sum + textMessageTokens(contentForEstimate(msg.content), estimator), 0);
 }
 
 function toolHistory(count, contentFactory = (index) => `payload-${index}`) {
@@ -215,5 +221,42 @@ describe('Slice B microcompaction old tool-result eviction', () => {
     const evicted = bridge.evictOldToolResults(JSON.parse(JSON.stringify(alreadyEvicted)));
 
     expect(evicted).toEqual(alreadyEvicted);
+  });
+});
+
+describe('Slice C microcompaction emergency truncation', () => {
+  it('loops over protected messages until the result is under the hard token limit', () => {
+    const large = 'x'.repeat(8_000);
+    const messages = [
+      { role: 'system', content: `system ${large}` },
+      { role: 'user', content: `first ${large}` },
+      { role: 'user', content: `latest ${large}` },
+    ];
+    const limits = { maxTokens: 1_000, maxEntries: 20, warningThreshold: 900 };
+
+    const trimmed = bridge.trimMessages(JSON.parse(JSON.stringify(messages)), limits);
+    const retrimmed = bridge.trimMessages(JSON.parse(JSON.stringify(trimmed)), limits);
+
+    expect(totalTokens(trimmed)).toBeLessThanOrEqual(limits.maxTokens);
+    expect(retrimmed).toEqual(trimmed);
+    expect(trimmed).toHaveLength(3);
+    expect(trimmed[0].role).toBe('system');
+    expect(trimmed[1].content).toContain('[EMERGENCY TRUNCATION: content exceeded 1000 token limit.');
+    expect(trimmed[2].role).toBe('user');
+    expect(JSON.stringify(trimmed)).not.toContain('agent_task_result');
+  });
+
+  it('truncates protected array text content without returning over-limit', () => {
+    const messages = [
+      { role: 'system', content: 'system' },
+      { role: 'user', content: [{ type: 'text', text: 'α'.repeat(7_000) }] },
+    ];
+    const limits = { maxTokens: 900, maxEntries: 10, warningThreshold: 800 };
+
+    const trimmed = bridge.trimMessages(JSON.parse(JSON.stringify(messages)), limits);
+
+    expect(totalTokens(trimmed)).toBeLessThanOrEqual(limits.maxTokens);
+    expect(trimmed[1].content[0].text).toContain('[EMERGENCY TRUNCATION: content exceeded 900 token limit]');
+    expect(JSON.stringify(trimmed)).not.toContain('agent_task_result');
   });
 });

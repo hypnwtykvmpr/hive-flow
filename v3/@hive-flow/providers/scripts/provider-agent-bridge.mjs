@@ -1705,6 +1705,83 @@ export function trimMessages(messages, limits) {
   let result = removeOrphanedToolResults(flattenUnits(units));
   let finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
 
+  function splitEmergencyTruncatedText(text) {
+    const markerIndex = text.indexOf('[EMERGENCY TRUNCATION:');
+    const base = markerIndex === -1 ? text : text.slice(0, markerIndex).replace(/\n\n$/, '');
+    const match = text.match(/\[EMERGENCY TRUNCATION:[^\]]*Original: (\d+) chars\]/);
+    const originalChars = match ? Number.parseInt(match[1], 10) : text.length;
+    return { base, originalChars: Number.isFinite(originalChars) ? originalChars : text.length };
+  }
+
+  function truncateEmergencyText(text, targetTokens, marker) {
+    const { base } = splitEmergencyTruncatedText(text);
+    if (base.length === 0) return null;
+
+    const markerText = `\n\n${marker}`;
+    const markerTokens = estimateTokensFromText(markerText);
+    const allowedContentTokens = Math.max(0, targetTokens - markerTokens);
+    const baseBytes = Buffer.byteLength(base, 'utf8');
+    let targetBytes = Math.max(0, Math.floor((allowedContentTokens * 4) / TOKEN_ESTIMATE_PAD));
+
+    if (targetBytes >= baseBytes) {
+      targetBytes = Math.floor(baseBytes / 2);
+    }
+
+    let truncated = `${sliceUtf8Bytes(base, targetBytes)}${markerText}`;
+    if (Buffer.byteLength(truncated, 'utf8') >= Buffer.byteLength(text, 'utf8') && targetBytes > 0) {
+      targetBytes = 0;
+      truncated = markerText.trimStart();
+    }
+
+    return truncated;
+  }
+
+  function collectEmergencyCandidates(items) {
+    const candidates = [];
+    for (let messageIndex = 0; messageIndex < items.length; messageIndex += 1) {
+      const msg = items[messageIndex];
+      const messageTokens = estimateMessageTokens(msg);
+      if (typeof msg.content === 'string') {
+        const { base, originalChars } = splitEmergencyTruncatedText(msg.content);
+        if (base.length > 0) {
+          candidates.push({
+            messageIndex,
+            tokens: estimateTokensFromText(base),
+            messageTokens,
+            apply(targetTokens) {
+              const marker = `[EMERGENCY TRUNCATION: content exceeded ${limits.maxTokens} token limit. Original: ${originalChars} chars]`;
+              const next = truncateEmergencyText(msg.content, targetTokens, marker);
+              if (!next || next === msg.content) return false;
+              msg.content = next;
+              return true;
+            },
+          });
+        }
+      } else if (Array.isArray(msg.content)) {
+        for (let partIndex = 0; partIndex < msg.content.length; partIndex += 1) {
+          const part = msg.content[partIndex];
+          if (part?.type !== 'text' || typeof part.text !== 'string') continue;
+          const { base } = splitEmergencyTruncatedText(part.text);
+          if (base.length === 0) continue;
+          candidates.push({
+            messageIndex,
+            partIndex,
+            tokens: estimateTokensFromText(base),
+            messageTokens,
+            apply(targetTokens) {
+              const marker = `[EMERGENCY TRUNCATION: content exceeded ${limits.maxTokens} token limit]`;
+              const next = truncateEmergencyText(part.text, targetTokens, marker);
+              if (!next || next === part.text) return false;
+              part.text = next;
+              return true;
+            },
+          });
+        }
+      }
+    }
+    return candidates.sort((a, b) => b.tokens - a.tokens);
+  }
+
   if (finalTokens > limits.maxTokens && result.length > 0) {
     bridgeLog('warn', 'Protected messages exceed limit — emergency truncation', {
       finalTokens,
@@ -1712,32 +1789,31 @@ export function trimMessages(messages, limits) {
       messages: result.length,
     });
 
-    // Find the largest message and truncate its content
-    let largestIdx = 0;
-    let largestTokens = 0;
-    for (let i = 0; i < result.length; i++) {
-      const t = estimateMessageTokens(result[i]);
-      if (t > largestTokens) { largestTokens = t; largestIdx = i; }
-    }
-
-    const msg = result[largestIdx];
-    if (typeof msg.content === 'string' && msg.content.length > 1000) {
-      const targetChars = Math.floor((limits.maxTokens * 0.7) * 4); // rough chars for 70% of limit
-      msg.content = msg.content.slice(0, targetChars) +
-        `\n\n[EMERGENCY TRUNCATION: content exceeded ${limits.maxTokens} token limit. Original: ${msg.content.length} chars]`;
-    } else if (Array.isArray(msg.content)) {
-      for (const part of msg.content) {
-        if (part.type === 'text' && typeof part.text === 'string' && part.text.length > 1000) {
-          const targetChars = Math.floor((limits.maxTokens * 0.7) * 4);
-          part.text = part.text.slice(0, targetChars) +
-            `\n\n[EMERGENCY TRUNCATION: content exceeded ${limits.maxTokens} token limit]`;
+    const maxEmergencyPasses = Math.max(10, result.length * 10);
+    for (let pass = 0; finalTokens > limits.maxTokens && pass < maxEmergencyPasses; pass += 1) {
+      const candidates = collectEmergencyCandidates(result);
+      let applied = false;
+      for (const candidate of candidates) {
+        const otherTokens = Math.max(0, finalTokens - candidate.tokens);
+        const targetTokens = Math.max(1, limits.maxTokens - otherTokens - 10);
+        if (candidate.apply(targetTokens)) {
+          applied = true;
           break;
         }
       }
+      if (!applied) break;
+
+      result = removeOrphanedToolResults(result);
+      finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
     }
 
-    result = removeOrphanedToolResults(result);
-    finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
+    if (finalTokens > limits.maxTokens) {
+      bridgeLog('warn', 'Emergency truncation could not fit protected messages under limit', {
+        finalTokens,
+        limit: limits.maxTokens,
+        messages: result.length,
+      });
+    }
   }
 
   bridgeLog('info', 'Context compaction complete', {
