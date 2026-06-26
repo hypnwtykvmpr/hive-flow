@@ -2742,13 +2742,32 @@ async function runShellTool(rawArgs, ctx = {}) {
     return denied;
   }
 
+  // T4: annotate stdout/stderr inline when the sandbox reports truncation,
+  // so the model sees the cap before the result is serialized.
+  const rawStdout = sandboxResult.stdout || '';
+  const rawStderr = sandboxResult.stderr || '';
+  const stdoutBytes = Buffer.byteLength(rawStdout, 'utf8');
+  const stderrBytes = Buffer.byteLength(rawStderr, 'utf8');
+  const stdoutOut = sandboxResult.stdoutTruncated
+    ? rawStdout + `\n[OUTPUT TRUNCATED: showing first ${stdoutBytes} bytes (truncated)]`
+    : rawStdout;
+  const stderrOut = sandboxResult.stderrTruncated
+    ? rawStderr + `\n[OUTPUT TRUNCATED: showing first ${stderrBytes} bytes (truncated)]`
+    : rawStderr;
+  const shellTruncated = Boolean(sandboxResult.stdoutTruncated || sandboxResult.stderrTruncated);
+  const shellNote = [
+    sandboxResult.stdoutTruncated ? `stdout: showing first ${stdoutBytes} bytes (truncated)` : '',
+    sandboxResult.stderrTruncated ? `stderr: showing first ${stderrBytes} bytes (truncated)` : '',
+  ].filter(Boolean).join('; ');
   return {
     status: 'executed',
     exitCode: typeof sandboxResult.code === 'number' ? sandboxResult.code : null,
-    stdout: sandboxResult.stdout || '',
-    stderr: sandboxResult.stderr || '',
+    stdout: stdoutOut,
+    stderr: stderrOut,
     timedOut: sandboxResult.status === 'timeout',
-    truncated: Boolean(sandboxResult.stdoutTruncated || sandboxResult.stderrTruncated),
+    truncated: shellTruncated,
+    // T4: top-level disclosure survives truncateToolResult regardless of model threshold
+    ...(shellTruncated ? { truncationNote: `[OUTPUT TRUNCATED: ${shellNote}]` } : {}),
     sandboxBackend: sandboxResult.backend || null,
   };
 }
@@ -2760,6 +2779,20 @@ const RUN_COMMAND_DEFAULT_TIMEOUT_MS = 10_000;
 const GREP_TIMEOUT_MS = 30_000;
 const GREP_VERSION_PROBE_TIMEOUT_MS = 5_000;
 const RUN_COMMAND_OUTPUT_LIMIT_BYTES = 32 * 1024;
+
+/**
+ * Slice a UTF-8 string to at most maxBytes bytes, backing off any partial
+ * multibyte sequence at the boundary so the result is always valid UTF-8.
+ * Returns the original string unchanged when it already fits.
+ */
+function sliceUtf8Bytes(str, maxBytes) {
+  const buf = Buffer.from(str, 'utf8');
+  if (buf.length <= maxBytes) return str;
+  let end = maxBytes;
+  // Back off past any UTF-8 continuation bytes (0x80–0xBF) at the cut point
+  while (end > 0 && (buf[end] & 0xC0) === 0x80) end--;
+  return buf.slice(0, end).toString('utf8');
+}
 
 function runCommandDenied(denyReason, error = denyReason) {
   return {
@@ -2947,27 +2980,56 @@ async function runCommandTool(rawArgs) {
       timeout: clampInteger(rawArgs?.timeoutMs, RUN_COMMAND_DEFAULT_TIMEOUT_MS, RUN_COMMAND_DEFAULT_TIMEOUT_MS),
       maxBuffer: RUN_COMMAND_OUTPUT_LIMIT_BYTES * 2,
     });
-    const truncated = Buffer.byteLength(output, 'utf8') > RUN_COMMAND_OUTPUT_LIMIT_BYTES;
+    const fullBytes = Buffer.byteLength(output, 'utf8');
+    const truncated = fullBytes > RUN_COMMAND_OUTPUT_LIMIT_BYTES;
+    // T3: byte-safe slice so the "first N bytes" claim is honest (str.slice is char-based)
+    const shownStdout = truncated ? sliceUtf8Bytes(output, RUN_COMMAND_OUTPUT_LIMIT_BYTES) : output;
+    const shownStdoutBytes = truncated ? Buffer.byteLength(shownStdout, 'utf8') : fullBytes;
+    const stdoutOut = truncated
+      ? shownStdout + `\n[OUTPUT TRUNCATED: showing first ${shownStdoutBytes} of ${fullBytes} bytes]`
+      : output;
     return {
       status: 'executed',
       exitCode: 0,
-      stdout: truncated ? output.slice(0, RUN_COMMAND_OUTPUT_LIMIT_BYTES) : output,
+      stdout: stdoutOut,
       stderr: '',
       timedOut: false,
       truncated,
+      // T3: top-level disclosure survives truncateToolResult regardless of model threshold
+      ...(truncated ? { truncationNote: `[OUTPUT TRUNCATED: showing first ${shownStdoutBytes} of ${fullBytes} bytes]` } : {}),
     };
   } catch (err) {
     const stdout = typeof err.stdout === 'string' ? err.stdout : '';
     const stderr = typeof err.stderr === 'string' ? err.stderr : '';
+    const stdoutBytes = Buffer.byteLength(stdout, 'utf8');
+    const stderrBytes = Buffer.byteLength(stderr, 'utf8');
+    const stdoutTrunc = stdoutBytes > RUN_COMMAND_OUTPUT_LIMIT_BYTES;
+    const stderrTrunc = stderrBytes > RUN_COMMAND_OUTPUT_LIMIT_BYTES;
+    const catchTruncated = stdoutTrunc || stderrTrunc;
+    // T3: byte-safe slice on both channels in the error/catch path
+    const shownStdout = stdoutTrunc ? sliceUtf8Bytes(stdout, RUN_COMMAND_OUTPUT_LIMIT_BYTES) : stdout;
+    const shownStderr = stderrTrunc ? sliceUtf8Bytes(stderr, RUN_COMMAND_OUTPUT_LIMIT_BYTES) : stderr;
+    const shownStdoutBytes = stdoutTrunc ? Buffer.byteLength(shownStdout, 'utf8') : stdoutBytes;
+    const shownStderrBytes = stderrTrunc ? Buffer.byteLength(shownStderr, 'utf8') : stderrBytes;
+    const stdoutOut = stdoutTrunc
+      ? shownStdout + `\n[OUTPUT TRUNCATED: showing first ${shownStdoutBytes} of ${stdoutBytes} bytes]`
+      : stdout;
+    const stderrOut = stderrTrunc
+      ? shownStderr + `\n[OUTPUT TRUNCATED: showing first ${shownStderrBytes} of ${stderrBytes} bytes]`
+      : stderr;
+    const catchNote = [
+      stdoutTrunc ? `stdout: showing first ${shownStdoutBytes} of ${stdoutBytes} bytes` : '',
+      stderrTrunc ? `stderr: showing first ${shownStderrBytes} of ${stderrBytes} bytes` : '',
+    ].filter(Boolean).join('; ');
     return {
       status: 'executed',
       exitCode: typeof err.status === 'number' ? err.status : null,
-      stdout: stdout.slice(0, RUN_COMMAND_OUTPUT_LIMIT_BYTES),
-      stderr: stderr.slice(0, RUN_COMMAND_OUTPUT_LIMIT_BYTES),
+      stdout: stdoutOut,
+      stderr: stderrOut,
       timedOut: Boolean(err.killed || err.signal === 'SIGTERM' || /timed out/i.test(err.message || '')),
-      truncated:
-        Buffer.byteLength(stdout, 'utf8') > RUN_COMMAND_OUTPUT_LIMIT_BYTES ||
-        Buffer.byteLength(stderr, 'utf8') > RUN_COMMAND_OUTPUT_LIMIT_BYTES,
+      truncated: catchTruncated,
+      // T3: top-level disclosure survives truncateToolResult
+      ...(catchTruncated ? { truncationNote: `[OUTPUT TRUNCATED: ${catchNote}]` } : {}),
     };
   }
 }
@@ -3603,6 +3665,8 @@ async function webSearchTool(rawArgs, ctx = {}) {
     contentType: headerValue(response.headers, 'content-type'),
     bytes: readResult.bytes,
     truncated: readResult.truncated,
+    // T6: honest disclosure when the fetched search page was capped
+    ...(readResult.truncated ? { truncatedNote: `Search page was truncated at ${effectiveOptions.maxBytes} bytes; the result list may be incomplete.` } : {}),
     redirectCount: 0,
     results,
   };
@@ -3774,6 +3838,11 @@ const BRIDGE_FILESYSTEM_TOOLS = {
     }
     mkdirSync(dirname(safePath), { recursive: true });
     writeFileSync(safePath, content, 'utf-8');
+    // HF-4: empty string === '' truncates the file to 0 bytes but does NOT delete it.
+    // Whitespace-only content is real content and must NOT trigger this message.
+    if (content === '') {
+      return `File truncated to 0 bytes (not deleted): ${safePath}. The bridge has no delete tool; the empty file still exists on disk.`;
+    }
     return `File written: ${safePath}`;
   },
   'edit_file': ({ path: filePath, old_string, new_string }) => {
@@ -4091,7 +4160,7 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
       type: 'function',
       function: {
         name: 'read_file',
-        description: 'Read the contents of a file.',
+        description: 'Read the contents of a file. Large files are truncated to a head+tail window; a [FILE TRUNCATED] marker is inserted showing total size. Use offset/limit parameters for specific sections.',
         parameters: {
           type: 'object',
           properties: {
@@ -4123,7 +4192,7 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
       type: 'function',
       function: {
         name: 'write_file',
-        description: 'Write content to a file, creating parent directories if needed.',
+        description: 'Write content to a file, creating parent directories if needed. Supplying empty content truncates the file to 0 bytes — the file is not deleted (the bridge has no delete tool).',
         parameters: {
           type: 'object',
           properties: {
@@ -4318,7 +4387,7 @@ const BRIDGE_TOOL_CAPABILITY_MANIFEST = Object.freeze({
       type: 'function',
       function: {
         name: 'web_fetch',
-        description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Requires project allowlist; follows redirects manually; returns status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount, and denyReason on denial.',
+        description: 'Fetch a small HTTPS URL through the bridge SSRF guard. Returns metadata only (status, finalUrl, httpStatus, contentType, bytes, truncated, redirectCount) — no body text is delivered. Requires project allowlist; follows redirects manually. truncated:true means the body exceeded the byte cap and was discarded, not delivered.',
         parameters: {
           type: 'object',
           properties: {
