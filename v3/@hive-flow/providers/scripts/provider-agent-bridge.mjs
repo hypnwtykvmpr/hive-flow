@@ -744,6 +744,7 @@ const TOKEN_ESTIMATE_PAD = 1.3;
 const KEEP_RECENT_TOOL_RESULTS = 3;
 export const EVICTED_TOOL_MARKER_PREFIX = '[Old tool result content cleared';
 export const EVICTED_TOOL_RESULT_MARKER = '[Old tool result content cleared to preserve context; re-run the relevant tool or query if the exact prior tool output is needed]';
+export const STRUCTURED_RESULT_TRUNCATED_MARKER = '[STRUCTURED RESULT TRUNCATED to preserve context; re-run the tool for the full structured output]';
 const RUN_SHELL_DEFAULT_TIMEOUT_MS = 30_000;
 const RUN_SHELL_MAX_TIMEOUT_MS = 120_000;
 const RUN_SHELL_DEFAULT_STDOUT_LIMIT_BYTES = 256 * 1024;
@@ -1214,7 +1215,11 @@ function getToolResultThreshold(limits) {
   return 5 * 1024; // small models: 5KB
 }
 
-function truncateToolResult(content, toolName, limits) {
+function looksLikeJsonPayload(content) {
+  return /^[\s]*[\[{]/.test(content);
+}
+
+export function truncateToolResult(content, toolName, limits) {
   if (typeof content !== 'string') return content;
   const threshold = getToolResultThreshold(limits);
   const bytes = Buffer.byteLength(content, 'utf8');
@@ -1222,6 +1227,15 @@ function truncateToolResult(content, toolName, limits) {
 
   // Infinity threshold means no truncation — should not reach here, but guard anyway
   if (threshold === Infinity) return content;
+
+  if (looksLikeJsonPayload(content)) {
+    return safeBridgeJsonStringify({
+      truncated: true,
+      message: STRUCTURED_RESULT_TRUNCATED_MARKER,
+      toolName,
+      preview: sliceUtf8Bytes(content, Math.floor(threshold * 0.5)),
+    });
+  }
 
   const lines = content.split('\n');
   const totalLines = lines.length;

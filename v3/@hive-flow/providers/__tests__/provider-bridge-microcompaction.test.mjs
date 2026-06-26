@@ -260,3 +260,62 @@ describe('Slice C microcompaction emergency truncation', () => {
     expect(JSON.stringify(trimmed)).not.toContain('agent_task_result');
   });
 });
+
+describe('Slice D microcompaction structured result truncation', () => {
+  it('does not splice large single-line JSON into an invalid JSON fragment', () => {
+    const content = JSON.stringify({
+      key: 'v'.repeat(100_000),
+      nested: { a: 1 },
+    });
+    const limits = { maxTokens: 4_000, maxEntries: 20 };
+
+    const truncated = bridge.truncateToolResult(content, 'read_file', limits);
+    const parsed = JSON.parse(truncated);
+
+    expect(parsed).toMatchObject({
+      truncated: true,
+      message: bridge.STRUCTURED_RESULT_TRUNCATED_MARKER,
+      toolName: 'read_file',
+    });
+    expect(parsed.preview).toBeTypeOf('string');
+    expect(parsed.preview.startsWith('{"key":"')).toBe(true);
+    expect(parsed.message).not.toContain('agent_task_result');
+    expect(truncated.startsWith('{')).toBe(true);
+    expect(truncated.trimEnd().endsWith('}')).toBe(true);
+  });
+
+  it('passes small JSON through unchanged', () => {
+    const content = JSON.stringify({ ok: true });
+    const limits = { maxTokens: 4_000, maxEntries: 20 };
+
+    expect(bridge.truncateToolResult(content, 'read_file', limits)).toBe(content);
+  });
+
+  it('wraps pretty-printed oversized JSON instead of line-splicing it', () => {
+    const content = JSON.stringify({
+      rows: Array.from({ length: 80 }, (_, index) => ({
+        index,
+        value: 'x'.repeat(180),
+      })),
+    }, null, 2);
+    const limits = { maxTokens: 4_000, maxEntries: 20 };
+
+    const parsed = JSON.parse(bridge.truncateToolResult(content, 'read_file', limits));
+
+    expect(parsed.truncated).toBe(true);
+    expect(parsed.message).toBe(bridge.STRUCTURED_RESULT_TRUNCATED_MARKER);
+    expect(parsed.preview.startsWith('{\n  "rows"')).toBe(true);
+  });
+
+  it('keeps non-JSON line-based truncation behavior for text blobs', () => {
+    const content = Array.from({ length: 80 }, (_, index) => `line-${index} ${'x'.repeat(180)}`).join('\n');
+    const limits = { maxTokens: 4_000, maxEntries: 20 };
+
+    const truncated = bridge.truncateToolResult(content, 'read_file', limits);
+
+    expect(truncated).toContain('[TRUNCATED]');
+    expect(truncated).toContain('line-0');
+    expect(truncated).toContain('line-79');
+    expect(() => JSON.parse(truncated)).toThrow();
+  });
+});
