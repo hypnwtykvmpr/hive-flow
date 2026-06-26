@@ -2340,6 +2340,12 @@ describe('enforcement security property contracts', () => {
 
     expect(enf.detectCircumvention(
       'Bash',
+      { command: 'git.exe checkout -- .claude/helpers/enforcement.cjs' },
+      state,
+    ).circumvention).toBe(true);
+
+    expect(enf.detectCircumvention(
+      'Bash',
       { command: "sed -i 's/.claude\\/settings.json/.claude\\/settings.local.json/g' v3/docs/notes.md && echo ok" },
       state,
     ).circumvention).toBe(false);

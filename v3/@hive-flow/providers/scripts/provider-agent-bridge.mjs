@@ -2356,8 +2356,18 @@ function shellQuoteArg(value) {
   return `'${text.replace(/'/g, `'\\''`)}'`;
 }
 
+// Windows-executable extensions stripped from a command basename so a token
+// like `python.exe`/`git.cmd` normalizes to its POSIX family name. Keeps both
+// the run_shell denylist (HF-20 under-block) and the run_command read allowlist
+// (E1 over-block) correct cross-platform through this single chokepoint.
+const WIN_EXEC_EXT = new Set(['exe', 'cmd', 'bat', 'com', 'ps1', 'vbs', 'wsf', 'msc', 'scr']);
 function commandName(value) {
-  return basename(String(value || '')).toLowerCase();
+  let s = String(value || '').replace(/\\/g, '/'); // backslash → slash BEFORE basename (POSIX basename doesn't split \)
+  s = basename(s).toLowerCase();
+  s = s.replace(/[. ]+$/, '');                       // Windows trims trailing dots/spaces
+  const dot = s.lastIndexOf('.');
+  if (dot > 0 && WIN_EXEC_EXT.has(s.slice(dot + 1))) s = s.slice(0, dot); // strip ONE trailing known exec ext
+  return s;
 }
 
 function isEnvAssignmentToken(token) {
@@ -2482,7 +2492,7 @@ function normalizeRunShellArgs(args) {
   throw new Error('run_shell requires either command or argv');
 }
 
-function denyUnsafeRunShellCommand(renderedCommand, argv) {
+export function denyUnsafeRunShellCommand(renderedCommand, argv) {
   const executable = commandName(argv[0]);
   if (!executable) return 'run_shell command has no executable';
 
@@ -2549,9 +2559,97 @@ function denyUnsafeRunShellCommand(renderedCommand, argv) {
     return 'run_shell git push is not available to provider agents';
   }
 
-  if ((executable === 'node' || executable === 'python' || executable === 'python3') &&
-      argv.slice(1).some((entry) => entry === '-e' || entry === '--eval' || entry === '-c')) {
-    return 'run_shell inline code execution is not available';
+  // HF-20: defense-in-depth inline-eval / arbitrary-code blocklist. The sandbox
+  // (sandboxExec) + permission-guard Bash gate remain the PRIMARY boundary —
+  // anything slipping this list is still network-isolated and filesystem-jailed
+  // to projectRoot+tempDir, or denied outright when no sandbox backend verifies.
+  // These shapes are refused early because they are unambiguous code-execution
+  // vectors. Per-interpreter eval-flag map matches short/long/bundled/capital
+  // forms (e.g. `-eCODE`, `-E`, `--eval`, `-p`) while still allowing legit
+  // script runs (`node script.js`, `perl script.pl`, `php -f script.php`).
+  const rest = argv.slice(1);
+  // matchesEvalFlag(arg, flags): exact match OR bundled single-dash form
+  // (`-eCODE` for `-e`). Long `--` flags must match exactly so `-e` never
+  // matches `--experimental`/`--eval` is listed explicitly where wanted.
+  const hasEvalFlag = (exacts, bundlePrefixes) => rest.some((raw) => {
+    const a = String(raw);
+    if (exacts.includes(a)) return true;
+    // long `--flag=VALUE` form (e.g. --eval=CODE) for any long exact flag
+    if (exacts.some((f) => f.startsWith('--') && a.startsWith(f + '='))) return true;
+    // bundled single-dash only (e.g. -eCODE), never -- long flags
+    return bundlePrefixes.some((p) => a.startsWith(p) && !a.startsWith('--'));
+  });
+  // perl clusters the eval flag behind booleans (`-nE`, `-pE`, `-lne`), so a
+  // simple prefix check misses it. Deny any single-dash arg containing e/E,
+  // except -M/-I/-m loaders whose payload legitimately carries letters
+  // (`perl -MData::Dumper script.pl`).
+  const perlHasEval = () => rest.some((raw) => {
+    const a = String(raw);
+    if (!a.startsWith('-') || a.startsWith('--')) return false;
+    if (/^-[MIm]/.test(a)) return false;
+    return /[eE]/.test(a);
+  });
+  const INLINE_EVAL = 'run_shell inline code execution is not available';
+  // Normalize versioned interpreter basenames to their family so the switch
+  // catches `python3.11`/`ruby3.3`/`php8.2`/`perl5.36`/`node20`. Anchored
+  // `[0-9.]*$` so trailing-letter/`-` tools (perldoc, php-fpm, python3-config,
+  // ruby-doc) are NOT normalized → they fall through to default-allow. Python
+  // alone allows ONE trailing ABI letter (`python3.11m`/`3.13t`/`3.11d`); the
+  // single `[a-z]?` still rejects `python3-config` (`-`) and `python3.11abc`.
+  // ponytail: cross-family interpreter basenames (pypy/pypy3/jython) slip the
+  // family map — accepted: the sandbox (sandboxExec) is the fail-closed PRIMARY
+  // boundary (network-isolated, path-jailed), so a slipped inline-code
+  // interpreter is sandbox-contained, not independently exploitable;
+  // defense-in-depth only.
+  const family =
+    /^python[0-9.]*[a-z]?$/.test(executable) ? 'python' :
+    /^ruby[0-9.]*$/.test(executable) ? 'ruby' :
+    /^php[0-9.]*$/.test(executable) ? 'php' :
+    /^perl[0-9.]*$/.test(executable) ? 'perl' :
+    /^node[0-9.]*$/.test(executable) ? 'node' :
+    executable;
+  switch (family) {
+    case 'perl': // -e/-E plus clustered -nE/-pE/-lne; not -M/-I/-m loaders
+      if (perlHasEval()) return INLINE_EVAL;
+      break;
+    case 'ruby': // -e/--eval/-eCODE; -E is encoding, NOT eval → not blocked
+      if (hasEvalFlag(['-e', '--eval'], ['-e'])) return INLINE_EVAL;
+      break;
+    case 'node':
+    case 'nodejs': // -e/--eval/-p/--print (and bundled -eCODE/-pCODE); not -c/--check
+      if (hasEvalFlag(['-e', '--eval', '-p', '--print'], ['-e', '-p'])) return INLINE_EVAL;
+      break;
+    case 'python': // -c/-cCODE (python2/python3/python3.11 → 'python' via family)
+      if (hasEvalFlag(['-c'], ['-c'])) return INLINE_EVAL;
+      break;
+    case 'php': // -r/-R/-F (and bundled); lowercase -f is a normal script run
+      if (hasEvalFlag(['-r', '-R', '-F'], ['-r', '-R', '-F'])) return INLINE_EVAL;
+      break;
+    case 'bun': // -e/--eval/-eCODE OR `bun eval`
+      if (argv[1] === 'eval' || hasEvalFlag(['-e', '--eval'], ['-e'])) return INLINE_EVAL;
+      break;
+    case 'deno': // `deno eval`
+      if (argv[1] === 'eval') return INLINE_EVAL;
+      break;
+    // awk/gawk/mawk/nawk: the program text is arbitrary code (system(), |"sh").
+    case 'awk':
+    case 'gawk':
+    case 'mawk':
+    case 'nawk':
+      return 'run_shell awk-family inline programs are not available';
+    // xargs builds+runs commands from stdin.
+    case 'xargs':
+      return 'run_shell xargs is not available';
+    // sed: GNU `s///e`/`e`-command execute forms are fragile to detect across
+    // GNU vs macOS; deny entirely (a read-only agent has grep/read_file/find_file).
+    case 'sed':
+      return 'run_shell sed is not available';
+    default:
+      break;
+  }
+  // find -exec/-execdir spawns arbitrary commands.
+  if (executable === 'find' && rest.some((entry) => entry === '-exec' || entry === '-execdir')) {
+    return 'run_shell find -exec is not available';
   }
 
   if (/[;&|<>`]/.test(renderedCommand) || /\$\(/.test(renderedCommand)) {
@@ -2656,6 +2754,11 @@ async function runShellTool(rawArgs, ctx = {}) {
 }
 
 const RUN_COMMAND_DEFAULT_TIMEOUT_MS = 10_000;
+// HF-12: grep/rg run synchronously via execFileSync; without a timeout a
+// pathological ERE on the GNU-grep fallback or a slow large-repo match hangs
+// the bridge process. Cap the search and the version probe.
+const GREP_TIMEOUT_MS = 30_000;
+const GREP_VERSION_PROBE_TIMEOUT_MS = 5_000;
 const RUN_COMMAND_OUTPUT_LIMIT_BYTES = 32 * 1024;
 
 function runCommandDenied(denyReason, error = denyReason) {
@@ -3563,6 +3666,57 @@ const BRIDGE_BLOCKED_TOOLS = new Set([
   'mcp__filesystem__search_files',
 ]);
 
+// HF-21: ReDoS-safe glob→regex builder for find_file (matchesPattern) and the
+// gitignore wildcard branch (shouldIgnore). ROOT CAUSE of the old builder: it
+// escaped only `.` then translated `*`/`**`/`?`, leaving every other regex
+// metacharacter (`+ ( ) [ ] { } ^ $ | \`) UNESCAPED — so a glob like `(a+)+$`
+// injected a catastrophic-backtracking regex (a timeout cannot help: matching
+// is synchronous and in-process). Fix: FULLY escape every metacharacter FIRST,
+// then translate ONLY the intended glob wildcards. After escaping, user input
+// can no longer inject quantifiers/groups, so the ReDoS surface is gone.
+// Returns a RegExp anchored to the whole string, or null when the pattern is
+// rejected (too long → callers treat as no-match).
+const GLOB_PATTERN_MAX_LENGTH = 256;
+const GLOB_MAX_WILDCARDS = 3;
+// HF-21: the ReDoS cost scales with wildcards × candidate length (a translated
+// `[^/]*` chain still backtracks), so cap BOTH. N=3 @ len=256 ≈ 24ms; the cap
+// alone is not enough because a long candidate (a 255-char in-jail filename or a
+// deep relativePath) hangs even at N≤3. Callers also skip the regex when the
+// candidate exceeds this length (substring/no-match instead).
+const GLOB_MAX_CANDIDATE_LENGTH = 256;
+export function globToSafeRegExp(glob) {
+  const raw = String(glob ?? '');
+  if (raw.length > GLOB_PATTERN_MAX_LENGTH) return null; // belt-and-suspenders bound
+  // Collapse adjacent `*` runs (incl. `***`) to a single globstar so a long run
+  // of stars cannot expand into stacked quantifiers.
+  const collapsed = raw.replace(/\*{2,}/g, '**');
+  // Bound the wildcard count. Even fully escaped, a pattern like `a*a*...*b`
+  // builds many overlapping `[^/]*` segments separated by single literals — a
+  // legitimate-translation ReDoS (exponential backtracking on a long
+  // non-matching input). No realistic glob carries this many wildcards; reject
+  // beyond the cap (callers fall back to substring / no-match).
+  const wildcardCount = (collapsed.match(/[*?]/g) || []).length;
+  if (wildcardCount > GLOB_MAX_WILDCARDS) return null;
+  let out = '';
+  for (let i = 0; i < collapsed.length; i += 1) {
+    const ch = collapsed[i];
+    if (ch === '*') {
+      if (collapsed[i + 1] === '*') { out += '.*'; i += 1; }   // ** → cross-segment
+      else { out += '[^/]*'; }                                  // *  → single-segment
+    } else if (ch === '?') {
+      out += '[^/]';
+    } else {
+      // Escape EVERY regex metacharacter so the rest is literal.
+      out += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+  }
+  try {
+    return new RegExp('^' + out + '$');
+  } catch {
+    return null;
+  }
+}
+
 // Built-in filesystem tool handlers — always available to provider agents.
 // These execute only through the bridge-owned registry below.
 const BRIDGE_FILESYSTEM_TOOLS = {
@@ -3679,7 +3833,7 @@ const BRIDGE_FILESYSTEM_TOOLS = {
       // Try ripgrep (rg) first, fall back to grep -rn
       let command, args;
       try {
-        execFileSync('rg', ['--version'], { stdio: 'ignore' });
+        execFileSync('rg', ['--version'], { stdio: 'ignore', timeout: GREP_VERSION_PROBE_TIMEOUT_MS });
         command = 'rg';
         // FIX-S2: buildRgArgs places ALL rg option flags BEFORE the `--`
         // separator, then the separator, then positionals (pattern +
@@ -3715,18 +3869,32 @@ const BRIDGE_FILESYSTEM_TOOLS = {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         maxBuffer: 5 * 1024 * 1024, // 5MB — prevent ENOBUFS on large repos
+        timeout: GREP_TIMEOUT_MS,    // HF-12: kill a hung/slow search instead of blocking the bridge
       }).trim();
-      
+
       if (!output) {
         return 'No matches found';
       }
-      
+
       const lines = output.split('\n');
       const limitedLines = lines.slice(0, maxResults);
-      
+
+      // HF-6-T8: disclose silent truncation so the agent knows to narrow.
+      if (lines.length > maxResults) {
+        return limitedLines.join('\n') +
+          `\n[RESULTS TRUNCATED: showing ${maxResults} of ${lines.length} matches. Narrow the pattern or path.]`;
+      }
+
       return limitedLines.join('\n');
-      
+
     } catch (error) {
+      // HF-12: a timeout/kill is an HONEST failure, never a fabricated empty
+      // search. execFileSync sets err.killed=true and err.signal (e.g. SIGTERM)
+      // when the timeout fires. Surface as a thrown error → evaluateToolCall
+      // wraps {status:'error'} so it cannot count as grounded success.
+      if (error.killed === true || error.signal) {
+        throw new Error(`Search failed: timed out after ${GREP_TIMEOUT_MS}ms`);
+      }
       if (error.status === 1) {
         // grep/rg exit code 1 means no matches found
         return 'No matches found';
@@ -3747,26 +3915,16 @@ const BRIDGE_FILESYSTEM_TOOLS = {
       throw new Error(`find_file blocked: ${basePath} is a protected read path`);
     }
     
-    // Simple glob pattern matching function
+    // Simple glob pattern matching function (HF-21: ReDoS-safe builder).
     function matchesPattern(filename, pattern) {
-      // Convert glob pattern to regex
-      let regexStr = pattern
-        .replace(/\./g, '\\.')
-        .replace(/\*\*/g, '§GLOBSTAR§')   // Placeholder before single * replacement
-        .replace(/\*/g, '[^/]*')
-        .replace(/\?/g, '[^/]')
-        .replace(/§GLOBSTAR§/g, '.*');     // Now replace placeholder with cross-directory match
-      
-      // Anchor to start and end
-      regexStr = '^' + regexStr + '$';
-      
-      try {
-        const regex = new RegExp(regexStr);
-        return regex.test(filename);
-      } catch {
-        // If regex fails, do simple substring match
+      const regex = globToSafeRegExp(pattern);
+      if (!regex || filename.length > GLOB_MAX_CANDIDATE_LENGTH) {
+        // Rejected (too long / too many wildcards), un-compilable, OR the
+        // candidate is long enough to make even a ≤3-wildcard regex backtrack →
+        // substring match instead (bounds cost to N≤3 × len≤256).
         return filename.includes(pattern);
       }
+      return regex.test(filename);
     }
     
     // Check if a path should be ignored based on .gitignore patterns
@@ -3786,14 +3944,17 @@ const BRIDGE_FILESYSTEM_TOOLS = {
           return !isNegation; // If it's a negation pattern, don't ignore
         }
         
-        // Check for wildcard matches
+        // Check for wildcard matches (HF-21: same ReDoS-safe builder; the old
+        // unbounded `.*` + unescaped translation shared the catastrophic
+        // backtracking surface).
         if (pattern.includes('*')) {
-          const regexPattern = pattern
-            .replace(/\./g, '\\.')
-            .replace(/\*/g, '.*')
-            .replace(/\?/g, '.');
-          const regex = new RegExp('^' + regexPattern + '$');
-          if (regex.test(relativePath) || regex.test(path)) {
+          const regex = globToSafeRegExp(pattern);
+          // Skip the regex on over-long candidates (same wildcards×length ReDoS
+          // bound as matchesPattern); leaving the rule un-matched is the safe
+          // default for an approximate ignore check.
+          if (regex &&
+              ((relativePath.length <= GLOB_MAX_CANDIDATE_LENGTH && regex.test(relativePath)) ||
+               (path.length <= GLOB_MAX_CANDIDATE_LENGTH && regex.test(path)))) {
             return !isNegation;
           }
         }

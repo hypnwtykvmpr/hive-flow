@@ -146,6 +146,28 @@ const DANGEROUS_COMMANDS = [
 ];
 
 /**
+ * Windows-executable extensions stripped from a command basename so a NAME-POLICY
+ * comparison (blocklist / allowlist membership) treats `rm.exe`/`git.cmd` the
+ * same as `rm`/`git`. Mirrors the provider bridge's `commandName()` chokepoint.
+ */
+const WIN_EXEC_EXT = new Set(['exe', 'cmd', 'bat', 'com', 'ps1', 'vbs', 'wsf', 'msc', 'scr']);
+
+/**
+ * Normalizes a command token to the basename used for blocklist/allowlist
+ * membership decisions: backslash→slash, basename, lowercase, trim trailing
+ * Windows dots/spaces, strip ONE trailing known Windows exec extension. Used
+ * ONLY for name-policy decisions — never for path-argument validation.
+ */
+function commandPolicyName(cmd: string): string {
+  let s = String(cmd ?? '').replace(/\\/g, '/'); // backslash → slash before basename
+  s = path.basename(s).toLowerCase();
+  s = s.replace(/[. ]+$/, '');                     // Windows trims trailing dots/spaces
+  const dot = s.lastIndexOf('.');
+  if (dot > 0 && WIN_EXEC_EXT.has(s.slice(dot + 1))) s = s.slice(0, dot); // strip ONE known exec ext
+  return s;
+}
+
+/**
  * Safe command executor that prevents command injection.
  *
  * This class replaces unsafe exec() and spawn({shell: true}) calls
@@ -203,7 +225,7 @@ export class SafeExecutor {
 
     // Check for dangerous commands in allowlist
     const dangerousAllowed = this.config.allowedCommands.filter(
-      cmd => DANGEROUS_COMMANDS.includes(path.basename(cmd))
+      cmd => DANGEROUS_COMMANDS.includes(commandPolicyName(cmd))
     );
 
     if (dangerousAllowed.length > 0) {
@@ -221,11 +243,11 @@ export class SafeExecutor {
    * @throws SafeExecutorError if command is not allowed
    */
   private validateCommand(command: string): void {
-    const basename = path.basename(command);
+    const basename = commandPolicyName(command);
 
     // Check if command is allowed
     const isAllowed = this.config.allowedCommands.some(allowed => {
-      const allowedBasename = path.basename(allowed);
+      const allowedBasename = commandPolicyName(allowed);
       return command === allowed || basename === allowedBasename;
     });
 
@@ -445,7 +467,7 @@ export class SafeExecutor {
    * @param command - Command to add
    */
   allowCommand(command: string): void {
-    const basename = path.basename(command);
+    const basename = commandPolicyName(command);
 
     if (DANGEROUS_COMMANDS.includes(basename)) {
       throw new SafeExecutorError(
@@ -466,9 +488,9 @@ export class SafeExecutor {
    * @returns True if command is allowed
    */
   isCommandAllowed(command: string): boolean {
-    const basename = path.basename(command);
+    const basename = commandPolicyName(command);
     return this.config.allowedCommands.some(allowed => {
-      const allowedBasename = path.basename(allowed);
+      const allowedBasename = commandPolicyName(allowed);
       return command === allowed || basename === allowedBasename;
     });
   }

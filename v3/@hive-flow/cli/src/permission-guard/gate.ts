@@ -867,8 +867,58 @@ const READ_COMMANDS = new Set([
   'tac',
 ]);
 
+const WIN_EXEC_EXT = new Set(['exe', 'cmd', 'bat', 'com', 'ps1', 'vbs', 'wsf', 'msc', 'scr']);
+
 function commandBasename(command: string): string {
-  return basename(command).toLowerCase();
+  let name = basename(String(command || '').replace(/\\/g, '/')).toLowerCase();
+  name = name.replace(/[. ]+$/, '');
+  const dot = name.lastIndexOf('.');
+  if (dot > 0 && WIN_EXEC_EXT.has(name.slice(dot + 1))) {
+    name = name.slice(0, dot);
+  }
+  return name;
+}
+
+function readLeadingShellToken(segment: string): { token: string; rest: string } | null {
+  const text = segment.trimStart();
+  if (!text) return null;
+
+  if (text.startsWith("$'")) {
+    let escaped = false;
+    let token = '';
+    for (let i = 2; i < text.length; i += 1) {
+      const ch = text[i];
+      if (ch === "'" && !escaped) return { token, rest: text.slice(i + 1) };
+      token += ch;
+      escaped = ch === '\\' && !escaped;
+      if (ch !== '\\') escaped = false;
+    }
+    return null;
+  }
+
+  const quote = text[0] === '"' || text[0] === "'" ? text[0] : null;
+  if (quote) {
+    let escaped = false;
+    let token = '';
+    for (let i = 1; i < text.length; i += 1) {
+      const ch = text[i];
+      if (ch === quote && !escaped) return { token, rest: text.slice(i + 1) };
+      token += ch;
+      escaped = quote === '"' && ch === '\\' && !escaped;
+      if (quote !== '"' || ch !== '\\') escaped = false;
+    }
+    return null;
+  }
+
+  const match = text.match(/^(\S+)([\s\S]*)$/);
+  return match ? { token: match[1], rest: match[2] } : null;
+}
+
+function normalizeForbiddenSegmentExecutable(segment: string): string {
+  const parsed = readLeadingShellToken(segment);
+  if (!parsed) return segment;
+  const normalized = commandBasename(parsed.token);
+  return normalized ? `${normalized}${parsed.rest}` : segment;
 }
 
 function isReadCommand(command: string): boolean {
@@ -1713,11 +1763,12 @@ function checkForbiddenSafeguard(
 
   for (const segment of segments) {
     const stripped = stripCommand(segment);
+    const normalized = normalizeForbiddenSegmentExecutable(stripped);
 
     // Check direct match against FORBIDDEN_PATTERNS
     for (const fp of FORBIDDEN_PATTERNS) {
       try {
-        if (new RegExp(fp, 'i').test(stripped)) {
+        if (new RegExp(fp, 'i').test(normalized)) {
           logDecision(config, toolName, inputSummary, 'deny', 'forbidden-safeguard',
             `Post-verdict safeguard: ${fp} is FORBIDDEN`);
           return { decision: 'deny', reason: 'DENIED: This command is not available.' };

@@ -1576,9 +1576,17 @@ function splitTokenSegments(tokens) {
   return segments;
 }
 
+const WIN_EXEC_EXT = new Set(['exe', 'cmd', 'bat', 'com', 'ps1', 'vbs', 'wsf', 'msc', 'scr']);
+
 function commandBasename(command) {
   const normalized = normalizeShellWord(String(command || '')).replace(/\\/g, '/');
-  return normalized.split('/').pop() || normalized;
+  let name = normalized.split('/').pop() || normalized;
+  name = name.replace(/[. ]+$/, '');
+  const dot = name.lastIndexOf('.');
+  if (dot > 0 && WIN_EXEC_EXT.has(name.slice(dot + 1).toLowerCase())) {
+    name = name.slice(0, dot);
+  }
+  return name;
 }
 
 function escapeRegExpLiteral(value) {

@@ -173,6 +173,27 @@ describe('FORBIDDEN_PATTERNS covers git push short flags', () => {
   });
 });
 
+describe('FORBIDDEN_PATTERNS normalizes Windows executable suffixes', () => {
+  const deniedCommands = [
+    'rm.exe -rf /',
+    'git.exe push --force origin main',
+    'git.cmd reset --hard',
+    'sudo.exe rm stale-output.txt',
+    'chmod.exe 777 script.sh',
+    'chmod.cmd -R a+rwx build',
+    'killall.exe node',
+    'docker.exe rm container-id',
+    '"C:\\Program Files\\Git\\bin\\git.exe" push --force origin main',
+  ];
+
+  for (const command of deniedCommands) {
+    it(`denies ${command}`, async () => {
+      const result = await evaluateHookInput(bashInput(command));
+      expect(result.decision).toBe('deny');
+    });
+  }
+});
+
 describe('safe rm/chmod are not blanket-denied', () => {
   it('allows a non-recursive single-file rm through the full guard stack', async () => {
     const result = await evaluateHookInput(bashInput('rm stale-output.txt'));
