@@ -65,6 +65,33 @@ function totalTokens(messages, estimator = bridge.estimateTokensFromText) {
   return messages.reduce((sum, msg) => sum + textMessageTokens(String(msg.content ?? ''), estimator), 0);
 }
 
+function toolHistory(count, contentFactory = (index) => `payload-${index}`) {
+  const messages = [
+    { role: 'system', content: 'system' },
+    { role: 'user', content: 'task' },
+  ];
+  for (let index = 0; index < count; index += 1) {
+    const id = `call_${index}`;
+    messages.push({
+      role: 'assistant',
+      content: `calling ${index}`,
+      toolCalls: [{ id, type: 'function', function: { name: 'read_file', arguments: '{}' } }],
+    });
+    messages.push({
+      role: 'tool',
+      toolCallId: id,
+      name: 'read_file',
+      content: contentFactory(index),
+    });
+  }
+  messages.push({ role: 'user', content: 'latest' });
+  return messages;
+}
+
+function toolMessages(messages) {
+  return messages.filter((msg) => msg.role === 'tool');
+}
+
 describe('Slice A microcompaction budget heuristic', () => {
   it('pads chars/4 token estimates by 1.3 without changing non-string handling', () => {
     expect(bridge.estimateTokensFromText(null)).toBe(0);
@@ -119,5 +146,74 @@ describe('Slice A microcompaction budget heuristic', () => {
 
     expect(limits.warningThreshold).toBe(850_000);
     expect(paddedEstimate).toBeLessThan(limits.warningThreshold);
+  });
+});
+
+describe('Slice B microcompaction old tool-result eviction', () => {
+  it('clears only old tool-result content and keeps the last three tool results verbatim', () => {
+    const limits = { maxTokens: 100_000, maxEntries: 100, warningThreshold: 90_000 };
+    const messages = toolHistory(5);
+
+    const prepared = bridge.prepareForProvider(JSON.parse(JSON.stringify(messages)), limits);
+    const tools = toolMessages(prepared);
+
+    expect(tools).toHaveLength(5);
+    expect(tools[0]).toMatchObject({
+      toolCallId: 'call_0',
+      name: 'read_file',
+      content: bridge.EVICTED_TOOL_RESULT_MARKER,
+    });
+    expect(tools[1]).toMatchObject({
+      toolCallId: 'call_1',
+      name: 'read_file',
+      content: bridge.EVICTED_TOOL_RESULT_MARKER,
+    });
+    expect(tools.slice(2).map((msg) => msg.content)).toEqual(['payload-2', 'payload-3', 'payload-4']);
+    expect(tools[0].content).toContain('re-run the relevant tool or query');
+    expect(tools[0].content).not.toContain('agent_task_result');
+    expect(tools[0].content).not.toContain('full payload');
+  });
+
+  it('clears array-content old tool results to the same honest marker string', () => {
+    const messages = toolHistory(4, (index) => (index === 0
+      ? [{ type: 'text', text: 'array payload' }]
+      : `payload-${index}`));
+
+    const evicted = bridge.evictOldToolResults(JSON.parse(JSON.stringify(messages)));
+    const tools = toolMessages(evicted);
+
+    expect(tools).toHaveLength(4);
+    expect(tools[0].content).toBe(bridge.EVICTED_TOOL_RESULT_MARKER);
+    expect(tools[1].content).toBe('payload-1');
+    expect(tools[2].content).toBe('payload-2');
+    expect(tools[3].content).toBe('payload-3');
+  });
+
+  it('is idempotent and keeps compaction metadata non-enumerable', () => {
+    const limits = { maxTokens: 100_000, maxEntries: 100, warningThreshold: 90_000 };
+    const messages = toolHistory(6);
+
+    const first = bridge.prepareForProvider(JSON.parse(JSON.stringify(messages)), limits);
+    const second = bridge.prepareForProvider(JSON.parse(JSON.stringify(first)), limits);
+
+    expect(second).toEqual(first);
+    expect(Object.prototype.propertyIsEnumerable.call(first, '_compactionMeta')).toBe(false);
+    expect(first._compactionMeta).toMatchObject({
+      evictedToolResults: 3,
+      keptRecentToolResults: 3,
+    });
+    expect(JSON.stringify(first)).not.toContain('_compactionMeta');
+  });
+
+  it('does not mutate already-small histories or already-evicted marker content', () => {
+    const small = toolHistory(3);
+    expect(bridge.evictOldToolResults(JSON.parse(JSON.stringify(small)))).toEqual(small);
+
+    const alreadyEvicted = toolHistory(4);
+    alreadyEvicted[3].content = bridge.EVICTED_TOOL_RESULT_MARKER;
+
+    const evicted = bridge.evictOldToolResults(JSON.parse(JSON.stringify(alreadyEvicted)));
+
+    expect(evicted).toEqual(alreadyEvicted);
   });
 });

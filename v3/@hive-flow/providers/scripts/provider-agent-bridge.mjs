@@ -741,6 +741,9 @@ const stderrLogger = {
 const DEFAULT_MAX_HISTORY_ENTRIES = 50;
 const DEFAULT_MAX_PROMPT_TOKENS = 128000; // 128K tokens safe default
 const TOKEN_ESTIMATE_PAD = 1.3;
+const KEEP_RECENT_TOOL_RESULTS = 3;
+export const EVICTED_TOOL_MARKER_PREFIX = '[Old tool result content cleared';
+export const EVICTED_TOOL_RESULT_MARKER = '[Old tool result content cleared to preserve context; re-run the relevant tool or query if the exact prior tool output is needed]';
 const RUN_SHELL_DEFAULT_TIMEOUT_MS = 30_000;
 const RUN_SHELL_MAX_TIMEOUT_MS = 120_000;
 const RUN_SHELL_DEFAULT_STDOUT_LIMIT_BYTES = 256 * 1024;
@@ -1336,6 +1339,53 @@ function hasAssistantContent(msg) {
   return msg.content !== undefined && msg.content !== null;
 }
 
+export function evictOldToolResults(messages, ctx = {}) {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return Array.isArray(messages) ? messages : [];
+  }
+
+  const toolIndices = [];
+  for (let index = 0; index < messages.length; index += 1) {
+    if (messages[index]?.role === 'tool') toolIndices.push(index);
+  }
+
+  const evictCount = Math.max(0, toolIndices.length - KEEP_RECENT_TOOL_RESULTS);
+  if (evictCount === 0) return messages;
+
+  let cleared = 0;
+  let clearedTokens = 0;
+  const out = messages.slice();
+  for (const index of toolIndices.slice(0, evictCount)) {
+    const msg = out[index];
+    const content = typeof msg?.content === 'string' ? msg.content : '';
+    if (content.startsWith(EVICTED_TOOL_MARKER_PREFIX)) continue;
+
+    cleared += 1;
+    clearedTokens += estimateMessageTokens(msg);
+    out[index] = { ...msg, content: EVICTED_TOOL_RESULT_MARKER };
+  }
+
+  if (cleared === 0) return messages;
+
+  bridgeLog('info', 'Tier-1 microcompaction: old tool results cleared', {
+    cleared,
+    kept: KEEP_RECENT_TOOL_RESULTS,
+    taskId: typeof ctx?.taskId === 'string' && ctx.taskId ? ctx.taskId : undefined,
+  });
+  Object.defineProperty(out, '_compactionMeta', {
+    value: {
+      ...(messages._compactionMeta && typeof messages._compactionMeta === 'object' ? messages._compactionMeta : {}),
+      evictedToolResults: cleared,
+      evictedToolResultTokens: clearedTokens,
+      keptRecentToolResults: KEEP_RECENT_TOOL_RESULTS,
+    },
+    enumerable: false,
+    configurable: true,
+  });
+
+  return out;
+}
+
 export function normalizeForProvider(messages) {
   if (!Array.isArray(messages)) return [];
 
@@ -1702,8 +1752,17 @@ export function trimMessages(messages, limits) {
   return result;
 }
 
-export function prepareForProvider(messages, limits) {
-  return trimMessages(normalizeForProvider(messages), limits);
+export function prepareForProvider(messages, limits, ctx = {}) {
+  const evicted = evictOldToolResults(messages, ctx);
+  const prepared = trimMessages(normalizeForProvider(evicted), limits);
+  if (evicted._compactionMeta && typeof evicted._compactionMeta === 'object') {
+    Object.defineProperty(prepared, '_compactionMeta', {
+      value: evicted._compactionMeta,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  return prepared;
 }
 
 // ===== Provider Default Models (loaded from model-alias-resolver if available) =====
@@ -5201,13 +5260,14 @@ export function normalizeProviderToolCalls(toolCalls) {
 async function main() {
   const parsed = await parseArgs();
   const { agentId, task, storeDir, timeout: parsedTimeout, agentToken, resultFile, taskFile } = parsed;
+  const providerContext = { taskId: taskIdFromResultFile(resultFile) };
   const lockPath = join(storeDir, '.store.lock');
 
   // ── Phase 1: Lock → read state → unlock ──
   const { store, agent, storePath, messages, providerName } = await withFileLock(lockPath, async () => {
     const { store, agent, storePath } = loadAgentState(storeDir, agentId);
     const rawMessages = buildMessages(agent, task);
-    const messages = prepareForProvider(rawMessages, getProviderLimits(agent.provider, agent.resolvedModel));
+    const messages = prepareForProvider(rawMessages, getProviderLimits(agent.provider, agent.resolvedModel), providerContext);
     const providerName = agent.provider;
     return { store, agent, storePath, messages, providerName };
   });
@@ -5323,7 +5383,7 @@ async function main() {
             // Store for reuse in the tool loop so every iteration uses the same
             // dynamic limit rather than re-calling getProviderLimits().
             dynamicLimits = correctedLimits;
-            request.messages = prepareForProvider(request.messages, correctedLimits);
+            request.messages = prepareForProvider(request.messages, correctedLimits, providerContext);
           }
         }
       } catch (err) {
@@ -5572,7 +5632,7 @@ async function main() {
             successfulRerolledModel = nextModel;
             dynamicLimits = null;
             currentBridgeLimits = getProviderLimits(providerName, nextModel);
-            request.messages = prepareForProvider(request.messages, currentBridgeLimits);
+            request.messages = prepareForProvider(request.messages, currentBridgeLimits, providerContext);
           }
           throw error;
         }
@@ -5778,6 +5838,7 @@ async function main() {
             request.messages = prepareForProvider(
               request.messages,
               dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel),
+              providerContext,
             );
 
             // FIX 4: lower temperature on fidelity retries so the model copies args
@@ -5954,7 +6015,7 @@ async function main() {
         // Prefer dynamicLimits (set by Phase 2 OpenRouter discovery) over the
         // static Phase 1 limits so context windows are consistent throughout.
         const limits = dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel);
-        request.messages = prepareForProvider(request.messages, limits);
+        request.messages = prepareForProvider(request.messages, limits, providerContext);
 
         // Stuck detection: fingerprint + error counter
         if (calls.length > 0) {
@@ -6050,6 +6111,7 @@ async function main() {
         summaryRequest.messages = prepareForProvider(
           summaryRequest.messages,
           dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel),
+          providerContext,
         );
         const summaryResponse = await completeProviderRequest(summaryRequest, {
           reason: 'max-tool-iterations-summary',
@@ -6081,7 +6143,7 @@ async function main() {
           }],
           model: request.model,
         };
-        summaryRequest.messages = prepareForProvider(summaryRequest.messages, dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel));
+        summaryRequest.messages = prepareForProvider(summaryRequest.messages, dynamicLimits ?? getProviderLimits(providerName, agent.resolvedModel), providerContext);
         const summaryResponse = await completeProviderRequest(summaryRequest, { reason: 'summary' });
         if (summaryResponse.content && summaryResponse.content.trim() !== '') {
           response = { ...response, content: summaryResponse.content };

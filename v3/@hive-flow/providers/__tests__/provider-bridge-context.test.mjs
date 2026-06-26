@@ -452,7 +452,10 @@ describe('provider bridge context helpers', () => {
         const normalized = bridge.normalizeForProvider(clone(messages));
         const renormalized = bridge.normalizeForProvider(clone(normalized));
         const prepared = bridge.prepareForProvider(clone(messages), limits);
-        const manuallyPrepared = bridge.trimMessages(clone(normalized), limits);
+        const manuallyPrepared = bridge.trimMessages(
+          bridge.normalizeForProvider(bridge.evictOldToolResults(clone(messages))),
+          limits,
+        );
 
         expect(renormalized).toEqual(normalized);
         expect(prepared).toEqual(manuallyPrepared);
