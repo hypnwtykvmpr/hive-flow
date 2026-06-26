@@ -7,7 +7,7 @@
 In Claude Code:
 
 ```
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 ```
 
 This will:
@@ -170,7 +170,7 @@ Agents are automatically available for Claude Code to delegate to when appropria
 /plugin list
 
 # Try installing again
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 ```
 
 ### Commands Not Showing

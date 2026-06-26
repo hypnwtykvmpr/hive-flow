@@ -64,7 +64,7 @@ mcp__hive-flow__agent_spawn { type: "coder", name: "Implementation Planner" }
 
 // Create comprehensive issue
 mcp__github__create_issue {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   title: "Integration Review: claude-code-flow and hive-flow complete integration",
   body: `## 🔄 Integration Review
@@ -81,7 +81,7 @@ mcp__github__create_issue {
   ### Swarm Coordination
   This issue will be managed by coordinated swarm agents for optimal progress tracking.`,
   labels: ["integration", "review", "enhancement"],
-  assignees: ["hypnwtykvmpr"]
+  assignees: ["hypnwtk"]
 }
 
 // Set up automated tracking
@@ -102,7 +102,7 @@ mcp__hive-flow__memory_usage {
 
 // Add coordinated progress comment
 mcp__github__add_issue_comment {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   issue_number: 54,
   body: `## 🚀 Progress Update
@@ -135,14 +135,14 @@ mcp__hive-flow__memory_usage {
 ```javascript
 // Search and coordinate related issues
 mcp__github__search_issues {
-  q: "repo:hypnwtykvmpr$hive-flow label:integration state:open",
+  q: "repo:hypnwtk/hive-flow label:integration state:open",
   sort: "created",
   order: "desc"
 }
 
 // Create coordinated issue updates
 mcp__github__update_issue {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   issue_number: 54,
   state: "open",

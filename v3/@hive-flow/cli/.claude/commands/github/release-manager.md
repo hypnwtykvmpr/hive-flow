@@ -33,7 +33,7 @@ mcp__hive-flow__agent_spawn { type: "analyst", name: "Deployment Analyst" }
 
 // Create release preparation branch
 mcp__github__create_branch {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   branch: "release/v1.0.72",
   from_branch: "main"
@@ -51,7 +51,7 @@ mcp__hive-flow__task_orchestrate {
 ```javascript
 // Update versions across packages
 mcp__github__push_files {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   branch: "release/v1.0.72",
   files: [
@@ -109,7 +109,7 @@ Bash("cd /workspaces/hive-flow/hive-flow/npm && npm run lint")
 
 // Create release PR with validation results
 mcp__github__create_pull_request {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   title: "Release v1.0.72: GitHub Integration and Swarm Enhancements",
   head: "release/v1.0.72",

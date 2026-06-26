@@ -7,10 +7,12 @@ const legacyPrefix = ['r', 'u', 'v'].join('');
 const legacyOrg = `${legacyPrefix}net`;
 const legacyVectorBrand = ['R', 'u', 'V', 'e', 'c', 't', 'o', 'r'].join('');
 const legacyAuthorBrand = ['r', 'U', 'v'].join('');
+const placeholderOrg = ['hyp', 'nwt', 'ykv', 'mpr'].join('');
 
 export const CORE_PROHIBITED: readonly ProhibitedPattern[] = [
   { label: 'old GitHub org', pattern: new RegExp(`${legacyOrg}/hive-flow`, 'i') },
   { label: 'old container registry org', pattern: new RegExp(`ghcr\\.io/${legacyOrg}/hive-flow`, 'i') },
+  { label: 'scrambled placeholder org', pattern: new RegExp(placeholderOrg, 'i') },
   { label: 'stale removed memory backend version', pattern: /2\.0\.0-alpha\.3\.4/ },
   { label: 'old vector brand', pattern: new RegExp(`\\b${legacyVectorBrand}\\b`) },
   { label: 'old public org', pattern: new RegExp(legacyOrg, 'i') },
@@ -32,6 +34,10 @@ export const URL_AND_INSTALL_PROHIBITED: readonly ProhibitedPattern[] = [
   { label: 'npm registry or package URL', pattern: /https?:\/\/(?:www\.)?npmjs\.com\/[^\s)"'<>]+/i },
   { label: 'npm shield badge', pattern: /https?:\/\/img\.shields\.io\/npm\/[^\s)"'<>]+/i },
   { label: 'npm install guidance', pattern: /\bnpm\s+install\b/i },
+  {
+    label: 'scrambled placeholder container registry ref',
+    pattern: new RegExp(`\\bghcr\\.io/${placeholderOrg}/[^\\s'"]+`, 'i'),
+  },
   {
     label: 'npx install guidance',
     pattern: /\bnpx[ \t]+(?:-y[ \t]+)?(?:@hive-flow\/cli|hive-flow(?:@[\w.-]+)?|flow-nexus(?:@[\w.-]+)?|tsx|ts-node|copilot-api)(?:[ \t]|$)/i,

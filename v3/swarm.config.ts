@@ -179,7 +179,7 @@ export const defaultSwarmConfig: V3SwarmConfig = {
   // GitHub Integration
   github: {
     enabled: true,
-    repository: 'hypnwtykvmpr/hive-flow',
+    repository: 'hypnwtk/hive-flow',
     issueLabels: {
       'agent-1': 'swarm:agent-1',
       'agent-2-4': 'swarm:agent-2-4',

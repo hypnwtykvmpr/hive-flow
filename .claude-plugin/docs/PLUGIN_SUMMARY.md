@@ -44,7 +44,7 @@ hive-flow/
 
 ```
 # Install plugin
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 
 # Restart Claude Code
 /restart
@@ -215,7 +215,7 @@ All documentation follows official Claude Code plugin guidelines.
 
 ### Install
 ```
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 ```
 
 ### Update
@@ -338,7 +338,7 @@ Commands and agents are automatically discovered from `commands/` and `agents/` 
 
 Users install with:
 ```
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 ```
 
 ---

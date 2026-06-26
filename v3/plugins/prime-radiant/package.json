@@ -21,6 +21,10 @@
     "plugin.yaml",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "v3alpha"
+  },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",

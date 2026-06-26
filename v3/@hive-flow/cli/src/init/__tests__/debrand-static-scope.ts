@@ -22,6 +22,7 @@ export const SHIPPED_SURFACE_ROOTS = [
   '.claude/skills',
   '.agents/skills',
   '.claude-plugin',
+  'plugin',
   '.github/dependabot.yml',
   '.gitignore',
   'v3/@hive-flow',

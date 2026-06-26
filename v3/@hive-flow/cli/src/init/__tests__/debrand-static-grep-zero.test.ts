@@ -127,6 +127,7 @@ function collectGitHubUrlFindings(relativePath: string, content: string): Array<
     .filter(({ url }) => /^https?:\/\/github\.com\//i.test(url))
     .filter(({ url }) => !url.includes('$'))
     .filter(({ url }) => !/^https?:\/\/github\.com\/login\/oauth\//i.test(url))
+    .filter(({ url }) => !isAllowedProjectGitHubUrl(url))
     .map(({ lineNumber, url }) => ({
       key: `${relativePath}:line:${lineNumber}:GitHub URL:${url}`,
       message: `${relativePath}:${lineNumber}: GitHub URL: ${url}`,
@@ -219,14 +220,28 @@ function isAllowedRuntimeUrl(rawUrl: string): boolean {
     host === 'accounts.google.com' ||
     host === 'oauth2.googleapis.com' ||
     host === 'dotnet.microsoft.com' ||
+    host === 'code.claude.com' ||
     // Third-party provider-install hints (load-bearing, DO-NOT-REVERT in source):
     // Antigravity CLI (`agy`) install URL — replaces the dead @google/gemini-cli;
     // Cursor headless CLI install URL. Functional install guidance, not the
     // dropped project brand — same class as the dotnet.microsoft.com entry above.
     host === 'antigravity.google' ||
     host === 'cursor.com' ||
+    isAllowedProjectGitHubUrl(rawUrl) ||
     (host === 'github.com' && parsed.pathname.startsWith('/login/oauth/'))
   );
+}
+
+function isAllowedProjectGitHubUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  if (parsed.hostname.toLowerCase() !== 'github.com') return false;
+  return parsed.pathname === '/hypnwtk' || parsed.pathname === '/hypnwtk/hive-flow';
 }
 
 function collectDeadMarkdownLinks(): string[] {

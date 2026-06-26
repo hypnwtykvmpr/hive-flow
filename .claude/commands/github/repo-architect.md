@@ -36,7 +36,7 @@ LS("/workspaces/hive-flow/hive-flow/npm")
 
 // Search for related repositories
 mcp__github__search_repositories {
-  query: "user:hypnwtykvmpr claude",
+  query: "user:hypnwtk claude",
   sort: "updated",
   order: "desc"
 }
@@ -61,7 +61,7 @@ mcp__github__create_repository {
 
 // Push template structure
 mcp__github__push_files {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "claude-project-template",
   branch: "main",
   files: [
@@ -143,7 +143,7 @@ const repositories = [
 // Update common files across repositories
 repositories.forEach(repo => {
   mcp__github__create_or_update_file({
-    owner: "hypnwtykvmpr",
+    owner: "hypnwtk",
     repo: "hive-flow",
     path: `${repo}/.github/workflows/integration.yml`,
     content: `name: Integration Tests

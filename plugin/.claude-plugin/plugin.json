@@ -4,10 +4,10 @@
   "version": "3.0.0",
   "author": {
     "name": "Hive Flow",
-    "url": "https://github.com/hypnwtykvmpr"
+    "url": "https://github.com/hypnwtk"
   },
-  "homepage": "https://github.com/hypnwtykvmpr/hive-flow",
-  "repository": "https://github.com/hypnwtykvmpr/hive-flow",
+  "homepage": "https://github.com/hypnwtk/hive-flow",
+  "repository": "https://github.com/hypnwtk/hive-flow",
   "license": "MIT",
   "keywords": [
     "swarm",

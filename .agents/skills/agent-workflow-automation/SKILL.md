@@ -60,7 +60,7 @@ jobs:
       - uses: actions$checkout@v3
 
       - name: Initialize Swarm
-        uses: hypnwtykvmpr$swarm-action@v1
+        uses: hypnwtk/swarm-action@v1
         with:
           topology: mesh
           max-agents: 6

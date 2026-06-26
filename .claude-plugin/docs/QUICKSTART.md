@@ -11,7 +11,7 @@ Get started with Hive Flow in 5 minutes!
 In Claude Code:
 
 ```
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 /restart
 ```
 

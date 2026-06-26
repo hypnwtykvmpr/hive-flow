@@ -56,7 +56,7 @@ hive-flow/
 Users install with:
 
 ```
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 /restart
 ```
 

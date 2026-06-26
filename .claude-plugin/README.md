@@ -279,7 +279,7 @@ Hive Flow is the most comprehensive Claude Code plugin for enterprise AI agent o
 In Claude Code:
 
 ```
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 ```
 
 Or from local directory:
@@ -333,7 +333,7 @@ claude plugin list
 
 In Claude Code:
 ```
-/plugin add hypnwtykvmpr/hive-flow
+/plugin add hypnwtk/hive-flow
 /restart
 ```
 

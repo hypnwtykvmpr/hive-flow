@@ -36,7 +36,7 @@ mcp__hive-flow__agent_spawn { type: "coordinator", name: "PR Coordinator" }
 
 // Create PR and orchestrate review
 mcp__github__create_pull_request {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   title: "Integration: claude-code-flow and hive-flow",
   head: "integration/claude-code-flow-hive-flow",
@@ -55,11 +55,11 @@ mcp__hive-flow__task_orchestrate {
 ### 2. Automated Multi-File Review
 ```javascript
 // Get PR files and create parallel review tasks
-mcp__github__get_pull_request_files { owner: "hypnwtykvmpr", repo: "hive-flow", pull_number: 54 }
+mcp__github__get_pull_request_files { owner: "hypnwtk", repo: "hive-flow", pull_number: 54 }
 
 // Create coordinated reviews
 mcp__github__create_pull_request_review {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   pull_number: 54,
   body: "Automated swarm review with comprehensive analysis",
@@ -74,11 +74,11 @@ mcp__github__create_pull_request_review {
 ### 3. Merge Coordination with Testing
 ```javascript
 // Validate PR status and merge when ready
-mcp__github__get_pull_request_status { owner: "hypnwtykvmpr", repo: "hive-flow", pull_number: 54 }
+mcp__github__get_pull_request_status { owner: "hypnwtk", repo: "hive-flow", pull_number: 54 }
 
 // Merge with coordination
 mcp__github__merge_pull_request {
-  owner: "hypnwtykvmpr",
+  owner: "hypnwtk",
   repo: "hive-flow",
   pull_number: 54,
   merge_method: "squash",
