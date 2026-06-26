@@ -3443,10 +3443,15 @@ async function webFetchTool(rawArgs, ctx = {}) {
   }
 }
 
-function decodeHtmlEntities(value) {
+// ponytail: valid scalar = integer, 0–0x10FFFF, excluding surrogates 0xD800–0xDFFF
+function isValidCodePoint(n) {
+  return Number.isInteger(n) && n >= 0 && n <= 0x10FFFF && (n < 0xD800 || n > 0xDFFF);
+}
+
+export function decodeHtmlEntities(value) {
   return String(value || '')
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (m, code) => { const n = Number(code); return isValidCodePoint(n) ? String.fromCodePoint(n) : m; })
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, code) => { const n = parseInt(code, 16); return isValidCodePoint(n) ? String.fromCodePoint(n) : m; })
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -3731,13 +3736,26 @@ const BRIDGE_FILESYSTEM_TOOLS = {
       try {
         const headSize = Math.floor(maxReadBytes * 0.7);
         const tailSize = Math.floor(maxReadBytes * 0.2);
-        const headBuf = Buffer.alloc(headSize);
-        const tailBuf = Buffer.alloc(tailSize);
-        readSync(fd, headBuf, 0, headSize, 0);
-        readSync(fd, tailBuf, 0, tailSize, stats.size - tailSize);
-        return headBuf.toString('utf-8') +
+        // ponytail: pad ≤3 extra bytes (max UTF-8 continuation count for a 4-byte seq)
+        const PAD = 3;
+        // Head: read headSize+PAD bytes, trim back past any trailing continuation bytes
+        const headRaw = Buffer.alloc(headSize + PAD);
+        const headRead = readSync(fd, headRaw, 0, headSize + PAD, 0);
+        let headEnd = Math.min(headSize, headRead);
+        while (headEnd > 0 && (headRaw[headEnd] & 0xC0) === 0x80) headEnd--;
+        const headStr = headRaw.slice(0, headEnd).toString('utf-8');
+        // Tail: read tailSize+PAD bytes from before the tail window, skip leading continuations
+        const tailOffset = Math.max(0, stats.size - tailSize - PAD);
+        const tailRaw = Buffer.alloc(tailSize + PAD);
+        const tailRead = readSync(fd, tailRaw, 0, tailSize + PAD, tailOffset);
+        // How many bytes of PAD prefix we actually got before the tail window
+        const prefixBytes = stats.size - tailSize - tailOffset; // 0 when tailOffset==0
+        let tailStart = Math.min(prefixBytes, tailRead);
+        while (tailStart < tailRead && (tailRaw[tailStart] & 0xC0) === 0x80) tailStart++;
+        const tailStr = tailRaw.slice(tailStart, tailRead).toString('utf-8');
+        return headStr +
           `\n\n[FILE TRUNCATED: ${stats.size} bytes total, showing first ${headSize} + last ${tailSize} bytes. Use offset/limit for specific sections.]\n\n` +
-          tailBuf.toString('utf-8');
+          tailStr;
       } finally {
         closeSync(fd);
       }
