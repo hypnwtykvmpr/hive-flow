@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import fc from 'fast-check';
@@ -12,6 +12,7 @@ const spawnTool = agentTools.find(tool => tool.name === 'agent_spawn')!;
 const poolTool = agentTools.find(tool => tool.name === 'agent_pool')!;
 const listTool = agentTools.find(tool => tool.name === 'agent_list')!;
 const statusTool = agentTools.find(tool => tool.name === 'agent_status')!;
+const updateTool = agentTools.find(tool => tool.name === 'agent_update')!;
 const ORIGINAL_CWD = process.cwd();
 const OWNER_ENV_KEYS = Array.from(new Set([
   ...operatorSessionEnvKeys(),
@@ -344,6 +345,150 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecord(tmpRoot, 'ownerless-agent')).toBeUndefined();
   });
 
+  it('persists top-level read-only-with-artifacts mode and strips config authority forgeries', async () => {
+    const artifactDir = join(tmpRoot, '.tmp-audit', 'artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+
+    const result = await spawnTool.handler({
+      agentId: 'artifact-mode-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+      config: {
+        mode: 'full',
+        accessMode: 'full',
+        agentMode: 'full',
+        artifactDir: tmpRoot,
+        artifact_dir: tmpRoot,
+        writeAuthority: 'source',
+        retained: 'ok',
+      },
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'artifact-mode-agent',
+      mode: 'read-only-with-artifacts',
+      artifactDir: realpathSync.native(artifactDir),
+    });
+    const record = readAgentRecord(tmpRoot, 'artifact-mode-agent');
+    expect(record?.mode).toBe('read-only-with-artifacts');
+    expect(record?.artifactDir).toBe(realpathSync.native(artifactDir));
+    expect(record?.writeAuthority).toBeUndefined();
+    expect((record?.config as Record<string, unknown>)?.retained).toBe('ok');
+    for (const key of ['mode', 'accessMode', 'agentMode', 'artifactDir', 'artifact_dir', 'writeAuthority']) {
+      expect((record?.config as Record<string, unknown>)?.[key]).toBeUndefined();
+    }
+  });
+
+  it('persists default/full modes canonically for new agents', async () => {
+    const defaultAlias = await spawnTool.handler({
+      agentId: 'default-mode-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'default',
+    }) as Record<string, unknown>;
+    const omitted = await spawnTool.handler({
+      agentId: 'omitted-mode-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }) as Record<string, unknown>;
+
+    expect(defaultAlias).toMatchObject({ success: true, mode: 'full' });
+    expect(omitted).toMatchObject({ success: true, mode: 'full' });
+    expect(readAgentRecord(tmpRoot, 'default-mode-agent')?.mode).toBe('full');
+    expect(readAgentRecord(tmpRoot, 'omitted-mode-agent')?.mode).toBe('full');
+  });
+
+  it('rejects invalid modes and invalid artifact directories before persistence', async () => {
+    const outside = mkdtempSync(join(tmpdir(), 'hive-flow-outside-artifacts-'));
+    const protectedDir = join(tmpRoot, '.hive-flow', 'agents');
+    mkdirSync(protectedDir, { recursive: true });
+    try {
+      const invalidMode = await spawnTool.handler({
+        agentId: 'invalid-mode-agent',
+        agentType: 'tester',
+        provider: 'anthropic',
+        mode: 'write-everywhere',
+      }) as Record<string, unknown>;
+      const missingArtifactDir = await spawnTool.handler({
+        agentId: 'missing-artifact-dir-agent',
+        agentType: 'tester',
+        provider: 'anthropic',
+        mode: 'read-only-with-artifacts',
+      }) as Record<string, unknown>;
+      const outsideArtifactDir = await spawnTool.handler({
+        agentId: 'outside-artifact-dir-agent',
+        agentType: 'tester',
+        provider: 'anthropic',
+        mode: 'read-only-with-artifacts',
+        artifactDir: outside,
+      }) as Record<string, unknown>;
+      const protectedArtifactDir = await spawnTool.handler({
+        agentId: 'protected-artifact-dir-agent',
+        agentType: 'tester',
+        provider: 'anthropic',
+        mode: 'read-only-with-artifacts',
+        artifactDir: protectedDir,
+      }) as Record<string, unknown>;
+      const artifactWithoutMode = await spawnTool.handler({
+        agentId: 'artifact-without-mode-agent',
+        agentType: 'tester',
+        provider: 'anthropic',
+        artifactDir: protectedDir,
+      }) as Record<string, unknown>;
+
+      expect(invalidMode).toMatchObject({ success: false, code: 'invalid-agent-mode' });
+      expect(missingArtifactDir).toMatchObject({ success: false, code: 'invalid-artifact-dir' });
+      expect(outsideArtifactDir).toMatchObject({ success: false, code: 'invalid-artifact-dir' });
+      expect(protectedArtifactDir).toMatchObject({ success: false, code: 'invalid-artifact-dir' });
+      expect(artifactWithoutMode).toMatchObject({ success: false, code: 'invalid-artifact-dir' });
+      for (const id of [
+        'invalid-mode-agent',
+        'missing-artifact-dir-agent',
+        'outside-artifact-dir-agent',
+        'protected-artifact-dir-agent',
+        'artifact-without-mode-agent',
+      ]) {
+        expect(readAgentRecord(tmpRoot, id)).toBeUndefined();
+      }
+    } finally {
+      rmSync(outside, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+    }
+  });
+
+  it('strips authority-looking config keys on agent_update without changing top-level mode', async () => {
+    await spawnTool.handler({
+      agentId: 'update-strip-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only',
+    });
+
+    const result = await updateTool.handler({
+      agentId: 'update-strip-agent',
+      config: {
+        mode: 'full',
+        accessMode: 'full',
+        agentMode: 'full',
+        artifactDir: tmpRoot,
+        artifact_dir: tmpRoot,
+        writeAuthority: 'source',
+        retainedAfterUpdate: 'yes',
+      },
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ success: true, agentId: 'update-strip-agent' });
+    const record = readAgentRecord(tmpRoot, 'update-strip-agent');
+    expect(record?.mode).toBe('read-only');
+    expect(record?.writeAuthority).toBeUndefined();
+    expect((record?.config as Record<string, unknown>)?.retainedAfterUpdate).toBe('yes');
+    for (const key of ['mode', 'accessMode', 'agentMode', 'artifactDir', 'artifact_dir', 'writeAuthority']) {
+      expect((record?.config as Record<string, unknown>)?.[key]).toBeUndefined();
+    }
+  });
+
   it('lists spawned idle agents when status is all and supports canonical type filters', async () => {
     await spawnTool.handler({
       agentId: 'list-implementer',
@@ -575,5 +720,6 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(agents).toHaveLength(2);
     expect(agents.every(agent => agent.ownerSessionId === 'pool-parent-session')).toBe(true);
     expect(agents.every(agent => agent.ownerClientKind === 'opencode')).toBe(true);
+    expect(agents.every(agent => agent.mode === 'full')).toBe(true);
   });
 });

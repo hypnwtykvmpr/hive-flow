@@ -2139,6 +2139,61 @@ function bridgeIsControlPlanePath(safePath) {
   });
 }
 
+const BRIDGE_AGENT_MODES = new Set(['full', 'read-only', 'read-only-with-artifacts']);
+
+function bridgePathIsInside(parent, child) {
+  const rel = relative(parent, child);
+  return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel));
+}
+
+function bridgeNormalizeAgentMode(record) {
+  const mode = record?.mode;
+  if (mode === undefined) return 'full'; // legacy records retain historical behavior
+  return typeof mode === 'string' && BRIDGE_AGENT_MODES.has(mode) ? mode : 'read-only';
+}
+
+function bridgeResolveArtifactDir(record) {
+  if (typeof record?.artifactDir !== 'string' || !record.artifactDir.trim()) return null;
+  try {
+    const candidate = isAbsolute(record.artifactDir)
+      ? resolve(record.artifactDir)
+      : resolve(PROJECT_ROOT, record.artifactDir);
+    const stats = statSync(candidate);
+    if (!stats.isDirectory()) return null;
+    const realCandidate = realpathSync.native(candidate);
+    if (realCandidate === PROJECT_ROOT) return null;
+    if (!bridgePathIsInside(PROJECT_ROOT, realCandidate)) return null;
+    if (isProtectedPath(realCandidate) || bridgeIsControlPlanePath(realCandidate)) return null;
+    return realCandidate;
+  } catch {
+    return null;
+  }
+}
+
+// R1 read-only modes: read the persisted top-level agent mode by bridge-owned
+// agent id. Missing/invalid store state fails closed to read-only, while legacy
+// records with no mode field retain historical full tool access.
+export function bridgeReadAgentMode() {
+  try {
+    const agentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
+    if (!agentId) return { mode: 'read-only', reason: 'missing-agent-id' };
+    const storePath = resolve(PROJECT_ROOT, '.hive-flow', 'agents', 'store.json');
+    if (!existsSync(storePath)) return { mode: 'read-only', reason: 'missing-agent-store' };
+    const store = JSON.parse(readFileSync(storePath, 'utf-8'));
+    const record = store?.agents?.[agentId];
+    if (!record || typeof record !== 'object') return { mode: 'read-only', reason: 'missing-agent-record' };
+    const mode = bridgeNormalizeAgentMode(record);
+    if (mode === 'read-only-with-artifacts') {
+      const artifactDir = bridgeResolveArtifactDir(record);
+      if (!artifactDir) return { mode: 'read-only', reason: 'invalid-artifact-dir' };
+      return { mode, artifactDir };
+    }
+    return { mode };
+  } catch {
+    return { mode: 'read-only', reason: 'agent-mode-read-failed' };
+  }
+}
+
 // HF-1: read the agent's persisted, top-level writeAuthority from the agent
 // store. The agent identity comes from HIVE_FLOW_AGENT_ID/CLAUDE_AGENT_ID, which
 // are set by the parent operator in buildProviderBridgeEnv() and cannot be

@@ -6,8 +6,8 @@
  */
 
 import { randomUUID, createHmac, timingSafeEqual, createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync, readdirSync, realpathSync } from 'node:fs';
+import { join, dirname, isAbsolute, resolve, relative } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
@@ -24,6 +24,7 @@ import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
 import { normalizeClientKind, operatorSessionEnvKeys, resolveOwnerStampOrError, resolveSessionId, type OperatorClientKind } from './session-id.js';
+import { isProtectedWritePath } from '../permission-guard/protected-paths.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -40,11 +41,28 @@ const TASK_DEADLINE_REAPER_GRACE_MS = 30_000;
 
 // Model tier aliases — map to provider-native models via resolveProviderModel()
 type AgentModel = 'sonnet' | 'opus' | 'mini' | 'inherit';
+export type AgentMode = 'full' | 'read-only' | 'read-only-with-artifacts';
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
 export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
 const AGENT_PROVIDERS = new Set<AgentProvider>(['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter']);
 const AGENT_MODEL_ALIASES = new Set<AgentModel>(['sonnet', 'opus', 'mini', 'inherit']);
+const AGENT_MODES = new Set<AgentMode>(['full', 'read-only', 'read-only-with-artifacts']);
+const CONFIG_AUTHORITY_KEYS = new Set([
+  'writeAuthority',
+  'mode',
+  'accessMode',
+  'agentMode',
+  'artifactDir',
+  'artifact_dir',
+]);
+
+type AgentModeParseResult =
+  | { ok: true; mode: AgentMode }
+  | { ok: false; error: string };
+type ArtifactDirParseResult =
+  | { ok: true; artifactDir: string }
+  | { ok: false; error: string };
 
 export interface AgentRecord {
   agentId: string;
@@ -70,6 +88,10 @@ export interface AgentRecord {
   // Accepted ONLY as a top-level agent_spawn input — never via config (which
   // agent_update can merge), model args, or tool calls. Legacy/malformed → none.
   writeAuthority?: 'source';
+  // Parent-requested per-agent tool authority mode. Accepted ONLY as top-level
+  // spawn input. Legacy records with no field are treated as 'full' by readers.
+  mode?: AgentMode;
+  artifactDir?: string;
 }
 
 export interface AgentStore {
@@ -111,6 +133,78 @@ function normalizeAgentProvider(value: unknown): AgentProvider | undefined {
   return AGENT_PROVIDERS.has(normalized as AgentProvider)
     ? normalized as AgentProvider
     : undefined;
+}
+
+function normalizeAgentModeInput(value: unknown): AgentModeParseResult {
+  if (value === undefined || value === null || value === '') {
+    return { ok: true, mode: 'full' };
+  }
+  if (typeof value !== 'string') {
+    return { ok: false, error: 'mode must be one of full, read-only, read-only-with-artifacts' };
+  }
+  const normalized = value.trim().toLowerCase();
+  const mode = normalized === 'default' ? 'full' : normalized;
+  if (AGENT_MODES.has(mode as AgentMode)) {
+    return { ok: true, mode: mode as AgentMode };
+  }
+  return {
+    ok: false,
+    error: `Invalid mode '${value}'. Valid modes: full, read-only, read-only-with-artifacts.`,
+  };
+}
+
+function stripConfigAuthorityFields(config: Record<string, unknown>): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (CONFIG_AUTHORITY_KEYS.has(key)) continue;
+    cleaned[key] = value;
+  }
+  return cleaned;
+}
+
+function isPathInside(parent: string, child: string): boolean {
+  const rel = relative(parent, child);
+  return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel));
+}
+
+function projectRootRealPath(): string {
+  try {
+    return realpathSync.native(process.cwd());
+  } catch {
+    return resolve(process.cwd());
+  }
+}
+
+function validateAgentArtifactDir(input: unknown): ArtifactDirParseResult {
+  if (typeof input !== 'string' || !input.trim()) {
+    return {
+      ok: false,
+      error: 'artifactDir is required for mode read-only-with-artifacts',
+    };
+  }
+  const projectRoot = projectRootRealPath();
+  const candidate = isAbsolute(input) ? resolve(input) : resolve(projectRoot, input);
+  let realCandidate: string;
+  try {
+    const stats = statSync(candidate);
+    if (!stats.isDirectory()) {
+      return { ok: false, error: `artifactDir '${input}' must be an existing directory` };
+    }
+    realCandidate = realpathSync.native(candidate);
+  } catch {
+    return { ok: false, error: `artifactDir '${input}' must be an existing directory` };
+  }
+
+  if (realCandidate === projectRoot) {
+    return { ok: false, error: 'artifactDir must be a dedicated subdirectory, not the project root' };
+  }
+  if (!isPathInside(projectRoot, realCandidate)) {
+    return { ok: false, error: 'artifactDir must resolve inside the current project' };
+  }
+  if (isProtectedWritePath(realCandidate, projectRoot)) {
+    return { ok: false, error: 'artifactDir must not resolve to a protected path' };
+  }
+  return { ok: true, artifactDir: realCandidate };
 }
 
 function isAgentModelAlias(value: unknown): value is AgentModel {
@@ -708,13 +802,25 @@ export const agentTools: MCPTool[] = [
           enum: ['source'],
           description: "Operator-only grant. 'source' lets this agent overwrite git-tracked source files via the provider bridge. Omit to default-deny tracked-source writes. Control-plane paths stay denied regardless.",
         },
+        mode: {
+          type: 'string',
+          enum: ['full', 'default', 'read-only', 'read-only-with-artifacts'],
+          description: 'Per-agent provider bridge tool mode. full/default is the legacy mode; read-only denies write/shell tools; read-only-with-artifacts allows only .json/.md artifacts in artifactDir.',
+        },
+        artifactDir: {
+          type: 'string',
+          description: 'Existing project-contained directory for read-only-with-artifacts mode. Accepted only with mode read-only-with-artifacts.',
+        },
       },
       required: ['agentType'],
     },
     handler: async (input, context) => {
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
       const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
-      const config = (input.config as Record<string, unknown>) || {};
+      const rawConfig = input.config && typeof input.config === 'object' && !Array.isArray(input.config)
+        ? input.config as Record<string, unknown>
+        : {};
+      const config = stripConfigAuthorityFields(rawConfig);
       const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'agent_spawn');
 
       if (!isCanonicalAgentType(agentType)) {
@@ -726,6 +832,34 @@ export const agentTools: MCPTool[] = [
       }
       if (!ownerStamp.success) return ownerStamp;
       const { ownerSessionId, ownerClientKind } = ownerStamp;
+
+      const modeResult = normalizeAgentModeInput(input.mode);
+      if (!modeResult.ok) {
+        return {
+          success: false,
+          code: 'invalid-agent-mode',
+          error: modeResult.error,
+        };
+      }
+      const mode = modeResult.mode;
+      let artifactDir: string | undefined;
+      if (mode === 'read-only-with-artifacts') {
+        const artifactResult = validateAgentArtifactDir(input.artifactDir);
+        if (!artifactResult.ok) {
+          return {
+            success: false,
+            code: 'invalid-artifact-dir',
+            error: artifactResult.error,
+          };
+        }
+        artifactDir = artifactResult.artifactDir;
+      } else if (input.artifactDir !== undefined) {
+        return {
+          success: false,
+          code: 'invalid-artifact-dir',
+          error: 'artifactDir is only accepted with mode read-only-with-artifacts',
+        };
+      }
 
       // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 180).
       // The runbook specifies a 150 working + 30 queued cap; without a persistent
@@ -856,6 +990,8 @@ export const agentTools: MCPTool[] = [
           : routingResult.routedBy,
         ownerSessionId,
         ownerClientKind,
+        mode,
+        ...(artifactDir ? { artifactDir } : {}),
         ...(writeAuthority ? { writeAuthority } : {}),
       };
 
@@ -889,6 +1025,8 @@ export const agentTools: MCPTool[] = [
         modelRoutedBy: routingResult.routedBy,
         ownerSessionId: agent.ownerSessionId,
         ownerClientKind: agent.ownerClientKind,
+        mode: agent.mode,
+        ...(agent.artifactDir ? { artifactDir: agent.artifactDir } : {}),
         status: 'spawned',
         createdAt: agent.createdAt,
       };
@@ -1095,6 +1233,8 @@ export const agentTools: MCPTool[] = [
             provider: agent.provider,
             resolvedModel: agent.resolvedModel,
             modelRoutedBy: agent.modelRoutedBy,
+            mode: agent.mode ?? 'full',
+            artifactDir: agent.artifactDir,
           };
         }
 
@@ -1160,6 +1300,8 @@ export const agentTools: MCPTool[] = [
           provider: a.provider,
           resolvedModel: a.resolvedModel,
           modelRoutedBy: a.modelRoutedBy,
+          mode: a.mode ?? 'full',
+          artifactDir: a.artifactDir,
         })),
         total: agents.length,
         filters: {
@@ -1267,6 +1409,7 @@ export const agentTools: MCPTool[] = [
                 createdAt: new Date().toISOString(),
                 ownerSessionId,
                 ownerClientKind,
+                mode: 'full',
               };
               added.push(agentId);
             }
@@ -1899,7 +2042,10 @@ export const agentTools: MCPTool[] = [
           if (typeof input.health === 'number') agent.health = input.health as number;
           if (typeof input.taskCount === 'number') agent.taskCount = input.taskCount as number;
           if (input.config) {
-            agent.config = { ...agent.config, ...(input.config as Record<string, unknown>) };
+            const configPatch = input.config && typeof input.config === 'object' && !Array.isArray(input.config)
+              ? stripConfigAuthorityFields(input.config as Record<string, unknown>)
+              : {};
+            agent.config = { ...agent.config, ...configPatch };
           }
           saveAgentStore(store);
 
@@ -1912,6 +2058,8 @@ export const agentTools: MCPTool[] = [
               status: agent.status,
               health: agent.health,
               taskCount: agent.taskCount,
+              mode: agent.mode ?? 'full',
+              artifactDir: agent.artifactDir,
             },
           };
         }

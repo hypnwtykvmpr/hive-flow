@@ -280,6 +280,7 @@ export const hiveMindTools: MCPTool[] = [
             resolvedModel: (input.model as string) || undefined,
             ownerSessionId,
             ownerClientKind,
+            mode: 'full',
           };
 
           // Join to hive-mind (like hive-mind/join)
