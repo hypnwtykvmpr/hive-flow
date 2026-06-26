@@ -83,11 +83,16 @@ const BRIDGE_SECRET_VALUE_PATTERNS = [
   /\bBearer\s+[A-Za-z0-9._-]+/gi,
   /\bAIza[A-Za-z0-9._-]+/g,
   /\bCURSOR[A-Za-z0-9._-]*/g,
+  // HF-19: prefix-anchored tokens that fall below the 40/48-char floor below.
+  /\bgh[posru]_[A-Za-z0-9]{20,}/g,                 // GitHub PAT/OAuth: ghp_, gho_, ghs_, ghu_, ghr_
+  /\bxox[baprs]-[A-Za-z0-9-]{10,}/g,               // Slack: xoxb-, xoxp-, xoxa-, xoxr-, xoxs-
+  /\bglpat-[A-Za-z0-9_-]{16,}/g,                   // GitLab PAT
+  /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, // JWT (header.payload.signature)
   /(?<![A-Za-z0-9+/_-])[A-Fa-f0-9]{48,}(?![A-Za-z0-9+/_-])/g,
   /(?<![A-Za-z0-9+/_-])(?:[A-Za-z0-9+/]{40,}={0,2}|[A-Za-z0-9_-]{40,})(?![A-Za-z0-9+/_-])/g,
 ];
 
-function redactBridgeString(value) {
+export function redactBridgeString(value) {
   let rendered = String(value);
   for (const pattern of BRIDGE_SECRET_VALUE_PATTERNS) {
     rendered = rendered.replace(pattern, BRIDGE_REDACTED);
@@ -1106,9 +1111,48 @@ function loadAgentState(storeDir, agentId) {
   return { store, agent, storePath };
 }
 
-function saveAgentState(storePath, store) {
+// HF-18: model output and tool-result content persisted to store.json must be
+// redacted before disk write — otherwise secret-shaped content lands un-redacted
+// and replays into future provider requests. Redacts ONLY content-bearing fields;
+// structural fields (status, ids, owner, currentTaskId, usage, timestamps) survive.
+// Returns a copy with redacted content; never mutates the caller's live in-memory
+// store (which can share the conversationHistory array replayed in-process).
+function redactPersistedAgentContent(store) {
+  if (!store || typeof store !== 'object' || !store.agents) return store;
+  const agents = {};
+  for (const [agentId, agent] of Object.entries(store.agents)) {
+    if (!agent || typeof agent !== 'object') {
+      agents[agentId] = agent;
+      continue;
+    }
+    const next = { ...agent };
+    if (Array.isArray(agent.conversationHistory)) {
+      next.conversationHistory = agent.conversationHistory.map((entry) => {
+        if (!entry || typeof entry !== 'object') return entry;
+        const redacted = { ...entry };
+        if (entry.content !== undefined) redacted.content = redactBridgeCredentialMaterial(entry.content);
+        if (entry.reasoningContent !== undefined) redacted.reasoningContent = redactBridgeCredentialMaterial(entry.reasoningContent);
+        // toolCalls[].function.arguments can embed secrets and are replayed by
+        // buildMessages; redactBridgeCredentialMaterial recurses + key/value-redacts
+        // while leaving structural fields (id, function.name, type) intact.
+        if (entry.toolCalls !== undefined) redacted.toolCalls = redactBridgeCredentialMaterial(entry.toolCalls);
+        if (entry.tool_calls !== undefined) redacted.tool_calls = redactBridgeCredentialMaterial(entry.tool_calls);
+        return redacted;
+      });
+    }
+    if (agent.lastResult && typeof agent.lastResult === 'object') {
+      next.lastResult = { ...agent.lastResult };
+      if (agent.lastResult.content !== undefined) next.lastResult.content = redactBridgeCredentialMaterial(agent.lastResult.content);
+      if (agent.lastResult.summary !== undefined) next.lastResult.summary = redactBridgeCredentialMaterial(agent.lastResult.summary);
+    }
+    agents[agentId] = next;
+  }
+  return { ...store, agents };
+}
+
+export function saveAgentState(storePath, store) {
   const tmpPath = storePath + '.tmp.' + process.pid;
-  writeFileSync(tmpPath, JSON.stringify(store, null, 2));
+  writeFileSync(tmpPath, JSON.stringify(redactPersistedAgentContent(store), null, 2));
   renameSync(tmpPath, storePath);
 }
 
