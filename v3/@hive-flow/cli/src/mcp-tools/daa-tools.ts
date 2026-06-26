@@ -13,6 +13,7 @@ import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { resolveOwnerStampOrError, type OperatorClientKind } from './session-id.js';
+import { resolveEffectiveAgentModeForSpawn, type AgentMode } from './agent-tools.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -30,6 +31,8 @@ interface DAAAgent {
   capabilities: string[];
   ownerSessionId: string;
   ownerClientKind: Exclude<OperatorClientKind, 'unknown'>;
+  mode: AgentMode;
+  artifactDir?: string;
   metrics: {
     tasksCompleted: number;
     successRate: number;
@@ -108,6 +111,8 @@ export const daaTools: MCPTool[] = [
     handler: async (input, context) => {
       const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'daa_agent_create');
       if (!ownerStamp.success) return ownerStamp;
+      const modeResult = resolveEffectiveAgentModeForSpawn({});
+      if (!modeResult.ok) return { success: false, code: modeResult.code, error: modeResult.error };
 
       const store = loadDAAStore();
       const id = input.id as string;
@@ -123,6 +128,8 @@ export const daaTools: MCPTool[] = [
         capabilities: (input.capabilities as string[]) || ['reasoning', 'learning'],
         ownerSessionId: ownerStamp.ownerSessionId,
         ownerClientKind: ownerStamp.ownerClientKind,
+        mode: modeResult.mode,
+        ...(modeResult.artifactDir ? { artifactDir: modeResult.artifactDir } : {}),
         metrics: {
           tasksCompleted: 0,
           successRate: 1.0,
@@ -146,6 +153,8 @@ export const daaTools: MCPTool[] = [
           capabilities: agent.capabilities,
           ownerSessionId: agent.ownerSessionId,
           ownerClientKind: agent.ownerClientKind,
+          mode: agent.mode,
+          ...(agent.artifactDir ? { artifactDir: agent.artifactDir } : {}),
         },
         createdAt: agent.createdAt,
       };

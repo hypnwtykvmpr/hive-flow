@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -14,6 +14,8 @@ const OWNER_ENV_KEYS = Array.from(new Set([
   'CLAUDECODE',
   'CLAUDE_CODE',
   'CLAUDE_PROJECT_DIR',
+  'HIVE_FLOW_AGENT_ID',
+  'CLAUDE_AGENT_ID',
 ]));
 const ORIGINAL_ENV = Object.fromEntries(
   OWNER_ENV_KEYS.map(key => [key, process.env[key]]),
@@ -30,6 +32,15 @@ function readDAAAgents(root: string): Record<string, Record<string, unknown>> {
     agents?: Record<string, Record<string, unknown>>;
   };
   return store.agents ?? {};
+}
+
+function writeRawAgentStore(root: string, agents: Record<string, Record<string, unknown>>): void {
+  const storeDir = join(root, '.hive-flow', 'agents');
+  mkdirSync(storeDir, { recursive: true });
+  writeFileSync(join(storeDir, 'store.json'), JSON.stringify({
+    version: '3.0.0',
+    agents,
+  }, null, 2), 'utf8');
 }
 
 describe('daa_agent_create owner contract', () => {
@@ -82,11 +93,50 @@ describe('daa_agent_create owner contract', () => {
         id: 'daa-owned-agent',
         ownerSessionId: 'opencode-context-session',
         ownerClientKind: 'opencode',
+        mode: 'full',
       },
     });
     expect(readDAAAgents(tmpRoot)['daa-owned-agent']).toMatchObject({
       ownerSessionId: 'opencode-context-session',
       ownerClientKind: 'opencode',
+      mode: 'full',
+    });
+  });
+
+  it('persists the parent mode floor as inert DAA metadata', async () => {
+    writeRawAgentStore(tmpRoot, {
+      daaParent: {
+        agentId: 'daaParent',
+        agentType: 'researcher',
+        status: 'idle',
+        health: 1,
+        taskCount: 0,
+        config: {},
+        createdAt: new Date().toISOString(),
+        ownerSessionId: 'daa-parent-session',
+        ownerClientKind: 'codex',
+        mode: 'read-only',
+      },
+    });
+    process.env.HIVE_FLOW_AGENT_ID = 'daaParent';
+
+    const result = await createTool.handler({
+      id: 'daa-readonly-child',
+      name: 'DAA child',
+    }, {
+      sessionId: 'daa-parent-session',
+      clientKind: 'codex',
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agent: {
+        id: 'daa-readonly-child',
+        mode: 'read-only',
+      },
+    });
+    expect(readDAAAgents(tmpRoot)['daa-readonly-child']).toMatchObject({
+      mode: 'read-only',
     });
   });
 });

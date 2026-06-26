@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import fc from 'fast-check';
@@ -21,6 +21,8 @@ const OWNER_ENV_KEYS = Array.from(new Set([
   'CLAUDECODE',
   'CLAUDE_CODE',
   'CLAUDE_PROJECT_DIR',
+  'HIVE_FLOW_AGENT_ID',
+  'CLAUDE_AGENT_ID',
 ]));
 const ORIGINAL_ENV = Object.fromEntries(
   OWNER_ENV_KEYS.map(key => [key, process.env[key]]),
@@ -58,6 +60,15 @@ function readAgentRecords(root: string): Array<Record<string, unknown>> {
     agents?: Record<string, Record<string, unknown>>;
   };
   return Object.values(store.agents ?? {});
+}
+
+function writeRawAgentStore(root: string, agents: Record<string, Record<string, unknown>>): void {
+  const storeDir = join(root, '.hive-flow', 'agents');
+  mkdirSync(storeDir, { recursive: true });
+  writeFileSync(join(storeDir, 'store.json'), JSON.stringify({
+    version: '3.0.0',
+    agents,
+  }, null, 2), 'utf8');
 }
 
 function cliSpawnChoices(): string[] {
@@ -489,6 +500,161 @@ describe('agent_spawn canonical roster whitelist', () => {
     }
   });
 
+  it('floors child mode to read-only when the persisted parent is read-only', async () => {
+    const parent = await spawnTool.handler({
+      agentId: 'readonly-parent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only',
+    }) as Record<string, unknown>;
+    expect(parent).toMatchObject({ success: true, mode: 'read-only' });
+    process.env.HIVE_FLOW_AGENT_ID = 'readonly-parent';
+
+    const child = await spawnTool.handler({
+      agentId: 'readonly-parent-child',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'full',
+    }) as Record<string, unknown>;
+
+    expect(child).toMatchObject({ success: true, mode: 'read-only' });
+    expect(readAgentRecord(tmpRoot, 'readonly-parent-child')?.mode).toBe('read-only');
+  });
+
+  it('floors child mode to parent artifact mode and inherits the persisted artifactDir', async () => {
+    const artifactDir = join(tmpRoot, '.tmp-audit', 'parent-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+    const parent = await spawnTool.handler({
+      agentId: 'artifact-parent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    }) as Record<string, unknown>;
+    expect(parent).toMatchObject({ success: true, mode: 'read-only-with-artifacts' });
+    process.env.HIVE_FLOW_AGENT_ID = 'artifact-parent';
+
+    const child = await spawnTool.handler({
+      agentId: 'artifact-parent-child',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }) as Record<string, unknown>;
+
+    expect(child).toMatchObject({
+      success: true,
+      mode: 'read-only-with-artifacts',
+      artifactDir: realpathSync.native(artifactDir),
+    });
+    expect(readAgentRecord(tmpRoot, 'artifact-parent-child')).toMatchObject({
+      mode: 'read-only-with-artifacts',
+      artifactDir: realpathSync.native(artifactDir),
+    });
+  });
+
+  it('allows an artifact-mode parent to narrow a child artifactDir inside the parent artifactDir', async () => {
+    const parentArtifactDir = join(tmpRoot, '.tmp-audit', 'parent-artifacts');
+    const childArtifactDir = join(parentArtifactDir, 'child');
+    mkdirSync(childArtifactDir, { recursive: true });
+    const parent = await spawnTool.handler({
+      agentId: 'artifact-parent-narrow',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only-with-artifacts',
+      artifactDir: parentArtifactDir,
+    }) as Record<string, unknown>;
+    expect(parent).toMatchObject({ success: true });
+    process.env.HIVE_FLOW_AGENT_ID = 'artifact-parent-narrow';
+
+    const child = await spawnTool.handler({
+      agentId: 'artifact-child-narrow',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only-with-artifacts',
+      artifactDir: childArtifactDir,
+    }) as Record<string, unknown>;
+
+    expect(child).toMatchObject({
+      success: true,
+      mode: 'read-only-with-artifacts',
+      artifactDir: realpathSync.native(childArtifactDir),
+    });
+  });
+
+  it('rejects an artifact-mode parent trying to spawn a child with an artifactDir outside the parent artifactDir', async () => {
+    const parentArtifactDir = join(tmpRoot, '.tmp-audit', 'parent-artifacts');
+    const siblingArtifactDir = join(tmpRoot, '.tmp-audit', 'sibling-artifacts');
+    mkdirSync(parentArtifactDir, { recursive: true });
+    mkdirSync(siblingArtifactDir, { recursive: true });
+    const parent = await spawnTool.handler({
+      agentId: 'artifact-parent-outside',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only-with-artifacts',
+      artifactDir: parentArtifactDir,
+    }) as Record<string, unknown>;
+    expect(parent).toMatchObject({ success: true });
+    process.env.HIVE_FLOW_AGENT_ID = 'artifact-parent-outside';
+
+    const child = await spawnTool.handler({
+      agentId: 'artifact-child-outside',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'read-only-with-artifacts',
+      artifactDir: siblingArtifactDir,
+    }) as Record<string, unknown>;
+
+    expect(child).toMatchObject({
+      success: false,
+      code: 'invalid-artifact-dir',
+    });
+    expect(readAgentRecord(tmpRoot, 'artifact-child-outside')).toBeUndefined();
+  });
+
+  it('fails closed to read-only for child mode when the persisted parent store is corrupt', async () => {
+    writeRawAgentStore(tmpRoot, {
+      corruptParent: {
+        agentId: 'corruptParent',
+        agentType: 'tester',
+        status: 'idle',
+        health: 1,
+        taskCount: 0,
+        config: {},
+        createdAt: new Date().toISOString(),
+        ownerSessionId: 'spawn-test-session',
+        ownerClientKind: 'codex',
+        mode: 'read-only',
+      },
+    });
+    const storePath = join(tmpRoot, '.hive-flow', 'agents', 'store.json');
+    writeFileSync(storePath, '{not-json', 'utf8');
+    process.env.HIVE_FLOW_AGENT_ID = 'corruptParent';
+
+    const child = await spawnTool.handler({
+      agentId: 'corrupt-parent-child',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'full',
+    }) as Record<string, unknown>;
+
+    expect(child).toMatchObject({ success: true, mode: 'read-only' });
+    expect(readAgentRecord(tmpRoot, 'corrupt-parent-child')?.mode).toBe('read-only');
+  });
+
+  it('fails closed to read-only when a parent agent id is present but has no persisted record', async () => {
+    writeRawAgentStore(tmpRoot, {});
+    process.env.HIVE_FLOW_AGENT_ID = 'missingParent';
+
+    const child = await spawnTool.handler({
+      agentId: 'missing-parent-child',
+      agentType: 'tester',
+      provider: 'anthropic',
+      mode: 'full',
+    }) as Record<string, unknown>;
+
+    expect(child).toMatchObject({ success: true, mode: 'read-only' });
+    expect(readAgentRecord(tmpRoot, 'missing-parent-child')?.mode).toBe('read-only');
+  });
+
   it('lists spawned idle agents when status is all and supports canonical type filters', async () => {
     await spawnTool.handler({
       agentId: 'list-implementer',
@@ -700,10 +866,25 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecords(tmpRoot)).toHaveLength(0);
   });
 
-  it('agent_pool scale stamps every grown pool agent with a real parent owner', async () => {
+  it('agent_pool scale stamps every grown pool agent with a real parent owner and inherited floor mode', async () => {
     clearOwnerEnv();
     process.env.OPENCODE_THREAD_ID = 'pool-parent-session';
     process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+    writeRawAgentStore(tmpRoot, {
+      poolParent: {
+        agentId: 'poolParent',
+        agentType: 'researcher',
+        status: 'idle',
+        health: 1,
+        taskCount: 0,
+        config: {},
+        createdAt: new Date().toISOString(),
+        ownerSessionId: 'pool-parent-session',
+        ownerClientKind: 'opencode',
+        mode: 'read-only',
+      },
+    });
+    process.env.HIVE_FLOW_AGENT_ID = 'poolParent';
 
     const result = await poolTool.handler({
       action: 'scale',
@@ -717,9 +898,10 @@ describe('agent_spawn canonical roster whitelist', () => {
       added: expect.any(Array),
     });
     const agents = readAgentRecords(tmpRoot);
-    expect(agents).toHaveLength(2);
-    expect(agents.every(agent => agent.ownerSessionId === 'pool-parent-session')).toBe(true);
-    expect(agents.every(agent => agent.ownerClientKind === 'opencode')).toBe(true);
-    expect(agents.every(agent => agent.mode === 'full')).toBe(true);
+    const poolAgents = agents.filter(agent => agent.agentId !== 'poolParent');
+    expect(poolAgents).toHaveLength(2);
+    expect(poolAgents.every(agent => agent.ownerSessionId === 'pool-parent-session')).toBe(true);
+    expect(poolAgents.every(agent => agent.ownerClientKind === 'opencode')).toBe(true);
+    expect(poolAgents.every(agent => agent.mode === 'read-only')).toBe(true);
   });
 });

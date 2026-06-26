@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -11,6 +11,8 @@ const ORIGINAL_CWD = process.cwd();
 const OWNER_ENV_KEYS = Array.from(new Set([
   ...operatorSessionEnvKeys(),
   'HIVE_FLOW_CLIENT_KIND',
+  'HIVE_FLOW_AGENT_ID',
+  'CLAUDE_AGENT_ID',
 ]));
 const ORIGINAL_ENV = Object.fromEntries(
   OWNER_ENV_KEYS.map(key => [key, process.env[key]]),
@@ -27,6 +29,15 @@ function readAgentRecords(root: string): Array<Record<string, unknown>> {
     agents?: Record<string, Record<string, unknown>>;
   };
   return Object.values(store.agents ?? {});
+}
+
+function writeRawAgentStore(root: string, agents: Record<string, Record<string, unknown>>): void {
+  const storeDir = join(root, '.hive-flow', 'agents');
+  mkdirSync(storeDir, { recursive: true });
+  writeFileSync(join(storeDir, 'store.json'), JSON.stringify({
+    version: '3.0.0',
+    agents,
+  }, null, 2), 'utf8');
 }
 
 describe('hive-mind_spawn persisted agent mode', () => {
@@ -66,5 +77,35 @@ describe('hive-mind_spawn persisted agent mode', () => {
     expect(records.every(record => record.ownerSessionId === 'hive-parent-session')).toBe(true);
     expect(records.every(record => record.ownerClientKind === 'codex')).toBe(true);
     expect(records.every(record => record.mode === 'full')).toBe(true);
+  });
+
+  it('floors hive-mind_spawn records to the persisted parent mode', async () => {
+    writeRawAgentStore(tmpRoot, {
+      hiveParent: {
+        agentId: 'hiveParent',
+        agentType: 'researcher',
+        status: 'idle',
+        health: 1,
+        taskCount: 0,
+        config: {},
+        createdAt: new Date().toISOString(),
+        ownerSessionId: 'hive-parent-session',
+        ownerClientKind: 'codex',
+        mode: 'read-only',
+      },
+    });
+    process.env.HIVE_FLOW_AGENT_ID = 'hiveParent';
+    await initTool.handler({ topology: 'mesh' });
+
+    const result = await spawnTool.handler({
+      count: 2,
+      agentType: 'tester',
+      prefix: 'hm-floor',
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ success: true, spawned: 2 });
+    const workers = readAgentRecords(tmpRoot).filter(record => record.agentId !== 'hiveParent');
+    expect(workers).toHaveLength(2);
+    expect(workers.every(record => record.mode === 'read-only')).toBe(true);
   });
 });

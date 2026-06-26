@@ -214,6 +214,15 @@ const missionAssignTool: MCPTool = {
             provider: { type: 'string', description: 'LLM provider (e.g., "gemini-cli", "codex-cli", "openrouter")' },
             model: { type: 'string', description: 'Model alias (opus/sonnet/mini/inherit) or provider-native model. OpenRouter direct models must be allowed by config.' },
             task: { type: 'string', description: 'Task prompt to dispatch immediately after spawn' },
+            mode: {
+              type: 'string',
+              enum: ['full', 'default', 'read-only', 'read-only-with-artifacts'],
+              description: 'Requested worker tool mode; parent floor still applies.',
+            },
+            artifactDir: {
+              type: 'string',
+              description: 'Existing artifact directory for read-only-with-artifacts workers.',
+            },
           },
         },
         description: 'Worker definitions — auto-spawned and tasked in parallel',
@@ -231,7 +240,7 @@ const missionAssignTool: MCPTool = {
     const providers = input.providers as string[] | undefined;
     const workerDependencies = input.workerDependencies as Record<string, string[]> | undefined;
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
-    const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string }> | undefined;
+    const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string; mode?: string; artifactDir?: string }> | undefined;
     const ownerStamp = resolveOwnerStampOrError(input as Record<string, unknown>, process.env, context, 'queen_mission_assign');
     if (!ownerStamp.success) return ownerStamp;
     const { ownerSessionId, ownerClientKind } = ownerStamp;
@@ -370,7 +379,7 @@ const missionAssignTool: MCPTool = {
       // Enforce maxWorkers budget
       const effectiveDefs = workerDefs.slice(0, enforcedMaxWorkers);
 
-      const spawnAndTask = async (def: { role?: string; provider?: string; model?: string; task?: string }): Promise<WorkerSpawnResult> => {
+      const spawnAndTask = async (def: { role?: string; provider?: string; model?: string; task?: string; mode?: string; artifactDir?: string }): Promise<WorkerSpawnResult> => {
         const role = def.role || 'coder';
         const workerProvider = (def.provider as AgentProvider) || (providers && providers.length > 0 ? providers[0] as AgentProvider : 'anthropic');
         const workerModel = def.model;
@@ -386,6 +395,8 @@ const missionAssignTool: MCPTool = {
             provider: workerProvider,
             model: workerModel,
             task: workerTask,
+            mode: def.mode,
+            artifactDir: def.artifactDir,
             config: {
               hiveId: hive.hiveId,
               parentAgentId: queenId,
@@ -558,6 +569,15 @@ const spawnWorkerTool: MCPTool = {
         description: 'Model alias (opus/sonnet/mini/inherit) or provider-native model. OpenRouter direct models must be allowed by config.',
       },
       task: { type: 'string', description: 'Initial task description for model routing' },
+      mode: {
+        type: 'string',
+        enum: ['full', 'default', 'read-only', 'read-only-with-artifacts'],
+        description: 'Requested worker tool mode; parent floor still applies.',
+      },
+      artifactDir: {
+        type: 'string',
+        description: 'Existing artifact directory for read-only-with-artifacts workers.',
+      },
       budgetAllocation: { type: 'number', description: 'Budget allocation for this worker' },
       config: { type: 'object', description: 'Additional worker configuration' },
     },
@@ -570,6 +590,8 @@ const spawnWorkerTool: MCPTool = {
     const provider = (input.provider as AgentProvider) || 'anthropic';
     const model = input.model as string | undefined;
     const task = input.task as string | undefined;
+    const mode = input.mode as string | undefined;
+    const artifactDir = input.artifactDir as string | undefined;
     const budgetAllocation = input.budgetAllocation as number | undefined;
     const config = (input.config as Record<string, unknown>) || {};
 
@@ -630,6 +652,8 @@ const spawnWorkerTool: MCPTool = {
         provider,
         model,
         task,
+        mode,
+        artifactDir,
         config: {
           ...config,
           hiveId,

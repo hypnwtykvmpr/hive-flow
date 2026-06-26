@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
-import { loadAgentStore, saveAgentStore, withStoreLock, agentTools } from './agent-tools.js';
+import { loadAgentStore, saveAgentStore, withStoreLock, agentTools, resolveEffectiveAgentModeForSpawn } from './agent-tools.js';
 import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import type { AgentProvider } from './agent-tools.js';
 import { resolveOwnerStampOrError, type OperatorClientKind } from './session-id.js';
@@ -242,6 +242,8 @@ export const hiveMindTools: MCPTool[] = [
       const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'hive-mind_spawn');
       if (!ownerStamp.success) return ownerStamp;
       const { ownerSessionId, ownerClientKind } = ownerStamp;
+      const modeResult = resolveEffectiveAgentModeForSpawn({});
+      if (!modeResult.ok) return { success: false, code: modeResult.code, error: modeResult.error };
 
       const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
       const role = (input.role as string) || 'worker';
@@ -280,7 +282,8 @@ export const hiveMindTools: MCPTool[] = [
             resolvedModel: (input.model as string) || undefined,
             ownerSessionId,
             ownerClientKind,
-            mode: 'full',
+            mode: modeResult.mode,
+            ...(modeResult.artifactDir ? { artifactDir: modeResult.artifactDir } : {}),
           };
 
           // Join to hive-mind (like hive-mind/join)

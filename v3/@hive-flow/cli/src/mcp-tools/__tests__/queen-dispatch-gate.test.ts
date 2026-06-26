@@ -30,8 +30,19 @@ vi.mock('../agent-tools.js', () => {
       handler: async (input: Record<string, unknown>) => {
         mockAgentState.calls.spawn += 1;
         const agentId = String(input.agentId ?? 'spawned-agent');
-        mockAgentState.store.agents[agentId] = makeAgent(agentId, String(input.agentType ?? 'worker'));
-        return { success: true, agentId, model: input.model, resolvedModel: input.model };
+        mockAgentState.store.agents[agentId] = {
+          ...makeAgent(agentId, String(input.agentType ?? 'worker')),
+          mode: typeof input.mode === 'string' ? input.mode as AgentRecord['mode'] : 'full',
+          ...(typeof input.artifactDir === 'string' ? { artifactDir: input.artifactDir } : {}),
+        };
+        return {
+          success: true,
+          agentId,
+          model: input.model,
+          resolvedModel: input.model,
+          mode: input.mode,
+          artifactDir: input.artifactDir,
+        };
       },
     },
     {
@@ -97,6 +108,7 @@ vi.mock('../agent-tools.js', () => {
     },
     transitionAgent,
     propagateEnforcementToSubAgent: async () => undefined,
+    resolveEffectiveAgentModeForSpawn: () => ({ ok: true, mode: 'full', parentMode: 'full', requestedMode: 'full' }),
   };
 });
 
@@ -329,6 +341,61 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(result.action).toBe('execute');
     expectMcpDeny(result.error);
     expect(mockAgentState.calls.task).toBe(0);
+  });
+
+  it('passes requested mode and artifactDir from queen_spawn_worker through to agent_spawn', async () => {
+    const hive = createActiveHive();
+    const artifactDir = join(root, '.tmp-audit', 'queen-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+
+    const result = await getQueenTool('queen_spawn_worker').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      role: 'reviewer',
+      provider: 'codex-cli',
+      model: 'sonnet',
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(mockAgentState.calls.spawn).toBe(1);
+    const agent = mockAgentState.store.agents[String(result.agentId)];
+    expect(agent).toMatchObject({
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
+  });
+
+  it('passes requested worker mode and artifactDir from queen_mission_assign through to agent_spawn', async () => {
+    const artifactDir = join(root, '.tmp-audit', 'mission-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'mode pass-through mission',
+      description: 'Verify worker mode forwarding',
+      workers: Array.from({ length: 5 }, (_, index) => ({
+        role: `reviewer-${index}`,
+        provider: 'codex-cli',
+        model: 'sonnet',
+        mode: 'read-only-with-artifacts',
+        artifactDir,
+      })),
+    }, { sessionId: 'queen-mode-session', clientKind: 'codex' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.workersSpawned).toBeGreaterThan(0);
+    expect(mockAgentState.calls.spawn).toBeGreaterThan(0);
+    const workerIds = Object.keys(mockAgentState.store.agents).filter(agentId => agentId.startsWith('worker-'));
+    expect(workerIds.length).toBeGreaterThanOrEqual(2);
+    const spawned = workerIds
+      .map(agentId => mockAgentState.store.agents[agentId])
+      .find(agent => agent.mode === 'read-only-with-artifacts');
+    expect(spawned).toMatchObject({
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
   });
 
   it('statically keeps every in-process dispatch sink behind assertDispatchAllowed', () => {

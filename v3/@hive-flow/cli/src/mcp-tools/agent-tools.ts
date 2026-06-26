@@ -48,6 +48,11 @@ export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'code
 const AGENT_PROVIDERS = new Set<AgentProvider>(['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter']);
 const AGENT_MODEL_ALIASES = new Set<AgentModel>(['sonnet', 'opus', 'mini', 'inherit']);
 const AGENT_MODES = new Set<AgentMode>(['full', 'read-only', 'read-only-with-artifacts']);
+const AGENT_MODE_RANK: Record<AgentMode, number> = {
+  'full': 0,
+  'read-only-with-artifacts': 1,
+  'read-only': 2,
+};
 const CONFIG_AUTHORITY_KEYS = new Set([
   'writeAuthority',
   'mode',
@@ -63,6 +68,9 @@ type AgentModeParseResult =
 type ArtifactDirParseResult =
   | { ok: true; artifactDir: string }
   | { ok: false; error: string };
+type EffectiveAgentModeResult =
+  | { ok: true; mode: AgentMode; artifactDir?: string; parentMode: AgentMode; requestedMode: AgentMode }
+  | { ok: false; code: 'invalid-agent-mode' | 'invalid-artifact-dir'; error: string };
 
 export interface AgentRecord {
   agentId: string;
@@ -205,6 +213,111 @@ function validateAgentArtifactDir(input: unknown): ArtifactDirParseResult {
     return { ok: false, error: 'artifactDir must not resolve to a protected path' };
   }
   return { ok: true, artifactDir: realCandidate };
+}
+
+function stricterAgentMode(a: AgentMode, b: AgentMode): AgentMode {
+  return AGENT_MODE_RANK[a] >= AGENT_MODE_RANK[b] ? a : b;
+}
+
+function normalizePersistedAgentMode(record: unknown): { mode: AgentMode; artifactDir?: string } {
+  if (!record || typeof record !== 'object') return { mode: 'full' };
+  const mode = (record as AgentRecord).mode;
+  if (mode === undefined) return { mode: 'full' };
+  if (!AGENT_MODES.has(mode as AgentMode)) return { mode: 'read-only' };
+  if (mode === 'read-only-with-artifacts') {
+    const artifactResult = validateAgentArtifactDir((record as AgentRecord).artifactDir);
+    if (!artifactResult.ok) return { mode: 'read-only' };
+    return { mode, artifactDir: artifactResult.artifactDir };
+  }
+  return { mode: mode as AgentMode };
+}
+
+function readPersistedParentAgentMode(): { mode: AgentMode; artifactDir?: string } {
+  const parentAgentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
+  if (!parentAgentId) return { mode: 'full' };
+  try {
+    const path = getAgentPath();
+    if (!existsSync(path)) return { mode: 'read-only' };
+    const store = JSON.parse(readFileSync(path, 'utf-8')) as AgentStore;
+    const parentRecord = store.agents?.[parentAgentId];
+    if (!parentRecord) return { mode: 'read-only' };
+    return normalizePersistedAgentMode(parentRecord);
+  } catch {
+    return { mode: 'read-only' };
+  }
+}
+
+function artifactDirInsideParent(childArtifactDir: string, parentArtifactDir: string): boolean {
+  const rel = relative(parentArtifactDir, childArtifactDir);
+  return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel));
+}
+
+export function resolveEffectiveAgentModeForSpawn(input: Record<string, unknown>): EffectiveAgentModeResult {
+  const requested = normalizeAgentModeInput(input.mode);
+  if (!requested.ok) {
+    return { ok: false, code: 'invalid-agent-mode', error: requested.error };
+  }
+
+  let requestedArtifactDir: string | undefined;
+  if (requested.mode === 'read-only-with-artifacts') {
+    const artifactResult = validateAgentArtifactDir(input.artifactDir);
+    if (!artifactResult.ok) {
+      return { ok: false, code: 'invalid-artifact-dir', error: artifactResult.error };
+    }
+    requestedArtifactDir = artifactResult.artifactDir;
+  } else if (input.artifactDir !== undefined) {
+    return {
+      ok: false,
+      code: 'invalid-artifact-dir',
+      error: 'artifactDir is only accepted with mode read-only-with-artifacts',
+    };
+  }
+
+  const parent = readPersistedParentAgentMode();
+  const effectiveMode = stricterAgentMode(parent.mode, requested.mode);
+  if (effectiveMode !== 'read-only-with-artifacts') {
+    return {
+      ok: true,
+      mode: effectiveMode,
+      parentMode: parent.mode,
+      requestedMode: requested.mode,
+    };
+  }
+
+  let artifactDir = requestedArtifactDir;
+  if (parent.mode === 'read-only-with-artifacts') {
+    if (!parent.artifactDir) {
+      return {
+        ok: false,
+        code: 'invalid-artifact-dir',
+        error: 'Parent artifact mode is missing a valid artifactDir',
+      };
+    }
+    if (requestedArtifactDir && !artifactDirInsideParent(requestedArtifactDir, parent.artifactDir)) {
+      return {
+        ok: false,
+        code: 'invalid-artifact-dir',
+        error: 'Child artifactDir must resolve inside the parent artifactDir',
+      };
+    }
+    artifactDir = requestedArtifactDir ?? parent.artifactDir;
+  }
+
+  if (!artifactDir) {
+    return {
+      ok: false,
+      code: 'invalid-artifact-dir',
+      error: 'artifactDir is required for mode read-only-with-artifacts',
+    };
+  }
+
+  return {
+    ok: true,
+    mode: effectiveMode,
+    artifactDir,
+    parentMode: parent.mode,
+    requestedMode: requested.mode,
+  };
 }
 
 function isAgentModelAlias(value: unknown): value is AgentModel {
@@ -833,33 +946,16 @@ export const agentTools: MCPTool[] = [
       if (!ownerStamp.success) return ownerStamp;
       const { ownerSessionId, ownerClientKind } = ownerStamp;
 
-      const modeResult = normalizeAgentModeInput(input.mode);
+      const modeResult = resolveEffectiveAgentModeForSpawn(input);
       if (!modeResult.ok) {
         return {
           success: false,
-          code: 'invalid-agent-mode',
+          code: modeResult.code,
           error: modeResult.error,
         };
       }
       const mode = modeResult.mode;
-      let artifactDir: string | undefined;
-      if (mode === 'read-only-with-artifacts') {
-        const artifactResult = validateAgentArtifactDir(input.artifactDir);
-        if (!artifactResult.ok) {
-          return {
-            success: false,
-            code: 'invalid-artifact-dir',
-            error: artifactResult.error,
-          };
-        }
-        artifactDir = artifactResult.artifactDir;
-      } else if (input.artifactDir !== undefined) {
-        return {
-          success: false,
-          code: 'invalid-artifact-dir',
-          error: 'artifactDir is only accepted with mode read-only-with-artifacts',
-        };
-      }
+      const artifactDir = modeResult.artifactDir;
 
       // Global spawn hard-cap enforcement (DEFAULT_MAX_AGENTS + DEFAULT_QUEUE_DEPTH = 180).
       // The runbook specifies a 150 working + 30 queued cap; without a persistent
@@ -1387,6 +1483,8 @@ export const agentTools: MCPTool[] = [
         const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'agent_pool scale');
         if (!ownerStamp.success) return { action, ...ownerStamp };
         const { ownerSessionId, ownerClientKind } = ownerStamp;
+        const modeResult = resolveEffectiveAgentModeForSpawn({});
+        if (!modeResult.ok) return { action, success: false, code: modeResult.code, error: modeResult.error };
 
         return withStoreLock(() => {
           const freshStore = loadAgentStore();
@@ -1409,7 +1507,8 @@ export const agentTools: MCPTool[] = [
                 createdAt: new Date().toISOString(),
                 ownerSessionId,
                 ownerClientKind,
-                mode: 'full',
+                mode: modeResult.mode,
+                ...(modeResult.artifactDir ? { artifactDir: modeResult.artifactDir } : {}),
               };
               added.push(agentId);
             }
