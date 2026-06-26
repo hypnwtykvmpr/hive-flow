@@ -120,10 +120,8 @@ describe('provider bridge persisted agent mode reader', () => {
     ['missing agent id', {}, { HIVE_FLOW_AGENT_ID: '', CLAUDE_AGENT_ID: '' }, 'missing-agent-id'],
     ['missing store', null, {}, 'missing-agent-store'],
     ['missing record', {}, { HIVE_FLOW_AGENT_ID: 'missing', CLAUDE_AGENT_ID: 'missing' }, 'missing-agent-record'],
-    ['malformed mode', { 'mode-agent': { agentId: 'mode-agent', mode: 'admin', config: {} } }, {}, undefined],
-    ['artifact mode without valid dir', { 'mode-agent': { agentId: 'mode-agent', mode: 'read-only-with-artifacts', artifactDir: join(tmpdir(), 'outside') } }, {}, 'invalid-artifact-dir'],
-  ])('fails closed for %s', (_label, agents, extraEnv, reason) => {
-    const root = makeProjectRoot('hfmode-closed-');
+  ])('treats legacy/non-agent state %s as full because read-only is explicit opt-in', (_label, agents, extraEnv, reason) => {
+    const root = makeProjectRoot('hfmode-legacy-default-');
     roots.push(root);
     if (agents === null) {
       rmSync(join(root, '.hive-flow', 'agents', 'store.json'), { force: true });
@@ -132,6 +130,17 @@ describe('provider bridge persisted agent mode reader', () => {
     } else if (!existsSync(join(root, '.hive-flow', 'agents', 'store.json'))) {
       writeStore(root, {});
     }
+
+    expect(runReader(root, { extraEnv })).toEqual({ mode: 'full', reason });
+  });
+
+  it.each([
+    ['malformed mode', { 'mode-agent': { agentId: 'mode-agent', mode: 'admin', config: {} } }, {}, undefined],
+    ['artifact mode without valid dir', { 'mode-agent': { agentId: 'mode-agent', mode: 'read-only-with-artifacts', artifactDir: join(tmpdir(), 'outside') } }, {}, 'invalid-artifact-dir'],
+  ])('fails closed for malformed known records: %s', (_label, agents, extraEnv, reason) => {
+    const root = makeProjectRoot('hfmode-closed-');
+    roots.push(root);
+    writeStore(root, agents);
 
     const result = runReader(root, { extraEnv });
     expect(result.mode).toBe('read-only');

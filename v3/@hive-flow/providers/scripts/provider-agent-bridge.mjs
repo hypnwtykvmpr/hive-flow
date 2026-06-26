@@ -2140,6 +2140,12 @@ function bridgeIsControlPlanePath(safePath) {
 }
 
 const BRIDGE_AGENT_MODES = new Set(['full', 'read-only', 'read-only-with-artifacts']);
+const BRIDGE_AGENT_MODE_MUTATOR_TOOLS = new Set(['write_file', 'edit_file']);
+const BRIDGE_AGENT_MODE_EXEC_TOOLS = new Set(['run_shell', 'run_command']);
+const BRIDGE_AGENT_MODE_RESTRICTED_TOOLS = new Set([
+  ...BRIDGE_AGENT_MODE_MUTATOR_TOOLS,
+  ...BRIDGE_AGENT_MODE_EXEC_TOOLS,
+]);
 
 function bridgePathIsInside(parent, child) {
   const rel = relative(parent, child);
@@ -2171,17 +2177,18 @@ function bridgeResolveArtifactDir(record) {
 }
 
 // R1 read-only modes: read the persisted top-level agent mode by bridge-owned
-// agent id. Missing/invalid store state fails closed to read-only, while legacy
-// records with no mode field retain historical full tool access.
+// agent id. Read-only is an explicit per-agent opt-in: missing legacy/non-agent
+// records retain full tool access, while corrupt stores or malformed known
+// records fail closed to read-only.
 export function bridgeReadAgentMode() {
   try {
     const agentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
-    if (!agentId) return { mode: 'read-only', reason: 'missing-agent-id' };
+    if (!agentId) return { mode: 'full', reason: 'missing-agent-id' };
     const storePath = resolve(PROJECT_ROOT, '.hive-flow', 'agents', 'store.json');
-    if (!existsSync(storePath)) return { mode: 'read-only', reason: 'missing-agent-store' };
+    if (!existsSync(storePath)) return { mode: 'full', reason: 'missing-agent-store' };
     const store = JSON.parse(readFileSync(storePath, 'utf-8'));
     const record = store?.agents?.[agentId];
-    if (!record || typeof record !== 'object') return { mode: 'read-only', reason: 'missing-agent-record' };
+    if (!record || typeof record !== 'object') return { mode: 'full', reason: 'missing-agent-record' };
     const mode = bridgeNormalizeAgentMode(record);
     if (mode === 'read-only-with-artifacts') {
       const artifactDir = bridgeResolveArtifactDir(record);
@@ -2192,6 +2199,31 @@ export function bridgeReadAgentMode() {
   } catch {
     return { mode: 'read-only', reason: 'agent-mode-read-failed' };
   }
+}
+
+function bridgeAgentModeDenyReason(toolName, modeInfo = bridgeReadAgentMode()) {
+  const mode = modeInfo?.mode;
+  if (mode === 'read-only' && BRIDGE_AGENT_MODE_RESTRICTED_TOOLS.has(toolName)) {
+    return {
+      denyReason: 'agent-mode-read-only',
+      error: `Tool '${toolName}' is denied because this agent is in read-only mode.`,
+    };
+  }
+  if (mode === 'read-only-with-artifacts') {
+    if (BRIDGE_AGENT_MODE_EXEC_TOOLS.has(toolName)) {
+      return {
+        denyReason: 'agent-mode-artifact-exec-denied',
+        error: `Tool '${toolName}' is denied because artifact-mode agents cannot execute commands.`,
+      };
+    }
+    if (BRIDGE_AGENT_MODE_MUTATOR_TOOLS.has(toolName)) {
+      return {
+        denyReason: 'agent-mode-artifact-write-pending',
+        error: `Tool '${toolName}' is denied until artifact write confinement is active for this agent mode.`,
+      };
+    }
+  }
+  return null;
 }
 
 // HF-1: read the agent's persisted, top-level writeAuthority from the agent
@@ -4801,6 +4833,14 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
       'unknown-tool',
       `Tool '${toolName}' is not in the provider bridge registry.`,
     );
+  }
+
+  const modeDenial = bridgeAgentModeDenyReason(toolName);
+  if (modeDenial) {
+    stderrLogger.warn(`Tool denied by persisted agent mode: ${toolName}`, {
+      denyReason: modeDenial.denyReason,
+    });
+    return bridgeDeniedTool(toolName, modeDenial.denyReason, modeDenial.error);
   }
 
   // HF-10-D/E: check for malformed/oversized args BEFORE calling handler
