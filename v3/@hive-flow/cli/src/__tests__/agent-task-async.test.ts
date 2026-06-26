@@ -65,6 +65,7 @@ interface AgentRecord {
   ownerSessionId?: string;
   ownerClientKind?: string;
   currentTaskPid?: number;
+  currentTaskId?: string;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -111,8 +112,8 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
     (path: string, data: string) => {
       if (typeof path === 'string' && path.includes('.tmp.')) {
         tmpWrites.set(path, data);
-      } else {
-        // Ignore non-JSON data (e.g. task file writes)
+      } else if (typeof path === 'string' && path.endsWith('store.json')) {
+        // Ignore non-store writes (task files, task tracking, journals).
         try { currentStore = JSON.parse(data); } catch { /* not the store */ }
       }
     },
@@ -436,6 +437,73 @@ describe('agent_task_async handler', () => {
     expect(getPersistedStore().agents[agent.agentId].status).toBe('idle');
     expect(getPersistedStore().agents[agent.agentId].idleSince).toBeDefined();
   });
+
+  // ------------------------------------------------------------------
+  // HF-13 D1: currentTaskId is persisted with the pid in the SAME locked
+  // dispatch update, and cleared on every terminal/failure path.
+  // ------------------------------------------------------------------
+  it('persists currentTaskId alongside currentTaskPid in the same dispatch update', async () => {
+    const agent = makeAgent({ status: 'idle' });
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(54321);
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'track me' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const persisted = getPersistedStore().agents[agent.agentId];
+    expect(persisted.status).toBe('busy');
+    expect(persisted.currentTaskPid).toBe(54321);
+    // Same locked update sets currentTaskId to the returned taskId.
+    expect(persisted.currentTaskId).toBe(result.taskId);
+  });
+
+  it('still sets currentTaskId when the OS gives no usable pid', async () => {
+    const agent = makeAgent({ status: 'idle' });
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    // Detached spawn with undefined pid (e.g. platform quirk).
+    (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({ pid: undefined, on: vi.fn(), unref: vi.fn() }));
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'no pid' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const persisted = getPersistedStore().agents[agent.agentId];
+    expect(persisted.currentTaskId).toBe(result.taskId);
+    expect(persisted.currentTaskPid).toBeUndefined();
+  });
+
+  it('writes timeoutMs and an explicit deadlineAt into the tracking file', async () => {
+    const agent = makeAgent();
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(77);
+
+    await asyncHandler({ agentId: agent.agentId, task: 'deadline task', timeout: 120000 });
+
+    const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
+    const trackingCall = writeCalls.find(([p]: [string]) =>
+      typeof p === 'string' && p.endsWith('.json') && !p.endsWith('store.json') && !p.includes('.tmp.'));
+    expect(trackingCall).toBeDefined();
+    const tracking = JSON.parse(trackingCall![1]);
+    expect(tracking.timeoutMs).toBe(120000);
+    expect(tracking.deadlineGraceMs).toBe(30000);
+    expect(typeof tracking.deadlineAt).toBe('string');
+    const deadline = new Date(tracking.deadlineAt).getTime();
+    const started = new Date(tracking.startedAt).getTime();
+    expect(deadline - started).toBe(150000);
+  });
+
+  it('clears currentTaskId when the bridge spawn fails after the busy transition', async () => {
+    const agent = makeAgent({ status: 'idle' });
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => { throw new Error('spawn failed'); });
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'spawn failure' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    const persisted = getPersistedStore().agents[agent.agentId];
+    expect(persisted.status).toBe('idle');
+    expect(persisted.currentTaskId).toBeUndefined();
+    expect(persisted.currentTaskPid).toBeUndefined();
+  });
 });
 
 // ── agent_task_result tests ─────────────────────────────────────────────────
@@ -487,7 +555,7 @@ describe('agent_task_result handler', () => {
   // 8. Returns 'running' when no result file and PID is alive
   // ------------------------------------------------------------------
   it('returns status:running when no result file exists and PID is alive', async () => {
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: TASK_ID, currentTaskPid: LIVE_PID });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
 
     // Only tracking file exists; no result file
@@ -516,7 +584,7 @@ describe('agent_task_result handler', () => {
   // 9. Returns 'completed' when result file exists
   // ------------------------------------------------------------------
   it('returns status:completed with result when result file exists', async () => {
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: TASK_ID, currentTaskPid: LIVE_PID });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
     const resultData = { success: true, response: 'Task output here' };
 
@@ -535,7 +603,7 @@ describe('agent_task_result handler', () => {
   });
 
   it('clears a stale task pid when a result is consumed after the agent was already idled', async () => {
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'idle', currentTaskPid: LIVE_PID });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'idle', currentTaskPid: LIVE_PID, currentTaskId: TASK_ID });
     let currentStore = makeStore({ [AGENT_ID]: agent });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
     const resultData = { success: true, response: 'already idled before consumption' };
@@ -575,10 +643,11 @@ describe('agent_task_result handler', () => {
     });
     expect(currentStore.agents[AGENT_ID].status).toBe('idle');
     expect(currentStore.agents[AGENT_ID].currentTaskPid).toBeUndefined();
+    expect(currentStore.agents[AGENT_ID].currentTaskId).toBeUndefined();
   });
 
   it('does not read the observability journal to decide terminal result authority', async () => {
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: TASK_ID, currentTaskPid: LIVE_PID });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
     const resultData = { success: true, response: 'result json remains the authority' };
 
@@ -638,7 +707,7 @@ describe('agent_task_result handler', () => {
   });
 
   it('first completed poll deletes tracking and second poll replays the terminal result', async () => {
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: TASK_ID, currentTaskPid: LIVE_PID });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
     const resultData = { success: true, response: 'done once, readable forever' };
     let currentStore = makeStore({ [AGENT_ID]: agent });
@@ -732,7 +801,7 @@ describe('agent_task_result handler', () => {
 
   it('clears a stale task pid when a dead child is observed after the agent was already idled', async () => {
     const DEAD_PID = 99999;
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'idle', currentTaskPid: DEAD_PID });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'idle', currentTaskPid: DEAD_PID, currentTaskId: TASK_ID });
     let currentStore = makeStore({ [AGENT_ID]: agent });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: DEAD_PID };
 
@@ -839,7 +908,7 @@ describe('agent_task_result handler', () => {
   // 11. Resets agent to idle on completion
   // ------------------------------------------------------------------
   it('resets agent to idle when task is completed', async () => {
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: TASK_ID, currentTaskPid: LIVE_PID });
     const store = makeStore({ [AGENT_ID]: agent });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
     const resultData = { success: true, response: 'done' };
@@ -877,9 +946,44 @@ describe('agent_task_result handler', () => {
     expect(currentStore.agents[AGENT_ID].idleSince).toBeDefined();
   });
 
+  it('does not idle a newer in-flight task when an older result is consumed late', async () => {
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: 'task-newer', currentTaskPid: 4242 });
+    let currentStore = makeStore({ [AGENT_ID]: agent });
+    const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
+    const resultData = { success: true, response: 'late old result' };
+
+    baseExistsMock([`${TASK_ID}.json`, `${TASK_ID}.result.json`]);
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return JSON.stringify(currentStore);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.json`)) return JSON.stringify(tracking);
+      if (typeof p === 'string' && p.endsWith(`${TASK_ID}.result.json`)) return JSON.stringify(resultData);
+      return JSON.stringify({});
+    });
+    const tmpWrites = new Map<string, string>();
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
+      if (typeof p === 'string' && p.includes('.tmp.')) tmpWrites.set(p, data);
+    });
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+      const data = tmpWrites.get(src);
+      if (data) {
+        currentStore = JSON.parse(data);
+        tmpWrites.delete(src);
+      }
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (unlinkSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+
+    const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({ success: true, status: 'completed', taskId: TASK_ID });
+    expect(currentStore.agents[AGENT_ID].status).toBe('busy');
+    expect(currentStore.agents[AGENT_ID].currentTaskId).toBe('task-newer');
+    expect(currentStore.agents[AGENT_ID].currentTaskPid).toBe(4242);
+  });
+
   it('sets idleSince when a dead worker is reset back to idle', async () => {
     const DEAD_PID = 99999;
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy' });
+    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: TASK_ID, currentTaskPid: DEAD_PID });
     let currentStore = makeStore({ [AGENT_ID]: agent });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: DEAD_PID };
 
@@ -1248,6 +1352,8 @@ describe('agent_task_result: bridge result-file failure surfacing', () => {
     const agent = makeAgent({
       agentId: AGENT_ID,
       status: overrides.agentStatus ?? 'busy',
+      currentTaskId: TASK_ID,
+      currentTaskPid: overrides.pid ?? ALIVE_PID,
     });
     let currentStore = makeStore({ [AGENT_ID]: agent });
     const tracking = {

@@ -500,15 +500,14 @@ let currentBridgeLimits = null;
 
 let isShuttingDown = false;
 
-process.on('SIGTERM', () => {
-  if (isShuttingDown) return; // Prevent race with error handler
-  isShuttingDown = true;
-
-  bridgeLog('warn', 'Bridge received SIGTERM — exiting gracefully');
-
-  // Extract agent info from argv for cleanup
+/**
+ * Resolve the bridge's --agent-id / --store-dir / --result-file from argv,
+ * validating the file paths. Used by the synchronous terminal handlers so they
+ * don't have to re-implement argv scanning each time.
+ */
+function resolveBridgeArgvPaths() {
   const argvAgentIdx = process.argv.indexOf('--agent-id');
-  const logAgentId = argvAgentIdx !== -1 ? (process.argv[argvAgentIdx + 1] || 'unknown') : 'unknown';
+  const agentId = argvAgentIdx !== -1 ? (process.argv[argvAgentIdx + 1] || 'unknown') : 'unknown';
 
   const argvStoreDirIdx = process.argv.indexOf('--store-dir');
   const rawStoreDir = argvStoreDirIdx !== -1
@@ -522,67 +521,157 @@ process.on('SIGTERM', () => {
   let resultFile = '';
   try { resultFile = validateFilePath(rawResultFile); } catch { /* path outside project root — skip file write */ }
 
-  // Write error result file
+  return { agentId, storeDir, resultFile };
+}
+
+function shouldClearTaskForResult(agent, taskId) {
+  return Boolean(agent && taskId && agent.currentTaskId === taskId);
+}
+
+function clearTaskFieldsForResult(agent, taskId) {
+  if (!shouldClearTaskForResult(agent, taskId)) return false;
+  agent.status = 'idle';
+  delete agent.currentTaskPid;
+  delete agent.currentTaskId;
+  return true;
+}
+
+async function clearMatchingTaskState({ storeDir, agentId, resultFile }) {
+  if (!storeDir || !agentId || agentId === 'unknown') return false;
+  const taskId = taskIdFromResultFile(resultFile);
+  if (!taskId) return false;
+  const storeLockPath = join(storeDir, '.store.lock');
+  let cleared = false;
+  await withFileLock(storeLockPath, async () => {
+    const { store, agent, storePath } = loadAgentState(storeDir, agentId);
+    if (clearTaskFieldsForResult(agent, taskId)) {
+      saveAgentState(storePath, store);
+      cleared = true;
+    }
+  });
+  return cleared;
+}
+
+function clearMatchingTaskStateSync({ storeDir, agentId, resultFile }) {
+  if (!storeDir || !agentId || agentId === 'unknown') return false;
+  const taskId = taskIdFromResultFile(resultFile);
+  if (!taskId) return false;
+  const storeLockPath = join(storeDir, '.store.lock');
+  let storeLockAcquired = false;
+  try {
+    mkdirSync(storeLockPath);
+    storeLockAcquired = true;
+    const { store, agent, storePath } = loadAgentState(storeDir, agentId);
+    if (!clearTaskFieldsForResult(agent, taskId)) return false;
+    saveAgentState(storePath, store);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (storeLockAcquired) {
+      try { rmdirSync(storeLockPath); } catch { /* ignore */ }
+    }
+  }
+}
+
+/**
+ * Idempotent terminal failure handler. Every abnormal bridge exit
+ * (SIGTERM, uncaughtException, unhandledRejection) flows through here so the
+ * task is always terminalized the same way: a failed result file is written,
+ * the owning agent is idled with BOTH currentTaskPid and currentTaskId cleared,
+ * and the owning operator is notified.
+ *
+ * Synchronous + best-effort so it is safe to call from signal/exception
+ * handlers. Returns true if a result file was written, false otherwise.
+ *
+ * @param {object} opts
+ * @param {string} opts.error   - human-readable failure message
+ * @param {string} opts.code    - machine code (SIGTERM / UNCAUGHT_EXCEPTION / ...)
+ * @param {string} [opts.reason]- journal/notification reason (defaults to code)
+ * @param {object} [opts.paths] - override for resolveBridgeArgvPaths() (tests)
+ */
+export function terminalizeBridgeFailure({ error, code, reason, paths } = {}) {
+  const { agentId, storeDir, resultFile } = paths || resolveBridgeArgvPaths();
+  const failReason = reason || code || 'BRIDGE_ERROR';
+  if (resultFile && existsSync(resultFile)) {
+    return false;
+  }
+
   const errorResponse = {
     success: false,
-    error: 'Bridge terminated: SIGTERM',
-    code: 'SIGTERM',
-    agentId: logAgentId,
+    error: error || 'Bridge terminated',
+    code: code || 'BRIDGE_ERROR',
+    ...(agentId && agentId !== 'unknown' ? { agentId } : {}),
   };
 
+  let wroteResult = false;
   if (resultFile) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
       const payload = safeBridgeJsonStringify(errorResponse, 2) + '\n';
       writeFileSync(tmpResult, payload);
       renameSync(tmpResult, resultFile);
+      wroteResult = true;
       appendBridgeJournalEvent({
         event: 'result_written',
         resultFile,
-        agentId: logAgentId,
+        agentId,
         meta: {
           success: false,
           resultBytes: Buffer.byteLength(payload, 'utf8'),
-          reason: 'SIGTERM',
+          reason: failReason,
           status: 'failed',
         },
       });
       notifyTaskCompletionFromResultFile(resultFile);
     } catch {
       // File write failed — fall back to stdout
-      process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
+      try { process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n'); } catch { /* ignore */ }
     }
   } else {
-    process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
+    try { process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n'); } catch { /* ignore */ }
   }
 
-  // Reset agent status to idle (best-effort, synchronous)
-  if (storeDir && logAgentId !== 'unknown') {
-    const storeLockPath = join(storeDir, '.store.lock');
-    let storeLockAcquired = false;
-    try {
-      mkdirSync(storeLockPath);
-      storeLockAcquired = true;
+  // Reset only if the persisted record still points at this result task. A late
+  // failure from task A must never idle task B or delete task B's live PID.
+  clearMatchingTaskStateSync({ storeDir, agentId, resultFile });
 
-      const { store, storePath } = loadAgentState(storeDir, logAgentId);
-      if (store.agents && store.agents[logAgentId]) {
-        store.agents[logAgentId].status = 'idle';
-        saveAgentState(storePath, store);
-      }
-    } catch {
-      // Ignore errors - this is best-effort cleanup
-    } finally {
-      if (storeLockAcquired) {
-        try { rmdirSync(storeLockPath); } catch { /* ignore */ }
-      }
-    }
-  }
+  return wroteResult;
+}
 
+process.on('SIGTERM', () => {
+  if (isShuttingDown) return; // Prevent race with error handler
+  isShuttingDown = true;
+
+  bridgeLog('warn', 'Bridge received SIGTERM — exiting gracefully');
+  terminalizeBridgeFailure({ error: 'Bridge terminated: SIGTERM', code: 'SIGTERM' });
   process.exit(143); // 128 + 15 (SIGTERM)
 });
 
 process.on('uncaughtException', (err) => {
   bridgeLog('error', 'Bridge uncaughtException', { error: err?.message || String(err) });
+  if (isShuttingDown) { process.exit(1); return; }
+  isShuttingDown = true;
+  // Do NOT just log+exit: flow through the same terminal contract so the task
+  // is failed, the agent idled, and both task fields cleared.
+  terminalizeBridgeFailure({
+    error: `Bridge uncaughtException: ${err?.message || String(err)}`,
+    code: err?.code || 'UNCAUGHT_EXCEPTION',
+    reason: 'UNCAUGHT_EXCEPTION',
+  });
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  bridgeLog('error', 'Bridge unhandledRejection', { error: err.message });
+  if (isShuttingDown) { process.exit(1); return; }
+  isShuttingDown = true;
+  terminalizeBridgeFailure({
+    error: `Bridge unhandledRejection: ${err.message}`,
+    code: err.code || 'UNHANDLED_REJECTION',
+    reason: 'UNHANDLED_REJECTION',
+  });
   process.exit(1);
 });
 
@@ -819,6 +908,39 @@ function normalizeHolderProviderResponse(response) {
   };
 }
 
+// Hard ceiling for a single credential-holder round-trip. The holder call is
+// bounded so a hung/unresponsive holder cannot wedge the bridge forever; on
+// expiry the bridge fails the task (and main()'s error path idles the agent and
+// clears both task fields) instead of hanging busy.
+const CREDENTIAL_HOLDER_TIMEOUT_GRACE_MS = 30_000;
+const CREDENTIAL_HOLDER_TIMEOUT_MAX_MS = 10 * 60_000; // 10 min absolute cap
+
+export function resolveCredentialHolderTimeoutMs(requestTimeout, configTimeout) {
+  const base = [requestTimeout, configTimeout]
+    .map(Number)
+    .find((n) => Number.isFinite(n) && n > 0) || RUN_SHELL_DEFAULT_TIMEOUT_MS;
+  return Math.min(CREDENTIAL_HOLDER_TIMEOUT_MAX_MS, base + CREDENTIAL_HOLDER_TIMEOUT_GRACE_MS);
+}
+
+/**
+ * Race a promise against a bounded timeout. Rejects with a classifiable timeout
+ * error (message contains "timed out") if the promise does not settle in time.
+ * The losing promise is left to settle on its own (best-effort).
+ */
+export function callWithTimeout(promise, timeoutMs, label = 'operation') {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return promise;
+  let timer = null;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    if (typeof timer.unref === 'function') timer.unref();
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 function createStrictHolderProvider(providerName, config, agentId) {
   const socketPath = defaultCredentialHolderSocketPath();
   return {
@@ -826,18 +948,23 @@ function createStrictHolderProvider(providerName, config, agentId) {
       assertCredentialHolderSocketIdentity(socketPath);
     },
     async complete(request) {
-      const response = await sendCredentialHolderCommand(socketPath, {
-        action: 'provider_call',
-        taskId: `provider-bridge-${agentId}-${Date.now()}`,
-        provider: providerName,
-        request: {
-          action: 'complete',
-          payload: {
-            ...request,
-            timeout: request.timeout || config.timeout,
+      const holderTimeoutMs = resolveCredentialHolderTimeoutMs(request.timeout, config.timeout);
+      const response = await callWithTimeout(
+        sendCredentialHolderCommand(socketPath, {
+          action: 'provider_call',
+          taskId: `provider-bridge-${agentId}-${Date.now()}`,
+          provider: providerName,
+          request: {
+            action: 'complete',
+            payload: {
+              ...request,
+              timeout: request.timeout || config.timeout,
+            },
           },
-        },
-      });
+        }),
+        holderTimeoutMs,
+        `credential holder provider_call (${providerName})`,
+      );
       if (!response.ok) throw new Error(`credential holder provider_call failed: ${response.error || 'unknown error'}`);
       return normalizeHolderProviderResponse(response.response);
     },
@@ -4975,51 +5102,12 @@ async function main() {
       if (existsSync(terminateFile)) {
         bridgeLog('warn', 'Terminate marker detected — exiting gracefully', { agentId });
 
-        // Write an error result file so agent_task_result sees completion
-        if (resultFile) {
-          const termResult = {
-            success: false,
-            error: 'Agent terminated via control file',
-            code: 'TERMINATED',
-            agentId,
-          };
-          try {
-            const tmpResult = resultFile + `.tmp.${process.pid}`;
-            const payload = safeBridgeJsonStringify(termResult, 2) + '\n';
-            writeFileSync(tmpResult, payload);
-            renameSync(tmpResult, resultFile);
-            appendBridgeJournalEvent({
-              event: 'result_written',
-              resultFile,
-              agentId,
-              provider: providerName,
-              model: request.model || agent.resolvedModel,
-              meta: {
-                success: false,
-                resultBytes: Buffer.byteLength(payload, 'utf8'),
-                reason: 'TERMINATED',
-                status: 'failed',
-              },
-            });
-            notifyTaskCompletionFromResultFile(resultFile);
-          } catch (writeErr) {
-            bridgeLog('error', 'Failed to write termination result file', { agentId, error: writeErr.message });
-          }
-        }
-
-        // Reset agent to idle
-        try {
-          const storeLockPath = join(storeDir, '.store.lock');
-          await withFileLock(storeLockPath, async () => {
-            const { store: s, agent: a, storePath: sp } = loadAgentState(storeDir, agentId);
-            if (a && a.status === 'busy') {
-              a.status = 'idle';
-              saveAgentState(sp, s);
-            }
-          });
-        } catch (resetErr) {
-          bridgeLog('error', 'Failed to reset agent after termination', { agentId, error: resetErr.message });
-        }
+        terminalizeBridgeFailure({
+          error: 'Agent terminated via control file',
+          code: 'TERMINATED',
+          reason: 'TERMINATED',
+          paths: { agentId, storeDir, resultFile },
+        });
 
         // Delete the marker so it doesn't fire again on a future task
         try { unlinkSync(terminateFile); } catch { /* best-effort */ }
@@ -5668,16 +5756,22 @@ async function main() {
       completedAt: new Date().toISOString(),
     };
 
-    // ── Phase 3: Lock → write state → unlock ──
-    // Reset status to idle so agents don't get stuck in 'busy' if
-    // agent_task_result is never polled (idempotent: agent_task_result
-    // checks `status === 'busy'` before resetting, so this is safe).
-    agent.status = 'idle';
+    const completedConversationHistory = agent.conversationHistory;
+    const completedTaskCount = agent.taskCount;
+    const completedLastTaskAt = agent.lastTaskAt;
+    const completedLastResult = agent.lastResult;
     await withFileLock(lockPath, async () => {
-      // Re-read store to avoid clobbering changes from other agents
+      // Re-read store to avoid clobbering changes from other agents. Only merge
+      // completion fields if the persisted record still points at this task.
       const freshStore = JSON.parse(readFileSync(storePath, 'utf-8'));
-      freshStore.agents[agentId] = agent;
-      saveAgentState(storePath, freshStore);
+      const freshAgent = freshStore.agents && freshStore.agents[agentId];
+      if (clearTaskFieldsForResult(freshAgent, taskIdFromResultFile(resultFile))) {
+        freshAgent.conversationHistory = completedConversationHistory;
+        freshAgent.taskCount = completedTaskCount;
+        freshAgent.lastTaskAt = completedLastTaskAt;
+        freshAgent.lastResult = completedLastResult;
+        saveAgentState(storePath, freshStore);
+      }
     });
 
     result = {
@@ -5707,7 +5801,7 @@ async function main() {
   });
 
   // Output result as JSON
-  if (resultFile) {
+  if (resultFile && !existsSync(resultFile)) {
     const tmpResult = resultFile + `.tmp.${process.pid}`;
     const payload = safeBridgeJsonStringify(result, 2) + '\n';
     writeFileSync(tmpResult, payload);
@@ -5726,7 +5820,7 @@ async function main() {
       },
     });
     notifyTaskCompletionFromResultFile(resultFile);
-  } else {
+  } else if (!resultFile) {
     process.stdout.write(safeBridgeJsonStringify(result, 2) + '\n');
   }
 
@@ -5782,6 +5876,11 @@ async function handleMainError(err) {
     ...bridgeDurableOwnerFields(process.env, { agentId: logAgentId !== 'unknown' ? logAgentId : undefined }),
   };
 
+  const argvResultIdx = process.argv.indexOf('--result-file');
+  const rawResultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
+  let resultFile = '';
+  try { resultFile = validateFilePath(rawResultFile); } catch { /* path outside project root — skip file write */ }
+
   // Reset agent status to idle before writing the error result file so that
   // the agent is not left stuck in 'busy' after a bridge failure.
   // Guard against SIGTERM handler already running cleanup
@@ -5794,15 +5893,7 @@ async function handleMainError(err) {
       let storeDir = '';
       try { storeDir = validateFilePath(rawStoreDir); } catch { /* path outside project root — skip */ }
       if (storeDir && logAgentId !== 'unknown') {
-        const storePath = join(storeDir, 'store.json');
-        const errorLockPath = join(storeDir, '.store.lock');
-        await withFileLock(errorLockPath, async () => {
-          const freshStore = JSON.parse(readFileSync(storePath, 'utf-8'));
-          if (freshStore.agents && freshStore.agents[logAgentId]) {
-            freshStore.agents[logAgentId].status = 'idle';
-            saveAgentState(storePath, freshStore);
-          }
-        });
+        await clearMatchingTaskState({ storeDir, agentId: logAgentId, resultFile });
       }
     } catch {
       // Best-effort — do not block error result writing
@@ -5810,11 +5901,7 @@ async function handleMainError(err) {
   }
 
   // Write error result to --result-file if set, fall back to stdout
-  const argvResultIdx = process.argv.indexOf('--result-file');
-  const rawResultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';
-  let resultFile = '';
-  try { resultFile = validateFilePath(rawResultFile); } catch { /* path outside project root — skip file write */ }
-  if (resultFile) {
+  if (resultFile && !existsSync(resultFile)) {
     try {
       const tmpResult = resultFile + `.tmp.${process.pid}`;
       const payload = safeBridgeJsonStringify(errorResponse, 2) + '\n';
@@ -5837,7 +5924,7 @@ async function handleMainError(err) {
       // File write failed — fall back to stdout
       process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
     }
-  } else {
+  } else if (!resultFile) {
     process.stdout.write(safeBridgeJsonStringify(errorResponse, 2) + '\n');
   }
 

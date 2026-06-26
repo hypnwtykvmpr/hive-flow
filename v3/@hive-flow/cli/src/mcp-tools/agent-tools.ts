@@ -36,6 +36,7 @@ import {
 const STORAGE_DIR = '.hive-flow';
 const AGENT_DIR = 'agents';
 const AGENT_FILE = 'store.json';
+const TASK_DEADLINE_REAPER_GRACE_MS = 30_000;
 
 // Model tier aliases — map to provider-native models via resolveProviderModel()
 type AgentModel = 'sonnet' | 'opus' | 'mini' | 'inherit';
@@ -63,6 +64,7 @@ export interface AgentRecord {
   ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
   ownerClientKind?: Exclude<OperatorClientKind, 'unknown'>;  // Owning operator lane for completion routing
   currentTaskPid?: number;  // Provider bridge child pid for read-side liveness checks
+  currentTaskId?: string;  // In-flight taskId — resolves to .hive-flow/tasks/<id>.json tracking (deadline/result) for the reaper
   // HF-1: top-level, persisted, operator-only write-authority grant. Only the
   // literal value 'source' grants tracked-source writes in the provider bridge.
   // Accepted ONLY as a top-level agent_spawn input — never via config (which
@@ -73,6 +75,24 @@ export interface AgentRecord {
 export interface AgentStore {
   agents: Record<string, AgentRecord>;
   version: string;
+}
+
+function clearTerminalTaskIfCurrent(agent: AgentRecord | undefined, taskId: string): boolean {
+  if (!agent || agent.currentTaskId !== taskId) return false;
+  let changed = false;
+  if (agent.status === 'busy') {
+    transitionAgent(agent, 'idle');
+    changed = true;
+  }
+  if (agent.currentTaskPid !== undefined) {
+    delete agent.currentTaskPid;
+    changed = true;
+  }
+  if (agent.currentTaskId !== undefined) {
+    delete agent.currentTaskId;
+    changed = true;
+  }
+  return changed;
 }
 
 function normalizeProviderModelString(value: unknown): string | undefined {
@@ -120,13 +140,16 @@ export function transitionAgent(agent: AgentRecord, newStatus: AgentRecord['stat
   if (newStatus === 'idle') {
     agent.idleSince = new Date().toISOString();
     delete agent.currentTaskPid;
+    delete agent.currentTaskId;
   } else if (newStatus === 'busy') {
     delete agent.idleSince;
     delete agent.currentTaskPid;
+    delete agent.currentTaskId;
   } else if (newStatus === 'terminated') {
     agent.terminatedAt = new Date().toISOString();
     delete agent.idleSince;
     delete agent.currentTaskPid;
+    delete agent.currentTaskId;
   }
   return true;
 }
@@ -1419,6 +1442,7 @@ export const agentTools: MCPTool[] = [
             try {
               transitionAgent(agent, 'idle');
               delete agent.currentTaskPid;
+              delete agent.currentTaskId;
               saveAgentStore(store);
             } catch { /* best-effort: store may have compacted */ }
             // Write a failed-task result so agent_task_result can surface the error.
@@ -1434,6 +1458,10 @@ export const agentTools: MCPTool[] = [
           });
           child.unref();
           const childPid = child.pid;
+          // Persist currentTaskId + currentTaskPid together in this SAME locked
+          // update so the reaper can always resolve a busy agent to its in-flight
+          // task tracking, even when the OS gave us no usable pid.
+          agent.currentTaskId = taskId;
           if (typeof childPid === 'number' && Number.isInteger(childPid) && childPid > 0) {
             agent.currentTaskPid = childPid;
           }
@@ -1448,7 +1476,11 @@ export const agentTools: MCPTool[] = [
             ownerClientKind,
           };
         } catch (err) {
+          // transitionAgent('idle') clears currentTaskId + currentTaskPid; the
+          // explicit deletes keep the failure path symmetric with the success path.
           transitionAgent(agent, 'idle');
+          delete agent.currentTaskPid;
+          delete agent.currentTaskId;
           saveAgentStore(store);
           return { error: err instanceof Error ? err.message : String(err) };
         }
@@ -1462,6 +1494,7 @@ export const agentTools: MCPTool[] = [
       // can emit a terminal call event correlated by the same taskId without
       // re-reading the agent store (which may have changed by poll time).
       const trackingPath = join(tasksDir, `${taskId}.json`);
+      const startedAt = new Date();
       writeFileSync(trackingPath, JSON.stringify({
         status: 'running',
         taskId,
@@ -1469,8 +1502,14 @@ export const agentTools: MCPTool[] = [
         provider: dispatchResult.provider,
         ownerSessionId: dispatchResult.ownerSessionId,
         ownerClientKind: dispatchResult.ownerClientKind,
-        startedAt: new Date().toISOString(),
+        startedAt: startedAt.toISOString(),
         pid: dispatchResult.pid,
+        // Explicit deadline so the reaper can decide "past deadline, no result"
+        // without re-deriving the timeout from startedAt. The extra grace keeps
+        // the cleanup hook from racing the bridge's own timeout/result write.
+        timeoutMs: timeout,
+        deadlineGraceMs: TASK_DEADLINE_REAPER_GRACE_MS,
+        deadlineAt: new Date(startedAt.getTime() + timeout + TASK_DEADLINE_REAPER_GRACE_MS).toISOString(),
       }, null, 2), 'utf-8');
       appendTaskJournalEvent({
         tasksDir,
@@ -1603,19 +1642,18 @@ export const agentTools: MCPTool[] = [
         // busy->idle transition leaves a dead pid behind whenever another path
         // (reaper/hook/idle-reconcile) already idled the agent without clearing
         // it — which makes read-side liveness count a completed agent as live.
+        let agentTaskCleared = false;
         await withBridgeLock(tracking.agentId, () => {
           const store = loadAgentStore();
           const agent = store.agents[tracking.agentId];
-          if (agent) {
-            let changed = false;
-            if (agent.status === 'busy') { transitionAgent(agent, 'idle'); changed = true; }
-            if (agent.currentTaskPid !== undefined) { delete agent.currentTaskPid; changed = true; }
-            if (changed) saveAgentStore(store);
+          if (clearTerminalTaskIfCurrent(agent, taskId)) {
+            saveAgentStore(store);
+            agentTaskCleared = true;
           }
         });
 
         // Also update hive worker record status
-        try {
+        if (agentTaskCleared) try {
           const { loadHive, saveHive, withHiveLock } = await import('./hive-store.js');
           const { listHives } = await import('./hive-store.js');
           const hives = listHives('active');
@@ -1626,9 +1664,14 @@ export const agentTools: MCPTool[] = [
                 const fresh = loadHive(hive.hiveId);
                 if (!fresh) return;
                 const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
-                if (fw && fw.status === 'busy') {
+                const workerTaskId = typeof (fw as { currentTaskId?: unknown } | undefined)?.currentTaskId === 'string'
+                  ? (fw as { currentTaskId?: string }).currentTaskId
+                  : undefined;
+                if (fw && fw.status === 'busy' && (!workerTaskId || workerTaskId === taskId)) {
                   fw.status = 'idle';
                   fw.idleSince = new Date().toISOString();
+                  delete (fw as { currentTaskPid?: unknown }).currentTaskPid;
+                  delete (fw as { currentTaskId?: unknown }).currentTaskId;
                   saveHive(hive.hiveId, fresh);
                 }
               });
@@ -1675,19 +1718,18 @@ export const agentTools: MCPTool[] = [
           // exited without a result; a lingering currentTaskPid must not be
           // counted as live by the statusboard even if another path already
           // idled the agent without clearing it.
+          let agentTaskCleared = false;
           await withBridgeLock(tracking.agentId, () => {
             const store = loadAgentStore();
             const agent = store.agents[tracking.agentId];
-            if (agent) {
-              let changed = false;
-              if (agent.status === 'busy') { transitionAgent(agent, 'idle'); changed = true; }
-              if (agent.currentTaskPid !== undefined) { delete agent.currentTaskPid; changed = true; }
-              if (changed) saveAgentStore(store);
+            if (clearTerminalTaskIfCurrent(agent, taskId)) {
+              saveAgentStore(store);
+              agentTaskCleared = true;
             }
           });
 
           // Also update hive worker record status
-          try {
+          if (agentTaskCleared) try {
             const { loadHive, saveHive, withHiveLock } = await import('./hive-store.js');
             const { listHives } = await import('./hive-store.js');
             const hives = listHives('active');
@@ -1698,9 +1740,14 @@ export const agentTools: MCPTool[] = [
                   const fresh = loadHive(hive.hiveId);
                   if (!fresh) return;
                   const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
-                  if (fw && fw.status === 'busy') {
+                  const workerTaskId = typeof (fw as { currentTaskId?: unknown } | undefined)?.currentTaskId === 'string'
+                    ? (fw as { currentTaskId?: string }).currentTaskId
+                    : undefined;
+                  if (fw && fw.status === 'busy' && (!workerTaskId || workerTaskId === taskId)) {
                     fw.status = 'idle';
                     fw.idleSince = new Date().toISOString();
+                    delete (fw as { currentTaskPid?: unknown }).currentTaskPid;
+                    delete (fw as { currentTaskId?: unknown }).currentTaskId;
                     saveHive(hive.hiveId, fresh);
                   }
                 });

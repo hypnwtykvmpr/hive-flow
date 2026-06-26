@@ -30,7 +30,7 @@ const fs = require('fs');
 
 const IDLE_TIMEOUT_MS = parseInt(process.env.HIVE_FLOW_IDLE_TIMEOUT_MS, 10) || 900000; // 15 min
 const MIN_WORKERS_PER_HIVE = 5; // queen is separate; keep at least 5 workers alive
-const PROJECT_DIR = path.resolve(__dirname, '..', '..');
+const PROJECT_DIR = path.resolve(process.env.HIVE_FLOW_CLEANUP_PROJECT_DIR || path.join(__dirname, '..', '..'));
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
 const TASKS_DIR = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
 const AGENTS_DIR = path.join(PROJECT_DIR, '.hive-flow', 'agents');
@@ -253,6 +253,67 @@ function isPidDefinitelyDead(pid) {
   }
 }
 
+function safeTaskIdForPath(taskId) {
+  if (typeof taskId !== 'string' || taskId.length === 0) return '';
+  if (path.basename(taskId) !== taskId) return '';
+  if (!/^[A-Za-z0-9._-]+$/.test(taskId)) return '';
+  return taskId;
+}
+
+function readTaskState(taskId) {
+  const safeTaskId = safeTaskIdForPath(taskId);
+  if (!safeTaskId) return { kind: 'unsafe' };
+  const trackingPath = path.join(TASKS_DIR, safeTaskId + '.json');
+  const resultPath = path.join(TASKS_DIR, safeTaskId + '.result.json');
+  if (fs.existsSync(resultPath)) return { kind: 'result-present', resultPath };
+  if (!fs.existsSync(trackingPath)) return { kind: 'missing' };
+  try {
+    return {
+      kind: 'tracking',
+      trackingPath,
+      tracking: JSON.parse(fs.readFileSync(trackingPath, 'utf-8')),
+    };
+  } catch {
+    return { kind: 'malformed', trackingPath };
+  }
+}
+
+function classifyStaleBusyAgent(agentId, agent, nowMs) {
+  const taskId = typeof agent.currentTaskId === 'string' ? agent.currentTaskId : '';
+  const pid = agent.currentTaskPid;
+
+  if (taskId) {
+    const taskState = readTaskState(taskId);
+    if (taskState.kind === 'result-present') {
+      return { stale: true, reason: 'result-file-present', taskId, pid };
+    }
+    if (taskState.kind === 'tracking') {
+      const tracking = taskState.tracking || {};
+      if (tracking.agentId && tracking.agentId !== agentId) {
+        return { stale: false };
+      }
+      const trackingPid = Number.isInteger(tracking.pid) && tracking.pid > 1 ? tracking.pid : undefined;
+      if (isPositivePid(pid) && isPositivePid(trackingPid) && pid !== trackingPid) {
+        return { stale: false };
+      }
+      const deadlineAt = Date.parse(tracking.deadlineAt);
+      if (Number.isFinite(deadlineAt) && nowMs > deadlineAt) {
+        const livePid = isPositivePid(trackingPid) ? trackingPid : pid;
+        if (isPositivePid(livePid) && !isPidDefinitelyDead(livePid)) {
+          return { stale: false };
+        }
+        return { stale: true, reason: 'past-deadline', taskId, pid: livePid };
+      }
+    }
+  }
+
+  if (isPositivePid(pid) && isPidDefinitelyDead(pid)) {
+    return { stale: true, reason: 'dead-pid', taskId, pid };
+  }
+
+  return { stale: false };
+}
+
 // ---------------------------------------------------------------------------
 // Core cleanup logic
 // ---------------------------------------------------------------------------
@@ -424,6 +485,7 @@ async function cleanupStaleBusyAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIM
 
   const staleByAgentId = new Map();
   const nowIso = new Date().toISOString();
+  const nowMs = Date.now();
 
   try {
     let store;
@@ -440,15 +502,21 @@ async function cleanupStaleBusyAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIM
         break;
       }
       if (!agent || agent.status !== 'busy') continue;
-      const pid = agent.currentTaskPid;
-      if (!isPositivePid(pid)) continue;
-      if (!isPidDefinitelyDead(pid)) continue;
+      const stale = classifyStaleBusyAgent(id, agent, nowMs);
+      if (!stale.stale) continue;
 
       summary.staleBusyFound++;
       agent.status = 'idle';
       agent.idleSince = nowIso;
       delete agent.currentTaskPid;
-      staleByAgentId.set(id, { agentId: id, pid, status: 'idle' });
+      delete agent.currentTaskId;
+      staleByAgentId.set(id, {
+        agentId: id,
+        pid: stale.pid,
+        taskId: stale.taskId,
+        reason: stale.reason,
+        status: 'idle',
+      });
     }
 
     if (staleByAgentId.size > 0) {
@@ -481,6 +549,8 @@ async function cleanupStaleBusyAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIM
           if (!stale) continue;
           worker.status = 'idle';
           worker.idleSince = nowIso;
+          delete worker.currentTaskPid;
+          delete worker.currentTaskId;
           changed = true;
           summary.hiveWorkersReaped++;
           stale.hiveId = freshHive.hiveId;
@@ -494,10 +564,12 @@ async function cleanupStaleBusyAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIM
             timestamp: nowIso,
             event: 'worker-idle',
             hiveId: freshHive.hiveId,
-            detail: 'Stale busy cleanup: marked worker idle after child PID disappeared',
+            detail: 'Stale busy cleanup: marked worker idle after task terminal/stale proof',
             agentId: stale.agentId,
             workerId: stale.workerId,
             pid: stale.pid,
+            taskId: stale.taskId,
+            reason: stale.reason,
           });
         }
         saveHive(freshHive.hiveId, freshHive);
@@ -957,11 +1029,7 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
   return summary;
 }
 
-// ---------------------------------------------------------------------------
-// Main — run all cleanup and output JSON to stdout
-// ---------------------------------------------------------------------------
-
-(async () => {
+async function runCleanupMain() {
   try {
     const deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS;
     const hiveResult = await cleanupIdleAgents(deadline);
@@ -1034,4 +1102,25 @@ function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS
       error: err && err.message ? err.message : String(err),
     }));
   }
-})();
+}
+
+module.exports = {
+  cleanupIdleAgents,
+  cleanupStaleBusyAgents,
+  cleanupOrphanedAgents,
+  autoFailStuckActiveHives,
+  cleanupStaleHiveDirs,
+  pruneTerminatedAgents,
+  cleanupAgedAgentStoreRecords,
+  cleanupOrphanedTasks,
+  cleanupLegacyWatchersDir,
+  runCleanupMain,
+};
+
+// ---------------------------------------------------------------------------
+// Main — run all cleanup and output JSON to stdout
+// ---------------------------------------------------------------------------
+
+if (require.main === module) {
+  void runCleanupMain();
+}
