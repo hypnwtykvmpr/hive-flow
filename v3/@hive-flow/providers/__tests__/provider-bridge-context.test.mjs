@@ -315,9 +315,9 @@ describe('provider bridge context helpers', () => {
     expect(bridge.estimateTokensFromText('   ')).toBe(1);
     expect(bridge.estimateTokensFromText(null)).toBe(0);
     expect(bridge.estimateTokensFromText({ value: 'not text' })).toBe(0);
-    expect(bridge.estimateTokensFromText('abcd')).toBe(1);
+    expect(bridge.estimateTokensFromText('abcd')).toBe(2);
     expect(bridge.estimateTokensFromText('abcde')).toBe(2);
-    expect(bridge.estimateTokensFromText('x'.repeat(40_000))).toBe(10_000);
+    expect(bridge.estimateTokensFromText('x'.repeat(40_000))).toBe(13_000);
     expect(bridge.estimateTokensFromText('x'.repeat(4_000))).toBeGreaterThan(
       bridge.estimateTokensFromText('x'.repeat(400)),
     );

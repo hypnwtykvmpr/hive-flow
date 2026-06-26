@@ -740,6 +740,7 @@ const stderrLogger = {
 
 const DEFAULT_MAX_HISTORY_ENTRIES = 50;
 const DEFAULT_MAX_PROMPT_TOKENS = 128000; // 128K tokens safe default
+const TOKEN_ESTIMATE_PAD = 1.3;
 const RUN_SHELL_DEFAULT_TIMEOUT_MS = 30_000;
 const RUN_SHELL_MAX_TIMEOUT_MS = 120_000;
 const RUN_SHELL_DEFAULT_STDOUT_LIMIT_BYTES = 256 * 1024;
@@ -988,11 +989,10 @@ function createStrictHolderProvider(providerName, config, agentId) {
   };
 }
 
-// Token estimation: ~4 chars per token (conservative for code/mixed content)
+// Token estimation: ~4 chars per token with a safety pad for code/JSON/CJK-heavy content.
 export function estimateTokensFromText(text) {
   if (typeof text !== 'string') return 0;
-  // Rough estimate: characters / 4
-  return Math.ceil(text.length / 4);
+  return Math.ceil((text.length / 4) * TOKEN_ESTIMATE_PAD);
 }
 
 function estimateMessageTokens(msg) {
@@ -1578,8 +1578,10 @@ export function trimMessages(messages, limits) {
       if (summarized === member.msg) continue;
 
       const originalMemberTokens = member.tokens;
+      const summarizedTokens = estimateMessageTokens(summarized);
+      if (summarizedTokens >= originalMemberTokens) continue;
       member.msg = summarized;
-      member.tokens = estimateMessageTokens(summarized);
+      member.tokens = summarizedTokens;
       member.bytes = messageByteLength(summarized);
       unit.tokens += member.tokens - originalMemberTokens;
       totalTokens += member.tokens - originalMemberTokens;
@@ -1611,8 +1613,10 @@ export function trimMessages(messages, limits) {
       if (summarized === member.msg) continue;
 
       const originalMemberTokens = member.tokens;
+      const summarizedTokens = estimateMessageTokens(summarized);
+      if (summarizedTokens >= originalMemberTokens) continue;
       member.msg = summarized;
-      member.tokens = estimateMessageTokens(summarized);
+      member.tokens = summarizedTokens;
       member.bytes = messageByteLength(summarized);
       unit.tokens += member.tokens - originalMemberTokens;
       totalTokens += member.tokens - originalMemberTokens;
