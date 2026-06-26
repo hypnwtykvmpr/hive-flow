@@ -1446,6 +1446,167 @@ export function normalizeForProvider(messages) {
   return normalized;
 }
 
+function createLogicalMember(msg, index) {
+  return {
+    index,
+    msg,
+    tokens: estimateMessageTokens(msg),
+    bytes: messageByteLength(msg),
+  };
+}
+
+function finalizeLogicalUnit(unit, protectedIndices) {
+  unit.members.sort((a, b) => a.index - b.index);
+  unit.startIndex = unit.members[0]?.index ?? Number.POSITIVE_INFINITY;
+  unit.protected = unit.members.some((member) => protectedIndices.has(member.index));
+  unit.tokens = unit.members.reduce((sum, member) => sum + member.tokens, 0);
+  return unit;
+}
+
+export function buildLogicalUnits(sourceMessages) {
+  if (!Array.isArray(sourceMessages) || sourceMessages.length === 0) return [];
+
+  const protectedIndices = new Set();
+  if (sourceMessages[0]?.role === 'system') protectedIndices.add(0);
+  const firstUserIndex = sourceMessages.findIndex((msg, index) => msg.role === 'user' && index <= 1);
+  if (firstUserIndex !== -1) protectedIndices.add(firstUserIndex);
+  protectedIndices.add(sourceMessages.length - 1);
+
+  const units = [];
+  const toolResultBacklog = [];
+  const assistantUnitsByCallId = new Map();
+
+  for (let index = 0; index < sourceMessages.length; index += 1) {
+    const msg = sourceMessages[index];
+    const member = createLogicalMember(msg, index);
+
+    if (msg.role === 'assistant') {
+      const toolCalls = toolCallsOf(msg);
+      if (toolCalls.length > 0) {
+        const unit = { members: [member], protected: false, startIndex: index, tokens: 0 };
+        units.push(unit);
+        for (const toolCall of toolCalls) {
+          if (toolCall?.id) assistantUnitsByCallId.set(toolCall.id, unit);
+        }
+        continue;
+      }
+    }
+
+    if (msg.role === 'tool') {
+      const toolCallId = toolCallIdOf(msg);
+      const parentUnit = toolCallId ? assistantUnitsByCallId.get(toolCallId) : null;
+      if (parentUnit) {
+        parentUnit.members.push(member);
+      } else {
+        toolResultBacklog.push(member);
+      }
+      continue;
+    }
+
+    units.push({ members: [member], protected: false, startIndex: index, tokens: 0 });
+  }
+
+  for (const member of toolResultBacklog) {
+    const toolCallId = toolCallIdOf(member.msg);
+    const parentUnit = toolCallId ? assistantUnitsByCallId.get(toolCallId) : null;
+    if (parentUnit) {
+      parentUnit.members.push(member);
+    } else {
+      units.push({ members: [member], protected: false, startIndex: member.index, tokens: 0 });
+    }
+  }
+
+  return units
+    .filter((unit) => unit.members.length > 0)
+    .map((unit) => finalizeLogicalUnit(unit, protectedIndices))
+    .sort((a, b) => a.startIndex - b.startIndex);
+}
+
+function totalLogicalMessageCount(units) {
+  return units.reduce((sum, unit) => sum + unit.members.length, 0);
+}
+
+function recalculateLogicalTokens(units) {
+  return units.reduce((sum, unit) => sum + unit.tokens, 0);
+}
+
+function flattenLogicalUnits(units) {
+  return units
+    .slice()
+    .sort((a, b) => a.startIndex - b.startIndex)
+    .flatMap((unit) => unit.members.slice().sort((a, b) => a.index - b.index).map((member) => member.msg));
+}
+
+function removeOrphanedToolResults(compactedMessages) {
+  const liveToolCallIds = new Set();
+  for (const msg of compactedMessages) {
+    if (msg.role !== 'assistant') continue;
+    for (const toolCall of toolCallsOf(msg)) {
+      if (toolCall?.id) liveToolCallIds.add(toolCall.id);
+    }
+  }
+
+  const cleaned = compactedMessages.filter((msg) => {
+    if (msg.role !== 'tool') return true;
+    const toolCallId = toolCallIdOf(msg);
+    return Boolean(toolCallId && liveToolCallIds.has(toolCallId));
+  });
+
+  if (cleaned.length !== compactedMessages.length) {
+    bridgeLog('info', 'Removed orphaned tool results', {
+      removedCount: compactedMessages.length - cleaned.length,
+    });
+  }
+
+  return cleaned;
+}
+
+export function compactPersistedConversationHistory(history, limits) {
+  if (!Array.isArray(history) || history.length === 0) {
+    return Array.isArray(history) ? history : [];
+  }
+
+  const maxEntries = typeof limits?.maxEntries === 'number' ? limits.maxEntries : Number.POSITIVE_INFINITY;
+  const units = buildLogicalUnits(history).slice();
+
+  while (Number.isFinite(maxEntries) && totalLogicalMessageCount(units) > maxEntries) {
+    const dropIndex = units.findIndex((unit) => !unit.protected);
+    if (dropIndex === -1) break;
+
+    const [droppedUnit] = units.splice(dropIndex, 1);
+    bridgeLog('info', 'Persisted history whole-unit drop', {
+      startIndex: droppedUnit.startIndex,
+      members: droppedUnit.members.length,
+      roles: droppedUnit.members.map((member) => member.msg.role),
+      maxEntries,
+      remainingEntries: totalLogicalMessageCount(units),
+    });
+  }
+
+  return normalizeForProvider(removeOrphanedToolResults(flattenLogicalUnits(units)));
+}
+
+export function buildProviderLastResult(response, request, toolUse, resultFile) {
+  const fullContent = response?.content ?? '';
+  const taskId = taskIdFromResultFile(resultFile);
+  const truncated = fullContent.length > 10240;
+  return {
+    content: fullContent.slice(0, 10240),
+    summary: fullContent.slice(0, 200),
+    truncated,
+    originalLength: fullContent.length,
+    ...(taskId ? { taskId } : {}),
+    ...(truncated && taskId
+      ? { retrievalHint: `Result truncated (${fullContent.length} chars). Call agent_task_result({taskId:"${taskId}"}) for full final payload.` }
+      : {}),
+    model: response?.model || request?.model,
+    usage: response?.usage,
+    cost: response?.cost,
+    toolUse,
+    completedAt: new Date().toISOString(),
+  };
+}
+
 export function trimMessages(messages, limits) {
   if (!limits) {
     throw new Error('trimMessages requires limits');
@@ -1458,137 +1619,12 @@ export function trimMessages(messages, limits) {
   const warningThreshold = typeof limits.warningThreshold === 'number' ? limits.warningThreshold : limits.maxTokens;
   const originalMessageCount = messages.length;
 
-  function getToolCalls(msg) {
-    if (Array.isArray(msg.toolCalls)) return msg.toolCalls;
-    if (Array.isArray(msg.tool_calls)) return msg.tool_calls;
-    return [];
-  }
-
-  function getToolCallId(msg) {
-    if (typeof msg.toolCallId === 'string') return msg.toolCallId;
-    if (typeof msg.tool_call_id === 'string') return msg.tool_call_id;
-    return null;
-  }
-
-  function createMember(msg, index) {
-    return {
-      index,
-      msg,
-      tokens: estimateMessageTokens(msg),
-      bytes: messageByteLength(msg),
-    };
-  }
-
-  function finalizeUnit(unit, protectedIndices) {
-    unit.members.sort((a, b) => a.index - b.index);
-    unit.startIndex = unit.members[0]?.index ?? Number.POSITIVE_INFINITY;
-    unit.protected = unit.members.some((member) => protectedIndices.has(member.index));
-    unit.tokens = unit.members.reduce((sum, member) => sum + member.tokens, 0);
-    return unit;
-  }
-
-  function buildLogicalUnits(sourceMessages) {
-    const protectedIndices = new Set();
-    if (sourceMessages[0]?.role === 'system') protectedIndices.add(0);
-    const firstUserIndex = sourceMessages.findIndex((msg, index) => msg.role === 'user' && index <= 1);
-    if (firstUserIndex !== -1) protectedIndices.add(firstUserIndex);
-    protectedIndices.add(sourceMessages.length - 1);
-
-    const units = [];
-    const toolResultBacklog = [];
-    const assistantUnitsByCallId = new Map();
-
-    for (let index = 0; index < sourceMessages.length; index++) {
-      const msg = sourceMessages[index];
-      const member = createMember(msg, index);
-
-      if (msg.role === 'assistant') {
-        const toolCalls = getToolCalls(msg);
-        if (toolCalls.length > 0) {
-          const unit = { members: [member], protected: false, startIndex: index, tokens: 0 };
-          units.push(unit);
-          for (const toolCall of toolCalls) {
-            if (toolCall?.id) assistantUnitsByCallId.set(toolCall.id, unit);
-          }
-          continue;
-        }
-      }
-
-      if (msg.role === 'tool') {
-        const toolCallId = getToolCallId(msg);
-        const parentUnit = toolCallId ? assistantUnitsByCallId.get(toolCallId) : null;
-        if (parentUnit) {
-          parentUnit.members.push(member);
-        } else {
-          toolResultBacklog.push(member);
-        }
-        continue;
-      }
-
-      units.push({ members: [member], protected: false, startIndex: index, tokens: 0 });
-    }
-
-    for (const member of toolResultBacklog) {
-      const toolCallId = getToolCallId(member.msg);
-      const parentUnit = toolCallId ? assistantUnitsByCallId.get(toolCallId) : null;
-      if (parentUnit) {
-        parentUnit.members.push(member);
-      } else {
-        units.push({ members: [member], protected: false, startIndex: member.index, tokens: 0 });
-      }
-    }
-
-    return units
-      .filter((unit) => unit.members.length > 0)
-      .map((unit) => finalizeUnit(unit, protectedIndices))
-      .sort((a, b) => a.startIndex - b.startIndex);
-  }
-
-  function totalMessageCount(units) {
-    return units.reduce((sum, unit) => sum + unit.members.length, 0);
-  }
-
-  function recalculateTotals(units) {
-    return units.reduce((sum, unit) => sum + unit.tokens, 0);
-  }
-
   function withinHardLimits(units, totalTokens) {
-    return totalTokens <= limits.maxTokens && totalMessageCount(units) <= maxEntries;
-  }
-
-  function flattenUnits(units) {
-    return units
-      .slice()
-      .sort((a, b) => a.startIndex - b.startIndex)
-      .flatMap((unit) => unit.members.slice().sort((a, b) => a.index - b.index).map((member) => member.msg));
-  }
-
-  function removeOrphanedToolResults(compactedMessages) {
-    const liveToolCallIds = new Set();
-    for (const msg of compactedMessages) {
-      if (msg.role !== 'assistant') continue;
-      for (const toolCall of getToolCalls(msg)) {
-        if (toolCall?.id) liveToolCallIds.add(toolCall.id);
-      }
-    }
-
-    const cleaned = compactedMessages.filter((msg) => {
-      if (msg.role !== 'tool') return true;
-      const toolCallId = getToolCallId(msg);
-      return Boolean(toolCallId && liveToolCallIds.has(toolCallId));
-    });
-
-    if (cleaned.length !== compactedMessages.length) {
-      bridgeLog('info', 'Removed orphaned tool results', {
-        removedCount: compactedMessages.length - cleaned.length,
-      });
-    }
-
-    return cleaned;
+    return totalTokens <= limits.maxTokens && totalLogicalMessageCount(units) <= maxEntries;
   }
 
   const units = buildLogicalUnits(messages);
-  const originalTokens = recalculateTotals(units);
+  const originalTokens = recalculateLogicalTokens(units);
   let totalTokens = originalTokens;
 
   bridgeLog('debug', 'Context size check', {
@@ -1601,7 +1637,7 @@ export function trimMessages(messages, limits) {
   });
 
   if (totalTokens <= warningThreshold && withinHardLimits(units, totalTokens)) {
-    return removeOrphanedToolResults(flattenUnits(units));
+    return removeOrphanedToolResults(flattenLogicalUnits(units));
   }
 
   if (totalTokens > warningThreshold) {
@@ -1623,7 +1659,7 @@ export function trimMessages(messages, limits) {
     }
 
     if (totalTokens <= warningThreshold && withinHardLimits(units, totalTokens)) {
-      const compacted = removeOrphanedToolResults(flattenUnits(units));
+      const compacted = removeOrphanedToolResults(flattenLogicalUnits(units));
       bridgeLog('info', 'Proactive trimming successful', {
         originalTokens,
         finalTokens: totalTokens,
@@ -1665,7 +1701,7 @@ export function trimMessages(messages, limits) {
   }
 
   if (withinHardLimits(units, totalTokens)) {
-    return removeOrphanedToolResults(flattenUnits(units));
+    return removeOrphanedToolResults(flattenLogicalUnits(units));
   }
 
   for (const unit of units) {
@@ -1716,7 +1752,7 @@ export function trimMessages(messages, limits) {
 
   // Safety net: if protected messages alone exceed the limit, aggressively truncate
   // the largest message content to fit. Never return over-limit.
-  let result = removeOrphanedToolResults(flattenUnits(units));
+  let result = removeOrphanedToolResults(flattenLogicalUnits(units));
   let finalTokens = result.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
 
   function splitEmergencyTruncatedText(text) {
@@ -6311,22 +6347,12 @@ async function main() {
     });
 
     const limits = getProviderLimits(providerName, agent.resolvedModel);
-    while (history.length > limits.maxEntries) {
-      history.shift();
-    }
+    const compactedHistory = compactPersistedConversationHistory(history, limits);
 
-    agent.conversationHistory = history;
+    agent.conversationHistory = compactedHistory;
     agent.taskCount = (agent.taskCount || 0) + 1;
     agent.lastTaskAt = new Date().toISOString();
-    agent.lastResult = {
-      content: (response.content ?? '').slice(0, 10240),
-      summary: (response.content ?? '').slice(0, 200),
-      model: response.model || request.model,
-      usage: response.usage,
-      cost: response.cost,
-      toolUse,
-      completedAt: new Date().toISOString(),
-    };
+    agent.lastResult = buildProviderLastResult(response, request, toolUse, resultFile);
 
     const completedConversationHistory = agent.conversationHistory;
     const completedTaskCount = agent.taskCount;
@@ -6355,7 +6381,7 @@ async function main() {
       usage: response.usage,
       cost: response.cost,
       toolUse,
-      historyLength: history.length,
+      historyLength: agent.conversationHistory.length,
       taskCount: agent.taskCount,
     };
   } finally {

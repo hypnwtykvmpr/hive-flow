@@ -98,6 +98,30 @@ function toolMessages(messages) {
   return messages.filter((msg) => msg.role === 'tool');
 }
 
+function assertNoDanglingToolPairs(messages) {
+  const liveCalls = new Set();
+  for (const msg of messages) {
+    const calls = Array.isArray(msg.toolCalls)
+      ? msg.toolCalls
+      : Array.isArray(msg.tool_calls)
+        ? msg.tool_calls
+        : [];
+    for (const call of calls) {
+      if (call?.id) liveCalls.add(call.id);
+    }
+  }
+
+  for (const msg of messages) {
+    if (msg.role !== 'tool') continue;
+    const id = typeof msg.toolCallId === 'string'
+      ? msg.toolCallId
+      : typeof msg.tool_call_id === 'string'
+        ? msg.tool_call_id
+        : null;
+    expect(liveCalls.has(id)).toBe(true);
+  }
+}
+
 describe('Slice A microcompaction budget heuristic', () => {
   it('pads chars/4 token estimates by 1.3 without changing non-string handling', () => {
     expect(bridge.estimateTokensFromText(null)).toBe(0);
@@ -317,5 +341,71 @@ describe('Slice D microcompaction structured result truncation', () => {
     expect(truncated).toContain('line-0');
     expect(truncated).toContain('line-79');
     expect(() => JSON.parse(truncated)).toThrow();
+  });
+});
+
+describe('Slice E microcompaction persisted history and final result disclosure', () => {
+  it('caps persisted conversation history by dropping whole logical units', () => {
+    const history = toolHistory(6);
+
+    const compacted = bridge.compactPersistedConversationHistory(history, { maxEntries: 6 });
+    const serialized = JSON.stringify(compacted);
+
+    expect(compacted.length).toBeLessThanOrEqual(6);
+    expect(compacted[0]).toEqual(history[0]);
+    expect(compacted[1]).toEqual(history[1]);
+    expect(compacted.at(-1)).toEqual(history.at(-1));
+    expect(serialized).not.toContain('call_0');
+    expect(serialized).not.toContain('payload-0');
+    expect(serialized).toContain('call_5');
+    expect(serialized).toContain('payload-5');
+    assertNoDanglingToolPairs(compacted);
+  });
+
+  it('cleans persisted orphan tool results and incomplete assistant calls', () => {
+    const history = [
+      { role: 'user', content: 'first' },
+      {
+        role: 'assistant',
+        content: 'I tried a tool',
+        toolCalls: [{ id: 'missing', type: 'function', function: { name: 'read_file', arguments: '{}' } }],
+      },
+      { role: 'tool', toolCallId: 'orphan', name: 'read_file', content: 'orphan payload' },
+    ];
+
+    const compacted = bridge.compactPersistedConversationHistory(history, { maxEntries: 20 });
+
+    expect(compacted).toEqual([
+      { role: 'user', content: 'first' },
+      { role: 'assistant', content: 'I tried a tool' },
+    ]);
+    assertNoDanglingToolPairs(compacted);
+  });
+
+  it('adds final-result disclosure fields for queen collection and agent_task_result recovery', () => {
+    const fullContent = 'z'.repeat(12_000);
+    const lastResult = bridge.buildProviderLastResult(
+      {
+        content: fullContent,
+        model: 'gpt-5.5',
+        usage: { totalTokens: 123 },
+        cost: 0.42,
+      },
+      { model: 'fallback-model' },
+      { iterations: 1, tools: ['read_file'] },
+      '/tmp/task-abc123.result.json',
+    );
+
+    expect(lastResult.content).toHaveLength(10_240);
+    expect(lastResult.summary).toHaveLength(200);
+    expect(lastResult.truncated).toBe(true);
+    expect(lastResult.originalLength).toBe(fullContent.length);
+    expect(lastResult.taskId).toBe('task-abc123');
+    expect(lastResult.retrievalHint).toBe(
+      'Result truncated (12000 chars). Call agent_task_result({taskId:"task-abc123"}) for full final payload.',
+    );
+    expect(lastResult.model).toBe('gpt-5.5');
+    expect(lastResult.usage.totalTokens).toBe(123);
+    expect(lastResult.toolUse.tools).toEqual(['read_file']);
   });
 });
