@@ -2216,13 +2216,51 @@ function bridgeAgentModeDenyReason(toolName, modeInfo = bridgeReadAgentMode()) {
         error: `Tool '${toolName}' is denied because artifact-mode agents cannot execute commands.`,
       };
     }
-    if (BRIDGE_AGENT_MODE_MUTATOR_TOOLS.has(toolName)) {
-      return {
-        denyReason: 'agent-mode-artifact-write-pending',
-        error: `Tool '${toolName}' is denied until artifact write confinement is active for this agent mode.`,
-      };
-    }
   }
+  return null;
+}
+
+function bridgeArtifactWritePathHasAllowedExtension(safePath) {
+  const name = basename(safePath).toLowerCase();
+  return name.endsWith('.json') || name.endsWith('.md');
+}
+
+function bridgeAgentModeArtifactWriteDenyReason(toolName, parsedArgs, modeInfo = bridgeReadAgentMode()) {
+  if (modeInfo?.mode !== 'read-only-with-artifacts') return null;
+  if (!BRIDGE_AGENT_MODE_MUTATOR_TOOLS.has(toolName)) return null;
+
+  const filePath = parsedArgs?.path;
+  if (typeof filePath !== 'string' || !filePath.trim()) {
+    return {
+      denyReason: 'agent-mode-artifact-path-denied',
+      error: `Tool '${toolName}' is denied because artifact-mode writes require a valid target path.`,
+    };
+  }
+
+  let safePath;
+  try {
+    safePath = validateFilePath(filePath);
+  } catch (err) {
+    return {
+      denyReason: 'agent-mode-artifact-path-denied',
+      error: `Tool '${toolName}' is denied because the target is outside the project root: ${err.message || String(err)}`,
+    };
+  }
+
+  if (!bridgePathIsInside(modeInfo.artifactDir, safePath)) {
+    return {
+      denyReason: 'agent-mode-artifact-path-denied',
+      error: `Tool '${toolName}' is denied because artifact-mode writes must stay inside the persisted artifactDir.`,
+    };
+  }
+
+  if (!bridgeArtifactWritePathHasAllowedExtension(safePath)) {
+    return {
+      denyReason: 'agent-mode-artifact-extension-denied',
+      error: `Tool '${toolName}' is denied because artifact-mode writes are limited to .json and .md files.`,
+    };
+  }
+
   return null;
 }
 
@@ -4849,6 +4887,14 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
     const denyReason = parsedArgs.reason === 'args-too-large' ? 'args-too-large' : 'malformed-args';
     stderrLogger.warn(`Tool args denied (${denyReason}): ${toolName}`);
     return bridgeDeniedTool(toolName, denyReason, `Tool '${toolName}' args ${denyReason === 'args-too-large' ? 'exceed 1MB size cap' : 'are not valid JSON'}.`);
+  }
+
+  const artifactWriteDenial = bridgeAgentModeArtifactWriteDenyReason(toolName, parsedArgs);
+  if (artifactWriteDenial) {
+    stderrLogger.warn(`Tool denied by persisted artifact mode: ${toolName}`, {
+      denyReason: artifactWriteDenial.denyReason,
+    });
+    return bridgeDeniedTool(toolName, artifactWriteDenial.denyReason, artifactWriteDenial.error);
   }
 
   try {

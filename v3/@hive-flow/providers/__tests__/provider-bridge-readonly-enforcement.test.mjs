@@ -64,6 +64,15 @@ function writeLevelZeroEnforcement(root) {
   writeFileSync(join(enforcementDir, 'state.json'), JSON.stringify(envelope, null, 2), 'utf8');
 }
 
+function gitInitCommit(root) {
+  const opts = { cwd: root, stdio: 'ignore' };
+  execFileSync('git', ['init', '-q'], opts);
+  execFileSync('git', ['config', 'user.email', 'a@b.c'], opts);
+  execFileSync('git', ['config', 'user.name', 'test'], opts);
+  execFileSync('git', ['add', '-A'], opts);
+  execFileSync('git', ['commit', '-q', '-m', 'fixture'], opts);
+}
+
 function runTool(root, toolName, toolArgs, { agentId = 'mode-agent' } = {}) {
   const script = `
     const bridge = await import(${JSON.stringify(pathToFileURL(bridgePath).href)});
@@ -166,16 +175,13 @@ describe('provider bridge read-only mode enforcement', () => {
   });
 
   it.each([
-    ['write_file', { path: 'src/artifact.md', content: '# pending' }, 'agent-mode-artifact-write-pending'],
-    ['edit_file', { path: 'src/artifact.md', old_string: 'x', new_string: 'y' }, 'agent-mode-artifact-write-pending'],
-    ['run_shell', { command: 'pwd' }, 'agent-mode-artifact-exec-denied'],
-    ['run_command', { command: 'pwd' }, 'agent-mode-artifact-exec-denied'],
-  ])('fails safe for %s in artifact mode until R3 confinement is active', (toolName, toolArgs, denyReason) => {
+    ['run_shell', { command: 'pwd' }],
+    ['run_command', { command: 'pwd' }],
+  ])('denies %s for artifact-mode agents', (toolName, toolArgs) => {
     const root = makeProjectRoot('hfmode-artifact-deny-');
     roots.push(root);
     const artifactDir = join(root, '.tmp-audit', 'agent-artifacts');
     mkdirSync(artifactDir, { recursive: true });
-    writeFileSync(join(root, 'src', 'artifact.md'), 'x', 'utf8');
     writeStore(root, 'mode-agent', {
       mode: 'read-only-with-artifacts',
       artifactDir,
@@ -184,9 +190,121 @@ describe('provider bridge read-only mode enforcement', () => {
     const result = runTool(root, toolName, toolArgs);
 
     expect(result).toMatchObject({
-      status: 'denied',
-      denyReason,
       tool: toolName,
+      status: 'denied',
+      denyReason: 'agent-mode-artifact-exec-denied',
     });
+  });
+
+  it.each([
+    ['write_file', 'report.md', '# report\n'],
+    ['write_file', 'data.JSON', '{"ok":true}\n'],
+  ])('allows %s to create %s inside the persisted artifactDir', (toolName, fileName, content) => {
+    const root = makeProjectRoot('hfmode-artifact-write-');
+    roots.push(root);
+    writeLevelZeroEnforcement(root);
+    const artifactDir = join(root, '.tmp-audit', 'agent-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+    writeStore(root, 'mode-agent', {
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
+    const target = join(artifactDir, fileName);
+
+    const result = runTool(root, toolName, { path: target, content });
+
+    expect(result).toMatch(/File written:/);
+    expect(readFileSync(target, 'utf8')).toBe(content);
+  });
+
+  it('allows edit_file for .md artifacts inside the persisted artifactDir', () => {
+    const root = makeProjectRoot('hfmode-artifact-edit-');
+    roots.push(root);
+    writeLevelZeroEnforcement(root);
+    const artifactDir = join(root, '.tmp-audit', 'agent-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+    const target = join(artifactDir, 'notes.md');
+    writeFileSync(target, 'before\n', 'utf8');
+    writeStore(root, 'mode-agent', {
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
+
+    const result = runTool(root, 'edit_file', { path: target, old_string: 'before', new_string: 'after' });
+
+    expect(result).toMatch(/File edited:/);
+    expect(readFileSync(target, 'utf8')).toBe('after\n');
+  });
+
+  it('denies artifact-mode writes outside the persisted artifactDir even when tool args forge another artifactDir', () => {
+    const root = makeProjectRoot('hfmode-artifact-outside-');
+    roots.push(root);
+    writeLevelZeroEnforcement(root);
+    const artifactDir = join(root, '.tmp-audit', 'agent-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+    const outside = join(root, 'src', 'outside.md');
+    writeStore(root, 'mode-agent', {
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
+
+    const result = runTool(root, 'write_file', {
+      path: outside,
+      content: 'blocked\n',
+      artifactDir: join(root, 'src'),
+      mode: 'full',
+    });
+
+    expect(result).toMatchObject({
+      status: 'denied',
+      denyReason: 'agent-mode-artifact-path-denied',
+      tool: 'write_file',
+    });
+    expect(() => readFileSync(outside, 'utf8')).toThrow();
+  });
+
+  it('denies artifact-mode writes with non-artifact file extensions', () => {
+    const root = makeProjectRoot('hfmode-artifact-extension-');
+    roots.push(root);
+    writeLevelZeroEnforcement(root);
+    const artifactDir = join(root, '.tmp-audit', 'agent-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+    const target = join(artifactDir, 'script.txt');
+    writeStore(root, 'mode-agent', {
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
+
+    const result = runTool(root, 'write_file', { path: target, content: 'blocked\n' });
+
+    expect(result).toMatchObject({
+      status: 'denied',
+      denyReason: 'agent-mode-artifact-extension-denied',
+      tool: 'write_file',
+    });
+    expect(() => readFileSync(target, 'utf8')).toThrow();
+  });
+
+  it('still applies the tracked-source write gate after artifact confinement passes', () => {
+    const root = makeProjectRoot('hfmode-artifact-source-gate-');
+    roots.push(root);
+    writeLevelZeroEnforcement(root);
+    const artifactDir = join(root, 'src');
+    const target = join(artifactDir, 'tracked.md');
+    writeFileSync(target, 'safe\n', 'utf8');
+    writeStore(root, 'mode-agent', {
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
+    gitInitCommit(root);
+
+    const result = runTool(root, 'write_file', { path: target, content: 'blocked\n' });
+
+    expect(result).toMatchObject({
+      status: 'error',
+      tool: 'write_file',
+    });
+    expect(result.error).toMatch(/tracked|write authority/i);
+    expect(readFileSync(target, 'utf8')).toBe('safe\n');
   });
 });
