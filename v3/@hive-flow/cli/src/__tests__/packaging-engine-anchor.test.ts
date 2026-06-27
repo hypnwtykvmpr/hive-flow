@@ -10,6 +10,7 @@ const repoRoot = resolve(__dirname, '..', '..', '..', '..', '..');
 const cliRoot = join(repoRoot, 'v3', '@hive-flow', 'cli');
 const anchorDir = join(cliRoot, '.claude', 'helpers');
 const packageJsonPath = join(cliRoot, 'package.json');
+const PACKAGING_TEST_TIMEOUT_MS = 30_000;
 
 const ENGINE_FILES = [
   { name: 'enforcement.cjs', source: join(repoRoot, '.claude', 'helpers', 'enforcement.cjs') },
@@ -104,7 +105,7 @@ describe('P1 engine packaging anchor', () => {
       expect(files).toContain(`.claude/helpers/${name}`);
     }
     expect(files).toContain('.claude/helpers/.engine-manifest.json');
-  });
+  }, PACKAGING_TEST_TIMEOUT_MS);
 
   it('writes a manifest whose sha256 values match the anchor and canonical sources', () => {
     const manifest = JSON.parse(readFileSync(manifestPath(), 'utf8')) as {

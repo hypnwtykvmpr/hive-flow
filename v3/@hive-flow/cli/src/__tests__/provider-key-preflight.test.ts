@@ -58,6 +58,8 @@ interface AgentRecord {
   taskCount: number;
   config: Record<string, unknown>;
   createdAt: string;
+  ownerSessionId?: string;
+  ownerClientKind?: string;
   provider?: string;
   model?: string;
   resolvedModel?: string;
@@ -234,8 +236,11 @@ describe('PH-B8 provider-key preflight', () => {
     expect(spawn).not.toHaveBeenCalled();
   });
 
-  it('fails fast at agent_task before spawning the provider bridge for a legacy openrouter agent when holder is unavailable', async () => {
-    const agent = makeAgent();
+  it('fails fast at agent_task before spawning the provider bridge for an owned openrouter agent when holder is unavailable', async () => {
+    const agent = makeAgent({
+      ownerSessionId: 'test-owner-session',
+      ownerClientKind: 'claude',
+    });
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
     const result = await agentTaskTool.handler({

@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { operatorSessionEnvKeys } from '../mcp-tools/session-id.js';
 
 const AGENT_TOOLS_PATH = resolve(
   __dirname,
@@ -45,11 +46,11 @@ describe('d3-003: callerAgentId fallback chain', () => {
     expect(callerAssignment).toContain('CLAUDE_AGENT_ID');
   });
 
-  it('CLAUDE_SESSION_ID still appears in legitimate session-id usage elsewhere in the file', () => {
-    // The session id is legitimately used for ownerSessionId — confirm it
-    // still exists somewhere in the file so we did not accidentally remove all uses.
-    const sessionUsage = src.indexOf('CLAUDE_SESSION_ID');
-    expect(sessionUsage).toBeGreaterThan(-1);
+  it('operator session ids still flow through the legitimate session helper', () => {
+    // Session ids are legitimately used for ownerSessionId via the shared helper
+    // so new parent CLI keys stay centralized instead of being copied here.
+    expect(src).toContain('operatorSessionEnvKeys');
+    expect(operatorSessionEnvKeys()).toContain('CLAUDE_SESSION_ID');
 
     // Confirm the only surviving use is outside the callerAgentId block
     const callerAssignment = getAgentUpdateCallerBlock();
@@ -112,10 +113,6 @@ describe('agent_task bridge env includes non-secret notification routing keys', 
     'HIVE_FLOW_PROJECT_ROOT',
     'HIVE_FLOW_SESSION_ID',
     'HIVE_FLOW_CLIENT_KIND',
-    'CLAUDE_SESSION_ID',
-    'CODEX_SESSION_ID',
-    'CODEX_THREAD_ID',
-    'HIVE_FLOW_SESSION_ID',
   ] as const;
 
   it('preserves session/home routing env for detached bridge completion notifications', () => {
@@ -129,5 +126,12 @@ describe('agent_task bridge env includes non-secret notification routing keys', 
     for (const key of REQUIRED_ROUTING_KEYS) {
       expect(setLiteral, `BRIDGE_BASE_ENV_KEYS must contain '${key}'`).toContain(`'${key}'`);
     }
+    expect(setLiteral).toContain('...operatorSessionEnvKeys()');
+    expect(operatorSessionEnvKeys()).toEqual(expect.arrayContaining([
+      'CLAUDE_SESSION_ID',
+      'CLAUDE_CODE_SESSION_ID',
+      'CODEX_SESSION_ID',
+      'CODEX_THREAD_ID',
+    ]));
   });
 });

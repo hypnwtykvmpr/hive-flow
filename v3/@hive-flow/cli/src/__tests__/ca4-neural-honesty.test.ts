@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { extname, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -35,19 +35,32 @@ const PROHIBITED_BY_PATH = [
   },
 ] as const;
 
-function shouldScan(relativePath: string): boolean {
-  return !relativePath
+function ignoredPathSegment(relativePath: string): boolean {
+  return relativePath
     .split('/')
-    .some((segment) => segment === '__tests__' || segment === 'tests' || segment === 'node_modules' || segment.startsWith('DELETE_')) &&
+    .some((segment) => segment === '__tests__' || segment === 'tests' || segment === 'node_modules' || segment.startsWith('DELETE_'));
+}
+
+function shouldScan(relativePath: string): boolean {
+  return !ignoredPathSegment(relativePath) &&
     TEXT_EXTENSIONS.has(extname(relativePath)) &&
     !relativePath.endsWith('.test.ts') &&
     !ALLOWED_PATH_PATTERNS.some((pattern) => pattern.test(relativePath));
 }
 
 function walkTarget(absolutePath: string): string[] {
-  const stats = statSync(absolutePath);
+  const relativePath = relative(REPO_ROOT, absolutePath).split(sep).join('/');
+  if (relativePath && ignoredPathSegment(relativePath)) return [];
+
+  let stats: ReturnType<typeof lstatSync>;
+  try {
+    stats = lstatSync(absolutePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
+  if (stats.isSymbolicLink()) return [];
   if (stats.isFile()) {
-    const relativePath = relative(REPO_ROOT, absolutePath).split(sep).join('/');
     return shouldScan(relativePath) ? [relativePath] : [];
   }
   if (!stats.isDirectory()) return [];

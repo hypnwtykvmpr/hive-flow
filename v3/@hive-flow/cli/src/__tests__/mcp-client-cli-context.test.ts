@@ -3,50 +3,34 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildDefaultMCPContext, callMCPTool, getToolMetadata } from '../mcp-client.js';
+import { operatorSessionEnvKeys } from '../mcp-tools/session-id.js';
 
 const ORIGINAL_CWD = process.cwd();
-const ORIGINAL_ENV = {
-  CODEX_SESSION_ID: process.env.CODEX_SESSION_ID,
-  CODEX_THREAD_ID: process.env.CODEX_THREAD_ID,
-  CLAUDE_SESSION_ID: process.env.CLAUDE_SESSION_ID,
-  HIVE_FLOW_SESSION_ID: process.env.HIVE_FLOW_SESSION_ID,
-  HIVE_FLOW_CLIENT_KIND: process.env.HIVE_FLOW_CLIENT_KIND,
-  HIVE_FLOW_PROJECT_ROOT: process.env.HIVE_FLOW_PROJECT_ROOT,
-  CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
-  CURSOR_SESSION_ID: process.env.CURSOR_SESSION_ID,
-  AGENT_SESSION_ID: process.env.AGENT_SESSION_ID,
-  ANTIGRAVITY_SESSION_ID: process.env.ANTIGRAVITY_SESSION_ID,
-  AGY_SESSION_ID: process.env.AGY_SESSION_ID,
-  OPENCODE_SESSION_ID: process.env.OPENCODE_SESSION_ID,
-  FORGECODE_SESSION_ID: process.env.FORGECODE_SESSION_ID,
-  FORGE_SESSION_ID: process.env.FORGE_SESSION_ID,
-};
+const ENV_KEYS_TO_ISOLATE = Array.from(new Set([
+  ...operatorSessionEnvKeys(),
+  'HIVE_FLOW_CLIENT_KIND',
+  'HIVE_FLOW_PROJECT_ROOT',
+  'CLAUDE_PROJECT_DIR',
+  'CLAUDECODE',
+  'CLAUDE_CODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+]));
+const ORIGINAL_ENV = Object.fromEntries(
+  ENV_KEYS_TO_ISOLATE.map((key) => [key, process.env[key]]),
+) as Record<string, string | undefined>;
 
 function restoreEnv(): void {
   for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
     if (value === undefined) {
-      delete process.env[key as keyof typeof ORIGINAL_ENV];
+      delete process.env[key];
     } else {
-      process.env[key as keyof typeof ORIGINAL_ENV] = value;
+      process.env[key] = value;
     }
   }
 }
 
 function clearSessionEnv(): void {
-  delete process.env.CODEX_SESSION_ID;
-  delete process.env.CODEX_THREAD_ID;
-  delete process.env.CLAUDE_SESSION_ID;
-  delete process.env.HIVE_FLOW_SESSION_ID;
-  delete process.env.HIVE_FLOW_CLIENT_KIND;
-  delete process.env.HIVE_FLOW_PROJECT_ROOT;
-  delete process.env.CLAUDE_PROJECT_DIR;
-  delete process.env.CURSOR_SESSION_ID;
-  delete process.env.AGENT_SESSION_ID;
-  delete process.env.ANTIGRAVITY_SESSION_ID;
-  delete process.env.AGY_SESSION_ID;
-  delete process.env.OPENCODE_SESSION_ID;
-  delete process.env.FORGECODE_SESSION_ID;
-  delete process.env.FORGE_SESSION_ID;
+  for (const key of ENV_KEYS_TO_ISOLATE) delete process.env[key];
 }
 
 function readAgent(root: string, agentId: string): Record<string, unknown> | undefined {

@@ -38,6 +38,7 @@ import { createHash, createHmac } from 'crypto';
 import { dirname, join } from 'path';
 
 import { checkMCPEnforcement, getEnforcementLevel } from '../mcp-enforcement-gate.js';
+import { operatorSessionEnvKeys } from '../session-id.js';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers — replicate exactly the signing + layout the gate verifies:
@@ -68,34 +69,30 @@ interface Sandbox {
   projectDir: string;
 }
 
-let originalHiveFlowHome: string | undefined;
-let originalHiveFlowProjectRoot: string | undefined;
-let originalProjectDir: string | undefined;
-let originalAgentId: string | undefined;
-let originalCcAgentId: string | undefined;
-let originalHiveId: string | undefined;
-let originalSessionId: string | undefined;
-let originalHfSessionId: string | undefined;
-let originalCodexSessionId: string | undefined;
+const ENV_KEYS_TO_ISOLATE = Array.from(new Set([
+  'HIVE_FLOW_HOME',
+  'HIVE_FLOW_PROJECT_ROOT',
+  'CLAUDE_PROJECT_DIR',
+  'HIVE_FLOW_AGENT_ID',
+  'CLAUDE_AGENT_ID',
+  'HIVE_FLOW_HIVE_ID',
+  'HIVE_FLOW_CLIENT_KIND',
+  ...operatorSessionEnvKeys(),
+  'CLAUDECODE',
+  'CLAUDE_CODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+]));
+
+let originalEnv: Record<string, string | undefined> = {};
 const createdRoots: string[] = [];
 
 beforeEach(() => {
-  originalHiveFlowHome = process.env.HIVE_FLOW_HOME;
-  originalHiveFlowProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT;
-  originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
-  originalAgentId = process.env.HIVE_FLOW_AGENT_ID;
-  originalCcAgentId = process.env.CLAUDE_AGENT_ID;
-  originalHiveId = process.env.HIVE_FLOW_HIVE_ID;
-  originalSessionId = process.env.CLAUDE_SESSION_ID;
-  originalHfSessionId = process.env.HIVE_FLOW_SESSION_ID;
-  originalCodexSessionId = process.env.CODEX_SESSION_ID;
-  // Default: clear scope-id env so only the project + global scopes apply.
-  delete process.env.HIVE_FLOW_AGENT_ID;
-  delete process.env.CLAUDE_AGENT_ID;
-  delete process.env.HIVE_FLOW_HIVE_ID;
-  delete process.env.CLAUDE_SESSION_ID;
-  delete process.env.HIVE_FLOW_SESSION_ID;
-  delete process.env.CODEX_SESSION_ID;
+  originalEnv = {};
+  for (const key of ENV_KEYS_TO_ISOLATE) {
+    originalEnv[key] = process.env[key];
+    // Default: clear operator/scope env so only the project + global scopes apply.
+    delete process.env[key];
+  }
 });
 
 function restore(name: string, value: string | undefined): void {
@@ -104,15 +101,7 @@ function restore(name: string, value: string | undefined): void {
 }
 
 afterEach(() => {
-  restore('HIVE_FLOW_HOME', originalHiveFlowHome);
-  restore('HIVE_FLOW_PROJECT_ROOT', originalHiveFlowProjectRoot);
-  restore('CLAUDE_PROJECT_DIR', originalProjectDir);
-  restore('HIVE_FLOW_AGENT_ID', originalAgentId);
-  restore('CLAUDE_AGENT_ID', originalCcAgentId);
-  restore('HIVE_FLOW_HIVE_ID', originalHiveId);
-  restore('CLAUDE_SESSION_ID', originalSessionId);
-  restore('HIVE_FLOW_SESSION_ID', originalHfSessionId);
-  restore('CODEX_SESSION_ID', originalCodexSessionId);
+  for (const [key, value] of Object.entries(originalEnv)) restore(key, value);
 
   while (createdRoots.length > 0) {
     const root = createdRoots.pop()!;
