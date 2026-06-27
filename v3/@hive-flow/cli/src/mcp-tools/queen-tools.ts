@@ -12,7 +12,7 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
@@ -200,6 +200,13 @@ function permissionStatusForDecision(decision: HivePermissionDecision): HivePerm
   return 'denied';
 }
 
+function isDefinitelyDeadPidError(error: unknown): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && (error as { code?: unknown }).code === 'ESRCH';
+}
+
 function permissionRequestLogPath(hiveId: string): string | null {
   const sanitized = sanitizePathId(hiveId, 128);
   if (!sanitized) return null;
@@ -307,6 +314,66 @@ async function callAgentTaskAsync(input: Record<string, unknown>): Promise<Recor
   const asyncTool = agentTools.find(t => t.name === 'agent_task_async');
   if (!asyncTool) throw new Error('agent_task_async tool not found');
   return asyncTool.handler(input) as Promise<Record<string, unknown>>;
+}
+
+function readTaskPromptForRetry(tasksDir: string, taskId: string): string | null {
+  const safeTaskId = sanitizePathId(taskId);
+  if (!safeTaskId) return null;
+  const taskPath = join(tasksDir, `${safeTaskId}.task`);
+  if (!existsSync(taskPath)) return null;
+  try {
+    const task = readFileSync(taskPath, 'utf-8');
+    return task.trim() ? task : null;
+  } catch {
+    return null;
+  }
+}
+
+async function clearAgentTaskBeforeReassignment(agentId: string, taskId: string): Promise<boolean> {
+  return withStoreLock(agentId, () => {
+    const store = loadAgentStore();
+    const agent = store.agents[agentId];
+    if (!agent) return false;
+    let changed = false;
+    if (agent.currentTaskId === taskId) {
+      transitionAgent(agent, 'idle');
+      changed = true;
+    }
+    if (agent.taskId === taskId) {
+      delete agent.taskId;
+      changed = true;
+    }
+    if (changed) saveAgentStore(store);
+    return changed;
+  });
+}
+
+function retryCountFromTracking(tracking: Record<string, unknown>): number {
+  return Number.isInteger(tracking.retryCount) && (tracking.retryCount as number) >= 0
+    ? tracking.retryCount as number
+    : 0;
+}
+
+function annotateReplacementTracking(
+  tasksDir: string,
+  replacementTaskId: unknown,
+  originalTaskId: string,
+  retryCount: number,
+): void {
+  const safeReplacementTaskId = sanitizePathId(replacementTaskId);
+  if (!safeReplacementTaskId) return;
+  const replacementTrackingPath = join(tasksDir, `${safeReplacementTaskId}.json`);
+  if (!existsSync(replacementTrackingPath)) return;
+  try {
+    const replacementTracking = JSON.parse(readFileSync(replacementTrackingPath, 'utf-8')) as Record<string, unknown>;
+    replacementTracking.retryCount = retryCount;
+    replacementTracking.reassignedFromTaskId = originalTaskId;
+    replacementTracking.originalTaskId = typeof replacementTracking.originalTaskId === 'string'
+      ? replacementTracking.originalTaskId
+      : originalTaskId;
+    replacementTracking.reassignedAt = new Date().toISOString();
+    writeFileSync(replacementTrackingPath, JSON.stringify(replacementTracking, null, 2), 'utf-8');
+  } catch { /* best-effort metadata */ }
 }
 
 // ---------------------------------------------------------------------------
@@ -1450,7 +1517,19 @@ const hivePollWorkersTool: MCPTool = {
       taskId: string;
       trackingPath: string;
       resultPath: string;
-      tracking: { status: string; taskId: string; agentId: string; startedAt: string; pid?: number };
+      tracking: {
+        status: string;
+        taskId: string;
+        agentId: string;
+        startedAt: string;
+        pid?: number;
+        timeoutMs?: number;
+        retryCount?: number;
+        failedAt?: string;
+        failureReason?: string;
+        reassignedAt?: string;
+        reassignedToTaskId?: string;
+      };
     }>>();
 
     if (existsSync(tasksDir)) {
@@ -1466,7 +1545,17 @@ const hivePollWorkersTool: MCPTool = {
         const trackingPath = join(tasksDir, file);
         try {
           const tracking = JSON.parse(readFileSync(trackingPath, 'utf-8')) as {
-            status: string; taskId: string; agentId: string; startedAt: string; pid?: number;
+            status: string;
+            taskId: string;
+            agentId: string;
+            startedAt: string;
+            pid?: number;
+            timeoutMs?: number;
+            retryCount?: number;
+            failedAt?: string;
+            failureReason?: string;
+            reassignedAt?: string;
+            reassignedToTaskId?: string;
           };
           if (!tracking.agentId || !tracking.taskId) continue;
           if (!agentTaskMap.has(tracking.agentId)) {
@@ -1569,12 +1658,72 @@ const hivePollWorkersTool: MCPTool = {
           });
           runningCount++;
           continue;
-        } catch {
+        } catch (error) {
           // Process exited without writing a result — failed
           latest.tracking.status = 'failed';
+          latest.tracking.failedAt = new Date().toISOString();
+          latest.tracking.failureReason = isDefinitelyDeadPidError(error)
+            ? 'worker-process-dead'
+            : 'worker-process-liveness-check-failed';
           try {
             writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
           } catch { /* best-effort */ }
+
+          const retryCount = retryCountFromTracking(latest.tracking);
+          const taskPrompt = isDefinitelyDeadPidError(error)
+            ? readTaskPromptForRetry(tasksDir, latest.taskId)
+            : null;
+          if (taskPrompt && retryCount < 1) {
+            await clearAgentTaskBeforeReassignment(worker.agentId, latest.taskId);
+            const retryInput: Record<string, unknown> = {
+              hiveId,
+              workerId: worker.workerId,
+              task: taskPrompt,
+            };
+            if (Number.isFinite(latest.tracking.timeoutMs) && latest.tracking.timeoutMs! > 0) {
+              retryInput.timeout = latest.tracking.timeoutMs;
+            }
+            const retryResult = await taskWorkerTool.handler(retryInput) as Record<string, unknown>;
+            const replacementTaskId = (retryResult.result as Record<string, unknown> | undefined)?.taskId;
+            if (retryResult.success && typeof replacementTaskId === 'string') {
+              latest.tracking.reassignedToTaskId = replacementTaskId;
+              latest.tracking.reassignedAt = new Date().toISOString();
+              latest.tracking.retryCount = retryCount + 1;
+              try {
+                writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
+              } catch { /* best-effort */ }
+              annotateReplacementTracking(tasksDir, replacementTaskId, latest.taskId, retryCount + 1);
+              await withHiveLock(hiveId, () => {
+                const freshHive = loadHive(hiveId);
+                if (!freshHive) return;
+                const freshWorker = freshHive.workers.find(w => w.workerId === worker.workerId);
+                if (!freshWorker) return;
+                freshWorker.status = 'busy';
+                freshWorker.taskId = replacementTaskId;
+                delete freshWorker.idleSince;
+                appendHiveAudit(freshHive, {
+                  event: 'worker-tasked',
+                  detail: `Reassigned dead-worker task '${latest.taskId}' to replacement task '${replacementTaskId}'.`,
+                  agentId: worker.agentId,
+                  workerId: worker.workerId,
+                });
+                saveHive(hiveId, freshHive);
+              });
+              workerStatuses.push({
+                workerId: worker.workerId,
+                agentId: worker.agentId,
+                role: worker.role,
+                status: 'running',
+                taskId: replacementTaskId,
+                result: {
+                  reassignedFromTaskId: latest.taskId,
+                  retryCount: retryCount + 1,
+                },
+              });
+              runningCount++;
+              continue;
+            }
+          }
 
           workerStatuses.push({
             workerId: worker.workerId,
