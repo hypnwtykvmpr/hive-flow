@@ -4,7 +4,7 @@
  * Tool definitions for collective intelligence and swarm coordination.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, statSync, lstatSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 import { loadAgentStore, saveAgentStore, withStoreLock, agentTools, resolveEffectiveAgentModeForSpawn, resolveOwnerStampForAgentCreation } from './agent-tools.js';
@@ -22,6 +22,7 @@ import {
 const STORAGE_DIR = '.hive-flow';
 const HIVE_DIR = 'hive-mind';
 const HIVE_FILE = 'state.json';
+const HIVE_STATE_LOCK_DIR = '.state.lock';
 
 interface HiveState {
   initialized: boolean;
@@ -78,10 +79,69 @@ function getHivePath(): string {
   return join(getHiveDir(), HIVE_FILE);
 }
 
+function getHiveStateLockPath(): string {
+  return join(getHiveDir(), HIVE_STATE_LOCK_DIR);
+}
+
+function assertNotSymlink(path: string, label: string): void {
+  if (!existsSync(path)) return;
+  if (lstatSync(path).isSymbolicLink()) {
+    throw new Error(`Refusing to use symlinked hive-mind ${label}: ${path}`);
+  }
+}
+
+function isHiveMindSymlinkError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('symlinked hive-mind');
+}
+
 function ensureHiveDir(): void {
+  assertNotSymlink(join(process.cwd(), STORAGE_DIR), 'storage root');
   const dir = getHiveDir();
+  assertNotSymlink(dir, 'directory');
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
+  }
+  assertNotSymlink(dir, 'directory');
+}
+
+async function withHiveStateLock<T>(fn: () => T | Promise<T>): Promise<T> {
+  ensureHiveDir();
+  const lockPath = getHiveStateLockPath();
+  const maxWaitMs = 10000;
+  const startedAt = Date.now();
+  let acquired = false;
+
+  while (Date.now() - startedAt < maxWaitMs) {
+    try {
+      assertNotSymlink(lockPath, 'lock');
+      mkdirSync(lockPath);
+      acquired = true;
+      break;
+    } catch (error) {
+      if (isHiveMindSymlinkError(error)) throw error;
+      try {
+        assertNotSymlink(lockPath, 'lock');
+        const lockStat = statSync(lockPath);
+        if (Date.now() - lockStat.mtimeMs > 30000) {
+          try { rmdirSync(lockPath); } catch { /* race with another cleaner */ }
+          continue;
+        }
+      } catch (lockError) {
+        if (isHiveMindSymlinkError(lockError)) throw lockError;
+        continue;
+      }
+      await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+    }
+  }
+
+  if (!acquired) {
+    throw new Error('Failed to acquire hive-mind state lock within 10s');
+  }
+
+  try {
+    return await fn();
+  } finally {
+    try { rmdirSync(lockPath); } catch { /* ignore */ }
   }
 }
 
@@ -89,6 +149,7 @@ function loadHiveState(): HiveState {
   try {
     const path = getHivePath();
     if (existsSync(path)) {
+      assertNotSymlink(path, 'state file');
       const data = readFileSync(path, 'utf-8');
       const state = JSON.parse(data) as HiveState;
 
@@ -145,7 +206,11 @@ function loadHiveState(): HiveState {
 function saveHiveState(state: HiveState): void {
   ensureHiveDir();
   state.updatedAt = new Date().toISOString();
-  writeFileSync(getHivePath(), JSON.stringify(state, null, 2), 'utf-8');
+  const targetPath = getHivePath();
+  assertNotSymlink(targetPath, 'state file');
+  const tmpPath = `${targetPath}.tmp.${process.pid}.${Date.now()}`;
+  writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf-8');
+  renameSync(tmpPath, targetPath);
 }
 
 /** Minimum votes needed for a majority decision. Handles 1-worker edge case. */
@@ -234,34 +299,35 @@ export const hiveMindTools: MCPTool[] = [
       },
     },
     handler: async (input, context) => {
-      const state = loadHiveState();
+      return await withHiveStateLock(async () => {
+        const state = loadHiveState();
 
-      if (!state.initialized) {
-        return { success: false, error: 'Hive-mind not initialized. Run hive-mind/init first.' };
-      }
-      const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'hive-mind_spawn');
-      if (!ownerStamp.success) return ownerStamp;
-      const { ownerSessionId, ownerClientKind } = ownerStamp;
-      const modeResult = resolveEffectiveAgentModeForSpawn({});
-      if (!modeResult.ok) return { success: false, code: modeResult.code, error: modeResult.error };
+        if (!state.initialized) {
+          return { success: false, error: 'Hive-mind not initialized. Run hive-mind/init first.' };
+        }
+        const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'hive-mind_spawn');
+        if (!ownerStamp.success) return ownerStamp;
+        const { ownerSessionId, ownerClientKind } = ownerStamp;
+        const modeResult = resolveEffectiveAgentModeForSpawn({});
+        if (!modeResult.ok) return { success: false, code: modeResult.code, error: modeResult.error };
 
-      const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
-      const role = (input.role as string) || 'worker';
-      const agentType = typeof input.agentType === 'string' && input.agentType.trim()
-        ? input.agentType.trim()
-        : DEFAULT_CANONICAL_AGENT_TYPE;
-      const prefix = (input.prefix as string) || 'hive-worker';
+        const count = Math.min(Math.max(1, (input.count as number) || 1), 20); // Cap at 20
+        const role = (input.role as string) || 'worker';
+        const agentType = typeof input.agentType === 'string' && input.agentType.trim()
+          ? input.agentType.trim()
+          : DEFAULT_CANONICAL_AGENT_TYPE;
+        const prefix = (input.prefix as string) || 'hive-worker';
 
-      if (!isCanonicalAgentType(agentType)) {
-        return {
-          success: false,
-          code: 'invalid-agent-type',
-          error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
-        };
-      }
+        if (!isCanonicalAgentType(agentType)) {
+          return {
+            success: false,
+            code: 'invalid-agent-type',
+            error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+          };
+        }
 
-      return await withStoreLock(() => {
-        const agentStore = loadAgentStore();
+        return await withStoreLock(() => {
+          const agentStore = loadAgentStore();
 
         const spawnedWorkers: Array<{ agentId: string; role: string; provider?: AgentProvider; model?: string; joinedAt: string }> = [];
 
@@ -311,14 +377,15 @@ export const hiveMindTools: MCPTool[] = [
         saveAgentStore(agentStore);
         saveHiveState(state);
 
-        return {
-          success: true,
-          spawned: count,
-          workers: spawnedWorkers,
-          totalWorkers: state.workers.length,
-          hiveStatus: 'active',
-          message: `Spawned ${count} worker(s) and joined them to the hive-mind`,
-        };
+          return {
+            success: true,
+            spawned: count,
+            workers: spawnedWorkers,
+            totalWorkers: state.workers.length,
+            hiveStatus: 'active',
+            message: `Spawned ${count} worker(s) and joined them to the hive-mind`,
+          };
+        });
       });
     },
   },
@@ -338,37 +405,39 @@ export const hiveMindTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const state = loadHiveState();
-      const hiveId = `hive-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const queenId = (input.queenId as string) || `queen-${Date.now()}`;
+      return await withHiveStateLock(() => {
+        const state = loadHiveState();
+        const hiveId = `hive-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const queenId = (input.queenId as string) || `queen-${Date.now()}`;
 
-      state.initialized = true;
-      state.topology = (input.topology as HiveState['topology']) || 'mesh';
-      state.createdAt = new Date().toISOString();
-      state.queen = {
-        agentId: queenId,
-        electedAt: new Date().toISOString(),
-        term: 1,
-      };
+        state.initialized = true;
+        state.topology = (input.topology as HiveState['topology']) || 'mesh';
+        state.createdAt = new Date().toISOString();
+        state.queen = {
+          agentId: queenId,
+          electedAt: new Date().toISOString(),
+          term: 1,
+        };
 
-      saveHiveState(state);
+        saveHiveState(state);
 
-      return {
-        success: true,
-        hiveId,
-        topology: state.topology,
-        consensus: (input.consensus as string) || 'byzantine',
-        queenId,
-        status: 'initialized',
-        config: {
+        return {
+          success: true,
+          hiveId,
           topology: state.topology,
-          consensus: input.consensus || 'byzantine',
-          maxAgents: input.maxAgents || DEFAULT_MAX_AGENTS,
-          persist: input.persist !== false,
-          memoryBackend: input.memoryBackend || 'hybrid',
-        },
-        createdAt: state.createdAt,
-      };
+          consensus: (input.consensus as string) || 'byzantine',
+          queenId,
+          status: 'initialized',
+          config: {
+            topology: state.topology,
+            consensus: input.consensus || 'byzantine',
+            maxAgents: input.maxAgents || DEFAULT_MAX_AGENTS,
+            persist: input.persist !== false,
+            memoryBackend: input.memoryBackend || 'hybrid',
+          },
+          createdAt: state.createdAt,
+        };
+      });
     },
   },
   {
@@ -463,63 +532,65 @@ export const hiveMindTools: MCPTool[] = [
       required: ['agentId'],
     },
     handler: async (input, context) => {
-      const state = loadHiveState();
-      const agentId = input.agentId as string;
-      if (!state.initialized) return { success: false, error: 'Hive-mind not initialized' };
+      return await withHiveStateLock(() => {
+        const state = loadHiveState();
+        const agentId = input.agentId as string;
+        if (!state.initialized) return { success: false, error: 'Hive-mind not initialized' };
 
-      if (!state.workers.find(w => w.agentId === agentId)) {
-        const agentStore = loadAgentStore();
-        const rec = agentStore.agents[agentId];
-        if (!rec) {
-          return {
-            success: false,
-            code: 'agent-not-found',
-            error: `hive-mind_join requires an existing owned agent record before joining worker ${agentId}.`,
-          };
+        if (!state.workers.find(w => w.agentId === agentId)) {
+          const agentStore = loadAgentStore();
+          const rec = agentStore.agents[agentId];
+          if (!rec) {
+            return {
+              success: false,
+              code: 'agent-not-found',
+              error: `hive-mind_join requires an existing owned agent record before joining worker ${agentId}.`,
+            };
+          }
+          if (!rec.ownerSessionId || !rec.ownerClientKind) {
+            return {
+              success: false,
+              code: 'missing-owner-session',
+              error: `hive-mind_join requires existing agent ${agentId} to have an owner stamp before it can join the hive.`,
+            };
+          }
+          const ownerStamp = resolveOwnerStampForAgentCreation(
+            { ...input, session_id: rec.ownerSessionId },
+            context,
+            'hive-mind_join',
+          );
+          if (!ownerStamp.success) return ownerStamp;
+          if (
+            ownerStamp.ownerSessionId !== rec.ownerSessionId
+            || ownerStamp.ownerClientKind !== rec.ownerClientKind
+          ) {
+            return {
+              success: false,
+              code: 'owner-stamp-mismatch',
+              error: `hive-mind_join owner context does not match existing agent ${agentId}.`,
+            };
+          }
+          const provider = (input.provider as AgentProvider | undefined) ?? rec.provider;
+          const model = (input.model as string | undefined) ?? rec.resolvedModel ?? rec.model;
+          state.workers.push({
+            agentId, provider, model,
+            ownerSessionId: rec.ownerSessionId,
+            ownerClientKind: rec.ownerClientKind,
+            role: (input.role as string) || 'worker',
+            joinedAt: new Date().toISOString(), status: 'idle',
+          });
+          saveHiveState(state);
         }
-        if (!rec.ownerSessionId || !rec.ownerClientKind) {
-          return {
-            success: false,
-            code: 'missing-owner-session',
-            error: `hive-mind_join requires existing agent ${agentId} to have an owner stamp before it can join the hive.`,
-          };
+        const worker = state.workers.find(w => w.agentId === agentId);
+        if (!worker) {
+          return { success: false, error: `Agent ${agentId} not found in hive workers after join` };
         }
-        const ownerStamp = resolveOwnerStampForAgentCreation(
-          { ...input, session_id: rec.ownerSessionId },
-          context,
-          'hive-mind_join',
-        );
-        if (!ownerStamp.success) return ownerStamp;
-        if (
-          ownerStamp.ownerSessionId !== rec.ownerSessionId
-          || ownerStamp.ownerClientKind !== rec.ownerClientKind
-        ) {
-          return {
-            success: false,
-            code: 'owner-stamp-mismatch',
-            error: `hive-mind_join owner context does not match existing agent ${agentId}.`,
-          };
-        }
-        const provider = (input.provider as AgentProvider | undefined) ?? rec.provider;
-        const model = (input.model as string | undefined) ?? rec.resolvedModel ?? rec.model;
-        state.workers.push({
-          agentId, provider, model,
-          ownerSessionId: rec.ownerSessionId,
-          ownerClientKind: rec.ownerClientKind,
-          role: (input.role as string) || 'worker',
-          joinedAt: new Date().toISOString(), status: 'idle',
-        });
-        saveHiveState(state);
-      }
-      const worker = state.workers.find(w => w.agentId === agentId);
-      if (!worker) {
-        return { success: false, error: `Agent ${agentId} not found in hive workers after join` };
-      }
-      return {
-        success: true, agentId, role: worker.role,
-        provider: worker.provider, model: worker.model,
-        totalWorkers: state.workers.length, joinedAt: worker.joinedAt,
-      };
+        return {
+          success: true, agentId, role: worker.role,
+          provider: worker.provider, model: worker.model,
+          totalWorkers: state.workers.length, joinedAt: worker.joinedAt,
+        };
+      });
     },
   },
   {
@@ -534,22 +605,24 @@ export const hiveMindTools: MCPTool[] = [
       required: ['agentId'],
     },
     handler: async (input) => {
-      const state = loadHiveState();
-      const agentId = input.agentId as string;
+      return await withHiveStateLock(() => {
+        const state = loadHiveState();
+        const agentId = input.agentId as string;
 
-      const index = state.workers.findIndex(w => w.agentId === agentId);
-      if (index > -1) {
-        state.workers.splice(index, 1);
-        saveHiveState(state);
-        return {
-          success: true,
-          agentId,
-          leftAt: new Date().toISOString(),
-          remainingWorkers: state.workers.length,
-        };
-      }
+        const index = state.workers.findIndex(w => w.agentId === agentId);
+        if (index > -1) {
+          state.workers.splice(index, 1);
+          saveHiveState(state);
+          return {
+            success: true,
+            agentId,
+            leftAt: new Date().toISOString(),
+            remainingWorkers: state.workers.length,
+          };
+        }
 
-      return { success: false, agentId, error: 'Agent not in hive' };
+        return { success: false, agentId, error: 'Agent not in hive' };
+      });
     },
   },
   {
@@ -571,81 +644,88 @@ export const hiveMindTools: MCPTool[] = [
       required: ['action'],
     },
     handler: async (input) => {
-      const state = loadHiveState();
       const action = input.action as string;
 
       if (action === 'propose') {
-        const proposalId = `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const proposal: ConsensusProposal = {
-          proposalId,
-          type: (input.type as string) || 'general',
-          value: input.value,
-          proposedBy: (input.voterId as string) || 'system',
-          proposedAt: new Date().toISOString(),
-          votes: {},
-          status: 'pending',
-        };
+        return await withHiveStateLock(() => {
+          const state = loadHiveState();
+          const proposalId = `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const proposal: ConsensusProposal = {
+            proposalId,
+            type: (input.type as string) || 'general',
+            value: input.value,
+            proposedBy: (input.voterId as string) || 'system',
+            proposedAt: new Date().toISOString(),
+            votes: {},
+            status: 'pending',
+          };
 
-        state.consensus.pending.push(proposal);
-        saveHiveState(state);
+          state.consensus.pending.push(proposal);
+          saveHiveState(state);
 
-        return {
-          action,
-          proposalId,
-          type: proposal.type,
-          status: 'pending',
-          requiredVotes: getMajority(state.workers.length),
-        };
+          return {
+            action,
+            proposalId,
+            type: proposal.type,
+            status: 'pending',
+            requiredVotes: getMajority(state.workers.length),
+          };
+        });
       }
 
       if (action === 'vote') {
-        const proposal = state.consensus.pending.find(p => p.proposalId === input.proposalId);
-        if (!proposal) {
-          return { action, error: 'Proposal not found' };
-        }
+        return await withHiveStateLock(() => {
+          const state = loadHiveState();
+          const proposal = state.consensus.pending.find(p => p.proposalId === input.proposalId);
+          if (!proposal) {
+            return { action, error: 'Proposal not found' };
+          }
 
-        const voterId = input.voterId as string;
-        proposal.votes[voterId] = input.vote as boolean;
+          const voterId = input.voterId as string;
+          proposal.votes[voterId] = input.vote as boolean;
 
-        // Check if we have majority
-        const votesFor = Object.values(proposal.votes).filter(v => v).length;
-        const votesAgainst = Object.values(proposal.votes).filter(v => !v).length;
-        const majority = getMajority(state.workers.length);
+          // Check if we have majority
+          const votesFor = Object.values(proposal.votes).filter(v => v).length;
+          const votesAgainst = Object.values(proposal.votes).filter(v => !v).length;
+          const majority = getMajority(state.workers.length);
 
-        if (votesFor >= majority) {
-          proposal.status = 'approved';
-          state.consensus.history.push({
+          if (votesFor >= majority) {
+            proposal.status = 'approved';
+            state.consensus.history.push({
+              proposalId: proposal.proposalId,
+              type: proposal.type,
+              result: 'approved',
+              votes: { for: votesFor, against: votesAgainst },
+              decidedAt: new Date().toISOString(),
+            });
+            state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
+          } else if (votesAgainst >= majority) {
+            proposal.status = 'rejected';
+            state.consensus.history.push({
+              proposalId: proposal.proposalId,
+              type: proposal.type,
+              result: 'rejected',
+              votes: { for: votesFor, against: votesAgainst },
+              decidedAt: new Date().toISOString(),
+            });
+            state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
+          }
+
+          saveHiveState(state);
+
+          return {
+            action,
             proposalId: proposal.proposalId,
-            type: proposal.type,
-            result: 'approved',
-            votes: { for: votesFor, against: votesAgainst },
-            decidedAt: new Date().toISOString(),
-          });
-          state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
-        } else if (votesAgainst >= majority) {
-          proposal.status = 'rejected';
-          state.consensus.history.push({
-            proposalId: proposal.proposalId,
-            type: proposal.type,
-            result: 'rejected',
-            votes: { for: votesFor, against: votesAgainst },
-            decidedAt: new Date().toISOString(),
-          });
-          state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
-        }
-
-        saveHiveState(state);
-
-        return {
-          action,
-          proposalId: proposal.proposalId,
-          voterId,
-          vote: input.vote,
-          votesFor,
-          votesAgainst,
-          status: proposal.status,
-        };
+            voterId,
+            vote: input.vote,
+            votesFor,
+            votesAgainst,
+            status: proposal.status,
+          };
+        });
       }
+
+      const state = loadHiveState();
 
       if (action === 'status') {
         const proposal = state.consensus.pending.find(p => p.proposalId === input.proposalId);
@@ -784,25 +864,43 @@ export const hiveMindTools: MCPTool[] = [
           }
         }
 
-        // Abstention handling: failed workers reduce the denominator, not count as rejections
-        const abstentions = results.filter(r => r.status === 'failed').map(r => r.agentId);
-        const participatingCount = state.workers.length - abstentions.length;
+        const finalVotes = { ...proposal.votes };
 
-        // Check majority (same logic as existing vote action)
-        const votesFor = Object.values(proposal.votes).filter(v => v).length;
-        const votesAgainst = Object.values(proposal.votes).filter(v => !v).length;
-        const majority = getMajority(participatingCount);
-        if (votesFor >= majority) {
-          proposal.status = 'approved';
-          state.consensus.history.push({ proposalId: proposal.proposalId, type: proposal.type, result: 'approved', votes: { for: votesFor, against: votesAgainst }, decidedAt: new Date().toISOString() });
-          state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
-        } else if (votesAgainst >= majority) {
-          proposal.status = 'rejected';
-          state.consensus.history.push({ proposalId: proposal.proposalId, type: proposal.type, result: 'rejected', votes: { for: votesFor, against: votesAgainst }, decidedAt: new Date().toISOString() });
-          state.consensus.pending = state.consensus.pending.filter(p => p.proposalId !== proposal.proposalId);
-        }
-        saveHiveState(state);
-        return { action, proposalId: proposal.proposalId, evaluated: results.length, results, votesFor, votesAgainst, abstentions: abstentions.length, participatingVoters: participatingCount, status: proposal.status };
+        return await withHiveStateLock(() => {
+          const latestState = loadHiveState();
+          const latestProposal = latestState.consensus.pending.find(p => p.proposalId === proposal.proposalId);
+          if (!latestProposal) {
+            return {
+              action,
+              proposalId: proposal.proposalId,
+              evaluated: results.length,
+              results,
+              error: 'Proposal is no longer pending; execution results were not persisted.',
+            };
+          }
+
+          latestProposal.votes = { ...latestProposal.votes, ...finalVotes };
+
+          // Abstention handling: failed workers reduce the denominator, not count as rejections
+          const abstentions = results.filter(r => r.status === 'failed').map(r => r.agentId);
+          const participatingCount = latestState.workers.length - abstentions.length;
+
+          // Check majority (same logic as existing vote action)
+          const votesFor = Object.values(latestProposal.votes).filter(v => v).length;
+          const votesAgainst = Object.values(latestProposal.votes).filter(v => !v).length;
+          const majority = getMajority(participatingCount);
+          if (votesFor >= majority) {
+            latestProposal.status = 'approved';
+            latestState.consensus.history.push({ proposalId: latestProposal.proposalId, type: latestProposal.type, result: 'approved', votes: { for: votesFor, against: votesAgainst }, decidedAt: new Date().toISOString() });
+            latestState.consensus.pending = latestState.consensus.pending.filter(p => p.proposalId !== latestProposal.proposalId);
+          } else if (votesAgainst >= majority) {
+            latestProposal.status = 'rejected';
+            latestState.consensus.history.push({ proposalId: latestProposal.proposalId, type: latestProposal.type, result: 'rejected', votes: { for: votesFor, against: votesAgainst }, decidedAt: new Date().toISOString() });
+            latestState.consensus.pending = latestState.consensus.pending.filter(p => p.proposalId !== latestProposal.proposalId);
+          }
+          saveHiveState(latestState);
+          return { action, proposalId: latestProposal.proposalId, evaluated: results.length, results, votesFor, votesAgainst, abstentions: abstentions.length, participatingVoters: participatingCount, status: latestProposal.status };
+        });
       }
 
       return { action, error: 'Unknown action' };
@@ -822,35 +920,37 @@ export const hiveMindTools: MCPTool[] = [
       required: ['message'],
     },
     handler: async (input) => {
-      const state = loadHiveState();
+      return await withHiveStateLock(() => {
+        const state = loadHiveState();
 
-      if (!state.initialized) {
-        return { success: false, error: 'Hive-mind not initialized' };
-      }
+        if (!state.initialized) {
+          return { success: false, error: 'Hive-mind not initialized' };
+        }
 
-      const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      // Store in shared memory
-      const messages = (state.sharedMemory.broadcasts as Array<unknown>) || [];
-      messages.push({
-        messageId,
-        message: input.message,
-        priority: input.priority || 'normal',
-        fromId: input.fromId || 'system',
-        timestamp: new Date().toISOString(),
+        // Store in shared memory
+        const messages = (state.sharedMemory.broadcasts as Array<unknown>) || [];
+        messages.push({
+          messageId,
+          message: input.message,
+          priority: input.priority || 'normal',
+          fromId: input.fromId || 'system',
+          timestamp: new Date().toISOString(),
+        });
+
+        // Keep only last 100 broadcasts
+        state.sharedMemory.broadcasts = messages.slice(-100);
+        saveHiveState(state);
+
+        return {
+          success: true,
+          messageId,
+          recipients: state.workers.length,
+          priority: input.priority || 'normal',
+          broadcastAt: new Date().toISOString(),
+        };
       });
-
-      // Keep only last 100 broadcasts
-      state.sharedMemory.broadcasts = messages.slice(-100);
-      saveHiveState(state);
-
-      return {
-        success: true,
-        messageId,
-        recipients: state.workers.length,
-        priority: input.priority || 'normal',
-        broadcastAt: new Date().toISOString(),
-      };
     },
   },
   {
@@ -865,58 +965,60 @@ export const hiveMindTools: MCPTool[] = [
       },
     },
     handler: async (input) => {
-      const state = loadHiveState();
+      return await withHiveStateLock(async () => {
+        const state = loadHiveState();
 
-      if (!state.initialized) {
-        return { success: false, error: 'Hive-mind not initialized or already shut down' };
-      }
-
-      const graceful = input.graceful !== false;
-      const force = input.force === true;
-      const workerCount = state.workers.length;
-      const pendingConsensus = state.consensus.pending.length;
-
-      // If graceful and there are pending consensus items, warn (unless forced)
-      if (graceful && pendingConsensus > 0 && !force) {
-        return {
-          success: false,
-          error: `Cannot gracefully shutdown with ${pendingConsensus} pending consensus items. Use force: true to override.`,
-          pendingConsensus,
-          workerCount,
-        };
-      }
-
-      // Clear workers from agent store (under lock to prevent race conditions)
-      return await withStoreLock(() => {
-        const agentStore = loadAgentStore();
-        for (const worker of state.workers) {
-          if (agentStore.agents[worker.agentId]) {
-            delete agentStore.agents[worker.agentId];
-          }
+        if (!state.initialized) {
+          return { success: false, error: 'Hive-mind not initialized or already shut down' };
         }
-        saveAgentStore(agentStore);
 
-        // Reset hive state
-        const shutdownTime = new Date().toISOString();
-        const previousQueen = state.queen?.agentId;
+        const graceful = input.graceful !== false;
+        const force = input.force === true;
+        const workerCount = state.workers.length;
+        const pendingConsensus = state.consensus.pending.length;
 
-        state.initialized = false;
-        state.queen = undefined;
-        state.workers = [];
-        state.consensus.pending = [];
-        // Keep history for reference
-        state.sharedMemory = {};
-        saveHiveState(state);
+        // If graceful and there are pending consensus items, warn (unless forced)
+        if (graceful && pendingConsensus > 0 && !force) {
+          return {
+            success: false,
+            error: `Cannot gracefully shutdown with ${pendingConsensus} pending consensus items. Use force: true to override.`,
+            pendingConsensus,
+            workerCount,
+          };
+        }
 
-        return {
-          success: true,
-          shutdownAt: shutdownTime,
-          graceful,
-          workersTerminated: workerCount,
-          previousQueen,
-          consensusCleared: pendingConsensus,
-          message: `Hive-mind shutdown complete. ${workerCount} workers terminated.`,
-        };
+        // Clear workers from agent store (under lock to prevent race conditions)
+        return await withStoreLock(() => {
+          const agentStore = loadAgentStore();
+          for (const worker of state.workers) {
+            if (agentStore.agents[worker.agentId]) {
+              delete agentStore.agents[worker.agentId];
+            }
+          }
+          saveAgentStore(agentStore);
+
+          // Reset hive state
+          const shutdownTime = new Date().toISOString();
+          const previousQueen = state.queen?.agentId;
+
+          state.initialized = false;
+          state.queen = undefined;
+          state.workers = [];
+          state.consensus.pending = [];
+          // Keep history for reference
+          state.sharedMemory = {};
+          saveHiveState(state);
+
+          return {
+            success: true,
+            shutdownAt: shutdownTime,
+            graceful,
+            workersTerminated: workerCount,
+            previousQueen,
+            consensusCleared: pendingConsensus,
+            message: `Hive-mind shutdown complete. ${workerCount} workers terminated.`,
+          };
+        });
       });
     },
   },
@@ -950,26 +1052,32 @@ export const hiveMindTools: MCPTool[] = [
 
       if (action === 'set') {
         if (!key) return { action, error: 'Key required' };
-        state.sharedMemory[key] = input.value;
-        saveHiveState(state);
-        return {
-          action,
-          key,
-          success: true,
-          updatedAt: new Date().toISOString(),
-        };
+        return await withHiveStateLock(() => {
+          const latestState = loadHiveState();
+          latestState.sharedMemory[key] = input.value;
+          saveHiveState(latestState);
+          return {
+            action,
+            key,
+            success: true,
+            updatedAt: new Date().toISOString(),
+          };
+        });
       }
 
       if (action === 'delete') {
         if (!key) return { action, error: 'Key required' };
-        const existed = key in state.sharedMemory;
-        delete state.sharedMemory[key];
-        saveHiveState(state);
-        return {
-          action,
-          key,
-          deleted: existed,
-        };
+        return await withHiveStateLock(() => {
+          const latestState = loadHiveState();
+          const existed = key in latestState.sharedMemory;
+          delete latestState.sharedMemory[key];
+          saveHiveState(latestState);
+          return {
+            action,
+            key,
+            deleted: existed,
+          };
+        });
       }
 
       if (action === 'list') {

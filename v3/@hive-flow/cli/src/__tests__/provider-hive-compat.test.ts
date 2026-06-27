@@ -7,6 +7,10 @@ vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
+  renameSync: vi.fn(),
+  rmdirSync: vi.fn(),
+  statSync: vi.fn(),
+  lstatSync: vi.fn(),
 }));
 
 // Mock agent-tools to control loadAgentStore, saveAgentStore, withStoreLock, and agentTools
@@ -18,13 +22,39 @@ vi.mock('../mcp-tools/agent-tools.js', () => ({
     return (fn as () => unknown)();
   }),
   agentTools: [] as Array<{ name: string; handler: (input: Record<string, unknown>) => unknown }>,
+  resolveEffectiveAgentModeForSpawn: vi.fn(() => ({ ok: true, mode: 'full' })),
+  resolveOwnerStampForAgentCreation: vi.fn((input: Record<string, unknown>, context: Record<string, unknown> = {}) => {
+    const explicitSessionId = typeof input.session_id === 'string' ? input.session_id : '';
+    const envSessionId =
+      process.env.CODEX_SESSION_ID
+      || process.env.CODEX_THREAD_ID
+      || process.env.CLAUDE_SESSION_ID
+      || process.env.HIVE_FLOW_SESSION_ID
+      || '';
+    const ownerSessionId = explicitSessionId || envSessionId;
+    if (!ownerSessionId) {
+      return { success: false, code: 'missing-owner-session', error: 'missing owner session' };
+    }
+    if (explicitSessionId && explicitSessionId !== envSessionId) {
+      return { success: false, code: 'missing-owner-client-kind', error: 'missing owner client kind' };
+    }
+    const ownerClientKind =
+      (typeof context.clientKind === 'string' ? context.clientKind : undefined)
+      || (ownerSessionId === process.env.CODEX_SESSION_ID || ownerSessionId === process.env.CODEX_THREAD_ID ? 'codex' : undefined)
+      || (ownerSessionId === process.env.CLAUDE_SESSION_ID ? 'claude' : undefined)
+      || (typeof process.env.HIVE_FLOW_CLIENT_KIND === 'string' ? process.env.HIVE_FLOW_CLIENT_KIND : undefined);
+    if (!ownerClientKind) {
+      return { success: false, code: 'missing-owner-client-kind', error: 'missing owner client kind' };
+    }
+    return { success: true, ownerSessionId, ownerClientKind };
+  }),
 }));
 
 vi.mock('../mcp-tools/mcp-enforcement-gate.js', () => ({
   assertDispatchAllowed: vi.fn(() => ({ allowed: true, risk: 3 })),
 }));
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, statSync, lstatSync } from 'node:fs';
 import { loadAgentStore, saveAgentStore, agentTools } from '../mcp-tools/agent-tools.js';
 import { hiveMindTools } from '../mcp-tools/hive-mind-tools.js';
 import { operatorSessionEnvKeys } from '../mcp-tools/session-id.js';
@@ -136,6 +166,13 @@ function setupFsMocks(
   );
 
   (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+  (renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+  (rmdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+  (statSync as ReturnType<typeof vi.fn>).mockReturnValue({ mtimeMs: Date.now() });
+  (lstatSync as ReturnType<typeof vi.fn>).mockReturnValue({
+    isSymbolicLink: () => false,
+    isDirectory: () => true,
+  });
 
   // Agent store mocks
   (loadAgentStore as ReturnType<typeof vi.fn>).mockReturnValue(capturedAgentStore);
