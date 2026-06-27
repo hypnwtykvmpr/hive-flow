@@ -101,6 +101,16 @@ function writeTaskResult(projectRoot: string, taskId: string): void {
   );
 }
 
+function writeTaskMetadata(
+  projectRoot: string,
+  taskId: string,
+  metadata: Record<string, unknown>,
+): void {
+  const tasksRoot = join(projectRoot, '.hive-flow', 'tasks');
+  mkdirSync(tasksRoot, { recursive: true });
+  writeFileSync(join(tasksRoot, `${taskId}.json`), JSON.stringify(metadata), { mode: 0o600 });
+}
+
 function makeStoreFresh(storePath: string): void {
   // mtime = now; lstat will report ageMs ~0 -> 'fresh'.
   const now = Date.now() / 1000;
@@ -800,5 +810,63 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
 
     expect(result.queensAlive).toBe(1);
     expect(result.workersAlive).toBe(0);
+  });
+
+  // Live provider workers can exist as hive/task records before, after, or
+  // without a matching busy row in agents/store.json. The Swarm row must count
+  // the repo-local hive worker from its task pid evidence instead of silently
+  // disappearing because the store row is missing.
+  it('counts a live active-hive worker from task pid evidence even without an agent-store row', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeHive(fix.projectRoot, 'h-live', [
+      {
+        agentId: 'worker-live',
+        workerId: 'worker-live',
+        status: 'idle',
+        taskId: 'task-live',
+        provider: 'deepseek',
+        resolvedModel: 'deepseek-v4-pro',
+      },
+    ], 'queen-live', 'session-a', 'active');
+    writeTaskMetadata(fix.projectRoot, 'task-live', {
+      status: 'running',
+      pid: process.pid,
+      provider: 'deepseek',
+      resolvedModel: 'deepseek-v4-pro',
+    });
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.workersAlive).toBe(1);
+    expect(result.workersExecuting).toBe(1);
+    expect(result.agents).toEqual([
+      expect.objectContaining({
+        id: 'worker-live',
+        role: 'worker',
+        status: 'busy',
+        provider: 'deepseek',
+        model: 'deepseek-v4-pro',
+      }),
+    ]);
+  });
+
+  it('session-scopes hive-only live workers by their owning hive session', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeHive(fix.projectRoot, 'h-live', [
+      { agentId: 'worker-live', workerId: 'worker-live', status: 'idle', taskId: 'task-live' },
+    ], 'queen-live', 'session-a', 'active');
+    writeTaskMetadata(fix.projectRoot, 'task-live', {
+      status: 'running',
+      pid: process.pid,
+    });
+
+    const sameSession = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-a' });
+    const otherSession = await collectSwarm({ projectRoot: fix.projectRoot, sessionId: 'session-b' });
+
+    expect(sameSession.workersAlive).toBe(1);
+    expect(otherSession.workersAlive).toBe(0);
+    expect(otherSession.agents).toEqual([]);
   });
 });

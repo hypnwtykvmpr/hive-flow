@@ -24,11 +24,17 @@ interface HiveWorkerShape {
   taskId?: unknown;
   currentTaskPid?: unknown;
   pid?: unknown;
+  provider?: unknown;
+  model?: unknown;
+  resolvedModel?: unknown;
 }
 
 interface TaskMetadataShape {
   status?: unknown;
   pid?: unknown;
+  provider?: unknown;
+  model?: unknown;
+  resolvedModel?: unknown;
 }
 
 function isActiveHiveRecord(record: unknown): record is HiveRecordShape {
@@ -42,7 +48,20 @@ export interface ActiveHiveRuntimeState {
   activeAgentIds: ReadonlySet<string>;
   hiveAgentIds: ReadonlySet<string>;
   activeHiveIds: ReadonlySet<string>;
+  activeAgents: ReadonlyArray<ActiveHiveRuntimeAgent>;
   inspected: number;
+}
+
+export interface ActiveHiveRuntimeAgent {
+  agentId: string;
+  ownerSessionId: string;
+  role: 'queen' | 'worker';
+  status: 'busy';
+  hiveId: string;
+  currentTaskPid?: number;
+  taskId?: string;
+  provider?: string;
+  model?: string;
 }
 
 const TERMINAL_STATUSES = new Set([
@@ -77,7 +96,7 @@ function isPidDefinitelyDead(pid: number): boolean {
   }
 }
 
-function isLivePid(value: unknown): boolean {
+function isLivePid(value: unknown): value is number {
   return isPositiveInteger(value) && !isPidDefinitelyDead(value);
 }
 
@@ -113,29 +132,43 @@ async function taskMetadataTerminal(tasksRoot: string, taskId: string): Promise<
   return isTerminalStatus(meta?.status);
 }
 
-async function taskMetadataLivePid(tasksRoot: string, taskId: string): Promise<boolean> {
+async function taskMetadata(tasksRoot: string, taskId: string): Promise<TaskMetadataShape | undefined> {
+  return readJsonFile<TaskMetadataShape>(join(tasksRoot, `${taskId}.json`)).catch(() => undefined);
+}
+
+async function taskMetadataLivePid(tasksRoot: string, taskId: string): Promise<number | undefined> {
   const meta = await readJsonFile<TaskMetadataShape>(join(tasksRoot, `${taskId}.json`)).catch(
     () => undefined,
   );
-  return isLivePid(meta?.pid);
+  const pid = meta?.pid;
+  return isLivePid(pid) ? pid : undefined;
 }
 
-async function isWorkerLive(tasksRoot: string, worker: HiveWorkerShape): Promise<boolean> {
-  if (isTerminalStatus(worker.status)) return false;
-  if (isLivePid(worker.currentTaskPid) || isLivePid(worker.pid)) return true;
+async function workerLivePid(tasksRoot: string, worker: HiveWorkerShape): Promise<number | undefined> {
+  if (isTerminalStatus(worker.status)) return undefined;
+  if (isLivePid(worker.currentTaskPid)) return worker.currentTaskPid;
+  if (isLivePid(worker.pid)) return worker.pid;
   const taskId = typeof worker.taskId === 'string' && worker.taskId.trim()
     ? worker.taskId.trim()
     : '';
-  if (!taskId) return false;
-  if (await taskResultExists(tasksRoot, taskId)) return false;
-  if (await taskMetadataTerminal(tasksRoot, taskId)) return false;
+  if (!taskId) return undefined;
+  if (await taskResultExists(tasksRoot, taskId)) return undefined;
+  if (await taskMetadataTerminal(tasksRoot, taskId)) return undefined;
   return taskMetadataLivePid(tasksRoot, taskId);
+}
+
+async function isWorkerLive(tasksRoot: string, worker: HiveWorkerShape): Promise<boolean> {
+  return (await workerLivePid(tasksRoot, worker)) !== undefined;
 }
 
 function workerAgentId(worker: HiveWorkerShape): string | null {
   if (typeof worker.agentId === 'string' && worker.agentId.trim()) return worker.agentId.trim();
   if (typeof worker.workerId === 'string' && worker.workerId.trim()) return worker.workerId.trim();
   return null;
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 /**
@@ -184,6 +217,7 @@ export async function collectActiveHiveRuntimeState(
   const activeAgentIds = new Set<string>();
   const hiveAgentIds = new Set<string>();
   const activeHiveIds = new Set<string>();
+  const activeAgents: ActiveHiveRuntimeAgent[] = [];
 
   for (const entry of entries) {
     if (inspected >= MAX_HIVE_RECORDS) break;
@@ -213,14 +247,50 @@ export async function collectActiveHiveRuntimeState(
     let hasLiveWorker = false;
     for (const worker of workers) {
       const agentId = workerAgentId(worker);
-      if (!(await isWorkerLive(tasksRoot, worker))) continue;
+      const currentTaskPid = await workerLivePid(tasksRoot, worker);
+      if (currentTaskPid === undefined) continue;
       hasLiveWorker = true;
       if (agentId !== null) activeAgentIds.add(agentId);
+      if (agentId !== null) {
+        const taskId = optionalString(worker.taskId);
+        const meta = taskId !== undefined ? await taskMetadata(tasksRoot, taskId) : undefined;
+        const provider = optionalString(worker.provider) ?? optionalString(meta?.provider);
+        const model =
+          optionalString(worker.resolvedModel) ??
+          optionalString(worker.model) ??
+          optionalString(meta?.resolvedModel) ??
+          optionalString(meta?.model);
+        activeAgents.push({
+          agentId,
+          ownerSessionId,
+          role: 'worker',
+          status: 'busy',
+          hiveId: typeof record.hiveId === 'string' && record.hiveId.trim()
+            ? record.hiveId.trim()
+            : entry.name,
+          currentTaskPid,
+          ...(taskId !== undefined ? { taskId } : {}),
+          ...(provider !== undefined ? { provider } : {}),
+          ...(model !== undefined ? { model } : {}),
+        });
+      }
     }
     const hasLiveQueen = isLivePid(recordQueenPid(record));
     if (typeof record.queenId === 'string' && record.queenId.trim()) {
       const queenId = record.queenId.trim();
       if (hasLiveWorker || hasLiveQueen) activeAgentIds.add(queenId);
+      if (hasLiveQueen) {
+        activeAgents.push({
+          agentId: queenId,
+          ownerSessionId,
+          role: 'queen',
+          status: 'busy',
+          hiveId: typeof record.hiveId === 'string' && record.hiveId.trim()
+            ? record.hiveId.trim()
+            : entry.name,
+          currentTaskPid: recordQueenPid(record) as number,
+        });
+      }
     }
     if (!hasLiveWorker && !hasLiveQueen) continue;
     activeHiveIds.add(entry.name);
@@ -233,13 +303,14 @@ export async function collectActiveHiveRuntimeState(
   }
 
   if (active <= 0) {
-    return { activeAgentIds, hiveAgentIds, activeHiveIds, inspected };
+    return { activeAgentIds, hiveAgentIds, activeHiveIds, activeAgents, inspected };
   }
   return {
     activeHives: { active, unknownOwner, byOwnerSessionId },
     activeAgentIds,
     hiveAgentIds,
     activeHiveIds,
+    activeAgents,
     inspected,
   };
 }

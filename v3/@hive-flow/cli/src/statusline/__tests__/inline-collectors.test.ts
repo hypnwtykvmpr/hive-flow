@@ -109,6 +109,16 @@ function writeTaskResult(projectRoot: string, taskId: string): void {
   );
 }
 
+function writeTaskMetadata(
+  projectRoot: string,
+  taskId: string,
+  metadata: Record<string, unknown>,
+): void {
+  const tasksRoot = join(projectRoot, '.hive-flow', 'tasks');
+  mkdirSync(tasksRoot, { recursive: true });
+  writeFileSync(join(tasksRoot, `${taskId}.json`), JSON.stringify(metadata), { mode: 0o600 });
+}
+
 // ---------------------------------------------------------------------------
 // Real-git helper: detect whether a `git` binary exists on PATH. Tests that
 // require a real repo are SKIPPED (not failed) on hosts without git so the
@@ -1112,5 +1122,67 @@ describe('collectInlineSnapshot (Slice A parity with collectSwarm)', () => {
     expect(snap.swarm?.activeQueens).toBe(0);
     expect(snap.swarm?.activeAgents).toBe(1);
     expect(snap.swarm?.agents?.map((a) => a.id)).toEqual(['queen-bee']);
+  });
+
+  it('counts a hive-only live worker from task pid evidence (inline mirror)', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeHive(fix.projectRoot, 'h-live', [
+      {
+        agentId: 'worker-live',
+        workerId: 'worker-live',
+        status: 'idle',
+        taskId: 'task-live',
+        provider: 'deepseek',
+        resolvedModel: 'deepseek-v4-pro',
+      },
+    ], 'queen-live', 'session-a');
+    writeTaskMetadata(fix.projectRoot, 'task-live', {
+      status: 'running',
+      pid: process.pid,
+      provider: 'deepseek',
+      resolvedModel: 'deepseek-v4-pro',
+    });
+
+    const canonical = await collectSwarm({ projectRoot: fix.projectRoot });
+    const inline = await collectInlineSnapshot({ projectRoot: fix.projectRoot, deadlineMs: 500 });
+
+    expect(canonical.workersAlive).toBe(1);
+    expect(inline.swarm?.activeAgents).toBe(1);
+    expect(inline.swarm?.agents).toEqual([
+      expect.objectContaining({
+        id: 'worker-live',
+        role: 'worker',
+        status: 'busy',
+        provider: 'deepseek',
+        model: 'deepseek-v4-pro',
+      }),
+    ]);
+  });
+
+  it('session-scopes hive-only live workers (inline mirror)', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeHive(fix.projectRoot, 'h-live', [
+      { agentId: 'worker-live', workerId: 'worker-live', status: 'idle', taskId: 'task-live' },
+    ], 'queen-live', 'session-a');
+    writeTaskMetadata(fix.projectRoot, 'task-live', {
+      status: 'running',
+      pid: process.pid,
+    });
+
+    const sameSession = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      sessionId: 'session-a',
+      deadlineMs: 500,
+    });
+    const otherSession = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      sessionId: 'session-b',
+      deadlineMs: 500,
+    });
+
+    expect(sameSession.swarm?.activeAgents).toBe(1);
+    expect(otherSession.swarm).toBeUndefined();
   });
 });

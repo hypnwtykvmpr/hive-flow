@@ -45,6 +45,7 @@ import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 
 import {
   collectActiveHiveRuntimeState,
+  type ActiveHiveRuntimeAgent,
   type ActiveHiveRuntimeState,
 } from './hive-ownership.js';
 import { sanitizeSessionId } from '../mcp-tools/session-id.js';
@@ -530,6 +531,70 @@ function isCompletedAgent(rec: RawAgentRecord, status: NormalizedAgentRow['statu
   return !(status === 'busy' && isPositiveInteger(rec.currentTaskPid));
 }
 
+function buildRuntimeHiveRows(
+  runtimeAgents: ReadonlyArray<ActiveHiveRuntimeAgent> | undefined,
+  countedAgentIds: ReadonlySet<string>,
+  suppressedAgentIds: ReadonlySet<string>,
+  sessionId?: string,
+): NormalizedAgentRow[] {
+  if (runtimeAgents === undefined || runtimeAgents.length === 0) return [];
+  const rows: NormalizedAgentRow[] = [];
+  const seen = new Set(countedAgentIds);
+  for (const runtimeAgent of runtimeAgents) {
+    if (sessionId !== undefined && runtimeAgent.ownerSessionId !== sessionId) continue;
+    if (seen.has(runtimeAgent.agentId)) continue;
+    if (suppressedAgentIds.has(runtimeAgent.agentId)) continue;
+    seen.add(runtimeAgent.agentId);
+    const row: NormalizedAgentRow = {
+      id: runtimeAgent.agentId,
+      role: runtimeAgent.role,
+      status: runtimeAgent.status,
+    };
+    if (runtimeAgent.provider !== undefined) {
+      (row as { provider?: string }).provider = runtimeAgent.provider;
+    }
+    if (runtimeAgent.model !== undefined) {
+      (row as { model?: string }).model = runtimeAgent.model;
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function summarizeSwarmRows(
+  rows: ReadonlyArray<NormalizedAgentRow>,
+  activeHives?: SwarmSummary['activeHives'],
+): SwarmSummary | undefined {
+  if (rows.length === 0) return undefined;
+  let activeAgents = 0;
+  let idleAgents = 0;
+  let queuedAgents = 0;
+  let activeQueens = 0;
+  let executingQueens = 0;
+  for (const row of rows) {
+    if (row.role === 'queen') {
+      activeQueens++;
+      if (row.status === 'busy') executingQueens++;
+    } else if (row.status === 'busy') {
+      activeAgents++;
+    } else if (row.status === 'idle' || row.status === 'stale') {
+      idleAgents++;
+    } else if (row.status === 'queued') {
+      queuedAgents++;
+    }
+  }
+  return {
+    activeAgents,
+    idleAgents,
+    queuedAgents,
+    maxAgents: DEFAULT_MAX_AGENTS,
+    activeQueens,
+    executingQueens,
+    agents: [...rows],
+    ...(activeHives !== undefined ? { activeHives } : {}),
+  };
+}
+
 async function probeSwarm(projectRoot: string, sessionId?: string): Promise<SwarmSummary | undefined> {
   const storePath = join(projectRoot, '.hive-flow', 'agents', 'store.json');
   const [raw, runtimeState] = await Promise.all([
@@ -539,7 +604,12 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
     collectActiveHiveRuntimeState(projectRoot).catch(() => undefined),
   ]);
   const activeHives = runtimeState?.activeHives;
-  if (raw === undefined || raw === null || typeof raw !== 'object') return undefined;
+  if (raw === undefined || raw === null || typeof raw !== 'object') {
+    return summarizeSwarmRows(
+      buildRuntimeHiveRows(runtimeState?.activeAgents, new Set(), new Set(), sessionId),
+      activeHives,
+    );
+  }
 
   // Extract records: dict shape (canonical) OR array shape (legacy). Drop
   // null / non-object members so a corrupt slot can't propagate.
@@ -564,7 +634,12 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
     }
   }
 
-  if (records.length === 0) return undefined;
+  if (records.length === 0) {
+    return summarizeSwarmRows(
+      buildRuntimeHiveRows(runtimeState?.activeAgents, new Set(), new Set(), sessionId),
+      activeHives,
+    );
+  }
 
   // Build normalized rows. Terminal statuses → `undefined` and are dropped.
   let activeAgents = 0;
@@ -573,8 +648,13 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
   let activeQueens = 0;
   let executingQueens = 0;
   const rows: NormalizedAgentRow[] = [];
+  const countedAgentIds = new Set<string>();
+  const suppressedRuntimeAgentIds = new Set<string>();
 
   for (const rec of records) {
+    if (hasCompletedLastResult(rec) && typeof rec.agentId === 'string' && rec.agentId.trim()) {
+      suppressedRuntimeAgentIds.add(rec.agentId.trim());
+    }
     const ownerSessionId = ownerSessionIdOf(rec);
     if (ownerSessionId === null) continue;
     if (sessionId !== undefined && ownerSessionId !== sessionId) continue;
@@ -610,6 +690,7 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
       (row as { model?: string }).model = rec.model;
     }
     rows.push(row);
+    countedAgentIds.add(row.id);
 
     if (isQueen) {
       activeQueens++;
@@ -620,6 +701,25 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
       else if (effectiveStatus === 'queued') queuedAgents++;
     }
   }
+  for (const row of buildRuntimeHiveRows(
+    runtimeState?.activeAgents,
+    countedAgentIds,
+    suppressedRuntimeAgentIds,
+    sessionId,
+  )) {
+    rows.push(row);
+    if (row.role === 'queen') {
+      activeQueens++;
+      if (row.status === 'busy') executingQueens++;
+    } else if (row.status === 'busy') {
+      activeAgents++;
+    } else if (row.status === 'idle' || row.status === 'stale') {
+      idleAgents++;
+    } else if (row.status === 'queued') {
+      queuedAgents++;
+    }
+  }
+  if (rows.length === 0) return undefined;
 
   return {
     activeAgents,
