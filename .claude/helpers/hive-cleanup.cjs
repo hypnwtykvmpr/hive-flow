@@ -278,6 +278,26 @@ function readTaskState(taskId) {
   }
 }
 
+function taskFileExists(taskId) {
+  const safeTaskId = safeTaskIdForPath(taskId);
+  if (!safeTaskId) return false;
+  return fs.existsSync(path.join(TASKS_DIR, safeTaskId + '.task'));
+}
+
+function workerHasUnfinishedTaskEvidence(worker) {
+  const taskId = typeof worker?.currentTaskId === 'string' && worker.currentTaskId
+    ? worker.currentTaskId
+    : typeof worker?.taskId === 'string'
+      ? worker.taskId
+      : '';
+  if (!taskId) return false;
+  const taskState = readTaskState(taskId);
+  if (taskState.kind === 'result-present') return false;
+  if (taskState.kind === 'tracking') return true;
+  if (taskFileExists(taskId)) return true;
+  return false;
+}
+
 function classifyStaleBusyAgent(agentId, agent, nowMs) {
   const taskId = typeof agent.currentTaskId === 'string' ? agent.currentTaskId : '';
   const pid = agent.currentTaskPid;
@@ -373,6 +393,10 @@ async function cleanupIdleAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS)
 
           // Check idle threshold: use idleSince (falls back to spawnedAt)
           if (w.status === 'idle') {
+            if (workerHasUnfinishedTaskEvidence(w)) {
+              nonIdleWorkers.push(w);
+              continue;
+            }
             const idleSince = new Date(w.idleSince || w.spawnedAt).getTime();
             if (now - idleSince > IDLE_TIMEOUT_MS) {
               idleWorkers.push(w);

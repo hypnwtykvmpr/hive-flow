@@ -816,7 +816,7 @@ export const statuslineCommand: Command = {
     }
 
     const stdinData = await readStatuslineStdin();
-    const meta = await renderClaudeCodeStatuslineWithMeta(stdinData, process.cwd());
+    const meta = await renderClaudeCodeStatuslineWithMeta(stdinData);
     const rendered = meta.rendered;
 
     if (meta.projectKey && meta.projectRoot) {

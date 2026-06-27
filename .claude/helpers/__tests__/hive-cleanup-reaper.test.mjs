@@ -181,6 +181,93 @@ afterEach(() => {
 });
 
 describe('hive-cleanup OS reaper', () => {
+  it('does not idle-reap workers with unfinished task tracking even when spawned long ago', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const workers = [];
+    workers.push(makeIdleWorker(1, {
+      agentId: 'agent-pending',
+      workerId: 'worker-pending',
+      taskId: 'task-pending',
+      spawnedAt: isoMsAgo(60 * 60_000),
+      idleSince: undefined,
+    }));
+    for (let i = 2; i <= 7; i++) workers.push(makeIdleWorker(i));
+    writeHive(projectDir, 'h1', workers);
+    writeTracking(projectDir, 'task-pending.json', {
+      status: 'running',
+      taskId: 'task-pending',
+      agentId: 'agent-pending',
+      startedAt: isoMsAgo(60 * 60_000),
+      pid: 456789,
+      deadlineAt: isoMsAgo(50 * 60_000),
+    });
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupIdleAgents(Date.now() + 2000);
+    const hive = readHive(projectDir, 'h1');
+
+    assert.equal(result.terminated.some(entry => entry.agentId === 'agent-pending'), false);
+    assert.equal(hive.workers.find(w => w.agentId === 'agent-pending').status, 'idle');
+    assert.equal(hive.workers.find(w => w.agentId === 'agent-pending').taskId, 'task-pending');
+  });
+
+  it('does not idle-reap queued workers with only a .task file and no result yet', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const workers = [];
+    workers.push(makeIdleWorker(1, {
+      agentId: 'agent-queued',
+      workerId: 'worker-queued',
+      taskId: 'task-queued',
+      spawnedAt: isoMsAgo(60 * 60_000),
+      idleSince: undefined,
+    }));
+    for (let i = 2; i <= 7; i++) workers.push(makeIdleWorker(i));
+    writeHive(projectDir, 'h1', workers);
+    const tasksDir = join(projectDir, '.hive-flow', 'tasks');
+    mkdirSync(tasksDir, { recursive: true });
+    writeFileSync(join(tasksDir, 'task-queued.task'), 'queued provider task', 'utf8');
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupIdleAgents(Date.now() + 2000);
+    const hive = readHive(projectDir, 'h1');
+
+    assert.equal(result.terminated.some(entry => entry.agentId === 'agent-queued'), false);
+    assert.equal(hive.workers.find(w => w.agentId === 'agent-queued').status, 'idle');
+    assert.equal(hive.workers.find(w => w.agentId === 'agent-queued').taskId, 'task-queued');
+  });
+
+  it('still idle-reaps workers whose assigned task already has a result file', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const workers = [];
+    workers.push(makeIdleWorker(1, {
+      agentId: 'agent-done',
+      workerId: 'worker-done',
+      taskId: 'task-done',
+      spawnedAt: isoMsAgo(60 * 60_000),
+      idleSince: undefined,
+    }));
+    for (let i = 2; i <= 7; i++) workers.push(makeIdleWorker(i));
+    writeHive(projectDir, 'h1', workers);
+    writeTracking(projectDir, 'task-done.json', {
+      status: 'completed',
+      taskId: 'task-done',
+      agentId: 'agent-done',
+      startedAt: isoMsAgo(60 * 60_000),
+      pid: 567890,
+    });
+    writeResult(projectDir, 'task-done', { status: 'completed' });
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupIdleAgents(Date.now() + 2000);
+    const hive = readHive(projectDir, 'h1');
+
+    assert.equal(result.terminated.some(entry => entry.agentId === 'agent-done'), true);
+    assert.equal(hive.workers.find(w => w.agentId === 'agent-done').status, 'terminated');
+  });
+
   it('SIGTERMs the worker PID read from the task tracking file', async () => {
     const projectDir = makeProjectDir();
     tempDirs.push(projectDir);

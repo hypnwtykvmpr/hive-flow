@@ -3594,7 +3594,7 @@ const statuslineCommand: Command = {
     const { readStatuslineStdin, renderClaudeCodeStatuslineWithMeta } = await import('../statusline/claude-code-renderer.js');
     const { writeLastRender } = await import('../statusline/last-render.js');
     const stdinData = await readStatuslineStdin();
-    const meta = await renderClaudeCodeStatuslineWithMeta(stdinData, process.cwd());
+    const meta = await renderClaudeCodeStatuslineWithMeta(stdinData);
     const rendered = meta.rendered;
     if (meta.projectKey && meta.projectRoot) {
       await writeLastRender({

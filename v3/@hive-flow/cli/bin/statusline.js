@@ -10,7 +10,7 @@ import { writeLastRender } from '../dist/src/statusline/last-render.js';
 
 try {
   const stdinData = await readStatuslineStdin();
-  const meta = await renderClaudeCodeStatuslineWithMeta(stdinData, process.cwd());
+  const meta = await renderClaudeCodeStatuslineWithMeta(stdinData);
   process.stdout.write(meta.rendered + '\n');
   if (meta.projectKey && meta.projectRoot) {
     await writeLastRender({
