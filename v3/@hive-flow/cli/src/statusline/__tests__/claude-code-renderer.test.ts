@@ -337,12 +337,14 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const output = await renderClaudeCodeStatusline(stdinPayload(), fix.projectRoot);
     const plain = stripAnsi(output);
     expect(plain).toContain('Swarm');
-    // idle-only swarm (activeAgents=0, total=5) => hollow ○ indicator (teal), not filled ◉.
+    // idle-only swarm (activeAgents=0, total=5) => hollow orange ○ indicator, not filled green ◉.
     expect(plain).toContain('Swarm ○');
     expect(plain).not.toContain('Swarm ◉');
     expect(plain).toMatch(/\[\s*5\/150\]/);
     expect(plain).not.toMatch(/\[\s*0\/150\]/);
     expect(plain).not.toContain('agents off');
+    expect(output).toContain('\x1b[38;5;208m○');
+    expect(output).toContain('[\x1b[38;5;208m 5\x1b[0m');
   });
 
   it('fresh cache cannot render a stale Swarm row without current live process evidence', async () => {

@@ -961,10 +961,10 @@ function renderSwarm(
   const indicator = executing
     ? `${p.active}◉${p.reset}`
     : total > 0
-      ? `${p.memory}○${p.reset}`
+      ? `${p.warn}○${p.reset}`
       : `${p.dim}○${p.reset}`;
 
-  const numberColor = executing ? p.active : total > 0 ? p.memory : p.dim;
+  const numberColor = executing ? p.active : total > 0 ? p.warn : p.dim;
   const slot = `[${numberColor}${String(total).padStart(2, ' ')}${p.reset}${p.gray}/${p.reset}${p.number}${swarm.maxAgents}${p.reset}]`;
 
   const queenPart = swarm.activeQueens > 0
