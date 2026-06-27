@@ -64,7 +64,14 @@ describe('terminalizeBridgeFailure', () => {
     try {
       writeFileSync(storePath, JSON.stringify({
         agents: {
-          'agent-x': { agentId: 'agent-x', provider: 'openrouter', status: 'busy', currentTaskPid: 999999, currentTaskId: 'task-x' },
+          'agent-x': {
+            agentId: 'agent-x',
+            provider: 'openrouter',
+            status: 'busy',
+            currentTaskPid: 999999,
+            currentTaskId: 'task-x',
+            taskId: 'task-x',
+          },
         },
         version: '3.0.0',
       }), 'utf-8');
@@ -87,6 +94,7 @@ describe('terminalizeBridgeFailure', () => {
       expect(agent.status).toBe('idle');
       expect(agent.currentTaskPid).toBeUndefined();
       expect(agent.currentTaskId).toBeUndefined();
+      expect(agent.taskId).toBeUndefined();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -163,6 +171,7 @@ describe('terminalizeBridgeFailure', () => {
             status: 'busy',
             currentTaskPid: 123456,
             currentTaskId: 'task-new',
+            taskId: 'task-old',
           },
         },
         version: '3.0.0',
@@ -180,6 +189,7 @@ describe('terminalizeBridgeFailure', () => {
       expect(agent.status).toBe('busy');
       expect(agent.currentTaskPid).toBe(123456);
       expect(agent.currentTaskId).toBe('task-new');
+      expect(agent.taskId).toBeUndefined();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

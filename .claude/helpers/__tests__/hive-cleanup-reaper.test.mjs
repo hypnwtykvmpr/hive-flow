@@ -408,6 +408,7 @@ describe('hive-cleanup OS reaper', () => {
         agentType: 'coder',
         status: 'busy',
         currentTaskPid: deadPid,
+        taskId: 'task-dead-stale',
         createdAt: new Date().toISOString(),
       },
       eperm: {
@@ -415,6 +416,7 @@ describe('hive-cleanup OS reaper', () => {
         agentType: 'coder',
         status: 'busy',
         currentTaskPid: epermPid,
+        taskId: 'task-eperm-live',
         createdAt: new Date().toISOString(),
       },
       legacy: {
@@ -425,8 +427,8 @@ describe('hive-cleanup OS reaper', () => {
       },
     });
     writeHive(projectDir, 'h1', [
-      makeIdleWorker(1, { agentId: 'dead', workerId: 'w-dead', status: 'busy' }),
-      makeIdleWorker(2, { agentId: 'eperm', workerId: 'w-eperm', status: 'busy' }),
+      makeIdleWorker(1, { agentId: 'dead', workerId: 'w-dead', status: 'busy', taskId: 'task-dead-stale' }),
+      makeIdleWorker(2, { agentId: 'eperm', workerId: 'w-eperm', status: 'busy', taskId: 'task-eperm-live' }),
       makeIdleWorker(3, { agentId: 'legacy', workerId: 'w-legacy', status: 'busy' }),
     ]);
 
@@ -457,15 +459,21 @@ describe('hive-cleanup OS reaper', () => {
       const store = readAgentStore(projectDir);
       assert.equal(store.agents.dead.status, 'idle');
       assert.equal(store.agents.dead.currentTaskPid, undefined);
+      assert.equal(store.agents.dead.taskId, undefined);
       assert.match(store.agents.dead.idleSince, /^\d{4}-\d{2}-\d{2}T/);
       assert.equal(store.agents.eperm.status, 'busy');
       assert.equal(store.agents.eperm.currentTaskPid, epermPid);
+      assert.equal(store.agents.eperm.taskId, 'task-eperm-live');
       assert.equal(store.agents.legacy.status, 'busy');
       assert.equal(store.agents.legacy.currentTaskPid, undefined);
 
       const hive = readHive(projectDir, 'h1');
-      assert.equal(hive.workers.find(w => w.agentId === 'dead').status, 'idle');
-      assert.equal(hive.workers.find(w => w.agentId === 'eperm').status, 'busy');
+      const deadWorker = hive.workers.find(w => w.agentId === 'dead');
+      const epermWorker = hive.workers.find(w => w.agentId === 'eperm');
+      assert.equal(deadWorker.status, 'idle');
+      assert.equal(deadWorker.taskId, undefined);
+      assert.equal(epermWorker.status, 'busy');
+      assert.equal(epermWorker.taskId, 'task-eperm-live');
       assert.equal(hive.workers.find(w => w.agentId === 'legacy').status, 'busy');
       assert.equal(hive.audit.some(entry => entry.event === 'worker-idle' && entry.agentId === 'dead'), true);
     } finally {

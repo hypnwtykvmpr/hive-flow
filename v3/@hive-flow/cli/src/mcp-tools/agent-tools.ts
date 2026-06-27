@@ -98,6 +98,7 @@ export interface AgentRecord {
   ownerClientKind?: Exclude<OperatorClientKind, 'unknown'>;  // Owning operator lane for completion routing
   currentTaskPid?: number;  // Provider bridge child pid for read-side liveness checks
   currentTaskId?: string;  // In-flight taskId — resolves to .hive-flow/tasks/<id>.json tracking (deadline/result) for the reaper
+  taskId?: string; // Legacy mission-assignment task pointer; cleared on terminal/stale proof
   // HF-1: top-level, persisted, operator-only write-authority grant. Only the
   // literal value 'source' grants tracked-source writes in the provider bridge.
   // Accepted ONLY as a top-level agent_spawn input — never via config (which
@@ -115,18 +116,62 @@ export interface AgentStore {
 }
 
 function clearTerminalTaskIfCurrent(agent: AgentRecord | undefined, taskId: string): boolean {
-  if (!agent || agent.currentTaskId !== taskId) return false;
+  if (!agent || (agent.currentTaskId !== taskId && agent.taskId !== taskId)) return false;
   let changed = false;
-  if (agent.status === 'busy') {
-    transitionAgent(agent, 'idle');
+  if (agent.currentTaskId === taskId) {
+    if (agent.status === 'busy') {
+      transitionAgent(agent, 'idle');
+      changed = true;
+    }
+    if (agent.currentTaskPid !== undefined) {
+      delete agent.currentTaskPid;
+      changed = true;
+    }
+    if (agent.currentTaskId !== undefined) {
+      delete agent.currentTaskId;
+      changed = true;
+    }
+  }
+  if (agent.taskId === taskId) {
+    delete agent.taskId;
     changed = true;
   }
-  if (agent.currentTaskPid !== undefined) {
-    delete agent.currentTaskPid;
-    changed = true;
+  return changed;
+}
+
+function stringRecordField(record: unknown, key: string): string | undefined {
+  if (!record || typeof record !== 'object') return undefined;
+  const value = (record as Record<string, unknown>)[key];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function clearTerminalHiveWorkerTask(worker: unknown, taskId: string): boolean {
+  if (!worker || typeof worker !== 'object') return false;
+  const mutable = worker as Record<string, unknown>;
+  const currentTaskId = stringRecordField(worker, 'currentTaskId');
+  const legacyTaskId = stringRecordField(worker, 'taskId');
+  const matchesCurrent = currentTaskId === taskId;
+  const matchesLegacy = legacyTaskId === taskId;
+  if (!matchesCurrent && !matchesLegacy) return false;
+
+  let changed = false;
+  if (matchesCurrent || (!currentTaskId && matchesLegacy)) {
+    if (mutable.status === 'busy') {
+      mutable.status = 'idle';
+      mutable.idleSince = new Date().toISOString();
+      changed = true;
+    }
+    if ('currentTaskPid' in mutable) {
+      delete mutable.currentTaskPid;
+      changed = true;
+    }
+    if ('currentTaskId' in mutable) {
+      delete mutable.currentTaskId;
+      changed = true;
+    }
   }
-  if (agent.currentTaskId !== undefined) {
-    delete agent.currentTaskId;
+  if (matchesLegacy) {
+    delete mutable.taskId;
     changed = true;
   }
   return changed;
@@ -1965,14 +2010,7 @@ export const agentTools: MCPTool[] = [
                 const fresh = loadHive(hive.hiveId);
                 if (!fresh) return;
                 const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
-                const workerTaskId = typeof (fw as { currentTaskId?: unknown } | undefined)?.currentTaskId === 'string'
-                  ? (fw as { currentTaskId?: string }).currentTaskId
-                  : undefined;
-                if (fw && fw.status === 'busy' && (!workerTaskId || workerTaskId === taskId)) {
-                  fw.status = 'idle';
-                  fw.idleSince = new Date().toISOString();
-                  delete (fw as { currentTaskPid?: unknown }).currentTaskPid;
-                  delete (fw as { currentTaskId?: unknown }).currentTaskId;
+                if (clearTerminalHiveWorkerTask(fw, taskId)) {
                   saveHive(hive.hiveId, fresh);
                 }
               });
@@ -2041,14 +2079,7 @@ export const agentTools: MCPTool[] = [
                   const fresh = loadHive(hive.hiveId);
                   if (!fresh) return;
                   const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
-                  const workerTaskId = typeof (fw as { currentTaskId?: unknown } | undefined)?.currentTaskId === 'string'
-                    ? (fw as { currentTaskId?: string }).currentTaskId
-                    : undefined;
-                  if (fw && fw.status === 'busy' && (!workerTaskId || workerTaskId === taskId)) {
-                    fw.status = 'idle';
-                    fw.idleSince = new Date().toISOString();
-                    delete (fw as { currentTaskPid?: unknown }).currentTaskPid;
-                    delete (fw as { currentTaskId?: unknown }).currentTaskId;
+                  if (clearTerminalHiveWorkerTask(fw, taskId)) {
                     saveHive(hive.hiveId, fresh);
                   }
                 });

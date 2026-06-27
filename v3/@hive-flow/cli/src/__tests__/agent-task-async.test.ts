@@ -66,6 +66,7 @@ interface AgentRecord {
   ownerClientKind?: string;
   currentTaskPid?: number;
   currentTaskId?: string;
+  taskId?: string;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -947,7 +948,13 @@ describe('agent_task_result handler', () => {
   });
 
   it('does not idle a newer in-flight task when an older result is consumed late', async () => {
-    const agent = makeAgent({ agentId: AGENT_ID, status: 'busy', currentTaskId: 'task-newer', currentTaskPid: 4242 });
+    const agent = makeAgent({
+      agentId: AGENT_ID,
+      status: 'busy',
+      currentTaskId: 'task-newer',
+      currentTaskPid: 4242,
+      taskId: TASK_ID,
+    });
     let currentStore = makeStore({ [AGENT_ID]: agent });
     const tracking = { status: 'running', taskId: TASK_ID, agentId: AGENT_ID, startedAt: new Date().toISOString(), pid: LIVE_PID };
     const resultData = { success: true, response: 'late old result' };
@@ -979,6 +986,7 @@ describe('agent_task_result handler', () => {
     expect(currentStore.agents[AGENT_ID].status).toBe('busy');
     expect(currentStore.agents[AGENT_ID].currentTaskId).toBe('task-newer');
     expect(currentStore.agents[AGENT_ID].currentTaskPid).toBe(4242);
+    expect(currentStore.agents[AGENT_ID].taskId).toBeUndefined();
   });
 
   it('sets idleSince when a dead worker is reset back to idle', async () => {

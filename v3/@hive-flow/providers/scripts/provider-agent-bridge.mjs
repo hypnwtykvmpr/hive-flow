@@ -600,15 +600,23 @@ function resolveBridgeArgvPaths() {
 }
 
 function shouldClearTaskForResult(agent, taskId) {
-  return Boolean(agent && taskId && agent.currentTaskId === taskId);
+  return Boolean(agent && taskId && (agent.currentTaskId === taskId || agent.taskId === taskId));
 }
 
 function clearTaskFieldsForResult(agent, taskId) {
   if (!shouldClearTaskForResult(agent, taskId)) return false;
-  agent.status = 'idle';
-  delete agent.currentTaskPid;
-  delete agent.currentTaskId;
-  return true;
+  let changed = false;
+  if (agent.currentTaskId === taskId) {
+    agent.status = 'idle';
+    delete agent.currentTaskPid;
+    delete agent.currentTaskId;
+    changed = true;
+  }
+  if (agent.taskId === taskId) {
+    delete agent.taskId;
+    changed = true;
+  }
+  return changed;
 }
 
 async function clearMatchingTaskState({ storeDir, agentId, resultFile }) {

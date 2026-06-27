@@ -534,6 +534,7 @@ async function cleanupStaleBusyAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIM
       agent.idleSince = nowIso;
       delete agent.currentTaskPid;
       delete agent.currentTaskId;
+      delete agent.taskId;
       staleByAgentId.set(id, {
         agentId: id,
         pid: stale.pid,
@@ -575,6 +576,7 @@ async function cleanupStaleBusyAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIM
           worker.idleSince = nowIso;
           delete worker.currentTaskPid;
           delete worker.currentTaskId;
+          delete worker.taskId;
           changed = true;
           summary.hiveWorkersReaped++;
           stale.hiveId = freshHive.hiveId;
