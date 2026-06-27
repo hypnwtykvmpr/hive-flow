@@ -121,10 +121,12 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
   );
 
   (renameSync as ReturnType<typeof vi.fn>).mockImplementation(
-    (src: string, _dest: string) => {
+    (src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     },
@@ -156,6 +158,22 @@ function mockDetachedSpawn(pid: number = 12345) {
     on: vi.fn(),
     unref: vi.fn(),
   }));
+}
+
+function atomicWriteForDestination(predicate: (destination: string) => boolean) {
+  const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
+  const renameCalls = (renameSync as ReturnType<typeof vi.fn>).mock.calls;
+  const renameCall = renameCalls.find(([, dest]: [string, string]) =>
+    typeof dest === 'string' && predicate(dest));
+  expect(renameCall).toBeDefined();
+  const tmpPath = renameCall![0] as string;
+  const tmpWrite = writeCalls.find(([p]: [string]) => p === tmpPath);
+  expect(tmpWrite).toBeDefined();
+  return {
+    tmpPath,
+    destination: renameCall![1] as string,
+    contents: tmpWrite![1] as string,
+  };
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -216,9 +234,9 @@ describe('agent_task_async handler', () => {
   });
 
   // ------------------------------------------------------------------
-  // 4. Creates .task file and .json tracking file
+  // 4. Creates .task file and .json tracking file atomically
   // ------------------------------------------------------------------
-  it('writes a .task file and a .json tracking file', async () => {
+  it('writes a .task file and a .json tracking file through temp-and-rename', async () => {
     const agent = makeAgent();
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(99);
@@ -227,15 +245,16 @@ describe('agent_task_async handler', () => {
 
     const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
 
-    // At least one call with a .task path
-    const taskFileCall = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.task'));
-    expect(taskFileCall).toBeDefined();
-    expect(taskFileCall![1]).toBe('the task text');
+    const directTaskWrite = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.task'));
+    expect(directTaskWrite).toBeUndefined();
+    const directTrackingWrite = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.json') && !p.endsWith('store.json') && !p.includes('.tmp.'));
+    expect(directTrackingWrite).toBeUndefined();
 
-    // At least one call with a .json path (tracking file)
-    const trackingCall = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.json') && !p.endsWith('store.json') && !p.includes('.tmp.'));
-    expect(trackingCall).toBeDefined();
-    const tracking = JSON.parse(trackingCall![1]);
+    const taskWrite = atomicWriteForDestination((dest) => dest.endsWith('.task'));
+    expect(taskWrite.contents).toBe('the task text');
+
+    const trackingWrite = atomicWriteForDestination((dest) => dest.endsWith('.json') && !dest.endsWith('store.json'));
+    const tracking = JSON.parse(trackingWrite.contents);
     expect(tracking.status).toBe('running');
     expect(tracking.agentId).toBe(agent.agentId);
     expect(typeof tracking.taskId).toBe('string');
@@ -479,11 +498,9 @@ describe('agent_task_async handler', () => {
 
     await asyncHandler({ agentId: agent.agentId, task: 'deadline task', timeout: 120000 });
 
-    const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
-    const trackingCall = writeCalls.find(([p]: [string]) =>
-      typeof p === 'string' && p.endsWith('.json') && !p.endsWith('store.json') && !p.includes('.tmp.'));
-    expect(trackingCall).toBeDefined();
-    const tracking = JSON.parse(trackingCall![1]);
+    const trackingWrite = atomicWriteForDestination((dest) =>
+      dest.endsWith('.json') && !dest.endsWith('store.json'));
+    const tracking = JSON.parse(trackingWrite.contents);
     expect(tracking.timeoutMs).toBe(120000);
     expect(tracking.deadlineGraceMs).toBe(30000);
     expect(typeof tracking.deadlineAt).toBe('string');
@@ -601,6 +618,12 @@ describe('agent_task_result handler', () => {
     expect(result.taskId).toBe(TASK_ID);
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.result).toEqual(resultData);
+
+    const directTrackingWrite = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(([p]: [string]) =>
+      typeof p === 'string' && p.endsWith(`${TASK_ID}.json`) && !p.includes('.tmp.'));
+    expect(directTrackingWrite).toBeUndefined();
+    const trackingWrite = atomicWriteForDestination((dest) => dest.endsWith(`${TASK_ID}.json`));
+    expect(JSON.parse(trackingWrite.contents).status).toBe('completed');
   });
 
   it('clears a stale task pid when a result is consumed after the agent was already idled', async () => {
@@ -624,10 +647,12 @@ describe('agent_task_result handler', () => {
         tmpWrites.set(p, data);
       }
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     });
@@ -732,10 +757,12 @@ describe('agent_task_result handler', () => {
         tmpWrites.set(p, data);
       }
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     });
@@ -797,6 +824,12 @@ describe('agent_task_result handler', () => {
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.error).toMatch(/Process exited without producing a result/i);
 
+    const directTrackingWrite = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(([p]: [string]) =>
+      typeof p === 'string' && p.endsWith(`${TASK_ID}.json`) && !p.includes('.tmp.'));
+    expect(directTrackingWrite).toBeUndefined();
+    const trackingWrite = atomicWriteForDestination((dest) => dest.endsWith(`${TASK_ID}.json`));
+    expect(JSON.parse(trackingWrite.contents).status).toBe('failed');
+
     killSpy.mockRestore();
   });
 
@@ -820,10 +853,12 @@ describe('agent_task_result handler', () => {
         tmpWrites.set(p, data);
       }
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     });
@@ -932,10 +967,12 @@ describe('agent_task_result handler', () => {
       }
       // ignore non-store writes
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        try { currentStore = JSON.parse(data); } catch { /* skip */ }
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          try { currentStore = JSON.parse(data); } catch { /* skip */ }
+        }
         tmpWrites.delete(src);
       }
     });
@@ -970,10 +1007,12 @@ describe('agent_task_result handler', () => {
     (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string, data: string) => {
       if (typeof p === 'string' && p.includes('.tmp.')) tmpWrites.set(p, data);
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     });
@@ -1009,10 +1048,12 @@ describe('agent_task_result handler', () => {
         tmpWrites.set(p, data);
       }
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     });
@@ -1136,10 +1177,12 @@ describe('parallel dispatch', () => {
       }
       // Task file and tracking file writes are ignored for the store
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        try { currentStore = JSON.parse(data); } catch { /* skip */ }
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          try { currentStore = JSON.parse(data); } catch { /* skip */ }
+        }
         tmpWrites.delete(src);
       }
     });
@@ -1232,10 +1275,12 @@ describe('agent_terminate cleanup liveness', () => {
         tmpWrites.set(p, data);
       }
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     });
@@ -1400,10 +1445,12 @@ describe('agent_task_result: bridge result-file failure surfacing', () => {
         tmpWrites.set(p, data);
       }
     });
-    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string) => {
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation((src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        try { currentStore = JSON.parse(data); } catch { /* skip */ }
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          try { currentStore = JSON.parse(data); } catch { /* skip */ }
+        }
         tmpWrites.delete(src);
       }
     });

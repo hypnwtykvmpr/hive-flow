@@ -491,6 +491,16 @@ function ensureAgentDir(): void {
   }
 }
 
+function writeAtomicUtf8File(targetPath: string, contents: string): void {
+  const tmpPath = `${targetPath}.tmp.${process.pid}.${Date.now()}.${randomUUID()}`;
+  writeFileSync(tmpPath, contents, 'utf-8');
+  renameSync(tmpPath, targetPath);
+}
+
+function writeAtomicJsonFile(targetPath: string, value: unknown): void {
+  writeAtomicUtf8File(targetPath, JSON.stringify(value, null, 2));
+}
+
 export function loadAgentStore(): AgentStore {
   const path = getAgentPath();
   const bakPath = path + '.bak';
@@ -1750,7 +1760,7 @@ export const agentTools: MCPTool[] = [
           ? agent.config._spawnToken
           : undefined;
 
-        writeFileSync(taskFilePath, task, 'utf-8');
+        writeAtomicUtf8File(taskFilePath, task);
 
         const agentDir = getAgentDir();
         const agentRole = readVerifiedAgentRole(agentId);
@@ -1841,7 +1851,7 @@ export const agentTools: MCPTool[] = [
       // re-reading the agent store (which may have changed by poll time).
       const trackingPath = join(tasksDir, `${taskId}.json`);
       const startedAt = new Date();
-      writeFileSync(trackingPath, JSON.stringify({
+      writeAtomicJsonFile(trackingPath, {
         status: 'running',
         taskId,
         agentId,
@@ -1856,7 +1866,7 @@ export const agentTools: MCPTool[] = [
         timeoutMs: timeout,
         deadlineGraceMs: TASK_DEADLINE_REAPER_GRACE_MS,
         deadlineAt: new Date(startedAt.getTime() + timeout + TASK_DEADLINE_REAPER_GRACE_MS).toISOString(),
-      }, null, 2), 'utf-8');
+      });
       appendTaskJournalEvent({
         tasksDir,
         taskId,
@@ -1981,7 +1991,7 @@ export const agentTools: MCPTool[] = [
 
         // Update tracking status
         tracking.status = 'completed';
-        writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
+        writeAtomicJsonFile(trackingPath, tracking);
 
         // Reset agent to idle and clear the (now-stale) task pid. The result is
         // consumed, so currentTaskPid is definitively dead. Clearing only on the
@@ -2051,7 +2061,7 @@ export const agentTools: MCPTool[] = [
         } else {
           // Process exited without writing a result
           tracking.status = 'failed';
-          writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
+          writeAtomicJsonFile(trackingPath, tracking);
 
           // Reset agent to idle and clear the stale (dead) task pid. The child
           // exited without a result; a lingering currentTaskPid must not be

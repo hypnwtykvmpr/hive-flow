@@ -521,6 +521,102 @@ describe('hive-cleanup OS reaper', () => {
     assert.equal(hive.workers.find(w => w.agentId === 'freshGhost').status, 'busy');
   });
 
+  it('reaps busy records with missing tracking after the idle timeout age floor', async () => {
+    process.env.HIVE_FLOW_IDLE_TIMEOUT_MS = String(60_000);
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const taskId = 'task-missing-tracking';
+    writeAgentStore(projectDir, {
+      staleMissingTracking: {
+        agentId: 'staleMissingTracking',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskId: taskId,
+        createdAt: isoMsAgo(60 * 60_000),
+      },
+      freshMissingTracking: {
+        agentId: 'freshMissingTracking',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskId: 'task-fresh-missing-tracking',
+        createdAt: new Date().toISOString(),
+      },
+    });
+    writeHive(projectDir, 'h-missing-tracking', [
+      makeIdleWorker(1, {
+        agentId: 'staleMissingTracking',
+        workerId: 'w-stale-missing',
+        status: 'busy',
+        currentTaskId: taskId,
+      }),
+      makeIdleWorker(2, {
+        agentId: 'freshMissingTracking',
+        workerId: 'w-fresh-missing',
+        status: 'busy',
+        currentTaskId: 'task-fresh-missing-tracking',
+      }),
+    ]);
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupStaleBusyAgents(Date.now() + 2000);
+
+    assert.equal(result.staleBusyFound, 1);
+    assert.equal(result.staleBusyReaped, 1);
+    assert.equal(result.hiveWorkersReaped, 1);
+    assert.equal(result.staleBusyAgents[0].reason, 'missing-tracking');
+
+    const store = readAgentStore(projectDir);
+    assert.equal(store.agents.staleMissingTracking.status, 'idle');
+    assert.equal(store.agents.staleMissingTracking.currentTaskId, undefined);
+    assert.equal(store.agents.freshMissingTracking.status, 'busy');
+    const hive = readHive(projectDir, 'h-missing-tracking');
+    assert.equal(hive.workers.find(w => w.agentId === 'staleMissingTracking').status, 'idle');
+    assert.equal(hive.workers.find(w => w.agentId === 'staleMissingTracking').currentTaskId, undefined);
+    assert.equal(hive.workers.find(w => w.agentId === 'freshMissingTracking').status, 'busy');
+  });
+
+  it('reaps busy records with malformed tracking after the idle timeout age floor', async () => {
+    process.env.HIVE_FLOW_IDLE_TIMEOUT_MS = String(60_000);
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const taskId = 'task-malformed-tracking';
+    const tasksDir = join(projectDir, '.hive-flow', 'tasks');
+    mkdirSync(tasksDir, { recursive: true });
+    writeFileSync(join(tasksDir, `${taskId}.json`), '{"status":"running"', 'utf8');
+    writeAgentStore(projectDir, {
+      malformedTrackingAgent: {
+        agentId: 'malformedTrackingAgent',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskId: taskId,
+        updatedAt: isoMsAgo(60 * 60_000),
+      },
+    });
+    writeHive(projectDir, 'h-malformed-tracking', [
+      makeIdleWorker(1, {
+        agentId: 'malformedTrackingAgent',
+        workerId: 'w-malformed',
+        status: 'busy',
+        currentTaskId: taskId,
+      }),
+    ]);
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupStaleBusyAgents(Date.now() + 2000);
+
+    assert.equal(result.staleBusyFound, 1);
+    assert.equal(result.staleBusyReaped, 1);
+    assert.equal(result.hiveWorkersReaped, 1);
+    assert.equal(result.staleBusyAgents[0].reason, 'malformed-tracking');
+
+    const store = readAgentStore(projectDir);
+    assert.equal(store.agents.malformedTrackingAgent.status, 'idle');
+    assert.equal(store.agents.malformedTrackingAgent.currentTaskId, undefined);
+    const hiveWorker = readHive(projectDir, 'h-malformed-tracking').workers[0];
+    assert.equal(hiveWorker.status, 'idle');
+    assert.equal(hiveWorker.currentTaskId, undefined);
+  });
+
   it('reaps past-deadline busy records even when their recorded PID is still alive', async () => {
     const projectDir = makeProjectDir();
     tempDirs.push(projectDir);

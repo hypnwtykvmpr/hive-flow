@@ -216,14 +216,15 @@ describe('cleanupStaleBusyAgents — HF-13 D1 reaper', () => {
     expect(agent.status).toBe('busy');
   });
 
-  it('is fail-safe on missing/malformed tracking — no over-reap', async () => {
-    // a6: currentTaskId points at non-existent tracking, no pid → cannot prove
-    // staleness → preserve. a7: malformed tracking JSON → preserve.
+  it('is fail-safe on fresh missing/malformed tracking — no over-reap', async () => {
+    // Missing/malformed tracking becomes reapable only after the idle age floor.
+    // Fresh dispatch-window records are still preserved.
     const malformedId = 'task-malformed';
     writeFileSync(join(tasksDir, `${malformedId}.json`), '{ not valid json', 'utf-8');
+    const now = new Date().toISOString();
     writeStore({
-      a6: { agentId: 'a6', status: 'busy', currentTaskId: 'task-does-not-exist' },
-      a7: { agentId: 'a7', status: 'busy', currentTaskId: malformedId },
+      a6: { agentId: 'a6', status: 'busy', currentTaskId: 'task-does-not-exist', createdAt: now },
+      a7: { agentId: 'a7', status: 'busy', currentTaskId: malformedId, createdAt: now },
     });
     const { cleanupStaleBusyAgents } = loadReaper();
     const summary = await cleanupStaleBusyAgents();

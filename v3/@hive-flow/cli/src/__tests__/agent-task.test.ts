@@ -160,10 +160,12 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
   );
 
   (renameSync as ReturnType<typeof vi.fn>).mockImplementation(
-    (src: string, _dest: string) => {
+    (src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        }
         tmpWrites.delete(src);
       }
     },
@@ -196,6 +198,22 @@ function mockDetachedSpawn(pid: number = 12345) {
     on: vi.fn(),
     unref: vi.fn(),
   }));
+}
+
+function atomicWriteForDestination(predicate: (destination: string) => boolean) {
+  const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
+  const renameCalls = (renameSync as ReturnType<typeof vi.fn>).mock.calls;
+  const renameCall = renameCalls.find(([, dest]: [string, string]) =>
+    typeof dest === 'string' && predicate(dest));
+  expect(renameCall).toBeDefined();
+  const tmpPath = renameCall![0] as string;
+  const tmpWrite = writeCalls.find(([p]: [string]) => p === tmpPath);
+  expect(tmpWrite).toBeDefined();
+  return {
+    tmpPath,
+    destination: renameCall![1] as string,
+    contents: tmpWrite![1] as string,
+  };
 }
 
 /**
@@ -437,9 +455,9 @@ describe('agent_task handler (non-blocking)', () => {
   });
 
   // ------------------------------------------------------------------
-  // 7. Creates .task file and .json tracking file
+  // 7. Creates .task file and .json tracking file atomically
   // ------------------------------------------------------------------
-  it('writes a .task file and a .json tracking file', async () => {
+  it('writes a .task file and a .json tracking file through temp-and-rename', async () => {
     const agent = makeAgent();
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(99);
@@ -448,13 +466,15 @@ describe('agent_task handler (non-blocking)', () => {
 
     const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
 
-    const taskFileCall = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.task'));
-    expect(taskFileCall).toBeDefined();
-    expect(taskFileCall![1]).toBe('the task text');
+    const directTaskWrite = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.task'));
+    expect(directTaskWrite).toBeUndefined();
+    const directTrackingWrite = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.json') && !p.endsWith('store.json') && !p.includes('.tmp.'));
+    expect(directTrackingWrite).toBeUndefined();
 
-    const trackingCall = writeCalls.find(([p]: [string]) => typeof p === 'string' && p.endsWith('.json') && !p.endsWith('store.json') && !p.includes('.tmp.'));
-    expect(trackingCall).toBeDefined();
-    const tracking = JSON.parse(trackingCall![1]);
+    const taskWrite = atomicWriteForDestination((dest) => dest.endsWith('.task'));
+    expect(taskWrite.contents).toBe('the task text');
+    const trackingWrite = atomicWriteForDestination((dest) => dest.endsWith('.json') && !dest.endsWith('store.json'));
+    const tracking = JSON.parse(trackingWrite.contents);
     expect(tracking.status).toBe('running');
     expect(tracking.agentId).toBe(agent.agentId);
     expect(typeof tracking.taskId).toBe('string');

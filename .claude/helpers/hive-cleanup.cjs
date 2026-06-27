@@ -298,6 +298,14 @@ function workerHasUnfinishedTaskEvidence(worker) {
   return false;
 }
 
+function staleByAge(agent, nowMs, reason, taskId, pid) {
+  const lastActivityMs = latestAgentTimestamp(agent);
+  if (!Number.isFinite(lastActivityMs) || nowMs - lastActivityMs > IDLE_TIMEOUT_MS) {
+    return { stale: true, reason, taskId, pid };
+  }
+  return { stale: false };
+}
+
 function classifyStaleBusyAgent(agentId, agent, nowMs) {
   const taskId = typeof agent.currentTaskId === 'string' ? agent.currentTaskId : '';
   const pid = agent.currentTaskPid;
@@ -322,13 +330,13 @@ function classifyStaleBusyAgent(agentId, agent, nowMs) {
         return { stale: true, reason: 'past-deadline', taskId, pid: livePid };
       }
     }
+    if ((taskState.kind === 'missing' || taskState.kind === 'malformed') && !isPositivePid(pid)) {
+      return staleByAge(agent, nowMs, `${taskState.kind}-tracking`, taskId, pid);
+    }
   }
 
   if (!taskId && !isPositivePid(pid)) {
-    const lastActivityMs = latestAgentTimestamp(agent);
-    if (!Number.isFinite(lastActivityMs) || nowMs - lastActivityMs > IDLE_TIMEOUT_MS) {
-      return { stale: true, reason: 'ghost-busy-no-task', taskId, pid };
-    }
+    return staleByAge(agent, nowMs, 'ghost-busy-no-task', taskId, pid);
   }
 
   if (isPositivePid(pid) && isPidDefinitelyDead(pid)) {
