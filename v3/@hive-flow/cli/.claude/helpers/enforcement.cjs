@@ -2597,7 +2597,7 @@ function detectCircumvention(toolName, toolInput, state) {
       return {
         circumvention: true,
         denyOnly: true,
-        reason: 'compact-now is not activated by checking out protected hook files from inside a governed Claude session. Correct self-compaction command: node .claude/helpers/compact-now.cjs --mode headless --reason "<why compaction is needed>" --resume "$CLAUDE_SESSION_ID" --next-step "<exact next step after compact>". Do not git checkout or edit .claude/helpers to activate compaction.',
+        reason: 'compact-now is not activated by checking out protected hook files from inside a governed Claude session. Correct current-session self-compaction command: node .claude/helpers/compact-now.cjs --mode inplace --reason "<why compaction is needed>" --next-step "<exact next step after compact>". Do not git checkout or edit .claude/helpers to activate compaction.',
         severity: 'normal',
       };
     }

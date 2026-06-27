@@ -893,8 +893,8 @@ describe('enforcement security property contracts', () => {
 
     expect(result.hookSpecificOutput.permissionDecision).toBe('deny');
     expect(result.hookSpecificOutput.permissionDecisionReason).toContain('compact-now is not activated by checking out protected hook files');
-    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('node .claude/helpers/compact-now.cjs --mode headless');
-    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('--resume "$CLAUDE_SESSION_ID"');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('node .claude/helpers/compact-now.cjs --mode inplace');
+    expect(result.hookSpecificOutput.permissionDecisionReason).toContain('--next-step "<exact next step after compact>"');
     expect(readScopedState('global', 'global')).toBeNull();
   });
 

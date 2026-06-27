@@ -1874,7 +1874,7 @@ function consumeCompactSignalAdvisory(projectRoot = PROJECT_ROOT) {
 }
 
 function correctSelfCompactCommand() {
-  return 'Correct self-compaction command: node .claude/helpers/compact-now.cjs --mode headless --reason "<why compaction is needed>" --resume "$CLAUDE_SESSION_ID" --next-step "<exact next step after compact>"';
+  return 'Correct current-session self-compaction command: node .claude/helpers/compact-now.cjs --mode inplace --reason "<why compaction is needed>" --next-step "<exact next step after compact>"';
 }
 
 function launchHeadlessCompact(signal, prompt) {

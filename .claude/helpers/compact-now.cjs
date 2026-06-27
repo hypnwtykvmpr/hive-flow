@@ -15,9 +15,10 @@ const { spawnSync } = require('child_process');
 
 const VALID_MODES = new Set(['inplace', 'headless']);
 const CORRECT_SELF_COMPACT_COMMAND = [
-  'Correct self-compaction command:',
-  'node .claude/helpers/compact-now.cjs --mode headless --reason "<why compaction is needed>" --resume "$CLAUDE_SESSION_ID" --next-step "<exact next step after compact>"',
-  'This writes .hive-flow/data/compaction-handoff.md first, then invokes Claude Code as: claude --output-format stream-json --verbose -p "/compact <preservation prompt>" --resume "$CLAUDE_SESSION_ID".',
+  'Correct current-session self-compaction command:',
+  'node .claude/helpers/compact-now.cjs --mode inplace --reason "<why compaction is needed>" --next-step "<exact next step after compact>"',
+  'This writes .hive-flow/data/compaction-handoff.md first, then submits /compact back into Claude\'s own tmux pane when run from that pane.',
+  'compact-now.cjs --mode headless launches a separate Claude process and must not be used when the current pane/session needs compaction.',
   'Do not git checkout or edit .claude/helpers to activate compaction from inside a governed Claude session.',
 ].join('\n');
 
@@ -160,6 +161,66 @@ function launchHeadlessCompact(request) {
   return { launched: true, mode: 'sync', compacted: true, compactBoundary };
 }
 
+function readTextFileIfPresent(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return '';
+    return fs.readFileSync(filePath, 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
+
+function currentTmuxPane() {
+  const fromEnv = sanitizeLine(process.env.TMUX_PANE || '', 80);
+  if (fromEnv) return fromEnv;
+  const result = spawnSync('tmux', ['display-message', '-p', '#{pane_id}'], {
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) return '';
+  return sanitizeLine(result.stdout, 80);
+}
+
+function resolveInplaceCompactTarget(request) {
+  if (!process.env.TMUX && !process.env.TMUX_PANE) {
+    throw new Error(`In-place compaction requires a tmux session.\n\n${CORRECT_SELF_COMPACT_COMMAND}`);
+  }
+
+  const currentPane = currentTmuxPane();
+  if (!currentPane) {
+    throw new Error(`Could not identify current tmux pane for in-place compaction.\n\n${CORRECT_SELF_COMPACT_COMMAND}`);
+  }
+
+  const recordedPane = readTextFileIfPresent(path.join(request.projectRoot, '.hive-flow', 'data', 'tmux-pane.txt'));
+  const allowExternal = process.env.HIVE_FLOW_ALLOW_TMUX_COMPACT === '1';
+  if (recordedPane && recordedPane !== currentPane && !allowExternal) {
+    throw new Error(
+      `Refusing to inject /compact into pane ${recordedPane} from ${currentPane}; run compact-now from Claude's own pane.\n\n${CORRECT_SELF_COMPACT_COMMAND}`,
+    );
+  }
+
+  return recordedPane || currentPane;
+}
+
+function runTmux(args) {
+  const result = spawnSync('tmux', args, {
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (typeof result.status === 'number' && result.status !== 0) {
+    const detail = (result.stderr || result.stdout || '').trim().slice(0, 1000);
+    throw new Error(`tmux ${args.join(' ')} exited with status ${result.status}${detail ? `: ${detail}` : ''}`);
+  }
+}
+
+function launchInplaceCompact(request, pane) {
+  const prompt = `/compact ${request.preservationPrompt}`;
+  runTmux(['send-keys', '-t', pane, '-l', prompt]);
+  runTmux(['send-keys', '-t', pane, 'Enter']);
+  return { launched: true, mode: 'inplace', pane };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -192,6 +253,8 @@ function main() {
   };
   request.preservationPrompt = buildPreservationPrompt(request);
 
+  const inplacePane = request.mode === 'inplace' ? resolveInplaceCompactTarget(request) : '';
+
   // Recovery note FIRST. The request is written only after the durable handoff.
   appendRecoveryNote(handoffPath, request);
   request.requestedAt = new Date().toISOString();
@@ -199,7 +262,7 @@ function main() {
 
   const headless = request.mode === 'headless'
     ? launchHeadlessCompact(request)
-    : { launched: false, mode: 'inplace' };
+    : launchInplaceCompact(request, inplacePane);
 
   process.stdout.write(JSON.stringify({
     ok: true,

@@ -135,7 +135,8 @@ Automated watcher system that monitors hive worker progress without polling.
 ## Context Management and Compaction Recovery
 
 - Do not suggest `/clear`; preserve state through compact/recovery.
-- Never queue, relay, or ask another agent or the human to send `/compact`; use self-compaction at a clean boundary when needed.
+- Never ask another agent or the human to send `/compact`; use self-compaction at a clean boundary when needed.
+- Current-session self-compaction is a tmux self-send from Claude's own pane. Use `node .claude/helpers/compact-now.cjs --mode inplace --reason "<reason>" --next-step "<exact next step>"`, which writes the recovery handoff and submits `/compact ...` back to the current Claude pane. Do not use `compact-now.cjs --mode headless` for current-session compaction; it starts a separate Claude process and does not compact this pane.
 - Treat context thresholds as active operating guidance:
   - **70%+**: warning zone. Start looking for a clean compaction boundary.
   - **80%+**: historically redlined. Do not treat this as fine; continue only while actively approaching a better boundary.
