@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { buildHiveStatusNotification, classifyMCPClient, clientKindForMCPToolContext } from '../mcp-server.js';
+import {
+  buildHiveStatusNotification,
+  buildMCPToolContextForCall,
+  classifyMCPClient,
+  clientKindForMCPToolContext,
+} from '../mcp-server.js';
 import { operatorSessionEnvKeys } from '../mcp-tools/session-id.js';
 
 const OWNER_ENV_KEYS = Array.from(new Set([
@@ -94,6 +99,40 @@ describe('MCP hive completion notifications', () => {
     expect(clientKindForMCPToolContext('unknown')).toBe('claude');
     expect(clientKindForMCPToolContext('codex')).toBe('codex');
     expect(clientKindForMCPToolContext('opencode')).toBe('opencode');
+  });
+
+  it('binds explicit owner session to classified Codex MCP calls', () => {
+    expect(buildMCPToolContextForCall('mcp-1-local', 'codex', {
+      session_id: 'codex-thread-owner',
+    })).toEqual({
+      sessionId: 'codex-thread-owner',
+      clientKind: 'codex',
+    });
+  });
+
+  it('does not bind explicit owner session for unclassified MCP calls', () => {
+    expect(buildMCPToolContextForCall('mcp-1-local', 'unknown', {
+      session_id: 'attacker-selected-owner',
+    })).toEqual({
+      sessionId: 'mcp-1-local',
+      clientKind: 'claude',
+    });
+  });
+
+  it('uses transport session for classified MCP calls without explicit owner session', () => {
+    expect(buildMCPToolContextForCall('mcp-1-local', 'codex', {})).toEqual({
+      sessionId: 'mcp-1-local',
+      clientKind: 'codex',
+    });
+  });
+
+  it('accepts sessionId alias when binding classified MCP tool context', () => {
+    expect(buildMCPToolContextForCall('mcp-1-local', 'opencode', {
+      sessionId: 'opencode-parent-session',
+    })).toEqual({
+      sessionId: 'opencode-parent-session',
+      clientKind: 'opencode',
+    });
   });
 
   it('emits standard MCP logging notifications for Codex hive completion', () => {

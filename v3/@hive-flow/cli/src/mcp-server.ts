@@ -199,6 +199,27 @@ export function clientKindForMCPToolContext(clientKind: MCPClientKind): Exclude<
   return 'claude';
 }
 
+function readExplicitToolSessionId(params: Record<string, unknown>): string | undefined {
+  const sessionId = typeof params.session_id === 'string'
+    ? params.session_id.trim()
+    : typeof params.sessionId === 'string'
+      ? params.sessionId.trim()
+      : '';
+  return sessionId || undefined;
+}
+
+export function buildMCPToolContextForCall(
+  transportSessionId: string,
+  clientKind: MCPClientKind,
+  toolParams: Record<string, unknown>,
+): { sessionId: string; clientKind: Exclude<MCPClientKind, 'unknown'> } {
+  const explicitSessionId = readExplicitToolSessionId(toolParams);
+  return {
+    sessionId: clientKind !== 'unknown' && explicitSessionId ? explicitSessionId : transportSessionId,
+    clientKind: clientKindForMCPToolContext(clientKind),
+  };
+}
+
 export function buildHiveStatusNotification(
   hive: HiveStatusNotificationInput,
   clientKind: MCPClientKind = 'unknown',
@@ -834,10 +855,11 @@ export class MCPServerManager extends EventEmitter {
           }
 
           try {
-            const result = await callMCPTool(toolName, toolParams, {
-              sessionId,
-              clientKind: clientKindForMCPToolContext(clientKind),
-            });
+            const result = await callMCPTool(
+              toolName,
+              toolParams,
+              buildMCPToolContextForCall(sessionId, clientKind, toolParams),
+            );
             
             // Intercept queen_mission_assign success to auto-register hive for monitoring
             if (toolName === 'queen_mission_assign' && result && typeof result === 'object' && 'success' in result && result.success === true) {
