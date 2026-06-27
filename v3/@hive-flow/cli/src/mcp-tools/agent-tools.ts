@@ -23,7 +23,14 @@ import {
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
-import { normalizeClientKind, operatorSessionEnvKeys, resolveOwnerStampOrError, resolveSessionId, type OperatorClientKind } from './session-id.js';
+import {
+  normalizeClientKind,
+  operatorSessionEnvKeys,
+  resolveOwnerStampOrError,
+  sanitizeSessionId,
+  type OperatorClientKind,
+  type OwnerStampResult,
+} from './session-id.js';
 import { isProtectedWritePath } from '../permission-guard/protected-paths.js';
 import {
   CANONICAL_AGENT_TYPES,
@@ -232,19 +239,71 @@ function normalizePersistedAgentMode(record: unknown): { mode: AgentMode; artifa
   return { mode: mode as AgentMode };
 }
 
-function readPersistedParentAgentMode(): { mode: AgentMode; artifactDir?: string } {
-  const parentAgentId = process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '';
-  if (!parentAgentId) return { mode: 'full' };
+function persistedParentAgentIdFromEnv(): string | null {
+  return sanitizePathId(process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '', 64) || null;
+}
+
+function readPersistedParentAgentRecord(): { parentAgentId: string | null; record?: AgentRecord } {
+  const parentAgentId = persistedParentAgentIdFromEnv();
+  if (!parentAgentId) return { parentAgentId: null };
   try {
     const path = getAgentPath();
-    if (!existsSync(path)) return { mode: 'read-only' };
+    if (!existsSync(path)) return { parentAgentId };
     const store = JSON.parse(readFileSync(path, 'utf-8')) as AgentStore;
     const parentRecord = store.agents?.[parentAgentId];
-    if (!parentRecord) return { mode: 'read-only' };
-    return normalizePersistedAgentMode(parentRecord);
+    return parentRecord ? { parentAgentId, record: parentRecord } : { parentAgentId };
   } catch {
-    return { mode: 'read-only' };
+    return { parentAgentId };
   }
+}
+
+function readPersistedParentAgentMode(): { mode: AgentMode; artifactDir?: string } {
+  const parent = readPersistedParentAgentRecord();
+  if (!parent.parentAgentId) return { mode: 'full' };
+  if (!parent.record) return { mode: 'read-only' };
+  return normalizePersistedAgentMode(parent.record);
+}
+
+export function resolveOwnerStampForAgentCreation(
+  input: Record<string, unknown> | null | undefined = null,
+  context: Record<string, unknown> | null | undefined = null,
+  surface = 'agent',
+): OwnerStampResult {
+  const parent = readPersistedParentAgentRecord();
+  if (!parent.parentAgentId) {
+    return resolveOwnerStampOrError(input, process.env, context, surface);
+  }
+  if (!parent.record) {
+    return {
+      success: false,
+      code: 'missing-owner-session',
+      error: `${surface} requires persisted parent agent '${parent.parentAgentId}' before creating child agent records.`,
+    };
+  }
+
+  const ownerSessionId = sanitizeSessionId(parent.record.ownerSessionId);
+  if (!ownerSessionId) {
+    return {
+      success: false,
+      code: 'missing-owner-session',
+      error: `${surface} requires persisted parent agent '${parent.parentAgentId}' to have an owner session id before creating child agent records.`,
+    };
+  }
+
+  const ownerClientKind = normalizeClientKind(parent.record.ownerClientKind);
+  if (ownerClientKind === 'unknown') {
+    return {
+      success: false,
+      code: 'missing-owner-client-kind',
+      error: `${surface} requires persisted parent agent '${parent.parentAgentId}' to have an owner client kind before creating child agent records.`,
+    };
+  }
+
+  return {
+    success: true,
+    ownerSessionId,
+    ownerClientKind,
+  };
 }
 
 function artifactDirInsideParent(childArtifactDir: string, parentArtifactDir: string): boolean {
@@ -934,7 +993,7 @@ export const agentTools: MCPTool[] = [
         ? input.config as Record<string, unknown>
         : {};
       const config = stripConfigAuthorityFields(rawConfig);
-      const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'agent_spawn');
+      const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'agent_spawn');
 
       if (!isCanonicalAgentType(agentType)) {
         return {
@@ -1480,7 +1539,7 @@ export const agentTools: MCPTool[] = [
             error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
           };
         }
-        const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'agent_pool scale');
+        const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'agent_pool scale');
         if (!ownerStamp.success) return { action, ...ownerStamp };
         const { ownerSessionId, ownerClientKind } = ownerStamp;
         const modeResult = resolveEffectiveAgentModeForSpawn({});

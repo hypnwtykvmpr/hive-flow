@@ -12,8 +12,8 @@
 import type { MCPTool } from './types.js';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveOwnerStampOrError, type OperatorClientKind } from './session-id.js';
-import { resolveEffectiveAgentModeForSpawn, type AgentMode } from './agent-tools.js';
+import type { OperatorClientKind } from './session-id.js';
+import { resolveEffectiveAgentModeForSpawn, resolveOwnerStampForAgentCreation, type AgentMode } from './agent-tools.js';
 
 // Storage paths
 const STORAGE_DIR = '.hive-flow';
@@ -109,7 +109,7 @@ export const daaTools: MCPTool[] = [
       required: ['id'],
     },
     handler: async (input, context) => {
-      const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'daa_agent_create');
+      const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'daa_agent_create');
       if (!ownerStamp.success) return ownerStamp;
       const modeResult = resolveEffectiveAgentModeForSpawn({});
       if (!modeResult.ok) return { success: false, code: modeResult.code, error: modeResult.error };

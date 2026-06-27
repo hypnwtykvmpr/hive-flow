@@ -288,18 +288,45 @@ describe('hive enforcement watcher launch', () => {
     }
   });
 
-  it('does not create a top-up worker when the hive owner session has no matching parent env', () => {
+  it('creates a top-up worker from the persisted hive owner without matching parent env', () => {
     const root = makeTempProject();
     try {
       const hiveHome = join(root, 'global-home');
-      const hiveId = 'hive-owner-env-missing';
+      const hiveId = 'hive-owner-env-independent';
       writeHiveRecord(root, hiveId, 4, { ownerSessionId: 'owner-session', ownerClientKind: 'opencode' });
 
-      expect(invokeSourceHookWithToolResponse(root, { hiveId }, hiveHome)).toBe('{}');
+      expect(invokeSourceHookWithToolResponse(root, { hiveId }, hiveHome)).toContain('Auto-spawned 1 worker');
+
+      const store = readAgentStore(root) as { agents?: Record<string, Record<string, unknown>> };
+      const agents = Object.values(store.agents ?? {});
+      expect(agents).toHaveLength(1);
+      expect(agents[0]).toMatchObject({
+        ownerSessionId: 'owner-session',
+        ownerClientKind: 'opencode',
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not create a top-up worker for legacy hives with a missing owner client kind', () => {
+    const root = makeTempProject();
+    try {
+      const hiveHome = join(root, 'global-home');
+      const hiveId = 'hive-missing-owner-kind';
+      writeHiveRecord(root, hiveId, 4, { ownerSessionId: 'owner-session' });
+
+      expect(invokeSourceHookWithToolResponse(root, { hiveId }, hiveHome, {
+        OPENCODE_SESSION_ID: 'owner-session',
+      })).toBe('{}');
 
       const store = readAgentStore(root) as { agents?: Record<string, unknown> };
       expect(Object.keys(store.agents ?? {})).toHaveLength(0);
-      expect(readAuditEvents(hiveHome)).toContain('worker-spawn-failed');
+      expect(readAuditRecords(hiveHome).at(-1)).toMatchObject({
+        event: 'hive-enforcement-skipped',
+        reason: 'missing-owner-client-kind',
+        hiveId,
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -79,7 +79,8 @@ describe('hive-mind_spawn persisted agent mode', () => {
     expect(records.every(record => record.mode === 'full')).toBe(true);
   });
 
-  it('floors hive-mind_spawn records to the persisted parent mode', async () => {
+  it('inherits persisted parent owner and mode before stale ambient env in hive-mind_spawn', async () => {
+    process.env.CODEX_SESSION_ID = 'stale-ambient-codex-session';
     writeRawAgentStore(tmpRoot, {
       hiveParent: {
         agentId: 'hiveParent',
@@ -89,8 +90,8 @@ describe('hive-mind_spawn persisted agent mode', () => {
         taskCount: 0,
         config: {},
         createdAt: new Date().toISOString(),
-        ownerSessionId: 'hive-parent-session',
-        ownerClientKind: 'codex',
+        ownerSessionId: 'opencode-hive-parent-session',
+        ownerClientKind: 'opencode',
         mode: 'read-only',
       },
     });
@@ -106,6 +107,8 @@ describe('hive-mind_spawn persisted agent mode', () => {
     expect(result).toMatchObject({ success: true, spawned: 2 });
     const workers = readAgentRecords(tmpRoot).filter(record => record.agentId !== 'hiveParent');
     expect(workers).toHaveLength(2);
+    expect(workers.every(record => record.ownerSessionId === 'opencode-hive-parent-session')).toBe(true);
+    expect(workers.every(record => record.ownerClientKind === 'opencode')).toBe(true);
     expect(workers.every(record => record.mode === 'read-only')).toBe(true);
   });
 });

@@ -103,7 +103,8 @@ describe('daa_agent_create owner contract', () => {
     });
   });
 
-  it('persists the parent mode floor as inert DAA metadata', async () => {
+  it('persists parent owner and mode as inert DAA metadata before stale ambient env', async () => {
+    process.env.CODEX_SESSION_ID = 'stale-ambient-codex-session';
     writeRawAgentStore(tmpRoot, {
       daaParent: {
         agentId: 'daaParent',
@@ -113,8 +114,8 @@ describe('daa_agent_create owner contract', () => {
         taskCount: 0,
         config: {},
         createdAt: new Date().toISOString(),
-        ownerSessionId: 'daa-parent-session',
-        ownerClientKind: 'codex',
+        ownerSessionId: 'opencode-daa-parent-session',
+        ownerClientKind: 'opencode',
         mode: 'read-only',
       },
     });
@@ -124,7 +125,7 @@ describe('daa_agent_create owner contract', () => {
       id: 'daa-readonly-child',
       name: 'DAA child',
     }, {
-      sessionId: 'daa-parent-session',
+      sessionId: 'stale-ambient-codex-session',
       clientKind: 'codex',
     }) as Record<string, unknown>;
 
@@ -132,10 +133,14 @@ describe('daa_agent_create owner contract', () => {
       success: true,
       agent: {
         id: 'daa-readonly-child',
+        ownerSessionId: 'opencode-daa-parent-session',
+        ownerClientKind: 'opencode',
         mode: 'read-only',
       },
     });
     expect(readDAAAgents(tmpRoot)['daa-readonly-child']).toMatchObject({
+      ownerSessionId: 'opencode-daa-parent-session',
+      ownerClientKind: 'opencode',
       mode: 'read-only',
     });
   });

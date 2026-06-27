@@ -436,13 +436,16 @@ function loadAgentTools() {
  * Spawn a single worker via agent_spawn handler (metadata-only, fast).
  * Returns the spawn result or null on failure.
  */
-async function spawnWorkerViaAgentTools(agentTools, role, provider, model, hiveId, queenId, ownerSessionId) {
+async function spawnWorkerViaAgentTools(agentTools, role, provider, model, hiveId, queenId, ownerSessionId, ownerClientKind) {
   try {
     const spawnHandler = agentTools.find(t => t.name === 'agent_spawn');
     if (!spawnHandler) return null;
     const workerId = `worker-${randomUUID()}`;
     const normalizedOwnerSessionId = typeof ownerSessionId === 'string' && ownerSessionId.trim()
       ? ownerSessionId.trim()
+      : '';
+    const normalizedOwnerClientKind = typeof ownerClientKind === 'string' && ownerClientKind.trim()
+      ? ownerClientKind.trim()
       : '';
     const result = await spawnHandler.handler({
       agentType: role,
@@ -455,7 +458,9 @@ async function spawnWorkerViaAgentTools(agentTools, role, provider, model, hiveI
         hiveId,
         queenId,
       },
-    });
+    }, normalizedOwnerSessionId && normalizedOwnerClientKind
+      ? { sessionId: normalizedOwnerSessionId, clientKind: normalizedOwnerClientKind }
+      : undefined);
     if (!result) return null;
     return { ...result, workerId };
   } catch {
@@ -652,6 +657,7 @@ async function processPostToolUse(input) {
   let deficit;
   let queenId;
   let ownerSessionId = '';
+  let ownerClientKind = '';
   let shouldLaunchWatcher = false;
   try {
     record = loadHiveRecord(sanitizedId);
@@ -669,6 +675,9 @@ async function processPostToolUse(input) {
     queenId = record.queenId;
     ownerSessionId = typeof record.ownerSessionId === 'string' && record.ownerSessionId.trim()
       ? record.ownerSessionId.trim()
+      : '';
+    ownerClientKind = typeof record.ownerClientKind === 'string' && record.ownerClientKind.trim()
+      ? record.ownerClientKind.trim()
       : '';
     shouldLaunchWatcher = true;
 
@@ -707,6 +716,18 @@ async function processPostToolUse(input) {
         hiveId: sanitizedId,
         tool: toolName,
         reason: 'missing-owner-session',
+        liveWorkers: currentAllocated,
+        deficit,
+      });
+      return {};
+    }
+    if (!ownerClientKind) {
+      releaseLock(lockPath);
+      appendAuditLog({
+        event: 'hive-enforcement-skipped',
+        hiveId: sanitizedId,
+        tool: toolName,
+        reason: 'missing-owner-client-kind',
         liveWorkers: currentAllocated,
         deficit,
       });
@@ -755,7 +776,7 @@ async function processPostToolUse(input) {
     const role = WORKER_ROLES[i % WORKER_ROLES.length];
 
     // 4a: Spawn via agent_spawn handler (metadata-only, fast)
-    const spawnResult = await spawnWorkerViaAgentTools(agentTools, role, provider, model, sanitizedId, queenId, ownerSessionId);
+    const spawnResult = await spawnWorkerViaAgentTools(agentTools, role, provider, model, sanitizedId, queenId, ownerSessionId, ownerClientKind);
     if (!spawnResult || !spawnResult.agentId) {
       releaseReservedWorkerSlot(sanitizedId, lockPath);
       appendAuditLog({

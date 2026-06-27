@@ -12,6 +12,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
 import { sanitizePathId } from '../shared/index.js';
@@ -39,7 +41,7 @@ import {
   recomputeDelegationMetrics,
 } from './hive-store.js';
 import { getWorkflowHookDispatcher } from './workflow-executor.js';
-import { resolveOwnerStampOrError } from './session-id.js';
+import { normalizeClientKind, resolveOwnerStampOrError, sanitizeSessionId, type OwnerStampError } from './session-id.js';
 
 // ---------------------------------------------------------------------------
 // Workflow hooks (fire-and-forget)
@@ -142,6 +144,34 @@ async function callAgentSpawn(
   const spawnTool = agentTools.find(t => t.name === 'agent_spawn');
   if (!spawnTool) throw new Error('agent_spawn tool not found');
   return spawnTool.handler(effectiveInput, context) as Promise<Record<string, unknown>>;
+}
+
+function ownerSpawnContext(
+  ownerSessionId: unknown,
+  ownerClientKind: unknown,
+  surface: string,
+): ({ success: true; input: { session_id: string }; context: { sessionId: string; clientKind: string } } | OwnerStampError) {
+  const sessionId = sanitizeSessionId(ownerSessionId);
+  if (!sessionId) {
+    return {
+      success: false,
+      code: 'missing-owner-session',
+      error: `${surface} requires a persisted hive owner session before spawning workers.`,
+    };
+  }
+  const clientKind = normalizeClientKind(ownerClientKind);
+  if (clientKind === 'unknown') {
+    return {
+      success: false,
+      code: 'missing-owner-client-kind',
+      error: `${surface} requires a persisted hive owner client kind before spawning workers.`,
+    };
+  }
+  return {
+    success: true,
+    input: { session_id: sessionId },
+    context: { sessionId, clientKind },
+  };
 }
 
 async function callAgentTask(input: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -376,6 +406,9 @@ const missionAssignTool: MCPTool = {
     const workerResults: WorkerSpawnResult[] = [];
 
     if (workerDefs && workerDefs.length > 0) {
+      const inheritedOwner = ownerSpawnContext(ownerSessionId, ownerClientKind, 'queen_mission_assign worker spawn');
+      if (!inheritedOwner.success) return inheritedOwner;
+
       // Enforce maxWorkers budget
       const effectiveDefs = workerDefs.slice(0, enforcedMaxWorkers);
 
@@ -392,6 +425,7 @@ const missionAssignTool: MCPTool = {
           spawnResult = await callAgentSpawn({
             agentType: role,
             agentId: workerId,
+            ...inheritedOwner.input,
             provider: workerProvider,
             model: workerModel,
             task: workerTask,
@@ -402,7 +436,7 @@ const missionAssignTool: MCPTool = {
               parentAgentId: queenId,
               role,
             },
-          }, context);
+          }, inheritedOwner.context);
         } catch (e) {
           return { role, error: `Spawn failed: ${(e as Error).message}` };
         }
@@ -611,6 +645,8 @@ const spawnWorkerTool: MCPTool = {
       if (hive.status !== 'active') {
         return { success: false, error: `Hive '${hiveId}' is not active (status: ${hive.status}).` };
       }
+      const inheritedOwner = ownerSpawnContext(hive.ownerSessionId, hive.ownerClientKind, 'queen_spawn_worker');
+      if (!inheritedOwner.success) return inheritedOwner;
 
       // Reconcile worker statuses against the agent store to clear stale
       // entries from previous sessions (e.g. workers stuck in 'spawning' or
@@ -649,6 +685,7 @@ const spawnWorkerTool: MCPTool = {
       const spawnResult = await callAgentSpawn({
         agentType: role,
         agentId: workerId,
+        ...inheritedOwner.input,
         provider,
         model,
         task,
@@ -661,7 +698,7 @@ const spawnWorkerTool: MCPTool = {
           role,
           budgetAllocation,
         },
-      }, context);
+      }, inheritedOwner.context);
 
       if (!spawnResult.success) {
         return { success: false, error: `Failed to spawn worker: ${spawnResult.error}` };
@@ -841,6 +878,18 @@ const collectResultsTool: MCPTool = {
 
     // Collect agent status for each worker
     const store = loadAgentStore();
+    const tasksDir = join(process.cwd(), '.hive-flow', 'tasks');
+    const readDurableTaskResult = (taskId: unknown): unknown | undefined => {
+      const safeTaskId = sanitizePathId(taskId);
+      if (!safeTaskId) return undefined;
+      const resultPath = join(tasksDir, `${safeTaskId}.result.json`);
+      if (!existsSync(resultPath)) return undefined;
+      try {
+        return JSON.parse(readFileSync(resultPath, 'utf-8'));
+      } catch {
+        return { error: 'Failed to parse task result file', taskId: safeTaskId };
+      }
+    };
     const workerResults: Array<{
       workerId: string;
       agentId: string;
@@ -848,19 +897,23 @@ const collectResultsTool: MCPTool = {
       provider: string;
       status: string;
       taskCount: number;
+      taskId?: string;
       lastResult?: unknown;
     }> = [];
 
     for (const worker of liveWorkers) {
       const agent = store.agents[worker.agentId];
+      const taskResult = readDurableTaskResult(worker.taskId);
+      const lastResult = (agent as unknown as Record<string, unknown> | undefined)?.lastResult ?? taskResult;
       workerResults.push({
         workerId: worker.workerId,
         agentId: worker.agentId,
         role: worker.role,
         provider: worker.provider,
-        status: agent?.status ?? worker.status,
-        taskCount: agent?.taskCount ?? 0,
-        lastResult: (agent as unknown as Record<string, unknown>)?.lastResult,
+        status: agent?.status ?? (taskResult !== undefined ? 'completed' : worker.status),
+        taskCount: Math.max(agent?.taskCount ?? 0, taskResult !== undefined ? 1 : 0),
+        ...(typeof worker.taskId === 'string' ? { taskId: worker.taskId } : {}),
+        ...(lastResult !== undefined ? { lastResult } : {}),
       });
     }
 

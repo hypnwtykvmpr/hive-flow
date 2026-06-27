@@ -27,11 +27,13 @@ vi.mock('../agent-tools.js', () => {
   const agentTools = [
     {
       name: 'agent_spawn',
-      handler: async (input: Record<string, unknown>) => {
+      handler: async (input: Record<string, unknown>, context: Record<string, unknown> = {}) => {
         mockAgentState.calls.spawn += 1;
-        const agentId = String(input.agentId ?? 'spawned-agent');
+        const agentId = String(input.agentId ?? `worker-${mockAgentState.calls.spawn}`);
         mockAgentState.store.agents[agentId] = {
           ...makeAgent(agentId, String(input.agentType ?? 'worker')),
+          ...(typeof input.session_id === 'string' ? { ownerSessionId: input.session_id } : {}),
+          ...(typeof context.clientKind === 'string' ? { ownerClientKind: context.clientKind as AgentRecord['ownerClientKind'] } : {}),
           mode: typeof input.mode === 'string' ? input.mode as AgentRecord['mode'] : 'full',
           ...(typeof input.artifactDir === 'string' ? { artifactDir: input.artifactDir } : {}),
         };
@@ -40,6 +42,8 @@ vi.mock('../agent-tools.js', () => {
           agentId,
           model: input.model,
           resolvedModel: input.model,
+          ownerSessionId: input.session_id,
+          ownerClientKind: context.clientKind,
           mode: input.mode,
           artifactDir: input.artifactDir,
         };
@@ -114,7 +118,7 @@ vi.mock('../agent-tools.js', () => {
 
 import { queenTools } from '../queen-tools.js';
 import { hiveMindTools } from '../hive-mind-tools.js';
-import { createHive, saveHive } from '../hive-store.js';
+import { createHive, loadHive, saveHive } from '../hive-store.js';
 import { checkMCPEnforcement, classifyTool, ToolRisk } from '../mcp-enforcement-gate.js';
 
 const originalCwd = process.cwd();
@@ -186,8 +190,8 @@ function getHiveMindTool(name: string) {
   return tool;
 }
 
-function createActiveHive(): HiveRecord {
-  const hive = createHive('queen-1', { maxWorkers: 6 });
+function createActiveHive(owner: { ownerSessionId?: string; ownerClientKind?: string } = { ownerSessionId: 'hive-owner-session', ownerClientKind: 'codex' }): HiveRecord {
+  const hive = createHive('queen-1', { maxWorkers: 6 }, undefined, owner);
   hive.status = 'active';
   hive.workers.push({
     workerId: 'worker-1',
@@ -362,9 +366,48 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(mockAgentState.calls.spawn).toBe(1);
     const agent = mockAgentState.store.agents[String(result.agentId)];
     expect(agent).toMatchObject({
+      ownerSessionId: 'hive-owner-session',
+      ownerClientKind: 'codex',
       mode: 'read-only-with-artifacts',
       artifactDir,
     });
+  });
+
+  it('queen_spawn_worker inherits the persisted hive owner instead of stale ambient context', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-hive-session', ownerClientKind: 'claude' });
+
+    const result = await getQueenTool('queen_spawn_worker').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      role: 'reviewer',
+      provider: 'codex-cli',
+      model: 'sonnet',
+    }, { sessionId: 'codex-transport-session', clientKind: 'codex' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const agent = mockAgentState.store.agents[String(result.agentId)];
+    expect(agent).toMatchObject({
+      ownerSessionId: 'claude-hive-session',
+      ownerClientKind: 'claude',
+    });
+  });
+
+  it('queen_spawn_worker fails closed when the hive owner stamp is incomplete', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'legacy-owner-session' });
+
+    const result = await getQueenTool('queen_spawn_worker').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      role: 'reviewer',
+      provider: 'codex-cli',
+      model: 'sonnet',
+    }, { sessionId: 'codex-transport-session', clientKind: 'codex' }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      code: 'missing-owner-client-kind',
+    });
+    expect(mockAgentState.calls.spawn).toBe(0);
   });
 
   it('passes requested worker mode and artifactDir from queen_mission_assign through to agent_spawn', async () => {
@@ -375,6 +418,7 @@ describe('D-32: queen in-process dispatch gate', () => {
       queenId: 'queen-1',
       scope: 'mode pass-through mission',
       description: 'Verify worker mode forwarding',
+      session_id: 'claude-mission-session',
       workers: Array.from({ length: 5 }, (_, index) => ({
         role: `reviewer-${index}`,
         provider: 'codex-cli',
@@ -382,7 +426,7 @@ describe('D-32: queen in-process dispatch gate', () => {
         mode: 'read-only-with-artifacts',
         artifactDir,
       })),
-    }, { sessionId: 'queen-mode-session', clientKind: 'codex' }) as Record<string, unknown>;
+    }, { sessionId: 'claude-mission-session', clientKind: 'claude' }) as Record<string, unknown>;
 
     expect(result.success).toBe(true);
     expect(result.workersSpawned).toBeGreaterThan(0);
@@ -393,9 +437,91 @@ describe('D-32: queen in-process dispatch gate', () => {
       .map(agentId => mockAgentState.store.agents[agentId])
       .find(agent => agent.mode === 'read-only-with-artifacts');
     expect(spawned).toMatchObject({
+      ownerSessionId: 'claude-mission-session',
+      ownerClientKind: 'claude',
       mode: 'read-only-with-artifacts',
       artifactDir,
     });
+  });
+
+  it('queen_mission_assign auto-spawns every parallel worker with the persisted hive owner', async () => {
+    const roles = ['tester', 'verifier', 'researcher', 'auditor', 'bug-hunter'];
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'owner inheritance mission',
+      description: 'Verify auto-spawn owner inheritance',
+      session_id: 'claude-auto-session',
+      workers: Array.from({ length: 5 }, (_, index) => ({
+        role: roles[index],
+        provider: 'codex-cli',
+        model: 'sonnet',
+      })),
+    }, { sessionId: 'claude-auto-session', clientKind: 'claude' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.workersSpawned).toBe(5);
+    const resultWorkers = result.workers as Array<Record<string, unknown>>;
+    expect(resultWorkers).toHaveLength(5);
+    expect(new Set(resultWorkers.map(worker => worker.agentId)).size).toBe(5);
+    const persistedHive = loadHive(String(result.hiveId));
+    const spawnedWorkers = persistedHive?.workers.filter(worker => String(worker.agentId).startsWith('worker-')) ?? [];
+    expect(spawnedWorkers).toHaveLength(5);
+    expect(spawnedWorkers.every(worker => worker.ownerSessionId === 'claude-auto-session')).toBe(true);
+    expect(spawnedWorkers.every(worker => worker.ownerClientKind === 'claude')).toBe(true);
+  });
+
+  it('queen_collect_results reads durable task results for queen-owned workers before agent_task_result consumption', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-collect-session', ownerClientKind: 'claude' });
+    const taskDir = join(root, '.hive-flow', 'tasks');
+    mkdirSync(taskDir, { recursive: true });
+    hive.workers = Array.from({ length: 5 }, (_, index) => {
+      const workerId = `worker-${index + 1}`;
+      const agentId = `collect-agent-${index + 1}`;
+      const taskId = `task-collect-${index + 1}`;
+      writeFileSync(join(taskDir, `${taskId}.result.json`), JSON.stringify({
+        success: true,
+        taskId,
+        agentId,
+        result: `worker result ${index + 1}`,
+      }), 'utf8');
+      mockAgentState.store.agents[agentId] = {
+        ...makeAgent(agentId, 'tester'),
+        ownerSessionId: 'claude-collect-session',
+        ownerClientKind: 'claude',
+        taskCount: 0,
+      };
+      return {
+        workerId,
+        agentId,
+        taskId,
+        ownerSessionId: 'claude-collect-session',
+        ownerClientKind: 'claude',
+        role: 'tester',
+        provider: 'codex-cli',
+        status: 'idle',
+        spawnedAt: new Date(0).toISOString(),
+      };
+    });
+    hive.budget.workersAllocated = 5;
+    saveHive(hive.hiveId, hive);
+
+    const result = await getQueenTool('queen_collect_results').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.workerCount).toBe(5);
+    const workers = result.workers as Array<Record<string, unknown>>;
+    expect(workers).toHaveLength(5);
+    expect(workers.every(worker => worker.taskCount === 1)).toBe(true);
+    expect(workers.map(worker => (worker.lastResult as Record<string, unknown>)?.result)).toEqual([
+      'worker result 1',
+      'worker result 2',
+      'worker result 3',
+      'worker result 4',
+      'worker result 5',
+    ]);
   });
 
   it('statically keeps every in-process dispatch sink behind assertDispatchAllowed', () => {

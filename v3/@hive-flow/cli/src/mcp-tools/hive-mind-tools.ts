@@ -7,10 +7,10 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
-import { loadAgentStore, saveAgentStore, withStoreLock, agentTools, resolveEffectiveAgentModeForSpawn } from './agent-tools.js';
+import { loadAgentStore, saveAgentStore, withStoreLock, agentTools, resolveEffectiveAgentModeForSpawn, resolveOwnerStampForAgentCreation } from './agent-tools.js';
 import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import type { AgentProvider } from './agent-tools.js';
-import { resolveOwnerStampOrError, type OperatorClientKind } from './session-id.js';
+import type { OperatorClientKind } from './session-id.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -239,7 +239,7 @@ export const hiveMindTools: MCPTool[] = [
       if (!state.initialized) {
         return { success: false, error: 'Hive-mind not initialized. Run hive-mind/init first.' };
       }
-      const ownerStamp = resolveOwnerStampOrError(input, process.env, context, 'hive-mind_spawn');
+      const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'hive-mind_spawn');
       if (!ownerStamp.success) return ownerStamp;
       const { ownerSessionId, ownerClientKind } = ownerStamp;
       const modeResult = resolveEffectiveAgentModeForSpawn({});
@@ -484,9 +484,8 @@ export const hiveMindTools: MCPTool[] = [
             error: `hive-mind_join requires existing agent ${agentId} to have an owner stamp before it can join the hive.`,
           };
         }
-        const ownerStamp = resolveOwnerStampOrError(
+        const ownerStamp = resolveOwnerStampForAgentCreation(
           { ...input, session_id: rec.ownerSessionId },
-          process.env,
           context,
           'hive-mind_join',
         );

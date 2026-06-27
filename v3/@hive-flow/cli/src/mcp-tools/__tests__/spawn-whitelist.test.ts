@@ -218,6 +218,40 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecord(tmpRoot, 'context-codex-owned-agent')?.ownerClientKind).toBe('codex');
   });
 
+  it('inherits persisted parent owner for direct child agent_spawn before stale ambient env', async () => {
+    clearOwnerEnv();
+    process.env.CODEX_SESSION_ID = 'stale-ambient-codex-session';
+    writeRawAgentStore(tmpRoot, {
+      parentAgent: {
+        agentId: 'parentAgent',
+        agentType: 'researcher',
+        status: 'idle',
+        health: 1,
+        taskCount: 0,
+        config: {},
+        createdAt: new Date().toISOString(),
+        ownerSessionId: 'opencode-parent-session',
+        ownerClientKind: 'opencode',
+      },
+    });
+    process.env.HIVE_FLOW_AGENT_ID = 'parentAgent';
+
+    const result = await spawnTool.handler({
+      agentId: 'child-owned-by-parent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'child-owned-by-parent',
+    });
+    expect(readAgentRecord(tmpRoot, 'child-owned-by-parent')).toMatchObject({
+      ownerSessionId: 'opencode-parent-session',
+      ownerClientKind: 'opencode',
+    });
+  });
+
   it('derives ownerClientKind from explicit owner session instead of ambient MCP server env', async () => {
     delete process.env.CODEX_SESSION_ID;
     process.env.CODEX_THREAD_ID = 'codex-thread-from-reconnect';
@@ -610,7 +644,7 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(readAgentRecord(tmpRoot, 'artifact-child-outside')).toBeUndefined();
   });
 
-  it('fails closed to read-only for child mode when the persisted parent store is corrupt', async () => {
+  it('refuses child spawn when the persisted parent store is corrupt', async () => {
     writeRawAgentStore(tmpRoot, {
       corruptParent: {
         agentId: 'corruptParent',
@@ -636,11 +670,14 @@ describe('agent_spawn canonical roster whitelist', () => {
       mode: 'full',
     }) as Record<string, unknown>;
 
-    expect(child).toMatchObject({ success: true, mode: 'read-only' });
-    expect(readAgentRecord(tmpRoot, 'corrupt-parent-child')?.mode).toBe('read-only');
+    expect(child).toMatchObject({
+      success: false,
+      code: 'missing-owner-session',
+    });
+    expect(readFileSync(storePath, 'utf8')).toBe('{not-json');
   });
 
-  it('fails closed to read-only when a parent agent id is present but has no persisted record', async () => {
+  it('refuses child spawn when a parent agent id is present but has no persisted record', async () => {
     writeRawAgentStore(tmpRoot, {});
     process.env.HIVE_FLOW_AGENT_ID = 'missingParent';
 
@@ -651,8 +688,11 @@ describe('agent_spawn canonical roster whitelist', () => {
       mode: 'full',
     }) as Record<string, unknown>;
 
-    expect(child).toMatchObject({ success: true, mode: 'read-only' });
-    expect(readAgentRecord(tmpRoot, 'missing-parent-child')?.mode).toBe('read-only');
+    expect(child).toMatchObject({
+      success: false,
+      code: 'missing-owner-session',
+    });
+    expect(readAgentRecord(tmpRoot, 'missing-parent-child')).toBeUndefined();
   });
 
   it('lists spawned idle agents when status is all and supports canonical type filters', async () => {
@@ -868,8 +908,7 @@ describe('agent_spawn canonical roster whitelist', () => {
 
   it('agent_pool scale stamps every grown pool agent with a real parent owner and inherited floor mode', async () => {
     clearOwnerEnv();
-    process.env.OPENCODE_THREAD_ID = 'pool-parent-session';
-    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+    process.env.CODEX_SESSION_ID = 'stale-ambient-codex-session';
     writeRawAgentStore(tmpRoot, {
       poolParent: {
         agentId: 'poolParent',
