@@ -1155,11 +1155,17 @@ describe('collectInlineSnapshot (Slice A parity with collectSwarm)', () => {
       expect.objectContaining({
         id: 'worker-live',
         role: 'worker',
+        ownerSessionId: 'session-a',
         status: 'busy',
         provider: 'deepseek',
         model: 'deepseek-v4-pro',
       }),
-      { id: 'queen-live', role: 'queen', status: 'idle' },
+      expect.objectContaining({
+        id: 'queen-live',
+        role: 'queen',
+        ownerSessionId: 'session-a',
+        status: 'idle',
+      }),
     ]);
     expect(inline.swarm?.activeQueens).toBe(1);
     expect(inline.swarm?.executingQueens).toBe(0);

@@ -449,6 +449,7 @@ export type AgentRole =
 export interface NormalizedAgentRow {
   id: string;
   role: AgentRole;
+  ownerSessionId?: string;
   provider?: ScoreProvider | string;
   model?: string;
   status: NormalizedAgentStatus;

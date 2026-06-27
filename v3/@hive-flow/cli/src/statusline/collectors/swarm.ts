@@ -312,6 +312,10 @@ function buildRow(
     role: roleSource,
     status,
   };
+  const ownerSessionId = ownerSessionIdOf(rec);
+  if (ownerSessionId !== null) {
+    row.ownerSessionId = ownerSessionId;
+  }
   if (typeof rec.provider === 'string' && rec.provider.length > 0) {
     (row as { provider?: string }).provider = rec.provider;
   }
@@ -389,6 +393,7 @@ function buildRuntimeHiveRows(
     const row: NormalizedAgentRow = {
       id: runtimeAgent.agentId,
       role: runtimeAgent.role,
+      ownerSessionId: runtimeAgent.ownerSessionId,
       status: runtimeAgent.status,
     };
     if (runtimeAgent.provider !== undefined) {

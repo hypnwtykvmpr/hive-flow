@@ -548,6 +548,7 @@ function buildRuntimeHiveRows(
     const row: NormalizedAgentRow = {
       id: runtimeAgent.agentId,
       role: runtimeAgent.role,
+      ownerSessionId: runtimeAgent.ownerSessionId,
       status: runtimeAgent.status,
     };
     if (runtimeAgent.provider !== undefined) {
@@ -680,7 +681,7 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
     const isExecuting = status === 'busy' && isPositiveInteger(rec.currentTaskPid);
     const effectiveStatus: NormalizedAgentRow['status'] = status;
 
-    const row: NormalizedAgentRow = { id, role, status: effectiveStatus };
+    const row: NormalizedAgentRow = { id, role, ownerSessionId, status: effectiveStatus };
     if (typeof rec.provider === 'string' && rec.provider.length > 0) {
       (row as { provider?: string }).provider = rec.provider;
     }

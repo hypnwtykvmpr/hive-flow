@@ -548,25 +548,44 @@ async function revalidateCachedSwarm(
   scope: ProjectScope,
   cached: StatuslineSnapshotV1,
 ): Promise<StatuslineSnapshotV1> {
-  const liveSwarm = await collectLiveSwarm(scope).catch(() => undefined);
-  const base = withoutCachedSwarm(cached);
-  return liveSwarm !== undefined ? { ...base, swarm: liveSwarm } : base;
+  const validation = await collectLiveSwarm(scope).catch(() => undefined);
+  if (validation?.swarm !== undefined) {
+    return { ...withoutCachedSwarm(cached), swarm: validation.swarm };
+  }
+  if (validation?.hasLiveSwarmSource === true) {
+    return withoutCachedSwarm(cached);
+  }
+  return cached;
 }
 
-async function collectLiveSwarm(scope: ProjectScope): Promise<SwarmSummary | undefined> {
+interface LiveSwarmValidation {
+  readonly swarm?: SwarmSummary;
+  readonly hasLiveSwarmSource: boolean;
+}
+
+async function collectLiveSwarm(scope: ProjectScope): Promise<LiveSwarmValidation> {
   const s = await collectSwarm({ projectRoot: scope.projectRoot });
-  if (s.workersAlive <= 0 && s.queensAlive <= 0) return undefined;
+  const hasLiveSwarmSource =
+    s.freshness.state !== 'absent' ||
+    s.activeHives !== undefined ||
+    s.agents.length > 0;
+  if (s.workersAlive <= 0 && s.queensAlive <= 0) {
+    return { hasLiveSwarmSource };
+  }
   const idleAgents = Math.max(0, s.workersAlive - s.workersExecuting);
   const agentsList: NormalizedAgentRow[] = s.agents.map((row) => ({ ...row }));
   return {
-    activeAgents: s.workersExecuting,
-    idleAgents,
-    queuedAgents: 0,
-    maxAgents: s.cap,
-    activeQueens: s.queensAlive,
-    executingQueens: s.queensExecuting,
-    ...(agentsList.length > 0 ? { agents: agentsList } : {}),
-    ...(s.activeHives !== undefined ? { activeHives: s.activeHives } : {}),
+    hasLiveSwarmSource: true,
+    swarm: {
+      activeAgents: s.workersExecuting,
+      idleAgents,
+      queuedAgents: 0,
+      maxAgents: s.cap,
+      activeQueens: s.queensAlive,
+      executingQueens: s.queensExecuting,
+      ...(agentsList.length > 0 ? { agents: agentsList } : {}),
+      ...(s.activeHives !== undefined ? { activeHives: s.activeHives } : {}),
+    },
   };
 }
 
@@ -971,11 +990,16 @@ function renderSwarm(
     ? `  ${swarm.executingQueens > 0 ? p.queen : p.queenIdle}♛${swarm.activeQueens}${p.reset}`
     : '';
 
-  const hiveTag = maybeRenderHiveSessionTag(swarm, currentSessionId, p);
-  const hivePart = hiveTag !== undefined ? `  ${p.separator}·${p.reset}  ${hiveTag}` : '';
+  const detailTags = [
+    maybeRenderParentSessionTag(swarm, currentSessionId, p),
+    maybeRenderHiveSessionTag(swarm, currentSessionId, p),
+  ].filter((tag): tag is string => tag !== undefined);
+  const detailPart = detailTags.length > 0
+    ? `  ${p.separator}·${p.reset}  ${detailTags.join(`  ${p.separator}·${p.reset}  `)}`
+    : '';
   const detailMode = snapshot.rendererHints?.activeAgentDetail ?? 'off';
   const useRoleIcons = snapshot.rendererHints?.useRoleIcons === true;
-  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}${hivePart}`;
+  const swarmCore = `🪪 Swarm ${indicator} ${slot}${queenPart}${detailPart}`;
 
   // Active agents row collapses into the same section when role-icons toggle
   // is on (visual design 3.5). Default is `off` per config.
@@ -984,6 +1008,26 @@ function renderSwarm(
     return `${swarmCore}  ${p.separator}·${p.reset}  ${active}`;
   }
   return swarmCore;
+}
+
+function maybeRenderParentSessionTag(
+  swarm: SwarmSummary,
+  currentSessionId: string | undefined,
+  p: PaletteCodes,
+): string | undefined {
+  if (currentSessionId === undefined) return undefined;
+  const agents = swarm.agents;
+  if (agents === undefined || agents.length === 0) return undefined;
+
+  let knownOwnerRows = 0;
+  let currentOwnerRows = 0;
+  for (const agent of agents) {
+    if (typeof agent.ownerSessionId !== 'string' || agent.ownerSessionId.length === 0) continue;
+    knownOwnerRows++;
+    if (agent.ownerSessionId === currentSessionId) currentOwnerRows++;
+  }
+  if (knownOwnerRows <= 0) return undefined;
+  return `${p.gray}parent ${p.number}${currentOwnerRows}${p.reset}`;
 }
 
 function maybeRenderHiveSessionTag(

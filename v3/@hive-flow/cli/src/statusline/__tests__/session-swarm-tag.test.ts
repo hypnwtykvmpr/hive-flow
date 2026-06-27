@@ -126,6 +126,8 @@ describe('statusline R7 swarm session tag', () => {
 
     const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
 
+    expect(row).toMatch(/\[\s*3\/150\]/);
+    expect(row).toContain('parent 2');
     expect(row).toContain('hives 1 this/1 other');
   });
 
@@ -136,6 +138,7 @@ describe('statusline R7 swarm session tag', () => {
 
     const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
 
+    expect(row).toContain('parent 2');
     expect(row).not.toContain('unowned');
     expect(row).not.toContain('hives');
   });
@@ -146,19 +149,23 @@ describe('statusline R7 swarm session tag', () => {
 
     const row = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
 
+    expect(row).toContain('parent 1');
     expect(row).not.toContain('unowned');
     expect(row).not.toContain('hives');
   });
 
-  it('leaves the swarm row unchanged when there is no current session id', async () => {
+  it('keeps repo-wide live hive workers visible when there is no current session id', async () => {
     writeSwarmStore(projectRoot, 'sid-current');
     const baseline = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot), projectRoot));
+    expect(baseline).toMatch(/\[\s*1\/150\]/);
 
     writeHive(projectRoot, 'hive-current', 'sid-current');
     writeHive(projectRoot, 'hive-other', 'sid-other');
     const withHives = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot), projectRoot));
 
-    expect(withHives).toBe(baseline);
+    expect(withHives).toMatch(/\[\s*3\/150\]/);
+    expect(withHives).not.toContain('parent');
+    expect(withHives).not.toContain('hives');
   });
 
   it('does not let ambient Codex env hide live agents when stdin has no session id', async () => {
@@ -188,11 +195,13 @@ describe('statusline R7 swarm session tag', () => {
 
     expect(row).toContain('Swarm ◉');
     expect(row).toMatch(/\[\s*1\/150\]/);
+    expect(row).toContain('parent 0');
   });
 
-  it('leaves the swarm row unchanged when every active hive belongs to the current session', async () => {
+  it('counts current-session hive workers while omitting a redundant this-only hive tag', async () => {
     writeSwarmStore(projectRoot, 'sid-current');
     const baseline = swarmRow(await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot));
+    expect(baseline).toMatch(/\[\s*1\/150\]/);
 
     writeHive(projectRoot, 'hive-a', 'sid-current');
     writeHive(projectRoot, 'hive-b', 'sid-current');
@@ -200,6 +209,8 @@ describe('statusline R7 swarm session tag', () => {
       await renderClaudeCodeStatusline(stdinPayload(projectRoot, 'sid-current'), projectRoot),
     );
 
-    expect(withOwnedHives).toBe(baseline);
+    expect(withOwnedHives).toMatch(/\[\s*3\/150\]/);
+    expect(withOwnedHives).toContain('parent 3');
+    expect(withOwnedHives).not.toContain('hives');
   });
 });

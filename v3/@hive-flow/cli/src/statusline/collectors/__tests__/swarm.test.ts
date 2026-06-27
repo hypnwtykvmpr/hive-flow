@@ -850,11 +850,17 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
       expect.objectContaining({
         id: 'worker-live',
         role: 'worker',
+        ownerSessionId: 'session-a',
         status: 'busy',
         provider: 'deepseek',
         model: 'deepseek-v4-pro',
       }),
-      { id: 'queen-live', role: 'queen', status: 'idle' },
+      expect.objectContaining({
+        id: 'queen-live',
+        role: 'queen',
+        ownerSessionId: 'session-a',
+        status: 'idle',
+      }),
     ]);
     expect(result.queensAlive).toBe(1);
     expect(result.queensExecuting).toBe(0);
