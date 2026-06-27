@@ -57,7 +57,8 @@ async function importQueenModules() {
     const mockedAgentTask = {
       name: 'agent_task',
       handler: async (input: Record<string, unknown>) => {
-        taskCalls.push(input);
+        const retryContext = (input as Record<symbol, unknown>)[actual.AGENT_TASK_RETRY_CONTEXT];
+        taskCalls.push({ ...input, __retryContext: retryContext });
         const replacementTaskId = `task-retry-${taskCalls.length}`;
         const store = actual.loadAgentStore();
         const agent = store.agents[input.agentId as string];
@@ -72,6 +73,7 @@ async function importQueenModules() {
           agentId: input.agentId,
           pid: process.pid,
           timeoutMs: input.timeout,
+          ...(retryContext && typeof retryContext === 'object' ? retryContext as Record<string, unknown> : {}),
         });
         return {
           success: true,
@@ -216,6 +218,11 @@ describe('hive_poll_workers dead-worker reassignment', () => {
         agentId: 'agent-dead',
         task: 'original prompt',
         timeout: 120_000,
+        __retryContext: {
+          retryCount: 1,
+          reassignedFromTaskId: 'task-dead',
+          originalTaskId: 'task-dead',
+        },
       });
 
       const oldTracking = readJson(join(tasksDir(), 'task-dead.json'));

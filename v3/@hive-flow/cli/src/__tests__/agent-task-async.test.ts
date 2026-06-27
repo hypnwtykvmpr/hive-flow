@@ -39,7 +39,7 @@ vi.mock('../hivector/enhanced-model-router.js', () => ({
 
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, rmSync, renameSync, unlinkSync } from 'node:fs';
 import { spawn } from 'node:child_process';
-import { agentTools } from '../mcp-tools/agent-tools.js';
+import { AGENT_TASK_RETRY_CONTEXT, agentTools } from '../mcp-tools/agent-tools.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -507,6 +507,30 @@ describe('agent_task_async handler', () => {
     const deadline = new Date(tracking.deadlineAt).getTime();
     const started = new Date(tracking.startedAt).getTime();
     expect(deadline - started).toBe(150000);
+  });
+
+  it('persists internal retry metadata in the initial tracking file', async () => {
+    const agent = makeAgent();
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(88);
+
+    await asyncHandler({
+      agentId: agent.agentId,
+      task: 'retry replacement task',
+      [AGENT_TASK_RETRY_CONTEXT]: {
+        retryCount: 1,
+        reassignedFromTaskId: 'task-dead',
+        originalTaskId: 'task-root',
+      },
+    });
+
+    const trackingWrite = atomicWriteForDestination((dest) =>
+      dest.endsWith('.json') && !dest.endsWith('store.json'));
+    const tracking = JSON.parse(trackingWrite.contents);
+    expect(tracking.retryCount).toBe(1);
+    expect(tracking.reassignedFromTaskId).toBe('task-dead');
+    expect(tracking.originalTaskId).toBe('task-root');
+    expect(typeof tracking.reassignedAt).toBe('string');
   });
 
   it('clears currentTaskId when the bridge spawn fails after the busy transition', async () => {

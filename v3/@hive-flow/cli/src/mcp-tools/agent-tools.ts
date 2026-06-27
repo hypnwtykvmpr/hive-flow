@@ -49,6 +49,12 @@ const TASK_DEADLINE_REAPER_GRACE_MS = 30_000;
 // Model tier aliases — map to provider-native models via resolveProviderModel()
 type AgentModel = 'sonnet' | 'opus' | 'mini' | 'inherit';
 export type AgentMode = 'full' | 'read-only' | 'read-only-with-artifacts';
+export interface AgentTaskRetryContext {
+  retryCount: number;
+  reassignedFromTaskId?: string;
+  originalTaskId?: string;
+}
+export const AGENT_TASK_RETRY_CONTEXT = Symbol('hive-flow.agent-task.retry-context');
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
 export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
@@ -499,6 +505,27 @@ function writeAtomicUtf8File(targetPath: string, contents: string): void {
 
 function writeAtomicJsonFile(targetPath: string, value: unknown): void {
   writeAtomicUtf8File(targetPath, JSON.stringify(value, null, 2));
+}
+
+type AgentTaskInput = Record<string, unknown> & {
+  [AGENT_TASK_RETRY_CONTEXT]?: Partial<AgentTaskRetryContext>;
+};
+
+function retryMetadataFromTaskInput(input: Record<string, unknown>): Record<string, unknown> {
+  const context = (input as AgentTaskInput)[AGENT_TASK_RETRY_CONTEXT];
+  if (!context || typeof context !== 'object') return {};
+  const rawRetryCount = context.retryCount;
+  if (typeof rawRetryCount !== 'number' || !Number.isInteger(rawRetryCount) || rawRetryCount < 0) return {};
+  const retryCount = rawRetryCount;
+  const reassignedFromTaskId = sanitizePathId(context.reassignedFromTaskId);
+  const originalTaskId = sanitizePathId(context.originalTaskId) || reassignedFromTaskId;
+  const metadata: Record<string, unknown> = {
+    retryCount,
+    reassignedAt: new Date().toISOString(),
+  };
+  if (reassignedFromTaskId) metadata.reassignedFromTaskId = reassignedFromTaskId;
+  if (originalTaskId) metadata.originalTaskId = originalTaskId;
+  return metadata;
 }
 
 export function loadAgentStore(): AgentStore {
@@ -1866,6 +1893,7 @@ export const agentTools: MCPTool[] = [
         timeoutMs: timeout,
         deadlineGraceMs: TASK_DEADLINE_REAPER_GRACE_MS,
         deadlineAt: new Date(startedAt.getTime() + timeout + TASK_DEADLINE_REAPER_GRACE_MS).toISOString(),
+        ...retryMetadataFromTaskInput(input),
       });
       appendTaskJournalEvent({
         tasksDir,

@@ -15,7 +15,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
-import type { AgentProvider } from './agent-tools.js';
+import type { AgentProvider, AgentTaskRetryContext } from './agent-tools.js';
 import { sanitizePathId } from '../shared/index.js';
 import {
   transitionAgent,
@@ -23,6 +23,7 @@ import {
   loadAgentStore,
   saveAgentStore,
   withStoreLock,
+  AGENT_TASK_RETRY_CONTEXT,
 } from './agent-tools.js';
 import {
   type HiveRecord,
@@ -980,10 +981,14 @@ const taskWorkerTool: MCPTool = {
       return dispatchContext;
     }
 
-    const taskInput: Record<string, unknown> = {
+    const retryContext = (input as Record<symbol, unknown>)[AGENT_TASK_RETRY_CONTEXT];
+    const taskInput: Record<string, unknown> & { [AGENT_TASK_RETRY_CONTEXT]?: AgentTaskRetryContext } = {
       agentId: dispatchContext.agentId,
       task,
     };
+    if (retryContext && typeof retryContext === 'object') {
+      taskInput[AGENT_TASK_RETRY_CONTEXT] = retryContext as AgentTaskRetryContext;
+    }
     if (timeout) taskInput.timeout = timeout;
 
     const result = await callAgentTask(taskInput);
@@ -1525,6 +1530,7 @@ const hivePollWorkersTool: MCPTool = {
         pid?: number;
         timeoutMs?: number;
         retryCount?: number;
+        originalTaskId?: string;
         failedAt?: string;
         failureReason?: string;
         reassignedAt?: string;
@@ -1552,6 +1558,7 @@ const hivePollWorkersTool: MCPTool = {
             pid?: number;
             timeoutMs?: number;
             retryCount?: number;
+            originalTaskId?: string;
             failedAt?: string;
             failureReason?: string;
             reassignedAt?: string;
@@ -1685,10 +1692,18 @@ const hivePollWorkersTool: MCPTool = {
           const taskPrompt = readTaskPromptForRetry(tasksDir, latest.taskId);
           if (taskPrompt && retryCount < 1) {
             await clearAgentTaskBeforeReassignment(worker.agentId, latest.taskId);
-            const retryInput: Record<string, unknown> = {
+            const replacementRetryCount = retryCount + 1;
+            const retryInput: Record<string, unknown> & { [AGENT_TASK_RETRY_CONTEXT]?: AgentTaskRetryContext } = {
               hiveId,
               workerId: worker.workerId,
               task: taskPrompt,
+            };
+            retryInput[AGENT_TASK_RETRY_CONTEXT] = {
+              retryCount: replacementRetryCount,
+              reassignedFromTaskId: latest.taskId,
+              originalTaskId: typeof latest.tracking.originalTaskId === 'string'
+                ? latest.tracking.originalTaskId
+                : latest.taskId,
             };
             if (Number.isFinite(latest.tracking.timeoutMs) && latest.tracking.timeoutMs! > 0) {
               retryInput.timeout = latest.tracking.timeoutMs;
@@ -1698,11 +1713,11 @@ const hivePollWorkersTool: MCPTool = {
             if (retryResult.success && typeof replacementTaskId === 'string') {
               latest.tracking.reassignedToTaskId = replacementTaskId;
               latest.tracking.reassignedAt = new Date().toISOString();
-              latest.tracking.retryCount = retryCount + 1;
+              latest.tracking.retryCount = replacementRetryCount;
               try {
                 writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
               } catch { /* best-effort */ }
-              annotateReplacementTracking(tasksDir, replacementTaskId, latest.taskId, retryCount + 1);
+              annotateReplacementTracking(tasksDir, replacementTaskId, latest.taskId, replacementRetryCount);
               await withHiveLock(hiveId, () => {
                 const freshHive = loadHive(hiveId);
                 if (!freshHive) return;
@@ -1727,7 +1742,7 @@ const hivePollWorkersTool: MCPTool = {
                 taskId: replacementTaskId,
                 result: {
                   reassignedFromTaskId: latest.taskId,
-                  retryCount: retryCount + 1,
+                  retryCount: replacementRetryCount,
                 },
               });
               runningCount++;
