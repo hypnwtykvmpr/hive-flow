@@ -108,6 +108,30 @@ function notificationTargetsAgent(obj, targetAgent, projectRoot = projectDir()) 
   return true;
 }
 
+function isPermissionWakeNotification(obj) {
+  const kind = String(obj?.kind || '').trim();
+  return kind === 'permission-request'
+    || kind === 'worker-permission-denial'
+    || kind === 'provider-permission-denial'
+    || kind === 'queen-permission-request';
+}
+
+function isQueenPermissionNotification(obj) {
+  const kind = String(obj?.kind || '').trim();
+  if (kind === 'queen-permission-request') return true;
+  const role = String(obj?.role || obj?.agentRole || obj?.agent_role || obj?.requesterRole || obj?.requester_role || obj?.sourceRole || obj?.source_role || '').trim().toLowerCase();
+  if (role === 'queen') return true;
+  const agentType = String(obj?.agentType || obj?.agent_type || obj?.type || '').trim().toLowerCase();
+  if (agentType === 'queen') return true;
+  const agentId = String(obj?.agentId || obj?.agent_id || '').trim();
+  const queenId = String(obj?.queenId || obj?.queen_id || '').trim();
+  return !!agentId && !!queenId && agentId === queenId;
+}
+
+function suppressPermissionWake(obj) {
+  return isPermissionWakeNotification(obj) && !isQueenPermissionNotification(obj);
+}
+
 function collectDrainFiles(file) {
   const dir = path.dirname(file);
   const base = path.basename(file);
@@ -143,6 +167,7 @@ function parseSummariesFromLines(lines, targetAgent = null, projectRoot = projec
   for (const line of lines) {
     try {
       const obj = JSON.parse(line);
+      if (suppressPermissionWake(obj)) continue;
       if (!notificationTargetsAgent(obj, targetAgent, projectRoot)) continue;
       if (obj && obj.summary) {
         const key = obj.taskId || obj.hiveId || obj.summary;
@@ -192,6 +217,7 @@ function drainNotifications(projectRoot = projectDir(), sessionInput = null) {
           lines.push(line);
           continue;
         }
+        if (suppressPermissionWake(obj)) continue;
         if (!notificationTargetsAgent(obj, targetAgent, projectRoot)) {
           const originalFile = originalPendingFileForDrain(drainFile);
           const existing = survivorsByFile.get(originalFile) || [];

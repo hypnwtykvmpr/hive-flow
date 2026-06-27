@@ -399,12 +399,28 @@ describe('provider bridge task completion notifications', () => {
     expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
   });
 
-  it('escalates denied privileged run_command attempts to the owning operator', async () => {
+  it('records denied provider tool attempts for queen review without waking the operator', async () => {
     const projectRoot = tempDir('hf-bridge-permission-project-');
     const hiveHome = tempDir('hf-bridge-permission-home-');
-    const taskId = 'task-permission-escalation';
+    const taskId = 'task-permission-queen-review';
+    const hiveId = 'hive-permission-review';
     const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
     mkdirSync(dirname(resultFile), { recursive: true });
+    mkdirSync(join(projectRoot, '.hive-flow', 'agents'), { recursive: true });
+    writeFileSync(join(projectRoot, '.hive-flow', 'agents', 'store.json'), JSON.stringify({
+      agents: {
+        'agent-needs-permission': {
+          id: 'agent-needs-permission',
+          provider: 'deepseek',
+          ownerSessionId: 'permission-owner-session',
+          ownerClientKind: 'codex',
+          config: {
+            hiveId,
+            queenId: 'queen-permission-review',
+          },
+        },
+      },
+    }, null, 2), 'utf8');
 
     process.env.HIVE_FLOW_HOME = hiveHome;
     process.env.HIVE_FLOW_SESSION_ID = 'permission-owner-session';
@@ -421,20 +437,89 @@ describe('provider bridge task completion notifications', () => {
     expect(denied).toMatchObject({
       status: 'denied',
       denyReason: 'read-only-command-denied',
+      permissionRequest: {
+        status: 'pending',
+        routedTo: 'queen',
+        action: 'queen-review-required',
+        workerAction: 'continue-with-available-tools',
+        agentId: 'agent-needs-permission',
+        hiveId: 'hive-permission-review',
+        queenId: 'queen-permission-review',
+        tool: 'run_command',
+      },
     });
+    expect(denied.permissionRequest.requestId).toMatch(/^permission-[0-9a-f]{16}$/);
 
-    const localPending = readFileSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'), 'utf8');
-    const sessionPending = readFileSync(join(
+    const hivePermissionFile = join(projectRoot, '.hive-flow', 'hives', hiveId, 'permission-requests.jsonl');
+    const hivePermissionText = readFileSync(hivePermissionFile, 'utf8');
+
+    expect(existsSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'))).toBe(false);
+    expect(existsSync(join(
       hiveHome,
       'wake',
       'sessions',
       sessionKeyFor('codex', 'permission-owner-session'),
       'pending-notifications.jsonl',
-    ), 'utf8');
+    ))).toBe(false);
 
-    expect(localPending).toContain('"kind":"permission-request"');
-    expect(localPending).toContain('"targetAgent":"codex"');
-    expect(localPending).toContain('git subcommand');
-    expect(sessionPending).toContain('[PERMISSION REQUEST: task-permission-escalation]');
+    expect(hivePermissionText).toContain('"kind":"worker-permission-denial"');
+    expect(hivePermissionText).toContain(`"requestId":"${denied.permissionRequest.requestId}"`);
+    expect(hivePermissionText).toContain('"agentId":"agent-needs-permission"');
+    expect(hivePermissionText).toContain('"hiveId":"hive-permission-review"');
+    expect(hivePermissionText).toContain('"queenId":"queen-permission-review"');
+    expect(hivePermissionText).toContain('"tool":"run_command"');
+    expect(hivePermissionText).toContain('"denyCode":"read-only-command-denied"');
+    expect(hivePermissionText).toContain("git subcommand 'mv'");
+    expect(hivePermissionText).toContain('Queen should redirect the worker');
+    expect(hivePermissionText).not.toContain('Owning operator');
+
+    const deniedAgain = JSON.parse(await bridge.executeBridgeTool('run_command', {
+      argv: ['git', 'mv', 'old-name', 'new-name'],
+    }, {
+      agentId: 'agent-needs-permission',
+      resultFile,
+      source: 'test',
+    }));
+    expect(deniedAgain.status).toBe('denied');
+    expect(deniedAgain.permissionRequest.requestId).toBe(denied.permissionRequest.requestId);
+    expect(readFileSync(hivePermissionFile, 'utf8').trim().split('\n')).toHaveLength(1);
+  });
+
+  it('falls back to a local non-wake audit log when a denied provider tool has no hive', async () => {
+    const projectRoot = tempDir('hf-bridge-permission-fallback-project-');
+    const hiveHome = tempDir('hf-bridge-permission-fallback-home-');
+    const taskId = 'task-permission-local-audit';
+    const resultFile = join(projectRoot, '.hive-flow', 'tasks', `${taskId}.result.json`);
+    mkdirSync(dirname(resultFile), { recursive: true });
+
+    process.env.HIVE_FLOW_HOME = hiveHome;
+    process.env.HIVE_FLOW_SESSION_ID = 'permission-owner-session';
+    process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
+
+    const denied = JSON.parse(await bridge.executeBridgeTool('run_shell', {
+      command: 'pwd',
+    }, {
+      agentId: 'standalone-provider-agent',
+      resultFile,
+      source: 'test',
+    }));
+
+    expect(denied.status).toBe('denied');
+    expect(denied.permissionRequest).toMatchObject({
+      status: 'pending',
+      routedTo: 'local-audit',
+      action: 'local-audit-only',
+      workerAction: 'continue-with-available-tools',
+      agentId: 'standalone-provider-agent',
+      tool: 'run_shell',
+    });
+    expect(existsSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'))).toBe(false);
+    expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
+
+    const auditText = readFileSync(join(projectRoot, '.hive-flow', 'data', 'provider-permission-denials.jsonl'), 'utf8');
+    expect(auditText).toContain('"kind":"worker-permission-denial"');
+    expect(auditText).toContain('"agentId":"standalone-provider-agent"');
+    expect(auditText).toContain('"tool":"run_shell"');
+    expect(auditText).not.toContain('pending-notifications');
   });
 });

@@ -11,7 +11,7 @@
  *   7. hive_terminate        — Advocate cascade-kills queen + all workers
  */
 
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MCPTool } from './types.js';
@@ -29,6 +29,9 @@ import {
   type HiveMission,
   type HiveWorkerRecord,
   type HiveBudget,
+  type HivePermissionDecision,
+  type HivePermissionRequest,
+  type HivePermissionRequestStatus,
   type ModuleHiveConfig,
   withHiveLock,
   createHive,
@@ -172,6 +175,108 @@ function ownerSpawnContext(
     input: { session_id: sessionId },
     context: { sessionId, clientKind },
   };
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function permissionRequestIdFromPayload(payload: Record<string, unknown>): string {
+  const existing = stringValue(payload.requestId);
+  if (existing) return existing;
+  const material = JSON.stringify({
+    taskId: stringValue(payload.taskId),
+    agentId: stringValue(payload.agentId),
+    tool: stringValue(payload.tool),
+    denyReason: stringValue(payload.denyReason),
+  });
+  return `permission-${createHash('sha256').update(material).digest('hex').slice(0, 16)}`;
+}
+
+function permissionStatusForDecision(decision: HivePermissionDecision): HivePermissionRequestStatus {
+  if (decision === 'approve') return 'approved';
+  if (decision === 'redirect') return 'redirected';
+  if (decision === 'halt') return 'halted';
+  return 'denied';
+}
+
+function permissionRequestLogPath(hiveId: string): string | null {
+  const sanitized = sanitizePathId(hiveId, 128);
+  if (!sanitized) return null;
+  return join(process.cwd(), '.hive-flow', 'hives', sanitized, 'permission-requests.jsonl');
+}
+
+function normalizePermissionRequestFromLog(
+  payload: Record<string, unknown>,
+  hive: HiveRecord,
+): HivePermissionRequest | null {
+  if (payload.kind !== 'worker-permission-denial') return null;
+  const taskId = stringValue(payload.taskId);
+  const agentId = stringValue(payload.agentId);
+  const tool = stringValue(payload.tool);
+  const denyReason = stringValue(payload.denyReason);
+  if (!taskId || !agentId || !tool || !denyReason) return null;
+  const worker = hive.workers.find(w => w.agentId === agentId || w.workerId === payload.workerId);
+  return {
+    requestId: permissionRequestIdFromPayload(payload),
+    taskId,
+    agentId,
+    ...(worker?.workerId ? { workerId: worker.workerId } : {}),
+    hiveId: hive.hiveId,
+    queenId: stringValue(payload.queenId) || hive.queenId,
+    tool,
+    denyReason,
+    ...(stringValue(payload.denyCode) ? { denyCode: stringValue(payload.denyCode) } : {}),
+    status: 'pending',
+    requestedAt: stringValue(payload.ts) || new Date().toISOString(),
+  };
+}
+
+function readHivePermissionRequestLog(hive: HiveRecord): HivePermissionRequest[] {
+  const path = permissionRequestLogPath(hive.hiveId);
+  if (!path || !existsSync(path)) return [];
+  const requests: HivePermissionRequest[] = [];
+  const seen = new Set<string>();
+  for (const line of readFileSync(path, 'utf-8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const request = normalizePermissionRequestFromLog(parsed, hive);
+      if (!request || seen.has(request.requestId)) continue;
+      seen.add(request.requestId);
+      requests.push(request);
+    } catch {
+      // Ignore malformed append-only lines; the queen cannot adjudicate them.
+    }
+  }
+  return requests;
+}
+
+function mergeHivePermissionRequests(hive: HiveRecord): { requests: HivePermissionRequest[]; added: HivePermissionRequest[] } {
+  const existing = new Map<string, HivePermissionRequest>();
+  for (const request of hive.permissionRequests ?? []) {
+    if (request?.requestId) existing.set(request.requestId, request);
+  }
+  const added: HivePermissionRequest[] = [];
+  for (const request of readHivePermissionRequestLog(hive)) {
+    const current = existing.get(request.requestId);
+    if (current) {
+      existing.set(request.requestId, {
+        ...request,
+        ...current,
+        status: current.status ?? request.status,
+        decision: current.decision,
+        updatedAt: current.updatedAt,
+      });
+      continue;
+    }
+    existing.set(request.requestId, request);
+    added.push(request);
+  }
+  const requests = Array.from(existing.values()).sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
+  hive.permissionRequests = requests;
+  return { requests, added };
 }
 
 async function callAgentTask(input: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -1621,6 +1726,219 @@ const hivePollWorkersTool: MCPTool = {
 };
 
 // ---------------------------------------------------------------------------
+// Tool 10: queen_permission_requests
+// ---------------------------------------------------------------------------
+
+const queenPermissionRequestsTool: MCPTool = {
+  name: 'queen_permission_requests',
+  description: 'Queen reviews pending worker tool-denial permission requests for a hive. Ingests the hive-local request log; never wakes the operator.',
+  category: 'queen',
+  tags: ['hive', 'queen', 'permissions', 'review'],
+  inputSchema: {
+    type: 'object',
+    properties: {
+      hiveId: { type: 'string', description: 'ID of the hive' },
+      queenId: { type: 'string', description: 'Agent ID of the queen that owns the hive' },
+      status: {
+        type: 'string',
+        enum: ['pending', 'approved', 'denied', 'redirected', 'halted', 'all'],
+        description: 'Optional request status filter; defaults to pending.',
+      },
+    },
+    required: ['hiveId', 'queenId'],
+  },
+  handler: async (input) => {
+    const hiveId = input.hiveId as string;
+    const queenId = input.queenId as string;
+    const statusFilter = (input.status as string | undefined) || 'pending';
+
+    return withHiveLock(hiveId, () => {
+      const hive = loadHive(hiveId);
+      if (!hive) {
+        return { success: false, error: `Hive '${hiveId}' not found.` };
+      }
+      if (hive.queenId !== queenId) {
+        return { success: false, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
+      }
+
+      const { requests, added } = mergeHivePermissionRequests(hive);
+      for (const request of added) {
+        appendHiveAudit(hive, {
+          event: 'permission-requested',
+          detail: `Worker permission request '${request.requestId}' for ${request.tool}: ${request.denyCode || request.denyReason}`,
+          agentId: request.agentId,
+          workerId: request.workerId,
+        });
+      }
+      if (added.length > 0) saveHive(hiveId, hive);
+
+      const filtered = statusFilter === 'all'
+        ? requests
+        : requests.filter(request => request.status === statusFilter);
+
+      return {
+        success: true,
+        hiveId,
+        queenId,
+        status: statusFilter,
+        requestCount: filtered.length,
+        pendingCount: requests.filter(request => request.status === 'pending').length,
+        requests: filtered,
+      };
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Tool 11: queen_permission_decide
+// ---------------------------------------------------------------------------
+
+const queenPermissionDecideTool: MCPTool = {
+  name: 'queen_permission_decide',
+  description: 'Queen decides a worker permission request. Can record approval/denial, redirect the worker with a safer task, or halt that worker.',
+  category: 'queen',
+  tags: ['hive', 'queen', 'permissions', 'decision'],
+  inputSchema: {
+    type: 'object',
+    properties: {
+      hiveId: { type: 'string', description: 'ID of the hive' },
+      queenId: { type: 'string', description: 'Agent ID of the queen that owns the hive' },
+      requestId: { type: 'string', description: 'Permission request ID from queen_permission_requests' },
+      decision: {
+        type: 'string',
+        enum: ['approve', 'deny', 'redirect', 'halt'],
+        description: 'Queen decision. Redirect dispatches a safer worker task; halt terminates only the requesting worker.',
+      },
+      reason: { type: 'string', description: 'Queen rationale for the decision' },
+      redirectTask: { type: 'string', description: 'Required when decision=redirect; safe alternative task for the worker' },
+    },
+    required: ['hiveId', 'queenId', 'requestId', 'decision'],
+  },
+  handler: async (input) => {
+    const hiveId = input.hiveId as string;
+    const queenId = input.queenId as string;
+    const requestId = input.requestId as string;
+    const decision = input.decision as HivePermissionDecision;
+    const reason = stringValue(input.reason) || `Queen decision: ${decision}`;
+    const redirectTask = stringValue(input.redirectTask);
+
+    if (!['approve', 'deny', 'redirect', 'halt'].includes(decision)) {
+      return { success: false, error: `Invalid permission decision '${String(input.decision)}'.` };
+    }
+    if (decision === 'redirect' && !redirectTask) {
+      return { success: false, error: 'queen_permission_decide requires redirectTask when decision=redirect.' };
+    }
+
+    const response = await withHiveLock(hiveId, async () => {
+      const hive = loadHive(hiveId);
+      if (!hive) {
+        return { success: false as const, error: `Hive '${hiveId}' not found.` };
+      }
+      if (hive.queenId !== queenId) {
+        return { success: false as const, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
+      }
+
+      const { requests, added } = mergeHivePermissionRequests(hive);
+      for (const request of added) {
+        appendHiveAudit(hive, {
+          event: 'permission-requested',
+          detail: `Worker permission request '${request.requestId}' for ${request.tool}: ${request.denyCode || request.denyReason}`,
+          agentId: request.agentId,
+          workerId: request.workerId,
+        });
+      }
+
+      const request = requests.find(item => item.requestId === requestId);
+      if (!request) {
+        if (added.length > 0) saveHive(hiveId, hive);
+        return { success: false as const, error: `Permission request '${requestId}' not found in hive '${hiveId}'.` };
+      }
+
+      const worker = request.workerId
+        ? hive.workers.find(item => item.workerId === request.workerId)
+        : hive.workers.find(item => item.agentId === request.agentId);
+
+      if ((decision === 'redirect' || decision === 'halt') && !worker) {
+        return { success: false as const, error: `Request '${requestId}' is not linked to a live hive worker.` };
+      }
+
+      if (decision === 'halt' && worker) {
+        const terminateResult = await callAgentTerminate({
+          agentId: worker.agentId,
+          force: true,
+          reason: `Queen halted worker after permission request ${requestId}: ${reason}`,
+        });
+        if (!terminateResult.success) {
+          return {
+            success: false as const,
+            error: String(terminateResult.error || 'agent_terminate failed'),
+            requestId,
+          };
+        }
+        worker.status = 'terminated';
+        worker.terminatedAt = new Date().toISOString();
+        appendHiveAudit(hive, {
+          event: 'worker-terminated',
+          detail: `Queen halted worker '${worker.workerId}' after permission request '${requestId}': ${reason}`,
+          agentId: worker.agentId,
+          workerId: worker.workerId,
+        });
+      }
+
+      const decidedAt = new Date().toISOString();
+      request.status = permissionStatusForDecision(decision);
+      request.updatedAt = decidedAt;
+      request.decision = {
+        decision,
+        decidedAt,
+        decidedBy: queenId,
+        reason,
+        ...(redirectTask ? { redirectTask } : {}),
+      };
+
+      appendHiveAudit(hive, {
+        event: 'permission-reviewed',
+        detail: `Queen '${queenId}' ${decision}ed permission request '${requestId}': ${reason}`,
+        agentId: request.agentId,
+        workerId: request.workerId,
+      });
+      saveHive(hiveId, hive);
+
+      return {
+        success: true as const,
+        hiveId,
+        queenId,
+        request,
+        ...(worker ? { workerId: worker.workerId, agentId: worker.agentId } : {}),
+      };
+    });
+
+    if (!response.success) return response;
+
+    let redirectDispatch: Record<string, unknown> | undefined;
+    if (decision === 'redirect' && response.workerId) {
+      redirectDispatch = await taskWorkerTool.handler({
+        hiveId,
+        workerId: response.workerId,
+        task: redirectTask,
+      }) as Record<string, unknown>;
+    }
+
+    return {
+      success: true,
+      hiveId,
+      queenId,
+      requestId,
+      decision,
+      status: response.request.status,
+      request: response.request,
+      ...(redirectDispatch ? { redirectDispatch } : {}),
+      ...(decision === 'approve' ? { approvalEffect: 'recorded; does not bypass sandbox, source, or control-plane gates' } : {}),
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -1634,4 +1952,6 @@ export const queenTools: MCPTool[] = [
   hiveTerminateTool,
   hiveValidateCompositionTool,
   hivePollWorkersTool,
+  queenPermissionRequestsTool,
+  queenPermissionDecideTool,
 ];

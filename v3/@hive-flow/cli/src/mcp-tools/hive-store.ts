@@ -69,11 +69,36 @@ export interface HiveMission {
 
 export interface HiveAuditEntry {
   timestamp: string;
-  event: 'mission-assigned' | 'worker-spawned' | 'worker-tasked' | 'worker-terminated' | 'results-collected' | 'report-submitted' | 'hive-terminated' | 'watcher-spawned' | 'error';
+  event: 'mission-assigned' | 'worker-spawned' | 'worker-tasked' | 'worker-terminated' | 'results-collected' | 'report-submitted' | 'hive-terminated' | 'watcher-spawned' | 'permission-requested' | 'permission-reviewed' | 'error';
   hiveId: string;
   detail: string;
   agentId?: string;
   workerId?: string;
+}
+
+export type HivePermissionRequestStatus = 'pending' | 'approved' | 'denied' | 'redirected' | 'halted';
+export type HivePermissionDecision = 'approve' | 'deny' | 'redirect' | 'halt';
+
+export interface HivePermissionRequest {
+  requestId: string;
+  taskId: string;
+  agentId: string;
+  workerId?: string;
+  hiveId: string;
+  queenId?: string;
+  tool: string;
+  denyReason: string;
+  denyCode?: string;
+  status: HivePermissionRequestStatus;
+  requestedAt: string;
+  updatedAt?: string;
+  decision?: {
+    decision: HivePermissionDecision;
+    decidedAt: string;
+    decidedBy: string;
+    reason?: string;
+    redirectTask?: string;
+  };
 }
 
 /**
@@ -127,6 +152,8 @@ export interface HiveRecord {
   completedAt?: string;
   /** Queen's synthesized report content (populated by queen_report) */
   report?: string;
+  /** Worker tool-denial requests awaiting queen review. */
+  permissionRequests?: HivePermissionRequest[];
   /** HMAC signature over the hive record for tamper detection */
   signature?: string;
   /** Queen delegation counters (directWorkCount synced from role.json on queen_report) */

@@ -524,6 +524,196 @@ describe('D-32: queen in-process dispatch gate', () => {
     ]);
   });
 
+  it('lets the owning queen review and redirect a worker permission request without waking the operator', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
+    const requestLine = {
+      kind: 'worker-permission-denial',
+      requestId: 'permission-test-redirect',
+      taskId: 'task-permission-redirect',
+      ts: new Date(0).toISOString(),
+      agentId: 'worker-agent-1',
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: "git subcommand 'mv' is not in the read-only allowlist",
+      denyCode: 'read-only-command-denied',
+    };
+    writeFileSync(join(root, '.hive-flow', 'hives', hive.hiveId, 'permission-requests.jsonl'), `${JSON.stringify(requestLine)}\n`, 'utf8');
+
+    const requestsResult = await getQueenTool('queen_permission_requests').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+    }) as Record<string, unknown>;
+
+    expect(requestsResult.success).toBe(true);
+    expect(requestsResult.pendingCount).toBe(1);
+    const requests = requestsResult.requests as Array<Record<string, unknown>>;
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      requestId: 'permission-test-redirect',
+      workerId: 'worker-1',
+      status: 'pending',
+      tool: 'run_command',
+    });
+
+    const redirectResult = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-redirect',
+      decision: 'redirect',
+      reason: 'Use safe read-only inspection instead of moving files.',
+      redirectTask: 'Inspect the file list with read_file/list_directory and summarize the required rename without mutating files.',
+    }) as Record<string, unknown>;
+
+    expect(redirectResult.success).toBe(true);
+    expect(redirectResult.status).toBe('redirected');
+    expect((redirectResult.redirectDispatch as Record<string, unknown>).success).toBe(true);
+    expect(mockAgentState.calls.task).toBe(1);
+
+    const persisted = loadHive(hive.hiveId)!;
+    expect(persisted.permissionRequests?.[0]).toMatchObject({
+      requestId: 'permission-test-redirect',
+      status: 'redirected',
+      decision: {
+        decision: 'redirect',
+        decidedBy: hive.queenId,
+        redirectTask: 'Inspect the file list with read_file/list_directory and summarize the required rename without mutating files.',
+      },
+    });
+    expect(persisted.workers[0].status).toBe('busy');
+    expect(persisted.audit.some(entry => entry.event === 'permission-requested')).toBe(true);
+    expect(persisted.audit.some(entry => entry.event === 'permission-reviewed')).toBe(true);
+    expect(existsSync(join(root, '.hive-flow', 'data', 'pending-notifications.jsonl'))).toBe(false);
+    expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
+  });
+
+  it('lets the queen approve, deny, or halt permission requests through the same durable lifecycle', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
+    hive.workers = ['approve', 'deny', 'halt'].map((suffix, index) => {
+      const workerId = `permission-worker-${suffix}`;
+      const agentId = `permission-agent-${suffix}`;
+      mockAgentState.store.agents[agentId] = {
+        ...makeAgent(agentId, 'worker'),
+        ownerSessionId: 'claude-permission-session',
+        ownerClientKind: 'claude',
+      };
+      return {
+        workerId,
+        agentId,
+        role: `role-${index}`,
+        provider: 'codex-cli',
+        status: 'idle' as const,
+        spawnedAt: new Date(0).toISOString(),
+      };
+    });
+    hive.budget.workersAllocated = hive.workers.length;
+    saveHive(hive.hiveId, hive);
+
+    const lines = hive.workers.map(worker => JSON.stringify({
+      kind: 'worker-permission-denial',
+      requestId: `permission-test-${worker.role}`,
+      taskId: `task-${worker.role}`,
+      ts: new Date(0).toISOString(),
+      agentId: worker.agentId,
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_shell',
+      denyReason: 'sandbox-unavailable:no-verified-backend',
+      denyCode: 'sandbox-unavailable',
+    }));
+    writeFileSync(join(root, '.hive-flow', 'hives', hive.hiveId, 'permission-requests.jsonl'), `${lines.join('\n')}\n`, 'utf8');
+
+    const listed = await getQueenTool('queen_permission_requests').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      status: 'all',
+    }) as Record<string, unknown>;
+    expect(listed.success).toBe(true);
+    expect(listed.requestCount).toBe(3);
+
+    const approve = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-role-0',
+      decision: 'approve',
+      reason: 'Queen records approval, but does not bypass sandbox gates.',
+    }) as Record<string, unknown>;
+    expect(approve).toMatchObject({
+      success: true,
+      status: 'approved',
+      approvalEffect: 'recorded; does not bypass sandbox, source, or control-plane gates',
+    });
+
+    const deny = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-role-1',
+      decision: 'deny',
+      reason: 'Use available read-only tools instead.',
+    }) as Record<string, unknown>;
+    expect(deny).toMatchObject({ success: true, status: 'denied' });
+
+    const halt = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-role-2',
+      decision: 'halt',
+      reason: 'Repeated unsafe execution attempt.',
+    }) as Record<string, unknown>;
+    expect(halt).toMatchObject({ success: true, status: 'halted' });
+    expect(mockAgentState.calls.task).toBe(0);
+    expect(mockAgentState.calls.terminate).toBe(1);
+
+    const persisted = loadHive(hive.hiveId)!;
+    const statuses = new Map(persisted.permissionRequests?.map(request => [request.requestId, request.status]));
+    expect(statuses.get('permission-test-role-0')).toBe('approved');
+    expect(statuses.get('permission-test-role-1')).toBe('denied');
+    expect(statuses.get('permission-test-role-2')).toBe('halted');
+    expect(persisted.workers.find(worker => worker.workerId === 'permission-worker-halt')?.status).toBe('terminated');
+    expect(existsSync(join(root, '.hive-flow', 'data', 'pending-notifications.jsonl'))).toBe(false);
+    expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
+  });
+
+  it('rejects permission review or decisions from a non-owning queen', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
+    writeFileSync(join(root, '.hive-flow', 'hives', hive.hiveId, 'permission-requests.jsonl'), `${JSON.stringify({
+      kind: 'worker-permission-denial',
+      requestId: 'permission-cross-queen',
+      taskId: 'task-cross-queen',
+      ts: new Date(0).toISOString(),
+      agentId: 'worker-agent-1',
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: 'blocked',
+      denyCode: 'blocked',
+    })}\n`, 'utf8');
+
+    const listResult = await getQueenTool('queen_permission_requests').handler({
+      hiveId: hive.hiveId,
+      queenId: 'wrong-queen',
+    }) as Record<string, unknown>;
+    expect(listResult.success).toBe(false);
+    expect(String(listResult.error)).toContain("does not own hive");
+
+    const decideResult = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: 'wrong-queen',
+      requestId: 'permission-cross-queen',
+      decision: 'redirect',
+      redirectTask: 'try something else',
+    }) as Record<string, unknown>;
+    expect(decideResult.success).toBe(false);
+    expect(String(decideResult.error)).toContain("does not own hive");
+    expect(mockAgentState.calls.task).toBe(0);
+    expect(mockAgentState.calls.terminate).toBe(0);
+
+    const persisted = loadHive(hive.hiveId)!;
+    expect(persisted.permissionRequests).toBeUndefined();
+    expect(existsSync(join(root, '.hive-flow', 'data', 'pending-notifications.jsonl'))).toBe(false);
+    expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
+  });
+
   it('statically keeps every in-process dispatch sink behind assertDispatchAllowed', () => {
     const queenSource = readFileSync(join(cliPackageRoot, 'src/mcp-tools/queen-tools.ts'), 'utf8');
     const hiveMindSource = readFileSync(join(cliPackageRoot, 'src/mcp-tools/hive-mind-tools.ts'), 'utf8');

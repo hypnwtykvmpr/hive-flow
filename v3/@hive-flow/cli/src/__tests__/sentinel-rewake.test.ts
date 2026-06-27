@@ -289,6 +289,83 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
+  it('drops worker/provider permission lines instead of injecting them', () => {
+    const root = makeTempProject();
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      writeFileSync(
+        join(dataDir, 'pending-notifications.jsonl'),
+        [
+          JSON.stringify({
+            kind: 'permission-request',
+            taskId: 'task-denied-tool',
+            targetAgent: 'claude',
+            summary: '[PERMISSION REQUEST: task-denied-tool] provider agent needs shell.',
+          }),
+          JSON.stringify({
+            kind: 'worker-permission-denial',
+            taskId: 'task-worker-denied',
+            targetAgent: 'claude',
+            summary: '[WORKER PERMISSION DENIAL: task-worker-denied] worker needs shell.',
+          }),
+          JSON.stringify({
+            kind: 'provider-permission-denial',
+            taskId: 'task-provider-denied',
+            targetAgent: 'claude',
+            summary: '[PROVIDER PERMISSION DENIAL: task-provider-denied] provider needs shell.',
+          }),
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-real-completion',
+            targetAgent: 'claude',
+            summary: '[TASK COMPLETE: task-real-completion] done',
+          }),
+        ].join('\n') + '\n',
+      );
+
+      const output = drain.drainNotifications(root, { client_kind: 'claude-code' });
+      const context = output.hookSpecificOutput.additionalContext;
+      expect(context).toContain('task-real-completion');
+      expect(context).not.toContain('PERMISSION REQUEST');
+      expect(context).not.toContain('task-denied-tool');
+      expect(context).not.toContain('WORKER PERMISSION DENIAL');
+      expect(context).not.toContain('task-worker-denied');
+      expect(context).not.toContain('PROVIDER PERMISSION DENIAL');
+      expect(context).not.toContain('task-provider-denied');
+      expect(drain.drainNotifications(root, { client_kind: 'claude-code' })).toEqual({});
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('allows queen permission escalation lines to reach the owning operator', () => {
+    const root = makeTempProject();
+    try {
+      const dataDir = join(root, '.hive-flow', 'data');
+      mkdirSync(dataDir, { recursive: true });
+      writeFileSync(
+        join(dataDir, 'pending-notifications.jsonl'),
+        JSON.stringify({
+          kind: 'queen-permission-request',
+          taskId: 'task-queen-permission',
+          targetAgent: 'claude',
+          agentId: 'queen-1',
+          queenId: 'queen-1',
+          summary: '[QUEEN PERMISSION REQUEST: task-queen-permission] queen needs operator adjudication.',
+        }) + '\n',
+      );
+
+      const output = drain.drainNotifications(root, { client_kind: 'claude-code' });
+      const context = output.hookSpecificOutput.additionalContext;
+      expect(context).toContain('QUEEN PERMISSION REQUEST');
+      expect(context).toContain('task-queen-permission');
+      expect(drain.drainNotifications(root, { client_kind: 'claude-code' })).toEqual({});
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('does not let Claude drain Codex-targeted repo fallback notifications', () => {
     const root = makeTempProject();
     try {

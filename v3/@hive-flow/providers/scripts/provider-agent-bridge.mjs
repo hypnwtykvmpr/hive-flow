@@ -378,23 +378,30 @@ function appendTaskNotificationOnce(dataDir, taskId, line) {
   }
 }
 
-function appendPermissionNotificationOnce(dataDir, taskId, markerKey, line) {
+function bridgeSafePathId(value, fallback = 'unknown') {
+  return String(value || '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 128) || fallback;
+}
+
+function appendProviderPermissionRecordOnce(baseDir, fileName, taskId, markerKey, line) {
   const safeMarker = String(markerKey || '')
     .replace(/[^A-Za-z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'permission-request';
-  const markerPath = join(dataDir, `task-${taskId}.${safeMarker}.notified`);
+    .slice(0, 80) || 'permission-denial';
+  const markerPath = join(baseDir, `task-${taskId}.${safeMarker}.recorded`);
   let fd = null;
   let markerCreated = false;
   try {
-    mkdirSync(dataDir, { recursive: true });
+    mkdirSync(baseDir, { recursive: true });
     fd = openSync(markerPath, 'wx', 0o600);
     markerCreated = true;
-    appendFileSync(join(dataDir, 'pending-notifications.jsonl'), line + '\n', 'utf8');
+    appendFileSync(join(baseDir, fileName), line + '\n', 'utf8');
     writeFileSync(fd, JSON.stringify({
       claimedAt: new Date().toISOString(),
       pid: process.pid,
-      source: 'provider-agent-bridge:permission-request',
+      source: 'provider-agent-bridge:worker-permission-denial',
     }, null, 2) + '\n', 'utf8');
     return true;
   } catch {
@@ -408,6 +415,13 @@ function appendPermissionNotificationOnce(dataDir, taskId, markerKey, line) {
       try { closeSync(fd); } catch { /* ignore */ }
     }
   }
+}
+
+function bridgeAgentRecordFromStore(projectRoot, agentId) {
+  if (!agentId) return null;
+  const store = bridgeReadJsonFile(join(projectRoot, '.hive-flow', 'agents', 'store.json'));
+  const record = store?.agents?.[agentId];
+  return record && typeof record === 'object' ? record : null;
 }
 
 export function notifyTaskCompletionFromResultFile(resultFile) {
@@ -436,41 +450,80 @@ export function notifyTaskCompletionFromResultFile(resultFile) {
   }
 }
 
-function notifyPermissionEscalationFromDeniedTool(toolName, denied, ctx = {}) {
+function recordWorkerPermissionDenialFromDeniedTool(toolName, denied, ctx = {}) {
   try {
     const resultFile = typeof ctx.resultFile === 'string' ? ctx.resultFile : '';
     const taskId = taskIdFromResultFile(resultFile);
-    if (!taskId) return false;
+    if (!taskId) return null;
     const projectRoot = projectRootFromResultFile(resultFile);
     const owner = bridgeTaskOwnershipFromResultFile(resultFile, projectRoot);
-    const targetAgent = bridgeTargetAgent(process.env, owner);
+    const agentId = bridgeStringValue(ctx.agentId || owner.agentId);
+    const agentRecord = bridgeAgentRecordFromStore(projectRoot, agentId);
+    const agentConfig = agentRecord?.config && typeof agentRecord.config === 'object' ? agentRecord.config : {};
+    const hiveId = bridgeStringValue(
+      ctx.hiveId ||
+      agentRecord?.hiveId ||
+      agentConfig.hiveId ||
+      process.env.HIVE_FLOW_HIVE_ID,
+    );
+    const queenId = bridgeStringValue(
+      ctx.queenId ||
+      agentRecord?.queenId ||
+      agentConfig.queenId ||
+      process.env.HIVE_FLOW_QUEEN_ID,
+    );
     const denyReason = String(denied?.error || denied?.message || denied?.denyReason || 'permission-denied').slice(0, 180);
     const denyCode = String(denied?.denyReason || 'permission-denied').slice(0, 80);
     const markerHash = createHash('sha256')
-      .update(`${toolName}\0${denyReason}`)
+      .update(`${taskId}\0${agentId}\0${toolName}\0${denyReason}`)
       .digest('hex')
       .slice(0, 16);
-    const summary = `[PERMISSION REQUEST: ${taskId}] provider agent ${ctx.agentId || 'unknown'} could not use ${toolName}: ${denyReason}. Owning operator should run an equivalent privileged action or adjust policy if appropriate.`;
+    const requestId = `permission-${markerHash}`;
+    const summary = `[WORKER TOOL DENIED: ${taskId}] worker ${agentId || 'unknown'} could not use ${toolName}: ${denyReason}. Queen should redirect the worker or approve through a queen-mediated policy path.`;
     const line = JSON.stringify({
-      kind: 'permission-request',
+      kind: 'worker-permission-denial',
+      requestId,
       taskId,
       ts: new Date().toISOString(),
       summary,
       tool: toolName,
       denyReason,
       denyCode,
-      ...(ctx.agentId ? { agentId: ctx.agentId } : {}),
-      ...(targetAgent ? { targetAgent } : {}),
+      action: 'queen-review-or-redirect',
+      ...(agentId ? { agentId } : {}),
+      ...(hiveId ? { hiveId } : {}),
+      ...(queenId ? { queenId } : {}),
       ...(owner.ownerSessionId ? { ownerSessionId: owner.ownerSessionId } : {}),
       ...(owner.ownerClientKind ? { ownerClientKind: owner.ownerClientKind } : {}),
     });
-    let wrote = false;
-    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env, owner)) {
-      if (appendPermissionNotificationOnce(dataDir, taskId, `permission-${markerHash}`, line)) wrote = true;
+    const metadata = {
+      requestId,
+      status: 'pending',
+      routedTo: hiveId ? 'queen' : 'local-audit',
+      action: hiveId ? 'queen-review-required' : 'local-audit-only',
+      workerAction: 'continue-with-available-tools',
+      taskId,
+      tool: toolName,
+      denyCode,
+      denyReason,
+      ...(agentId ? { agentId } : {}),
+      ...(hiveId ? { hiveId } : {}),
+      ...(queenId ? { queenId } : {}),
+    };
+    if (hiveId) {
+      const hiveDir = join(projectRoot, '.hive-flow', 'hives', bridgeSafePathId(hiveId, 'unknown-hive'));
+      return {
+        ...metadata,
+        recorded: appendProviderPermissionRecordOnce(hiveDir, 'permission-requests.jsonl', taskId, requestId, line),
+      };
     }
-    return wrote;
+    const auditDir = join(projectRoot, '.hive-flow', 'data');
+    return {
+      ...metadata,
+      recorded: appendProviderPermissionRecordOnce(auditDir, 'provider-permission-denials.jsonl', taskId, requestId, line),
+    };
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -4905,7 +4958,10 @@ export async function evaluateToolCall(toolName, toolArgs, ctx = {}) {
       result.status === 'denied' &&
       (toolName === 'run_command' || toolName === 'run_shell')
     ) {
-      notifyPermissionEscalationFromDeniedTool(toolName, result, ctx);
+      const permissionRequest = recordWorkerPermissionDenialFromDeniedTool(toolName, result, ctx);
+      if (permissionRequest) {
+        result.permissionRequest = permissionRequest;
+      }
     }
     return typeof result === 'string' ? redactBridgeString(result) : safeBridgeJsonStringify(result);
   } catch (err) {
