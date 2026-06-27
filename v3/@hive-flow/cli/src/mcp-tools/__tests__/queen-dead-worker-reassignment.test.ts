@@ -271,4 +271,39 @@ describe('hive_poll_workers dead-worker reassignment', () => {
       process.kill = originalKill;
     }
   });
+
+  it('treats EPERM liveness as still running without corrupting tracking', async () => {
+    const { queenTools, createHive, loadHive, saveHive, withHiveLock } = await importQueenModules();
+    writeAgentStore();
+    const hive = await seedHive(createHive, loadHive, saveHive, withHiveLock);
+    writeTask('task-dead', 'original prompt');
+    writeTracking('task-dead', {});
+
+    const originalTracking = readJson(join(tasksDir(), 'task-dead.json'));
+    const originalKill = process.kill;
+    process.kill = ((pid: number, signal?: NodeJS.Signals | 0) => {
+      if (signal === 0 && pid === DEAD_PID) {
+        const err = new Error('operation not permitted') as NodeJS.ErrnoException;
+        err.code = 'EPERM';
+        throw err;
+      }
+      return originalKill(pid, signal as NodeJS.Signals);
+    }) as typeof process.kill;
+
+    try {
+      const poll = getQueenTool(queenTools, 'hive_poll_workers');
+      const result = await poll.handler({ hiveId: hive.hiveId }) as Record<string, unknown>;
+
+      expect(result.runningCount).toBe(1);
+      expect(result.failedCount).toBe(0);
+      expect(taskCalls).toHaveLength(0);
+      expect(readJson(join(tasksDir(), 'task-dead.json'))).toEqual(originalTracking);
+
+      const updatedHive = loadHive(hive.hiveId);
+      expect(updatedHive?.workers[0].status).toBe('busy');
+      expect(updatedHive?.workers[0].taskId).toBe('task-dead');
+    } finally {
+      process.kill = originalKill;
+    }
+  });
 });

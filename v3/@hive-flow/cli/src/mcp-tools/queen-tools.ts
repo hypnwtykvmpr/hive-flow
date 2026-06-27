@@ -1659,20 +1659,30 @@ const hivePollWorkersTool: MCPTool = {
           runningCount++;
           continue;
         } catch (error) {
-          // Process exited without writing a result — failed
+          if (!isDefinitelyDeadPidError(error)) {
+            workerStatuses.push({
+              workerId: worker.workerId,
+              agentId: worker.agentId,
+              role: worker.role,
+              status: 'running',
+              taskId: latest.taskId,
+            });
+            runningCount++;
+            continue;
+          }
+
+          // ESRCH is the only signal-0 failure that proves the process exited
+          // without writing a result. EPERM and other ambiguous failures must
+          // preserve the worker as running so we do not corrupt tracking truth.
           latest.tracking.status = 'failed';
           latest.tracking.failedAt = new Date().toISOString();
-          latest.tracking.failureReason = isDefinitelyDeadPidError(error)
-            ? 'worker-process-dead'
-            : 'worker-process-liveness-check-failed';
+          latest.tracking.failureReason = 'worker-process-dead';
           try {
             writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
           } catch { /* best-effort */ }
 
           const retryCount = retryCountFromTracking(latest.tracking);
-          const taskPrompt = isDefinitelyDeadPidError(error)
-            ? readTaskPromptForRetry(tasksDir, latest.taskId)
-            : null;
+          const taskPrompt = readTaskPromptForRetry(tasksDir, latest.taskId);
           if (taskPrompt && retryCount < 1) {
             await clearAgentTaskBeforeReassignment(worker.agentId, latest.taskId);
             const retryInput: Record<string, unknown> = {
