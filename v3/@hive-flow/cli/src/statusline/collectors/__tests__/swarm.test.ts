@@ -693,8 +693,10 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
 
-    expect(result.agents.map((a) => a.id)).toEqual(['live-worker']);
+    expect(result.agents.map((a) => a.id)).toEqual(['live-worker', 'queen-active']);
     expect(result.workersAlive).toBe(1);
+    expect(result.queensAlive).toBe(1);
+    expect(result.queensExecuting).toBe(0);
   });
 
   // F1/F4 control — the SAME orphan with config.hiveId present is already
@@ -729,8 +731,10 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
     ], 'queen-active', 'session-a', 'active');
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
-    expect(result.agents.map((a) => a.id)).toEqual(['live-worker']);
+    expect(result.agents.map((a) => a.id)).toEqual(['live-worker', 'queen-active']);
     expect(result.workersAlive).toBe(1);
+    expect(result.queensAlive).toBe(1);
+    expect(result.queensExecuting).toBe(0);
   });
 
   // F2 — a completed (terminal lastResult) hive worker with a lingering live
@@ -767,8 +771,10 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
 
     const result = await collectSwarm({ projectRoot: fix.projectRoot });
 
-    expect(result.agents.map((a) => a.id)).toEqual(['live-worker']);
+    expect(result.agents.map((a) => a.id)).toEqual(['live-worker', 'queen-h1']);
     expect(result.workersAlive).toBe(1);
+    expect(result.queensAlive).toBe(1);
+    expect(result.queensExecuting).toBe(0);
   });
 
   // F3 — a record with agentId 'queen-*' but agentType 'worker' must count as
@@ -848,7 +854,10 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
         provider: 'deepseek',
         model: 'deepseek-v4-pro',
       }),
+      { id: 'queen-live', role: 'queen', status: 'idle' },
     ]);
+    expect(result.queensAlive).toBe(1);
+    expect(result.queensExecuting).toBe(0);
   });
 
   it('session-scopes hive-only live workers by their owning hive session', async () => {

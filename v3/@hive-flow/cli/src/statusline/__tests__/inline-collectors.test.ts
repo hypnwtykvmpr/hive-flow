@@ -1100,7 +1100,9 @@ describe('collectInlineSnapshot (Slice A parity with collectSwarm)', () => {
     ], 'queen-h1', 'session-a');
 
     const snap = await collectInlineSnapshot({ projectRoot: fix.projectRoot, deadlineMs: 500 });
-    expect(snap.swarm?.agents?.map((a) => a.id)).toEqual(['live-worker']);
+    expect(snap.swarm?.agents?.map((a) => a.id)).toEqual(['live-worker', 'queen-h1']);
+    expect(snap.swarm?.activeQueens).toBe(1);
+    expect(snap.swarm?.executingQueens).toBe(0);
   });
 
   // F3 mirror — inline path must classify a 'queen-*' record with agentType
@@ -1157,7 +1159,10 @@ describe('collectInlineSnapshot (Slice A parity with collectSwarm)', () => {
         provider: 'deepseek',
         model: 'deepseek-v4-pro',
       }),
+      { id: 'queen-live', role: 'queen', status: 'idle' },
     ]);
+    expect(inline.swarm?.activeQueens).toBe(1);
+    expect(inline.swarm?.executingQueens).toBe(0);
   });
 
   it('session-scopes hive-only live workers (inline mirror)', async () => {

@@ -289,7 +289,7 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
-  it('drops worker/provider permission lines instead of injecting them', () => {
+  it('surfaces queenless worker permission denials but keeps hive-scoped denials with queens', () => {
     const root = makeTempProject();
     try {
       const dataDir = join(root, '.hive-flow', 'data');
@@ -308,6 +308,13 @@ describe('sentinel agent task rewake', () => {
             taskId: 'task-worker-denied',
             targetAgent: 'claude',
             summary: '[WORKER PERMISSION DENIAL: task-worker-denied] worker needs shell.',
+          }),
+          JSON.stringify({
+            kind: 'worker-permission-denial',
+            taskId: 'task-hive-worker-denied',
+            hiveId: 'hive-owned-by-queen',
+            targetAgent: 'claude',
+            summary: '[WORKER PERMISSION DENIAL: task-hive-worker-denied] hive worker needs shell.',
           }),
           JSON.stringify({
             kind: 'provider-permission-denial',
@@ -329,8 +336,9 @@ describe('sentinel agent task rewake', () => {
       expect(context).toContain('task-real-completion');
       expect(context).not.toContain('PERMISSION REQUEST');
       expect(context).not.toContain('task-denied-tool');
-      expect(context).not.toContain('WORKER PERMISSION DENIAL');
-      expect(context).not.toContain('task-worker-denied');
+      expect(context).toContain('WORKER PERMISSION DENIAL');
+      expect(context).toContain('task-worker-denied');
+      expect(context).not.toContain('task-hive-worker-denied');
       expect(context).not.toContain('PROVIDER PERMISSION DENIAL');
       expect(context).not.toContain('task-provider-denied');
       expect(drain.drainNotifications(root, { client_kind: 'claude-code' })).toEqual({});

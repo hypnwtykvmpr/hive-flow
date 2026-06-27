@@ -143,6 +143,63 @@ describe('drain-notifications global wake queues', () => {
     assert.equal(existsSync(pending), false);
   });
 
+  it('drains queenless worker permission denials to the parent and drops hive-scoped permission noise', () => {
+    const projectRoot = tempDir('hf-drain-project-permission-parent-');
+    const home = tempDir('hf-drain-home-permission-parent-');
+    const origHome = process.env.HIVE_FLOW_HOME;
+    const origKind = process.env.HIVE_FLOW_CLIENT_KIND;
+    process.env.HIVE_FLOW_HOME = home;
+    process.env.HIVE_FLOW_CLIENT_KIND = 'claude-code';
+
+    try {
+      const sessionFile = pendingFile(home, 'claude-session-permission-parent');
+      mkdirSync(dirname(sessionFile), { recursive: true });
+      writeFileSync(
+        sessionFile,
+        [
+          JSON.stringify({
+            kind: 'worker-permission-denial',
+            taskId: 'task-queenless-denied',
+            targetAgent: 'claude',
+            ownerClientKind: 'claude-code',
+            summary: '[WORKER PERMISSION DENIAL: task-queenless-denied] parent should redirect.',
+          }),
+          JSON.stringify({
+            kind: 'worker-permission-denial',
+            taskId: 'task-hive-denied',
+            hiveId: 'hive-queen-owned',
+            targetAgent: 'claude',
+            ownerClientKind: 'claude-code',
+            summary: '[WORKER PERMISSION DENIAL: task-hive-denied] queen should handle.',
+          }),
+          JSON.stringify({
+            kind: 'provider-permission-denial',
+            taskId: 'task-provider-denied',
+            targetAgent: 'claude',
+            ownerClientKind: 'claude-code',
+            summary: '[PROVIDER PERMISSION DENIAL: task-provider-denied] legacy audit noise.',
+          }),
+        ].join('\n') + '\n',
+        'utf8',
+      );
+
+      const output = drain.drainNotifications(projectRoot, {
+        session_id: 'claude-session-permission-parent',
+        client_kind: 'claude-code',
+      });
+      const context = output.hookSpecificOutput?.additionalContext ?? '';
+      assert.match(context, /task-queenless-denied/);
+      assert.doesNotMatch(context, /task-hive-denied/);
+      assert.doesNotMatch(context, /task-provider-denied/);
+      assert.equal(existsSync(sessionFile), false);
+    } finally {
+      if (origHome !== undefined) process.env.HIVE_FLOW_HOME = origHome;
+      else delete process.env.HIVE_FLOW_HOME;
+      if (origKind !== undefined) process.env.HIVE_FLOW_CLIENT_KIND = origKind;
+      else delete process.env.HIVE_FLOW_CLIENT_KIND;
+    }
+  });
+
   it('uses durable result owner after task tracking has been consumed', () => {
     const projectRoot = tempDir('hf-drain-project-result-owned-');
     const pending = join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl');

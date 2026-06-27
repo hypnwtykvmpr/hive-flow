@@ -485,7 +485,7 @@ describe('provider bridge task completion notifications', () => {
     expect(readFileSync(hivePermissionFile, 'utf8').trim().split('\n')).toHaveLength(1);
   });
 
-  it('falls back to a local non-wake audit log when a denied provider tool has no hive', async () => {
+  it('routes queenless denied provider tools to the owning parent wake queue', async () => {
     const projectRoot = tempDir('hf-bridge-permission-fallback-project-');
     const hiveHome = tempDir('hf-bridge-permission-fallback-home-');
     const taskId = 'task-permission-local-audit';
@@ -507,19 +507,39 @@ describe('provider bridge task completion notifications', () => {
     expect(denied.status).toBe('denied');
     expect(denied.permissionRequest).toMatchObject({
       status: 'pending',
-      routedTo: 'local-audit',
-      action: 'local-audit-only',
+      routedTo: 'parent',
+      action: 'parent-review-required',
       workerAction: 'continue-with-available-tools',
       agentId: 'standalone-provider-agent',
       tool: 'run_shell',
+      notifiedParent: true,
     });
-    expect(existsSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'))).toBe(false);
-    expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
 
+    const localPending = readFileSync(join(projectRoot, '.hive-flow', 'data', 'pending-notifications.jsonl'), 'utf8');
+    const sessionPending = readFileSync(join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('codex', 'permission-owner-session'),
+      'pending-notifications.jsonl',
+    ), 'utf8');
     const auditText = readFileSync(join(projectRoot, '.hive-flow', 'data', 'provider-permission-denials.jsonl'), 'utf8');
+
+    expect(localPending).toContain('"kind":"worker-permission-denial"');
+    expect(localPending).toContain('"targetAgent":"codex"');
+    expect(localPending).toContain('Owning parent should redirect the worker');
+    expect(sessionPending).toContain('"kind":"worker-permission-denial"');
+    expect(sessionPending).toContain('"targetAgent":"codex"');
+    expect(existsSync(join(
+      hiveHome,
+      'wake',
+      'sessions',
+      sessionKeyFor('codex', 'permission-owner-session'),
+      `task-${taskId}.${denied.permissionRequest.requestId}.permission-denial`,
+    ))).toBe(true);
     expect(auditText).toContain('"kind":"worker-permission-denial"');
     expect(auditText).toContain('"agentId":"standalone-provider-agent"');
     expect(auditText).toContain('"tool":"run_shell"');
-    expect(auditText).not.toContain('pending-notifications');
+    expect(auditText).toContain('Owning parent should redirect the worker');
   });
 });

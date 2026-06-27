@@ -56,7 +56,7 @@ export interface ActiveHiveRuntimeAgent {
   agentId: string;
   ownerSessionId: string;
   role: 'queen' | 'worker';
-  status: 'busy';
+  status: 'busy' | 'idle';
   hiveId: string;
   currentTaskPid?: number;
   taskId?: string;
@@ -278,17 +278,17 @@ export async function collectActiveHiveRuntimeState(
     const hasLiveQueen = isLivePid(recordQueenPid(record));
     if (typeof record.queenId === 'string' && record.queenId.trim()) {
       const queenId = record.queenId.trim();
-      if (hasLiveWorker || hasLiveQueen) activeAgentIds.add(queenId);
-      if (hasLiveQueen) {
+      if (hasLiveWorker || hasLiveQueen) {
+        activeAgentIds.add(queenId);
         activeAgents.push({
           agentId: queenId,
           ownerSessionId,
           role: 'queen',
-          status: 'busy',
+          status: hasLiveQueen ? 'busy' : 'idle',
           hiveId: typeof record.hiveId === 'string' && record.hiveId.trim()
             ? record.hiveId.trim()
             : entry.name,
-          currentTaskPid: recordQueenPid(record) as number,
+          ...(hasLiveQueen ? { currentTaskPid: recordQueenPid(record) as number } : {}),
         });
       }
     }

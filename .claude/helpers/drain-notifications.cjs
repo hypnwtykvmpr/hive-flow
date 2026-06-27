@@ -65,6 +65,21 @@ function targetAgentFromKind(kind) {
   return targetAgentFromClientKind(kind);
 }
 
+function targetAgentFromAgentId(agentId) {
+  const raw = typeof agentId === 'string' ? agentId.trim().toLowerCase() : '';
+  if (!raw) return null;
+  const genericRoleTokens = new Set(['agent', 'worker', 'provider', 'task', 'hive', 'queen']);
+  const tokens = raw.split(/[^a-z0-9]+/).filter(Boolean);
+  for (const token of tokens) {
+    if (genericRoleTokens.has(token)) continue;
+    const target = targetAgentFromKind(token);
+    if (target) return target;
+  }
+  if (raw.includes('codex')) return 'codex';
+  if (raw.includes('claude')) return 'claude';
+  return null;
+}
+
 function agentIdFromNotification(obj) {
   const explicit = obj?.agentId || obj?.agent_id;
   if (typeof explicit === 'string' && explicit.trim()) return explicit.trim();
@@ -89,7 +104,7 @@ function taskOwnerTargetAgent(projectRoot, obj) {
 
   const agentId = task?.agentId || task?.agent_id || result?.agentId || result?.agent_id || inner?.agentId || inner?.agent_id || agentIdFromNotification(obj);
   if (typeof agentId !== 'string' || !agentId.trim()) return null;
-  const fromAgentId = targetAgentFromKind(agentId);
+  const fromAgentId = targetAgentFromKind(agentId) || targetAgentFromAgentId(agentId);
   if (fromAgentId) return fromAgentId;
   const store = readJsonFile(path.join(projectRoot, '.hive-flow', 'agents', 'store.json'));
   const agent = store?.agents?.[agentId.trim()];
@@ -128,8 +143,17 @@ function isQueenPermissionNotification(obj) {
   return !!agentId && !!queenId && agentId === queenId;
 }
 
+function hasHivePermissionScope(obj) {
+  const hiveId = String(obj?.hiveId || obj?.hive_id || '').trim();
+  return hiveId.length > 0;
+}
+
 function suppressPermissionWake(obj) {
-  return isPermissionWakeNotification(obj) && !isQueenPermissionNotification(obj);
+  if (!isPermissionWakeNotification(obj)) return false;
+  if (isQueenPermissionNotification(obj)) return false;
+  const kind = String(obj?.kind || '').trim();
+  if (kind === 'worker-permission-denial' && !hasHivePermissionScope(obj)) return false;
+  return true;
 }
 
 function collectDrainFiles(file) {
@@ -278,6 +302,7 @@ module.exports = {
   currentTargetAgent,
   readJsonFile,
   targetAgentFromKind,
+  targetAgentFromAgentId,
   agentIdFromNotification,
   taskOwnerTargetAgent,
   notificationTargetsAgent,

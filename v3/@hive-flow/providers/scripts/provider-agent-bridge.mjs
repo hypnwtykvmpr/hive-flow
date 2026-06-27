@@ -350,8 +350,12 @@ function bridgeTaskOwnershipFromResultFile(resultFile, projectRoot = projectRoot
   return bridgeMergeOwners(fromTracking, fromResult, fromAgent);
 }
 
-function appendTaskNotificationOnce(dataDir, taskId, line) {
-  const markerPath = join(dataDir, `task-${taskId}.notified`);
+function appendTaskNotificationOnce(dataDir, taskId, line, markerSuffix = 'notified') {
+  const safeSuffix = String(markerSuffix || 'notified')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120) || 'notified';
+  const markerPath = join(dataDir, `task-${taskId}.${safeSuffix}`);
   let fd = null;
   let markerCreated = false;
   try {
@@ -472,6 +476,7 @@ function recordWorkerPermissionDenialFromDeniedTool(toolName, denied, ctx = {}) 
       agentConfig.queenId ||
       process.env.HIVE_FLOW_QUEEN_ID,
     );
+    const targetAgent = bridgeTargetAgent(process.env, owner);
     const denyReason = String(denied?.error || denied?.message || denied?.denyReason || 'permission-denied').slice(0, 180);
     const denyCode = String(denied?.denyReason || 'permission-denied').slice(0, 80);
     const markerHash = createHash('sha256')
@@ -479,7 +484,9 @@ function recordWorkerPermissionDenialFromDeniedTool(toolName, denied, ctx = {}) 
       .digest('hex')
       .slice(0, 16);
     const requestId = `permission-${markerHash}`;
-    const summary = `[WORKER TOOL DENIED: ${taskId}] worker ${agentId || 'unknown'} could not use ${toolName}: ${denyReason}. Queen should redirect the worker or approve through a queen-mediated policy path.`;
+    const summary = hiveId
+      ? `[WORKER TOOL DENIED: ${taskId}] worker ${agentId || 'unknown'} could not use ${toolName}: ${denyReason}. Queen should redirect the worker or approve through a queen-mediated policy path.`
+      : `[WORKER TOOL DENIED: ${taskId}] worker ${agentId || 'unknown'} could not use ${toolName}: ${denyReason}. Owning parent should redirect the worker or approve through a parent-mediated policy path.`;
     const line = JSON.stringify({
       kind: 'worker-permission-denial',
       requestId,
@@ -495,6 +502,7 @@ function recordWorkerPermissionDenialFromDeniedTool(toolName, denied, ctx = {}) 
       ...(queenId ? { queenId } : {}),
       ...(owner.ownerSessionId ? { ownerSessionId: owner.ownerSessionId } : {}),
       ...(owner.ownerClientKind ? { ownerClientKind: owner.ownerClientKind } : {}),
+      ...(targetAgent ? { targetAgent } : {}),
     });
     const metadata = {
       requestId,
@@ -518,9 +526,18 @@ function recordWorkerPermissionDenialFromDeniedTool(toolName, denied, ctx = {}) 
       };
     }
     const auditDir = join(projectRoot, '.hive-flow', 'data');
+    let notifiedParent = false;
+    for (const dataDir of bridgeTaskNotificationDataDirs(projectRoot, process.env, owner)) {
+      if (appendTaskNotificationOnce(dataDir, taskId, line, `${requestId}.permission-denial`)) {
+        notifiedParent = true;
+      }
+    }
     return {
       ...metadata,
+      routedTo: 'parent',
+      action: 'parent-review-required',
       recorded: appendProviderPermissionRecordOnce(auditDir, 'provider-permission-denials.jsonl', taskId, requestId, line),
+      notifiedParent,
     };
   } catch {
     return null;
