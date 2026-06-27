@@ -413,6 +413,140 @@ describe('collectInlineSnapshot (Wave 8 inline-collector mode)', () => {
     });
   });
 
+  it('counts an idle queen without process evidence as alive but not executing', async () => {
+    writeStoreDict(fix.storePath, {
+      queen1: {
+        agentId: 'queen1',
+        agentType: 'queen',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+      },
+      worker1: {
+        agentId: 'worker1',
+        agentType: 'coder',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+      },
+    });
+
+    const snap = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+
+    expect(snap.swarm?.activeQueens).toBe(1);
+    expect(snap.swarm?.executingQueens).toBe(0);
+    expect(snap.swarm?.activeAgents).toBe(0);
+    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual(['queen1']);
+  });
+
+  it('does not count queued or stale queens without process evidence as alive', async () => {
+    writeStoreDict(fix.storePath, {
+      queuedQueen: {
+        agentId: 'queen-queued',
+        agentType: 'queen',
+        status: 'spawning',
+        ownerSessionId: 'session-a',
+      },
+      staleQueen: {
+        agentId: 'queen-stale',
+        agentType: 'queen',
+        status: 'zorp',
+        ownerSessionId: 'session-a',
+      },
+    });
+
+    const snap = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+
+    expect(snap.swarm?.activeQueens ?? 0).toBe(0);
+    expect(snap.swarm?.executingQueens ?? 0).toBe(0);
+    expect(snap.swarm?.agents ?? []).toEqual([]);
+  });
+
+  it('does not double-count a hive-associated stale store queen with no queen config hiveId', async () => {
+    writeStoreDict(fix.storePath, {
+      staleStoreQueen: {
+        agentId: 'queen-old',
+        agentType: 'queen',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+      },
+    });
+    writeHive(fix.projectRoot, 'old-hive', [], 'queen-old', 'session-a', 'failed');
+    writeHive(fix.projectRoot, 'active-hive', [
+      { agentId: 'live-worker', workerId: 'live-worker', status: 'busy', currentTaskPid: process.pid },
+    ], 'queen-active', 'session-a');
+
+    const snap = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+
+    expect(snap.swarm?.activeQueens).toBe(1);
+    expect(snap.swarm?.activeAgents).toBe(1);
+    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual(['live-worker', 'queen-active']);
+  });
+
+  it('counts an unlinked same-session idle queen as distinct from an active hive queen', async () => {
+    writeStoreDict(fix.storePath, {
+      unlinkedQueen: {
+        agentId: 'queen-unlinked',
+        agentType: 'queen',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+      },
+    });
+    writeHive(fix.projectRoot, 'active-hive', [
+      { agentId: 'live-worker', workerId: 'live-worker', status: 'busy', currentTaskPid: process.pid },
+    ], 'queen-active', 'session-a');
+
+    const snap = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+
+    // Known cosmetic identity boundary: without a hive record or config.hiveId,
+    // this row is indistinguishable from a legitimate unmissioned queen.
+    expect(snap.swarm?.activeQueens).toBe(2);
+    expect(snap.swarm?.activeAgents).toBe(1);
+    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual([
+      'queen-unlinked',
+      'live-worker',
+      'queen-active',
+    ]);
+  });
+
+  it('preserves a distinct same-session idle queen when another hive queen is active', async () => {
+    writeStoreDict(fix.storePath, {
+      standaloneQueen: {
+        agentId: 'queen-standalone',
+        agentType: 'queen',
+        status: 'idle',
+        ownerSessionId: 'session-a',
+      },
+    });
+    writeHive(fix.projectRoot, 'active-hive', [
+      { agentId: 'live-worker', workerId: 'live-worker', status: 'busy', currentTaskPid: process.pid },
+    ], 'queen-active', 'session-a');
+
+    const snap = await collectInlineSnapshot({
+      projectRoot: fix.projectRoot,
+      deadlineMs: 500,
+    });
+
+    expect(snap.swarm?.activeQueens).toBe(2);
+    expect(snap.swarm?.executingQueens).toBe(0);
+    expect(snap.swarm?.activeAgents).toBe(1);
+    expect(snap.swarm?.agents?.map((agent) => agent.id)).toEqual([
+      'queen-standalone',
+      'live-worker',
+      'queen-active',
+    ]);
+  });
+
   it('omits completed direct provider agents with no live task process', async () => {
     writeStoreDict(fix.storePath, {
       completeDirect: {

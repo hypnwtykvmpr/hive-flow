@@ -464,6 +464,13 @@ function hasLiveProcessEvidence(rec: RawAgentRecord): boolean {
   return isPositiveInteger(rec.currentTaskPid) && !isPidDefinitelyDead(rec.currentTaskPid);
 }
 
+function hasQueenPresenceEvidence(
+  status: NormalizedAgentRow['status'],
+  isQueen: boolean,
+): boolean {
+  return isQueen && status === 'idle';
+}
+
 function ownerSessionIdOf(rec: RawAgentRecord): string | null {
   return sanitizeSessionId(rec.ownerSessionId);
 }
@@ -668,8 +675,9 @@ async function probeSwarm(projectRoot: string, sessionId?: string): Promise<Swar
         : `agent-${rows.length}`;
     if (!shouldKeepRuntimeAgent(rec, id, runtimeState)) continue;
     if (isCompletedAgent(rec, status)) continue;
-    if (!hasLiveProcessEvidence(rec)) continue;
     const isQueen = isQueenRecord(rec);
+    const hasLiveEvidence = hasLiveProcessEvidence(rec);
+    if (!hasLiveEvidence && !hasQueenPresenceEvidence(status, isQueen)) continue;
 
     const role = isQueen
       ? 'queen'

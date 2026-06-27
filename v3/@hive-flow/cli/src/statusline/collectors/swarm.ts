@@ -284,6 +284,10 @@ function hasLiveProcessEvidence(rec: RawAgentRecord): boolean {
   return isPositiveInteger(rec.currentTaskPid) && !isPidDefinitelyDead(rec.currentTaskPid);
 }
 
+function hasQueenPresenceEvidence(row: NormalizedAgentRow, isQueen: boolean): boolean {
+  return isQueen && row.status === 'idle';
+}
+
 function ownerSessionIdOf(rec: RawAgentRecord): string | null {
   return sanitizeSessionId(rec.ownerSessionId);
 }
@@ -511,7 +515,8 @@ export async function collectSwarm(opts: CollectSwarmOptions): Promise<SwarmColl
     if (built === undefined) continue;
     if (!shouldKeepRuntimeAgent(rec, built.row.id, runtimeState)) continue;
     if (isCompletedAgent(rec, built.row)) continue;
-    if (!hasLiveProcessEvidence(rec)) continue;
+    const hasLiveEvidence = hasLiveProcessEvidence(rec);
+    if (!hasLiveEvidence && !hasQueenPresenceEvidence(built.row, built.isQueen)) continue;
     const isExecuting =
       built.row.status === 'busy' && isPositiveInteger(rec.currentTaskPid);
     const row = built.row;
