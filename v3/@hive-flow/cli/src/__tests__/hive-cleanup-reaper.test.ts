@@ -8,10 +8,12 @@
  * The reaper must reap/idle a busy agent when EITHER:
  *   (1) currentTaskPid is a positive PID that is definitely DEAD (ESRCH), OR
  *   (2) currentTaskId resolves to tracking PAST deadlineAt with NO result file
- *       (even when PID liveness is unknown / pid absent).
+ *       (even when the recorded PID is still alive).
+ *   (3) status is busy, but there is no task/PID evidence and the record is
+ *       older than the idle timeout.
  * Result-file-present is terminal: clear fields, do not keep busy.
  * It must NOT over-reap: live-in-deadline tasks, missing/malformed tracking,
- * and (per spec) live PID past deadline are preserved.
+ * and fresh no-task dispatch-window records are preserved.
  *
  * The patch makes the module require()-able by:
  *   - honoring HIVE_FLOW_CLEANUP_PROJECT_DIR for PROJECT_DIR, and
@@ -158,7 +160,7 @@ describe('cleanupStaleBusyAgents — HF-13 D1 reaper', () => {
     expect(agent.currentTaskId).toBe(taskId);
   });
 
-  it('does NOT reap a live PID even when past deadline (no safe-terminate implemented)', async () => {
+  it('reaps a task past deadlineAt even when the recorded PID is still alive', async () => {
     const taskId = 'task-live-past-deadline';
     writeTracking(taskId, {
       status: 'running',
@@ -174,8 +176,43 @@ describe('cleanupStaleBusyAgents — HF-13 D1 reaper', () => {
     const { cleanupStaleBusyAgents } = loadReaper();
     const summary = await cleanupStaleBusyAgents();
 
-    expect(summary.staleBusyReaped).toBe(0);
+    expect(summary.staleBusyReaped).toBeGreaterThanOrEqual(1);
     const agent = readStore().agents.a5;
+    expect(agent.status).toBe('idle');
+    expect(agent.currentTaskId).toBeUndefined();
+    expect(agent.currentTaskPid).toBeUndefined();
+  });
+
+  it('reaps ghost-busy records after the idle timeout age floor', async () => {
+    writeStore({
+      a9: {
+        agentId: 'a9',
+        status: 'busy',
+        createdAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+      },
+    });
+    const { cleanupStaleBusyAgents } = loadReaper();
+    const summary = await cleanupStaleBusyAgents();
+
+    expect(summary.staleBusyReaped).toBeGreaterThanOrEqual(1);
+    const agent = readStore().agents.a9;
+    expect(agent.status).toBe('idle');
+    expect(agent.idleSince).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('preserves fresh ghost-busy records from the dispatch window', async () => {
+    writeStore({
+      a10: {
+        agentId: 'a10',
+        status: 'busy',
+        createdAt: new Date().toISOString(),
+      },
+    });
+    const { cleanupStaleBusyAgents } = loadReaper();
+    const summary = await cleanupStaleBusyAgents();
+
+    expect(summary.staleBusyReaped).toBe(0);
+    const agent = readStore().agents.a10;
     expect(agent.status).toBe('busy');
   });
 

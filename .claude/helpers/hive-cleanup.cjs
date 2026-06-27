@@ -319,11 +319,15 @@ function classifyStaleBusyAgent(agentId, agent, nowMs) {
       const deadlineAt = Date.parse(tracking.deadlineAt);
       if (Number.isFinite(deadlineAt) && nowMs > deadlineAt) {
         const livePid = isPositivePid(trackingPid) ? trackingPid : pid;
-        if (isPositivePid(livePid) && !isPidDefinitelyDead(livePid)) {
-          return { stale: false };
-        }
         return { stale: true, reason: 'past-deadline', taskId, pid: livePid };
       }
+    }
+  }
+
+  if (!taskId && !isPositivePid(pid)) {
+    const lastActivityMs = latestAgentTimestamp(agent);
+    if (!Number.isFinite(lastActivityMs) || nowMs - lastActivityMs > IDLE_TIMEOUT_MS) {
+      return { stale: true, reason: 'ghost-busy-no-task', taskId, pid };
     }
   }
 
