@@ -184,7 +184,7 @@ const EXPECTED_DEFINITIONS = {
     type: 'function',
     function: {
       name: 'run_command',
-      description: 'Run a read-only allowlisted command in the project. Allowed: git status/diff/log/show/rev-parse/ls-files/describe/cat-file, pwd, ls, cat, head, tail, wc. No shell, writes, env exposure, launchers, pipes, or redirects.',
+      description: 'Run a read-only allowlisted command in the project. Allowed: git status/diff/log/rev-parse/ls-files/describe, pwd, ls, cat, head, tail, wc. No git blob readers (show/cat-file), shell, writes, env exposure, launchers, pipes, or redirects.',
       parameters: {
         type: 'object',
         properties: {
