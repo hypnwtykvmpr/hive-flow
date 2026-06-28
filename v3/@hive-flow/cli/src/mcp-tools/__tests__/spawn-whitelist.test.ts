@@ -5,6 +5,7 @@ import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CANONICAL_AGENT_TYPES } from '../../agents/roster.js';
 import { agentCommand } from '../../commands/agent.js';
+import { buildMCPToolContextForCall } from '../../mcp-server.js';
 import { agentTools } from '../agent-tools.js';
 import { operatorSessionEnvKeys } from '../session-id.js';
 
@@ -216,6 +217,59 @@ describe('agent_spawn canonical roster whitelist', () => {
     });
     expect(readAgentRecord(tmpRoot, 'context-codex-owned-agent')?.ownerSessionId).toBe('context-session');
     expect(readAgentRecord(tmpRoot, 'context-codex-owned-agent')?.ownerClientKind).toBe('codex');
+  });
+
+  it('stamps restored Claude MCP calls when transport classification is unknown after compaction', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const input = {
+      agentId: 'restored-claude-owned-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+      session_id: 'restored-claude-session',
+      ownerClientKind: 'codex',
+    };
+    const context = buildMCPToolContextForCall(
+      'mcp-1790000000000-deadbeef',
+      'unknown',
+      input,
+    );
+
+    const result = await spawnTool.handler(input, context) as Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: true,
+      agentId: 'restored-claude-owned-agent',
+    });
+    expect(readAgentRecord(tmpRoot, 'restored-claude-owned-agent')).toMatchObject({
+      ownerSessionId: 'restored-claude-session',
+      ownerClientKind: 'claude',
+    });
+  });
+
+  it('still refuses unclassified MCP transport ids without an explicit operator session', async () => {
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_SESSION_ID;
+    delete process.env.HIVE_FLOW_SESSION_ID;
+
+    const context = buildMCPToolContextForCall(
+      'mcp-1790000000000-deadbeef',
+      'unknown',
+      {},
+    );
+    const result = await spawnTool.handler({
+      agentId: 'unknown-transport-only-agent',
+      agentType: 'tester',
+      provider: 'anthropic',
+    }, context) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('missing-owner-session');
+    expect(readAgentRecord(tmpRoot, 'unknown-transport-only-agent')).toBeUndefined();
   });
 
   it('inherits persisted parent owner for direct child agent_spawn before stale ambient env', async () => {

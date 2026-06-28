@@ -214,9 +214,10 @@ export function buildMCPToolContextForCall(
   toolParams: Record<string, unknown>,
 ): { sessionId: string; clientKind: Exclude<MCPClientKind, 'unknown'> } {
   const explicitSessionId = readExplicitToolSessionId(toolParams);
+  const effectiveClientKind = clientKindForMCPToolContext(clientKind);
   return {
-    sessionId: clientKind !== 'unknown' && explicitSessionId ? explicitSessionId : transportSessionId,
-    clientKind: clientKindForMCPToolContext(clientKind),
+    sessionId: explicitSessionId ? explicitSessionId : transportSessionId,
+    clientKind: effectiveClientKind,
   };
 }
 

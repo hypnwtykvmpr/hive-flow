@@ -110,11 +110,11 @@ describe('MCP hive completion notifications', () => {
     });
   });
 
-  it('does not bind explicit owner session for unclassified MCP calls', () => {
+  it('binds explicit owner session for unclassified local MCP calls using the stable Claude default', () => {
     expect(buildMCPToolContextForCall('mcp-1-local', 'unknown', {
-      session_id: 'attacker-selected-owner',
+      session_id: 'restored-claude-session',
     })).toEqual({
-      sessionId: 'mcp-1-local',
+      sessionId: 'restored-claude-session',
       clientKind: 'claude',
     });
   });
