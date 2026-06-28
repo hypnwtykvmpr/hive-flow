@@ -2053,7 +2053,7 @@ const queenPermissionRequestsTool: MCPTool = {
 
 const queenPermissionDecideTool: MCPTool = {
   name: 'queen_permission_decide',
-  description: 'Queen decides a worker permission request. Can record approval/denial, redirect the worker with a safer task, or halt that worker.',
+  description: 'Queen decides a worker permission request. Denials require safer redirection guidance; redirect dispatches a safer task; halt terminates only that worker.',
   category: 'queen',
   tags: ['hive', 'queen', 'permissions', 'decision'],
   inputSchema: {
@@ -2068,6 +2068,7 @@ const queenPermissionDecideTool: MCPTool = {
         description: 'Queen decision. Redirect dispatches a safer worker task; halt terminates only the requesting worker.',
       },
       reason: { type: 'string', description: 'Queen rationale for the decision' },
+      guidance: { type: 'string', description: 'Required when decision=deny; concrete instructions for how the worker should continue without the denied permission' },
       redirectTask: { type: 'string', description: 'Required when decision=redirect; safe alternative task for the worker' },
     },
     required: ['hiveId', 'queenId', 'requestId', 'decision'],
@@ -2078,6 +2079,7 @@ const queenPermissionDecideTool: MCPTool = {
     const requestId = input.requestId as string;
     const decision = input.decision as HivePermissionDecision;
     const reason = stringValue(input.reason) || `Queen decision: ${decision}`;
+    const guidance = stringValue(input.guidance);
     const redirectTask = stringValue(input.redirectTask);
 
     if (!['approve', 'deny', 'redirect', 'halt'].includes(decision)) {
@@ -2085,6 +2087,12 @@ const queenPermissionDecideTool: MCPTool = {
     }
     if (decision === 'redirect' && !redirectTask) {
       return { success: false, error: 'queen_permission_decide requires redirectTask when decision=redirect.' };
+    }
+    if (decision === 'deny' && !guidance) {
+      return {
+        success: false,
+        error: 'queen_permission_decide requires guidance when decision=deny so the worker can continue without the denied permission.',
+      };
     }
 
     const response = await withHiveLock(hiveId, async () => {
@@ -2151,6 +2159,7 @@ const queenPermissionDecideTool: MCPTool = {
         decidedAt,
         decidedBy: queenId,
         reason,
+        ...(guidance ? { guidance } : {}),
         ...(redirectTask ? { redirectTask } : {}),
       };
 
@@ -2190,6 +2199,7 @@ const queenPermissionDecideTool: MCPTool = {
       decision,
       status: response.request.status,
       request: response.request,
+      ...(decision === 'deny' ? { guidance, redirectionInstructions: guidance } : {}),
       ...(redirectDispatch ? { redirectDispatch } : {}),
       ...(decision === 'approve' ? { approvalEffect: 'recorded; does not bypass sandbox, source, or control-plane gates' } : {}),
     };

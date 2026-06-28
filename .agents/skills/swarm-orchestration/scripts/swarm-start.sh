@@ -5,10 +5,10 @@
 set -e
 
 echo "Initializing hierarchical swarm..."
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init \
+node v3/@hive-flow/cli/bin/cli.js swarm init \
   --topology hierarchical \
   --max-agents 8 \
   --strategy specialized
 
 echo "Swarm initialized successfully"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm status
+node v3/@hive-flow/cli/bin/cli.js swarm status

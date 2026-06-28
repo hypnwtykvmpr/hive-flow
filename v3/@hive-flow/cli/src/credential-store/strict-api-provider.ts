@@ -466,5 +466,13 @@ function numberValue(value: unknown): number | undefined {
 }
 
 function redactErrorText(value: string): string {
+  const trimmed = String(value || '').trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      return JSON.stringify(redactCredentialMaterial(JSON.parse(trimmed)));
+    } catch {
+      // Fall through to plain-text redaction for malformed upstream bodies.
+    }
+  }
   return String(redactCredentialMaterial(value));
 }

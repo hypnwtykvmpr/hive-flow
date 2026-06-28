@@ -37,15 +37,16 @@ export interface GitEvidence {
   error?: string;
 }
 
-export interface BeadEvidence {
+export interface KnotEvidence {
   available: boolean;
-  snapshotPath?: string;
-  snapshotMtimeMs?: number;
+  statePath?: string;
+  stateMtimeMs?: number;
   inProgress: number;
   open: number;
   closed: number;
   malformed: number;
   stale: boolean;
+  error?: string;
 }
 
 export interface SwarmEvidence {
@@ -119,7 +120,7 @@ export interface ProgressAuthoritySnapshot {
   sessionId?: string;
   router: RouterEvidence;
   git: GitEvidence;
-  beads: BeadEvidence;
+  knots: KnotEvidence;
   swarm: SwarmEvidence;
   tasks: TaskEvidence;
 }
@@ -137,7 +138,7 @@ export interface ProgressAuthorityResult {
   evidence: {
     router: RouterEvidence;
     git: GitEvidence;
-    beads: BeadEvidence;
+    knots: KnotEvidence;
     swarm: SwarmEvidence;
     tasks: TaskEvidence;
   };
@@ -153,12 +154,12 @@ export interface CollectProgressAuthorityOptions {
 
 const ROUTER_DIR = ['.hive-flow', 'data', 'tmux-router'] as const;
 const TASKS_DIR = ['.hive-flow', 'tasks'] as const;
-const BEADS_SNAPSHOT = ['.beads', 'backup', 'issues.jsonl'] as const;
+const KNOTS_STATE = ['.knots', 'cache', 'state.sqlite'] as const;
 const MAX_ROUTER_NOTES = 40;
 const MAX_NOTE_BYTES = 64 * 1024;
 const MAX_EXCERPT_CHARS = 500;
 const MAX_TASK_FILES = 1_000;
-const BEADS_STALE_MS = 60 * 60 * 1000;
+const KNOTS_STALE_MS = 60 * 60 * 1000;
 const RECENT_ROUTER_MS = 15 * 60 * 1000;
 const DEFAULT_TASK_STALL_REVIEW_MS = 30 * 60 * 1000;
 
@@ -391,22 +392,50 @@ function collectGitEvidence(projectRoot: string): GitEvidence {
   };
 }
 
-function collectBeadEvidence(projectRoot: string, nowMs: number): BeadEvidence {
-  const snapshotPath = join(projectRoot, ...BEADS_SNAPSHOT);
-  if (!existsSync(snapshotPath)) {
+function collectKnotEvidence(projectRoot: string, nowMs: number): KnotEvidence {
+  const statePath = join(projectRoot, ...KNOTS_STATE);
+  if (!existsSync(statePath)) {
     return { available: false, inProgress: 0, open: 0, closed: 0, malformed: 0, stale: true };
   }
   let mtimeMs = 0;
-  let raw = '';
   try {
-    const st = statSync(snapshotPath);
+    const st = statSync(statePath);
     if (!st.isFile()) {
-      return { available: false, snapshotPath, inProgress: 0, open: 0, closed: 0, malformed: 0, stale: true };
+      return { available: false, statePath, inProgress: 0, open: 0, closed: 0, malformed: 0, stale: true };
     }
     mtimeMs = st.mtimeMs;
-    raw = readFileSync(snapshotPath, 'utf8');
-  } catch {
-    return { available: false, snapshotPath, inProgress: 0, open: 0, closed: 0, malformed: 0, stale: true };
+  } catch (error) {
+    return {
+      available: false,
+      statePath,
+      inProgress: 0,
+      open: 0,
+      closed: 0,
+      malformed: 0,
+      stale: true,
+      error: safeError(error),
+    };
+  }
+
+  const listed = spawnSync('kno', ['ls', '--json'], {
+    cwd: projectRoot,
+    shell: false,
+    timeout: 1_000,
+    encoding: 'utf8',
+    maxBuffer: 512 * 1024,
+  });
+  if (listed.error || listed.status !== 0) {
+    return {
+      available: false,
+      statePath,
+      stateMtimeMs: mtimeMs,
+      inProgress: 0,
+      open: 0,
+      closed: 0,
+      malformed: 0,
+      stale: nowMs - mtimeMs > KNOTS_STALE_MS,
+      error: safeError(listed.error ?? listed.stderr ?? `kno ls exited ${listed.status}`),
+    };
   }
 
   let inProgress = 0;
@@ -414,28 +443,43 @@ function collectBeadEvidence(projectRoot: string, nowMs: number): BeadEvidence {
   let closed = 0;
   let malformed = 0;
 
-  for (const line of raw.split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    try {
-      const row = JSON.parse(line) as Record<string, unknown>;
-      const status = typeof row.status === 'string' ? row.status.toLowerCase() : '';
-      if (status === 'in_progress' || status === 'in-progress') inProgress++;
-      else if (status === 'closed' || status === 'done') closed++;
-      else if (status === 'open' || status === 'ready' || status === 'blocked') open++;
-    } catch {
+  try {
+    const rows = JSON.parse(String(listed.stdout || '[]'));
+    if (!Array.isArray(rows)) {
       malformed++;
+    } else {
+      for (const row of rows) {
+        if (!isObject(row)) {
+          malformed++;
+          continue;
+        }
+        const status = typeof row.state === 'string'
+          ? row.state.toLowerCase()
+          : typeof row.status === 'string'
+            ? row.status.toLowerCase()
+            : '';
+        if (status === 'claimed' || status === 'in_progress' || status === 'in-progress' || status === 'working') {
+          inProgress++;
+        } else if (status === 'shipped' || status === 'closed' || status === 'done' || status === 'abandoned') {
+          closed++;
+        } else if (status === 'open' || status === 'ready' || status === 'blocked' || status === 'planned' || status === 'new') {
+          open++;
+        }
+      }
     }
+  } catch {
+    malformed++;
   }
 
   return {
     available: true,
-    snapshotPath,
-    snapshotMtimeMs: mtimeMs,
+    statePath,
+    stateMtimeMs: mtimeMs,
     inProgress,
     open,
     closed,
     malformed,
-    stale: nowMs - mtimeMs > BEADS_STALE_MS,
+    stale: nowMs - mtimeMs > KNOTS_STALE_MS,
   };
 }
 
@@ -688,7 +732,7 @@ function liveContinuationAfterGate(snapshot: ProgressAuthoritySnapshot): boolean
 function authoritySources(snapshot: ProgressAuthoritySnapshot): string[] {
   const sources: string[] = [];
   if (snapshot.router.concreteAction) sources.push('router');
-  if (snapshot.beads.available && !snapshot.beads.stale && snapshot.beads.inProgress > 0) sources.push('beads-snapshot');
+  if (snapshot.knots.available && !snapshot.knots.stale && snapshot.knots.inProgress > 0) sources.push('knots-state');
   if (snapshot.swarm.executing > 0) sources.push('swarm-live');
   if (snapshot.tasks.runningLive > 0 || snapshot.tasks.runningNoPid > 0) sources.push('task-tracking');
   if (snapshot.tasks.completedResults > 0 || snapshot.tasks.failedResults > 0) sources.push('task-result');
@@ -698,7 +742,7 @@ function authoritySources(snapshot: ProgressAuthoritySnapshot): string[] {
 function missingAuthority(snapshot: ProgressAuthoritySnapshot): string[] {
   const missing: string[] = [];
   if (!snapshot.router.available) missing.push('router');
-  if (!snapshot.beads.available || snapshot.beads.stale) missing.push('beads-snapshot');
+  if (!snapshot.knots.available || snapshot.knots.stale) missing.push('knots-state');
   if (!snapshot.swarm.available) missing.push('swarm');
   if (!snapshot.tasks.available) missing.push('tasks');
   return missing;
@@ -768,7 +812,7 @@ export function classifyProgressAuthority(snapshot: ProgressAuthoritySnapshot): 
     evidence: {
       router: sanitizedRouterEvidence(snapshot.router),
       git: sanitizedGitEvidence(snapshot.git),
-      beads: snapshot.beads,
+      knots: snapshot.knots,
       swarm: sanitizedSwarmEvidence(snapshot.swarm),
       tasks: snapshot.tasks,
     },
@@ -785,10 +829,10 @@ export async function collectProgressAuthoritySnapshot(
   const nowMs = options.nowMs ?? Date.now();
   const observedAt = new Date(nowMs).toISOString();
 
-  const [router, git, beads, swarm, tasks] = await Promise.all([
+  const [router, git, knots, swarm, tasks] = await Promise.all([
     Promise.resolve(collectRouterEvidence(projectRoot, options.agent, nowMs)),
     Promise.resolve(collectGitEvidence(projectRoot)),
-    Promise.resolve(collectBeadEvidence(projectRoot, nowMs)),
+    Promise.resolve(collectKnotEvidence(projectRoot, nowMs)),
     collectSwarmEvidence(projectRoot, options.sessionId),
     Promise.resolve(collectTaskEvidence(projectRoot)),
   ]);
@@ -802,7 +846,7 @@ export async function collectProgressAuthoritySnapshot(
     sessionId: options.sessionId,
     router,
     git,
-    beads,
+    knots,
     swarm,
     tasks,
   };

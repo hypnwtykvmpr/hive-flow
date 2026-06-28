@@ -21,11 +21,11 @@ test('SubagentStop hook has an explicit teardown timeout', () => {
   assert.ok(hooks[0].timeout <= 5000);
 });
 
-test('subagent-wrapup prompts when BEAD_ID is present', () => {
+test('subagent-wrapup prompts when KNOT_ID is present', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'hf-subagent-wrapup-'));
   try {
     const transcript = path.join(dir, 'transcript.jsonl');
-    writeFileSync(transcript, 'message\nBEAD_ID: bd-123\n');
+    writeFileSync(transcript, 'message\nKNOT_ID: knot-123\n');
     const input = JSON.stringify({
       agent_id: 'agent-1',
       agent_type: 'tester',
@@ -40,13 +40,13 @@ test('subagent-wrapup prompts when BEAD_ID is present', () => {
     assert.equal(result.status, 0, result.stderr);
     const payload = JSON.parse(result.stdout);
     assert.equal(payload.decision, 'block');
-    assert.match(payload.reason, /bd comments add bd-123 "LEARNED:/);
+    assert.match(payload.reason, /kno update knot-123 --add-note "LEARNED:/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('subagent-wrapup fails open quickly for large transcripts without a BEAD_ID', () => {
+test('subagent-wrapup fails open quickly for large transcripts without a KNOT_ID', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'hf-subagent-wrapup-large-'));
   try {
     const transcript = path.join(dir, 'large-transcript.jsonl');

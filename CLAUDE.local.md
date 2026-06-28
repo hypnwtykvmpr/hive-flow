@@ -83,16 +83,16 @@ Security: NEVER hardcode API keys. Source from .env at runtime. NEVER commit .en
 
 ## Doctor Health Checks
 
-`node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
+`node v3/@hive-flow/cli/bin/cli.js doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
 
 ## Hooks Quick Reference
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task]"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "[id]" --success true
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "[id]"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route --task "[task]"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker list
+node v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task]"
+node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "[id]" --success true
+node v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "[id]"
+node v3/@hive-flow/cli/bin/cli.js hooks route --task "[task]"
+node v3/@hive-flow/cli/bin/cli.js hooks worker list
 ```
 
 ## Pattern Utilities (Neural Package)

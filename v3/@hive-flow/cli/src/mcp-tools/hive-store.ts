@@ -97,6 +97,7 @@ export interface HivePermissionRequest {
     decidedAt: string;
     decidedBy: string;
     reason?: string;
+    guidance?: string;
     redirectTask?: string;
   };
 }

@@ -3,7 +3,7 @@
 # SessionStart: Auto-inject relevant knowledge from memory
 #
 # Searches the knowledge base for entries relevant to:
-# 1. Currently open beads
+# 1. Currently ready Knots
 # 2. Recent activity
 # 3. Current git branch context
 #
@@ -18,8 +18,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Version of lavra that wrote this hook (updated by installer)
 LAVRA_VERSION="0.7.0"
 
-# Exit silently if bd is not installed
-if ! command -v bd &>/dev/null; then
+# Exit silently if kno is not installed
+if ! command -v kno &>/dev/null; then
   exit 0
 fi
 
@@ -29,9 +29,9 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-${CWD:-.}}"
 
-# If neither .beads/ nor .lavra/ exists, this project doesn't use lavra
-if [[ ! -d "$PROJECT_DIR/.beads" ]] && [[ ! -d "$PROJECT_DIR/.lavra" ]]; then
-  jq -cn --arg msg "## Beads Not Initialized\n\nThis project doesn't have beads set up yet. Run \`bd init\` to enable issue tracking and knowledge management." \
+# If neither .knots/ nor .lavra/ exists, this project doesn't use lavra
+if [[ ! -d "$PROJECT_DIR/.knots" ]] && [[ ! -d "$PROJECT_DIR/.lavra" ]]; then
+  jq -cn --arg msg "## Knots Not Initialized\n\nThis project doesn't have Knots set up yet. Run \`kno init\` to enable issue tracking and workflow management." \
     '{"hookSpecificOutput":{"systemMessage":$msg}}'
   exit 0
 fi
@@ -41,7 +41,7 @@ if [[ ! -d "$PROJECT_DIR/.lavra/memory" ]]; then
   source "$SCRIPT_DIR/provision-memory.sh"
   provision_memory_dir "$PROJECT_DIR" "$SCRIPT_DIR"
 
-  jq -cn --arg msg "## Memory System Bootstrapped\n\nAuto-created \`.lavra/memory/\` with knowledge tracking. Your discoveries will be captured automatically via beads comments.\n\nUse \`bd comments add <BEAD_ID> \"LEARNED: ...\"\` to log knowledge." \
+  jq -cn --arg msg "## Memory System Bootstrapped\n\nAuto-created \`.lavra/memory/\` with knowledge tracking. Your discoveries will be captured automatically from Knots notes.\n\nUse \`kno update <KNOT_ID> --add-note \"LEARNED: ...\"\` to log knowledge." \
     '{"hookSpecificOutput":{"systemMessage":$msg}}'
   exit 0
 fi
@@ -82,24 +82,24 @@ KNOWLEDGE_FILE="$MEMORY_DIR/knowledge.jsonl"
 
 # First-run detection: if knowledge file is empty or missing, show orientation
 if [ ! -f "$KNOWLEDGE_FILE" ] || [ ! -s "$KNOWLEDGE_FILE" ]; then
-  jq -cn --arg msg "## Lavra is ready.\n\n| Goal | Command |\n|------|---------|\n| New feature | \`/lavra-brainstorm \"describe your feature\"\` |\n| Plan from spec | \`/lavra-design \"feature description\"\` |\n| Existing beads | \`/lavra-work\` |\n| Explore ideas | \`/lavra-brainstorm \"your idea\"\` |\n\nKnowledge you capture will appear here automatically in future sessions." \
-    '{"hookSpecificOutput":{"systemMessage":$msg}}'
+  jq -cn --arg msg "## Lavra is ready.\n\n| Goal | Command |\n|------|---------|\n| New feature | \`/lavra-brainstorm \"describe your feature\"\` |\n| Plan from spec | \`/lavra-design \"feature description\"\` |\n| Existing knots | \`kno ready --json\` then \`kno poll --claim\` |\n| Explore ideas | \`/lavra-brainstorm \"your idea\"\` |\n\nKnowledge you capture will appear here automatically in future sessions." \
+  '{"hookSpecificOutput":{"systemMessage":$msg}}'
   exit 0
 fi
 
-# Get currently open beads
-OPEN_BEADS=$(bd list --status=open --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | head -5)
-IN_PROGRESS=$(bd list --status=in_progress --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | head -5)
+# Get currently ready knots
+READY_KNOTS_JSON=$(kno ready --json 2>/dev/null || printf '[]')
+READY_KNOTS=$(printf '%s' "$READY_KNOTS_JSON" | jq -r '.[].id // empty' 2>/dev/null | head -5)
 
 # Get current branch name for context
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null)
 
-# Build search terms from bead titles and branch
+# Build search terms from knot titles and branch
 SEARCH_TERMS=""
 
-# Extract keywords from open/in-progress bead titles
-for BEAD_ID in $OPEN_BEADS $IN_PROGRESS; do
-  TITLE=$(bd show "$BEAD_ID" --json 2>/dev/null | jq -r '.[0].title // empty' 2>/dev/null)
+# Extract keywords from ready knot titles
+for KNOT_ID in $READY_KNOTS; do
+  TITLE=$(printf '%s' "$READY_KNOTS_JSON" | jq -r --arg id "$KNOT_ID" '.[] | select(.id == $id) | .title // empty' 2>/dev/null | head -1)
   if [[ -n "$TITLE" ]]; then
     # Extract key words (ignore common words)
     KEYWORDS=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | grep -oE '\b[a-z]{4,}\b' | grep -vE '^(the|and|for|with|from|that|this|have|been|will|into)$' | head -3)

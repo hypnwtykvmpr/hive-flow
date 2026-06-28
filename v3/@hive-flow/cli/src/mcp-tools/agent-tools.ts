@@ -45,6 +45,18 @@ const STORAGE_DIR = '.hive-flow';
 const AGENT_DIR = 'agents';
 const AGENT_FILE = 'store.json';
 const TASK_DEADLINE_REAPER_GRACE_MS = 30_000;
+const PROVIDER_CONCURRENCY_CONFIG_FILES = [
+  ['.hive-flow', 'provider-concurrency.json'],
+  ['.hive-flow', 'config.json'],
+  ['hive-flow.config.json'],
+] as const;
+const DEFAULT_API_PROVIDER_CONCURRENCY_LIMITS: Partial<Record<AgentProvider, number>> = {
+  deepseek: 20,
+  openrouter: 20,
+};
+type ProviderConcurrencyConfigSource =
+  | { source: string; value: Record<string, unknown> }
+  | { source: string; error: string };
 
 // Model tier aliases — map to provider-native models via resolveProviderModel()
 type AgentModel = 'sonnet' | 'opus' | 'mini' | 'inherit';
@@ -505,6 +517,121 @@ function writeAtomicUtf8File(targetPath: string, contents: string): void {
 
 function writeAtomicJsonFile(targetPath: string, value: unknown): void {
   writeAtomicUtf8File(targetPath, JSON.stringify(value, null, 2));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function positiveInteger(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value;
+  if (typeof value === 'string' && /^[1-9][0-9]*$/.test(value.trim())) return Number(value.trim());
+  return undefined;
+}
+
+function providerConfigEnvName(provider: AgentProvider): string {
+  return `HIVE_FLOW_PROVIDER_MAX_${provider.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`;
+}
+
+function parseProviderLimitValue(value: unknown): number | undefined {
+  const direct = positiveInteger(value);
+  if (direct !== undefined) return direct;
+  if (!isRecord(value)) return undefined;
+  return positiveInteger(value.maxConcurrentTasks)
+    ?? positiveInteger(value.maxConcurrent)
+    ?? positiveInteger(value.maxAgents)
+    ?? positiveInteger(value.limit);
+}
+
+function providerConcurrencyConfigObjects(projectRoot: string): ProviderConcurrencyConfigSource[] {
+  const configs: ProviderConcurrencyConfigSource[] = [];
+  for (const segments of PROVIDER_CONCURRENCY_CONFIG_FILES) {
+    const configPath = join(projectRoot, ...segments);
+    if (!existsSync(configPath)) continue;
+    try {
+      const parsed = JSON.parse(readFileSync(configPath, 'utf-8'));
+      if (!isRecord(parsed)) {
+        configs.push({ source: segments.join('/'), error: 'provider concurrency config must be a JSON object' });
+        continue;
+      }
+      const config = isRecord(parsed.providerConcurrency)
+        ? parsed.providerConcurrency
+        : parsed;
+      configs.push({ source: segments.join('/'), value: config });
+    } catch {
+      configs.push({ source: segments.join('/'), error: 'provider concurrency config is not valid JSON' });
+    }
+  }
+  return configs;
+}
+
+function resolveProviderConcurrencyLimit(provider: AgentProvider): { limit?: number; source?: string; error?: string } {
+  const envValue = positiveInteger(process.env[providerConfigEnvName(provider)]);
+  if (envValue !== undefined) return { limit: envValue, source: 'env' };
+
+  for (const config of providerConcurrencyConfigObjects(process.cwd())) {
+    if ('error' in config) return { source: config.source, error: config.error };
+    const value = config.value;
+    const providers = isRecord(value.providers) ? value.providers : undefined;
+    const defaults = isRecord(value.defaults) ? value.defaults : undefined;
+    const exact = parseProviderLimitValue(providers?.[provider])
+      ?? parseProviderLimitValue(value[provider])
+      ?? parseProviderLimitValue(defaults?.[provider])
+      ?? parseProviderLimitValue(defaults?.api)
+      ?? parseProviderLimitValue(defaults?.strictApi)
+      ?? parseProviderLimitValue(value.defaultMaxConcurrentTasks);
+    if (exact !== undefined) return { limit: exact, source: config.source };
+  }
+
+  const fallback = DEFAULT_API_PROVIDER_CONCURRENCY_LIMITS[provider];
+  return fallback !== undefined
+    ? { limit: fallback, source: 'default-api-provider' }
+    : {};
+}
+
+function countBusyProviderAgents(store: AgentStore, provider: AgentProvider): number {
+  return Object.values(store.agents).filter(agent =>
+    agent.status === 'busy'
+    && agent.provider === provider
+  ).length;
+}
+
+function checkProviderConcurrencyForDispatch(store: AgentStore, provider: AgentProvider): {
+  ok: true;
+  active: number;
+  limit?: number;
+  source?: string;
+} | {
+  ok: false;
+  code: 'provider-concurrency-limit' | 'provider-concurrency-config-error';
+  error: string;
+  provider: AgentProvider;
+  active: number;
+  limit?: number;
+  source: string;
+} {
+  const { limit, source, error } = resolveProviderConcurrencyLimit(provider);
+  const active = countBusyProviderAgents(store, provider);
+  if (error) {
+    return {
+      ok: false,
+      code: 'provider-concurrency-config-error',
+      provider,
+      active,
+      source: source || 'unknown',
+      error: `${error} in ${source || 'provider concurrency config'}; fix the config before dispatching more provider work.`,
+    };
+  }
+  if (limit === undefined || active < limit) return { ok: true, active, limit, source };
+  return {
+    ok: false,
+    code: 'provider-concurrency-limit',
+    provider,
+    active,
+    limit,
+    source: source || 'unknown',
+    error: `Provider '${provider}' is at its configured concurrency limit (${active}/${limit}). Reassign this work to another provider or wait for a provider slot to open.`,
+  };
 }
 
 type AgentTaskInput = Record<string, unknown> & {
@@ -1780,6 +1907,17 @@ export const agentTools: MCPTool[] = [
         if (!modelCheck.ok) {
           return { error: modelCheck.error };
         }
+        const providerConcurrency = checkProviderConcurrencyForDispatch(store, agent.provider as AgentProvider);
+        if (!providerConcurrency.ok) {
+          return {
+            error: providerConcurrency.error,
+            code: providerConcurrency.code,
+            provider: providerConcurrency.provider,
+            active: providerConcurrency.active,
+            limit: providerConcurrency.limit,
+            source: providerConcurrency.source,
+          };
+        }
         if (!transitionAgent(agent, 'busy')) {
           return { error: `Agent cannot accept tasks in current state: '${agent.status}'` };
         }
@@ -1870,7 +2008,8 @@ export const agentTools: MCPTool[] = [
       });
 
       if (dispatchResult.error) {
-        return { success: false, agentId, error: dispatchResult.error };
+        const { error, ...details } = dispatchResult as Record<string, unknown>;
+        return { success: false, agentId, error, ...details };
       }
 
       // Write tracking metadata. `provider` is persisted so agent_task_result

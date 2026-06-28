@@ -18,10 +18,10 @@ Use these defaults when initializing swarms from CLI:
 
 ```bash
 # 6-8 agents
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8 --strategy specialized
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
 # 10-15 agents
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
 ```
 
 Common topologies:
@@ -68,11 +68,11 @@ Common topologies:
 ## Quick CLI Examples
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init wizard
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
+node v3/@hive-flow/cli/bin/cli.js init wizard
+node v3/@hive-flow/cli/bin/cli.js daemon start
+node v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
+node v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns"
+node v3/@hive-flow/cli/bin/cli.js doctor --fix
 ```
 
 ## Hooks System (35 CLI Hook Subcommands + 10 Configured Workers)
@@ -88,7 +88,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 | Agent and model prep | `pretrain`, `build-agents`, `transfer` |
 | Utilities | `list`, `worker`, `statusline`, `coverage-route`, `coverage-suggest`, `coverage-gaps` |
 
-Use `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks list --format table` for full hook detail.
+Use `node v3/@hive-flow/cli/bin/cli.js hooks list --format table` for full hook detail.
 
 ### Worker Shortcuts
 `ultralearn`, `optimize`, `consolidate`, `predict`, `audit`, `map`, `preload`, `deepdive`, `document`, `refactor`, `benchmark`, `testgaps`
@@ -99,70 +99,70 @@ The hooks runtime has 10 configured worker entries; the CLI exposes these 12 use
 
 ```bash
 # Core lifecycle
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task]"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "[id]" --success true
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-edit --file "[file]" --train-neural true
+node v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task]"
+node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "[id]" --success true
+node v3/@hive-flow/cli/bin/cli.js hooks post-edit --file "[file]" --train-neural true
 
 # Session
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "[id]"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-end --export-metrics true
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-restore --session-id "[id]"
+node v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "[id]"
+node v3/@hive-flow/cli/bin/cli.js hooks session-end --export-metrics true
+node v3/@hive-flow/cli/bin/cli.js hooks session-restore --session-id "[id]"
 
 # Routing/intelligence
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route --task "[task]"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks explain --topic "[topic]"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pretrain --model-type moe --epochs 10
+node v3/@hive-flow/cli/bin/cli.js hooks route --task "[task]"
+node v3/@hive-flow/cli/bin/cli.js hooks explain --topic "[topic]"
+node v3/@hive-flow/cli/bin/cli.js hooks pretrain --model-type moe --epochs 10
 
 # Worker and coverage operations
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker list
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks coverage-gaps --format table
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks coverage-route --task "[task]"
+node v3/@hive-flow/cli/bin/cli.js hooks worker list
+node v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit
+node v3/@hive-flow/cli/bin/cli.js hooks coverage-gaps --format table
+node v3/@hive-flow/cli/bin/cli.js hooks coverage-route --task "[task]"
 
 # Statusline
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks statusline
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks statusline --json
+node v3/@hive-flow/cli/bin/cli.js hooks statusline
+node v3/@hive-flow/cli/bin/cli.js hooks statusline --json
 ```
 
 ## Migration (V2 to V3)
 
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate status
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate run --backup
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate rollback
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js migrate validate
+node v3/@hive-flow/cli/bin/cli.js migrate status
+node v3/@hive-flow/cli/bin/cli.js migrate run --backup
+node v3/@hive-flow/cli/bin/cli.js migrate rollback
+node v3/@hive-flow/cli/bin/cli.js migrate validate
 ```
 
 ## Quick Setup
 
 ```bash
 # Add MCP servers (stdin-piped mode auto-detected)
-claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+claude mcp add hive-flow -- node v3/@hive-flow/cli/bin/mcp-server.js
 claude mcp add hive-flow -- hive-flow mcp start
 claude mcp add flow-nexus -- flow-nexus mcp start
 
 # Start services and verify
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
+node v3/@hive-flow/cli/bin/cli.js daemon start
+node v3/@hive-flow/cli/bin/cli.js doctor --fix
 ```
 
 ## Memory Commands Reference
 
 ```bash
 # Store (required: --key, --value; optional: --namespace, --ttl, --tags)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
+node v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
 
 # Search (required: --query; optional: --namespace, --limit, --threshold)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns" --namespace patterns --limit 5
+node v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns" --namespace patterns --limit 5
 
 # List (optional: --namespace, --limit)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns --limit 10
+node v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns --limit 10
 
 # Retrieve (required: --key; optional: --namespace)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --key "pattern-auth" --namespace patterns
+node v3/@hive-flow/cli/bin/cli.js memory retrieve --key "pattern-auth" --namespace patterns
 
 # Initialize
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory init --force --verbose
+node v3/@hive-flow/cli/bin/cli.js memory init --force --verbose
 ```
 
 ## Environment Variables
@@ -188,7 +188,7 @@ HIVE_FLOW_MEMORY_PATH=./data/memory
 ```
 
 ## Doctor Health Checks
-Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor` to validate:
+Run `node v3/@hive-flow/cli/bin/cli.js doctor` to validate:
 - Node.js and npm versions
 - Git and TypeScript availability
 - Config validity

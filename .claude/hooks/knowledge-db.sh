@@ -10,9 +10,9 @@
 #
 # Functions:
 #   kb_ensure_db DB_PATH         - Create schema if missing
-#   kb_insert DB_PATH KEY TYPE CONTENT SOURCE TAGS_TEXT TS BEAD - Insert entry
+#   kb_insert DB_PATH KEY TYPE CONTENT SOURCE TAGS_TEXT TS KNOT - Insert entry
 #   kb_search DB_PATH QUERY TOP_N - FTS5 search with BM25 ranking
-#   kb_sync DB_PATH MEMORY_DIR     - Incremental sync from JSONL + first-time beads import
+#   kb_sync DB_PATH MEMORY_DIR     - Incremental sync from JSONL
 #   kb_backfill DB_PATH MEMORY_DIR - Alias for kb_sync (backward compat)
 #
 
@@ -68,7 +68,7 @@ kb_insert() {
   local SOURCE="$5"
   local TAGS_TEXT="$6"
   local TS="$7"
-  local BEAD="$8"
+  local KNOT="$8"
 
   if [[ -z "$DB_PATH" ]] || [[ -z "$KEY" ]]; then
     return 1
@@ -95,7 +95,7 @@ kb_insert() {
     --arg source "$SOURCE" \
     --arg tags_text "$TAGS_TEXT" \
     --argjson ts "${TS:-0}" \
-    --arg bead "$BEAD" \
+    --arg bead "$KNOT" \
     '[$key, $type, $content, $source, $tags_text, $ts, $bead] | @csv' > "$TMPFILE"
 
   sqlite3 "$DB_PATH" ".mode csv" ".import '$TMPFILE' knowledge" 2>/dev/null
@@ -106,7 +106,7 @@ kb_insert() {
 }
 
 # FTS5 MATCH search with BM25 ranking
-# Output: type|content|bead|tags_text (pipe-delimited)
+# Output: type|content|knot|tags_text (pipe-delimited)
 kb_search() {
   local DB_PATH="$1"
   local QUERY="$2"
@@ -156,7 +156,6 @@ SQL
 
 # Incremental sync from JSONL files into SQLite FTS5
 # Compares line counts to import only new entries. Safe to call every session.
-# First-time: also imports knowledge-prefixed comments from beads (via bd sql).
 kb_sync() {
   local DB_PATH="$1"
   local MEMORY_DIR="$2"
@@ -169,44 +168,6 @@ kb_sync() {
 
   local DB_COUNT
   DB_COUNT=$(sqlite3 "$DB_PATH" "SELECT count(*) FROM knowledge;" 2>/dev/null || echo "0")
-
-  # First-time: import from beads comments (only when SQLite is empty)
-  if [[ "$DB_COUNT" -eq 0 ]] && command -v bd &>/dev/null && command -v jq &>/dev/null; then
-    local COMMENT_JSON
-    COMMENT_JSON=$(bd sql --json "SELECT issue_id, text FROM comments WHERE text LIKE 'LEARNED:%' OR text LIKE 'DECISION:%' OR text LIKE 'FACT:%' OR text LIKE 'PATTERN:%' OR text LIKE 'INVESTIGATION:%'" 2>/dev/null || true)
-
-    if [[ -n "$COMMENT_JSON" ]] && [[ "$COMMENT_JSON" != "[]" ]]; then
-      local ROW_COUNT
-      ROW_COUNT=$(echo "$COMMENT_JSON" | jq 'length' 2>/dev/null || echo "0")
-
-      for (( i=0; i<ROW_COUNT; i++ )); do
-        local ISSUE_ID COMMENT_TEXT PREFIX TYPE CONTENT SLUG KEY
-
-        ISSUE_ID=$(echo "$COMMENT_JSON" | jq -r ".[$i].issue_id // empty" 2>/dev/null)
-        COMMENT_TEXT=$(echo "$COMMENT_JSON" | jq -r ".[$i].text // empty" 2>/dev/null)
-        [[ -z "$COMMENT_TEXT" ]] && continue
-
-        PREFIX=""
-        for P in INVESTIGATION LEARNED DECISION FACT PATTERN; do
-          if echo "$COMMENT_TEXT" | grep -q "^${P}:"; then
-            PREFIX="$P"
-            break
-          fi
-        done
-        [[ -z "$PREFIX" ]] && continue
-
-        TYPE=$(echo "$PREFIX" | tr '[:upper:]' '[:lower:]')
-        CONTENT=$(echo "$COMMENT_TEXT" | sed "s/^${PREFIX}:[[:space:]]*//" | head -c 2048)
-        SLUG=$(echo "$CONTENT" | head -c 60 | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//')
-        KEY="${TYPE}-${SLUG}"
-
-        kb_insert "$DB_PATH" "$KEY" "$TYPE" "$CONTENT" "backfill" "" "$(date +%s)" "$ISSUE_ID"
-      done
-    fi
-
-    # Re-read count after beads import
-    DB_COUNT=$(sqlite3 "$DB_PATH" "SELECT count(*) FROM knowledge;" 2>/dev/null || echo "0")
-  fi
 
   # Incremental import from JSONL files
   _kb_sync_jsonl "$DB_PATH" "$MEMORY_DIR/knowledge.jsonl" "$DB_COUNT"
@@ -234,7 +195,7 @@ _kb_sync_jsonl() {
   tail -n +"$(( SKIP + 1 ))" "$JSONL_FILE" | while IFS= read -r LINE; do
     [[ -z "$LINE" ]] && continue
 
-    local KEY TYPE CONTENT SOURCE TAGS_TEXT TS BEAD
+    local KEY TYPE CONTENT SOURCE TAGS_TEXT TS KNOT
     KEY=$(echo "$LINE" | jq -r '.key // empty' 2>/dev/null)
     [[ -z "$KEY" ]] && continue
 
@@ -243,9 +204,9 @@ _kb_sync_jsonl() {
     SOURCE=$(echo "$LINE" | jq -r '.source // ""' 2>/dev/null)
     TAGS_TEXT=$(echo "$LINE" | jq -r '(.tags // []) | join(" ")' 2>/dev/null)
     TS=$(echo "$LINE" | jq -r '.ts // 0' 2>/dev/null)
-    BEAD=$(echo "$LINE" | jq -r '.bead // ""' 2>/dev/null)
+    KNOT=$(echo "$LINE" | jq -r '.knot // .bead // ""' 2>/dev/null)
 
-    kb_insert "$DB_PATH" "$KEY" "$TYPE" "$CONTENT" "$SOURCE" "$TAGS_TEXT" "$TS" "$BEAD"
+    kb_insert "$DB_PATH" "$KEY" "$TYPE" "$CONTENT" "$SOURCE" "$TAGS_TEXT" "$TS" "$KNOT"
   done
 }
 

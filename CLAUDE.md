@@ -328,11 +328,11 @@ Task("Reviewer", "Review code quality and security. Store findings in 'collabora
 
 // 🟢 Codex-labeled workers (implementation, optimization)
 // These are only a distinct Codex runtime when codexCommand points at a real Codex-compatible CLI.
-Bash("node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
-Bash("node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
+Bash("node v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
+Bash("node v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
 
 // STEP 3: Coordinate via shared memory
-Bash("node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --namespace collaboration --key 'task-context' --value '[task description]'")
+Bash("node v3/@hive-flow/cli/bin/cli.js memory store --namespace collaboration --key 'task-context' --value '[task description]'")
 ```
 
 ### Collaboration Templates (Pre-Built Pipelines)
@@ -348,12 +348,12 @@ Bash("node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bi
 
 ```bash
 # Run a collaboration template
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run feature --task "Add user authentication with OAuth"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run security --target "./src"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run refactor --target "./src/legacy"
+node v3/@hive-flow/cli/bin/cli.js dual run feature --task "Add user authentication with OAuth"
+node v3/@hive-flow/cli/bin/cli.js dual run security --target "./src"
+node v3/@hive-flow/cli/bin/cli.js dual run refactor --target "./src/legacy"
 
 # Custom multi-platform swarm
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run \
+node v3/@hive-flow/cli/bin/cli.js dual run \
   --worker "claude:architect:Design the API structure" \
   --worker "codex:coder:Implement REST endpoints" \
   --worker "claude:tester:Write integration tests" \
@@ -361,10 +361,10 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
   --namespace "api-feature"
 
 # Check collaboration status
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual status
+node v3/@hive-flow/cli/bin/cli.js dual status
 
 # List available templates
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual templates
+node v3/@hive-flow/cli/bin/cli.js dual templates
 ```
 
 ### Shared Memory Coordination
@@ -373,13 +373,13 @@ All workers share state via the `collaboration` namespace:
 
 ```bash
 # Store context for cross-platform sharing
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --namespace collaboration --key "design-decisions" --value "..."
+node v3/@hive-flow/cli/bin/cli.js memory store --namespace collaboration --key "design-decisions" --value "..."
 
 # Search for patterns across all workers
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --namespace collaboration --query "authentication patterns"
+node v3/@hive-flow/cli/bin/cli.js memory search --namespace collaboration --query "authentication patterns"
 
 # Retrieve specific findings
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --namespace collaboration --key "security-findings"
+node v3/@hive-flow/cli/bin/cli.js memory retrieve --namespace collaboration --key "security-findings"
 ```
 
 ### Cross-Lane Learning
@@ -388,13 +388,13 @@ When the lanes are backed by distinct commands, both platforms can learn from ea
 
 ```bash
 # After successful collaboration, train patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "dual-[id]" --success true --train-neural true
+node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "dual-[id]" --success true --train-neural true
 
 # Store successful collaboration patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
+node v3/@hive-flow/cli/bin/cli.js memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
 
 # Transfer learnings to both platforms
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks transfer store --pattern "dual-collab-success"
+node v3/@hive-flow/cli/bin/cli.js hooks transfer store --pattern "dual-collab-success"
 ```
 
 ### Worker Dependency Levels
@@ -549,28 +549,28 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 
 ```bash
 # Initialize project
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init wizard
+node v3/@hive-flow/cli/bin/cli.js init wizard
 
 # Start daemon with background workers
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
+node v3/@hive-flow/cli/bin/cli.js daemon start
 
 # Spawn an agent
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn -t coder --name my-coder
+node v3/@hive-flow/cli/bin/cli.js agent spawn -t coder --name my-coder
 
 # Initialize swarm
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
+node v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
 
 # Search memory (HNSW-indexed)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search -q "authentication patterns"
+node v3/@hive-flow/cli/bin/cli.js memory search -q "authentication patterns"
 
 # System diagnostics
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
+node v3/@hive-flow/cli/bin/cli.js doctor --fix
 
 # Security scan
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js security scan --depth full
+node v3/@hive-flow/cli/bin/cli.js security scan --depth full
 
 # Performance benchmark
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js performance benchmark --suite all
+node v3/@hive-flow/cli/bin/cli.js performance benchmark --suite all
 ```
 
 ## Headless Background Instances (claude -p)
@@ -682,7 +682,7 @@ Claude Code's experimental Agent Teams feature is fully integrated with Hive Flo
 
 ### Enabling Agent Teams
 
-Agent Teams is automatically enabled when you run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init`. The following is added to `.claude/settings.json`:
+Agent Teams is automatically enabled when you run `node v3/@hive-flow/cli/bin/cli.js init`. The following is added to `.claude/settings.json`:
 
 ```json
 {
@@ -752,10 +752,10 @@ Task({
 
 ```bash
 # Handle idle teammate (auto-assigns available tasks)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks teammate-idle --auto-assign true
+node v3/@hive-flow/cli/bin/cli.js hooks teammate-idle --auto-assign true
 
 # Handle task completion (trains patterns, notifies lead)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks task-completed -i task-123 --train-patterns true
+node v3/@hive-flow/cli/bin/cli.js hooks task-completed -i task-123 --train-patterns true
 
 # Check on team progress
 TaskList
@@ -833,15 +833,15 @@ SONA, MoE, LoRA, EWC++, and Flash Attention runtime training are not available i
 
 ```bash
 # Add MCP servers
-claude mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+claude mcp add hive-flow -- node v3/@hive-flow/cli/bin/mcp-server.js
 claude mcp add hive-flow -- hive-flow mcp start  # Optional
 claude mcp add flow-nexus -- flow-nexus mcp start  # Optional
 
 # Start daemon
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
+node v3/@hive-flow/cli/bin/cli.js daemon start
 
 # Run doctor
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
+node v3/@hive-flow/cli/bin/cli.js doctor --fix
 ```
 
 ## Claude Code vs Hive Flow MCP Tools
@@ -871,14 +871,14 @@ Plugins are distributed via IPFS and can be installed with the CLI. Browse and i
 
 ```bash
 # List all available plugins
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins list
+node v3/@hive-flow/cli/bin/cli.js plugins list
 
 # Install a plugin
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins install -n @hive-flow/plugin-name
+node v3/@hive-flow/cli/bin/cli.js plugins install -n @hive-flow/plugin-name
 
 # Enable/disable
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --enable
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --disable
+node v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --enable
+node v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --disable
 ```
 
 ### Core Plugins

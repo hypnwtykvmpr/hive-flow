@@ -317,14 +317,14 @@ describe('BinaryBackend', () => {
 
     it('bulkDelete removes specified entries', async () => {
       await backend.bulkInsert([
-        makeEntry({ id: 'bd-1' }),
-        makeEntry({ id: 'bd-2' }),
-        makeEntry({ id: 'bd-3' }),
+        makeEntry({ id: 'bulk-delete-1' }),
+        makeEntry({ id: 'bulk-delete-2' }),
+        makeEntry({ id: 'bulk-delete-3' }),
       ]);
-      const deleted = await backend.bulkDelete(['bd-1', 'bd-3', 'nonexistent']);
+      const deleted = await backend.bulkDelete(['bulk-delete-1', 'bulk-delete-3', 'nonexistent']);
       assert.equal(deleted, 2);
       assert.equal(await backend.count(), 1);
-      assert.ok(await backend.get('bd-2'));
+      assert.ok(await backend.get('bulk-delete-2'));
     });
   });
 

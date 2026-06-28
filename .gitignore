@@ -170,9 +170,6 @@ hive-mind-prompt-*.txt
 .env.local
 .env.*.local
 
-# RVF appliance files
-*.rvf
-
 # Temp test directories
 tests/.tmp-*/
 
@@ -183,8 +180,7 @@ tests/.tmp-*/
 /.resources/
 /.resources/*
 
-# Dolt database files (added by bd init)
-.dolt/
+# Knots workflow state and cache
 /.knots/
 
 # Soft-deleted files (renamed with DELETE_ prefix, not deleted)
@@ -324,3 +320,11 @@ v4-plans/*
 # Cleanup-audit scratch (one-off investigation artifacts + audit probes; never commit)
 /.tmp-audit/
 **/.audit-probe.cjs
+/.claude/**
+!/.claude/
+!/.claude/skills/
+!/.claude/skills/**
+/.agents/**
+!/.agents/
+!/.agents/skills/
+!/.agents/skills/**

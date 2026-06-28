@@ -533,6 +533,133 @@ describe('agent_task handler (non-blocking)', () => {
     expect(result.error).toMatch(/cannot accept tasks in current state/i);
   });
 
+  it('rejects dispatch when a strict API provider reaches its default slot cap', async () => {
+    const agents: Record<string, AgentRecord> = {};
+    for (let i = 0; i < 20; i++) {
+      const busy = makeAgent({
+        agentId: `busy-openrouter-${i}`,
+        provider: 'openrouter',
+        model: 'mini',
+        status: 'busy',
+      });
+      agents[busy.agentId] = busy;
+    }
+    const idle = makeAgent({
+      agentId: 'idle-openrouter',
+      provider: 'openrouter',
+      model: 'mini',
+      status: 'idle',
+    });
+    agents[idle.agentId] = idle;
+    setupStoreMocks(makeStore(agents));
+    mockDetachedSpawn();
+
+    const result = await handler({ agentId: idle.agentId, task: 'should wait' }) as AgentTaskResult & Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      agentId: idle.agentId,
+      code: 'provider-concurrency-limit',
+      provider: 'openrouter',
+      active: 20,
+      limit: 20,
+      source: 'default-api-provider',
+    });
+    expect(String(result.error)).toContain("Provider 'openrouter' is at its configured concurrency limit");
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  it('honors editable JSON provider slot caps before bridge spawn', async () => {
+    const busy = makeAgent({
+      agentId: 'busy-deepseek',
+      provider: 'deepseek',
+      model: 'opus',
+      status: 'busy',
+    });
+    const idle = makeAgent({
+      agentId: 'idle-deepseek',
+      provider: 'deepseek',
+      model: 'opus',
+      status: 'idle',
+    });
+    const store = makeStore({ [busy.agentId]: busy, [idle.agentId]: idle });
+    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return true;
+      if (p === EXPECTED_BRIDGE_PATH) return true;
+      if (typeof p === 'string' && p.endsWith('.hive-flow/provider-concurrency.json')) return true;
+      return false;
+    });
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('.hive-flow/provider-concurrency.json')) {
+        return JSON.stringify({
+          providers: {
+            deepseek: { maxConcurrentTasks: 1 },
+          },
+          pools: {
+            deepseek: ['deepseek', 'openrouter'],
+          },
+        });
+      }
+      return JSON.stringify(store);
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    mockDetachedSpawn();
+
+    const result = await handler({ agentId: idle.agentId, task: 'should wait' }) as AgentTaskResult & Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      agentId: idle.agentId,
+      code: 'provider-concurrency-limit',
+      provider: 'deepseek',
+      active: 1,
+      limit: 1,
+      source: '.hive-flow/provider-concurrency.json',
+    });
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  it('rejects dispatch when the editable provider cap config is malformed', async () => {
+    const idle = makeAgent({
+      agentId: 'idle-openrouter',
+      provider: 'openrouter',
+      model: 'opus',
+      status: 'idle',
+    });
+    const store = makeStore({ [idle.agentId]: idle });
+    (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('store.json')) return true;
+      if (p === EXPECTED_BRIDGE_PATH) return true;
+      if (typeof p === 'string' && p.endsWith('.hive-flow/provider-concurrency.json')) return true;
+      return false;
+    });
+    (readFileSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
+      if (typeof p === 'string' && p.endsWith('.hive-flow/provider-concurrency.json')) {
+        return '{not-json';
+      }
+      return JSON.stringify(store);
+    });
+    (mkdirSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    (renameSync as ReturnType<typeof vi.fn>).mockImplementation(() => {});
+    mockDetachedSpawn();
+
+    const result = await handler({ agentId: idle.agentId, task: 'should explain bad config' }) as AgentTaskResult & Record<string, unknown>;
+
+    expect(result).toMatchObject({
+      success: false,
+      agentId: idle.agentId,
+      code: 'provider-concurrency-config-error',
+      provider: 'openrouter',
+      active: 0,
+      source: '.hive-flow/provider-concurrency.json',
+    });
+    expect(String(result.error)).toContain('not valid JSON');
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
   // ====================================================================
   // Timeout clamping
   // ====================================================================

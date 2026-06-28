@@ -712,6 +712,16 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(listed.success).toBe(true);
     expect(listed.requestCount).toBe(3);
 
+    const denyWithoutGuidance = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-role-1',
+      decision: 'deny',
+      reason: 'Use available read-only tools instead.',
+    }) as Record<string, unknown>;
+    expect(denyWithoutGuidance.success).toBe(false);
+    expect(String(denyWithoutGuidance.error)).toContain('requires guidance');
+
     const approve = await getQueenTool('queen_permission_decide').handler({
       hiveId: hive.hiveId,
       queenId: hive.queenId,
@@ -731,8 +741,14 @@ describe('D-32: queen in-process dispatch gate', () => {
       requestId: 'permission-test-role-1',
       decision: 'deny',
       reason: 'Use available read-only tools instead.',
+      guidance: 'Continue with read_file/list_directory and report the blocked command as a limitation instead of retrying run_shell.',
     }) as Record<string, unknown>;
-    expect(deny).toMatchObject({ success: true, status: 'denied' });
+    expect(deny).toMatchObject({
+      success: true,
+      status: 'denied',
+      guidance: 'Continue with read_file/list_directory and report the blocked command as a limitation instead of retrying run_shell.',
+      redirectionInstructions: 'Continue with read_file/list_directory and report the blocked command as a limitation instead of retrying run_shell.',
+    });
 
     const halt = await getQueenTool('queen_permission_decide').handler({
       hiveId: hive.hiveId,
@@ -750,6 +766,8 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(statuses.get('permission-test-role-0')).toBe('approved');
     expect(statuses.get('permission-test-role-1')).toBe('denied');
     expect(statuses.get('permission-test-role-2')).toBe('halted');
+    const denied = persisted.permissionRequests?.find(request => request.requestId === 'permission-test-role-1');
+    expect(denied?.decision?.guidance).toBe('Continue with read_file/list_directory and report the blocked command as a limitation instead of retrying run_shell.');
     expect(persisted.workers.find(worker => worker.workerId === 'permission-worker-halt')?.status).toBe('terminated');
     expect(existsSync(join(root, '.hive-flow', 'data', 'pending-notifications.jsonl'))).toBe(false);
     expect(existsSync(join(hiveHome, 'wake'))).toBe(false);

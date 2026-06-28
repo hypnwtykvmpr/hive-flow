@@ -1708,7 +1708,7 @@ Install these optional plugins to extend Hive Flow capabilities:
 
 | Plugin | Version | Description | Install Command |
 |--------|---------|-------------|-----------------|
-| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Gas Town orchestrator integration with WASM-accelerated formula parsing, Beads sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
+| **@hive-flow/plugin-gastown-bridge** | 0.1.0 | Legacy external Gas Town bridge with WASM-accelerated formula parsing, optional compatibility sync, convoy management, and graph analysis. 20 MCP tools. | `hive-flow plugins install -n @hive-flow/plugin-gastown-bridge` |
 | **@hive-flow/teammate-plugin** | 1.0.0-alpha.1 | Native TeammateTool integration for Claude Code v2.1.19+. BMSSP WASM acceleration, rate limiting, circuit breaker, semantic routing. 21 MCP tools. | `hive-flow plugins install -n @hive-flow/teammate-plugin` |
 
 **Agentic-QE Plugin Features:**
@@ -1818,6 +1818,19 @@ hive-flow hooks worker status
 | `anthropic-cli` | claude-opus-4-8 | Claude headless agent |
 
 **Credential Vault:** Use `hive-flow install --global --credentials` to create a per-machine KEK and encrypted credential vault, avoiding plain-text API key exposure in config files.
+
+**Provider concurrency caps:** API-backed provider agents are capped per concrete API provider at task dispatch. Defaults are conservative (`deepseek: 20`, `openrouter: 20`). Override them in `.hive-flow/provider-concurrency.json`:
+
+```json
+{
+  "providers": {
+    "deepseek": { "maxConcurrentTasks": 30 },
+    "openrouter": { "maxConcurrentTasks": 10 }
+  }
+}
+```
+
+When a provider is full, `agent_task` returns `provider-concurrency-limit` with the active count, limit, and config source so the parent can wait or choose another provider.
 
 <details>
 <summary>⚖️ <strong>Provider Load Balancing</strong> — 4 strategies for optimal cost and performance</summary>

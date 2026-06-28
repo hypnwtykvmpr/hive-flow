@@ -16,7 +16,7 @@ const requirements = [
   ['git-status-readonly', "spawnSync('git', ['status', '--short', '--branch']", source],
   ['git-head-readonly', "spawnSync('git', ['rev-parse', 'HEAD']", source],
   ['no-write-api', /\b(?:writeFileSync|appendFileSync|mkdirSync|rmSync|unlinkSync|renameSync|rmdirSync|createWriteStream)\b/, source, true],
-  ['no-bd-command', /\b(?:bd|beads)\s+(?:ready|update|close|create|claim|sync|dolt)\b/, source, true],
+  ['no-beads-command', /\b(?:bd|beads)\s+(?:ready|update|close|create|claim|sync|dolt)\b/, source, true],
   ['missing-authority-property', 'never classifies missing authority as progressing', test],
   ['idempotency-property', 'is idempotent for identical snapshots because now is injected', test],
   ['secret-redaction-property', 'redacts secret-like values from classifier output', test],

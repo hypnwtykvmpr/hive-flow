@@ -106,7 +106,7 @@ EOF
       echo "    To keep .lavra/ invisible to git without data loss, use git's"
       echo "    exclude file: echo '.lavra/' >> .git/info/exclude"
       echo ""
-      if [[ "${BEADS_AUTO_YES:-false}" == "true" ]] || ! [[ -t 0 ]]; then
+      if [[ "${KNOTS_AUTO_YES:-false}" == "true" ]] || ! [[ -t 0 ]]; then
         # Non-interactive mode (hook context or --yes flag): warn but don't modify
         echo "    [non-interactive] Leaving .gitignore unchanged. Re-run install to fix interactively."
       else

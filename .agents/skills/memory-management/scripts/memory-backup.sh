@@ -11,6 +11,6 @@ BACKUP_FILE="${BACKUP_DIR}/memory_${TIMESTAMP}.json"
 mkdir -p "$BACKUP_DIR"
 
 echo "Backing up memory to $BACKUP_FILE..."
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory export --output "$BACKUP_FILE"
+node v3/@hive-flow/cli/bin/cli.js memory export --output "$BACKUP_FILE"
 
 echo "Backup complete: $BACKUP_FILE"

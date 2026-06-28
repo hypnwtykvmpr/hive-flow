@@ -1,5 +1,5 @@
 import fc from 'fast-check';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -63,7 +63,7 @@ function baseSnapshot(overrides: Partial<ProgressAuthoritySnapshot> = {}): Progr
       available: true,
       dirtyFiles: 0,
     },
-    beads: {
+    knots: {
       available: false,
       inProgress: 0,
       open: 0,
@@ -97,7 +97,7 @@ describe('progress authority classifier', () => {
           dirtyFiles: fc.integer({ min: 0, max: 500 }),
           ahead: fc.integer({ min: 0, max: 20 }),
           behind: fc.integer({ min: 0, max: 20 }),
-          openBeads: fc.integer({ min: 0, max: 20 }),
+          openKnots: fc.integer({ min: 0, max: 20 }),
         }),
         (input) => {
           const result = classifyProgressAuthority(baseSnapshot({
@@ -107,10 +107,10 @@ describe('progress authority classifier', () => {
               ahead: input.ahead,
               behind: input.behind,
             },
-            beads: {
+            knots: {
               available: true,
               inProgress: 0,
-              open: input.openBeads,
+              open: input.openKnots,
               closed: 0,
               malformed: 0,
               stale: false,
@@ -135,7 +135,7 @@ describe('progress authority classifier', () => {
           swarmExecuting: fc.integer({ min: 0, max: 5 }),
           tasksLive: fc.integer({ min: 0, max: 5 }),
           tasksNoPid: fc.integer({ min: 0, max: 5 }),
-          beadInProgress: fc.integer({ min: 0, max: 5 }),
+          knotInProgress: fc.integer({ min: 0, max: 5 }),
         }),
         (input) => {
           const snapshot = baseSnapshot({
@@ -163,9 +163,9 @@ describe('progress authority classifier', () => {
               failedResults: 0,
               malformed: 0,
             },
-            beads: {
-              available: input.beadInProgress > 0,
-              inProgress: input.beadInProgress,
+            knots: {
+              available: input.knotInProgress > 0,
+              inProgress: input.knotInProgress,
               open: 0,
               closed: 0,
               malformed: 0,
@@ -275,9 +275,43 @@ describe('progress authority classifier', () => {
     expect(source).not.toMatch(/\b(?:bd|beads)\s+(?:ready|update|close|create|claim|sync|dolt)\b/);
     expect(source).toContain("spawnSync('git', ['status', '--short', '--branch']");
     expect(source).toContain("spawnSync('git', ['rev-parse', 'HEAD']");
-    expect(source).not.toMatch(/spawnSync\((?!'git')/);
+    expect(source).toContain("spawnSync('kno', ['ls', '--json']");
+    expect(source).not.toMatch(/spawnSync\((?!'(?:git|kno)')/);
     expect(source).toContain('shell: false');
     expect(source).toContain('timeout: 500');
+    expect(source).toContain('timeout: 1_000');
+  });
+
+  it('uses Knots state as the workflow authority source', async () => {
+    const root = tempRoot();
+    mkdirSync(join(root, '.knots', 'cache'), { recursive: true });
+    writeFileSync(join(root, '.knots', 'cache', 'state.sqlite'), 'sqlite-placeholder', 'utf8');
+
+    const binDir = join(root, 'bin');
+    mkdirSync(binDir, { recursive: true });
+    const knoPath = join(binDir, 'kno');
+    writeFileSync(
+      knoPath,
+      '#!/bin/sh\nprintf \'[{"id":"knot-a","state":"claimed"},{"id":"knot-b","state":"ready"},{"id":"knot-c","state":"shipped"}]\'\n',
+      'utf8',
+    );
+    chmodSync(knoPath, 0o755);
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${binDir}${process.platform === 'win32' ? ';' : ':'}${originalPath ?? ''}`;
+    try {
+      const snapshot = await collectProgressAuthoritySnapshot({ cwd: root, nowMs });
+      const result = classifyProgressAuthority(snapshot);
+
+      expect(snapshot.knots.available).toBe(true);
+      expect(snapshot.knots.inProgress).toBe(1);
+      expect(snapshot.knots.open).toBe(1);
+      expect(snapshot.knots.closed).toBe(1);
+      expect(result.authority.sources).toContain('knots-state');
+      expect(result.classification).toBe('stalled');
+    } finally {
+      process.env.PATH = originalPath;
+    }
   });
 
   it('uses bounded redaction equivalent to the task journal discipline', () => {

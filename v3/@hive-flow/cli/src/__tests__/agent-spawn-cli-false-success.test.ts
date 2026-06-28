@@ -151,7 +151,7 @@ describe('agent spawn CLI — false-success envelope handling', () => {
   it('returns exitCode 1 when agent_spawn returns {success:false, error:"connect EPERM ...sock"}', async () => {
     (callMCPTool as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       success: false,
-      error: 'connect EPERM /Users/jonathandirks/.hive-flow/run/credential-holder.sock',
+      error: 'connect EPERM /home/user/.hive-flow/run/credential-holder.sock',
     });
 
     const result = await spawnCmd.action(makeCtx());

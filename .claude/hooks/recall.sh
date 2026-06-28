@@ -8,7 +8,7 @@
 #   recall.sh --recent 10                  # Show latest N entries
 #   recall.sh --stats                      # Knowledge base stats
 #   recall.sh "keyword" --all              # Include archive
-#   recall.sh --topic BD-005               # Filter by epic parent
+#   recall.sh --topic KNOT_ID              # Filter by parent knot and children
 #
 
 MEMORY_DIR="${CLAUDE_PROJECT_DIR:-.}/.lavra/memory"
@@ -62,22 +62,25 @@ if $SHOW_STATS; then
   exit 0
 fi
 
-# Topic mode -- filter by bead parent
+# Topic mode -- filter by knot parent
 if [[ -n "$TOPIC_ID" ]]; then
-  if ! command -v bd &>/dev/null; then
-    echo "bd not found -- cannot query topic children"
+  if ! command -v kno &>/dev/null; then
+    echo "kno not found -- cannot query topic children"
     exit 1
   fi
 
-  CHILDREN=$(bd list --parent "$TOPIC_ID" --json 2>/dev/null | jq -r '.[].id' 2>/dev/null)
+  CHILDREN=$(kno edge list "$TOPIC_ID" --direction outgoing --json 2>/dev/null | jq -r '
+    .. | objects
+    | select((.kind? // .edgeKind? // .edge_kind? // "") == "parent_of")
+    | (.dst? // .target? // .to? // .child? // empty)
+  ' 2>/dev/null)
 
   if [[ -z "$CHILDREN" ]]; then
-    echo "No children found for topic $TOPIC_ID"
-    exit 0
+    CHILDREN="$TOPIC_ID"
   fi
 
-  for CHILD_ID in $CHILDREN; do
-    grep "\"bead\":\"$CHILD_ID\"" "$KNOWLEDGE_FILE" 2>/dev/null
+  for CHILD_ID in $TOPIC_ID $CHILDREN; do
+    grep -E "\"(knot|bead)\":\"$CHILD_ID\"" "$KNOWLEDGE_FILE" 2>/dev/null
   done | jq -r '"\(.type | ascii_upcase): \(.content)"' 2>/dev/null
   exit 0
 fi

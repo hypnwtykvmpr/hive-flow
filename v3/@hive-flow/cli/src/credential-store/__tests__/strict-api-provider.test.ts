@@ -221,4 +221,49 @@ describe('strict API provider holder invoker', () => {
     expect(message).not.toContain(plantedBlob);
     expect(message).not.toContain('or-holder-secret-material');
   });
+
+  it('keeps JSON provider error bodies valid after redaction', async () => {
+    const plantedKey = `or-${'c'.repeat(48)}`;
+    const fetchImpl = vi.fn(async () => new Response(
+      JSON.stringify({
+        error: {
+          message: `Request blocked for key ${plantedKey}`,
+          metadata: { authorization: `Bearer ${plantedKey}` },
+        },
+      }),
+      { status: 403 },
+    )) as unknown as typeof fetch;
+    const invoker = createStrictApiProviderInvoker({ fetchImpl });
+
+    let message = '';
+    try {
+      await invoker({
+        provider: 'openrouter',
+        taskId: 'task-json-error',
+        secret: Buffer.from('or-holder-secret-material'),
+        peer: { pid: 42, uid: 501, startTime: 'peer-start' },
+        request: {
+          action: 'complete',
+          payload: {
+            messages: [{ role: 'user', content: 'ping' }],
+            timeout: 1_000,
+          },
+        },
+      });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+
+    const jsonStart = message.indexOf('{');
+    expect(jsonStart).toBeGreaterThan(-1);
+    const parsed = JSON.parse(message.slice(jsonStart)) as Record<string, unknown>;
+    expect(parsed).toMatchObject({
+      error: {
+        message: 'Request blocked for key [REDACTED]',
+        metadata: { authorization: '[REDACTED]' },
+      },
+    });
+    expect(message).not.toContain(plantedKey);
+    expect(message).not.toContain('or-holder-secret-material');
+  });
 });

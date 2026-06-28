@@ -37,7 +37,7 @@
 
 ### ❌ WRONG: Expecting coordination-only commands to execute tasks
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Build API"
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "Build API"
 # WRONG: Waiting for a coordination-only swarm record to build the API
 # Coordination-only commands do not execute code by themselves.
 ```
@@ -45,8 +45,8 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 ### ✅ CORRECT: Codex executes direct work; Hive Flow agents handle delegated work
 ```bash
 # 1. Tell hive-flow what you're doing (optional coordination)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 1
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name codex-worker
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 1
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name codex-worker
 
 # 2. YOU (CODEX) DO THE ACTUAL WORK:
 mkdir -p src
@@ -55,7 +55,7 @@ export function hello() { return "Hello World"; }
 EOF
 
 # 3. Report to hive-flow what you did (optional)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "api-created" --value "src/api.ts" --namespace results
+node v3/@hive-flow/cli/bin/cli.js memory store --key "api-created" --value "src/api.ts" --namespace results
 ```
 
 ### The Division of Labor
@@ -90,9 +90,9 @@ Codex remains responsible for direct local execution: editing files, running tes
 
 ### ❌ WRONG Pattern (Stopping)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name worker-1
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Build hello world"
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name worker-1
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "Build hello world"
 # WRONG: Codex stops here and waits for something to happen
 # Nothing will happen unless you execute directly or send an executable task to a Hive Flow provider agent.
 ```
@@ -100,15 +100,15 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 ### ✅ CORRECT Pattern (Continue Immediately)
 ```bash
 # Step 1: Coordination (optional)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name worker-1
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name worker-1
 
 # Step 2: IMMEDIATELY DO THE WORK YOURSELF - DON'T WAIT!
 echo 'console.log("Hello World!");' > hello.js
 node hello.js
 
 # Step 3: Report what you did
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "result" --value "Hello World printed" --namespace results
+node v3/@hive-flow/cli/bin/cli.js memory store --key "result" --value "Hello World printed" --namespace results
 ```
 
 ### The Rule
@@ -139,14 +139,14 @@ You must ALWAYS follow up with direct Codex execution or a real provider-agent t
 
 ```bash
 # STEP 1: Optional - register with orchestrator
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 1
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 1
 
 # STEP 2: CODEX DOES THE WORK
 echo 'console.log("Hello World!");' > hello.js
 node hello.js
 
 # STEP 3: Optional - report completion
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "hello-result" --value "printed Hello World" --namespace results
+node v3/@hive-flow/cli/bin/cli.js memory store --key "hello-result" --value "printed Hello World" --namespace results
 ```
 
 **REMEMBER: Coordination-only commands track; Hive Flow provider agents can perform delegated work. Codex stays responsible for the outcome.**
@@ -159,32 +159,32 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ```bash
 # 5-AGENT SWARM - Run these commands in sequence:
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name coord-1
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name coder-1
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name coder-2
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name tester-1
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name reviewer-1
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Your task here" --strategy development
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name coord-1
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name coder-1
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name coder-2
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name tester-1
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name reviewer-1
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "Your task here" --strategy development
 ```
 
 ### Common Swarm Patterns
 
 | Task | Exact Command |
 |------|---------------|
-| Init hierarchical swarm | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8` |
-| Init mesh swarm | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 5` |
-| Init V3 mode (50 agents) | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode` |
-| Spawn coder | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name coder-1` |
-| Spawn tester | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name tester-1` |
-| Spawn coordinator | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name coord-1` |
-| Spawn architect | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type architect --name arch-1` |
-| Spawn reviewer | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name rev-1` |
-| Spawn researcher | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type researcher --name res-1` |
-| Start swarm | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "task" --strategy development` |
-| Check swarm status | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm status` |
-| List agents | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent list` |
-| Stop swarm | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm stop` |
+| Init hierarchical swarm | `node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8` |
+| Init mesh swarm | `node v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 5` |
+| Init V3 mode (50 agents) | `node v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode` |
+| Spawn coder | `node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name coder-1` |
+| Spawn tester | `node v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name tester-1` |
+| Spawn coordinator | `node v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name coord-1` |
+| Spawn architect | `node v3/@hive-flow/cli/bin/cli.js agent spawn --type architect --name arch-1` |
+| Spawn reviewer | `node v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name rev-1` |
+| Spawn researcher | `node v3/@hive-flow/cli/bin/cli.js agent spawn --type researcher --name res-1` |
+| Start swarm | `node v3/@hive-flow/cli/bin/cli.js swarm start --objective "task" --strategy development` |
+| Check swarm status | `node v3/@hive-flow/cli/bin/cli.js swarm status` |
+| List agents | `node v3/@hive-flow/cli/bin/cli.js agent list` |
+| Stop swarm | `node v3/@hive-flow/cli/bin/cli.js swarm stop` |
 
 ### Agent Types (Use with `--type`)
 
@@ -203,20 +203,20 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 | Action | Command |
 |--------|---------|
-| Create task | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task create --type implementation --description "desc"` |
-| List tasks | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task list` |
-| Assign task | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task assign TASK_ID --agent AGENT_NAME` |
-| Task status | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task status TASK_ID` |
-| Cancel task | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task cancel TASK_ID` |
+| Create task | `node v3/@hive-flow/cli/bin/cli.js task create --type implementation --description "desc"` |
+| List tasks | `node v3/@hive-flow/cli/bin/cli.js task list` |
+| Assign task | `node v3/@hive-flow/cli/bin/cli.js task assign TASK_ID --agent AGENT_NAME` |
+| Task status | `node v3/@hive-flow/cli/bin/cli.js task status TASK_ID` |
+| Cancel task | `node v3/@hive-flow/cli/bin/cli.js task cancel TASK_ID` |
 
 ### Memory Commands
 
 | Action | Command |
 |--------|---------|
-| Store | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "key" --value "value" --namespace patterns` |
-| Search | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "search terms"` |
-| List | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns` |
-| Retrieve | `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --key "key"` |
+| Store | `node v3/@hive-flow/cli/bin/cli.js memory store --key "key" --value "value" --namespace patterns` |
+| Search | `node v3/@hive-flow/cli/bin/cli.js memory search --query "search terms"` |
+| List | `node v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns` |
+| Retrieve | `node v3/@hive-flow/cli/bin/cli.js memory retrieve --key "key"` |
 
 ---
 
@@ -226,8 +226,8 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 **Step 1: Setup coordination** (returns instantly - don't stop!)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 5
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name hello-main
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 5
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name hello-main
 # ⚠️ DON'T STOP HERE - CONTINUE IMMEDIATELY TO STEP 2
 ```
 
@@ -243,15 +243,15 @@ node /tmp/hello-swarm.js
 
 **Step 3: Report completion** (optional - store results)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "hello-world-result" --value "Executed: Hello World from Swarm!" --namespace results
+node v3/@hive-flow/cli/bin/cli.js memory store --key "hello-world-result" --value "Executed: Hello World from Swarm!" --namespace results
 ```
 
 ### Recipe 1b: 5-Agent Concurrent Hello World (COMPLETE)
 ```bash
 # COORDINATION (instant - creates records only)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 5
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 5
 for i in 1 2 3 4 5; do
-  node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name "worker-$i"
+  node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name "worker-$i"
 done
 
 # ⚠️ NOW YOU DO THE ACTUAL CONCURRENT WORK:
@@ -262,55 +262,55 @@ wait
 echo "All 5 workers completed!"
 
 # REPORT (optional)
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "concurrent-result" --value "5 workers completed" --namespace results
+node v3/@hive-flow/cli/bin/cli.js memory store --key "concurrent-result" --value "5 workers completed" --namespace results
 ```
 
 ### Recipe 1b: Hello World (Single Command Block)
 ```bash
 # All-in-one execution
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 5 && \
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name hello-main && \
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Print hello world" --strategy development && \
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology mesh --max-agents 5 && \
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name hello-main && \
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "Print hello world" --strategy development && \
 echo 'console.log("Hello World from Swarm!");' > /tmp/hello-swarm.js && \
 node /tmp/hello-swarm.js && \
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "hello-world-result" --value "Success" --namespace results
+node v3/@hive-flow/cli/bin/cli.js memory store --key "hello-world-result" --value "Success" --namespace results
 ```
 
 ### Recipe 2: Feature Implementation (6 Agents)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name lead
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type architect --name arch
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name impl-1
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name impl-2
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name test
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name review
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Implement [feature]" --strategy development
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name lead
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type architect --name arch
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name impl-1
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name impl-2
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name test
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name review
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "Implement [feature]" --strategy development
 ```
 
 ### Recipe 3: Bug Fix (4 Agents)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 4
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name lead
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type researcher --name debug
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name fix
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name verify
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Fix [bug]" --strategy development
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 4
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name lead
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type researcher --name debug
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name fix
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type tester --name verify
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "Fix [bug]" --strategy development
 ```
 
 ### Recipe 4: Security Audit (3 Agents)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 4
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name lead
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type security-architect --name audit
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name review
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Security audit" --strategy development
+node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 4
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type coordinator --name lead
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type security-architect --name audit
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type reviewer --name review
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "Security audit" --strategy development
 ```
 
 ### Recipe 5: V3 Full Coordination (50 Agents)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm coordinate --agents 50
+node v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
+node v3/@hive-flow/cli/bin/cli.js swarm coordinate --agents 50
 ```
 
 ---
@@ -361,64 +361,64 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ### Swarm Commands
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init [--topology TYPE] [--max-agents N] [--v3-mode]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "task" --strategy [development|research]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm status [SWARM_ID]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm stop [SWARM_ID]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm scale --count N
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm coordinate --agents N
+node v3/@hive-flow/cli/bin/cli.js swarm init [--topology TYPE] [--max-agents N] [--v3-mode]
+node v3/@hive-flow/cli/bin/cli.js swarm start --objective "task" --strategy [development|research]
+node v3/@hive-flow/cli/bin/cli.js swarm status [SWARM_ID]
+node v3/@hive-flow/cli/bin/cli.js swarm stop [SWARM_ID]
+node v3/@hive-flow/cli/bin/cli.js swarm scale --count N
+node v3/@hive-flow/cli/bin/cli.js swarm coordinate --agents N
 ```
 
 ### Agent Commands
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type TYPE --name NAME
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent list [--filter active|idle|busy]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent status AGENT_ID
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent stop AGENT_ID
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent metrics [AGENT_ID]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent health
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent logs AGENT_ID
+node v3/@hive-flow/cli/bin/cli.js agent spawn --type TYPE --name NAME
+node v3/@hive-flow/cli/bin/cli.js agent list [--filter active|idle|busy]
+node v3/@hive-flow/cli/bin/cli.js agent status AGENT_ID
+node v3/@hive-flow/cli/bin/cli.js agent stop AGENT_ID
+node v3/@hive-flow/cli/bin/cli.js agent metrics [AGENT_ID]
+node v3/@hive-flow/cli/bin/cli.js agent health
+node v3/@hive-flow/cli/bin/cli.js agent logs AGENT_ID
 ```
 
 ### Task Commands
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task create --type TYPE --description "desc"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task list [--all]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task status TASK_ID
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task assign TASK_ID --agent AGENT_NAME
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task cancel TASK_ID
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js task retry TASK_ID
+node v3/@hive-flow/cli/bin/cli.js task create --type TYPE --description "desc"
+node v3/@hive-flow/cli/bin/cli.js task list [--all]
+node v3/@hive-flow/cli/bin/cli.js task status TASK_ID
+node v3/@hive-flow/cli/bin/cli.js task assign TASK_ID --agent AGENT_NAME
+node v3/@hive-flow/cli/bin/cli.js task cancel TASK_ID
+node v3/@hive-flow/cli/bin/cli.js task retry TASK_ID
 ```
 
 ### Memory Commands
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key KEY --value VALUE [--namespace NS]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "terms" [--namespace NS]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory list [--namespace NS]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --key KEY [--namespace NS]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory init [--force]
+node v3/@hive-flow/cli/bin/cli.js memory store --key KEY --value VALUE [--namespace NS]
+node v3/@hive-flow/cli/bin/cli.js memory search --query "terms" [--namespace NS]
+node v3/@hive-flow/cli/bin/cli.js memory list [--namespace NS]
+node v3/@hive-flow/cli/bin/cli.js memory retrieve --key KEY [--namespace NS]
+node v3/@hive-flow/cli/bin/cli.js memory init [--force]
 ```
 
 ### Hooks Commands
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "task"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id ID --success true
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks route --task "task"
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id ID
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-end --export-metrics true
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker list
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit
+node v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "task"
+node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id ID --success true
+node v3/@hive-flow/cli/bin/cli.js hooks route --task "task"
+node v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id ID
+node v3/@hive-flow/cli/bin/cli.js hooks session-end --export-metrics true
+node v3/@hive-flow/cli/bin/cli.js hooks worker list
+node v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit
 ```
 
 ### System Commands
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init [--wizard] [--codex] [--full]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon start
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon stop
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js daemon status
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor [--fix]
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js status
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+node v3/@hive-flow/cli/bin/cli.js init [--wizard] [--codex] [--full]
+node v3/@hive-flow/cli/bin/cli.js daemon start
+node v3/@hive-flow/cli/bin/cli.js daemon stop
+node v3/@hive-flow/cli/bin/cli.js daemon status
+node v3/@hive-flow/cli/bin/cli.js doctor [--fix]
+node v3/@hive-flow/cli/bin/cli.js status
+node v3/@hive-flow/cli/bin/mcp-server.js
 ```
 
 ---
@@ -493,7 +493,7 @@ Codex doesn't have native hooks like Claude Code, but uses **MCP (Model Context 
 
 ### MCP Auto-Registration
 
-When you run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js init --codex`, the MCP server is **automatically registered** with Codex.
+When you run `node v3/@hive-flow/cli/bin/cli.js init --codex`, the MCP server is **automatically registered** with Codex.
 
 ```bash
 # Verify MCP is registered:
@@ -501,16 +501,16 @@ codex mcp list
 
 # Expected output:
 # Name         Command  Args                                                                                          Status
-# hive-flow  node     /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js  enabled
+# hive-flow  node     v3/@hive-flow/cli/bin/mcp-server.js  enabled
 
 # If not present, add manually:
-codex mcp add hive-flow -- node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+codex mcp add hive-flow -- node v3/@hive-flow/cli/bin/mcp-server.js
 ```
 
 ### Test MCP Connection
 ```bash
 # Test MCP server starts correctly:
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/mcp-server.js
+node v3/@hive-flow/cli/bin/mcp-server.js
 ```
 
 ### MCP Tools Available
@@ -617,8 +617,8 @@ Use tool: memory_store
 
 ### CLI Fallback (if MCP unavailable)
 ```bash
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory search --query "keywords" --namespace patterns
-node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-x" --value "what worked" --namespace patterns
+node v3/@hive-flow/cli/bin/cli.js memory search --query "keywords" --namespace patterns
+node v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-x" --value "what worked" --namespace patterns
 ```
 
 ### Coordination via MCP
@@ -645,90 +645,89 @@ enabled = true
 
 **Remember: Codex executes, hive-flow orchestrates!**
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:full hash:d4f96305 -->
-## Issue Tracking with bd (beads)
+<!-- BEGIN KNOTS INTEGRATION v:1 profile:full -->
+## Issue Tracking with Knots
 
-**IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
+**IMPORTANT**: This project uses **Knots (`kno`)** for ALL issue and workflow tracking. Do NOT use Beads (`bd`), markdown TODOs, task lists, or other tracking methods.
 
-### Why bd?
+### Why Knots?
 
-- Dependency-aware: Track blockers and relationships between issues
-- Git-friendly: Dolt-powered version control with native sync
-- Agent-optimized: JSON output, ready work detection, discovered-from links
-- Prevents duplicate tracking systems and confusion
+- Local-first: repo-native workflow state with append-only events and a SQLite cache
+- Git-backed: syncable through a Knots git ref
+- Agent-oriented: claimable queues, self-contained prompts, JSON output, and explicit workflow transitions
+- Lightweight durable coordination records for agent workflow state
 
 ### Quick Start
 
 **Check for ready work:**
 
 ```bash
-bd ready --json
+kno ready --json
 ```
 
-**Create new issues:**
+**Create new knots:**
 
 ```bash
-bd create "Issue title" --description="Detailed context" -t bug|feature|task -p 0-4 --json
-bd create "Issue title" --description="What this issue is about" -p 1 --deps discovered-from:bd-123 --json
+kno new "Issue title" --desc "Detailed context" --type work --json
+kno new "Found bug" --desc "What was found and why it matters" --type work --tag discovered --json
 ```
 
-**Claim and update:**
+**Claim and inspect work:**
 
 ```bash
-bd update <id> --claim --json
-bd update bd-42 --priority 1 --json
+kno poll --claim --json
+kno claim <id> --json
+kno show <id> --json
 ```
 
-**Complete work:**
+**Update and add notes:**
 
 ```bash
-bd close bd-42 --reason "Completed" --json
+kno update <id> --priority 1 --json
+kno update <id> --add-note "LEARNED: key technical insight" --json
 ```
 
-### Issue Types
+**Advance completed work:**
 
-- `bug` - Something broken
-- `feature` - New functionality
-- `task` - Work item (tests, docs, refactoring)
-- `epic` - Large feature with subtasks
-- `chore` - Maintenance (dependencies, tooling)
+```bash
+kno next <id> --expected-state <current-state> --actor-kind agent --json
+```
+
+### Knot Types
+
+- `work` - Normal implementation, test, documentation, or refactoring work
+- `gate` - Decision or approval point
+- `explore` - Lightweight investigation
+- `execution_plan` - Structured plan with steps
+- `lease` - Lease/session coordination
 
 ### Priorities
 
 - `0` - Critical (security, data loss, broken builds)
 - `1` - High (major features, important bugs)
-- `2` - Medium (default, nice-to-have)
-- `3` - Low (polish, optimization)
-- `4` - Backlog (future ideas)
+- `2` - Medium
+- `3` - Normal/default
+- `4` - Backlog
 
 ### Workflow for AI Agents
 
-1. **Check ready work**: `bd ready` shows unblocked issues
-2. **Claim your task atomically**: `bd update <id> --claim`
-3. **Work on it**: Implement, test, document
-4. **Discover new work?** Create linked issue:
-   - `bd create "Found bug" --description="Details about what was found" -p 1 --deps discovered-from:<parent-id>`
-5. **Complete**: `bd close <id> --reason "Done"`
-
-### Auto-Sync
-
-bd automatically syncs via Dolt:
-
-- Each write auto-commits to Dolt history
-- Use `bd dolt push`/`bd dolt pull` for remote sync
-- No manual export/import needed!
+1. **Check ready work**: `kno ready --json` shows queued work.
+2. **Claim atomically**: `kno poll --claim --json` or `kno claim <id> --json`.
+3. **Follow the printed prompt**: Complete the claimed workflow action and respect its boundary.
+4. **Record context**: Use `kno update <id> --add-note "..." --json` for findings, decisions, risks, and handoff context.
+5. **Advance when done**: Use the `kno next ...` command from the prompt, including `--expected-state`.
+6. **Sync when appropriate**: Use `kno sync` to push then pull Knots updates.
 
 ### Important Rules
 
-- ✅ Use bd for ALL task tracking
-- ✅ Always use `--json` flag for programmatic use
-- ✅ Link discovered work with `discovered-from` dependencies
-- ✅ Check `bd ready` before asking "what should I work on?"
-- ❌ Do NOT create markdown TODO lists
-- ❌ Do NOT use external issue trackers
-- ❌ Do NOT duplicate tracking systems
-
-For more details, see README.md and docs/QUICKSTART.md.
+- Use `kno` for ALL task tracking.
+- Always prefer `--json` for programmatic use.
+- Use notes for discoveries instead of separate ad hoc tracking files.
+- Check `kno ready --json` before asking "what should I work on?"
+- Do NOT use `bd`; Beads has been removed from the system.
+- Do NOT create markdown TODO lists.
+- Do NOT use external issue trackers.
+- Do NOT duplicate tracking systems.
 
 ## Landing the Plane (Session Completion)
 
@@ -737,9 +736,9 @@ complete when the current state is verified and the human has a clear handoff.
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **Create knots for remaining work** - Use `kno new ... --json` for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
+3. **Update knot state** - Use `kno update`, `kno next`, and `kno sync` for claimed or finished work
 4. **Review git state** - Report changed files and whether changes are tracked, ignored, or local-only
 5. **Clean up** - Clear temporary files you created and note any retained local artifacts
 6. **Verify** - Confirm the requested gates actually ran and report failures honestly

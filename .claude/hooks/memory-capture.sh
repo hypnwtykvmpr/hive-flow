@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# PostToolUse:Bash (async) - Capture knowledge from bd comments add commands
+# PostToolUse:Bash (async) - Capture knowledge from kno note commands
 #
-# Detects: bd comments add {BEAD_ID} "INVESTIGATION: ..." / "LEARNED: ..." /
+# Detects: kno update {KNOT_ID} --add-note "INVESTIGATION: ..." / "LEARNED: ..." /
 #          "DECISION: ..." / "FACT: ..." / "PATTERN: ..." / "DEVIATION: ..."
 # Extracts knowledge entries into .lavra/memory/knowledge.jsonl
 #
@@ -15,7 +15,8 @@ TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 [[ -z "$COMMAND" ]] && exit 0
 
-echo "$COMMAND" | grep -qE 'bd\s+comments?\s+add\s+' || exit 0
+echo "$COMMAND" | grep -qE 'kno\s+update\s+' || exit 0
+echo "$COMMAND" | grep -qE -- '--add-note[=[:space:]]' || exit 0
 echo "$COMMAND" | grep -qE '(INVESTIGATION:|LEARNED:|DECISION:|FACT:|PATTERN:|DEVIATION:)' || exit 0
 
 # Validate CLAUDE_PROJECT_DIR to prevent redirect attacks
@@ -28,12 +29,12 @@ if [[ -n "$CLAUDE_PROJECT_DIR" ]]; then
   fi
 fi
 
-# Extract BEAD_ID
-BEAD_ID=$(echo "$COMMAND" | sed -E 's/.*bd[[:space:]]+comments?[[:space:]]+add[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]+.*/\1/')
-[[ -z "$BEAD_ID" || "$BEAD_ID" == "$COMMAND" ]] && exit 0
+# Extract KNOT_ID
+KNOT_ID=$(echo "$COMMAND" | sed -E 's/.*kno[[:space:]]+update[[:space:]]+([A-Za-z0-9._:-]+).*/\1/')
+[[ -z "$KNOT_ID" || "$KNOT_ID" == "$COMMAND" ]] && exit 0
 
-# Extract comment body
-COMMENT_BODY=$(echo "$COMMAND" | sed -E 's/.*bd[[:space:]]+comments?[[:space:]]+add[[:space:]]+[A-Za-z0-9._-]+[[:space:]]+["'\'']//' | sed -E 's/["'\''][[:space:]]*$//' | head -c 4096)
+# Extract note body
+COMMENT_BODY=$(echo "$COMMAND" | sed -E 's/.*--add-note(=|[[:space:]]+)["'\'']//' | sed -E 's/["'\''][[:space:]]*(--[A-Za-z0-9._:-]+.*)?$//' | head -c 4096)
 [[ -z "$COMMENT_BODY" ]] && exit 0
 
 # Detect type from prefix
@@ -90,8 +91,8 @@ ENTRY=$(jq -cn \
   --arg source "$SOURCE" \
   --argjson tags "$TAGS_JSON" \
   --argjson ts "$TS" \
-  --arg bead "$BEAD_ID" \
-  '{key: $key, type: $type, content: $content, source: $source, tags: $tags, ts: $ts, bead: $bead}')
+  --arg knot "$KNOT_ID" \
+  '{key: $key, type: $type, content: $content, source: $source, tags: $tags, ts: $ts, knot: $knot, bead: $knot}')
 
 [[ -z "$ENTRY" ]] && exit 0
 echo "$ENTRY" | jq . >/dev/null 2>&1 || exit 0
@@ -107,7 +108,7 @@ if command -v sqlite3 &>/dev/null; then
     source "$SCRIPT_DIR/knowledge-db.sh"
     TAGS_TEXT=$(echo "$TAGS_JSON" | jq -r '.[]' 2>/dev/null | tr '\n' ' ')
     kb_ensure_db "$MEMORY_DIR/knowledge.db"
-    kb_insert "$MEMORY_DIR/knowledge.db" "$KEY" "$TYPE" "$CONTENT" "$SOURCE" "$TAGS_TEXT" "$TS" "$BEAD_ID"
+    kb_insert "$MEMORY_DIR/knowledge.db" "$KEY" "$TYPE" "$CONTENT" "$SOURCE" "$TAGS_TEXT" "$TS" "$KNOT_ID"
   fi
 fi
 

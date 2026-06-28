@@ -12,7 +12,7 @@ fi
 
 # Add MCP server
 echo "📦 Adding Hive Flow MCP server..."
-claude mcp add hive-flow node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js mcp start
+claude mcp add hive-flow node v3/@hive-flow/cli/bin/cli.js mcp start
 
 echo "✅ MCP server setup complete!"
 echo "🎯 You can now use mcp__hive-flow__ tools in Claude Code"

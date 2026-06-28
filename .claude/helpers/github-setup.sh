@@ -22,7 +22,7 @@ fi
 
 echo ""
 echo "📦 GitHub swarm commands available:"
-echo "  - node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js github swarm"
-echo "  - node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js repo analyze"
-echo "  - node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js pr enhance"
-echo "  - node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js issue triage"
+echo "  - node v3/@hive-flow/cli/bin/cli.js github swarm"
+echo "  - node v3/@hive-flow/cli/bin/cli.js repo analyze"
+echo "  - node v3/@hive-flow/cli/bin/cli.js pr enhance"
+echo "  - node v3/@hive-flow/cli/bin/cli.js issue triage"

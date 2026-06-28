@@ -10,7 +10,7 @@
 
 set -uo pipefail
 
-CLI=/Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js
+CLI=v3/@hive-flow/cli/bin/cli.js
 PASS=0
 FAIL=0
 FAILS_LOG=$(mktemp)
