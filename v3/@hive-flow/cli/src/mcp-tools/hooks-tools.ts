@@ -2018,7 +2018,7 @@ export const hooksTrajectoryEnd: MCPTool = {
 // Pattern store/search hooks - REAL implementation using storeEntry
 export const hooksPatternStore: MCPTool = {
   name: 'hooks_intelligence_pattern-store',
-  description: 'Store pattern in ReasoningBank (HNSW-indexed)',
+  description: 'Store pattern via ReasoningBank or vector-backed memory when available',
   inputSchema: {
     type: 'object',
     properties: {
@@ -2074,13 +2074,13 @@ export const hooksPatternStore: MCPTool = {
       type,
       confidence,
       indexed: success,
-      hnswIndexed: success && (!!storeResult.embedding || controller === 'reasoningBank'),
+      hnswIndexed: success && !!storeResult.embedding,
       embedding: storeResult.embedding,
       timestamp,
       controller,
-      implementation: controller === 'reasoningBank' ? 'reasoning-bank-controller' : (storeResult.success ? 'real-hnsw-indexed' : 'memory-only'),
+      implementation: controller === 'reasoningBank' ? 'reasoning-bank-controller' : (storeResult.success ? 'real-vector-indexed' : 'memory-only'),
       note: controller === 'reasoningBank'
-        ? 'Pattern stored via ReasoningBank controller with HNSW indexing'
+        ? 'Pattern stored via ReasoningBank controller; index backend depends on the configured memory implementation'
         : (storeResult.success ? 'Pattern stored with vector embedding for semantic search' : (storeResult.error || 'Store function unavailable')),
     };
   },

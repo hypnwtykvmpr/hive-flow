@@ -1038,6 +1038,11 @@ describe('hooks-tools', () => {
   describe('hooks_intelligence_pattern-store', () => {
     const t = () => tool('hooks_intelligence_pattern-store');
 
+    it('does not advertise ReasoningBank stores as unconditionally HNSW-indexed', () => {
+      expect(t().description).toContain('vector-backed memory');
+      expect(t().description).not.toMatch(/HNSW-indexed/i);
+    });
+
     it('returns patternId and pattern details', async () => {
       const result = (await t().handler({ pattern: 'Use JWT for stateless auth', type: 'security' })) as AnyResult;
 
@@ -1046,6 +1051,8 @@ describe('hooks-tools', () => {
       expect(result.type).toBe('security');
       expect(typeof result.confidence).toBe('number');
       expect(typeof result.timestamp).toBe('string');
+      expect(result.hnswIndexed).toBe(false);
+      expect(result.implementation).toBe('memory-only');
     });
 
     it('defaults type to "general"', async () => {

@@ -37,23 +37,23 @@
 
 | Metric | Target | Status |
 |--------|--------|--------|
-| HNSW Search | Substantially faster | ✅ Achieved |
-| Flash Attention | Validated optimization | ✅ Achieved (alpha.102) |
-| Memory Reduction | Substantially lower | ✅ Achieved |
-| MCP Response | <100ms | ✅ Achieved |
-| CLI Startup | <500ms | ✅ Achieved |
+| HNSW Search | Substantially faster | Implemented for memory/vector backends where configured |
+| Flash Attention | Validated optimization | Source present; runtime availability is module-gated |
+| Memory Reduction | Substantially lower | Implemented where compression/quantization paths are enabled |
+| MCP Response | <100ms | Target retained; verify against the active runtime |
+| CLI Startup | <500ms | Target retained; verify against the active runtime |
 
 ## Neural Features (alpha.102+)
 
 | Component | Status | Lines | Notes |
 |-----------|--------|-------|-------|
-| SONA Optimizer | ✅ Real | 841 | Pattern learning from trajectories |
-| EWC++ Consolidation | ✅ Real | ~600 | Fisher matrix, prevents forgetting |
-| MoE Router | ✅ Real | ~500 | 8 experts with gating network |
-| Flash Attention | ✅ Real | ~500 | O(N) block attention |
-| LoRA Adapter | ✅ Real | ~400 | High compression (rank=8) |
-| Hyperbolic Embeddings | ✅ Real | - | Poincaré ball model |
-| Int8 Quantization | ✅ Real | - | Significant memory savings |
+| SONA Optimizer | Source present; runtime-gated | 841 | Lazy-loaded trajectory pattern utility when available |
+| EWC++ Consolidation | Source present; runtime-gated | ~600 | Lazy-loaded consolidation helper when available |
+| MoE Router | Source present; runtime-gated | ~500 | Lazy-loaded routing helper when available |
+| Flash Attention | Source present; runtime-gated | ~500 | Lazy-loaded attention helper when available |
+| LoRA Adapter | Source present; runtime-gated | ~400 | Lazy-loaded adapter helper when available |
+| Hyperbolic Embeddings | Source present; runtime-gated | - | Poincare/hyperbolic embedding support where enabled |
+| Int8 Quantization | Source present; runtime-gated | - | Quantization support where enabled |
 
 ## Security Status
 

@@ -1,11 +1,11 @@
 /**
- * V3 ReasoningBank - Pattern Learning with Local HNSW
+ * V3 ReasoningBank - Pattern Learning with Optional Local HNSW
  *
- * Connects hooks to persistent vector storage using the local vector backend.
- * No JSON - all patterns stored as vectors in memory.db
+ * Connects hooks to persistent vector storage using the local vector backend
+ * when available, with in-memory fallback otherwise.
  *
  * Features:
- * - Real HNSW indexing (M=16, efConstruction=200) for HNSW-indexed+ faster search
+ * - Optional local HNSW indexing (M=16, efConstruction=200) when the vector backend loads
  * - ONNX embeddings via @hive-flow/embeddings (MiniLM-L6 384-dim)
  * - Local vector backend for persistence
  * - Pattern promotion from short-term to long-term memory
@@ -184,7 +184,7 @@ const DOMAIN_GUIDANCE: Record<string, string[]> = {
 /**
  * ReasoningBank - Vector-based pattern storage and retrieval
  *
- * Uses the local vector backend for HNSW-indexed pattern storage.
+ * Uses the local vector backend for pattern storage and optional HNSW search.
  * Provides guidance generation from learned patterns.
  */
 export class ReasoningBank extends EventEmitter {
@@ -220,7 +220,7 @@ export class ReasoningBank extends EventEmitter {
   }
 
   /**
-   * Initialize ReasoningBank with local vector backend and real HNSW
+   * Initialize ReasoningBank with the local vector backend and optional HNSW.
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -230,7 +230,7 @@ export class ReasoningBank extends EventEmitter {
       await this.loadDependencies();
 
       if (LocalVectorBackend && HNSWIndex) {
-        // Initialize real HNSW index
+        // Initialize optional local HNSW index
         this.hnswIndex = new HNSWIndex({
           dimensions: this.config.dimensions,
           M: this.config.hnswM,
@@ -380,7 +380,7 @@ export class ReasoningBank extends EventEmitter {
 
     let results: Array<{ pattern: GuidancePattern; similarity: number }> = [];
 
-    // Try HNSW search first (HNSW-indexed+ faster)
+    // Try optional HNSW search first.
     if (this.hnswIndex && this.useRealBackend) {
       const hnswStart = performance.now();
       try {
