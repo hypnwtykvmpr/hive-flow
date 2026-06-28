@@ -226,7 +226,12 @@ export class CommandParser {
       } else if (arg.startsWith('--no-')) {
         // --no-flag (boolean negation)
         const key = arg.slice(5);
-        flags[this.normalizeKey(key)] = false;
+        const normalizedKey = this.normalizeKey(key);
+        flags[normalizedKey] = false;
+        const explicitNoKey = this.normalizeKey(`no-${key}`);
+        if (booleanFlags.has(explicitNoKey)) {
+          flags[explicitNoKey] = true;
+        }
       } else {
         const key = arg.slice(2);
         const normalizedKey = this.normalizeKey(key);

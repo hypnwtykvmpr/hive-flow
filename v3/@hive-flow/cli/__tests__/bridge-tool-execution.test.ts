@@ -90,6 +90,8 @@ interface AgentRecord {
   createdAt: string;
   provider?: string;
   model?: string;
+  ownerSessionId?: string;
+  ownerClientKind?: 'claude' | 'codex' | 'gemini' | 'cursor' | 'antigravity' | 'opencode' | 'forgecode';
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -103,6 +105,8 @@ function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
     createdAt: new Date().toISOString(),
     provider: 'gemini-cli',
     model: 'gemini-3.5-flash',
+    ownerSessionId: 'bridge-test-session',
+    ownerClientKind: 'codex',
     ...overrides,
   };
 }
@@ -125,6 +129,7 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
   });
 
   const tmpWrites = new Map<string, string>();
+  const committedWrites = new Map<string, string>();
 
   (writeFileSync as ReturnType<typeof vi.fn>).mockImplementation(
     (path: string, data: string) => {
@@ -140,15 +145,22 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
             currentStore = parsed;
           }
         } catch { /* not JSON — ignore */ }
+        if (typeof path === 'string') {
+          committedWrites.set(path, data);
+        }
       }
     },
   );
 
   (renameSync as ReturnType<typeof vi.fn>).mockImplementation(
-    (src: string, _dest: string) => {
+    (src: string, dest: string) => {
       const data = tmpWrites.get(src);
       if (data) {
-        currentStore = JSON.parse(data);
+        if (typeof dest === 'string' && dest.endsWith('store.json')) {
+          currentStore = JSON.parse(data);
+        } else if (typeof dest === 'string') {
+          committedWrites.set(dest, data);
+        }
         tmpWrites.delete(src);
       }
     },
@@ -158,6 +170,13 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
 
   return {
     getPersistedStore: () => currentStore as ReturnType<typeof makeStore>,
+    getCommittedWrite: (path: string) => committedWrites.get(path),
+    findCommittedWrite: (predicate: (path: string) => boolean) => {
+      for (const [path, data] of committedWrites.entries()) {
+        if (predicate(path)) return [path, data] as const;
+      }
+      return undefined;
+    },
   };
 }
 
@@ -253,7 +272,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
   describe('Bridge spawn parameters', () => {
     it('passes --agent-id and writes the task to a --task-file (not via stdin)', async () => {
       const agent = makeAgent({ agentId: 'tool-param-agent' });
-      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      const { findCommittedWrite } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockDetachedSpawn();
 
       await handler({
@@ -279,10 +298,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       expect(opts.stdio).toBe('ignore');
 
       // The task content is written to disk, not piped via stdin.
-      const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
-      const taskFileCall = writeCalls.find(([p]: [string]) =>
-        typeof p === 'string' && p.endsWith('.task'),
-      );
+      const taskFileCall = findCommittedWrite((p) => p.endsWith('.task'));
       expect(taskFileCall).toBeDefined();
       expect(taskFileCall![1]).toBe('Use the search tool to find auth patterns');
 
@@ -384,17 +400,14 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
 
     it('writes tracking JSON containing { status:"running", agentId, taskId, pid }', async () => {
       const agent = makeAgent();
-      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      const { findCommittedWrite } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockDetachedSpawn(44444);
 
       await handler({ agentId: agent.agentId, task: 'Quick task' });
 
-      const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
-      const trackingCall = writeCalls.find(([p]: [string]) =>
-        typeof p === 'string' &&
+      const trackingCall = findCommittedWrite((p) =>
         p.endsWith('.json') &&
-        !p.endsWith('store.json') &&
-        !p.includes('.tmp.'),
+        !p.endsWith('store.json')
       );
       expect(trackingCall).toBeDefined();
       const tracking = JSON.parse(trackingCall![1]);
@@ -634,7 +647,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
 
     it('writes the task body unchanged to the --task-file path', async () => {
       const agent = makeAgent();
-      setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+      const { getCommittedWrite } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
       mockDetachedSpawn();
 
       const taskBody = 'Simple question, no tools needed.';
@@ -645,10 +658,9 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
       expect(typeof taskFilePath).toBe('string');
       expect(taskFilePath.endsWith('.task')).toBe(true);
 
-      const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
-      const taskFileCall = writeCalls.find(([p]: [string]) => p === taskFilePath);
-      expect(taskFileCall).toBeDefined();
-      expect(taskFileCall![1]).toBe(taskBody);
+      const taskFileContent = getCommittedWrite(taskFilePath);
+      expect(taskFileContent).toBeDefined();
+      expect(taskFileContent).toBe(taskBody);
     });
 
     it('clamps and passes --timeout through to the bridge (handler does not enforce it)', async () => {

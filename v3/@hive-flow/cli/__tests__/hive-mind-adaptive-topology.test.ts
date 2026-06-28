@@ -25,6 +25,8 @@ const HIVE_FILE = 'state.json';
 
 // Use a temp directory for test isolation
 const TEST_CWD = join(process.cwd(), '.test-hive-mind-adaptive');
+const OWNER_SESSION_ID = 'adaptive-test-session';
+const OWNER_CLIENT_KIND = 'codex';
 
 function getHivePath(): string {
   return join(TEST_CWD, STORAGE_DIR, HIVE_DIR, HIVE_FILE);
@@ -62,6 +64,41 @@ function readAgentStore(): Record<string, unknown> {
   }
 }
 
+function writeAgentStore(store: Record<string, unknown>): void {
+  const dir = join(TEST_CWD, STORAGE_DIR, 'agents');
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  writeFileSync(getAgentStorePath(), JSON.stringify(store, null, 2), 'utf-8');
+}
+
+function ownedAgentRecord(agentId: string): Record<string, unknown> {
+  return {
+    agentId,
+    agentType: 'coder',
+    status: 'idle',
+    health: 1,
+    taskCount: 0,
+    config: {},
+    createdAt: new Date().toISOString(),
+    provider: 'codex-cli',
+    model: 'test-model',
+    ownerSessionId: OWNER_SESSION_ID,
+    ownerClientKind: OWNER_CLIENT_KIND,
+  };
+}
+
+function seedOwnedAgents(...agentIds: string[]): void {
+  const store = readAgentStore();
+  const agents = {
+    ...((store.agents as Record<string, Record<string, unknown>> | undefined) ?? {}),
+  };
+  for (const agentId of agentIds) {
+    agents[agentId] = ownedAgentRecord(agentId);
+  }
+  writeAgentStore({ version: '3.0.0', agents });
+}
+
 function cleanTestDir(): void {
   try {
     rmSync(TEST_CWD, { recursive: true, force: true });
@@ -71,7 +108,12 @@ function cleanTestDir(): void {
 }
 
 // Helper type for tool lookup
-type ToolMap = Record<string, { handler: (input: Record<string, unknown>) => Promise<unknown>; inputSchema: { properties: Record<string, unknown> } }>;
+type ToolMap = Record<string, { handler: (input: Record<string, unknown>, context?: Record<string, unknown>) => Promise<unknown>; inputSchema: { properties: Record<string, unknown> } }>;
+
+const ownerContext = {
+  sessionId: OWNER_SESSION_ID,
+  clientKind: OWNER_CLIENT_KIND,
+};
 
 async function loadTools(): Promise<ToolMap> {
   const { hiveMindTools } = await import('../src/mcp-tools/hive-mind-tools.js');
@@ -84,6 +126,17 @@ async function loadTools(): Promise<ToolMap> {
 
 describe('Hive-Mind Adaptive Topology', () => {
   let tools: ToolMap;
+
+  async function joinOwnedAgent(
+    agentId: string,
+    input: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    seedOwnedAgents(agentId);
+    return await tools['hive-mind_join'].handler(
+      { agentId, ...input },
+      ownerContext,
+    ) as Record<string, unknown>;
+  }
 
   beforeEach(async () => {
     cleanTestDir();
@@ -334,10 +387,9 @@ describe('Hive-Mind Adaptive Topology', () => {
     });
 
     it('should join agents to adaptive hive', async () => {
-      const result = await tools['hive-mind_join'].handler({
-        agentId: 'adaptive-agent-1',
+      const result = await joinOwnedAgent('adaptive-agent-1', {
         role: 'worker',
-      }) as Record<string, unknown>;
+      });
 
       expect(result.success).toBe(true);
       expect(result.agentId).toBe('adaptive-agent-1');
@@ -345,8 +397,8 @@ describe('Hive-Mind Adaptive Topology', () => {
     });
 
     it('should not duplicate agent on re-join', async () => {
-      await tools['hive-mind_join'].handler({ agentId: 'agent-dup' });
-      await tools['hive-mind_join'].handler({ agentId: 'agent-dup' });
+      await joinOwnedAgent('agent-dup');
+      await joinOwnedAgent('agent-dup');
 
       const state = readHiveState();
       const workers = state.workers as Array<{ agentId: string }>;
@@ -355,7 +407,7 @@ describe('Hive-Mind Adaptive Topology', () => {
     });
 
     it('should leave adaptive hive', async () => {
-      await tools['hive-mind_join'].handler({ agentId: 'leaver-1' });
+      await joinOwnedAgent('leaver-1');
       const result = await tools['hive-mind_leave'].handler({ agentId: 'leaver-1' }) as Record<string, unknown>;
 
       expect(result.success).toBe(true);
@@ -483,9 +535,9 @@ describe('Hive-Mind Adaptive Topology', () => {
     it('should handle topology switching during active consensus', async () => {
       // Init with hierarchical and create a pending consensus proposal
       await tools['hive-mind_init'].handler({ topology: 'hierarchical' });
-      await tools['hive-mind_join'].handler({ agentId: 'voter-a' });
-      await tools['hive-mind_join'].handler({ agentId: 'voter-b' });
-      await tools['hive-mind_join'].handler({ agentId: 'voter-c' });
+      await joinOwnedAgent('voter-a');
+      await joinOwnedAgent('voter-b');
+      await joinOwnedAgent('voter-c');
 
       // Create a pending proposal
       const proposal = await tools['hive-mind_consensus'].handler({
@@ -576,7 +628,7 @@ describe('Hive-Mind Adaptive Topology', () => {
 
     it('should block graceful shutdown with pending consensus (no force)', async () => {
       await tools['hive-mind_init'].handler({ topology: 'adaptive' });
-      await tools['hive-mind_join'].handler({ agentId: 'w1' });
+      await joinOwnedAgent('w1');
 
       // Create a pending proposal
       await tools['hive-mind_consensus'].handler({
@@ -595,8 +647,8 @@ describe('Hive-Mind Adaptive Topology', () => {
 
     it('should handle consensus proposals in adaptive topology', async () => {
       await tools['hive-mind_init'].handler({ topology: 'adaptive' });
-      await tools['hive-mind_join'].handler({ agentId: 'voter-1' });
-      await tools['hive-mind_join'].handler({ agentId: 'voter-2' });
+      await joinOwnedAgent('voter-1');
+      await joinOwnedAgent('voter-2');
 
       const proposal = await tools['hive-mind_consensus'].handler({
         action: 'propose',
@@ -611,9 +663,9 @@ describe('Hive-Mind Adaptive Topology', () => {
 
     it('should handle consensus voting to approval in adaptive topology', async () => {
       await tools['hive-mind_init'].handler({ topology: 'adaptive' });
-      await tools['hive-mind_join'].handler({ agentId: 'v1' });
-      await tools['hive-mind_join'].handler({ agentId: 'v2' });
-      await tools['hive-mind_join'].handler({ agentId: 'v3' });
+      await joinOwnedAgent('v1');
+      await joinOwnedAgent('v2');
+      await joinOwnedAgent('v3');
 
       // Propose
       const proposal = await tools['hive-mind_consensus'].handler({
@@ -718,7 +770,7 @@ describe('Hive-Mind Adaptive Topology', () => {
       await tools['hive-mind_init'].handler({ topology: 'adaptive' });
 
       // Continue operations
-      const joinResult = await tools['hive-mind_join'].handler({ agentId: 'new-agent' }) as Record<string, unknown>;
+      const joinResult = await joinOwnedAgent('new-agent');
       expect(joinResult.success).toBe(true);
 
       const broadcastResult = await tools['hive-mind_broadcast'].handler({ message: 'post-switch' }) as Record<string, unknown>;
@@ -760,8 +812,8 @@ describe('Hive-Mind Adaptive Topology', () => {
       await tools['hive-mind_spawn'].handler({ count: 10 });
 
       // Join more
-      await tools['hive-mind_join'].handler({ agentId: 'manual-1' });
-      await tools['hive-mind_join'].handler({ agentId: 'manual-2' });
+      await joinOwnedAgent('manual-1');
+      await joinOwnedAgent('manual-2');
 
       // Store shared memory
       await tools['hive-mind_memory'].handler({

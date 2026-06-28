@@ -24,6 +24,11 @@ vi.mock('fs', () => ({
 
 // Mock MCP client
 vi.mock('../src/mcp-client.js', () => ({
+  listMCPTools: vi.fn(() => [
+    { name: 'swarm_init', category: 'swarm' },
+    { name: 'agent_spawn', category: 'agent' },
+    { name: 'mcp_status', category: 'mcp' },
+  ]),
   callMCPTool: vi.fn(async (toolName: string, input: Record<string, unknown>) => {
     // Swarm tools
     if (toolName === 'swarm_init') {
