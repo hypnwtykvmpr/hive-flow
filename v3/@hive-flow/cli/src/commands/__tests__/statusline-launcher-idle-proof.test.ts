@@ -7,9 +7,8 @@
 // what the implementation MUST produce after the fix.
 //
 // Assertions:
-//   a. The installed ~/.hive-flow/bin/claude-code-statusline launcher execs
-//      bin/statusline.js (already proven by existing init tests; we reuse
-//      the same fixture shape and extend it).
+//   a. The installed ~/.hive-flow/bin/claude-code-statusline launcher emits
+//      canonical renderer output.
 //   b. When the agent store has ONLY idle agents (activeAgents === 0,
 //      idleAgents > 0) the rendered Swarm row uses "○", NOT "◉".
 //   c. When the agent store has at least one busy agent (activeAgents > 0)
@@ -58,7 +57,8 @@ function makeProjectRoot(): string {
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, `fixture:${relativePath}\n`);
   }
-  // The statusline.js stub echoes "HF_BOARD" so we can detect it launched correctly.
+  // Retained only to prove a project-local statusline stub is not used by
+  // the global launcher; the launcher must delegate to the canonical renderer.
   const statuslineRuntime = join(projectRoot, 'v3/@hive-flow/cli/bin/statusline.js');
   mkdirSync(dirname(statuslineRuntime), { recursive: true });
   writeFileSync(statuslineRuntime, '#!/usr/bin/env node\nprocess.stdout.write("HF_BOARD\\n");\n');
@@ -172,7 +172,7 @@ describe('Proof 1 — launcher idle-only symbol (spec: idle => ○, not ◉)', (
     rmSync(projectRoot, { recursive: true, force: true });
   });
 
-  it('launcher exists and execs bin/statusline.js (HF_BOARD in output)', () => {
+  it('launcher exists and emits canonical statusline output', () => {
     const launcher = join(homeDir, '.hive-flow', 'bin', 'claude-code-statusline');
     expect(existsSync(launcher)).toBe(true);
 
@@ -188,7 +188,10 @@ describe('Proof 1 — launcher idle-only symbol (spec: idle => ○, not ◉)', (
     });
 
     expect(launched.status).toBe(0);
-    expect(launched.stdout).toContain('HF_BOARD');
+    const plain = stripAnsi(launched.stdout);
+    expect(plain).toContain('Opus 4.8');
+    expect(plain).toContain('ENFORCEMENT');
+    expect(plain).not.toContain('HF_BOARD');
   });
 
   it('idle-only agents (activeAgents=0, idleAgents>0) render "○" not "◉" in the Swarm row', () => {
@@ -202,7 +205,7 @@ describe('Proof 1 — launcher idle-only symbol (spec: idle => ○, not ◉)', (
       executingQueens: 0,
     });
 
-    // The renderer must be asserted directly (the stub statusline.js only prints HF_BOARD).
+    // The renderer must be asserted directly for stable symbol checks.
     // We call the renderer inline, which is the exact module the launcher delegates to.
     return renderClaudeCodeStatusline(
       {

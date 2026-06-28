@@ -7,6 +7,10 @@
     "types": ["node", "vitest/globals"],
     "baseUrl": "..",
     "paths": {
+      "@hive-flow/cli/plugin-sdk": ["src/plugin-sdk/index.ts"],
+      "@hive-flow/cli/plugin-sdk/*": ["src/plugin-sdk/*"],
+      "@hive-flow/cli/swarm": ["src/swarm/index.ts"],
+      "@hive-flow/cli/swarm/*": ["src/swarm/*"],
       "@hive-flow/cli/memory": ["src/memory/index.ts"],
       "@hive-flow/cli/memory/*": ["src/memory/*"]
     }

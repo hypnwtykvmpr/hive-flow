@@ -16,6 +16,7 @@ describe('CLI process exit', () => {
       mkdirSync(resolve(root, 'dist/src'), { recursive: true });
       writeFileSync(resolve(root, 'package.json'), JSON.stringify({ type: 'module' }), 'utf8');
       cpSync(CLI_BIN, resolve(root, 'bin/cli.js'));
+      cpSync(resolve(here, '..', 'bin', 'npx-repair.js'), resolve(root, 'bin/npx-repair.js'));
       writeFileSync(
         resolve(root, 'dist/src/index.js'),
         [

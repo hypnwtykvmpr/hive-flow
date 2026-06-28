@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { createHmac } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const cliPackageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const v3Root = resolve(cliPackageRoot, '../..');
 const cliBin = join(cliPackageRoot, 'bin', 'cli.js');
 const TEST_HMAC_KEY = 'start-command-test-hmac-key';
 
@@ -58,11 +57,6 @@ describe('hive-flow start CLI entry point', () => {
   });
 
   it('starts from the built CLI with a valid explicit config', () => {
-    execFileSync('pnpm', ['--filter', '@hive-flow/cli', 'build'], {
-      cwd: v3Root,
-      stdio: 'pipe',
-    });
-
     const configPath = join(cwd, 'configs', 'valid.yaml');
     writeConfig(configPath);
 
