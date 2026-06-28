@@ -36,14 +36,14 @@ Common topologies:
 | `init` | 5 | Project initialization with wizard, check, skills, hooks, upgrade |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 12 | HiveMemory memory with vector search (fast HNSW-indexed) |
+| `memory` | 12 | HiveMemory memory with vector search where available |
 | `mcp` | 10 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 8 | Session state management and persistence |
 | `config` | 8 | Configuration management and provider setup |
 | `status` | 3 | System status monitoring with watch mode |
 | `workflow` | 6 | Workflow execution and template management |
-| `hooks` | 35 | Self-learning hooks + 12 background workers |
+| `hooks` | 35 | Hook CLI subcommands + 10 configured workers |
 | `hive-mind` | 11 | Queen-led Byzantine fault-tolerant consensus |
 
 ### Advanced Commands
@@ -51,7 +51,7 @@ Common topologies:
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
 | `daemon` | 5 | Background worker daemon (start, stop, status, trigger, enable) |
-| `neural` | 9 | Neural pattern training (train, status, patterns, predict, optimize, benchmark, list, export, import) |
+| `neural` | 9 | Deterministic local pattern utilities (not runtime neural-model training) |
 | `security` | 6 | Security scanning (scan, audit, cve, threats, validate, report) |
 | `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, report) |
 | `providers` | 5 | AI providers (list, add, remove, test, configure) |
@@ -73,7 +73,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
 ```
 
-## Hooks System (27 Hooks + 12 Workers)
+## Hooks System (35 CLI Hook Subcommands + 10 Configured Workers)
 
 ### Hook Groups
 
@@ -88,8 +88,10 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 Use `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks list --format table` for full hook detail.
 
-### Background Workers
+### Worker Shortcuts
 `ultralearn`, `optimize`, `consolidate`, `predict`, `audit`, `map`, `preload`, `deepdive`, `document`, `refactor`, `benchmark`, `testgaps`
+
+The hooks runtime has 10 configured worker entries; the CLI exposes these 12 user-facing worker shortcuts.
 
 ### Essential Hook Commands
 

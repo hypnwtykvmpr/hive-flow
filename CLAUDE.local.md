@@ -93,8 +93,8 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks worker list
 ```
 
-## Intelligence System (HiVector)
+## Pattern Utilities (Neural Package)
 
-4-step pipeline: RETRIEVE (HNSW) → JUDGE (verdicts) → DISTILL (LoRA) → CONSOLIDATE (EWC++)
+4-step pipeline: RETRIEVE (local similarity scan) → JUDGE (rule-based verdicts) → DISTILL (pattern extraction) → CONSOLIDATE (in-memory pruning)
 
-Components: SONA (<0.05ms), MoE (8 experts), HNSW-indexed vector search, Flash Attention
+Runtime components: deterministic local pattern learning with ReasoningBank and PatternLearner. HNSW is available for HiveMemory/vector memory paths where built. SONA, MoE, LoRA, EWC++, and Flash Attention runtime training are not available in this build.

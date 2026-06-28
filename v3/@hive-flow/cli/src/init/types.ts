@@ -181,7 +181,7 @@ export interface RuntimeConfig {
   enableHNSW: boolean;
   /** Enable neural learning */
   enableNeural: boolean;
-  /** Enable LearningBridge (ADR-049) - connects insights to SONA/ReasoningBank */
+  /** Enable LearningBridge (ADR-049) - connects insights to ReasoningBank and local patterns */
   enableLearningBridge?: boolean;
   /** Enable MemoryGraph (ADR-049) - PageRank knowledge graph */
   enableMemoryGraph?: boolean;

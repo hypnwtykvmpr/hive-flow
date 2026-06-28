@@ -159,9 +159,9 @@ Automated watcher system that monitors hive worker progress without polling.
 | Package | Path | Purpose |
 |---------|------|---------|
 | `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (37 commands) |
-| `@hive-flow/cli/codex` | `v3/@hive-flow/cli/src/codex/` | Dual-mode Claude + Codex collaboration |
+| `@hive-flow/cli/codex` | `v3/@hive-flow/cli/src/codex/` | Configurable dual-mode scaffold; defaults to the Claude CLI unless `codexCommand` is set |
 | `@hive-flow/cli/guidance` | `v3/@hive-flow/cli/src/guidance/` | Governance control plane |
-| `@hive-flow/cli/hooks` | `v3/@hive-flow/cli/src/hooks/` | 17 hooks + 12 workers |
+| `@hive-flow/cli/hooks` | `v3/@hive-flow/cli/src/hooks/` | 35 CLI hook subcommands, 36 MCP hook tools, 10 configured workers |
 | `@hive-flow/cli/memory` | `v3/@hive-flow/cli/src/memory/` | HiveMemory + HNSW search |
 | `@hive-flow/cli/security` | `v3/@hive-flow/cli/src/security/` | Input validation, CVE remediation |
 
@@ -281,22 +281,22 @@ mcp__hive-flow__swarm_init({
 })
 ```
 
-## Dual-Mode Collaboration (Claude Code + Codex)
+## Dual-Mode Collaboration Scaffold
 
-This repository uses **dual-mode orchestration** to run Claude Code (🔵) and OpenAI Codex (🟢) workers in parallel with shared memory coordination. Both platforms collaborate on development tasks with cross-learning.
+This repository includes a **dual-mode orchestration scaffold** that can run Claude Code (🔵) and a separate Codex-compatible command (🟢) in parallel when `codexCommand` is configured. The shipped default currently sets `codexCommand` to `claude`, so the Codex lane is a prompt/platform label unless a real Codex command is supplied.
 
 ### Why Dual-Mode?
 
-| Single Platform | Dual-Mode Collaboration |
-|----------------|------------------------|
-| One model's perspective | Two AI platforms cross-validating |
-| Limited reasoning styles | Complementary strengths |
-| No external verification | Built-in code review |
-| Sequential workflows | Parallel execution |
+| Default scaffold | Configured two-platform run |
+|------------------|-----------------------------|
+| Claude CLI executes both lanes | Claude and Codex-compatible commands execute separately |
+| Prompt labels distinguish lanes | Independent runtimes can cross-validate |
+| Useful for template/protocol design | Useful for real platform comparison |
+| Sequential or parallel workflows | Parallel execution |
 
 ### Dual-Mode Swarm Protocol
 
-For complex tasks, spawn both Claude and Codex workers in parallel:
+For complex tasks, configure `codexCommand` before treating the Codex lane as a separate runtime:
 
 ```javascript
 // STEP 1: Initialize dual-mode swarm
@@ -306,14 +306,15 @@ mcp__hive-flow__swarm_init({
   strategy: "specialized"
 })
 
-// STEP 2: Spawn BOTH platforms in parallel via Task tool
+// STEP 2: Spawn both lanes in parallel.
+// NOTE: the Codex lane runs the configured codexCommand; by default that command is "claude".
 // 🔵 Claude Code workers (architecture, security, testing)
 Task("Architect", "Design the implementation. Store design in memory namespace 'collaboration'.", "system-architect")
 Task("Tester", "Write tests based on architect's design. Read from 'collaboration' namespace.", "tester")
 Task("Reviewer", "Review code quality and security. Store findings in 'collaboration'.", "reviewer")
 
-// 🟢 Codex workers (implementation, optimization)
-// Spawn via CLI for Codex platform
+// 🟢 Codex-labeled workers (implementation, optimization)
+// These are only a distinct Codex runtime when codexCommand points at a real Codex-compatible CLI.
 Bash("node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
 Bash("node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
 
@@ -368,9 +369,9 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory retrieve --namespace collaboration --key "security-findings"
 ```
 
-### Cross-Platform Learning
+### Cross-Lane Learning
 
-Both platforms learn from each other's outputs:
+When the lanes are backed by distinct commands, both platforms can learn from each other's outputs. With the shipped default, this is cross-lane coordination inside the Claude CLI:
 
 ```bash
 # After successful collaboration, train patterns
@@ -396,14 +397,14 @@ Level 3: [🟢 Optimizer]           # Depends on Reviewer approval
 
 ### Platform Strengths
 
-| Task Type | Preferred Platform | Reason |
-|-----------|-------------------|--------|
+| Task Type | Preferred Lane | Reason |
+|-----------|----------------|--------|
 | Architecture & Design | 🔵 Claude | Strong reasoning, system thinking |
-| Implementation | 🟢 Codex | Fast code generation |
+| Implementation | 🟢 Codex-labeled | Useful when `codexCommand` is configured for code generation |
 | Security Review | 🔵 Claude | Careful analysis, threat modeling |
-| Performance Optimization | 🟢 Codex | Code-level optimizations |
+| Performance Optimization | 🟢 Codex-labeled | Useful when backed by a code-optimization runtime |
 | Testing Strategy | 🔵 Claude | Coverage analysis, edge cases |
-| Refactoring | 🟢 Codex | Bulk code transformations |
+| Refactoring | 🟢 Codex-labeled | Useful when backed by a bulk-edit runtime |
 
 ### Programmatic API
 
@@ -509,8 +510,8 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 - **Strategy**: specialized (clear roles, no overlap)
 - **Consensus**: raft (leader maintains authoritative state)
 - **Memory Backend**: hybrid (SQLite + HiveMemory)
-- **HNSW Indexing**: Enabled (fast HNSW-indexed)
-- **Neural Learning**: Enabled (SONA)
+- **HNSW Indexing**: Available for HiveMemory/vector memory search where built
+- **Neural Learning**: Deterministic local pattern utilities; SONA/MoE/LoRA runtime training is not available in this build
 
 ## V3 CLI Commands (37 Commands, 268 Subcommands)
 
@@ -521,7 +522,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 | `init` | 5 | Project initialization with wizard, check, skills, hooks, upgrade |
 | `agent` | 8 | Agent lifecycle (spawn, list, status, stop, metrics, pool, health, logs) |
 | `swarm` | 6 | Multi-agent swarm coordination and orchestration |
-| `memory` | 12 | HiveMemory memory with vector search (fast HNSW-indexed) |
+| `memory` | 12 | HiveMemory memory with vector similarity search |
 | `mcp` | 10 | MCP server management and tool execution |
 | `task` | 6 | Task creation, assignment, and lifecycle |
 | `session` | 8 | Session state management and persistence |
@@ -529,7 +530,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 | `status` | 3 | System status monitoring with watch mode |
 | `start` | 3 | Service startup and quick launch |
 | `workflow` | 6 | Workflow execution and template management |
-| `hooks` | 35 | Self-learning hooks + 12 background workers |
+| `hooks` | 35 | Self-learning hooks + 10 configured workers |
 | `hive-mind` | 11 | Queen-led Byzantine fault-tolerant consensus |
 
 ### Quick CLI Examples
@@ -780,7 +781,7 @@ SendMessage({
 | `in-process` | Teammates run in same process (default for CI/background) |
 | `tmux` | Split-pane display in terminal (requires tmux) |
 
-## V3 Hooks System (17 Hooks + 12 Workers)
+## V3 Hooks System (35 CLI Hook Subcommands + 10 Configured Workers)
 
 ### Hook Categories
 
@@ -792,23 +793,25 @@ SendMessage({
 | **Learning** | `intelligence` (trajectory-start/step/end, pattern-store/search, stats, attention) | Reinforcement |
 | **Agent Teams** | `teammate-idle`, `task-completed` | Multi-agent coordination |
 
-### 12 Background Workers
+### Background Workers
+10 workers are configured in `WORKER_CONFIGS`; the CLI also exposes 12 user-facing worker shortcuts.
+
 `ultralearn`, `optimize`, `consolidate`, `predict`, `audit`, `map`, `preload`, `deepdive`, `document`, `refactor`, `benchmark`, `testgaps`
 
-## Intelligence System (Hivector)
+## Intelligence System (Local Pattern Utilities)
 
-V3 includes the Hive Flow intelligence system:
-- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
-- **MoE**: Mixture of Experts for specialized routing
-- **HNSW**: fast HNSW-indexed pattern search
-- **EWC++**: Elastic Weight Consolidation (prevents forgetting)
-- **Flash Attention**: Flash Attention optimization
+The neural package currently exposes deterministic local pattern and reasoning utilities:
+- **ReasoningBank**: stores trajectories and retrieves similar patterns with an in-process linear scan
+- **PatternLearner**: deterministic clustering and pattern extraction
+- **HiveMemory/HnswLite**: HNSW support exists for memory search paths, not for ReasoningBank retrieval
 
 The 4-step intelligence pipeline:
-1. **RETRIEVE** — Fetch relevant patterns via HNSW
-2. **JUDGE** — Evaluate with verdicts (success/failure)
-3. **DISTILL** — Extract key learnings via LoRA
-4. **CONSOLIDATE** — Prevent catastrophic forgetting via EWC++
+1. **RETRIEVE** — Fetch relevant patterns with local similarity search
+2. **JUDGE** — Evaluate with rule-based verdicts
+3. **DISTILL** — Extract deterministic pattern summaries
+4. **CONSOLIDATE** — Prune stale or low-confidence matches
+
+SONA, MoE, LoRA, EWC++, and Flash Attention runtime training are not available in this build.
 
 ## Hive-Mind Consensus
 **Topologies:** `hierarchical`, `mesh`, `hierarchical-mesh`, `adaptive`
@@ -872,7 +875,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 | `@hive-flow/embeddings` | 3.0.0-alpha.1 | Vector embeddings with sql.js, HNSW, hyperbolic support |
 | `@hive-flow/cli/security` | 3.0.0-alpha.1 | Input validation, path security, CVE remediation |
 | `@hive-flow/cli/claims` | 3.1.0-alpha.52 | Preserved claims API subpath; live commands are built into `hive-flow claims` |
-| `@hive-flow/cli/neural` | 3.0.0-alpha.7 | Neural pattern training (SONA, MoE, EWC++) |
+| `@hive-flow/cli/neural` | 3.0.0-alpha.7 | Deterministic local pattern and reasoning utilities |
 | `@hive-flow/cli/plugin-sdk` | 3.0.0-alpha.1 | Plugin SDK core (builder, registry, workers, hooks) |
 | `@hive-flow/plugin-perf-optimizer` | 0.1.0 | Performance profiling and benchmarking |
 

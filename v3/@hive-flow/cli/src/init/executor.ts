@@ -1493,7 +1493,7 @@ async function writeCapabilitiesDoc(
 2. [Swarm Orchestration](#swarm-orchestration)
 3. [Available Agents (60+)](#available-agents)
 4. [CLI Commands (26 Commands, 140+ Subcommands)](#cli-commands)
-5. [Hooks System (27 Hooks + 12 Workers)](#hooks-system)
+5. [Hooks System (35 CLI Hook Subcommands + 10 Configured Workers)](#hooks-system)
 6. [Memory & Intelligence](#memory--intelligence)
 7. [Hive-Mind Consensus](#hive-mind-consensus)
 8. [Performance Targets](#performance-targets)
@@ -1506,8 +1506,8 @@ async function writeCapabilitiesDoc(
 Hive Flow V3 is a domain-driven design architecture for multi-agent AI coordination with:
 
 - **Multi-Agent Swarm Coordination** with hierarchical and mesh topologies
-- **HNSW Vector Search** - fast HNSW-indexed pattern retrieval
-- **SONA Neural Learning** - Self-optimizing with low-latency adaptation
+- **HiveMemory Vector Search** - vector retrieval where the memory backend is built
+- **Deterministic Pattern Utilities** - ReasoningBank and PatternLearner helpers; SONA/MoE/LoRA runtime training is not available in this build
 - **Byzantine Fault Tolerance** - Queen-led consensus mechanisms
 - **MCP Server Integration** - Model Context Protocol support
 
@@ -1517,9 +1517,9 @@ Hive Flow V3 is a domain-driven design architecture for multi-agent AI coordinat
 | Topology | ${options.runtime.topology} |
 | Max Agents | ${options.runtime.maxAgents} |
 | Memory Backend | ${options.runtime.memoryBackend} |
-| HNSW Indexing | ${options.runtime.enableHNSW ? 'Enabled' : 'Disabled'} |
-| Neural Learning | ${options.runtime.enableNeural ? 'Enabled' : 'Disabled'} |
-| LearningBridge | ${options.runtime.enableLearningBridge ? 'Enabled (SONA + ReasoningBank)' : 'Disabled'} |
+| HNSW Indexing | ${options.runtime.enableHNSW ? 'Enabled for memory search where built' : 'Disabled'} |
+| Neural Learning | ${options.runtime.enableNeural ? 'Enabled (deterministic local pattern utilities)' : 'Disabled'} |
+| LearningBridge | ${options.runtime.enableLearningBridge ? 'Enabled (ReasoningBank + PatternLearner)' : 'Disabled'} |
 | Knowledge Graph | ${options.runtime.enableMemoryGraph ? 'Enabled (PageRank + Communities)' : 'Disabled'} |
 | Agent Scopes | ${options.runtime.enableAgentScopes ? 'Enabled (project/local/user)' : 'Disabled'} |
 
@@ -1652,7 +1652,7 @@ hive-flow doctor --fix
 
 ## Hooks System
 
-### 27 Available Hooks
+### 35 CLI Hook Subcommands
 
 #### Core Hooks (6)
 | Hook | Description |
@@ -1709,24 +1709,24 @@ hive-flow doctor --fix
 ## Memory & Intelligence
 
 ### Local Intelligence System
-- **SONA**: Self-Optimizing Neural Architecture (low-latency)
-- **MoE**: Mixture of Experts routing
-- **HNSW**: fast HNSW-indexed search
-- **EWC++**: Prevents catastrophic forgetting
-- **Flash Attention**: Flash Attention optimization
+- **ReasoningBank**: deterministic trajectory storage and local similarity retrieval
+- **PatternLearner**: deterministic pattern extraction and clustering
+- **HiveMemory/HnswLite**: vector-memory search support where built; ReasoningBank does not use HNSW
 - **Int8 Quantization**: memory reduction
 
+SONA, MoE, LoRA, EWC++, and Flash Attention runtime training are not available in this build.
+
 ### 4-Step Intelligence Pipeline
-1. **RETRIEVE** - HNSW pattern search
-2. **JUDGE** - Success/failure verdicts
-3. **DISTILL** - LoRA learning extraction
-4. **CONSOLIDATE** - EWC++ preservation
+1. **RETRIEVE** - local similarity search
+2. **JUDGE** - rule-based success/failure verdicts
+3. **DISTILL** - deterministic pattern extraction
+4. **CONSOLIDATE** - prune stale or low-confidence matches
 
 ### Self-Learning Memory (ADR-049)
 
 | Component | Status | Description |
 |-----------|--------|-------------|
-| **LearningBridge** | ${options.runtime.enableLearningBridge ? '✅ Enabled' : '⏸ Disabled'} | Connects insights to SONA/ReasoningBank neural pipeline |
+| **LearningBridge** | ${options.runtime.enableLearningBridge ? '✅ Enabled' : '⏸ Disabled'} | Connects insights to ReasoningBank and PatternLearner |
 | **MemoryGraph** | ${options.runtime.enableMemoryGraph ? '✅ Enabled' : '⏸ Disabled'} | PageRank knowledge graph + community detection |
 | **AgentMemoryScope** | ${options.runtime.enableAgentScopes ? '✅ Enabled' : '⏸ Disabled'} | 3-scope agent memory (project/local/user) |
 
@@ -1800,13 +1800,13 @@ hive-flow hive-mind consensus --propose "task"
 
 | Metric | Target | Status |
 |--------|--------|--------|
-| HNSW Search | HNSW-indexed | ✅ Implemented |
+| HiveMemory Search | Vector search where built | ✅ Implemented |
 | Memory Reduction | with quantization | ✅ Implemented |
-| SONA Integration | Pattern learning | ✅ Implemented |
-| Flash Attention | Flash Attention optimization | 🔄 In Progress |
+| Pattern Utilities | Deterministic local helpers | ✅ Implemented |
+| Flash Attention Runtime Training | Not available in this build | ⏸ Not shipped |
 | MCP Response | <100ms | ✅ Achieved |
 | CLI Startup | <500ms | ✅ Achieved |
-| SONA Adaptation | low-latency | 🔄 In Progress |
+| SONA Adaptation | Not available in this build | ⏸ Not shipped |
 | Graph Build (1k) | <200ms | ✅ Met |
 | PageRank (1k) | <100ms | ✅ Met |
 | Insight Recording | <5ms/each | ✅ Met |
@@ -1822,8 +1822,8 @@ hive-flow hive-mind consensus --propose "task"
 |---------|---------|---------|
 | hive-flow | built-in | Core coordination |
 | hivememory | built-in | Vector database |
-| Local attention kernels | built-in | Flash-compatible attention |
-| Local SONA coordinator | built-in | Neural learning |
+| Local attention helpers | built-in | Deterministic attention-style scoring |
+| Local pattern coordinator | built-in | Deterministic pattern learning |
 
 ### Optional Integrations
 | Package | Command |

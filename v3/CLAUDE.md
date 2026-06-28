@@ -14,7 +14,7 @@ This directory contains the V3 monorepo packages. Root CLAUDE.md rules apply her
 |---------|------|---------|
 | `@hive-flow/cli` | `@hive-flow/cli/` | CLI entry point (37 commands, 268 subcommands) |
 | `@hive-flow/cli/guidance` | `@hive-flow/cli/src/guidance/` | Governance control plane (compile, enforce, prove, evolve) |
-| `@hive-flow/cli/hooks` | `@hive-flow/cli/src/hooks/` | 17 hooks + 12 background workers |
+| `@hive-flow/cli/hooks` | `@hive-flow/cli/src/hooks/` | 35 CLI hook subcommands, 36 MCP hook tools, 10 configured workers |
 | `@hive-flow/cli/memory` | `@hive-flow/cli/src/memory/` | HiveMemory + HNSW vector search |
 | `@hive-flow/cli/shared` | `@hive-flow/cli/shared/` | Shared types and utilities |
 | `@hive-flow/cli/security` | `@hive-flow/cli/src/security/` | Input validation, path security, CVE remediation |
@@ -35,4 +35,4 @@ This directory contains the V3 monorepo packages. Root CLAUDE.md rules apply her
 | Memory Reduction | Int8 quantization | Implemented |
 | MCP Response | <100ms | Achieved |
 | CLI Startup | <500ms | Achieved |
-| Flash Attention | Flash Attention optimization | In progress |
+| Pattern Utilities | Deterministic local attention-style helpers | Implemented |

@@ -65,7 +65,7 @@ hive-flow init --codex
 # Full setup with all 137+ skills
 hive-flow init --codex --full
 
-# Dual mode (both Claude Code and Codex)
+# Dual-mode scaffold (Claude Code plus configured Codex command)
 hive-flow init --dual
 ```
 
@@ -82,12 +82,12 @@ hive-flow init --dual
 | **MCP Integration** | Self-learning via memory and vector search |
 | **137+ Skills** | Invoke with `$skill-name` syntax |
 | **Vector Memory** | Semantic pattern search (384-dim embeddings) |
-| **Dual Platform** | Supports both Claude Code and Codex |
+| **Dual-Mode Scaffold** | Supports Claude Code plus a configured Codex-compatible command |
 | **Auto-Registration** | MCP server registered during init |
-| **HNSW Search** | fast HNSW-indexed pattern matching |
+| **Vector Search** | HiveMemory vector search where built |
 | **Self-Learning** | Learn from successes, remember patterns |
 | **GPT-5.3 Support** | Optimized for latest OpenAI models |
-| **Neural Training** | Train patterns with SONA architecture |
+| **Pattern Utilities** | Deterministic local pattern helpers |
 
 </details>
 
@@ -298,7 +298,7 @@ hive-flow init --codex --full
 - Security scanning
 - Performance optimization
 - HiveMemory vector search
-- Neural pattern training
+- Deterministic local pattern utilities
 
 </details>
 
@@ -361,7 +361,7 @@ $performance-optimization
 | V3 Security Overhaul | `$v3-security-overhaul` | Complete security architecture with CVE remediation |
 | V3 Memory Unification | `$v3-memory-unification` | Unify 6+ memory systems into HiveMemory with HNSW |
 | V3 Integration Deep | `$v3-integration-deep` | Deep local compatibility API integration (ADR-001) |
-| V3 Performance Optimization | `$v3-performance-optimization` | Achieve Flash Attention optimization targets |
+| V3 Performance Optimization | `$v3-performance-optimization` | Tune local pattern, memory, and MCP performance targets |
 | V3 Swarm Coordination | `$v3-swarm-coordination` | 15-agent hierarchical mesh coordination |
 | V3 DDD Architecture | `$v3-ddd-architecture` | Domain-Driven Design architecture |
 | V3 Core Implementation | `$v3-core-implementation` | Core module implementation |
@@ -447,7 +447,7 @@ $performance-optimization
 
 | Skill | Syntax | Description |
 |-------|--------|-------------|
-| Memory Neural | `$memory:neural` | Neural pattern training |
+| Memory Neural | `$memory:neural` | Deterministic local pattern utilities |
 | Memory Usage | `$memory:memory-usage` | Memory usage analysis |
 | Memory Search | `$memory:memory-search` | Semantic memory search |
 | Memory Persist | `$memory:memory-persist` | Memory persistence |
@@ -468,7 +468,7 @@ $performance-optimization
 | Skill | Syntax | Description |
 |-------|--------|-------------|
 | Specialization | `$training:specialization` | Agent specialization training |
-| Neural Patterns | `$training:neural-patterns` | Neural pattern training |
+| Neural Patterns | `$training:neural-patterns` | Deterministic local pattern utilities |
 | Pattern Learn | `$training:pattern-learn` | Pattern learning |
 | Model Update | `$training:model-update` | Model updates |
 
@@ -483,7 +483,7 @@ $performance-optimization
 | Parallel Execute | `$optimization:parallel-execute` | Parallel task execution |
 | Topology Optimize | `$optimization:topology-optimize` | Automatic topology selection |
 
-#### Hooks Skills (17 Hooks + 12 Workers)
+#### Hooks Skills (35 CLI Hook Subcommands + 10 Configured Workers)
 
 | Skill | Syntax | Description |
 |-------|--------|-------------|
@@ -525,15 +525,15 @@ Invoke with `$my-skill`
 ---
 
 <details>
-<summary><b>Dual-Mode Integration (Claude Code + Codex)</b></summary>
+<summary><b>Dual-Mode Scaffold (Claude Code + Configured Codex Command)</b></summary>
 
 ### Hybrid Execution Model
 
-Run Claude Code for interactive development and spawn headless Codex workers for parallel background tasks:
+Hive Flow supports real Codex CLI/provider-backed agents through MCP `agent_spawn` and `agent_task`. The older dual-mode scaffold is configurable, but its shipped default `codexCommand` is `claude`; set `codexCommand` to a real Codex-compatible CLI before treating the Codex lane as a separate runtime.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  CLAUDE CODE (interactive)  ←→  CODEX WORKERS (headless)        │
+│  CLAUDE CODE (interactive)  ←→  CONFIGURED WORKERS (headless)   │
 │  - Main conversation         - Parallel background execution    │
 │  - Complex reasoning         - Bulk code generation            │
 │  - Architecture decisions    - Test execution                   │

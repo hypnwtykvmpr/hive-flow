@@ -283,7 +283,7 @@ fi
 
 # ── 10. Hooks System ──────────────────────────────────────────
 if should_run "hooks"; then
-  section 10 "Hooks System (17 Hooks + 12 Workers)"
+  section 10 "Hooks System (35 CLI Hook Subcommands + 10 Configured Workers)"
   check "hooks list" $HIVE_FLOW_CMD hooks list
   check "hooks route" $HIVE_FLOW_CMD hooks route --task "test routing"
   check_warn "hooks pre-task" $HIVE_FLOW_CMD hooks pre-task --description "verify hooks"
@@ -309,7 +309,7 @@ fi
 
 # ── 13. Neural / Intelligence ─────────────────────────────────
 if should_run "neural"; then
-  section 13 "Neural / Intelligence (SONA + MoE)"
+  section 13 "Neural / Intelligence (Local Pattern Utilities)"
   check "neural status" $HIVE_FLOW_CMD neural status
   check "neural patterns" $HIVE_FLOW_CMD neural patterns --list
 fi

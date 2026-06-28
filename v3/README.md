@@ -9,8 +9,8 @@ Hive Flow V3 is a next-generation AI agent coordination system built on 10 Archi
 
 V3 represents a complete architectural overhaul:
 - **Faster testing** with Vitest
-- **fast HNSW-indexed search** with HNSW indexing
-- **Flash Attention optimization**
+- **HiveMemory vector search** where the backend is built
+- **Deterministic local pattern utilities**
 - **Memory reduction**
 
 ## Features
@@ -39,8 +39,8 @@ V3 represents a complete architectural overhaul:
 | Event Bus (100k events) | <50ms | Met |
 | Map Lookup (100k gets) | <20ms | Met |
 | Array.find vs Map O(1) | N/A | Map O(1) lookup |
-| Flash Attention | Flash Attention optimization | Validated |
-| HiveMemory Search | HNSW-indexed | HNSW indexed |
+| Local pattern helpers | Deterministic utilities | Validated |
+| HiveMemory Search | Vector search where built | Implemented |
 
 ## Architecture
 
@@ -74,7 +74,7 @@ V3 represents a complete architectural overhaul:
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
 │  │ integration  │  │  performance │  │    neural    │          │
-│  │ hive-flow │  │ Flash Attn   │  │   SONA       │          │
+│  │ hive-flow │  │ Local Attn   │  │ Patterns     │          │
 │  │  bridge      │  │ benchmarks   │  │  learning    │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
 │                                                                 │
@@ -109,12 +109,12 @@ v3/
 │   │       ├── context/             # Internal context assembly helpers
 │   │       ├── deployment/          # Release helper internals
 │   │       ├── guidance/            # Governance control plane
-│   │       ├── hooks/               # 17 hooks + 12 background workers
+│   │       ├── hooks/               # 35 CLI hook subcommands + 10 configured workers
 │   │       ├── integration/         # hive-flow integration bridge
 │   │       ├── memory/              # HiveMemory + HNSW vector search
 │   │       ├── mcp/                 # MCP server internals
 │   │       ├── mcp-tools/           # MCP tool definitions
-│   │       ├── neural/              # Neural/SONA helpers
+│   │       ├── neural/              # Deterministic local pattern helpers
 │   │       ├── performance/         # Performance profiling internals
 │   │       ├── plugin-sdk/          # Plugin SDK and examples
 │   │       ├── security/            # Input validation, CVE remediation
@@ -185,7 +185,7 @@ const agent = await bridge.createAgent({ type: 'coder' });
 ```
 
 ### @hive-flow/cli/performance
-Benchmarking framework with Flash Attention validation.
+Benchmarking framework with local attention-style helper validation.
 
 ```typescript
 import { BenchmarkRunner, formatTime } from '@hive-flow/cli/performance';
@@ -341,12 +341,12 @@ pnpm test:coverage
 
 | Category | Metric | Target |
 |----------|--------|--------|
-| **Search** | HiveMemory HNSW | fast HNSW-indexed |
-| **Attention** | Flash Attention | Flash Attention optimization |
+| **Search** | HiveMemory vector search | where built |
+| **Attention** | Local attention-style helpers | deterministic utilities |
 | **Memory** | Reduction | Substantially lower |
 | **Code** | Package count | 3 packages |
 | **Startup** | Cold start | <500ms |
-| **Learning** | SONA adaptation | low-latency |
+| **Learning** | Local pattern utilities | deterministic |
 
 ## Links
 

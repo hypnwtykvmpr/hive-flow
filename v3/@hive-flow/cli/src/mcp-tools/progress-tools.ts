@@ -33,7 +33,7 @@ const UTILITY_PACKAGES = new Set([
 const TARGETS = {
   CLI_COMMANDS: 28,
   MCP_TOOLS: 100,
-  HOOKS_SUBCOMMANDS: 27, // 27 hooks documented in CLAUDE.md
+  HOOKS_SUBCOMMANDS: 35, // CLI hooks subcommands documented in CLAUDE.md
   PACKAGES: 17,
 };
 
@@ -166,7 +166,7 @@ async function calculateProgress(): Promise<V3ProgressMetrics> {
   }
 
   // Count hooks subcommands (count const *Command definitions)
-  let hooksSubcommands = 27; // Default to documented count
+  let hooksSubcommands = 35; // Default to documented CLI hook subcommand count
   const hooksPath = join(V3_DIR, '@hive-flow/cli/src/commands/hooks.ts');
   if (existsSync(hooksPath)) {
     try {

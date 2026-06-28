@@ -1,6 +1,7 @@
 /**
  * Dual-Mode Orchestrator
- * Runs Claude Code and Codex workers in parallel with shared memory
+ * Runs Claude Code plus configurable Codex-labeled workers with shared memory.
+ * By default codexCommand is also "claude"; set it explicitly for a real Codex lane.
  */
 
 import { spawn, ChildProcess } from 'child_process';
@@ -48,7 +49,7 @@ export interface CollaborationResult {
 }
 
 /**
- * Orchestrates parallel execution of Claude Code and Codex workers
+ * Orchestrates parallel execution of Claude Code and configured Codex-labeled workers.
  */
 export class DualModeOrchestrator extends EventEmitter {
   private config: Required<DualModeConfig>;
@@ -63,7 +64,7 @@ export class DualModeOrchestrator extends EventEmitter {
       sharedNamespace: config.sharedNamespace ?? 'collaboration',
       timeout: config.timeout ?? 300000, // 5 minutes
       claudeCommand: config.claudeCommand ?? 'claude',
-      codexCommand: config.codexCommand ?? 'claude', // Both use claude CLI
+      codexCommand: config.codexCommand ?? 'claude', // Default scaffold uses claude for both lanes.
     };
   }
 

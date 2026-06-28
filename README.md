@@ -36,8 +36,8 @@ flowchart TB
 
     subgraph ROUTING["🧭 Routing Layer"]
         QL[Routing Engine]
-        MOE[MoE-style Router]
-        SK[Skills<br/>Claude + Codex]
+        ROUT[Deterministic Router]
+        SK[Skills<br/>agent CLIs]
         HK[Hooks<br/>commands + workers]
     end
 
@@ -68,8 +68,8 @@ flowchart TB
 
     U --> CLI
     CLI --> AID
-    AID --> QL & MOE & SK & HK
-    QL & MOE & SK & HK --> TOPO & CONS & CLM
+    AID --> QL & ROUT & SK & HK
+    QL & ROUT & SK & HK --> TOPO & CONS & CLM
     TOPO & CONS & CLM --> AG1 & AG2 & AG3 & AG4 & AG5 & AG6
     AG1 & AG2 & AG3 & AG4 & AG5 & AG6 --> MEM & PROV & WORK
     MEM & WORK --> L1
@@ -159,12 +159,12 @@ The system stores successful patterns in vector memory, builds a knowledge graph
 
 | Layer | Components | What It Does |
 |-------|------------|--------------|
-| Memory | HNSW, HiveMemory, Cache | Stores and retrieves patterns with vector search |
+| Memory | HiveMemory, HnswLite, Cache | Stores and retrieves memory entries with vector search where available |
 | Knowledge Graph | MemoryGraph, PageRank, Communities | Identifies influential insights, detects clusters (ADR-049) |
 | Pattern Learning | LearningBridge, ReasoningBank, PatternLearner | Records insights, confidence lifecycle, and reusable patterns |
 | Agent Scopes | AgentMemoryScope, 3-scope dirs | Per-agent isolation + cross-agent knowledge transfer (ADR-049) |
 | Embeddings | ONNX Runtime, MiniLM | Local vectors without API calls |
-| Routing | MoE-style router, ReasoningBank | Uses local routing and pattern signals |
+| Routing | Local router, ReasoningBank | Uses deterministic routing and recorded pattern signals |
 | Runtime Training | Neural-model training loops | Not available in this build; local pattern-learning helpers and type surfaces exist where noted |
 
 </details>
@@ -343,7 +343,7 @@ swarm_init({
 | **Agent Scoping** | Single project scope | 3-scope agent memory (project/local/user) with cross-agent transfer |
 | **Task Routing** | You decide which agent to use | Intelligent routing based on learned patterns |
 | **Complex Tasks** | Manual breakdown required | Automatic decomposition across 5 domains (Security, Core, Integration, Support) |
-| **Background Workers** | Nothing runs automatically | 12 context-triggered workers auto-dispatch on file changes, patterns, sessions |
+| **Background Workers** | Nothing runs automatically | 10 configured workers plus 12 user-facing worker shortcuts |
 | **LLM Provider** | Anthropic only | Multiple provider paths with configurable routing strategies |
 | **Security** | Standard protections | CVE-hardened with bcrypt, input validation, path traversal prevention |
 | **Evaluation** | Baseline | Task and swarm metrics require a current benchmark run for the target environment |
@@ -434,7 +434,7 @@ hive-flow init --global --claude-code
 | `--skip-claude` | Skip `.claude/` directory creation |
 | `--only-claude` | Only create `.claude/` directory |
 | `--codex` | Initialize for OpenAI Codex CLI |
-| `--dual` | Initialize for both Claude Code and Codex |
+| `--dual` | Initialize the configurable dual-mode scaffold |
 | `--start-all` | Auto-start daemon, memory, and swarm after init |
 | `--start-daemon` | Auto-start daemon after init |
 | `--with-embeddings` | Initialize ONNX embedding subsystem with hyperbolic support |
@@ -510,13 +510,13 @@ hive-flow init --dual
 
 **Codex does the work. Hive Flow coordinates and stores reusable patterns.**
 
-### Dual-Mode Integration (Claude Code + Codex)
+### Dual-Mode Scaffold (Claude Code + Configured Codex Command)
 
-Run Claude Code for interactive development and spawn headless Codex workers for parallel background tasks:
+Hive Flow supports real Codex CLI/provider-backed agents through MCP `agent_spawn` and `agent_task`. The older `hive-flow-codex dual` scaffold is configurable, but its shipped default `codexCommand` is `claude`; set `codexCommand` to a real Codex-compatible CLI before treating that scaffold as a two-platform runtime.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  CLAUDE CODE (interactive)  ←→  CODEX WORKERS (headless)        │
+│  CLAUDE CODE (interactive)  ←→  CONFIGURED WORKERS (headless)   │
 │  - Main conversation         - Parallel background execution    │
 │  - Complex reasoning         - Bulk code generation            │
 │  - Architecture decisions    - Test execution                   │
@@ -525,7 +525,7 @@ Run Claude Code for interactive development and spawn headless Codex workers for
 ```
 
 ```bash
-# Spawn parallel Codex workers from Claude Code
+# Claude-only parallel workers. Configure codexCommand separately for a real Codex lane.
 claude -p "Analyze src/auth/ for security issues" --session-id "task-1" &
 claude -p "Write unit tests for src/api/" --session-id "task-2" &
 claude -p "Optimize database queries in src/db/" --session-id "task-3" &
@@ -537,11 +537,11 @@ wait  # Wait for all to complete
 | Parallel Execution | Faster for bulk tasks |
 | Cost Optimization | Route simple tasks to cheaper workers |
 | Context Preservation | Shared memory across platforms |
-| Best of Both | Interactive + batch processing |
+| Configurable split | Interactive + batch processing when distinct commands are configured |
 
 ### Dual-Mode CLI Commands (NEW)
 
-> `hive-flow-codex` is a compatibility binary shipped by `@hive-flow/cli`. It is not a subcommand of the main `hive-flow` CLI and is not counted among its 37 commands.
+> `hive-flow-codex` is a compatibility binary shipped by `@hive-flow/cli`. It is not a subcommand of the main `hive-flow` CLI and is not counted among its 37 commands. The Codex-labeled lane uses the configured `codexCommand`; the default is `claude`.
 
 ```bash
 # List collaboration templates
@@ -561,9 +561,9 @@ hive-flow-codex dual run --template refactor --task "src/legacy/"
 
 | Template | Pipeline | Platforms |
 |----------|----------|-----------|
-| **feature** | architect → implementer → tester → verifier | Claude + Codex |
-| **security** | scanner → analyzer → fixer | Codex + Claude |
-| **refactor** | analyzer → planner → refactorer → validator | Claude + Codex |
+| **feature** | architect → implementer → tester → verifier | Claude + configured Codex command |
+| **security** | scanner → analyzer → fixer | configured Codex command + Claude |
+| **refactor** | analyzer → planner → refactorer → validator | Claude + configured Codex command |
 
 ### MCP Integration for Codex
 
@@ -688,7 +688,7 @@ Hive Flow v3 combines agent orchestration, memory-backed routing, MCP tools, hoo
 | **Pattern Learning** | ✅ ReasoningBank + PatternLearner | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Pattern Consolidation** | ✅ Memory-backed consolidation | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Trajectory Tracking** | ✅ Local trajectory records | ⛔ | ⛔ | ⛔ | ⛔ |
-| **Expert Routing** | ✅ MoE-style local router support | Manual | Graph edges | ⛔ | Fixed |
+| **Expert Routing** | ✅ Local router signal support | Manual | Graph edges | ⛔ | Fixed |
 | **Attention Optimization** | In progress / validation targets | ⛔ | ⛔ | ⛔ | ⛔ |
 | **Adapter Types** | Algorithm/type support; runtime training unavailable | ⛔ | ⛔ | ⛔ | ⛔ |
 
@@ -747,7 +747,7 @@ What makes Hive Flow different from other agent frameworks? These capabilities w
 |---|---------|--------------|-------------------|
 | 🧠 | **ReasoningBank** | Stores and retrieves reusable patterns for agent routing | Deterministic local pattern learning |
 | 🔒 | **Pattern Consolidation** | Consolidates useful patterns into memory-backed context | Memory consolidation instead of runtime neural retraining |
-| 🎯 | **MoE-style Routing** | Routes tasks using local router signals where configured | Router support lives in the CLI hivector layer |
+| 🎯 | **Local Routing** | Routes tasks using local router signals where configured | Router support lives in the CLI hivector layer |
 | ⚡ | **Attention Helper Surfaces** | Provides local attention-style kernels and benchmarks | Helper APIs exist; production performance depends on the active runtime |
 | 🌐 | **Hyperbolic Embeddings** | Represents hierarchical code relationships in compact vector space | Poincaré ball model for hierarchical code relationships |
 | 📦 | **Adapter Types** | Keeps adapter and low-rank algorithm surfaces available | Type/support surfaces only |
@@ -862,7 +862,7 @@ flowchart TB
 
     subgraph Intelligence["🧠 Intelligence Layer"]
         Learning[ReasoningBank + PatternLearner]
-        Router[MoE-style Router]
+        Router[Local Router]
         HNSW[HNSW Vector Search]
     end
 
@@ -1878,10 +1878,10 @@ hive-flow hooks worker status
 | `task` | 6 | Task management (create, list, status, cancel, assign, retry) |
 | `session` | 8 | Session management (list, save, restore, delete, export, import, current, recover) |
 | `mcp` | 10 | MCP server (start, stop, status, health, restart, reap, tools, toggle, exec, logs) |
-| `hooks` | 35 | Self-learning hooks + 12 background workers (pre/post-edit, pre/post-command, route, session-*, intelligence-*, worker-*, model-*, coverage-*, teammate-idle, task-completed) |
+| `hooks` | 35 | Self-learning hooks + 10 configured workers (pre/post-edit, pre/post-command, route, session-*, intelligence-*, worker-*, model-*, coverage-*, teammate-idle, task-completed) |
 | `statusline` | 3 | Statusline rendering for coding agent CLIs (wrapper-host, repair, compact) |
 | `tests` | 2 | Record test results for the statusline (record, import-junit) |
-| `neural` | 9 | Neural pattern training (train, status, patterns, predict, optimize, benchmark, list, export, import) |
+| `neural` | 9 | Deterministic local pattern utilities (train, status, patterns, predict, optimize, benchmark, list, export, import) |
 | `security` | 6 | Security scanning (scan, cve, threats, audit, secrets, defend) |
 | `performance` | 5 | Performance profiling (benchmark, profile, metrics, optimize, bottleneck) |
 | `embeddings` | 15 | Vector embeddings (init, generate, search, compare, collections, index, providers, chunk, normalize, hyperbolic, neural, models, cache, warmup, benchmark) |
@@ -2172,11 +2172,11 @@ hive-flow hive-mind status                                  # Check status
 </details>
 
 <details>
-<summary>🪝 <strong>Hooks System</strong> — Pattern learning with ReasoningBank and HNSW indexing</summary>
+<summary>🪝 <strong>Hooks System</strong> — Pattern learning with ReasoningBank and local matching</summary>
 
 | Component | Description | Performance |
 |-----------|-------------|-------------|
-| **ReasoningBank** | Pattern storage with HNSW indexing | Vector retrieval |
+| **ReasoningBank** | Pattern storage with local similarity matching | Local retrieval |
 | **GuidanceProvider** | Context-aware development guidance | Real-time suggestions |
 | **PatternLearning** | Automatic strategy extraction | Continuous improvement |
 | **QualityTracking** | Success/failure rate per pattern | Performance metrics |
@@ -2811,7 +2811,7 @@ All write operations use atomic writes: data goes to a temporary file first, the
 
 ### Pattern learning persistence
 
-Hive Flow stores reusable patterns and trajectories through the current memory and neural helper surfaces. Use `LearningBridge`, `ReasoningBank`, or `NeuralLearningSystem` depending on whether you are working from memory, neural helpers, or the CLI integration layer:
+Hive Flow stores reusable patterns and trajectories through the current memory and neural helper surfaces. Use `LearningBridge`, `ReasoningBank`, or `NeuralLearningSystem` depending on whether you are working from memory, deterministic neural helpers, or the CLI integration layer. Runtime SONA/MoE/LoRA training is not available in this build.
 
 ```typescript
 import { LearningBridge, UnifiedMemoryService } from '@hive-flow/cli/memory';
@@ -2870,7 +2870,7 @@ Hooks intercept operations (file edits, commands, tasks) and learn from outcomes
 | Concept | Plain English | Technical Details |
 |---------|---------------|-------------------|
 | **Hook** | Code that runs before/after an action | Event listener with pre/post lifecycle |
-| **Pattern** | A learned strategy that worked | Vector embedding stored in ReasoningBank |
+| **Pattern** | A learned strategy that worked | Pattern record stored for ReasoningBank/PatternLearner |
 | **Trajectory** | Recording of actions → outcomes | Input for ReasoningBank and PatternLearner |
 | **Routing** | Picking the best agent for a task | Local router signals and recorded outcomes |
 
@@ -2883,8 +2883,8 @@ Hooks intercept operations (file edits, commands, tasks) and learn from outcomes
 │ Find similar│    │ Was it      │    │ Extract key │    │ Prune stale │
 │ past patterns│   │ successful? │    │ patterns    │    │ matches     │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-     HNSW              Verdict        PatternLearner      MemoryGraph
-  vector search      success/fail      extraction        consolidation
+  local scan          Verdict        PatternLearner      MemoryGraph
+  similarity         success/fail      extraction        consolidation
 ```
 
 ### Hook Signals (ADR-026 Model Routing)
@@ -3077,7 +3077,7 @@ hive-flow hooks session-end --export-metrics --persist-patterns
 | `trajectory-start` | RL | Begin recording actions for learning |
 | `trajectory-step` | RL | Record an action with reward signal |
 | `trajectory-end` | RL | Finish recording, trigger learning |
-| `pattern-store` | Memory | Store a pattern with HNSW indexing |
+| `pattern-store` | Memory | Store a local pattern for later matching |
 | `pattern-search` | Memory | Find similar patterns with vector search |
 | `stats` | Analytics | Intelligence diagnostics, confidence trends, improvement tracking |
 | `attention` | Focus | Compute attention-weighted similarity |
@@ -3314,7 +3314,7 @@ The official plugin registry is hosted on IPFS with Ed25519 signature verificati
 
 ### IPFS Integration
 
-Patterns and models are distributed via IPFS for decentralization and integrity.
+Patterns and pattern metadata are distributed via IPFS for decentralization and integrity.
 
 | Feature | Benefit |
 |---------|---------|
@@ -3324,9 +3324,9 @@ Patterns and models are distributed via IPFS for decentralization and integrity.
 | **Multi-Gateway** | Automatic failover (Pinata, ipfs.io, dweb.link) |
 | **PII Detection** | Automatic scanning before publish |
 
-### Model & Learning Pattern Import/Export
+### Pattern Import/Export
 
-Share trained neural patterns and learning models via IPFS.
+Share learned deterministic local patterns via IPFS.
 
 | Operation | Description |
 |-----------|-------------|
@@ -3358,11 +3358,11 @@ Share trained neural patterns and learning models via IPFS.
 | `reasoning-bank` | Reasoning trajectories | Few-shot learning |
 | `agent-config` | Agent configurations | Swarm templates |
 
-### Pre-trained Model Registry
+### Pre-Built Pattern Registry
 
-Import pre-trained learning patterns for common tasks. 40 patterns across 8 categories.
+Import shared learning patterns for common tasks. 40 patterns across 8 categories.
 
-| Model | Category | Patterns | Use Case |
+| Pattern Pack | Category | Patterns | Use Case |
 |-------|----------|----------|----------|
 | `security-review-patterns` | security | 5 | SQL injection, XSS, path traversal |
 | `code-review-patterns` | quality | 5 | SRP, error handling, type safety |
@@ -3385,7 +3385,7 @@ hive-flow hooks route --task "review authentication code" --use-patterns
 
 #### Benefits vs Fresh Install
 
-| Metric | Fresh Install | With Pre-trained |
+| Metric | Fresh Install | With Pattern Pack |
 |--------|---------------|------------------|
 | Patterns Available | 0 | 40 |
 | Time to First Insight | Discovery needed | Immediate |
@@ -3411,18 +3411,18 @@ Local TypeScript helpers record pattern signals, contrastive scores, and attenti
 
 | Component | Role | Description |
 |-----------|------|-------------|
-| **MicroLoRA** | local signal path | Rank-2 adapter surface |
-| **ScopedLoRA** | 17 operators | Per-task-type learning (coordination, security, testing) |
-| **FlashAttention-compatible kernels** | local attention helpers | Attention-style operations used by local benchmarks |
+| **PatternSummary** | local signal path | Compact local summary surface |
+| **ScopedPatterns** | per-task operators | Per-task-type learning signals (coordination, security, testing) |
+| **Attention-compatible helpers** | local attention helpers | Attention-style operations used by local benchmarks |
 | **TrajectoryBuffer** | 10k capacity | Success/failure learning from patterns |
 | **InfoNCE Loss** | Contrastive | Temperature-scaled contrastive learning |
 | **AdamW Optimizer** | β1=0.9, β2=0.999 | Weight decay training optimization |
 
 ```bash
-# List available pre-trained models from IPFS registry
+# List available pattern packs from IPFS registry
 hive-flow neural list
 
-# List models by category
+# List pattern packs by category
 hive-flow neural list --category security
 
 # Train with local TypeScript acceleration
@@ -3434,10 +3434,10 @@ hive-flow neural train -p security --contrastive
 # Benchmark local neural helper performance
 hive-flow neural benchmark -d 256 -i 1000
 
-# Import pre-trained models
+# Import a pattern pack
 hive-flow neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc
 
-# Export trained patterns to IPFS
+# Export learned patterns to IPFS
 hive-flow neural export --ipfs --sign
 ```
 
@@ -3448,11 +3448,11 @@ hive-flow neural export --ipfs --sign
 | Mechanism           | Latency       | Throughput  |
 +---------------------+---------------+-------------+
 | DotProduct          | low-latency   | high        |
-| FlashAttention      | low-latency   | high        |
+| AttentionStyle      | low-latency   | high        |
 | MultiHead (4 heads) | low-latency   | moderate    |
-| MicroLoRA           | low-latency   | high        |
+| PatternSummary      | low-latency   | high        |
 +---------------------+---------------+-------------+
-MicroLoRA local signal path: available when local training initializes
+PatternSummary local signal path: available when local pattern utilities initialize
 ```
 
 #### Training Options
@@ -3460,7 +3460,7 @@ MicroLoRA local signal path: available when local training initializes
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--flash` | Use local attention-compatible helper path | `true` |
-| `--moe` | Enable Mixture of Experts routing | `false` |
+| `--moe` | Accepted legacy flag; MoE runtime routing is not available in this build | `false` |
 | `--hyperbolic` | Hyperbolic attention for hierarchical patterns | `false` |
 | `--contrastive` | InfoNCE contrastive learning | `true` |
 | `--curriculum` | Progressive difficulty curriculum | `false` |
@@ -3676,13 +3676,13 @@ Skills are **reusable workflows** that combine agents, hooks, and patterns into 
 </details>
 
 <details>
-<summary>☁️ <strong>Flow Nexus Skills</strong> — Cloud deployment, neural training</summary>
+<summary>☁️ <strong>Flow Nexus Skills</strong> — Cloud deployment and ML training</summary>
 
 | Skill | What It Does | When To Use |
 |-------|--------------|-------------|
 | `flow-nexus-platform` | Authentication, sandboxes, apps, payments, challenges | Full platform management |
 | `flow-nexus-swarm` | Cloud-based swarm deployment, event-driven workflows | Scale beyond local resources |
-| `flow-nexus-neural` | Train/deploy neural networks in distributed sandboxes | ML model training |
+| `flow-nexus-neural` | Run ML workloads in distributed sandboxes | Cloud ML workflows |
 
 ```bash
 # Example: Deploy swarm to cloud
@@ -4450,7 +4450,7 @@ claude mcp add hive-flow -- hive-flow mcp start
 | Component | Description | Performance |
 |-----------|-------------|-------------|
 | **Agent Booster** | Rust/WASM code transformations | $0 API cost when LLM is skipped |
-| **ReasoningBank** | Learning memory with HNSW | Vector search |
+| **ReasoningBank** | Learning memory with local similarity matching | Local search |
 | **ONNX Embeddings** | Local vector generation | Fast local embeddings, no API calls |
 | **Embedding Geometry** | Geometric intelligence layer | Runtime-dependent latency |
 | **Multi-Model Router** | Intelligent model selection | Cost savings |
@@ -4881,7 +4881,7 @@ hive-flow security scan --depth full
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   RETRIEVE  │───▶│    JUDGE    │───▶│   DISTILL   │───▶│ CONSOLIDATE │
-│   (HNSW)    │    │  (Verdict)  │    │  Patterns   │    │ Memory Graph│
+│ (local sim) │    │  (Verdict)  │    │  Patterns   │    │ Memory Graph│
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
        │                  │                  │                  │
  Fetch similar     Rate success/      Extract key        Prevent

@@ -156,10 +156,10 @@ function cliCommandsTable(): string {
 | \`init\` | 4 | Project initialization |
 | \`agent\` | 8 | Agent lifecycle management |
 | \`swarm\` | 6 | Multi-agent swarm coordination |
-| \`memory\` | 11 | HiveMemory with HNSW search |
+| \`memory\` | 11 | HiveMemory with vector search where available |
 | \`task\` | 6 | Task creation and lifecycle |
 | \`session\` | 7 | Session state management |
-| \`hooks\` | 17 | Self-learning hooks + 12 workers |
+| \`hooks\` | 35 | Hook CLI subcommands + 10 configured workers |
 | \`hive-mind\` | 6 | Byzantine fault-tolerant consensus |
 
 ### Quick CLI Examples
@@ -193,20 +193,22 @@ function agentTypes(): string {
 }
 
 function hooksSystem(): string {
-  return `## Hooks System (27 Hooks + 12 Workers)
+  return `## Hooks System (35 CLI Hook Subcommands + 10 Configured Workers)
 
 ### Essential Hooks
 
 | Hook | Description |
 |------|-------------|
 | \`pre-task\` / \`post-task\` | Task lifecycle with learning |
-| \`pre-edit\` / \`post-edit\` | File editing with neural training |
+| \`pre-edit\` / \`post-edit\` | File editing with local pattern learning |
 | \`session-start\` / \`session-end\` | Session state persistence |
 | \`route\` | Route task to optimal agent |
 | \`intelligence\` | Local intelligence system |
 | \`worker\` | Background worker management |
 
-### 12 Background Workers
+### Background Workers
+
+10 workers are configured in WORKER_CONFIGS; the CLI also exposes 12 user-facing worker shortcuts.
 
 | Worker | Priority | Description |
 |--------|----------|-------------|
@@ -228,13 +230,13 @@ function learningProtocol(): string {
   return `## Turn Completion (CRITICAL)
 
 When you finish the user's request: **report results, then STOP.**
-- Do NOT run post-task hooks, memory commands, or neural training
+- Do NOT run post-task hooks, memory commands, or local pattern-learning commands
 - Do NOT trigger worker dispatches
 - Background systems handle all learning automatically
 
 ## Background Learning
 
-Pattern learning, memory sync, and neural training are handled automatically by:
+Pattern learning and memory sync are handled automatically by:
 - **Daemon workers** (optimize, audit, consolidate — scheduled intervals)
 - **Hooks** (post-edit on file save, post-task on turn end, memory sync on Stop)
 
@@ -316,7 +318,7 @@ function performanceSection(): string {
 - Always run benchmarks before and after performance changes
 - Always profile before optimizing — never guess at bottlenecks
 - Prefer algorithmic improvements over micro-optimizations
-- Keep HNSW search within fast HNSW-indexed target
+- Keep vector search within documented local performance targets
 - Keep memory reduction within target with quantization
 
 ### Performance Tooling
@@ -335,16 +337,18 @@ hive-flow performance metrics --format table
 function intelligenceSystem(): string {
   return `## Intelligence System
 
-- **SONA**: Self-Optimizing Neural Architecture (low-latency adaptation)
-- **HNSW**: fast HNSW-indexed pattern search
-- **EWC++**: Elastic Weight Consolidation (prevents forgetting)
-- **Flash Attention**: Flash Attention optimization
+V3 currently exposes deterministic local pattern and reasoning utilities:
+- **ReasoningBank**: stores trajectories and retrieves similar patterns with local similarity search
+- **PatternLearner**: deterministic pattern extraction and clustering
+- **HiveMemory/HnswLite**: vector-memory search support where built; ReasoningBank does not use HNSW
 
 The 4-step intelligence pipeline:
-1. **RETRIEVE** - Fetch relevant patterns via HNSW
-2. **JUDGE** - Evaluate with verdicts (success/failure)
-3. **DISTILL** - Extract key learnings via LoRA
-4. **CONSOLIDATE** - Prevent catastrophic forgetting via EWC++`;
+1. **RETRIEVE** - Fetch relevant patterns with local similarity search
+2. **JUDGE** - Evaluate with rule-based verdicts
+3. **DISTILL** - Extract deterministic pattern summaries
+4. **CONSOLIDATE** - Prune stale or low-confidence matches
+
+SONA, MoE, LoRA, EWC++, and Flash Attention runtime training are not available in this build.`;
 }
 
 function envVars(): string {
