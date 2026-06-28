@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { collectSwarm } from '../statusline/collectors/swarm.js';
 import { resolveProjectScope } from '../statusline/project-scope.js';
@@ -37,7 +37,7 @@ export interface GitEvidence {
   error?: string;
 }
 
-export interface KnotEvidence {
+export interface WorkflowTrackerEvidence {
   available: boolean;
   statePath?: string;
   stateMtimeMs?: number;
@@ -120,7 +120,7 @@ export interface ProgressAuthoritySnapshot {
   sessionId?: string;
   router: RouterEvidence;
   git: GitEvidence;
-  knots: KnotEvidence;
+  workflow: WorkflowTrackerEvidence;
   swarm: SwarmEvidence;
   tasks: TaskEvidence;
 }
@@ -138,7 +138,7 @@ export interface ProgressAuthorityResult {
   evidence: {
     router: RouterEvidence;
     git: GitEvidence;
-    knots: KnotEvidence;
+    workflow: WorkflowTrackerEvidence;
     swarm: SwarmEvidence;
     tasks: TaskEvidence;
   };
@@ -154,14 +154,16 @@ export interface CollectProgressAuthorityOptions {
 
 const ROUTER_DIR = ['.hive-flow', 'data', 'tmux-router'] as const;
 const TASKS_DIR = ['.hive-flow', 'tasks'] as const;
-const KNOTS_STATE = ['.knots', 'cache', 'state.sqlite'] as const;
 const MAX_ROUTER_NOTES = 40;
 const MAX_NOTE_BYTES = 64 * 1024;
 const MAX_EXCERPT_CHARS = 500;
 const MAX_TASK_FILES = 1_000;
-const KNOTS_STALE_MS = 60 * 60 * 1000;
+const WORKFLOW_TRACKER_STALE_MS = 60 * 60 * 1000;
 const RECENT_ROUTER_MS = 15 * 60 * 1000;
 const DEFAULT_TASK_STALL_REVIEW_MS = 30 * 60 * 1000;
+const WORKFLOW_TRACKER_STATE_PATH_ENV = 'HIVE_FLOW_WORKFLOW_TRACKER_STATE_PATH';
+const WORKFLOW_TRACKER_COMMAND_ENV = 'HIVE_FLOW_WORKFLOW_TRACKER_COMMAND';
+const WORKFLOW_TRACKER_ARGS_ENV = 'HIVE_FLOW_WORKFLOW_TRACKER_ARGS';
 
 const REDACTED = '[REDACTED]';
 const SECRET_VALUE_PATTERNS = [
@@ -392,8 +394,33 @@ function collectGitEvidence(projectRoot: string): GitEvidence {
   };
 }
 
-function collectKnotEvidence(projectRoot: string, nowMs: number): KnotEvidence {
-  const statePath = join(projectRoot, ...KNOTS_STATE);
+function resolveWorkflowTrackerStatePath(projectRoot: string): string | undefined {
+  const configured = process.env[WORKFLOW_TRACKER_STATE_PATH_ENV]?.trim();
+  if (!configured) return undefined;
+  const statePath = isAbsolute(configured) ? resolve(configured) : resolve(projectRoot, configured);
+  const relativePath = relative(projectRoot, statePath);
+  if (relativePath === '' || relativePath.startsWith('..') || isAbsolute(relativePath)) return undefined;
+  return statePath;
+}
+
+function workflowTrackerCommandArgs(): string[] {
+  const configured = process.env[WORKFLOW_TRACKER_ARGS_ENV]?.trim();
+  if (!configured) return ['ls', '--json'];
+  try {
+    const parsed = JSON.parse(configured);
+    if (Array.isArray(parsed) && parsed.every((arg) => typeof arg === 'string')) return parsed;
+  } catch {
+    // Fall back to the read-only list shape below.
+  }
+  return ['ls', '--json'];
+}
+
+function collectWorkflowTrackerEvidence(projectRoot: string, nowMs: number): WorkflowTrackerEvidence {
+  const statePath = resolveWorkflowTrackerStatePath(projectRoot);
+  const command = process.env[WORKFLOW_TRACKER_COMMAND_ENV]?.trim();
+  if (!statePath || !command) {
+    return { available: false, inProgress: 0, open: 0, closed: 0, malformed: 0, stale: true };
+  }
   if (!existsSync(statePath)) {
     return { available: false, inProgress: 0, open: 0, closed: 0, malformed: 0, stale: true };
   }
@@ -417,7 +444,7 @@ function collectKnotEvidence(projectRoot: string, nowMs: number): KnotEvidence {
     };
   }
 
-  const listed = spawnSync('kno', ['ls', '--json'], {
+  const listed = spawnSync(command, workflowTrackerCommandArgs(), {
     cwd: projectRoot,
     shell: false,
     timeout: 1_000,
@@ -433,8 +460,8 @@ function collectKnotEvidence(projectRoot: string, nowMs: number): KnotEvidence {
       open: 0,
       closed: 0,
       malformed: 0,
-      stale: nowMs - mtimeMs > KNOTS_STALE_MS,
-      error: safeError(listed.error ?? listed.stderr ?? `kno ls exited ${listed.status}`),
+      stale: nowMs - mtimeMs > WORKFLOW_TRACKER_STALE_MS,
+      error: safeError(listed.error ?? listed.stderr ?? `workflow tracker exited ${listed.status}`),
     };
   }
 
@@ -479,7 +506,7 @@ function collectKnotEvidence(projectRoot: string, nowMs: number): KnotEvidence {
     open,
     closed,
     malformed,
-    stale: nowMs - mtimeMs > KNOTS_STALE_MS,
+    stale: nowMs - mtimeMs > WORKFLOW_TRACKER_STALE_MS,
   };
 }
 
@@ -732,7 +759,7 @@ function liveContinuationAfterGate(snapshot: ProgressAuthoritySnapshot): boolean
 function authoritySources(snapshot: ProgressAuthoritySnapshot): string[] {
   const sources: string[] = [];
   if (snapshot.router.concreteAction) sources.push('router');
-  if (snapshot.knots.available && !snapshot.knots.stale && snapshot.knots.inProgress > 0) sources.push('knots-state');
+  if (snapshot.workflow.available && !snapshot.workflow.stale && snapshot.workflow.inProgress > 0) sources.push('workflow-tracker');
   if (snapshot.swarm.executing > 0) sources.push('swarm-live');
   if (snapshot.tasks.runningLive > 0 || snapshot.tasks.runningNoPid > 0) sources.push('task-tracking');
   if (snapshot.tasks.completedResults > 0 || snapshot.tasks.failedResults > 0) sources.push('task-result');
@@ -742,7 +769,7 @@ function authoritySources(snapshot: ProgressAuthoritySnapshot): string[] {
 function missingAuthority(snapshot: ProgressAuthoritySnapshot): string[] {
   const missing: string[] = [];
   if (!snapshot.router.available) missing.push('router');
-  if (!snapshot.knots.available || snapshot.knots.stale) missing.push('knots-state');
+  if (!snapshot.workflow.available || snapshot.workflow.stale) missing.push('workflow-tracker');
   if (!snapshot.swarm.available) missing.push('swarm');
   if (!snapshot.tasks.available) missing.push('tasks');
   return missing;
@@ -812,7 +839,7 @@ export function classifyProgressAuthority(snapshot: ProgressAuthoritySnapshot): 
     evidence: {
       router: sanitizedRouterEvidence(snapshot.router),
       git: sanitizedGitEvidence(snapshot.git),
-      knots: snapshot.knots,
+      workflow: snapshot.workflow,
       swarm: sanitizedSwarmEvidence(snapshot.swarm),
       tasks: snapshot.tasks,
     },
@@ -829,10 +856,10 @@ export async function collectProgressAuthoritySnapshot(
   const nowMs = options.nowMs ?? Date.now();
   const observedAt = new Date(nowMs).toISOString();
 
-  const [router, git, knots, swarm, tasks] = await Promise.all([
+  const [router, git, workflow, swarm, tasks] = await Promise.all([
     Promise.resolve(collectRouterEvidence(projectRoot, options.agent, nowMs)),
     Promise.resolve(collectGitEvidence(projectRoot)),
-    Promise.resolve(collectKnotEvidence(projectRoot, nowMs)),
+    Promise.resolve(collectWorkflowTrackerEvidence(projectRoot, nowMs)),
     collectSwarmEvidence(projectRoot, options.sessionId),
     Promise.resolve(collectTaskEvidence(projectRoot)),
   ]);
@@ -846,7 +873,7 @@ export async function collectProgressAuthoritySnapshot(
     sessionId: options.sessionId,
     router,
     git,
-    knots,
+    workflow,
     swarm,
     tasks,
   };

@@ -1819,18 +1819,43 @@ hive-flow hooks worker status
 
 **Credential Vault:** Use `hive-flow install --global --credentials` to create a per-machine KEK and encrypted credential vault, avoiding plain-text API key exposure in config files.
 
-**Provider concurrency caps:** API-backed provider agents are capped per concrete API provider at task dispatch. Defaults are conservative (`deepseek: 20`, `openrouter: 20`). Override them in `.hive-flow/provider-concurrency.json`:
+**Provider concurrency caps:** API-backed provider limits are unknown until measured for the configured account. Run the built-in probe to launch real Hive Flow agents against each configured provider, cool down, narrow the failing range, and write an evidence-backed safe cap to `.hive-flow/provider-concurrency.json`:
+
+```bash
+cd v3/@hive-flow/cli
+npm run build
+npm run probe:provider-concurrency -- --providers deepseek,openrouter
+```
+
+The generated settings are programmatically editable and include the probe completion time so future runs can re-probe periodically or lower a cap after new rate-limit failures:
 
 ```json
 {
+  "updatedAt": "2026-06-28T00:00:00.000Z",
   "providers": {
-    "deepseek": { "maxConcurrentTasks": 30 },
-    "openrouter": { "maxConcurrentTasks": 10 }
+    "deepseek": {
+      "kind": "api",
+      "maxSafeConcurrentTasks": 24,
+      "probedAt": "2026-06-28T00:00:00.000Z",
+      "evidence": {
+        "method": "hive-flow-agent-ramp",
+        "firstPassAttempted": 150,
+        "largestSuccessfulBatch": 25,
+        "observedFailureAt": 26,
+        "safetyMargin": 1
+      }
+    }
+  },
+  "defaults": {
+    "cli": {
+      "maxConcurrentTasks": 10,
+      "reason": "CLI providers are subscription-backed; probe results are capped at 10 by policy."
+    }
   }
 }
 ```
 
-When a provider is full, `agent_task` returns `provider-concurrency-limit` with the active count, limit, and config source so the parent can wait or choose another provider.
+Unprobed API providers are not assigned arbitrary built-in caps; the global agent cap still applies. CLI providers stay capped at 10 even if a local probe appears to tolerate more. When a configured/probed provider is full, `agent_task` returns `provider-concurrency-limit` with the active count, limit, and config source so the parent can wait or choose another provider.
 
 <details>
 <summary>⚖️ <strong>Provider Load Balancing</strong> — 4 strategies for optimal cost and performance</summary>

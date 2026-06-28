@@ -533,7 +533,7 @@ describe('agent_task handler (non-blocking)', () => {
     expect(result.error).toMatch(/cannot accept tasks in current state/i);
   });
 
-  it('rejects dispatch when a strict API provider reaches its default slot cap', async () => {
+  it('does not invent a default cap for an unprobed API provider', async () => {
     const agents: Record<string, AgentRecord> = {};
     for (let i = 0; i < 20; i++) {
       const busy = makeAgent({
@@ -557,15 +557,47 @@ describe('agent_task handler (non-blocking)', () => {
     const result = await handler({ agentId: idle.agentId, task: 'should wait' }) as AgentTaskResult & Record<string, unknown>;
 
     expect(result).toMatchObject({
+      success: true,
+      agentId: idle.agentId,
+      status: 'running',
+      pid: 12345,
+    });
+    expect(spawn).toHaveBeenCalled();
+  });
+
+  it('keeps CLI providers on a conservative default cap when unconfigured', async () => {
+    const agents: Record<string, AgentRecord> = {};
+    for (let i = 0; i < 10; i++) {
+      const busy = makeAgent({
+        agentId: `busy-gemini-${i}`,
+        provider: 'gemini-cli',
+        model: 'mini',
+        status: 'busy',
+      });
+      agents[busy.agentId] = busy;
+    }
+    const idle = makeAgent({
+      agentId: 'idle-gemini',
+      provider: 'gemini-cli',
+      model: 'mini',
+      status: 'idle',
+    });
+    agents[idle.agentId] = idle;
+    setupStoreMocks(makeStore(agents));
+    mockDetachedSpawn();
+
+    const result = await handler({ agentId: idle.agentId, task: 'should wait' }) as AgentTaskResult & Record<string, unknown>;
+
+    expect(result).toMatchObject({
       success: false,
       agentId: idle.agentId,
       code: 'provider-concurrency-limit',
-      provider: 'openrouter',
-      active: 20,
-      limit: 20,
-      source: 'default-api-provider',
+      provider: 'gemini-cli',
+      active: 10,
+      limit: 10,
+      source: 'default-cli-provider',
     });
-    expect(String(result.error)).toContain("Provider 'openrouter' is at its configured concurrency limit");
+    expect(String(result.error)).toContain("Provider 'gemini-cli' is at its configured or probed concurrency limit");
     expect(spawn).not.toHaveBeenCalled();
   });
 
@@ -593,7 +625,11 @@ describe('agent_task handler (non-blocking)', () => {
       if (typeof p === 'string' && p.endsWith('.hive-flow/provider-concurrency.json')) {
         return JSON.stringify({
           providers: {
-            deepseek: { maxConcurrentTasks: 1 },
+            deepseek: {
+              maxSafeConcurrentTasks: 1,
+              probedAt: '2026-06-28T00:00:00.000Z',
+              safetyMargin: 1,
+            },
           },
           pools: {
             deepseek: ['deepseek', 'openrouter'],

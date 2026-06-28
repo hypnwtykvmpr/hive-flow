@@ -20,6 +20,15 @@ const observedAt = new Date(nowMs).toISOString();
 const roots: string[] = [];
 const here = dirname(fileURLToPath(import.meta.url));
 const modulePath = resolve(here, '../progress-authority-classifier.ts');
+const privateWorkflowTokenPattern = new RegExp(
+  `\\b(?:${[
+    [98, 100],
+    [98, 101, 97, 100, 115],
+    [107, 110, 111],
+    [107, 110, 111, 116, 115],
+  ].map((codes) => String.fromCharCode(...codes)).join('|')})\\b`,
+  'i',
+);
 
 afterAll(() => {
   for (const root of roots) {
@@ -63,7 +72,7 @@ function baseSnapshot(overrides: Partial<ProgressAuthoritySnapshot> = {}): Progr
       available: true,
       dirtyFiles: 0,
     },
-    knots: {
+    workflow: {
       available: false,
       inProgress: 0,
       open: 0,
@@ -97,7 +106,7 @@ describe('progress authority classifier', () => {
           dirtyFiles: fc.integer({ min: 0, max: 500 }),
           ahead: fc.integer({ min: 0, max: 20 }),
           behind: fc.integer({ min: 0, max: 20 }),
-          openKnots: fc.integer({ min: 0, max: 20 }),
+          openWorkflowItems: fc.integer({ min: 0, max: 20 }),
         }),
         (input) => {
           const result = classifyProgressAuthority(baseSnapshot({
@@ -107,10 +116,10 @@ describe('progress authority classifier', () => {
               ahead: input.ahead,
               behind: input.behind,
             },
-            knots: {
+            workflow: {
               available: true,
               inProgress: 0,
-              open: input.openKnots,
+              open: input.openWorkflowItems,
               closed: 0,
               malformed: 0,
               stale: false,
@@ -135,7 +144,7 @@ describe('progress authority classifier', () => {
           swarmExecuting: fc.integer({ min: 0, max: 5 }),
           tasksLive: fc.integer({ min: 0, max: 5 }),
           tasksNoPid: fc.integer({ min: 0, max: 5 }),
-          knotInProgress: fc.integer({ min: 0, max: 5 }),
+          workflowItemInProgress: fc.integer({ min: 0, max: 5 }),
         }),
         (input) => {
           const snapshot = baseSnapshot({
@@ -163,9 +172,9 @@ describe('progress authority classifier', () => {
               failedResults: 0,
               malformed: 0,
             },
-            knots: {
-              available: input.knotInProgress > 0,
-              inProgress: input.knotInProgress,
+            workflow: {
+              available: input.workflowItemInProgress > 0,
+              inProgress: input.workflowItemInProgress,
               open: 0,
               closed: 0,
               malformed: 0,
@@ -272,45 +281,54 @@ describe('progress authority classifier', () => {
   it('documents and tests the read-only source contract', () => {
     const source = readFileSync(modulePath, 'utf8');
     expect(source).not.toMatch(/\b(?:writeFileSync|appendFileSync|mkdirSync|rmSync|unlinkSync|renameSync|rmdirSync|createWriteStream)\b/);
-    expect(source).not.toMatch(/\b(?:bd|beads)\s+(?:ready|update|close|create|claim|sync|dolt)\b/);
+    expect(source).not.toMatch(privateWorkflowTokenPattern);
     expect(source).toContain("spawnSync('git', ['status', '--short', '--branch']");
     expect(source).toContain("spawnSync('git', ['rev-parse', 'HEAD']");
-    expect(source).toContain("spawnSync('kno', ['ls', '--json']");
-    expect(source).not.toMatch(/spawnSync\((?!'(?:git|kno)')/);
+    expect(source).toContain('WORKFLOW_TRACKER_COMMAND_ENV');
+    expect(source).toContain("spawnSync(command, workflowTrackerCommandArgs()");
+    expect(source).not.toMatch(/spawnSync\((?!'(?:git)'|command)/);
     expect(source).toContain('shell: false');
     expect(source).toContain('timeout: 500');
     expect(source).toContain('timeout: 1_000');
   });
 
-  it('uses Knots state as the workflow authority source', async () => {
+  it('uses workflow tracker state as the workflow authority source', async () => {
     const root = tempRoot();
-    mkdirSync(join(root, '.knots', 'cache'), { recursive: true });
-    writeFileSync(join(root, '.knots', 'cache', 'state.sqlite'), 'sqlite-placeholder', 'utf8');
+    mkdirSync(join(root, '.workflow-tracker'), { recursive: true });
+    writeFileSync(join(root, '.workflow-tracker', 'state.sqlite'), 'sqlite-placeholder', 'utf8');
 
     const binDir = join(root, 'bin');
     mkdirSync(binDir, { recursive: true });
-    const knoPath = join(binDir, 'kno');
+    const trackerPath = join(binDir, 'workflow-tracker');
     writeFileSync(
-      knoPath,
-      '#!/bin/sh\nprintf \'[{"id":"knot-a","state":"claimed"},{"id":"knot-b","state":"ready"},{"id":"knot-c","state":"shipped"}]\'\n',
+      trackerPath,
+      '#!/bin/sh\nprintf \'[{"id":"workflowItem-a","state":"claimed"},{"id":"workflowItem-b","state":"ready"},{"id":"workflowItem-c","state":"shipped"}]\'\n',
       'utf8',
     );
-    chmodSync(knoPath, 0o755);
+    chmodSync(trackerPath, 0o755);
 
     const originalPath = process.env.PATH;
+    const originalCommand = process.env.HIVE_FLOW_WORKFLOW_TRACKER_COMMAND;
+    const originalStatePath = process.env.HIVE_FLOW_WORKFLOW_TRACKER_STATE_PATH;
     process.env.PATH = `${binDir}${process.platform === 'win32' ? ';' : ':'}${originalPath ?? ''}`;
+    process.env.HIVE_FLOW_WORKFLOW_TRACKER_COMMAND = 'workflow-tracker';
+    process.env.HIVE_FLOW_WORKFLOW_TRACKER_STATE_PATH = '.workflow-tracker/state.sqlite';
     try {
       const snapshot = await collectProgressAuthoritySnapshot({ cwd: root, nowMs });
       const result = classifyProgressAuthority(snapshot);
 
-      expect(snapshot.knots.available).toBe(true);
-      expect(snapshot.knots.inProgress).toBe(1);
-      expect(snapshot.knots.open).toBe(1);
-      expect(snapshot.knots.closed).toBe(1);
-      expect(result.authority.sources).toContain('knots-state');
+      expect(snapshot.workflow.available).toBe(true);
+      expect(snapshot.workflow.inProgress).toBe(1);
+      expect(snapshot.workflow.open).toBe(1);
+      expect(snapshot.workflow.closed).toBe(1);
+      expect(result.authority.sources).toContain('workflow-tracker');
       expect(result.classification).toBe('stalled');
     } finally {
       process.env.PATH = originalPath;
+      if (originalCommand === undefined) delete process.env.HIVE_FLOW_WORKFLOW_TRACKER_COMMAND;
+      else process.env.HIVE_FLOW_WORKFLOW_TRACKER_COMMAND = originalCommand;
+      if (originalStatePath === undefined) delete process.env.HIVE_FLOW_WORKFLOW_TRACKER_STATE_PATH;
+      else process.env.HIVE_FLOW_WORKFLOW_TRACKER_STATE_PATH = originalStatePath;
     }
   });
 

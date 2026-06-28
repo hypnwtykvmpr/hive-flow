@@ -50,10 +50,7 @@ const PROVIDER_CONCURRENCY_CONFIG_FILES = [
   ['.hive-flow', 'config.json'],
   ['hive-flow.config.json'],
 ] as const;
-const DEFAULT_API_PROVIDER_CONCURRENCY_LIMITS: Partial<Record<AgentProvider, number>> = {
-  deepseek: 20,
-  openrouter: 20,
-};
+const DEFAULT_CLI_PROVIDER_CONCURRENCY_LIMIT = 10;
 type ProviderConcurrencyConfigSource =
   | { source: string; value: Record<string, unknown> }
   | { source: string; error: string };
@@ -537,7 +534,10 @@ function parseProviderLimitValue(value: unknown): number | undefined {
   const direct = positiveInteger(value);
   if (direct !== undefined) return direct;
   if (!isRecord(value)) return undefined;
-  return positiveInteger(value.maxConcurrentTasks)
+  return positiveInteger(value.maxSafeConcurrentTasks)
+    ?? positiveInteger(value.safeConcurrentTasks)
+    ?? positiveInteger(value.probedMaxConcurrentTasks)
+    ?? positiveInteger(value.maxConcurrentTasks)
     ?? positiveInteger(value.maxConcurrent)
     ?? positiveInteger(value.maxAgents)
     ?? positiveInteger(value.limit);
@@ -574,18 +574,21 @@ function resolveProviderConcurrencyLimit(provider: AgentProvider): { limit?: num
     const value = config.value;
     const providers = isRecord(value.providers) ? value.providers : undefined;
     const defaults = isRecord(value.defaults) ? value.defaults : undefined;
+    const apiDefaults = isRecord(defaults?.api) ? defaults.api : undefined;
+    const cliDefaults = isRecord(defaults?.cli) ? defaults.cli : undefined;
     const exact = parseProviderLimitValue(providers?.[provider])
       ?? parseProviderLimitValue(value[provider])
       ?? parseProviderLimitValue(defaults?.[provider])
+      ?? parseProviderLimitValue(apiDefaults?.[provider])
+      ?? parseProviderLimitValue(cliDefaults?.[provider])
       ?? parseProviderLimitValue(defaults?.api)
       ?? parseProviderLimitValue(defaults?.strictApi)
       ?? parseProviderLimitValue(value.defaultMaxConcurrentTasks);
     if (exact !== undefined) return { limit: exact, source: config.source };
   }
 
-  const fallback = DEFAULT_API_PROVIDER_CONCURRENCY_LIMITS[provider];
-  return fallback !== undefined
-    ? { limit: fallback, source: 'default-api-provider' }
+  return isEnvOnlyCliProvider(provider)
+    ? { limit: DEFAULT_CLI_PROVIDER_CONCURRENCY_LIMIT, source: 'default-cli-provider' }
     : {};
 }
 
@@ -630,7 +633,7 @@ function checkProviderConcurrencyForDispatch(store: AgentStore, provider: AgentP
     active,
     limit,
     source: source || 'unknown',
-    error: `Provider '${provider}' is at its configured concurrency limit (${active}/${limit}). Reassign this work to another provider or wait for a provider slot to open.`,
+    error: `Provider '${provider}' is at its configured or probed concurrency limit (${active}/${limit}). Reassign this work to another provider or wait for a provider slot to open.`,
   };
 }
 

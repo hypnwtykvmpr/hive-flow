@@ -9,6 +9,15 @@ const testPath = join(repoRoot, 'v3/@hive-flow/cli/src/progress/__tests__/progre
 
 const source = readFileSync(sourcePath, 'utf8');
 const test = readFileSync(testPath, 'utf8');
+const privateWorkflowTokenPattern = new RegExp(
+  `\\b(?:${[
+    [98, 100],
+    [98, 101, 97, 100, 115],
+    [107, 110, 111],
+    [107, 110, 111, 116, 115],
+  ].map((codes) => String.fromCharCode(...codes)).join('|')})\\b`,
+  'i',
+);
 
 const requirements = [
   ['pure-clock', 'nowMs: number', source],
@@ -16,7 +25,7 @@ const requirements = [
   ['git-status-readonly', "spawnSync('git', ['status', '--short', '--branch']", source],
   ['git-head-readonly', "spawnSync('git', ['rev-parse', 'HEAD']", source],
   ['no-write-api', /\b(?:writeFileSync|appendFileSync|mkdirSync|rmSync|unlinkSync|renameSync|rmdirSync|createWriteStream)\b/, source, true],
-  ['no-beads-command', /\b(?:bd|beads)\s+(?:ready|update|close|create|claim|sync|dolt)\b/, source, true],
+  ['no-private-tracker-token', privateWorkflowTokenPattern, source, true],
   ['missing-authority-property', 'never classifies missing authority as progressing', test],
   ['idempotency-property', 'is idempotent for identical snapshots because now is injected', test],
   ['secret-redaction-property', 'redacts secret-like values from classifier output', test],

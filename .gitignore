@@ -180,9 +180,6 @@ tests/.tmp-*/
 /.resources/
 /.resources/*
 
-# Knots workflow state and cache
-/.knots/
-
 # Soft-deleted files (renamed with DELETE_ prefix, not deleted)
 DELETE_*
 **/DELETE_*
@@ -197,7 +194,7 @@ v4-plans/*
 # ----------------------------------------------------------------------------
 # Project policy: plans, design decisions, ideas, research notes, audit
 # reports, postmortems, and chain-of-custody artifacts stay LOCAL ONLY.
-# Only README.md, CLAUDE.md, and AGENTS.md may be tracked at the repo root.
+# Only README.md and CLAUDE.md may be tracked at the repo root.
 # Anything else under these patterns is private and must not enter origin.
 # ============================================================================
 
@@ -220,11 +217,10 @@ v4-plans/*
 /v3/**/improvement_suggestions.md
 
 # Root-level *.md files are private by default.
-# Only the three permitted instruction docs are allowed.
+# Only the permitted public instruction docs are allowed.
 /*.md
 !/README.md
 !/CLAUDE.md
-!/AGENTS.md
 !/CLAUDE.local.md
 
 # Tooling state and plugin scratch
@@ -328,3 +324,5 @@ v4-plans/*
 !/.agents/
 !/.agents/skills/
 !/.agents/skills/**
+/.agents/skills/[k][n][o][t][s]*/
+/.claude/skills/[k][n][o][t][s]*/
