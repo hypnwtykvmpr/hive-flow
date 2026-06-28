@@ -479,8 +479,9 @@ function recordWorkerPermissionDenialFromDeniedTool(toolName, denied, ctx = {}) 
     const targetAgent = bridgeTargetAgent(process.env, owner);
     const denyReason = String(denied?.error || denied?.message || denied?.denyReason || 'permission-denied').slice(0, 180);
     const denyCode = String(denied?.denyReason || 'permission-denied').slice(0, 80);
+    const stableDenyKey = denyCode || denyReason;
     const markerHash = createHash('sha256')
-      .update(`${taskId}\0${agentId}\0${toolName}\0${denyReason}`)
+      .update(`${taskId}\0${agentId}\0${toolName}\0${stableDenyKey}`)
       .digest('hex')
       .slice(0, 16);
     const requestId = `permission-${markerHash}`;

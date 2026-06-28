@@ -606,6 +606,68 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
   });
 
+  it('deduplicates bridge-style permission requests by stable deny code', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
+    const lines = [
+      {
+        kind: 'worker-permission-denial',
+        requestId: 'permission-1111111111111111',
+        taskId: 'task-stable-deny',
+        ts: new Date(0).toISOString(),
+        agentId: 'worker-agent-1',
+        hiveId: hive.hiveId,
+        queenId: hive.queenId,
+        tool: 'run_command',
+        denyReason: "git subcommand 'mv' is not in the read-only allowlist",
+        denyCode: 'read-only-command-denied',
+      },
+      {
+        kind: 'worker-permission-denial',
+        requestId: 'permission-2222222222222222',
+        taskId: 'task-stable-deny',
+        ts: new Date(1).toISOString(),
+        agentId: 'worker-agent-1',
+        hiveId: hive.hiveId,
+        queenId: hive.queenId,
+        tool: 'run_command',
+        denyReason: "git subcommand 'rm' is not in the read-only allowlist",
+        denyCode: 'read-only-command-denied',
+      },
+      {
+        kind: 'worker-permission-denial',
+        requestId: 'permission-3333333333333333',
+        taskId: 'task-stable-deny',
+        ts: new Date(2).toISOString(),
+        agentId: 'worker-agent-1',
+        hiveId: hive.hiveId,
+        queenId: hive.queenId,
+        tool: 'run_command',
+        denyReason: 'sandbox unavailable',
+        denyCode: 'sandbox-unavailable',
+      },
+    ];
+    writeFileSync(
+      join(root, '.hive-flow', 'hives', hive.hiveId, 'permission-requests.jsonl'),
+      `${lines.map(line => JSON.stringify(line)).join('\n')}\n`,
+      'utf8',
+    );
+
+    const requestsResult = await getQueenTool('queen_permission_requests').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      status: 'all',
+    }) as Record<string, unknown>;
+
+    expect(requestsResult.success).toBe(true);
+    expect(requestsResult.requestCount).toBe(2);
+    const requests = requestsResult.requests as Array<Record<string, unknown>>;
+    const readOnlyRequests = requests.filter(request => request.denyCode === 'read-only-command-denied');
+    expect(readOnlyRequests).toHaveLength(1);
+    expect(readOnlyRequests[0].requestId).not.toBe('permission-1111111111111111');
+    expect(readOnlyRequests[0].requestId).not.toBe('permission-2222222222222222');
+    expect(requests.some(request => request.denyCode === 'sandbox-unavailable')).toBe(true);
+  });
+
   it('lets the queen approve, deny, or halt permission requests through the same durable lifecycle', async () => {
     const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
     hive.workers = ['approve', 'deny', 'halt'].map((suffix, index) => {

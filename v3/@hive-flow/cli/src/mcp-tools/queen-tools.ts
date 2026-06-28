@@ -195,6 +195,16 @@ function stringValue(value: unknown): string {
 
 function permissionRequestIdFromPayload(payload: Record<string, unknown>): string {
   const existing = stringValue(payload.requestId);
+  const denyCode = stringValue(payload.denyCode);
+  if (denyCode && (!existing || /^permission-[0-9a-f]{16}$/i.test(existing))) {
+    const material = JSON.stringify({
+      taskId: stringValue(payload.taskId),
+      agentId: stringValue(payload.agentId),
+      tool: stringValue(payload.tool),
+      denyCode,
+    });
+    return `permission-${createHash('sha256').update(material).digest('hex').slice(0, 16)}`;
+  }
   if (existing) return existing;
   const material = JSON.stringify({
     taskId: stringValue(payload.taskId),
@@ -364,6 +374,69 @@ function retryCountFromTracking(tracking: Record<string, unknown>): number {
   return Number.isInteger(tracking.retryCount) && (tracking.retryCount as number) >= 0
     ? tracking.retryCount as number
     : 0;
+}
+
+function writeTaskTrackingBestEffort(
+  trackingPath: string,
+  tracking: Record<string, unknown>,
+): void {
+  try {
+    writeFileSync(trackingPath, JSON.stringify(tracking, null, 2), 'utf-8');
+  } catch { /* best-effort tracking metadata */ }
+}
+
+async function claimDeadWorkerRetry(
+  hiveId: string,
+  trackingPath: string,
+  taskId: string,
+): Promise<{
+  claimed: boolean;
+  tracking?: Record<string, unknown>;
+  retryCount?: number;
+  originalTaskId?: string;
+  timeoutMs?: number;
+}> {
+  return withHiveLock(hiveId, () => {
+    let tracking: Record<string, unknown>;
+    try {
+      tracking = JSON.parse(readFileSync(trackingPath, 'utf-8')) as Record<string, unknown>;
+    } catch {
+      return { claimed: false };
+    }
+    if (tracking.taskId !== taskId) return { claimed: false };
+    const retryCount = retryCountFromTracking(tracking);
+    if (retryCount >= 1 || typeof tracking.reassignedToTaskId === 'string') {
+      tracking.status = 'failed';
+      tracking.failedAt = typeof tracking.failedAt === 'string'
+        ? tracking.failedAt
+        : new Date().toISOString();
+      tracking.failureReason = typeof tracking.failureReason === 'string'
+        ? tracking.failureReason
+        : 'worker-process-dead';
+      writeTaskTrackingBestEffort(trackingPath, tracking);
+      return { claimed: false, tracking };
+    }
+    const replacementRetryCount = retryCount + 1;
+    tracking.status = 'failed';
+    tracking.failedAt = typeof tracking.failedAt === 'string'
+      ? tracking.failedAt
+      : new Date().toISOString();
+    tracking.failureReason = typeof tracking.failureReason === 'string'
+      ? tracking.failureReason
+      : 'worker-process-dead';
+    tracking.retryCount = replacementRetryCount;
+    tracking.retryClaimedAt = new Date().toISOString();
+    writeTaskTrackingBestEffort(trackingPath, tracking);
+    return {
+      claimed: true,
+      tracking,
+      retryCount: replacementRetryCount,
+      originalTaskId: typeof tracking.originalTaskId === 'string'
+        ? tracking.originalTaskId
+        : taskId,
+      timeoutMs: typeof tracking.timeoutMs === 'number' ? tracking.timeoutMs : undefined,
+    };
+  });
 }
 
 function annotateReplacementTracking(
@@ -1695,15 +1768,19 @@ const hivePollWorkersTool: MCPTool = {
           latest.tracking.status = 'failed';
           latest.tracking.failedAt = new Date().toISOString();
           latest.tracking.failureReason = 'worker-process-dead';
-          try {
-            writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
-          } catch { /* best-effort */ }
-
-          const retryCount = retryCountFromTracking(latest.tracking);
           const taskPrompt = readTaskPromptForRetry(tasksDir, latest.taskId);
-          if (taskPrompt && retryCount < 1) {
+          const retryClaim = taskPrompt
+            ? await claimDeadWorkerRetry(hiveId, latest.trackingPath, latest.taskId)
+            : { claimed: false };
+          if (retryClaim.tracking) {
+            latest.tracking = retryClaim.tracking as typeof latest.tracking;
+          } else {
+            writeTaskTrackingBestEffort(latest.trackingPath, latest.tracking);
+          }
+
+          if (taskPrompt && retryClaim.claimed && retryClaim.retryCount !== undefined) {
             await clearAgentTaskBeforeReassignment(worker.agentId, latest.taskId);
-            const replacementRetryCount = retryCount + 1;
+            const replacementRetryCount = retryClaim.retryCount;
             const retryInput: Record<string, unknown> & { [AGENT_TASK_RETRY_CONTEXT]?: AgentTaskRetryContext } = {
               hiveId,
               workerId: worker.workerId,
@@ -1712,12 +1789,10 @@ const hivePollWorkersTool: MCPTool = {
             retryInput[AGENT_TASK_RETRY_CONTEXT] = {
               retryCount: replacementRetryCount,
               reassignedFromTaskId: latest.taskId,
-              originalTaskId: typeof latest.tracking.originalTaskId === 'string'
-                ? latest.tracking.originalTaskId
-                : latest.taskId,
+              originalTaskId: retryClaim.originalTaskId ?? latest.taskId,
             };
-            if (Number.isFinite(latest.tracking.timeoutMs) && latest.tracking.timeoutMs! > 0) {
-              retryInput.timeout = latest.tracking.timeoutMs;
+            if (Number.isFinite(retryClaim.timeoutMs) && retryClaim.timeoutMs! > 0) {
+              retryInput.timeout = retryClaim.timeoutMs;
             }
             const retryResult = await taskWorkerTool.handler(retryInput) as Record<string, unknown>;
             const replacementTaskId = (retryResult.result as Record<string, unknown> | undefined)?.taskId;
@@ -1725,9 +1800,7 @@ const hivePollWorkersTool: MCPTool = {
               latest.tracking.reassignedToTaskId = replacementTaskId;
               latest.tracking.reassignedAt = new Date().toISOString();
               latest.tracking.retryCount = replacementRetryCount;
-              try {
-                writeFileSync(latest.trackingPath, JSON.stringify(latest.tracking, null, 2), 'utf-8');
-              } catch { /* best-effort */ }
+              writeTaskTrackingBestEffort(latest.trackingPath, latest.tracking);
               annotateReplacementTracking(tasksDir, replacementTaskId, latest.taskId, replacementRetryCount);
               await withHiveLock(hiveId, () => {
                 const freshHive = loadHive(hiveId);

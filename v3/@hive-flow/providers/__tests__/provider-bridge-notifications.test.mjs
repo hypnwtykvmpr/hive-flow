@@ -474,7 +474,7 @@ describe('provider bridge task completion notifications', () => {
     expect(hivePermissionText).not.toContain('Owning operator');
 
     const deniedAgain = JSON.parse(await bridge.executeBridgeTool('run_command', {
-      argv: ['git', 'mv', 'old-name', 'new-name'],
+      argv: ['git', 'rm', 'old-name'],
     }, {
       agentId: 'agent-needs-permission',
       resultFile,

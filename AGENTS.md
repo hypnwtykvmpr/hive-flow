@@ -9,10 +9,10 @@
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║  1. hive-flow = LEDGER (tracks state, stores memory, coordinates)       ║
-║  2. Codex = EXECUTOR (writes code, runs commands, creates files)          ║
-║  3. NEVER stop after calling hive-flow - IMMEDIATELY continue working   ║
-║  4. If you need something BUILT/EXECUTED, YOU do it, not hive-flow      ║
+║  1. hive-flow = LEDGER + PROVIDER AGENT RUNTIME                         ║
+║  2. Codex = PRIMARY OPERATOR (edits, tests, commits when authorized)      ║
+║  3. NEVER stop after coordination-only calls - continue working          ║
+║  4. Delegate audits/reviews to Hive Flow agents when they can do it      ║
 ║  5. ALWAYS search memory BEFORE starting: memory search --query "task"    ║
 ║  6. ALWAYS store patterns AFTER success: memory store --namespace patterns║
 ╚═══════════════════════════════════════════════════════════════════════════╝
@@ -21,28 +21,28 @@
 **Workflow (Use MCP Tools):**
 1. `memory_search(query="task keywords")` → LEARN from past patterns (score > 0.7 = use it)
 2. `swarm_init(topology="hierarchical")` → coordination record (instant)
-3. **YOU write the code / run the commands** ← THIS IS WHERE WORK HAPPENS
+3. **YOU write the code / run the commands, or delegate parallel review/audit work to Hive Flow provider agents**
 4. `memory_store(key="pattern-x", value="what worked", namespace="patterns")` → REMEMBER for next time
 
 ---
 
-## 🚨 CRITICAL: CODEX DOES THE WORK, HIVE-FLOW ORCHESTRATES
+## 🚨 CRITICAL: CODEX OPERATES, HIVE-FLOW ORCHESTRATES AND DELEGATES
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  HIVE-FLOW = ORCHESTRATOR (tracks state, coordinates)     │
-│  CODEX = WORKER (writes code, runs commands, implements)    │
+│  HIVE-FLOW = ORCHESTRATOR + PROVIDER AGENT RUNTIME        │
+│  CODEX = PRIMARY OPERATOR (edits, tests, direct work)       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### ❌ WRONG: Expecting hive-flow to execute tasks
+### ❌ WRONG: Expecting coordination-only commands to execute tasks
 ```bash
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Build API"
-# WRONG: Waiting for hive-flow to build the API
-# Hive-flow does NOT execute code!
+# WRONG: Waiting for a coordination-only swarm record to build the API
+# Coordination-only commands do not execute code by themselves.
 ```
 
-### ✅ CORRECT: Codex executes, hive-flow tracks
+### ✅ CORRECT: Codex executes direct work; Hive Flow agents handle delegated work
 ```bash
 # 1. Tell hive-flow what you're doing (optional coordination)
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 1
@@ -62,8 +62,20 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 | Component | Role | Examples |
 |-----------|------|----------|
-| **CODEX** | EXECUTES | Write files, run tests, create code, shell commands |
-| **hive-flow** | ORCHESTRATES | Track agents, store memory, coordinate tasks |
+| **CODEX** | PRIMARY OPERATOR | Write files, run tests, create code, shell commands, commit only when authorized |
+| **Hive Flow coordination commands** | ORCHESTRATE | Track agents, store memory, coordinate tasks |
+| **Hive Flow provider agents** | DELEGATED EXECUTORS | Parallel audits, bug-hunting, verification, research, source review |
+
+### Hive Flow Agent Dogfooding
+
+Codex remains responsible for direct local execution: editing files, running tests, and committing only when explicitly authorized. That does not mean ignoring Hive Flow agents.
+
+- Use Hive Flow agents for delegated work when they can complete it: audits, bug-hunting, source review, verification, planning, research, and parallel inspection.
+- Prefer queen-led hives for broad or permission-sensitive work so worker permission requests route to a queen instead of spamming the parent.
+- Do not use native subagents or adjacent agent frameworks for work that Hive Flow agents can perform.
+- If a Hive Flow agent is overblocked or lacks a tool it should have, pause the lane and fix the Hive Flow harness first instead of routing around it.
+- Use native/non-Hive delegation only when Hive Flow agents demonstrably cannot complete the task, and record the reason in the durable handoff or final report.
+- When dispatching long-running Hive Flow provider tasks, pass an explicit generous `timeout`; the reaper uses the task's persisted deadline (`timeout` plus fixed cleanup grace).
 
 ---
 
@@ -72,7 +84,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  ❌ WRONG: Call hive-flow → STOP → Wait for results                   │
-│  ✅ RIGHT: Call hive-flow → IMMEDIATELY continue → YOU do the work    │
+│  ✅ RIGHT: Call coordination tools → continue with direct/delegated work│
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -82,7 +94,7 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js agent spawn --type coder --name worker-1
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js swarm start --objective "Build hello world"
 # WRONG: Codex stops here and waits for something to happen
-# Nothing will happen! Hive-flow doesn't execute code!
+# Nothing will happen unless you execute directly or send an executable task to a Hive Flow provider agent.
 ```
 
 ### ✅ CORRECT Pattern (Continue Immediately)
@@ -100,10 +112,10 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 ```
 
 ### The Rule
-**After ANY hive-flow command, IMMEDIATELY continue with your own work.**
+**After ANY coordination-only hive-flow command, IMMEDIATELY continue with direct work or an executable Hive Flow provider-agent task.**
 
-Hive-flow commands return instantly. They create coordination RECORDS only.
-You must ALWAYS follow up with YOUR OWN execution.
+Legacy coordination commands return instantly and create coordination records only.
+You must ALWAYS follow up with direct Codex execution or a real provider-agent task.
 
 | After This... | IMMEDIATELY Do This... |
 |---------------|----------------------|
@@ -137,7 +149,7 @@ node hello.js
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js memory store --key "hello-result" --value "printed Hello World" --namespace results
 ```
 
-**REMEMBER: If you need something DONE, YOU do it. Hive-flow just tracks.**
+**REMEMBER: Coordination-only commands track; Hive Flow provider agents can perform delegated work. Codex stays responsible for the outcome.**
 
 ---
 
@@ -305,15 +317,17 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ## 📋 BEHAVIORAL RULES
 
-- **YOU (CODEX) execute tasks** - hive-flow only orchestrates
+- **YOU (CODEX) execute direct tasks** - Hive Flow coordinates and its provider agents execute delegated tasks
+- **Use Hive Flow agents for delegated audits/reviews/verification** when their tools can complete the task; Codex still performs direct local edits and shell execution assigned to Codex
 - Do what is asked; nothing more, nothing less
 - NEVER create files unless absolutely necessary
 - ALWAYS prefer editing existing files
 - NEVER save to root folder
 - NEVER commit secrets or .env files
 - ALWAYS read a file before editing it
-- NEVER wait for hive-flow to "do work" - it doesn't execute, YOU do
-- Use hive-flow commands to TRACK progress, not to EXECUTE tasks
+- NEVER wait after coordination-only hive-flow commands; continue with direct execution or a real provider-agent task
+- Use coordination-only hive-flow commands to TRACK progress; use Hive Flow provider-agent tools for delegated execution
+- If a Hive Flow agent cannot proceed because of permission/tool overblock, fix the harness or document the real blocker before substituting a non-Hive agent
 
 ## 📁 FILE ORGANIZATION
 

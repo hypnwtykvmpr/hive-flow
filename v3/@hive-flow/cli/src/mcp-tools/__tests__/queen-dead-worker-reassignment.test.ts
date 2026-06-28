@@ -8,6 +8,7 @@ const originalCwd = process.cwd();
 const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
 let tempDir: string;
 let taskCalls: Array<Record<string, unknown>>;
+let taskHandlerDelay: Promise<void> | null;
 
 const DEAD_PID = 2147480000;
 
@@ -59,6 +60,7 @@ async function importQueenModules() {
       handler: async (input: Record<string, unknown>) => {
         const retryContext = (input as Record<symbol, unknown>)[actual.AGENT_TASK_RETRY_CONTEXT];
         taskCalls.push({ ...input, __retryContext: retryContext });
+        if (taskHandlerDelay) await taskHandlerDelay;
         const replacementTaskId = `task-retry-${taskCalls.length}`;
         const store = actual.loadAgentStore();
         const agent = store.agents[input.agentId as string];
@@ -172,6 +174,7 @@ async function seedHive(
 
 beforeEach(() => {
   tempDir = mkdtempSync(join(tmpdir(), 'queen-dead-worker-reassign-'));
+  taskHandlerDelay = null;
   process.chdir(tempDir);
   process.env.CLAUDE_PROJECT_DIR = tempDir;
 });
@@ -275,6 +278,59 @@ describe('hive_poll_workers dead-worker reassignment', () => {
       expect(readJson(join(tasksDir(), 'task-dead.json')).status).toBe('failed');
       expect(loadHive(hive.hiveId)?.workers[0].taskId).toBe('task-dead');
     } finally {
+      process.kill = originalKill;
+    }
+  });
+
+  it('durably claims the retry before dispatch so concurrent polls cannot double-reassign', async () => {
+    const { queenTools, createHive, loadHive, saveHive, withHiveLock } = await importQueenModules();
+    writeAgentStore();
+    const hive = await seedHive(createHive, loadHive, saveHive, withHiveLock);
+    writeTask('task-dead', 'original prompt');
+    writeTracking('task-dead', {});
+
+    let releaseDispatch!: () => void;
+    taskHandlerDelay = new Promise(resolve => {
+      releaseDispatch = resolve;
+    });
+
+    const originalKill = process.kill;
+    process.kill = ((pid: number, signal?: NodeJS.Signals | 0) => {
+      if (signal === 0 && pid === DEAD_PID) {
+        const err = new Error('dead process') as NodeJS.ErrnoException;
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return originalKill(pid, signal as NodeJS.Signals);
+    }) as typeof process.kill;
+
+    try {
+      const poll = getQueenTool(queenTools, 'hive_poll_workers');
+      const firstPoll = poll.handler({ hiveId: hive.hiveId }) as Promise<Record<string, unknown>>;
+
+      for (let i = 0; i < 20 && taskCalls.length === 0; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5));
+      }
+      expect(taskCalls).toHaveLength(1);
+      expect(readJson(join(tasksDir(), 'task-dead.json')).retryCount).toBe(1);
+
+      const secondResult = await poll.handler({ hiveId: hive.hiveId }) as Record<string, unknown>;
+      expect(secondResult.runningCount).toBe(0);
+      expect(secondResult.failedCount).toBe(1);
+      expect(taskCalls).toHaveLength(1);
+
+      releaseDispatch();
+      const firstResult = await firstPoll;
+      expect(firstResult.runningCount).toBe(1);
+      expect(firstResult.failedCount).toBe(0);
+      expect(taskCalls).toHaveLength(1);
+
+      const oldTracking = readJson(join(tasksDir(), 'task-dead.json'));
+      expect(oldTracking.retryCount).toBe(1);
+      expect(oldTracking.reassignedToTaskId).toBe('task-retry-1');
+    } finally {
+      releaseDispatch?.();
+      taskHandlerDelay = null;
       process.kill = originalKill;
     }
   });

@@ -32,10 +32,12 @@ Issue categorization: default to must-fix. NEVER "acceptable" unless CERTAIN hum
 - **No self-verification** — dispatch verification agents
 - **No stopping** — save state, not halt
 - **ALWAYS use hives (queen_mission_assign).** Individual agents for original work = immediate termination.
-  - Exception: Claude agents use native Task tool (MCP unreliable for Claude). Must match hive-equivalent agent count.
+  - Native Claude Task agents are NOT a default exception. They are forbidden whenever Hive Flow provider agents can complete the task.
+  - Use native Task agents only for a confirmed Hive Flow blocker (tool/permission/provider outage or explicit human instruction), and record the exact reason in the durable router note.
   - Individual agents OK ONLY for re-running failed workers from completed hives (< 5 failures).
 - **Provider strategy is phase-dependent** — see `memory/provider-phase-strategy.md`:
-  - Claude (opus/sonnet): REQUIRED for moderate+ design and implementation — native Task tool, preserve quota
+  - Hive Flow provider agents are mandatory default for delegated work; Claude native Task agents are exceptional, not routine
+  - Claude (opus/sonnet): use native Task only when Hive Flow agents cannot complete the task or the human explicitly requires native Claude
   - Codex + OpenRouter opus-level: Stand-in for SIMPLE design/implementation when Claude quota low
   - Codex: Reserve for queens (complex hives) and capability-specific tasks — expensive, don't use as default worker
   - OpenRouter opus (grok, mimo, minimax): Queens for simpler hives, workers for most tasks — effective and cheaper than codex

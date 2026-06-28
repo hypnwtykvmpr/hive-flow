@@ -1025,4 +1025,36 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
     expect(result.queensAlive).toBe(0);
     expect(result.agents).toEqual([]);
   });
+
+  it('does not count a quiescent active hive queen whose legacy nested pid is dead', async () => {
+    vi.spyOn(process, 'kill').mockImplementation(((pid: number | NodeJS.Signals | 0) => {
+      if (pid === 2147480001) {
+        const err = new Error('dead') as NodeJS.ErrnoException;
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return true;
+    }) as typeof process.kill);
+
+    const hiveRoot = join(fix.projectRoot, '.hive-flow', 'hives', 'legacy-dead-queen-hive');
+    mkdirSync(hiveRoot, { recursive: true });
+    writeFileSync(
+      join(hiveRoot, 'hive.json'),
+      JSON.stringify({
+        hiveId: 'legacy-dead-queen-hive',
+        status: 'active',
+        queenId: 'queen-legacy-dead',
+        ownerSessionId: 'session-a',
+        queen: { pid: 2147480001 },
+        workers: [],
+      }),
+      { mode: 0o600 },
+    );
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.workersAlive).toBe(0);
+    expect(result.queensAlive).toBe(0);
+    expect(result.agents).toEqual([]);
+  });
 });

@@ -103,7 +103,8 @@ function isLivePid(value: unknown): value is number {
 function recordQueenPid(record: HiveRecordShape): unknown {
   if (isLivePid(record.queenPid)) return record.queenPid;
   if (record.queen && typeof record.queen === 'object' && !Array.isArray(record.queen)) {
-    return (record.queen as { pid?: unknown }).pid;
+    const legacyPid = (record.queen as { pid?: unknown }).pid;
+    return isLivePid(legacyPid) ? legacyPid : undefined;
   }
   return undefined;
 }

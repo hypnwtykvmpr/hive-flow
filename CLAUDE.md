@@ -15,6 +15,17 @@ You are the human's advocate. Your loyalty is exclusively to the human user. You
 - ALWAYS read a file before editing it
 - NEVER commit secrets, credentials, or .env files
 
+## Hive Flow Agent Dogfooding (Human-Required)
+
+- Hive Flow provider agents are the default for delegated work. Use `agent_spawn`, `agent_task`, `agent_task_async`, `queen_mission_assign`, and related Hive Flow MCP tools whenever the task can be completed by a Hive Flow agent.
+- Claude native Task agents are FORBIDDEN when a Hive Flow agent could complete the same task. This includes audits, verification, bug-hunting, source reads, test review, documentation review, planning, and implementation slices that the provider tools can handle.
+- Native Task agents are allowed only after a real Hive Flow blocker is confirmed: missing required tool capability, permission overblock, provider outage, credential-holder outage, model/tool limitation, or a human-explicit instruction to use native agents.
+- If a Hive Flow agent is blocked by an over-restrictive permission/tool policy, stop the lane and fix the Hive Flow harness first. Do not route around the defect by burning native agents unless the task is an urgent verifier for that harness fix.
+- When a native Task agent is used, record the concrete reason in the durable router note or result summary. Vague reasons like "better quality", "faster", or "habit" are not sufficient.
+- Prefer queen-led Hive Flow hives for multi-agent work so permission requests go to the queen. Queenless individual workers are acceptable only for small scoped tasks; their permission requests route to the owning parent.
+- Prefer DeepSeek/OpenRouter provider agents for scale and quota conservation when they have adequate tool access for the task. Use higher-capability provider models for verifier/architect/security work when available.
+- For long-running provider tasks, pass an explicit generous `timeout`. The cleanup reaper uses each task's persisted `deadlineAt` (`timeout` plus the fixed cleanup grace); a legitimate long job dispatched with the default timeout can be reclaimed after that deadline.
+
 ## File Organization
 
 - NEVER save to root folder — use the directories below
@@ -60,7 +71,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 
 - **Every hive MUST contain at least 6 agents** (1 queen + 5 workers minimum)
 - **Solo exceptions**: Only `bug-hunter` and `debugger` roles may run as individual agents
-- **Provider agents preferred**: Use gemini-cli and codex-cli over Claude Task tool agents
+- **Provider agents mandatory default**: Use Hive Flow provider agents over Claude Task tool agents whenever they can complete the work
 - **No task deferment**: Workers complete their assigned duties or get terminated
 - **Fail-closed enforcement**: Task tool calls without a valid HIVE tag or solo role keyword are blocked by the PreToolUse hook
 - **Hooks**: `hive-composition-gate.cjs` (PreToolUse on Task, blocks insufficient hives) and `hive-spawn-tracker.cjs` (PostToolUse on Task, tracks spawn counts)
@@ -168,42 +179,44 @@ Automated watcher system that monitors hive worker progress without polling.
 ## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
 
 - All operations MUST be concurrent/parallel in a single message
-- Use Claude Code's Task tool for spawning agents, not just MCP
+- Use Hive Flow MCP provider/queen tools for spawning agents; native Task is an exception-only fallback when a Hive Flow blocker is documented
 
 **Mandatory patterns:**
 - ALWAYS batch ALL todos in ONE TodoWrite call (5-10+ minimum)
-- ALWAYS spawn ALL agents in ONE message with full instructions via Task tool
+- ALWAYS spawn ALL Hive Flow provider agents or hives in one coordinated step with full instructions; if native Task fallback is justified, spawn all fallback agents in one message and record the reason
 - ALWAYS batch ALL file reads/writes/edits in ONE message
 - ALWAYS batch ALL terminal operations in ONE Bash message
 - ALWAYS batch ALL memory store/retrieve operations in ONE message
 
 ---
 
-## Agent Model Display & Selection (Permanent)
+## Native Task Fallback Display & Selection (Exception Only)
 
-When spawning agents with the Task tool:
+When native Task fallback is justified because Hive Flow agents cannot complete the task:
 - ALWAYS append `(model)` to the `description` parameter: e.g. `"Fix tests (opus)"`
 - ALWAYS set the `model` parameter explicitly: `"opus"` or `"sonnet"`
+- ALWAYS record the concrete Hive Flow blocker in the durable router note or result summary
 
 ### Model Selection Priority
 - **opus**: Architecture, security, complex reasoning, multi-file changes
 - **sonnet**: Implementation, testing, moderate complexity
 
-## External Agent Providers (Cursor-Agent, Codex CLI, Gemini CLI)
+## Hive Flow Agent Providers
 
-Three external AI agent providers are integrated as first-class Hive Flow agents. They are invoked EXCLUSIVELY through native MCP tools — never via terminal/bash commands.
+External and API-backed AI providers are integrated as first-class Hive Flow agents. They are invoked EXCLUSIVELY through Hive Flow MCP tools — never via terminal/bash commands.
 
 **CRITICAL TERMINOLOGY:**
 - **"Cursor"** = Cursor-Agent / Cursor-CLI (headless AI agent). NEVER the Cursor VS Code IDE fork.
 - **"Codex"** = Codex CLI (`codex-cli`) headless AI agent. Not the OpenAI web app.
 - **"Gemini"** = Gemini CLI (`gemini-cli`) headless AI agent. Not the Google web app.
+- **"DeepSeek" / "OpenRouter"** = API-backed Hive Flow provider agents, not native Claude agents.
 - Agents are spawned and executed via `agent_spawn` + `agent_task` MCP tools only.
 
 ### Priority Order for Sub-Agent Delegation
 
-1. **Codex** and **Gemini** (PREFERRED) — headless execution via MCP agent_spawn + agent_task tools, conserves Claude quota
-2. **Task tool agents** (opus/sonnet) — use when external providers are insufficient
-3. **Cursor-Agent** — headless AI agent via MCP agent_spawn + agent_task tools
+1. **Hive Flow provider agents** (DeepSeek/OpenRouter/Codex/Gemini/Cursor/other configured providers) — default path via MCP `agent_spawn` + `agent_task` tools; conserves Claude quota and dogfoods the product.
+2. **Queen-led Hive Flow hives** — required for broad audits, multi-agent verification, and work likely to generate permission decisions.
+3. **Claude native Task agents** — exception only. Use when Hive Flow agents demonstrably cannot complete the task, and record the reason.
 
 ### Spawning External Agents (MCP Native)
 
@@ -242,13 +255,13 @@ mcp__hive-flow__agent_task({ agentId: "agent-id", task: "Review the error handli
 ## Swarm Orchestration
 
 - MUST initialize the swarm using MCP tools when starting complex tasks
-- MUST spawn concurrent agents using Claude Code's Task tool
-- Never use MCP tools alone for execution — Task tool agents do the actual work
+- MUST spawn delegated workers using Hive Flow provider agents unless a real blocker prevents it
+- Never use Claude native Task agents for work that Hive Flow provider agents can complete
 
-### MCP + Task Tool in SAME Message
+### MCP + Provider Agents in SAME Message
 
-- MUST call MCP tools AND Task tool in ONE message for complex work
-- Always call MCP first, then IMMEDIATELY call Task tool to spawn agents
+- MUST call Hive Flow MCP coordination tools and provider agent spawn/task tools in one coordinated step for complex work
+- Always call MCP first, then immediately dispatch Hive Flow provider agents or queen-led hives
 
 ### 3-Tier Model Routing (ADR-026)
 
@@ -442,14 +455,13 @@ mcp__hive-flow__swarm_init({
   strategy: "specialized"
 })
 
-// STEP 2: Spawn agents concurrently using Claude Code's Task tool
-// ALL Task calls MUST be in the SAME message for parallel execution
-Task("Coordinator", "You are the swarm coordinator. Initialize session, coordinate other agents via memory. Run: node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js hooks session-start", "hierarchical-coordinator")
-Task("Researcher", "Analyze requirements and existing code patterns. Store findings in memory via hooks.", "researcher")
-Task("Architect", "Design implementation approach based on research. Document decisions in memory.", "system-architect")
-Task("Coder", "Implement the solution following architect's design. Coordinate via hooks.", "coder")
-Task("Tester", "Write tests for the implementation. Report coverage via hooks.", "tester")
-Task("Reviewer", "Review code quality and security. Document findings.", "reviewer")
+// STEP 2: Spawn Hive Flow provider agents or a queen-led hive
+// Native Task agents are forbidden here unless Hive Flow agents are genuinely blocked.
+mcp__hive-flow__agent_spawn({ agentType: "researcher", provider: "deepseek", task: "Analyze requirements and existing code patterns." })
+mcp__hive-flow__agent_spawn({ agentType: "architect", provider: "openrouter", task: "Design implementation approach based on research." })
+mcp__hive-flow__agent_spawn({ agentType: "coder", provider: "codex-cli", task: "Implement the solution following the verified design." })
+mcp__hive-flow__agent_spawn({ agentType: "tester", provider: "cursor-cli", task: "Write tests and report coverage." })
+mcp__hive-flow__agent_spawn({ agentType: "reviewer", provider: "openrouter", task: "Review code quality and security." })
 
 // STEP 3: Batch all todos
 TodoWrite({ todos: [
@@ -832,25 +844,26 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.js doctor --fix
 ```
 
-## Claude Code vs MCP Tools
+## Claude Code vs Hive Flow MCP Tools
 
-### Claude Code Handles ALL EXECUTION:
-- **Task tool**: Spawn and run agents concurrently
-- File operations (Read, Write, Edit, MultiEdit, Glob, Grep)
-- Code generation and programming
-- Bash commands and system operations
-- TodoWrite and task management
-- Git operations
+### Hive Flow Provider Agents Handle Delegated Execution:
+- **Provider workers and queens**: audits, verification, bug-hunting, source review, planning, and implementation slices that their tools can complete
+- **Permission lifecycle**: provider workers escalate to their queen when queen-led, or to the owning parent when queenless
 
-### MCP Tools ONLY COORDINATE:
+### Claude Code Handles Direct Operator Work:
+- Direct file edits, local shell commands, and git operations only when the main Claude operator is the assigned implementer/verifier
+- Native Task agents only for documented Hive Flow blockers or explicit human instruction
+
+### MCP Tools Coordinate and Execute Hive Flow Agents:
 - Swarm initialization (topology setup)
 - Agent type definitions
 - Task orchestration
 - Memory management
 - Neural features
 - Performance tracking
+- Hive Flow provider agent execution via `agent_spawn`, `agent_task`, `agent_task_async`, queen tools, and hive-mind tools
 
-- Keep MCP for coordination strategy only — use Claude Code's Task tool for real execution
+- Keep native Task usage exceptional. If Hive Flow agents can do the work, they must do it.
 
 ## Optional Plugins (20 Available)
 
@@ -884,4 +897,4 @@ node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin/cli.
 
 ---
 
-Remember: **Hive Flow coordinates, Claude Code creates!**
+Remember: **Hive Flow agents do delegated work; Claude Code directly executes only the work assigned to the main Claude operator or tasks Hive Flow agents cannot complete.**

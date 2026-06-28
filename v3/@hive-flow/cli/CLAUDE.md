@@ -7,8 +7,10 @@ For shared behavior and general agent workflow (task complexity rules, swarm pro
 
 ## Execution Model (CLI + Claude Code)
 - CLI coordinates state and routing.
-- Claude Code tools execute work (Task, file edits, Bash, tests).
-- For complex tasks: run CLI coordination first, then spawn all Task agents in the same response with `run_in_background: true`, then wait for results.
+- Hive Flow provider agents execute delegated work whenever they have the required tools and permissions.
+- Claude Code tools execute direct operator work (file edits, Bash, tests) only when the main Claude operator is the assigned worker or Hive Flow agents are genuinely blocked.
+- Claude native Task agents are forbidden when Hive Flow provider agents can complete the same task. If native Task is used, record the concrete Hive Flow blocker or explicit human instruction.
+- For complex tasks: run CLI coordination first, then spawn queen-led Hive Flow hives or provider agents in one coordinated step, then wait for results without tight polling.
 - After task completion, do not run manual learning hooks unless explicitly needed; background systems already handle normal learning flow.
 
 ## Anti-Drift Swarm Init
@@ -197,4 +199,4 @@ Run `node /Users/jonathandirks/Development/Tools/hive-flow/v3/@hive-flow/cli/bin
 ## References
 - Full generated capabilities: `.hive-flow/CAPABILITIES.md`
 
-CLI coordinates; Claude Code executes.
+CLI coordinates; Hive Flow provider agents handle delegated execution; Claude Code executes only direct operator work or documented Hive Flow fallback cases.
