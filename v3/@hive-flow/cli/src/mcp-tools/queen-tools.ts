@@ -115,6 +115,17 @@ async function readVerifiedQueenDirectWorkCount(queenId: string): Promise<number
   }
 }
 
+function liveQueenPidFromAgent(queen: { currentTaskPid?: number } | undefined): number | undefined {
+  const pid = queen?.currentTaskPid;
+  if (!Number.isInteger(pid) || (pid ?? 0) <= 1) return undefined;
+  try {
+    process.kill(pid as number, 0);
+    return pid;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException)?.code === 'ESRCH' ? undefined : pid;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helper: invoke agent_spawn handler via dynamic import (avoid circular)
 // ---------------------------------------------------------------------------
@@ -487,7 +498,7 @@ const missionAssignTool: MCPTool = {
       queenId,
       budget,
       Object.keys(config).length > 0 ? config : undefined,
-      { ownerSessionId, ownerClientKind },
+      { ownerSessionId, ownerClientKind, queenPid: liveQueenPidFromAgent(queen) },
     );
 
     // Assign mission

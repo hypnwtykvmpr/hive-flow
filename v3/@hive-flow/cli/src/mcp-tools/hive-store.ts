@@ -135,6 +135,8 @@ export interface DelegationMetrics {
 export interface HiveRecord {
   hiveId: string;
   queenId: string;
+  /** Live-process proof captured from the queen agent when the hive is assigned. */
+  queenPid?: number;
   /** Session that launched this hive, used for multi-session completion routing. */
   ownerSessionId?: string | null;
   /** Parent client that launched this hive, used for owned worker top-ups. */
@@ -256,14 +258,16 @@ export function createHive(
   queenId: string,
   budget: Partial<HiveBudget> = {},
   config?: ModuleHiveConfig,
-  owner?: { ownerSessionId?: string | null; ownerClientKind?: string | null },
+  owner?: { ownerSessionId?: string | null; ownerClientKind?: string | null; queenPid?: number },
 ): HiveRecord {
   const hiveId = `hive-${randomUUID()}`;
   const now = new Date().toISOString();
+  const queenPid = owner?.queenPid;
 
   const record: HiveRecord = {
     hiveId,
     queenId,
+    ...(Number.isInteger(queenPid) && (queenPid ?? 0) > 1 ? { queenPid } : {}),
     ...(owner?.ownerSessionId ? { ownerSessionId: owner.ownerSessionId } : {}),
     ...(owner?.ownerClientKind ? { ownerClientKind: owner.ownerClientKind } : {}),
     status: 'pending',

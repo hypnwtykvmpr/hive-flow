@@ -284,11 +284,10 @@ export async function collectActiveHiveRuntimeState(
           agentId: queenId,
           ownerSessionId,
           role: 'queen',
-          status: hasLiveQueen ? 'busy' : 'idle',
+          status: 'idle',
           hiveId: typeof record.hiveId === 'string' && record.hiveId.trim()
             ? record.hiveId.trim()
             : entry.name,
-          ...(hasLiveQueen ? { currentTaskPid: recordQueenPid(record) as number } : {}),
         });
       }
     }

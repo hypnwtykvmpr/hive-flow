@@ -11,9 +11,11 @@ const mockAgentState = vi.hoisted(() => {
   const state: {
     store: AgentStore;
     calls: Record<'spawn' | 'task' | 'asyncTask' | 'terminate' | 'taskResult', number>;
+    retryContextSymbol: symbol;
   } = {
     store: { agents: {}, version: '3.0.0' },
     calls: { spawn: 0, task: 0, asyncTask: 0, terminate: 0, taskResult: 0 },
+    retryContextSymbol: Symbol('hive-flow.agent-task.retry-context.mock'),
   };
   return state;
 });
@@ -106,6 +108,7 @@ vi.mock('../agent-tools.js', () => {
     agentTools,
     loadAgentStore: () => mockAgentState.store,
     saveAgentStore: (store: AgentStore) => { mockAgentState.store = store; },
+    AGENT_TASK_RETRY_CONTEXT: mockAgentState.retryContextSymbol,
     withStoreLock: async (scopeOrFn: string | (() => unknown), maybeFn?: () => unknown) => {
       const fn = typeof scopeOrFn === 'function' ? scopeOrFn : maybeFn!;
       return fn();
@@ -468,6 +471,22 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(spawnedWorkers).toHaveLength(5);
     expect(spawnedWorkers.every(worker => worker.ownerSessionId === 'claude-auto-session')).toBe(true);
     expect(spawnedWorkers.every(worker => worker.ownerClientKind === 'claude')).toBe(true);
+  });
+
+  it('queen_mission_assign persists the live queen pid onto the hive record', async () => {
+    mockAgentState.store.agents['queen-1'].currentTaskPid = process.pid;
+
+    const result = await getQueenTool('queen_mission_assign').handler({
+      queenId: 'queen-1',
+      scope: 'queen pid mission',
+      description: 'Verify active quiescent queen visibility',
+      session_id: 'claude-queen-pid-session',
+    }, { sessionId: 'claude-queen-pid-session', clientKind: 'claude' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const persistedHive = loadHive(String(result.hiveId));
+    expect(persistedHive?.queenPid).toBe(process.pid);
+    expect(persistedHive?.ownerSessionId).toBe('claude-queen-pid-session');
   });
 
   it('queen_collect_results reads durable task results for queen-owned workers before agent_task_result consumption', async () => {

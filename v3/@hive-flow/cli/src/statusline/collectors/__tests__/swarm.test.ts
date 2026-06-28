@@ -75,6 +75,7 @@ function writeHive(
   queenId?: string,
   ownerSessionId?: string,
   status: string = 'active',
+  queenPid?: number,
 ): void {
   const hiveRoot = join(projectRoot, '.hive-flow', 'hives', hiveId);
   mkdirSync(hiveRoot, { recursive: true });
@@ -84,6 +85,7 @@ function writeHive(
       hiveId,
       status,
       queenId,
+      ...(queenPid !== undefined ? { queenPid } : {}),
       ...(ownerSessionId !== undefined ? { ownerSessionId } : {}),
       workers,
     }),
@@ -982,5 +984,45 @@ describe('collectSwarm (Slice A hive-worker counting fixes)', () => {
     expect(sameSession.workersAlive).toBe(1);
     expect(otherSession.workersAlive).toBe(0);
     expect(otherSession.agents).toEqual([]);
+  });
+
+  it('counts a quiescent active hive queen with live queenPid as alive but not executing', async () => {
+    vi.spyOn(process, 'kill').mockImplementation((() => true) as typeof process.kill);
+
+    writeHive(fix.projectRoot, 'quiet-hive', [], 'queen-quiet', 'session-a', 'active', process.pid);
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.workersAlive).toBe(0);
+    expect(result.workersExecuting).toBe(0);
+    expect(result.queensAlive).toBe(1);
+    expect(result.queensExecuting).toBe(0);
+    expect(result.agents).toEqual([
+      expect.objectContaining({
+        id: 'queen-quiet',
+        role: 'queen',
+        ownerSessionId: 'session-a',
+        status: 'idle',
+      }),
+    ]);
+  });
+
+  it('does not count a quiescent active hive queen whose queenPid is dead', async () => {
+    vi.spyOn(process, 'kill').mockImplementation(((pid: number | NodeJS.Signals | 0) => {
+      if (pid === 2147480000) {
+        const err = new Error('dead') as NodeJS.ErrnoException;
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return true;
+    }) as typeof process.kill);
+
+    writeHive(fix.projectRoot, 'dead-queen-hive', [], 'queen-dead', 'session-a', 'active', 2147480000);
+
+    const result = await collectSwarm({ projectRoot: fix.projectRoot });
+
+    expect(result.workersAlive).toBe(0);
+    expect(result.queensAlive).toBe(0);
+    expect(result.agents).toEqual([]);
   });
 });
