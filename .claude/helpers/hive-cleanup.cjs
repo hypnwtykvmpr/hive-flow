@@ -647,8 +647,8 @@ async function cleanupOrphanedAgents(deadline = Date.now() + CLEANUP_MAX_RUNTIME
     }
     if (agent.status !== 'idle') continue;
     if (activeAgentIds.has(id)) continue;
-    const createdAt = new Date(agent.createdAt).getTime();
-    if (now - createdAt > IDLE_TIMEOUT_MS) {
+    const lastActivityAt = latestAgentTimestamp(agent);
+    if (Number.isFinite(lastActivityAt) && now - lastActivityAt > IDLE_TIMEOUT_MS) {
       summary.orphansFound++;
       try {
         const terminateHandler = await getTerminateHandler();
@@ -721,8 +721,8 @@ function pruneTerminatedAgents() {
     const toPrune = [];
     for (const [id, agent] of Object.entries(store.agents || {})) {
       if (agent.status !== 'terminated') continue;
-      const createdAt = new Date(agent.createdAt).getTime();
-      if (now - createdAt > AGENT_PRUNE_THRESHOLD_MS) toPrune.push(id);
+      const lastActivityAt = latestAgentTimestamp(agent);
+      if (Number.isFinite(lastActivityAt) && now - lastActivityAt > AGENT_PRUNE_THRESHOLD_MS) toPrune.push(id);
     }
     if (toPrune.length === 0) return summary;
     for (const id of toPrune) {

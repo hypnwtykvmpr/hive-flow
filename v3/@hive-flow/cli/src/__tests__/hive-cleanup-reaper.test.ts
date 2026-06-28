@@ -246,3 +246,105 @@ describe('cleanupStaleBusyAgents — HF-13 D1 reaper', () => {
     expect(readStore().agents.a8.status).toBe('idle');
   });
 });
+
+describe('hive cleanup lifecycle age sources — M4', () => {
+  beforeEach(() => {
+    tmpRoot = mkdtempSync(join(tmpdir(), 'hf-reaper-m4-'));
+    agentsDir = join(tmpRoot, '.hive-flow', 'agents');
+    tasksDir = join(tmpRoot, '.hive-flow', 'tasks');
+    mkdirSync(agentsDir, { recursive: true });
+    mkdirSync(tasksDir, { recursive: true });
+    storePath = join(agentsDir, 'store.json');
+    process.env.HIVE_FLOW_CLEANUP_PROJECT_DIR = tmpRoot;
+  });
+
+  afterEach(() => {
+    delete process.env.HIVE_FLOW_CLEANUP_PROJECT_DIR;
+    try { rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* ignore */ }
+  });
+
+  it('does not orphan-clean an idle agent whose idleSince is fresh despite old createdAt', async () => {
+    writeStore({
+      freshIdle: {
+        agentId: 'freshIdle',
+        status: 'idle',
+        createdAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+        idleSince: new Date().toISOString(),
+      },
+    });
+
+    const { cleanupOrphanedAgents } = loadReaper();
+    const summary = await cleanupOrphanedAgents();
+
+    expect(summary.orphansTerminated).toBe(0);
+    expect(readStore().agents.freshIdle.status).toBe('idle');
+  });
+
+  it('orphan-cleans an idle agent whose idleSince is past the idle threshold', async () => {
+    writeStore({
+      staleIdle: {
+        agentId: 'staleIdle',
+        status: 'idle',
+        createdAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+        idleSince: new Date(Date.now() - 60 * 60_000).toISOString(),
+      },
+    });
+
+    const { cleanupOrphanedAgents } = loadReaper();
+    const summary = await cleanupOrphanedAgents();
+
+    expect(summary.orphansFound).toBe(1);
+    expect(summary.orphansTerminated).toBe(1);
+    expect(summary.terminated[0].agentId).toBe('staleIdle');
+  });
+
+  it('does not prune a terminated agent whose terminatedAt is fresh despite old createdAt', () => {
+    writeStore({
+      freshTerminated: {
+        agentId: 'freshTerminated',
+        status: 'terminated',
+        createdAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+        terminatedAt: new Date().toISOString(),
+      },
+    });
+
+    const { pruneTerminatedAgents } = loadReaper();
+    const summary = pruneTerminatedAgents();
+
+    expect(summary.agentsPruned).toBe(0);
+    expect(readStore().agents.freshTerminated).toBeDefined();
+  });
+
+  it('still prunes a terminated agent whose terminatedAt is past the prune threshold', () => {
+    writeStore({
+      staleTerminated: {
+        agentId: 'staleTerminated',
+        status: 'terminated',
+        createdAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+        terminatedAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+      },
+    });
+
+    const { pruneTerminatedAgents } = loadReaper();
+    const summary = pruneTerminatedAgents();
+
+    expect(summary.agentsPruned).toBe(1);
+    expect(readStore().agents.staleTerminated).toBeUndefined();
+  });
+
+  it('still prunes a legacy terminated agent using createdAt when terminatedAt is absent', () => {
+    writeStore({
+      legacyTerminated: {
+        agentId: 'legacyTerminated',
+        status: 'terminated',
+        createdAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+      },
+    });
+
+    const { pruneTerminatedAgents } = loadReaper();
+    const summary = pruneTerminatedAgents();
+
+    expect(summary.agentsPruned).toBe(1);
+    expect(readStore().agents.legacyTerminated).toBeUndefined();
+  });
+});
