@@ -8,6 +8,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, '..');
 const defaultConfigPath = resolve(process.cwd(), '.hive-flow/provider-concurrency.json');
 const API_PROVIDERS = new Set(['deepseek', 'openrouter']);
+const LOCAL_PROVIDERS = new Set(['lm-studio']);
 const CLI_PROVIDERS = new Map([
   ['anthropic-cli', ['claude']],
   ['codex-cli', ['codex']],
@@ -18,6 +19,9 @@ const PROVIDER_ENV = {
   deepseek: 'DEEPSEEK_API_KEY',
   openrouter: 'OPENROUTER_API_KEY',
 };
+const LOCAL_PROVIDER_ENV = {
+  'lm-studio': ['LM_STUDIO_API_URL', 'LM_STUDIO_BASE_URL'],
+};
 const DEFAULT_TASK = 'Provider concurrency probe: reply exactly PROVIDER_CONCURRENCY_PROBE_OK and do not call tools.';
 
 function usage() {
@@ -25,7 +29,7 @@ function usage() {
 
 Options:
   --providers a,b       Providers to probe. Default: auto-detect configured providers.
-  --max n               API provider first-pass cap, never above 150. Default: 150.
+  --max n               API/local provider first-pass cap, never above 150. Default: 150.
   --cli-max n           CLI provider cap, never above 10. Default: 10.
   --cooldown-ms n       Cooldown between narrowing probes. Default: 60000.
   --poll-ms n           Poll interval for task results. Default: 5000.
@@ -102,10 +106,38 @@ function executableExists(command) {
   }).status === 0;
 }
 
-function autoDetectProviders() {
+function localProviderUrl(provider) {
+  if (provider !== 'lm-studio') return undefined;
+  const configured = LOCAL_PROVIDER_ENV['lm-studio']
+    .map((name) => process.env[name])
+    .find((value) => typeof value === 'string' && value.trim());
+  return String(configured || 'http://localhost:1234/v1').replace(/\/+$/, '');
+}
+
+async function isLocalProviderAvailable(provider) {
+  const baseUrl = localProviderUrl(provider);
+  if (!baseUrl || typeof fetch !== 'function') return false;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1000);
+  try {
+    const response = await fetch(`${baseUrl}/models`, { signal: controller.signal });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function autoDetectProviders() {
   const providers = [];
   for (const [provider, envName] of Object.entries(PROVIDER_ENV)) {
     if (process.env[envName]) providers.push(provider);
+  }
+  for (const [provider, envNames] of Object.entries(LOCAL_PROVIDER_ENV)) {
+    if (envNames.some((name) => process.env[name]) || await isLocalProviderAvailable(provider)) {
+      providers.push(provider);
+    }
   }
   for (const [provider, commands] of CLI_PROVIDERS.entries()) {
     if (commands.some(executableExists)) providers.push(provider);
@@ -114,6 +146,7 @@ function autoDetectProviders() {
 }
 
 function providerKind(provider) {
+  if (LOCAL_PROVIDERS.has(provider)) return 'local';
   return CLI_PROVIDERS.has(provider) ? 'cli' : 'api';
 }
 
@@ -320,14 +353,14 @@ function writeProbeConfig(path, results, options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const providers = options.providers?.length ? options.providers : autoDetectProviders();
+  const providers = options.providers?.length ? options.providers : await autoDetectProviders();
   if (providers.length === 0) {
     throw new Error('No configured providers detected. Set provider API keys, install CLI providers, or pass --providers.');
   }
   const tools = await loadAgentTools();
   const results = [];
   for (const provider of providers) {
-    if (!API_PROVIDERS.has(provider) && !CLI_PROVIDERS.has(provider)) {
+    if (!API_PROVIDERS.has(provider) && !LOCAL_PROVIDERS.has(provider) && !CLI_PROVIDERS.has(provider)) {
       throw new Error(`Unsupported provider '${provider}' for concurrency probing.`);
     }
     console.error(`[probe] ${provider}: starting ${providerKind(provider)} provider probe`);

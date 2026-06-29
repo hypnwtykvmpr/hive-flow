@@ -42,6 +42,10 @@ vi.mock('@hive-flow/providers', () => ({
     if (provider === 'codex-cli') return 'gpt-5.5';
     if (provider === 'gemini-cli') return 'gemini-3.5-flash';
     if (provider === 'cursor-cli') return 'auto';
+    if (provider === 'lm-studio') {
+      if (!model || model === 'mini' || model === 'sonnet' || model === 'opus' || model === 'inherit') return 'local-model';
+      return model;
+    }
     if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
     if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-8';
     return model;
@@ -55,6 +59,10 @@ vi.mock('@hive-flow/providers', () => ({
     if (provider === 'codex-cli') return 'gpt-5.5';
     if (provider === 'gemini-cli') return 'gemini-3.5-flash';
     if (provider === 'cursor-cli') return 'auto';
+    if (provider === 'lm-studio') {
+      if (!model || model === 'mini' || model === 'sonnet' || model === 'opus' || model === 'inherit') return 'local-model';
+      return model;
+    }
     if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
     if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-8';
     return model;
@@ -274,6 +282,24 @@ describe('agent_spawn handler model normalization', () => {
     expect(persisted.provider).toBe('codex-cli');
     expect(persisted.model).toBe('opus');
     expect(persisted.resolvedModel).toBe('gpt-5.5');
+  });
+
+  it('accepts LM Studio as a local provider and persists exact local ids as resolvedModel', async () => {
+    const { getPersistedStore } = setupStoreMocks(makeStore());
+
+    const result = await spawnHandler({
+      agentType: 'researcher',
+      provider: 'LM-STUDIO',
+      model: ' local/llama-3.2 ',
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.provider).toBe('lm-studio');
+    expect(result.resolvedModel).toBe('local/llama-3.2');
+    const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord;
+    expect(persisted.provider).toBe('lm-studio');
+    expect(persisted.model).toBe('sonnet');
+    expect(persisted.resolvedModel).toBe('local/llama-3.2');
   });
 });
 

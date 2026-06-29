@@ -18,7 +18,7 @@ export const CLAUDE_ALIASES = ['haiku', 'sonnet', 'opus', 'inherit', 'mini'] as 
 export type ClaudeAlias = typeof CLAUDE_ALIASES[number];
 
 /** Provider names that support alias resolution */
-export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
+export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter' | 'lm-studio';
 
 /**
  * Maps Claude aliases to provider-native model names.
@@ -73,6 +73,13 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
     'mini': undefined,
     'inherit': undefined,
   },
+  'lm-studio': {
+    'opus': 'local-model',
+    'sonnet': 'local-model',
+    'haiku': 'local-model',
+    'mini': 'local-model',
+    'inherit': 'local-model',
+  },
 };
 
 /** Default models when no model is specified at all */
@@ -85,6 +92,7 @@ export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
   // DO-NOT-REVERT: human-selected OpenRouter default is MiniMax M3.
   // Xiaomi may remain an allowlisted fallback, but it is not the default.
   'openrouter': 'minimax/minimax-m3',
+  'lm-studio': 'local-model',
 };
 
 /**
@@ -127,6 +135,9 @@ export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
     'xiaomi/mimo-v2.5-pro', 'x-ai/grok-4.3', 'minimax/minimax-m3',
     'moonshotai/kimi-k2.6', 'qwen/qwen3.7-plus', 'z-ai/glm-5.2',
     'qwen/qwen3.6-plus', 'nvidia/nemotron-3-super-120b-a12b:free', 'deepseek/deepseek-v4-flash',
+  ]),
+  'lm-studio': new Set([
+    'local-model',
   ]),
 };
 
@@ -182,6 +193,18 @@ export function resolveProviderModel(
       return undefined;
     }
     return canonicalModel;
+  }
+
+  // LM Studio: local OpenAI-compatible server. Operators load arbitrary models
+  // in the LM Studio app, so direct model names pass through. Claude-style
+  // aliases collapse to the local default placeholder; users can pass the exact
+  // loaded model id when LM Studio requires one.
+  if (cliProvider === 'lm-studio') {
+    const requestedModel = typeof userModel === 'string' ? userModel.trim() : userModel;
+    const lower = typeof requestedModel === 'string' ? requestedModel.toLowerCase() : requestedModel;
+    if (!requestedModel || requestedModel === '' || lower === 'inherit') return PROVIDER_DEFAULTS['lm-studio'];
+    if (typeof lower === 'string' && isClaudeAlias(lower)) return PROVIDER_DEFAULTS['lm-studio'];
+    return requestedModel;
   }
 
   // ── Per-provider enforcement (ADR-026): alias schema is MANDATORY, not advisory ──
@@ -330,5 +353,11 @@ function isClaudeAlias(model: string): model is ClaudeAlias {
 }
 
 function isCliProvider(provider: string): provider is CLIProviderName {
-  return provider === 'anthropic-cli' || provider === 'gemini-cli' || provider === 'codex-cli' || provider === 'cursor-cli' || provider === 'deepseek' || provider === 'openrouter';
+  return provider === 'anthropic-cli'
+    || provider === 'gemini-cli'
+    || provider === 'codex-cli'
+    || provider === 'cursor-cli'
+    || provider === 'deepseek'
+    || provider === 'openrouter'
+    || provider === 'lm-studio';
 }

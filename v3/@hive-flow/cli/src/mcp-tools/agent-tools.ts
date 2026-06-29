@@ -66,8 +66,8 @@ export interface AgentTaskRetryContext {
 export const AGENT_TASK_RETRY_CONTEXT = Symbol('hive-flow.agent-task.retry-context');
 
 // First-class providers: Cursor, Codex, Gemini alongside Anthropic
-export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter';
-const AGENT_PROVIDERS = new Set<AgentProvider>(['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter']);
+export type AgentProvider = 'anthropic' | 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter' | 'lm-studio';
+const AGENT_PROVIDERS = new Set<AgentProvider>(['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter', 'lm-studio']);
 const AGENT_MODEL_ALIASES = new Set<AgentModel>(['sonnet', 'opus', 'mini', 'inherit']);
 const AGENT_MODES = new Set<AgentMode>(['full', 'read-only', 'read-only-with-artifacts']);
 const AGENT_MODE_RANK: Record<AgentMode, number> = {
@@ -106,7 +106,7 @@ export interface AgentRecord {
   terminatedAt?: string;
   domain?: string;
   model?: AgentModel;  // Model tier assigned to this agent
-  provider?: AgentProvider;  // LLM provider (anthropic, gemini-cli, codex-cli, cursor-cli)
+  provider?: AgentProvider;  // LLM provider (anthropic, CLI/API providers, local providers)
   resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.5-flash, gpt-5.5)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
   ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
@@ -1171,8 +1171,8 @@ export const agentTools: MCPTool[] = [
         domain: { type: 'string', description: 'Agent domain' },
         provider: {
           type: 'string',
-          enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter'],
-          description: 'LLM provider (default: anthropic). anthropic-cli, Codex, Gemini, Cursor, OpenRouter are first-class CLI providers.',
+          enum: ['anthropic', 'anthropic-cli', 'gemini-cli', 'codex-cli', 'cursor-cli', 'deepseek', 'openrouter', 'lm-studio'],
+          description: 'LLM provider (default: anthropic). anthropic-cli, Codex, Gemini, Cursor, DeepSeek, OpenRouter, and LM Studio are first-class providers.',
         },
         model: {
           type: 'string',
@@ -1896,7 +1896,7 @@ export const agentTools: MCPTool[] = [
         }
         if (agent.provider === 'anthropic') {
           return {
-            error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter. Use Claude Code Task tool for native anthropic agents.",
+            error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter, lm-studio. Use Claude Code Task tool for native anthropic agents.",
           };
         }
         const keyPreflight = await providerKeyPreflight(agent.provider, process.env);

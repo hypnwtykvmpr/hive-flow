@@ -842,6 +842,9 @@ const PROVIDER_TOKEN_LIMITS = {
   'cursor-cli':    { maxTokens: 200000,  maxEntries: 50 },
   'deepseek':      { maxTokens: 1000000, maxEntries: 100 },
   'openrouter':    { maxTokens: 128000,  maxEntries: 30 },
+  // LM Studio serves arbitrary local OpenAI-compatible models. Keep the
+  // bridge budget conservative unless a model-specific/local probe says more.
+  'lm-studio':     { maxTokens: 32000,   maxEntries: 30 },
 };
 
 // DO-NOT-REVERT: strict API providers must receive the guarded bridge web tools.
@@ -2001,6 +2004,7 @@ async function getProviderDefaults() {
     // DO-NOT-REVERT: human-selected OpenRouter default is MiniMax M3. Xiaomi
     // may remain an allowlisted fallback, but it is not the default.
     'openrouter': 'minimax/minimax-m3',
+    'lm-studio': 'local-model',
   };
   return _providerDefaults;
 }
@@ -5650,6 +5654,7 @@ async function main() {
     'cursor-cli': providerModule.CursorCLIProvider,
     'deepseek': providerModule.DeepSeekProvider,
     'openrouter': providerModule.OpenRouterProvider,
+    'lm-studio': providerModule.LMStudioProvider,
   };
 
   const ProviderClass = providerClasses[providerName];

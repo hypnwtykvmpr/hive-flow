@@ -303,6 +303,7 @@ describe('provider bridge context helpers', () => {
       maxTokens: 1_000_000,
       maxEntries: 100,
     });
+    expect(bridge.getProviderLimits('lm-studio')).toMatchObject({ maxTokens: 32_000, maxEntries: 30 });
     expect(bridge.getProviderLimits('codex-cli')).toMatchObject({ maxTokens: 400_000, maxEntries: 50 });
     expect(bridge.getProviderLimits('unknown-provider', 'unknown-model')).toMatchObject({
       maxTokens: 128_000,

@@ -59,6 +59,10 @@ describe('resolveProviderModel', () => {
       expect(resolveProviderModel('deepseek', 'mini')).toBe('deepseek-v4-flash');
     });
 
+    it('maps mini to the local default for lm-studio', () => {
+      expect(resolveProviderModel('lm-studio', 'mini')).toBe('local-model');
+    });
+
     it('maps mini to gemini-3.5-flash for gemini-cli', () => {
       expect(resolveProviderModel('gemini-cli', 'mini')).toBe('gemini-3.5-flash');
     });
@@ -113,6 +117,11 @@ describe('resolveProviderModel', () => {
     it('returns provider default for empty string model', () => {
       expect(resolveProviderModel('gemini-cli', '')).toBe('gemini-3.5-flash');
     });
+
+    it('returns local-model for lm-studio with undefined or empty model', () => {
+      expect(resolveProviderModel('lm-studio', undefined)).toBe('local-model');
+      expect(resolveProviderModel('lm-studio', '')).toBe('local-model');
+    });
   });
 
   describe('auto model handling', () => {
@@ -148,6 +157,11 @@ describe('resolveProviderModel', () => {
       expect(resolveProviderModel('cursor-cli', 'composer-1.5')).toBe('auto');
       expect(resolveProviderModel('cursor-cli', 'gpt-5.3-codex-xhigh')).toBe('auto');
       expect(resolveProviderModel('cursor-cli', 'some-unknown-model')).toBe('auto');
+    });
+
+    it('passes through exact local model ids for lm-studio', () => {
+      expect(resolveProviderModel('lm-studio', 'llama-3.2-3b-instruct')).toBe('llama-3.2-3b-instruct');
+      expect(resolveProviderModel('lm-studio', 'local/qwen3')).toBe('local/qwen3');
     });
   });
 
@@ -212,6 +226,7 @@ describe('resolveProviderModel', () => {
       expect(PROVIDER_ALIAS_MAP).toHaveProperty('codex-cli');
       expect(PROVIDER_ALIAS_MAP).toHaveProperty('cursor-cli');
       expect(PROVIDER_ALIAS_MAP).toHaveProperty('deepseek');
+      expect(PROVIDER_ALIAS_MAP).toHaveProperty('lm-studio');
     });
 
     it('exports KNOWN_PROVIDER_MODELS as Sets', () => {
@@ -219,6 +234,12 @@ describe('resolveProviderModel', () => {
       expect(KNOWN_PROVIDER_MODELS['codex-cli']).toBeInstanceOf(Set);
       expect(KNOWN_PROVIDER_MODELS['cursor-cli']).toBeInstanceOf(Set);
       expect(KNOWN_PROVIDER_MODELS['deepseek']).toBeInstanceOf(Set);
+      expect(KNOWN_PROVIDER_MODELS['lm-studio']).toBeInstanceOf(Set);
+      expect(KNOWN_PROVIDER_MODELS['lm-studio'].has('local-model')).toBe(true);
+    });
+
+    it('exports lm-studio as a provider default', () => {
+      expect(PROVIDER_DEFAULTS['lm-studio']).toBe('local-model');
     });
   });
 
@@ -336,6 +357,23 @@ describe('resolveProviderModel', () => {
     });
     it('real-world: deepseek + inherit → deepseek-v4-pro', () => {
       expect(resolveProviderModel('deepseek', 'inherit')).toBe('deepseek-v4-pro');
+    });
+
+    // lm-studio (5): aliases collapse to a local placeholder, exact ids pass through.
+    it('real-world: lm-studio + opus → local-model', () => {
+      expect(resolveProviderModel('lm-studio', 'opus')).toBe('local-model');
+    });
+    it('real-world: lm-studio + sonnet → local-model', () => {
+      expect(resolveProviderModel('lm-studio', 'sonnet')).toBe('local-model');
+    });
+    it('real-world: lm-studio + haiku → local-model', () => {
+      expect(resolveProviderModel('lm-studio', 'haiku')).toBe('local-model');
+    });
+    it('real-world: lm-studio + mini → local-model', () => {
+      expect(resolveProviderModel('lm-studio', 'mini')).toBe('local-model');
+    });
+    it('real-world: lm-studio + inherit → local-model', () => {
+      expect(resolveProviderModel('lm-studio', 'inherit')).toBe('local-model');
     });
 
     // openrouter (5)
