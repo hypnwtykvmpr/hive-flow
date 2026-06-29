@@ -76,7 +76,7 @@ export interface HiveAuditEntry {
   workerId?: string;
 }
 
-export type HivePermissionRequestStatus = 'pending' | 'approved' | 'denied' | 'redirected' | 'halted';
+export type HivePermissionRequestStatus = 'pending' | 'approved' | 'denied' | 'redirected' | 'redirect-failed' | 'halted';
 export type HivePermissionDecision = 'approve' | 'deny' | 'redirect' | 'halt';
 
 export interface HivePermissionRequest {
@@ -99,6 +99,7 @@ export interface HivePermissionRequest {
     reason?: string;
     guidance?: string;
     redirectTask?: string;
+    redirectError?: string;
   };
 }
 

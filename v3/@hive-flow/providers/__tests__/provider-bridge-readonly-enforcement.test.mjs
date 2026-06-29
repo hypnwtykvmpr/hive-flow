@@ -196,6 +196,28 @@ describe('provider bridge read-only mode enforcement', () => {
     });
   });
 
+  it('reports invalid artifactDir degradation distinctly from intentional read-only mode', () => {
+    const root = makeProjectRoot('hfmode-artifact-invalid-dir-');
+    roots.push(root);
+    const artifactDir = join(root, '.tmp-audit', 'agent-artifacts');
+    mkdirSync(artifactDir, { recursive: true });
+    writeStore(root, 'mode-agent', {
+      mode: 'read-only-with-artifacts',
+      artifactDir,
+    });
+    rmSync(artifactDir, { recursive: true, force: true });
+
+    const result = runTool(root, 'write_file', { path: join(root, '.tmp-audit', 'agent-artifacts', 'report.md'), content: '# report\n' });
+
+    expect(result).toMatchObject({
+      tool: 'write_file',
+      status: 'denied',
+      denyReason: 'agent-mode-artifact-dir-invalid',
+    });
+    expect(result.error).toMatch(/read-only-with-artifacts mode/i);
+    expect(result.error).toMatch(/artifactDir is invalid or unavailable/i);
+  });
+
   it.each([
     ['write_file', 'report.md', '# report\n'],
     ['write_file', 'data.JSON', '{"ok":true}\n'],

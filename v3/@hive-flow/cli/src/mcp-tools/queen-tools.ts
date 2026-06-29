@@ -193,10 +193,16 @@ function stringValue(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function isValidPermissionRequestId(value: string): boolean {
+  return /^permission-[A-Za-z0-9._:-]{1,128}$/.test(value);
+}
+
 function permissionRequestIdFromPayload(payload: Record<string, unknown>): string {
   const existing = stringValue(payload.requestId);
+  if (isValidPermissionRequestId(existing)) return existing;
+
   const denyCode = stringValue(payload.denyCode);
-  if (denyCode && (!existing || /^permission-[0-9a-f]{16}$/i.test(existing))) {
+  if (denyCode) {
     const material = JSON.stringify({
       taskId: stringValue(payload.taskId),
       agentId: stringValue(payload.agentId),
@@ -205,7 +211,6 @@ function permissionRequestIdFromPayload(payload: Record<string, unknown>): strin
     });
     return `permission-${createHash('sha256').update(material).digest('hex').slice(0, 16)}`;
   }
-  if (existing) return existing;
   const material = JSON.stringify({
     taskId: stringValue(payload.taskId),
     agentId: stringValue(payload.agentId),
@@ -213,6 +218,15 @@ function permissionRequestIdFromPayload(payload: Record<string, unknown>): strin
     denyReason: stringValue(payload.denyReason),
   });
   return `permission-${createHash('sha256').update(material).digest('hex').slice(0, 16)}`;
+}
+
+function permissionRequestDedupKey(request: HivePermissionRequest): string {
+  return JSON.stringify({
+    taskId: request.taskId,
+    agentId: request.agentId,
+    tool: request.tool,
+    deny: request.denyCode || request.denyReason,
+  });
 }
 
 function permissionStatusForDecision(decision: HivePermissionDecision): HivePermissionRequestStatus {
@@ -266,6 +280,7 @@ function readHivePermissionRequestLog(hive: HiveRecord): HivePermissionRequest[]
   if (!path || !existsSync(path)) return [];
   const requests: HivePermissionRequest[] = [];
   const seen = new Set<string>();
+  const seenStable = new Set<string>();
   for (const line of readFileSync(path, 'utf-8').split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -273,7 +288,10 @@ function readHivePermissionRequestLog(hive: HiveRecord): HivePermissionRequest[]
       const parsed = JSON.parse(trimmed) as Record<string, unknown>;
       const request = normalizePermissionRequestFromLog(parsed, hive);
       if (!request || seen.has(request.requestId)) continue;
+      const stableKey = permissionRequestDedupKey(request);
+      if (seenStable.has(stableKey)) continue;
       seen.add(request.requestId);
+      seenStable.add(stableKey);
       requests.push(request);
     } catch {
       // Ignore malformed append-only lines; the queen cannot adjudicate them.
@@ -1999,7 +2017,7 @@ const queenPermissionRequestsTool: MCPTool = {
       queenId: { type: 'string', description: 'Agent ID of the queen that owns the hive' },
       status: {
         type: 'string',
-        enum: ['pending', 'approved', 'denied', 'redirected', 'halted', 'all'],
+        enum: ['pending', 'approved', 'denied', 'redirected', 'redirect-failed', 'halted', 'all'],
         description: 'Optional request status filter; defaults to pending.',
       },
     },
@@ -2151,26 +2169,6 @@ const queenPermissionDecideTool: MCPTool = {
         });
       }
 
-      const decidedAt = new Date().toISOString();
-      request.status = permissionStatusForDecision(decision);
-      request.updatedAt = decidedAt;
-      request.decision = {
-        decision,
-        decidedAt,
-        decidedBy: queenId,
-        reason,
-        ...(guidance ? { guidance } : {}),
-        ...(redirectTask ? { redirectTask } : {}),
-      };
-
-      appendHiveAudit(hive, {
-        event: 'permission-reviewed',
-        detail: `Queen '${queenId}' ${decision}ed permission request '${requestId}': ${reason}`,
-        agentId: request.agentId,
-        workerId: request.workerId,
-      });
-      saveHive(hiveId, hive);
-
       return {
         success: true as const,
         hiveId,
@@ -2191,17 +2189,107 @@ const queenPermissionDecideTool: MCPTool = {
       }) as Record<string, unknown>;
     }
 
+    const finalized = await withHiveLock(hiveId, () => {
+      const hive = loadHive(hiveId);
+      if (!hive) {
+        return { success: false as const, error: `Hive '${hiveId}' not found.` };
+      }
+      if (hive.queenId !== queenId) {
+        return { success: false as const, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
+      }
+
+      const { requests, added } = mergeHivePermissionRequests(hive);
+      for (const addedRequest of added) {
+        appendHiveAudit(hive, {
+          event: 'permission-requested',
+          detail: `Worker permission request '${addedRequest.requestId}' for ${addedRequest.tool}: ${addedRequest.denyCode || addedRequest.denyReason}`,
+          agentId: addedRequest.agentId,
+          workerId: addedRequest.workerId,
+        });
+      }
+
+      const request = requests.find(item => item.requestId === requestId);
+      if (!request) {
+        if (added.length > 0) saveHive(hiveId, hive);
+        return { success: false as const, error: `Permission request '${requestId}' not found in hive '${hiveId}'.` };
+      }
+
+      const redirectFailed = Boolean(decision === 'redirect' && redirectDispatch && redirectDispatch.success === false);
+      const redirectError = redirectFailed
+        ? stringValue(redirectDispatch?.error)
+          || stringValue((redirectDispatch?.result as Record<string, unknown> | undefined)?.error)
+          || 'redirect dispatch failed'
+        : '';
+      const decidedAt = new Date().toISOString();
+      request.status = redirectFailed ? 'redirect-failed' : permissionStatusForDecision(decision);
+      request.updatedAt = decidedAt;
+      request.decision = {
+        decision,
+        decidedAt,
+        decidedBy: queenId,
+        reason,
+        ...(guidance ? { guidance } : {}),
+        ...(redirectTask ? { redirectTask } : {}),
+        ...(redirectFailed ? { redirectError } : {}),
+      };
+
+      appendHiveAudit(hive, {
+        event: 'permission-reviewed',
+        detail: redirectFailed
+          ? `Queen '${queenId}' redirect for permission request '${requestId}' failed: ${request.decision.redirectError}`
+          : `Queen '${queenId}' ${decision}ed permission request '${requestId}': ${reason}`,
+        agentId: request.agentId,
+        workerId: request.workerId,
+      });
+
+      const worker = request.workerId
+        ? hive.workers.find(item => item.workerId === request.workerId)
+        : hive.workers.find(item => item.agentId === request.agentId);
+      if (decision === 'halt' && worker && !redirectFailed) {
+        worker.status = 'terminated';
+        worker.terminatedAt = worker.terminatedAt || decidedAt;
+        appendHiveAudit(hive, {
+          event: 'worker-terminated',
+          detail: `Queen halted worker '${worker.workerId}' after permission request '${requestId}': ${reason}`,
+          agentId: worker.agentId,
+          workerId: worker.workerId,
+        });
+      }
+      saveHive(hiveId, hive);
+
+      return {
+        success: !redirectFailed as boolean,
+        hiveId,
+        queenId,
+        request,
+        ...(worker ? { workerId: worker.workerId, agentId: worker.agentId } : {}),
+        ...(redirectFailed ? { error: redirectError } : {}),
+      };
+    });
+
+    if (!('request' in finalized)) {
+      return {
+        success: false,
+        hiveId,
+        queenId,
+        requestId,
+        decision,
+        error: finalized.error,
+      };
+    }
+
     return {
-      success: true,
+      success: finalized.success,
       hiveId,
       queenId,
       requestId,
       decision,
-      status: response.request.status,
-      request: response.request,
+      status: finalized.request?.status,
+      request: finalized.request,
+      ...(!finalized.success ? { error: finalized.error || 'permission decision failed' } : {}),
       ...(decision === 'deny' ? { guidance, redirectionInstructions: guidance } : {}),
       ...(redirectDispatch ? { redirectDispatch } : {}),
-      ...(decision === 'approve' ? { approvalEffect: 'recorded; does not bypass sandbox, source, or control-plane gates' } : {}),
+      ...(decision === 'approve' && finalized.success ? { approvalEffect: 'recorded; does not bypass sandbox, source, or control-plane gates' } : {}),
     };
   },
 };

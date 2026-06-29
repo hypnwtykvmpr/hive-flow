@@ -55,6 +55,9 @@ vi.mock('../agent-tools.js', () => {
       name: 'agent_task',
       handler: async (input: Record<string, unknown>) => {
         mockAgentState.calls.task += 1;
+        if (!mockAgentState.store.agents[String(input.agentId)]) {
+          return { success: false, error: `Agent '${String(input.agentId)}' not found` };
+        }
         return { success: true, taskId: `task-${mockAgentState.calls.task}`, agentId: input.agentId, status: 'running' };
       },
     },
@@ -606,6 +609,66 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
   });
 
+  it('keeps a permission request retryable when queen redirect dispatch fails', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
+    const requestLine = {
+      kind: 'worker-permission-denial',
+      requestId: 'permission-test-redirect-fail',
+      taskId: 'task-permission-redirect-fail',
+      ts: new Date(0).toISOString(),
+      agentId: 'worker-agent-1',
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: "git subcommand 'mv' is not in the read-only allowlist",
+      denyCode: 'read-only-command-denied',
+    };
+    writeFileSync(join(root, '.hive-flow', 'hives', hive.hiveId, 'permission-requests.jsonl'), `${JSON.stringify(requestLine)}\n`, 'utf8');
+    delete mockAgentState.store.agents['worker-agent-1'];
+
+    const redirectResult = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-redirect-fail',
+      decision: 'redirect',
+      reason: 'Use safe read-only inspection instead of moving files.',
+      redirectTask: 'Inspect the file list with read_file/list_directory and summarize the required rename without mutating files.',
+    }) as Record<string, unknown>;
+
+    expect(redirectResult.success).toBe(false);
+    expect(redirectResult.status).toBe('redirect-failed');
+    expect(redirectResult.error).toMatch(/Agent 'worker-agent-1' not found/);
+    expect((redirectResult.redirectDispatch as Record<string, unknown>).success).toBe(false);
+    expect(mockAgentState.calls.task).toBe(1);
+
+    const persisted = loadHive(hive.hiveId)!;
+    expect(persisted.permissionRequests?.[0]).toMatchObject({
+      requestId: 'permission-test-redirect-fail',
+      status: 'redirect-failed',
+      decision: {
+        decision: 'redirect',
+        decidedBy: hive.queenId,
+        redirectTask: 'Inspect the file list with read_file/list_directory and summarize the required rename without mutating files.',
+        redirectError: "Agent 'worker-agent-1' not found",
+      },
+    });
+    expect(persisted.workers[0].status).toBe('error');
+
+    const retryResult = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-redirect-fail',
+      decision: 'deny',
+      reason: 'No live worker remains for redirect.',
+      guidance: 'Record the failed redirect and synthesize from durable evidence instead of retrying the denied tool.',
+    }) as Record<string, unknown>;
+    expect(retryResult).toMatchObject({
+      success: true,
+      status: 'denied',
+      guidance: 'Record the failed redirect and synthesize from durable evidence instead of retrying the denied tool.',
+    });
+  });
+
   it('deduplicates bridge-style permission requests by stable deny code', async () => {
     const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
     const lines = [
@@ -663,8 +726,7 @@ describe('D-32: queen in-process dispatch gate', () => {
     const requests = requestsResult.requests as Array<Record<string, unknown>>;
     const readOnlyRequests = requests.filter(request => request.denyCode === 'read-only-command-denied');
     expect(readOnlyRequests).toHaveLength(1);
-    expect(readOnlyRequests[0].requestId).not.toBe('permission-1111111111111111');
-    expect(readOnlyRequests[0].requestId).not.toBe('permission-2222222222222222');
+    expect(readOnlyRequests[0].requestId).toBe('permission-1111111111111111');
     expect(requests.some(request => request.denyCode === 'sandbox-unavailable')).toBe(true);
   });
 

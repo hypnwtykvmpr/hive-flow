@@ -2289,6 +2289,12 @@ export function bridgeReadAgentMode() {
 function bridgeAgentModeDenyReason(toolName, modeInfo = bridgeReadAgentMode()) {
   const mode = modeInfo?.mode;
   if (mode === 'read-only' && BRIDGE_AGENT_MODE_RESTRICTED_TOOLS.has(toolName)) {
+    if (modeInfo?.reason === 'invalid-artifact-dir') {
+      return {
+        denyReason: 'agent-mode-artifact-dir-invalid',
+        error: `Tool '${toolName}' is denied because this agent is configured for read-only-with-artifacts mode, but its persisted artifactDir is invalid or unavailable.`,
+      };
+    }
     return {
       denyReason: 'agent-mode-read-only',
       error: `Tool '${toolName}' is denied because this agent is in read-only mode.`,
