@@ -20,6 +20,7 @@ import {
   recordMcpCallComplete,
   recordMcpCallFailed,
 } from './scoreboard-instrumentation.js';
+import { checkModelEnforcement } from './mcp-enforcement-gate.js';
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
@@ -796,15 +797,17 @@ async function withBridgeLock<T>(agentId: string, fn: () => T | Promise<T>, proj
  * bypassing the haiku ban via storage. This helper closes that gap.
  */
 function validateAgentModelForTask(agent: AgentRecord): { ok: boolean; error?: string } {
-  // Cast to string for comparison: 'haiku' is not in the AgentModel union, but
-  // legacy / out-of-band-edited persisted state may contain it.
-  if ((agent.model as string | undefined) === 'haiku') {
+  const provider = typeof agent.provider === 'string' ? agent.provider : undefined;
+  const model = typeof agent.model === 'string' ? agent.model : undefined;
+
+  const enforcement = checkModelEnforcement('agent_task', { provider, model });
+  if (!enforcement.allowed) {
     return {
       ok: false,
-      error: 'AGENT MODEL ENFORCEMENT: agent has legacy persisted model "haiku" which is prohibited. Re-spawn with sonnet/opus/mini.',
+      error: `AGENT MODEL ENFORCEMENT: persisted agent provider/model violates task policy: ${enforcement.reason} Re-spawn with an allowed provider/model pair.`,
     };
   }
-  // Future: enforce other persisted-state policies here
+
   return { ok: true };
 }
 

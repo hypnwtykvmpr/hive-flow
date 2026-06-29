@@ -8,11 +8,13 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
   readdirSync: vi.fn(),
+  realpathSync: Object.assign(vi.fn((p: string) => p), { native: vi.fn((p: string) => p) }),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
   rmdirSync: vi.fn(),
   rmSync: vi.fn(),
   renameSync: vi.fn(),
+  statSync: vi.fn(() => ({ isDirectory: () => true })),
   unlinkSync: vi.fn(),
 }));
 
@@ -433,12 +435,31 @@ describe('agent_task_async handler', () => {
     expect(result.success).toBe(false);
     expect(result.agentId).toBe(agent.agentId);
     expect(typeof result.error).toBe('string');
-    expect(result.error as string).toMatch(/legacy persisted model "haiku"/i);
+    expect(result.error as string).toMatch(/haiku model prohibited/i);
 
     // Agent must remain idle (no busy transition for a rejected task).
     expect(getPersistedStore().agents[agent.agentId].status).toBe('idle');
 
     // Bridge must never have been spawned.
+    expect((spawn as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+  });
+
+  it('rejects a stale persisted provider-native model that violates task-time model policy', async () => {
+    const agent = makeAgent({
+      status: 'idle',
+      provider: 'codex-cli',
+      model: 'gpt-4o',
+    });
+    const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(12345);
+
+    const result = await asyncHandler({ agentId: agent.agentId, task: 'stale model policy' }) as Record<string, unknown>;
+
+    expect(result.success).toBe(false);
+    expect(result.agentId).toBe(agent.agentId);
+    expect(typeof result.error).toBe('string');
+    expect(result.error as string).toMatch(/codex-cli requires gpt-5\.5/i);
+    expect(getPersistedStore().agents[agent.agentId].status).toBe('idle');
     expect((spawn as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
   });
 
