@@ -289,6 +289,106 @@ describe('sentinel agent task rewake', () => {
     }
   });
 
+  it('does not drain another repo notification from the same owner session wake queue', () => {
+    const rootA = makeTempProject();
+    const rootB = makeTempProject();
+    const home = makeTempProject();
+    try {
+      const sessionInput = { session_id: 'shared-operator-session', client_kind: 'claude-code' };
+      const globalPending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor(sessionInput, {}),
+        'pending-notifications.jsonl',
+      );
+      mkdirSync(dirname(globalPending), { recursive: true });
+      writeFileSync(
+        globalPending,
+        [
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-root-a',
+            projectRoot: rootA,
+            targetAgent: 'claude',
+            summary: '[TASK COMPLETE: task-root-a] done',
+          }),
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-root-b',
+            projectRoot: rootB,
+            targetAgent: 'claude',
+            summary: '[TASK COMPLETE: task-root-b] done',
+          }),
+        ].join('\n') + '\n',
+      );
+
+      const output = drain.drainNotifications(rootA, sessionInput, { HIVE_FLOW_HOME: home });
+      const context = output.hookSpecificOutput.additionalContext;
+      expect(context).toContain('task-root-a');
+      expect(context).not.toContain('task-root-b');
+
+      const remaining = readFileSync(globalPending, 'utf8');
+      expect(remaining).toContain('task-root-b');
+      expect(remaining).not.toContain('task-root-a');
+    } finally {
+      rmSync(rootA, { recursive: true, force: true });
+      rmSync(rootB, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('drains legacy session wake notifications only when local task evidence exists', () => {
+    const root = makeTempProject();
+    const home = makeTempProject();
+    try {
+      const sessionInput = { session_id: 'legacy-shared-session', client_kind: 'claude-code' };
+      writeTracking(root, 'task-local-legacy', {
+        taskId: 'task-local-legacy',
+        agentId: 'agent-local',
+        ownerClientKind: 'claude-code',
+        ownerSessionId: 'legacy-shared-session',
+      });
+      const globalPending = join(
+        home,
+        'wake',
+        'sessions',
+        sessionKeyFor(sessionInput, {}),
+        'pending-notifications.jsonl',
+      );
+      mkdirSync(dirname(globalPending), { recursive: true });
+      writeFileSync(
+        globalPending,
+        [
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-local-legacy',
+            targetAgent: 'claude',
+            summary: '[TASK COMPLETE: task-local-legacy] done',
+          }),
+          JSON.stringify({
+            kind: 'task',
+            taskId: 'task-foreign-legacy',
+            targetAgent: 'claude',
+            summary: '[TASK COMPLETE: task-foreign-legacy] done',
+          }),
+        ].join('\n') + '\n',
+      );
+
+      const output = drain.drainNotifications(root, sessionInput, { HIVE_FLOW_HOME: home });
+      const context = output.hookSpecificOutput.additionalContext;
+      expect(context).toContain('task-local-legacy');
+      expect(context).not.toContain('task-foreign-legacy');
+
+      const remaining = readFileSync(globalPending, 'utf8');
+      expect(remaining).toContain('task-foreign-legacy');
+      expect(remaining).not.toContain('task-local-legacy');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('surfaces queenless worker permission denials but keeps hive-scoped denials with queens', () => {
     const root = makeTempProject();
     try {

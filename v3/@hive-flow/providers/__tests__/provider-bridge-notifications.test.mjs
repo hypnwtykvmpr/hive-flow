@@ -111,6 +111,8 @@ describe('provider bridge task completion notifications', () => {
     const sessionPendingText = readFileSync(sessionPending, 'utf8');
     expect(localPendingText).toContain(taskId);
     expect(sessionPendingText).toContain(taskId);
+    expect(localPendingText).toContain(`"projectRoot":"${projectRoot}"`);
+    expect(sessionPendingText).toContain(`"projectRoot":"${projectRoot}"`);
     expect(sessionPendingText).toContain('"targetAgent":"codex"');
     expect(sessionPendingText).not.toContain('[REDACTED]');
     expect(existsSync(join(localDataDir, `task-${taskId}.notified`))).toBe(true);
@@ -154,7 +156,9 @@ describe('provider bridge task completion notifications', () => {
       'pending-notifications.jsonl',
     ), 'utf8');
     expect(localPending).toContain('"targetAgent":"claude"');
+    expect(localPending).toContain(`"projectRoot":"${projectRoot}"`);
     expect(sessionPending).toContain('"targetAgent":"claude"');
+    expect(sessionPending).toContain(`"projectRoot":"${projectRoot}"`);
   });
 
   it('uses Codex session id before conflicting Claude/Hive session env values', () => {
@@ -526,9 +530,11 @@ describe('provider bridge task completion notifications', () => {
     const auditText = readFileSync(join(projectRoot, '.hive-flow', 'data', 'provider-permission-denials.jsonl'), 'utf8');
 
     expect(localPending).toContain('"kind":"worker-permission-denial"');
+    expect(localPending).toContain(`"projectRoot":"${projectRoot}"`);
     expect(localPending).toContain('"targetAgent":"codex"');
     expect(localPending).toContain('Owning parent should redirect the worker');
     expect(sessionPending).toContain('"kind":"worker-permission-denial"');
+    expect(sessionPending).toContain(`"projectRoot":"${projectRoot}"`);
     expect(sessionPending).toContain('"targetAgent":"codex"');
     expect(existsSync(join(
       hiveHome,
@@ -538,6 +544,7 @@ describe('provider bridge task completion notifications', () => {
       `task-${taskId}.${denied.permissionRequest.requestId}.permission-denial`,
     ))).toBe(true);
     expect(auditText).toContain('"kind":"worker-permission-denial"');
+    expect(auditText).toContain(`"projectRoot":"${projectRoot}"`);
     expect(auditText).toContain('"agentId":"standalone-provider-agent"');
     expect(auditText).toContain('"tool":"run_shell"');
     expect(auditText).toContain('Owning parent should redirect the worker');

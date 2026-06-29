@@ -111,6 +111,7 @@ export interface AgentRecord {
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
   ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
   ownerClientKind?: Exclude<OperatorClientKind, 'unknown'>;  // Owning operator lane for completion routing
+  projectRoot?: string;  // Effective project root used when this agent was spawned
   currentTaskPid?: number;  // Provider bridge child pid for read-side liveness checks
   currentTaskId?: string;  // In-flight taskId — resolves to .hive-flow/tasks/<id>.json tracking (deadline/result) for the reaper
   taskId?: string; // Legacy mission-assignment task pointer; cleared on terminal/stale proof
@@ -242,23 +243,44 @@ function isPathInside(parent: string, child: string): boolean {
   return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel));
 }
 
-function projectRootRealPath(): string {
+function projectRootRealPath(projectRoot = process.cwd()): string {
   try {
-    return realpathSync.native(process.cwd());
+    return realpathSync.native(projectRoot);
   } catch {
-    return resolve(process.cwd());
+    return resolve(projectRoot);
   }
 }
 
-function validateAgentArtifactDir(input: unknown): ArtifactDirParseResult {
+function resolveProjectRootFromInput(input: Record<string, unknown> | null | undefined): { ok: true; projectRoot: string } | { ok: false; error: string } {
+  const raw = input && typeof input === 'object'
+    ? (input.projectRoot ?? input.project_root ?? input.cwd ?? input.currentWorkingDirectory ?? input.current_working_directory)
+    : undefined;
+  if (raw !== undefined && (typeof raw !== 'string' || !raw.trim())) {
+    return { ok: false, error: 'projectRoot/cwd must be a non-empty string when provided' };
+  }
+  const candidate = typeof raw === 'string' && raw.trim()
+    ? (isAbsolute(raw.trim()) ? resolve(raw.trim()) : resolve(process.cwd(), raw.trim()))
+    : process.cwd();
+  try {
+    const stats = statSync(candidate);
+    if (!stats.isDirectory()) {
+      return { ok: false, error: `projectRoot/cwd '${String(raw)}' must be an existing directory` };
+    }
+    return { ok: true, projectRoot: realpathSync.native(candidate) };
+  } catch {
+    return { ok: false, error: `projectRoot/cwd '${String(raw ?? candidate)}' must be an existing directory` };
+  }
+}
+
+function validateAgentArtifactDir(input: unknown, projectRoot = process.cwd()): ArtifactDirParseResult {
   if (typeof input !== 'string' || !input.trim()) {
     return {
       ok: false,
       error: 'artifactDir is required for mode read-only-with-artifacts',
     };
   }
-  const projectRoot = projectRootRealPath();
-  const candidate = isAbsolute(input) ? resolve(input) : resolve(projectRoot, input);
+  const realProjectRoot = projectRootRealPath(projectRoot);
+  const candidate = isAbsolute(input) ? resolve(input) : resolve(realProjectRoot, input);
   let realCandidate: string;
   try {
     const stats = statSync(candidate);
@@ -270,13 +292,13 @@ function validateAgentArtifactDir(input: unknown): ArtifactDirParseResult {
     return { ok: false, error: `artifactDir '${input}' must be an existing directory` };
   }
 
-  if (realCandidate === projectRoot) {
+  if (realCandidate === realProjectRoot) {
     return { ok: false, error: 'artifactDir must be a dedicated subdirectory, not the project root' };
   }
-  if (!isPathInside(projectRoot, realCandidate)) {
+  if (!isPathInside(realProjectRoot, realCandidate)) {
     return { ok: false, error: 'artifactDir must resolve inside the current project' };
   }
-  if (isProtectedWritePath(realCandidate, projectRoot)) {
+  if (isProtectedWritePath(realCandidate, realProjectRoot)) {
     return { ok: false, error: 'artifactDir must not resolve to a protected path' };
   }
   return { ok: true, artifactDir: realCandidate };
@@ -286,13 +308,13 @@ function stricterAgentMode(a: AgentMode, b: AgentMode): AgentMode {
   return AGENT_MODE_RANK[a] >= AGENT_MODE_RANK[b] ? a : b;
 }
 
-function normalizePersistedAgentMode(record: unknown): { mode: AgentMode; artifactDir?: string } {
+function normalizePersistedAgentMode(record: unknown, projectRoot = process.cwd()): { mode: AgentMode; artifactDir?: string } {
   if (!record || typeof record !== 'object') return { mode: 'full' };
   const mode = (record as AgentRecord).mode;
   if (mode === undefined) return { mode: 'full' };
   if (!AGENT_MODES.has(mode as AgentMode)) return { mode: 'read-only' };
   if (mode === 'read-only-with-artifacts') {
-    const artifactResult = validateAgentArtifactDir((record as AgentRecord).artifactDir);
+    const artifactResult = validateAgentArtifactDir((record as AgentRecord).artifactDir, projectRoot);
     if (!artifactResult.ok) return { mode: 'read-only' };
     return { mode, artifactDir: artifactResult.artifactDir };
   }
@@ -303,11 +325,11 @@ function persistedParentAgentIdFromEnv(): string | null {
   return sanitizePathId(process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '', 64) || null;
 }
 
-function readPersistedParentAgentRecord(): { parentAgentId: string | null; record?: AgentRecord } {
+function readPersistedParentAgentRecord(projectRoot = process.cwd()): { parentAgentId: string | null; record?: AgentRecord } {
   const parentAgentId = persistedParentAgentIdFromEnv();
   if (!parentAgentId) return { parentAgentId: null };
   try {
-    const path = getAgentPath();
+    const path = getAgentPath(projectRoot);
     if (!existsSync(path)) return { parentAgentId };
     const store = JSON.parse(readFileSync(path, 'utf-8')) as AgentStore;
     const parentRecord = store.agents?.[parentAgentId];
@@ -317,19 +339,20 @@ function readPersistedParentAgentRecord(): { parentAgentId: string | null; recor
   }
 }
 
-function readPersistedParentAgentMode(): { mode: AgentMode; artifactDir?: string } {
-  const parent = readPersistedParentAgentRecord();
+function readPersistedParentAgentMode(projectRoot = process.cwd()): { mode: AgentMode; artifactDir?: string } {
+  const parent = readPersistedParentAgentRecord(projectRoot);
   if (!parent.parentAgentId) return { mode: 'full' };
   if (!parent.record) return { mode: 'read-only' };
-  return normalizePersistedAgentMode(parent.record);
+  return normalizePersistedAgentMode(parent.record, projectRoot);
 }
 
 export function resolveOwnerStampForAgentCreation(
   input: Record<string, unknown> | null | undefined = null,
   context: Record<string, unknown> | null | undefined = null,
   surface = 'agent',
+  projectRoot = process.cwd(),
 ): OwnerStampResult {
-  const parent = readPersistedParentAgentRecord();
+  const parent = readPersistedParentAgentRecord(projectRoot);
   if (!parent.parentAgentId) {
     return resolveOwnerStampOrError(input, process.env, context, surface);
   }
@@ -371,7 +394,7 @@ function artifactDirInsideParent(childArtifactDir: string, parentArtifactDir: st
   return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel));
 }
 
-export function resolveEffectiveAgentModeForSpawn(input: Record<string, unknown>): EffectiveAgentModeResult {
+export function resolveEffectiveAgentModeForSpawn(input: Record<string, unknown>, projectRoot = process.cwd()): EffectiveAgentModeResult {
   const requested = normalizeAgentModeInput(input.mode);
   if (!requested.ok) {
     return { ok: false, code: 'invalid-agent-mode', error: requested.error };
@@ -379,7 +402,7 @@ export function resolveEffectiveAgentModeForSpawn(input: Record<string, unknown>
 
   let requestedArtifactDir: string | undefined;
   if (requested.mode === 'read-only-with-artifacts') {
-    const artifactResult = validateAgentArtifactDir(input.artifactDir);
+    const artifactResult = validateAgentArtifactDir(input.artifactDir, projectRoot);
     if (!artifactResult.ok) {
       return { ok: false, code: 'invalid-artifact-dir', error: artifactResult.error };
     }
@@ -392,7 +415,7 @@ export function resolveEffectiveAgentModeForSpawn(input: Record<string, unknown>
     };
   }
 
-  const parent = readPersistedParentAgentMode();
+  const parent = readPersistedParentAgentMode(projectRoot);
   const effectiveMode = stricterAgentMode(parent.mode, requested.mode);
   if (effectiveMode !== 'read-only-with-artifacts') {
     return {
@@ -491,16 +514,16 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
-function getAgentDir(): string {
-  return join(process.cwd(), STORAGE_DIR, AGENT_DIR);
+function getAgentDir(projectRoot = process.cwd()): string {
+  return join(projectRoot, STORAGE_DIR, AGENT_DIR);
 }
 
-function getAgentPath(): string {
-  return join(getAgentDir(), AGENT_FILE);
+function getAgentPath(projectRoot = process.cwd()): string {
+  return join(getAgentDir(projectRoot), AGENT_FILE);
 }
 
-function ensureAgentDir(): void {
-  const dir = getAgentDir();
+function ensureAgentDir(projectRoot = process.cwd()): void {
+  const dir = getAgentDir(projectRoot);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -565,11 +588,11 @@ function providerConcurrencyConfigObjects(projectRoot: string): ProviderConcurre
   return configs;
 }
 
-function resolveProviderConcurrencyLimit(provider: AgentProvider): { limit?: number; source?: string; error?: string } {
+function resolveProviderConcurrencyLimit(provider: AgentProvider, projectRoot = process.cwd()): { limit?: number; source?: string; error?: string } {
   const envValue = positiveInteger(process.env[providerConfigEnvName(provider)]);
   if (envValue !== undefined) return { limit: envValue, source: 'env' };
 
-  for (const config of providerConcurrencyConfigObjects(process.cwd())) {
+  for (const config of providerConcurrencyConfigObjects(projectRoot)) {
     if ('error' in config) return { source: config.source, error: config.error };
     const value = config.value;
     const providers = isRecord(value.providers) ? value.providers : undefined;
@@ -599,7 +622,7 @@ function countBusyProviderAgents(store: AgentStore, provider: AgentProvider): nu
   ).length;
 }
 
-function checkProviderConcurrencyForDispatch(store: AgentStore, provider: AgentProvider): {
+function checkProviderConcurrencyForDispatch(store: AgentStore, provider: AgentProvider, projectRoot = process.cwd()): {
   ok: true;
   active: number;
   limit?: number;
@@ -613,7 +636,7 @@ function checkProviderConcurrencyForDispatch(store: AgentStore, provider: AgentP
   limit?: number;
   source: string;
 } {
-  const { limit, source, error } = resolveProviderConcurrencyLimit(provider);
+  const { limit, source, error } = resolveProviderConcurrencyLimit(provider, projectRoot);
   const active = countBusyProviderAgents(store, provider);
   if (error) {
     return {
@@ -658,8 +681,8 @@ function retryMetadataFromTaskInput(input: Record<string, unknown>): Record<stri
   return metadata;
 }
 
-export function loadAgentStore(): AgentStore {
-  const path = getAgentPath();
+export function loadAgentStore(projectRoot = process.cwd()): AgentStore {
+  const path = getAgentPath(projectRoot);
   const bakPath = path + '.bak';
   try {
     if (existsSync(path)) {
@@ -683,9 +706,9 @@ export function loadAgentStore(): AgentStore {
   return { agents: {}, version: '3.0.0' };
 }
 
-export function saveAgentStore(store: AgentStore): void {
-  ensureAgentDir();
-  const targetPath = getAgentPath();
+export function saveAgentStore(store: AgentStore, projectRoot = process.cwd()): void {
+  ensureAgentDir(projectRoot);
+  const targetPath = getAgentPath(projectRoot);
   const bakPath = targetPath + '.bak';
   const tmpPath = targetPath + '.tmp.' + process.pid;
   // Write .bak copy of the current file before overwriting
@@ -712,9 +735,17 @@ export function saveAgentStore(store: AgentStore): void {
 export async function withStoreLock<T>(fn: () => T): Promise<T>;
 export async function withStoreLock<T>(scope: string, fn: () => T): Promise<T>;
 export async function withStoreLock<T>(fnOrScope: string | (() => T), maybeFn?: () => T): Promise<T> {
+  return withStoreLockForProject(process.cwd(), fnOrScope as string | (() => T), maybeFn);
+}
+
+async function withStoreLockForProject<T>(
+  projectRoot: string,
+  fnOrScope: string | (() => T),
+  maybeFn?: () => T,
+): Promise<T> {
   const fn = typeof fnOrScope === 'function' ? fnOrScope : maybeFn!;
-  const lockPath = join(getAgentDir(), '.store.lock');
-  ensureAgentDir();
+  const lockPath = join(getAgentDir(projectRoot), '.store.lock');
+  ensureAgentDir(projectRoot);
   const maxWait = 10000; // 10s timeout
   const start = Date.now();
   let acquired = false;
@@ -753,8 +784,8 @@ export async function withStoreLock<T>(fnOrScope: string | (() => T), maybeFn?: 
 }
 
 // Alias for bridge-handler coordination — same lock, just accepts agentId for error messages
-async function withBridgeLock<T>(agentId: string, fn: () => T | Promise<T>): Promise<T> {
-  return withStoreLock(agentId, async () => fn());
+async function withBridgeLock<T>(agentId: string, fn: () => T | Promise<T>, projectRoot = process.cwd()): Promise<T> {
+  return withStoreLockForProject(projectRoot, agentId, async () => fn());
 }
 
 /**
@@ -893,16 +924,21 @@ async function determineAgentModel(
 // escalation ladder established by the parent session.
 // ---------------------------------------------------------------------------
 
-const ENFORCEMENT_DIR = join(process.cwd(), '.hive-flow', 'enforcement');
-const PROJECT_ENFORCEMENT_ID = `project-${createHash('sha256').update(process.cwd()).digest('hex').slice(0, 16)}`;
+function enforcementDir(projectRoot = process.cwd()): string {
+  return join(projectRoot, '.hive-flow', 'enforcement');
+}
 
-function readSignedEnforcementLevel(stateFile: string): number | undefined {
+function projectEnforcementId(projectRoot = process.cwd()): string {
+  return `project-${createHash('sha256').update(projectRoot).digest('hex').slice(0, 16)}`;
+}
+
+function readSignedEnforcementLevel(stateFile: string, projectRoot = process.cwd()): number | undefined {
   try {
     if (!existsSync(stateFile)) return undefined;
     const raw = JSON.parse(readFileSync(stateFile, 'utf8'));
 
     // A4: Read HMAC key for signature verification
-    const keyFile = join(ENFORCEMENT_DIR, '.hmac-key');
+    const keyFile = join(enforcementDir(projectRoot), '.hmac-key');
     let hmacKey: string | null = null;
     try {
       if (existsSync(keyFile)) {
@@ -945,16 +981,17 @@ function readSignedEnforcementLevel(stateFile: string): number | undefined {
   }
 }
 
-function readParentEnforcementLevel(): number {
-  const globalLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'state.json')) ?? 0;
-  const projectLevel = readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'projects', PROJECT_ENFORCEMENT_ID, 'state.json')) ?? 0;
+function readParentEnforcementLevel(projectRoot = process.cwd()): number {
+  const dir = enforcementDir(projectRoot);
+  const globalLevel = readSignedEnforcementLevel(join(dir, 'state.json'), projectRoot) ?? 0;
+  const projectLevel = readSignedEnforcementLevel(join(dir, 'projects', projectEnforcementId(projectRoot), 'state.json'), projectRoot) ?? 0;
   const callerAgentId = sanitizePathId(process.env.HIVE_FLOW_AGENT_ID || process.env.CLAUDE_AGENT_ID || '', 64);
   const agentLevel = callerAgentId
-    ? (readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'agents', callerAgentId, 'state.json')) ?? 0)
+    ? (readSignedEnforcementLevel(join(dir, 'agents', callerAgentId, 'state.json'), projectRoot) ?? 0)
     : 0;
   const hiveId = sanitizePathId(process.env.HIVE_FLOW_HIVE_ID || '', 64);
   const hiveLevel = hiveId
-    ? (readSignedEnforcementLevel(join(ENFORCEMENT_DIR, 'hives', hiveId, 'state.json')) ?? 0)
+    ? (readSignedEnforcementLevel(join(dir, 'hives', hiveId, 'state.json'), projectRoot) ?? 0)
     : 0;
   return Math.max(globalLevel, projectLevel, agentLevel, hiveLevel);
 }
@@ -1025,6 +1062,7 @@ function buildProviderBridgeEnv(
   agentRole: { type?: string; hiveId?: string } | null,
   ownerSessionId: string,
   ownerClientKind: Exclude<OperatorClientKind, 'unknown'>,
+  projectRoot: string,
 ): Record<string, string> {
   const childEnv: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
@@ -1044,6 +1082,8 @@ function buildProviderBridgeEnv(
   childEnv.CLAUDE_AGENT_ID = agentId;
   childEnv.HIVE_FLOW_SESSION_ID = ownerSessionId;
   childEnv.HIVE_FLOW_CLIENT_KIND = ownerClientKind;
+  childEnv.HIVE_FLOW_PROJECT_ROOT = projectRoot;
+  childEnv.CLAUDE_PROJECT_DIR = projectRoot;
   for (const key of operatorSessionEnvKeys()) {
     if (key !== 'HIVE_FLOW_SESSION_ID') delete childEnv[key];
   }
@@ -1057,12 +1097,13 @@ function buildProviderBridgeEnv(
   return childEnv;
 }
 
-function readVerifiedAgentRole(agentId: string): { type?: string; hiveId?: string } | null {
+function readVerifiedAgentRole(agentId: string, projectRoot = process.cwd()): { type?: string; hiveId?: string } | null {
   try {
     const sanitized = sanitizePathId(agentId, 64);
     if (!sanitized) return null;
-    const roleFile = join(ENFORCEMENT_DIR, 'agents', sanitized, 'role.json');
-    const keyFile = join(ENFORCEMENT_DIR, '.hmac-key');
+    const dir = enforcementDir(projectRoot);
+    const roleFile = join(dir, 'agents', sanitized, 'role.json');
+    const keyFile = join(dir, '.hmac-key');
     if (!existsSync(roleFile) || !existsSync(keyFile)) return null;
     const raw = JSON.parse(readFileSync(roleFile, 'utf8')) as { state?: Record<string, unknown>; hmac?: string };
     if (!raw?.state || typeof raw.hmac !== 'string') return null;
@@ -1109,20 +1150,21 @@ function parseActivityTimeRangeMs(input: Record<string, unknown>): number {
   return 3600000;
 }
 
-export function propagateEnforcementToSubAgent(agentId: string): void {
+export function propagateEnforcementToSubAgent(agentId: string, projectRoot = process.cwd()): void {
   try {
-    const level = readParentEnforcementLevel();
+    const level = readParentEnforcementLevel(projectRoot);
     if (level === 0) return; // NORMAL — no propagation needed
 
     // A10: Use shared sanitizePathId utility
     const sanitized = sanitizePathId(agentId, 64);
     if (!sanitized) return;
 
-    const agentEnfDir = join(ENFORCEMENT_DIR, 'agents', sanitized);
+    const dir = enforcementDir(projectRoot);
+    const agentEnfDir = join(dir, 'agents', sanitized);
     mkdirSync(agentEnfDir, { recursive: true });
 
     // Read HMAC key (enforcement.cjs creates it; fall back to generating one)
-    const keyFile = join(ENFORCEMENT_DIR, '.hmac-key');
+    const keyFile = join(dir, '.hmac-key');
     let key: string;
     if (existsSync(keyFile)) {
       key = readFileSync(keyFile, 'utf8').trim();
@@ -1195,17 +1237,30 @@ export const agentTools: MCPTool[] = [
           type: 'string',
           description: 'Existing project-contained directory for read-only-with-artifacts mode. Accepted only with mode read-only-with-artifacts.',
         },
+        projectRoot: {
+          type: 'string',
+          description: 'Effective project root for this agent. Pass this when the operator changed repositories after the MCP server started.',
+        },
+        cwd: {
+          type: 'string',
+          description: 'Alias for projectRoot; effective project root/current working directory for cross-repo dispatch.',
+        },
       },
       required: ['agentType'],
     },
     handler: async (input, context) => {
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
       const agentType = typeof input.agentType === 'string' ? input.agentType.trim() : '';
       const rawConfig = input.config && typeof input.config === 'object' && !Array.isArray(input.config)
         ? input.config as Record<string, unknown>
         : {};
       const config = stripConfigAuthorityFields(rawConfig);
-      const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'agent_spawn');
+      const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'agent_spawn', projectRoot);
 
       if (!isCanonicalAgentType(agentType)) {
         return {
@@ -1217,7 +1272,7 @@ export const agentTools: MCPTool[] = [
       if (!ownerStamp.success) return ownerStamp;
       const { ownerSessionId, ownerClientKind } = ownerStamp;
 
-      const modeResult = resolveEffectiveAgentModeForSpawn(input);
+      const modeResult = resolveEffectiveAgentModeForSpawn(input, projectRoot);
       if (!modeResult.ok) {
         return {
           success: false,
@@ -1244,7 +1299,7 @@ export const agentTools: MCPTool[] = [
       // HIVE_FLOW_DISABLE_SPAWN_CAP also disables for ad-hoc bypass.
       const spawnCapDisabled = process.env.VITEST === 'true' || process.env.HIVE_FLOW_DISABLE_SPAWN_CAP === 'true';
       if (!spawnCapDisabled) try {
-        const liveStore = loadAgentStore();
+        const liveStore = loadAgentStore(projectRoot);
         const liveAgents = Object.values(liveStore.agents ?? {}) as AgentRecord[];
         const workingCount = liveAgents.filter(
           a => a.status === 'spawning' || a.status === 'idle' || a.status === 'busy',
@@ -1357,6 +1412,7 @@ export const agentTools: MCPTool[] = [
           : routingResult.routedBy,
         ownerSessionId,
         ownerClientKind,
+        projectRoot,
         mode,
         ...(artifactDir ? { artifactDir } : {}),
         ...(writeAuthority ? { writeAuthority } : {}),
@@ -1365,15 +1421,15 @@ export const agentTools: MCPTool[] = [
       // Transition spawning → idle (setup complete)
       transitionAgent(agent, 'idle');
 
-      await withStoreLock(() => {
-        const store = loadAgentStore();
+      await withStoreLockForProject(projectRoot, () => {
+        const store = loadAgentStore(projectRoot);
         store.agents[agentId] = agent;
-        saveAgentStore(store);
+        saveAgentStore(store, projectRoot);
       });
 
       // LOGIC-012: Propagate parent enforcement level to sub-agent state file.
       // Sub-agents start at the parent's enforcement level, not NORMAL.
-      propagateEnforcementToSubAgent(agentId);
+      propagateEnforcementToSubAgent(agentId, projectRoot);
 
       // Phase 11.1: best-effort, NON-BLOCKING agent-spawn presence event.
       // Fire-and-forget: the recorders must never block or perturb the spawn
@@ -1390,8 +1446,9 @@ export const agentTools: MCPTool[] = [
         provider: agent.provider,
         resolvedModel: agent.resolvedModel,
         modelRoutedBy: routingResult.routedBy,
-        ownerSessionId: agent.ownerSessionId,
-        ownerClientKind: agent.ownerClientKind,
+            ownerSessionId: agent.ownerSessionId,
+            ownerClientKind: agent.ownerClientKind,
+            projectRoot: agent.projectRoot,
         mode: agent.mode,
         ...(agent.artifactDir ? { artifactDir: agent.artifactDir } : {}),
         status: 'spawned',
@@ -1435,14 +1492,21 @@ export const agentTools: MCPTool[] = [
       properties: {
         agentId: { type: 'string', description: 'ID of agent to terminate' },
         force: { type: 'boolean', description: 'Force immediate termination' },
+        projectRoot: { type: 'string', description: 'Effective project root containing the agent store' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
       required: ['agentId'],
     },
     handler: async (input) => {
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
       const agentId = input.agentId as string;
 
-      const result = await withStoreLock(() => {
-        const store = loadAgentStore();
+      const result = await withStoreLockForProject(projectRoot, () => {
+        const store = loadAgentStore(projectRoot);
 
         if (store.agents[agentId]) {
           const agent = store.agents[agentId];
@@ -1456,7 +1520,7 @@ export const agentTools: MCPTool[] = [
               terminatedAt: agent.terminatedAt,
             };
           }
-          saveAgentStore(store);
+          saveAgentStore(store, projectRoot);
           return {
             success: true,
             agentId,
@@ -1473,7 +1537,7 @@ export const agentTools: MCPTool[] = [
       });
 
       if (result.success && result.terminated) {
-        const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+        const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');
 
         if (existsSync(tasksDir)) {
           let trackingFiles: string[] = [];
@@ -1558,7 +1622,7 @@ export const agentTools: MCPTool[] = [
           // A10: Use shared sanitizePathId utility
           const sanitized = sanitizePathId(agentId, 64);
           if (sanitized) {
-            const agentEnfDir = join(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitized);
+            const agentEnfDir = join(projectRoot, '.hive-flow', 'enforcement', 'agents', sanitized);
             if (existsSync(agentEnfDir)) {
               rmSync(agentEnfDir, { recursive: true, force: true });
             }
@@ -1577,13 +1641,20 @@ export const agentTools: MCPTool[] = [
       type: 'object',
       properties: {
         agentId: { type: 'string', description: 'ID of agent' },
+        projectRoot: { type: 'string', description: 'Effective project root containing the agent store' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
       required: ['agentId'],
     },
     handler: async (input) => {
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { agentId: input.agentId, status: 'not_found', error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
       const agentId = input.agentId as string;
-      return withStoreLock(() => {
-        const store = loadAgentStore();
+      return withStoreLockForProject(projectRoot, () => {
+        const store = loadAgentStore(projectRoot);
         const agent = store.agents[agentId];
 
         if (agent) {
@@ -1600,6 +1671,7 @@ export const agentTools: MCPTool[] = [
             provider: agent.provider,
             resolvedModel: agent.resolvedModel,
             modelRoutedBy: agent.modelRoutedBy,
+            projectRoot: agent.projectRoot,
             mode: agent.mode ?? 'full',
             artifactDir: agent.artifactDir,
           };
@@ -1628,10 +1700,17 @@ export const agentTools: MCPTool[] = [
         },
         domain: { type: 'string', description: 'Filter by domain' },
         includeTerminated: { type: 'boolean', description: 'Include terminated agents' },
+        projectRoot: { type: 'string', description: 'Effective project root containing the agent store' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
     },
     handler: async (input) => {
-      const store = loadAgentStore();
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { agents: [], total: 0, error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
+      const store = loadAgentStore(projectRoot);
       let agents = Object.values(store.agents);
       const requestedStatus = typeof input.status === 'string' ? input.status.trim() : '';
       const includeAllStatuses = requestedStatus.toLowerCase() === 'all';
@@ -1669,6 +1748,7 @@ export const agentTools: MCPTool[] = [
           modelRoutedBy: a.modelRoutedBy,
           mode: a.mode ?? 'full',
           artifactDir: a.artifactDir,
+          projectRoot: a.projectRoot,
         })),
         total: agents.length,
         filters: {
@@ -1695,11 +1775,18 @@ export const agentTools: MCPTool[] = [
           description: `Agent type filter. Valid agent types: ${canonicalAgentTypesDescription()}.`,
           default: DEFAULT_CANONICAL_AGENT_TYPE,
         },
+        projectRoot: { type: 'string', description: 'Effective project root containing the agent store' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
       required: ['action'],
     },
     handler: async (input, context) => {
-      const store = loadAgentStore();
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { action: input.action || 'status', success: false, code: 'invalid-project-root', error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
+      const store = loadAgentStore(projectRoot);
       const agents = Object.values(store.agents).filter(a => a.status !== 'terminated');
       const action = (input.action as string) || 'status';  // Default to status
 
@@ -1751,14 +1838,14 @@ export const agentTools: MCPTool[] = [
             error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
           };
         }
-        const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'agent_pool scale');
+        const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'agent_pool scale', projectRoot);
         if (!ownerStamp.success) return { action, ...ownerStamp };
         const { ownerSessionId, ownerClientKind } = ownerStamp;
-        const modeResult = resolveEffectiveAgentModeForSpawn({});
+        const modeResult = resolveEffectiveAgentModeForSpawn({}, projectRoot);
         if (!modeResult.ok) return { action, success: false, code: modeResult.code, error: modeResult.error };
 
-        return withStoreLock(() => {
-          const freshStore = loadAgentStore();
+        return withStoreLockForProject(projectRoot, () => {
+          const freshStore = loadAgentStore(projectRoot);
           const liveAgents = Object.values(freshStore.agents).filter(a => a.status !== 'terminated');
           const currentSize = liveAgents.filter(a => a.agentType === agentType).length;
           const delta = targetSize - currentSize;
@@ -1791,7 +1878,7 @@ export const agentTools: MCPTool[] = [
             }
           }
 
-          saveAgentStore(freshStore);
+          saveAgentStore(freshStore, projectRoot);
           return {
             action,
             agentType,
@@ -1807,8 +1894,8 @@ export const agentTools: MCPTool[] = [
       if (action === 'drain') {
         const agentType = input.agentType as string;
 
-        return withStoreLock(() => {
-          const freshStore = loadAgentStore();
+        return withStoreLockForProject(projectRoot, () => {
+          const freshStore = loadAgentStore(projectRoot);
           const liveAgents = Object.values(freshStore.agents).filter(a => a.status !== 'terminated');
           let drained = 0;
           for (const a of liveAgents) {
@@ -1819,7 +1906,7 @@ export const agentTools: MCPTool[] = [
               }
             }
           }
-          saveAgentStore(freshStore);
+          saveAgentStore(freshStore, projectRoot);
           return {
             action,
             agentType: agentType || 'all',
@@ -1842,10 +1929,17 @@ export const agentTools: MCPTool[] = [
         agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
         task: { type: 'string', description: 'Task prompt to send to the agent' },
         timeout: { type: 'number', description: 'Timeout in ms (default: 300000)' },
+        projectRoot: { type: 'string', description: 'Effective project root/current repo for task files, bridge cwd, and notifications' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
       required: ['agentId', 'task'],
     },
     handler: async (input) => {
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
       const agentId = input.agentId as string;
       const task = input.task as string;
       const rawTimeout = (input.timeout as number) || 300000;
@@ -1864,7 +1958,7 @@ export const agentTools: MCPTool[] = [
       }
 
       // Create task directory and files
-      const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+      const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');
       mkdirSync(tasksDir, { recursive: true });
 
       const taskFilePath = join(tasksDir, `${taskId}.task`);
@@ -1872,7 +1966,7 @@ export const agentTools: MCPTool[] = [
 
       // RC-2 + liveness: lock → fresh read → validate → spawn → busy+pid save.
       const dispatchResult = await withBridgeLock(agentId, async () => {
-        const store = loadAgentStore();
+        const store = loadAgentStore(projectRoot);
         const agent = store.agents[agentId];
         if (!agent) {
           return { error: 'Agent not found' };
@@ -1910,7 +2004,7 @@ export const agentTools: MCPTool[] = [
         if (!modelCheck.ok) {
           return { error: modelCheck.error };
         }
-        const providerConcurrency = checkProviderConcurrencyForDispatch(store, agent.provider as AgentProvider);
+        const providerConcurrency = checkProviderConcurrencyForDispatch(store, agent.provider as AgentProvider, projectRoot);
         if (!providerConcurrency.ok) {
           return {
             error: providerConcurrency.error,
@@ -1930,8 +2024,8 @@ export const agentTools: MCPTool[] = [
 
         writeAtomicUtf8File(taskFilePath, task);
 
-        const agentDir = getAgentDir();
-        const agentRole = readVerifiedAgentRole(agentId);
+        const agentDir = getAgentDir(projectRoot);
+        const agentRole = readVerifiedAgentRole(agentId, projectRoot);
         const childEnv = buildProviderBridgeEnv(
           agent.provider as AgentProvider,
           agentId,
@@ -1939,12 +2033,13 @@ export const agentTools: MCPTool[] = [
           agentRole,
           ownerSessionId,
           ownerClientKind,
+          projectRoot,
         );
 
         try {
           // Persist busy before spawning so observers and the bridge never see a
           // just-dispatched task as idle during the small spawn/save window.
-          saveAgentStore(store);
+          saveAgentStore(store, projectRoot);
           const child = spawn('node', [
             bridgePath,
             '--agent-id', agentId,
@@ -1957,6 +2052,7 @@ export const agentTools: MCPTool[] = [
             detached: true,
             stdio: 'ignore',
             env: childEnv,
+            cwd: projectRoot,
           });
 
           // Attach an error listener before unref() so a spawn failure
@@ -1967,7 +2063,7 @@ export const agentTools: MCPTool[] = [
               transitionAgent(agent, 'idle');
               delete agent.currentTaskPid;
               delete agent.currentTaskId;
-              saveAgentStore(store);
+              saveAgentStore(store, projectRoot);
             } catch { /* best-effort: store may have compacted */ }
             // Write a failed-task result so agent_task_result can surface the error.
             try {
@@ -1989,7 +2085,7 @@ export const agentTools: MCPTool[] = [
           if (typeof childPid === 'number' && Number.isInteger(childPid) && childPid > 0) {
             agent.currentTaskPid = childPid;
           }
-          saveAgentStore(store);
+          saveAgentStore(store, projectRoot);
           return {
             error: null,
             agentToken,
@@ -2005,10 +2101,10 @@ export const agentTools: MCPTool[] = [
           transitionAgent(agent, 'idle');
           delete agent.currentTaskPid;
           delete agent.currentTaskId;
-          saveAgentStore(store);
+          saveAgentStore(store, projectRoot);
           return { error: err instanceof Error ? err.message : String(err) };
         }
-      });
+      }, projectRoot);
 
       if (dispatchResult.error) {
         const { error, ...details } = dispatchResult as Record<string, unknown>;
@@ -2027,6 +2123,7 @@ export const agentTools: MCPTool[] = [
         provider: dispatchResult.provider,
         ownerSessionId: dispatchResult.ownerSessionId,
         ownerClientKind: dispatchResult.ownerClientKind,
+        projectRoot,
         startedAt: startedAt.toISOString(),
         pid: dispatchResult.pid,
         // Explicit deadline so the reaper can decide "past deadline, no result"
@@ -2087,17 +2184,24 @@ export const agentTools: MCPTool[] = [
       type: 'object',
       properties: {
         taskId: { type: 'string', description: 'Task ID returned by agent_task_async' },
+        projectRoot: { type: 'string', description: 'Effective project root/current repo containing the task record' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
       required: ['taskId'],
     },
     handler: async (input) => {
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
       const rawTaskId = input.taskId as string;
       // A3+A10: Sanitize taskId using shared utility to prevent directory traversal
       const taskId = sanitizePathId(rawTaskId, 128);
       if (!taskId) {
         return { success: false, error: 'Invalid taskId' };
       }
-      const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+      const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');
       const trackingPath = join(tasksDir, `${taskId}.json`);
 
       if (!existsSync(trackingPath)) {
@@ -2170,13 +2274,13 @@ export const agentTools: MCPTool[] = [
         // it — which makes read-side liveness count a completed agent as live.
         let agentTaskCleared = false;
         await withBridgeLock(tracking.agentId, () => {
-          const store = loadAgentStore();
+          const store = loadAgentStore(projectRoot);
           const agent = store.agents[tracking.agentId];
           if (clearTerminalTaskIfCurrent(agent, taskId)) {
-            saveAgentStore(store);
+            saveAgentStore(store, projectRoot);
             agentTaskCleared = true;
           }
-        });
+        }, projectRoot);
 
         // Also update hive worker record status
         if (agentTaskCleared) try {
@@ -2239,13 +2343,13 @@ export const agentTools: MCPTool[] = [
           // idled the agent without clearing it.
           let agentTaskCleared = false;
           await withBridgeLock(tracking.agentId, () => {
-            const store = loadAgentStore();
+            const store = loadAgentStore(projectRoot);
             const agent = store.agents[tracking.agentId];
             if (clearTerminalTaskIfCurrent(agent, taskId)) {
-              saveAgentStore(store);
+              saveAgentStore(store, projectRoot);
               agentTaskCleared = true;
             }
-          });
+          }, projectRoot);
 
           // Also update hive worker record status
           if (agentTaskCleared) try {
@@ -2292,10 +2396,17 @@ export const agentTools: MCPTool[] = [
       properties: {
         agentId: { type: 'string', description: 'Specific agent ID (optional)' },
         threshold: { type: 'number', description: 'Health threshold (0-1)' },
+        projectRoot: { type: 'string', description: 'Effective project root containing the agent store' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
     },
     handler: async (input) => {
-      const store = loadAgentStore();
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { total: 0, healthyCount: 0, unhealthyCount: 0, error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
+      const store = loadAgentStore(projectRoot);
       const agents = Object.values(store.agents).filter(a => a.status !== 'terminated');
       const threshold = (input.threshold as number) || 0.5;
 
@@ -2372,10 +2483,17 @@ export const agentTools: MCPTool[] = [
         health: { type: 'number', description: 'Health value (0-1)' },
         taskCount: { type: 'number', description: 'Task count' },
         config: { type: 'object', description: 'Config updates' },
+        projectRoot: { type: 'string', description: 'Effective project root containing the agent store' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
       required: ['agentId'],
     },
     handler: async (input) => {
+      const projectRootResult = resolveProjectRootFromInput(input);
+      if (!projectRootResult.ok) {
+        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+      }
+      const projectRoot = projectRootResult.projectRoot;
       const agentId = input.agentId as string;
 
       // A9: Block cross-agent mutations when enforcement level > 0
@@ -2383,7 +2501,7 @@ export const agentTools: MCPTool[] = [
         || process.env.CLAUDE_AGENT_ID
         || null;
       if (callerAgentId && callerAgentId !== agentId) {
-        const enforcementLevel = readParentEnforcementLevel();
+        const enforcementLevel = readParentEnforcementLevel(projectRoot);
         if (enforcementLevel > 0) {
           return {
             success: false,
@@ -2393,8 +2511,8 @@ export const agentTools: MCPTool[] = [
         }
       }
 
-      return withStoreLock(() => {
-        const store = loadAgentStore();
+      return withStoreLockForProject(projectRoot, () => {
+        const store = loadAgentStore(projectRoot);
         const agent = store.agents[agentId];
 
         if (agent) {
@@ -2416,7 +2534,7 @@ export const agentTools: MCPTool[] = [
               : {};
             agent.config = { ...agent.config, ...configPatch };
           }
-          saveAgentStore(store);
+          saveAgentStore(store, projectRoot);
 
           return {
             success: true,

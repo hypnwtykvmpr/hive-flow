@@ -438,6 +438,7 @@ export function notifyTaskCompletionFromResultFile(resultFile) {
     const line = JSON.stringify({
       kind: 'task',
       taskId,
+      projectRoot,
       ts: new Date().toISOString(),
       summary: summarizeBridgeResultFile(resultFile, taskId),
       ...(targetAgent ? { targetAgent } : {}),
@@ -492,6 +493,7 @@ function recordWorkerPermissionDenialFromDeniedTool(toolName, denied, ctx = {}) 
       kind: 'worker-permission-denial',
       requestId,
       taskId,
+      projectRoot,
       ts: new Date().toISOString(),
       summary,
       tool: toolName,

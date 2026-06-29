@@ -326,6 +326,7 @@ function notifyCompletedTaskIfReady(projectRoot, taskId, options = {}) {
   const line = JSON.stringify({
     kind: 'task',
     taskId,
+    projectRoot,
     ts: new Date().toISOString(),
     summary,
     ...(targetAgent ? { targetAgent } : {}),

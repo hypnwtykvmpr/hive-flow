@@ -61,6 +61,28 @@ function readJsonFile(file) {
   }
 }
 
+function normalizeProjectPath(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const resolved = path.resolve(value.trim());
+  try {
+    return fs.realpathSync.native(resolved);
+  } catch {
+    return resolved;
+  }
+}
+
+function samePath(a, b) {
+  const left = normalizeProjectPath(a);
+  const right = normalizeProjectPath(b);
+  return !!left && !!right && left === right;
+}
+
+function notificationProjectRoot(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+  const raw = obj.projectRoot || obj.project_root || obj.projectDir || obj.project_dir || obj.cwd;
+  return normalizeProjectPath(raw);
+}
+
 function targetAgentFromKind(kind) {
   return targetAgentFromClientKind(kind);
 }
@@ -109,6 +131,38 @@ function taskOwnerTargetAgent(projectRoot, obj) {
   const store = readJsonFile(path.join(projectRoot, '.hive-flow', 'agents', 'store.json'));
   const agent = store?.agents?.[agentId.trim()];
   return targetAgentFromKind(agent?.ownerClientKind || agent?.owner_client_kind);
+}
+
+function notificationHasLocalEvidence(projectRoot, obj) {
+  if (!obj || typeof obj !== 'object') return false;
+  const taskId = typeof obj.taskId === 'string' ? obj.taskId.trim() : '';
+  if (taskId) {
+    const tasksDir = path.join(projectRoot, '.hive-flow', 'tasks');
+    if (fs.existsSync(path.join(tasksDir, `${taskId}.json`))) return true;
+    if (fs.existsSync(path.join(tasksDir, `${taskId}.result.json`))) return true;
+  }
+
+  const hiveId = typeof obj.hiveId === 'string'
+    ? obj.hiveId.trim()
+    : typeof obj.hive_id === 'string'
+      ? obj.hive_id.trim()
+      : '';
+  if (hiveId) {
+    const safeHiveId = hiveId.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 128);
+    if (!safeHiveId) return false;
+    if (fs.existsSync(path.join(projectRoot, '.hive-flow', 'hives', safeHiveId, 'hive.json'))) return true;
+    if (fs.existsSync(path.join(projectRoot, '.hive-flow', 'data', `hive-${safeHiveId}.done`))) return true;
+    if (fs.existsSync(path.join(projectRoot, '.hive-flow', 'data', `hive-${safeHiveId}.check-due`))) return true;
+  }
+
+  return false;
+}
+
+function notificationTargetsProject(obj, projectRoot, requireProjectScope = false) {
+  if (!requireProjectScope) return true;
+  const explicitRoot = notificationProjectRoot(obj);
+  if (explicitRoot) return samePath(explicitRoot, projectRoot);
+  return notificationHasLocalEvidence(projectRoot, obj);
 }
 
 function notificationTargetsAgent(obj, targetAgent, projectRoot = projectDir()) {
@@ -220,17 +274,20 @@ function supersedesCheckDue(existingKind, nextKind) {
   );
 }
 
-function drainNotifications(projectRoot = projectDir(), sessionInput = null) {
+function drainNotifications(projectRoot = projectDir(), sessionInput = null, env = process.env) {
   const drainFiles = [];
-  for (const file of pendingFiles(projectRoot, sessionInput, process.env)) {
+  for (const file of pendingFiles(projectRoot, sessionInput, env)) {
     drainFiles.push(...collectDrainFiles(file));
   }
   if (drainFiles.length === 0) return emptyOutput();
 
   const lines = [];
-  const targetAgent = currentTargetAgent(sessionInput, process.env);
+  const targetAgent = currentTargetAgent(sessionInput, env);
   const survivorsByFile = new Map();
   for (const drainFile of drainFiles) {
+    const originalFile = originalPendingFileForDrain(drainFile);
+    const isProjectLocalFile = samePath(originalFile, pendingFile(projectRoot));
+    const requireProjectScope = !isProjectLocalFile;
     try {
       const raw = fs.readFileSync(drainFile, 'utf8');
       for (const line of raw.split('\n').map((l) => l.trim()).filter(Boolean)) {
@@ -238,12 +295,23 @@ function drainNotifications(projectRoot = projectDir(), sessionInput = null) {
         try {
           obj = JSON.parse(line);
         } catch {
+          if (requireProjectScope) {
+            const existing = survivorsByFile.get(originalFile) || [];
+            existing.push(line);
+            survivorsByFile.set(originalFile, existing);
+            continue;
+          }
           lines.push(line);
           continue;
         }
         if (suppressPermissionWake(obj)) continue;
+        if (!notificationTargetsProject(obj, projectRoot, requireProjectScope)) {
+          const existing = survivorsByFile.get(originalFile) || [];
+          existing.push(line);
+          survivorsByFile.set(originalFile, existing);
+          continue;
+        }
         if (!notificationTargetsAgent(obj, targetAgent, projectRoot)) {
-          const originalFile = originalPendingFileForDrain(drainFile);
           const existing = survivorsByFile.get(originalFile) || [];
           existing.push(line);
           survivorsByFile.set(originalFile, existing);
@@ -301,10 +369,15 @@ module.exports = {
   pendingFiles,
   currentTargetAgent,
   readJsonFile,
+  normalizeProjectPath,
+  samePath,
+  notificationProjectRoot,
   targetAgentFromKind,
   targetAgentFromAgentId,
   agentIdFromNotification,
   taskOwnerTargetAgent,
+  notificationHasLocalEvidence,
+  notificationTargetsProject,
   notificationTargetsAgent,
   collectDrainFiles,
   parseSummariesFromLines,

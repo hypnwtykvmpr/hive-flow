@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
   lstatSync: vi.fn(),
+  statSync: vi.fn(),
+  realpathSync: Object.assign(vi.fn((p: string) => p), { native: vi.fn((p: string) => p) }),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
@@ -72,7 +74,7 @@ vi.mock('../mcp-tools/provider-key-preflight.js', () => ({
   providerKeyPreflight: vi.fn(async () => ({ ok: true })),
 }));
 
-import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, lstatSync, statSync, realpathSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { agentTools, transitionAgent } from '../mcp-tools/agent-tools.js';
 
@@ -103,6 +105,7 @@ interface AgentRecord {
   currentTaskPid?: number;
   ownerSessionId?: string;
   ownerClientKind?: string;
+  projectRoot?: string;
 }
 
 function makeAgent(overrides: Partial<AgentRecord> = {}): AgentRecord {
@@ -150,6 +153,12 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
     }
     throw new Error('unexpected lstatSync path');
   });
+
+  (statSync as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+    isDirectory: () => true,
+    mtimeMs: Date.now(),
+  }));
+  ((realpathSync as typeof realpathSync & { native: ReturnType<typeof vi.fn> }).native).mockImplementation((p: string) => p);
 
   (readFileSync as ReturnType<typeof vi.fn>).mockImplementation(() => {
     return JSON.stringify(currentStore);
@@ -300,6 +309,22 @@ describe('agent_spawn handler model normalization', () => {
     expect(persisted.provider).toBe('lm-studio');
     expect(persisted.model).toBe('sonnet');
     expect(persisted.resolvedModel).toBe('local/llama-3.2');
+  });
+
+  it('persists an explicit projectRoot so cross-repo agents are not stored under the MCP launch cwd', async () => {
+    const { getPersistedStore } = setupStoreMocks(makeStore());
+    const projectRoot = '/tmp/hf-agent-target-project';
+
+    const result = await spawnHandler({
+      agentType: 'researcher',
+      provider: 'lm-studio',
+      projectRoot,
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.projectRoot).toBe(projectRoot);
+    const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord;
+    expect(persisted.projectRoot).toBe(projectRoot);
   });
 });
 
@@ -507,6 +532,33 @@ describe('agent_task handler (non-blocking)', () => {
     expect(tracking.ownerSessionId).toBe(agent.ownerSessionId);
     expect(tracking.ownerClientKind).toBe(agent.ownerClientKind);
     expect(tracking.pid).toBe(99);
+  });
+
+  it('uses explicit projectRoot for task files, bridge cwd/env, and tracking metadata', async () => {
+    const projectRoot = '/tmp/hf-task-target-project';
+    const agent = makeAgent({ projectRoot });
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(77);
+
+    await handler({ agentId: agent.agentId, task: 'target repo work', projectRoot });
+
+    const taskWrite = atomicWriteForDestination((dest) =>
+      dest.startsWith(`${projectRoot}/.hive-flow/tasks/`) && dest.endsWith('.task'));
+    expect(taskWrite.contents).toBe('target repo work');
+
+    const trackingWrite = atomicWriteForDestination((dest) =>
+      dest.startsWith(`${projectRoot}/.hive-flow/tasks/`) && dest.endsWith('.json') && !dest.endsWith('store.json'));
+    const tracking = JSON.parse(trackingWrite.contents);
+    expect(tracking.projectRoot).toBe(projectRoot);
+    expect(tracking.pid).toBe(77);
+
+    const { args, opts } = getSpawnCall();
+    expect(args).toContain('--store-dir');
+    expect(args[args.indexOf('--store-dir') + 1]).toBe(`${projectRoot}/.hive-flow/agents`);
+    expect(opts.cwd).toBe(projectRoot);
+    const env = opts.env as Record<string, string>;
+    expect(env.HIVE_FLOW_PROJECT_ROOT).toBe(projectRoot);
+    expect(env.CLAUDE_PROJECT_DIR).toBe(projectRoot);
   });
 
   // ------------------------------------------------------------------

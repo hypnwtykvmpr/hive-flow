@@ -336,7 +336,7 @@ async function main() {
     const won = appendPendingOnceEverywhere(
       dataDirs,
       sanitized,
-      JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary }),
+      JSON.stringify({ kind: 'hive', hiveId, projectRoot: dir, ts: new Date().toISOString(), summary }),
     );
     if (!won) process.exit(0);
     process.stderr.write(summary + '\n');
@@ -356,7 +356,7 @@ async function main() {
       const won = appendPendingOnceEverywhere(
         dataDirs,
         sanitized,
-        JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary }),
+        JSON.stringify({ kind: 'hive', hiveId, projectRoot: dir, ts: new Date().toISOString(), summary }),
       );
       if (!won) process.exit(0);
       process.stderr.write(summary + '\n');
@@ -367,7 +367,7 @@ async function main() {
       const won = appendPendingOnceEverywhere(
         dataDirs,
         sanitized,
-        JSON.stringify({ kind: 'hive', hiveId, ts: new Date().toISOString(), summary: recordSummary }),
+        JSON.stringify({ kind: 'hive', hiveId, projectRoot: dir, ts: new Date().toISOString(), summary: recordSummary }),
       );
       if (!won) process.exit(0);
       process.stderr.write(recordSummary + '\n');
@@ -380,7 +380,7 @@ async function main() {
   const won = appendTimeoutCheckOnceEverywhere(
     dataDirs,
     sanitized,
-    JSON.stringify({ kind: 'hive-check', hiveId, ts: new Date().toISOString(), summary }),
+    JSON.stringify({ kind: 'hive-check', hiveId, projectRoot: dir, ts: new Date().toISOString(), summary }),
   );
   if (!won) process.exit(0);
   process.stderr.write(summary + '\n');
