@@ -1279,10 +1279,8 @@ async function writeRuntimeConfig(
 
   if (fs.existsSync(configPath) && !options.force) {
     result.skipped.push('.hive-flow/config.yaml');
-    return;
-  }
-
-  const config = `# Hive Flow V3 Runtime Configuration
+  } else {
+    const config = `# Hive Flow V3 Runtime Configuration
 # Generated: ${new Date().toISOString()}
 
 version: "3.0.0"
@@ -1327,8 +1325,9 @@ mcp:
   port: ${options.mcp.port}
 `;
 
-  fs.writeFileSync(configPath, config, 'utf-8');
-  result.created.files.push('.hive-flow/config.yaml');
+    fs.writeFileSync(configPath, config, 'utf-8');
+    result.created.files.push('.hive-flow/config.yaml');
+  }
 
   // Write .gitignore
   const gitignorePath = path.join(targetDir, '.hive-flow', '.gitignore');
@@ -1346,8 +1345,32 @@ neural/
     result.created.files.push('.hive-flow/.gitignore');
   }
 
+  writeProviderConcurrencyTemplate(targetDir, options, result);
+
   // Write CAPABILITIES.md with full system overview
   await writeCapabilitiesDoc(targetDir, options, result);
+}
+
+function writeProviderConcurrencyTemplate(
+  targetDir: string,
+  options: InitOptions,
+  result: InitResult
+): void {
+  const providerConcurrencyPath = path.join(targetDir, '.hive-flow', 'provider-concurrency.json');
+  if (fs.existsSync(providerConcurrencyPath) && !options.force) {
+    result.skipped.push('.hive-flow/provider-concurrency.json');
+    return;
+  }
+
+  const template = {
+    version: 1,
+    updatedAt: null,
+    providers: {},
+  };
+
+  fs.mkdirSync(path.dirname(providerConcurrencyPath), { recursive: true });
+  fs.writeFileSync(providerConcurrencyPath, `${JSON.stringify(template, null, 2)}\n`, 'utf-8');
+  result.created.files.push('.hive-flow/provider-concurrency.json');
 }
 
 /**
