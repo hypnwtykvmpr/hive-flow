@@ -24,6 +24,7 @@ import {
   saveAgentStore,
   withStoreLock,
   AGENT_TASK_RETRY_CONTEXT,
+  resolveProjectRootFromInput,
 } from './agent-tools.js';
 import {
   type HiveRecord,
@@ -91,7 +92,7 @@ async function signHiveState(record: HiveRecord): Promise<string> {
   }
 }
 
-async function readVerifiedQueenDirectWorkCount(queenId: string): Promise<number> {
+async function readVerifiedQueenDirectWorkCount(queenId: string, projectRoot = process.cwd()): Promise<number> {
   try {
     const { readFileSync, existsSync } = await import('node:fs');
     const { join } = await import('node:path');
@@ -99,8 +100,8 @@ async function readVerifiedQueenDirectWorkCount(queenId: string): Promise<number
     // A10: Use shared sanitizePathId utility
     const sanitized = sanitizePathId(queenId, 64);
     if (!sanitized) return 0;
-    const roleFile = join(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitized, 'role.json');
-    const hmacKeyFile = join(process.cwd(), '.hive-flow', 'enforcement', '.hmac-key');
+    const roleFile = join(projectRoot, '.hive-flow', 'enforcement', 'agents', sanitized, 'role.json');
+    const hmacKeyFile = join(projectRoot, '.hive-flow', 'enforcement', '.hmac-key');
     if (!existsSync(roleFile) || !existsSync(hmacKeyFile)) return 0;
     const raw = JSON.parse(readFileSync(roleFile, 'utf8')) as { state?: { directWorkCount?: number }; hmac?: string };
     if (!raw?.state || !raw?.hmac) return 0;
@@ -124,6 +125,25 @@ function liveQueenPidFromAgent(queen: { currentTaskPid?: number } | undefined): 
   } catch (err) {
     return (err as NodeJS.ErrnoException)?.code === 'ESRCH' ? undefined : pid;
   }
+}
+
+const PROJECT_ROOT_INPUT_PROPERTIES = {
+  projectRoot: {
+    type: 'string',
+    description: 'Effective project root/current repo for hive, agent, task, and permission records.',
+  },
+  cwd: {
+    type: 'string',
+    description: 'Alias for projectRoot. Used when the parent operator changed repositories after MCP startup.',
+  },
+} as const;
+
+function resolveQueenProjectRoot(input: Record<string, unknown>): { success: true; projectRoot: string } | { success: false; code: string; error: string } {
+  const result = resolveProjectRootFromInput(input);
+  if (!result.ok) {
+    return { success: false, code: 'invalid-project-root', error: result.error };
+  }
+  return { success: true, projectRoot: result.projectRoot };
 }
 
 // ---------------------------------------------------------------------------
@@ -243,10 +263,10 @@ function isDefinitelyDeadPidError(error: unknown): boolean {
     && (error as { code?: unknown }).code === 'ESRCH';
 }
 
-function permissionRequestLogPath(hiveId: string): string | null {
+function permissionRequestLogPath(hiveId: string, projectRoot = process.cwd()): string | null {
   const sanitized = sanitizePathId(hiveId, 128);
   if (!sanitized) return null;
-  return join(process.cwd(), '.hive-flow', 'hives', sanitized, 'permission-requests.jsonl');
+  return join(projectRoot, '.hive-flow', 'hives', sanitized, 'permission-requests.jsonl');
 }
 
 function normalizePermissionRequestFromLog(
@@ -275,8 +295,8 @@ function normalizePermissionRequestFromLog(
   };
 }
 
-function readHivePermissionRequestLog(hive: HiveRecord): HivePermissionRequest[] {
-  const path = permissionRequestLogPath(hive.hiveId);
+function readHivePermissionRequestLog(hive: HiveRecord, projectRoot = process.cwd()): HivePermissionRequest[] {
+  const path = permissionRequestLogPath(hive.hiveId, projectRoot);
   if (!path || !existsSync(path)) return [];
   const requests: HivePermissionRequest[] = [];
   const seen = new Set<string>();
@@ -300,13 +320,13 @@ function readHivePermissionRequestLog(hive: HiveRecord): HivePermissionRequest[]
   return requests;
 }
 
-function mergeHivePermissionRequests(hive: HiveRecord): { requests: HivePermissionRequest[]; added: HivePermissionRequest[] } {
+function mergeHivePermissionRequests(hive: HiveRecord, projectRoot = process.cwd()): { requests: HivePermissionRequest[]; added: HivePermissionRequest[] } {
   const existing = new Map<string, HivePermissionRequest>();
   for (const request of hive.permissionRequests ?? []) {
     if (request?.requestId) existing.set(request.requestId, request);
   }
   const added: HivePermissionRequest[] = [];
-  for (const request of readHivePermissionRequestLog(hive)) {
+  for (const request of readHivePermissionRequestLog(hive, projectRoot)) {
     const current = existing.get(request.requestId);
     if (current) {
       existing.set(request.requestId, {
@@ -369,9 +389,9 @@ function readTaskPromptForRetry(tasksDir: string, taskId: string): string | null
   }
 }
 
-async function clearAgentTaskBeforeReassignment(agentId: string, taskId: string): Promise<boolean> {
+async function clearAgentTaskBeforeReassignment(agentId: string, taskId: string, projectRoot = process.cwd()): Promise<boolean> {
   return withStoreLock(agentId, () => {
-    const store = loadAgentStore();
+    const store = loadAgentStore(projectRoot);
     const agent = store.agents[agentId];
     if (!agent) return false;
     let changed = false;
@@ -383,9 +403,9 @@ async function clearAgentTaskBeforeReassignment(agentId: string, taskId: string)
       delete agent.taskId;
       changed = true;
     }
-    if (changed) saveAgentStore(store);
+    if (changed) saveAgentStore(store, projectRoot);
     return changed;
-  });
+  }, projectRoot);
 }
 
 function retryCountFromTracking(tracking: Record<string, unknown>): number {
@@ -407,6 +427,7 @@ async function claimDeadWorkerRetry(
   hiveId: string,
   trackingPath: string,
   taskId: string,
+  projectRoot = process.cwd(),
 ): Promise<{
   claimed: boolean;
   tracking?: Record<string, unknown>;
@@ -454,7 +475,7 @@ async function claimDeadWorkerRetry(
         : taskId,
       timeoutMs: typeof tracking.timeoutMs === 'number' ? tracking.timeoutMs : undefined,
     };
-  });
+  }, projectRoot);
 }
 
 function annotateReplacementTracking(
@@ -506,6 +527,7 @@ const missionAssignTool: MCPTool = {
         description: 'Role-based dependency graph. Keys are role names (not worker IDs), values are arrays of role names that must complete first.',
       },
       stalenessTimeout: { type: 'number', description: 'Timeout in ms before hive is considered stale (default: 3600000)' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
       session_id: { type: 'string', description: 'Optional launching operator session id for multi-session ownership routing' },
       sessionId: { type: 'string', description: 'Optional launching operator session id fallback for multi-session ownership routing' },
       ownerTmuxPane: { type: 'string', description: 'Deprecated legacy pane field; accepted for compatibility and ignored' },
@@ -546,6 +568,9 @@ const missionAssignTool: MCPTool = {
     const workerDependencies = input.workerDependencies as Record<string, string[]> | undefined;
     const stalenessTimeout = input.stalenessTimeout as number | undefined;
     const workerDefs = input.workers as Array<{ role?: string; provider?: string; model?: string; task?: string; mode?: string; artifactDir?: string }> | undefined;
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
     const ownerStamp = resolveOwnerStampOrError(input as Record<string, unknown>, process.env, context, 'queen_mission_assign');
     if (!ownerStamp.success) return ownerStamp;
     const { ownerSessionId, ownerClientKind } = ownerStamp;
@@ -569,7 +594,7 @@ const missionAssignTool: MCPTool = {
     }
 
     // Verify queen exists and is alive
-    const store = loadAgentStore();
+    const store = loadAgentStore(projectRoot);
     const queen = store.agents[queenId];
     if (!queen) {
       return { success: false, error: `Queen agent '${queenId}' not found. Spawn it first via agent_spawn.` };
@@ -590,6 +615,7 @@ const missionAssignTool: MCPTool = {
       budget,
       Object.keys(config).length > 0 ? config : undefined,
       { ownerSessionId, ownerClientKind, queenPid: liveQueenPidFromAgent(queen) },
+      projectRoot,
     );
 
     // Assign mission
@@ -604,7 +630,7 @@ const missionAssignTool: MCPTool = {
     };
 
     await withHiveLock(hive.hiveId, async () => {
-      const record = loadHive(hive.hiveId);
+      const record = loadHive(hive.hiveId, projectRoot);
       if (!record) throw new Error('Hive record disappeared after creation');
       record.ownerSessionId = ownerSessionId;
       record.ownerClientKind = ownerClientKind;
@@ -616,8 +642,8 @@ const missionAssignTool: MCPTool = {
       });
       // Sign inside the same lock to avoid TOCTOU race
       record.signature = await signHiveState(record);
-      saveHive(hive.hiveId, record);
-    });
+      saveHive(hive.hiveId, record, projectRoot);
+    }, projectRoot);
 
     // Create role.json for queen enforcement
     try {
@@ -628,7 +654,7 @@ const missionAssignTool: MCPTool = {
       // Sanitize queen ID for filesystem path
       const sanitizedQueenId = sanitizePathId(queenId, 64);
       if (sanitizedQueenId) {
-        const roleDir = roleJoin(process.cwd(), '.hive-flow', 'enforcement', 'agents', sanitizedQueenId);
+        const roleDir = roleJoin(projectRoot, '.hive-flow', 'enforcement', 'agents', sanitizedQueenId);
         roleMkdir(roleDir, { recursive: true });
 
         const roleState = {
@@ -640,7 +666,7 @@ const missionAssignTool: MCPTool = {
         };
 
         // Read HMAC key from enforcement directory (same key as enforcement.cjs uses)
-        const hmacKeyFile = roleJoin(process.cwd(), '.hive-flow', 'enforcement', '.hmac-key');
+        const hmacKeyFile = roleJoin(projectRoot, '.hive-flow', 'enforcement', '.hmac-key');
         if (roleExists(hmacKeyFile)) {
           const hmacKey = roleRead(hmacKeyFile, 'utf8').trim();
           const hmac = roleCreateHmac('sha256', hmacKey).update(JSON.stringify(roleState)).digest('hex');
@@ -662,6 +688,7 @@ const missionAssignTool: MCPTool = {
       description,
       maxWorkers: enforcedMaxWorkers,
       providers,
+      projectRoot,
     });
 
     // -----------------------------------------------------------------------
@@ -706,6 +733,7 @@ const missionAssignTool: MCPTool = {
             task: workerTask,
             mode: def.mode,
             artifactDir: def.artifactDir,
+            projectRoot,
             config: {
               hiveId: hive.hiveId,
               parentAgentId: queenId,
@@ -727,7 +755,7 @@ const missionAssignTool: MCPTool = {
 
         // Record worker in hive (under lock)
         await withHiveLock(hive.hiveId, () => {
-          const freshHive = loadHive(hive.hiveId);
+          const freshHive = loadHive(hive.hiveId, projectRoot);
           if (!freshHive) return;
           const workerRecord: HiveWorkerRecord = {
             workerId,
@@ -747,15 +775,15 @@ const missionAssignTool: MCPTool = {
             agentId,
             workerId,
           });
-          saveHive(hive.hiveId, freshHive);
-        });
+          saveHive(hive.hiveId, freshHive, projectRoot);
+        }, projectRoot);
 
         // Step 2: If task provided, dispatch async
         if (workerTask) {
           try {
             // Log the task in hive audit (same pattern as queen_task_worker)
             await withHiveLock(hive.hiveId, () => {
-              const freshHive = loadHive(hive.hiveId);
+              const freshHive = loadHive(hive.hiveId, projectRoot);
               if (freshHive) {
                 appendHiveAudit(freshHive, {
                   event: 'worker-tasked',
@@ -768,26 +796,27 @@ const missionAssignTool: MCPTool = {
                 }
                 freshHive.delegationMetrics.taskedCount = (freshHive.delegationMetrics.taskedCount ?? 0) + 1;
                 recomputeDelegationMetrics(freshHive);
-                saveHive(hive.hiveId, freshHive);
+                saveHive(hive.hiveId, freshHive, projectRoot);
               }
-            });
+            }, projectRoot);
 
             const asyncResult = await callAgentTaskAsync({
               agentId,
               task: workerTask,
+              projectRoot,
             });
             pendingTaskId = asyncResult.taskId as string | undefined;
 
             // Write taskId back to the worker record in the hive
             if (pendingTaskId) {
               await withHiveLock(hive.hiveId, () => {
-                const freshHive = loadHive(hive.hiveId);
+                const freshHive = loadHive(hive.hiveId, projectRoot);
                 if (freshHive) {
                   const wr = freshHive.workers.find(w => w.workerId === workerId);
                   if (wr) wr.taskId = pendingTaskId;
-                  saveHive(hive.hiveId, freshHive);
+                  saveHive(hive.hiveId, freshHive, projectRoot);
                 }
-              });
+              }, projectRoot);
             }
 
             return {
@@ -887,6 +916,7 @@ const spawnWorkerTool: MCPTool = {
         type: 'string',
         description: 'Existing artifact directory for read-only-with-artifacts workers.',
       },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
       budgetAllocation: { type: 'number', description: 'Budget allocation for this worker' },
       config: { type: 'object', description: 'Additional worker configuration' },
     },
@@ -903,10 +933,13 @@ const spawnWorkerTool: MCPTool = {
     const artifactDir = input.artifactDir as string | undefined;
     const budgetAllocation = input.budgetAllocation as number | undefined;
     const config = (input.config as Record<string, unknown>) || {};
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
     // Lock the hive for the entire spawn operation (Condition 3)
     return withHiveLock(hiveId, async () => {
-      const hive = loadHive(hiveId);
+      const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
         return { success: false, error: `Hive '${hiveId}' not found.` };
       }
@@ -926,7 +959,7 @@ const spawnWorkerTool: MCPTool = {
       // Reconcile worker statuses against the agent store to clear stale
       // entries from previous sessions (e.g. workers stuck in 'spawning' or
       // 'error' whose underlying agent has been terminated or no longer exists).
-      const agentStore = loadAgentStore();
+      const agentStore = loadAgentStore(projectRoot);
       let reconciled = false;
       for (const worker of hive.workers) {
         if (worker.status === 'terminated') continue;
@@ -943,7 +976,7 @@ const spawnWorkerTool: MCPTool = {
           event: 'worker-spawned', // closest existing event type for bookkeeping
           detail: 'Reconciled stale workers: marked dead/missing agents as terminated',
         });
-        saveHive(hiveId, hive);
+        saveHive(hiveId, hive, projectRoot);
       }
 
       // Enforce maxWorkers hard limit (HiveBudget enforcement)
@@ -966,6 +999,7 @@ const spawnWorkerTool: MCPTool = {
         task,
         mode,
         artifactDir,
+        projectRoot,
         config: {
           ...config,
           hiveId,
@@ -1002,7 +1036,7 @@ const spawnWorkerTool: MCPTool = {
         workerId,
       });
 
-      saveHive(hiveId, hive);
+      saveHive(hiveId, hive, projectRoot);
 
       return {
         success: true,
@@ -1016,7 +1050,7 @@ const spawnWorkerTool: MCPTool = {
         modelRoutedBy: spawnResult.modelRoutedBy,
         budgetRemaining: hive.budget.maxWorkers - hive.budget.workersAllocated,
       };
-    });
+    }, projectRoot);
   },
 };
 
@@ -1036,6 +1070,7 @@ const taskWorkerTool: MCPTool = {
       workerId: { type: 'string', description: 'Worker ID (from queen_spawn_worker)' },
       task: { type: 'string', description: 'Task prompt to send to the worker' },
       timeout: { type: 'number', description: 'Timeout in ms (default: 120000)' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId', 'workerId', 'task'],
   },
@@ -1044,9 +1079,12 @@ const taskWorkerTool: MCPTool = {
     const workerId = input.workerId as string;
     const task = input.task as string;
     const timeout = input.timeout as number | undefined;
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
     const dispatchContext = await withHiveLock(hiveId, () => {
-      const freshHive = loadHive(hiveId);
+      const freshHive = loadHive(hiveId, projectRoot);
       if (!freshHive) {
         return { success: false as const, error: `Hive '${hiveId}' not found.` };
       }
@@ -1071,13 +1109,13 @@ const taskWorkerTool: MCPTool = {
       }
       freshHive.delegationMetrics.taskedCount = (freshHive.delegationMetrics.taskedCount ?? 0) + 1;
       recomputeDelegationMetrics(freshHive);
-      saveHive(hiveId, freshHive);
+      saveHive(hiveId, freshHive, projectRoot);
 
       return {
         success: true as const,
         agentId: worker.agentId,
       };
-    });
+    }, projectRoot);
 
     if (!dispatchContext.success) {
       return dispatchContext;
@@ -1087,6 +1125,7 @@ const taskWorkerTool: MCPTool = {
     const taskInput: Record<string, unknown> & { [AGENT_TASK_RETRY_CONTEXT]?: AgentTaskRetryContext } = {
       agentId: dispatchContext.agentId,
       task,
+      projectRoot,
     };
     if (retryContext && typeof retryContext === 'object') {
       taskInput[AGENT_TASK_RETRY_CONTEXT] = retryContext as AgentTaskRetryContext;
@@ -1097,7 +1136,7 @@ const taskWorkerTool: MCPTool = {
 
     // Update worker status based on result
     await withHiveLock(hiveId, () => {
-      const freshHive = loadHive(hiveId);
+      const freshHive = loadHive(hiveId, projectRoot);
       if (freshHive) {
         const freshWorker = freshHive.workers.find(w => w.workerId === workerId);
         if (freshWorker) {
@@ -1106,9 +1145,9 @@ const taskWorkerTool: MCPTool = {
             delete freshWorker.idleSince;
           }
         }
-        saveHive(hiveId, freshHive);
+        saveHive(hiveId, freshHive, projectRoot);
       }
-    });
+    }, projectRoot);
 
     return {
       success: result.success,
@@ -1134,14 +1173,18 @@ const collectResultsTool: MCPTool = {
     properties: {
       hiveId: { type: 'string', description: 'ID of the hive' },
       queenId: { type: 'string', description: 'Agent ID of the queen (for authorization)' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId', 'queenId'],
   },
   handler: async (input) => {
     const hiveId = input.hiveId as string;
     const queenId = input.queenId as string;
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
-    const hive = loadHive(hiveId);
+    const hive = loadHive(hiveId, projectRoot);
     if (!hive) {
       return { success: false, error: `Hive '${hiveId}' not found.` };
     }
@@ -1156,8 +1199,8 @@ const collectResultsTool: MCPTool = {
     }
 
     // Collect agent status for each worker
-    const store = loadAgentStore();
-    const tasksDir = join(process.cwd(), '.hive-flow', 'tasks');
+    const store = loadAgentStore(projectRoot);
+    const tasksDir = join(projectRoot, '.hive-flow', 'tasks');
     const readDurableTaskResult = (taskId: unknown): unknown | undefined => {
       const safeTaskId = sanitizePathId(taskId);
       if (!safeTaskId) return undefined;
@@ -1198,15 +1241,15 @@ const collectResultsTool: MCPTool = {
 
     // Log collection in audit
     await withHiveLock(hiveId, () => {
-      const freshHive = loadHive(hiveId);
+      const freshHive = loadHive(hiveId, projectRoot);
       if (freshHive) {
         appendHiveAudit(freshHive, {
           event: 'results-collected',
           detail: `Collected results from ${workerResults.length} workers`,
         });
-        saveHive(hiveId, freshHive);
+        saveHive(hiveId, freshHive, projectRoot);
       }
-    });
+    }, projectRoot);
 
     return {
       success: true,
@@ -1240,6 +1283,7 @@ const reportTool: MCPTool = {
         description: 'Final hive status',
       },
       error: { type: 'string', description: 'Error message if status is failed (Condition 4)' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId', 'queenId', 'report'],
   },
@@ -1249,11 +1293,14 @@ const reportTool: MCPTool = {
     const report = input.report as string;
     const status = (input.status as 'completed' | 'failed') || 'completed';
     const error = input.error as string | undefined;
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
     let liveWorkerCount = 0;
 
     const result = await withHiveLock(hiveId, async () => {
-      const hive = loadHive(hiveId);
+      const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
         return { success: false, error: `Hive '${hiveId}' not found.` };
       }
@@ -1269,7 +1316,7 @@ const reportTool: MCPTool = {
         return { success: false, error: `[COMPOSITION_ERROR] Queen report blocked. Found ${liveWorkerCount} live workers, minimum 5 required.` };
       }
 
-      const directWork = await readVerifiedQueenDirectWorkCount(queenId);
+      const directWork = await readVerifiedQueenDirectWorkCount(queenId, projectRoot);
       if (!hive.delegationMetrics) {
         hive.delegationMetrics = { taskedCount: 0, directWorkCount: 0, delegationRate: 1 };
       }
@@ -1300,7 +1347,7 @@ const reportTool: MCPTool = {
       // Sign the final state
       hive.signature = await signHiveState(hive);
 
-      saveHive(hiveId, hive);
+      saveHive(hiveId, hive, projectRoot);
 
       return {
         success: true,
@@ -1313,7 +1360,7 @@ const reportTool: MCPTool = {
         auditEntryCount: hive.audit.length,
         delegationMetrics: hive.delegationMetrics,
       };
-    });
+    }, projectRoot);
 
     if (result.success) {
       fireQueenReportHook({
@@ -1323,6 +1370,7 @@ const reportTool: MCPTool = {
         reportLength: report.length,
         workerCount: liveWorkerCount,
         delegationMetrics: result.delegationMetrics,
+        projectRoot,
       });
 
       fireHiveCompleteHook({
@@ -1334,6 +1382,7 @@ const reportTool: MCPTool = {
         workerCount: result.workerCount,
         auditEntryCount: result.auditEntryCount,
         delegationMetrics: result.delegationMetrics,
+        projectRoot,
       });
     }
 
@@ -1360,16 +1409,20 @@ const hiveStatusTool: MCPTool = {
         description: 'Filter by hive status',
       },
       includeStale: { type: 'boolean', description: 'Include staleness check (default: true)' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
   },
   handler: async (input) => {
     const hiveId = input.hiveId as string | undefined;
     const statusFilter = input.statusFilter as HiveRecord['status'] | undefined;
     const includeStale = (input.includeStale as boolean) ?? true;
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
     // Single hive lookup
     if (hiveId) {
-      const hive = loadHive(hiveId);
+      const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
         return { success: false, error: `Hive '${hiveId}' not found.` };
       }
@@ -1384,8 +1437,8 @@ const hiveStatusTool: MCPTool = {
     }
 
     // List all hives
-    const hives = listHives(statusFilter);
-    const staleHives = includeStale ? findStaleHives() : [];
+    const hives = listHives(statusFilter, projectRoot);
+    const staleHives = includeStale ? findStaleHives(projectRoot) : [];
 
     return {
       success: true,
@@ -1423,15 +1476,19 @@ const hiveTerminateTool: MCPTool = {
     properties: {
       hiveId: { type: 'string', description: 'ID of the hive to terminate' },
       reason: { type: 'string', description: 'Reason for termination' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId'],
   },
   handler: async (input) => {
     const hiveId = input.hiveId as string;
     const reason = (input.reason as string) || 'Advocate-initiated termination';
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
     return withHiveLock(hiveId, async () => {
-      const hive = loadHive(hiveId);
+      const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
         return { success: false, error: `Hive '${hiveId}' not found.` };
       }
@@ -1448,13 +1505,13 @@ const hiveTerminateTool: MCPTool = {
       for (const worker of hive.workers) {
         if (worker.status !== 'terminated') {
           try {
-            const terminateResult = await callAgentTerminate({ agentId: worker.agentId, force: true });
+            const terminateResult = await callAgentTerminate({ agentId: worker.agentId, force: true, projectRoot });
             if (!terminateResult.success) {
               const error = String(terminateResult.error || 'agent_terminate failed');
               if (error.includes('[MCP ENFORCEMENT]')) {
                 // Persist any worker mutations already applied before returning
                 // so the store stays consistent with the in-memory hive record.
-                saveHive(hiveId, hive);
+                saveHive(hiveId, hive, projectRoot);
                 return { success: false, hiveId, error, status: hive.status };
               }
               errors.push(`Failed to terminate worker ${worker.workerId}: ${error}`);
@@ -1473,12 +1530,12 @@ const hiveTerminateTool: MCPTool = {
       // Queens do NOT have config.hiveId at spawn time — they only get linked
       // to a hive after queen_mission_assign. So we use hive.queenId directly.
       try {
-        const queenTerminateResult = await callAgentTerminate({ agentId: hive.queenId, force: true });
+        const queenTerminateResult = await callAgentTerminate({ agentId: hive.queenId, force: true, projectRoot });
         if (!queenTerminateResult.success) {
           const error = String(queenTerminateResult.error || 'agent_terminate failed');
           if (error.includes('[MCP ENFORCEMENT]')) {
             // Persist any worker mutations already applied before returning.
-            saveHive(hiveId, hive);
+            saveHive(hiveId, hive, projectRoot);
             return { success: false, hiveId, error, status: hive.status };
           }
           errors.push(`Failed to terminate queen ${hive.queenId}: ${error}`);
@@ -1504,12 +1561,13 @@ const hiveTerminateTool: MCPTool = {
         queenId: hive.queenId,
         workerCount: terminated.length,
         reason: 'terminated',
+        projectRoot,
       });
 
       // Sign the final state
       hive.signature = await signHiveState(hive);
 
-      saveHive(hiveId, hive);
+      saveHive(hiveId, hive, projectRoot);
 
       return {
         success: true,
@@ -1519,7 +1577,7 @@ const hiveTerminateTool: MCPTool = {
         errors: errors.length > 0 ? errors : undefined,
         status: 'terminated',
       };
-    });
+    }, projectRoot);
   },
 };
 
@@ -1536,19 +1594,23 @@ const hiveValidateCompositionTool: MCPTool = {
     type: 'object',
     properties: {
       hiveId: { type: 'string', description: 'ID of the hive to validate' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId'],
   },
   handler: async (input) => {
     const hiveId = input.hiveId as string;
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
-    const hive = loadHive(hiveId);
+    const hive = loadHive(hiveId, projectRoot);
     if (!hive) {
       return { success: false, error: `Hive '${hiveId}' not found.` };
     }
 
     // Cross-reference the agent store for accurate live/dead status
-    const store = loadAgentStore();
+    const store = loadAgentStore(projectRoot);
     let liveWorkerCount = 0;
     let deadWorkerCount = 0;
     const roles: Record<string, number> = {};
@@ -1601,6 +1663,7 @@ const hivePollWorkersTool: MCPTool = {
     type: 'object',
     properties: {
       hiveId: { type: 'string', description: 'ID of the hive to poll' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId'],
   },
@@ -1609,15 +1672,18 @@ const hivePollWorkersTool: MCPTool = {
     const { join } = await import('node:path');
 
     const hiveId = input.hiveId as string;
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
-    const hive = loadHive(hiveId);
+    const hive = loadHive(hiveId, projectRoot);
     if (!hive) {
       console.error(`[hive_poll_workers] hive=${hiveId} not found, returning error`);
       return { success: false, error: `Hive '${hiveId}' not found.` };
     }
 
     const STORAGE_DIR = '.hive-flow';
-    const tasksDir = join(process.cwd(), STORAGE_DIR, 'tasks');
+    const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');
 
     // Build a map of agentId -> tracking entries from the tasks directory
     const agentTaskMap = new Map<string, Array<{
@@ -1788,7 +1854,7 @@ const hivePollWorkersTool: MCPTool = {
           latest.tracking.failureReason = 'worker-process-dead';
           const taskPrompt = readTaskPromptForRetry(tasksDir, latest.taskId);
           const retryClaim = taskPrompt
-            ? await claimDeadWorkerRetry(hiveId, latest.trackingPath, latest.taskId)
+            ? await claimDeadWorkerRetry(hiveId, latest.trackingPath, latest.taskId, projectRoot)
             : { claimed: false };
           if (retryClaim.tracking) {
             latest.tracking = retryClaim.tracking as typeof latest.tracking;
@@ -1797,12 +1863,13 @@ const hivePollWorkersTool: MCPTool = {
           }
 
           if (taskPrompt && retryClaim.claimed && retryClaim.retryCount !== undefined) {
-            await clearAgentTaskBeforeReassignment(worker.agentId, latest.taskId);
+            await clearAgentTaskBeforeReassignment(worker.agentId, latest.taskId, projectRoot);
             const replacementRetryCount = retryClaim.retryCount;
             const retryInput: Record<string, unknown> & { [AGENT_TASK_RETRY_CONTEXT]?: AgentTaskRetryContext } = {
               hiveId,
               workerId: worker.workerId,
               task: taskPrompt,
+              projectRoot,
             };
             retryInput[AGENT_TASK_RETRY_CONTEXT] = {
               retryCount: replacementRetryCount,
@@ -1821,7 +1888,7 @@ const hivePollWorkersTool: MCPTool = {
               writeTaskTrackingBestEffort(latest.trackingPath, latest.tracking);
               annotateReplacementTracking(tasksDir, replacementTaskId, latest.taskId, replacementRetryCount);
               await withHiveLock(hiveId, () => {
-                const freshHive = loadHive(hiveId);
+                const freshHive = loadHive(hiveId, projectRoot);
                 if (!freshHive) return;
                 const freshWorker = freshHive.workers.find(w => w.workerId === worker.workerId);
                 if (!freshWorker) return;
@@ -1834,8 +1901,8 @@ const hivePollWorkersTool: MCPTool = {
                   agentId: worker.agentId,
                   workerId: worker.workerId,
                 });
-                saveHive(hiveId, freshHive);
-              });
+                saveHive(hiveId, freshHive, projectRoot);
+              }, projectRoot);
               workerStatuses.push({
                 workerId: worker.workerId,
                 agentId: worker.agentId,
@@ -1909,17 +1976,17 @@ const hivePollWorkersTool: MCPTool = {
     // Auto-collect results into hive audit when all complete
     if (allComplete) {
       await withHiveLock(hiveId, () => {
-        const freshHive = loadHive(hiveId);
+        const freshHive = loadHive(hiveId, projectRoot);
         if (freshHive) {
           appendHiveAudit(freshHive, {
             event: 'results-collected',
             detail: `Auto-collected via hive_poll_workers: ${completedCount} completed, ${failedCount} failed, ${idleCount} idle, ${terminatedCount} terminated`,
           });
-          saveHive(hiveId, freshHive);
+          saveHive(hiveId, freshHive, projectRoot);
         }
-      });
+      }, projectRoot);
 
-      const freshStatus = loadHive(hiveId)?.status;
+      const freshStatus = loadHive(hiveId, projectRoot)?.status;
       if (freshStatus !== 'active') {
         return {
           success: true,
@@ -1940,8 +2007,8 @@ const hivePollWorkersTool: MCPTool = {
       try {
         const { appendFileSync, mkdirSync } = await import('node:fs');
         const { join } = await import('node:path');
-        mkdirSync(join(process.cwd(), '.hive-flow', 'logs'), { recursive: true });
-        const activityFile = join(process.cwd(), '.hive-flow', 'logs', 'activity.jsonl');
+        mkdirSync(join(projectRoot, '.hive-flow', 'logs'), { recursive: true });
+        const activityFile = join(projectRoot, '.hive-flow', 'logs', 'activity.jsonl');
         
 
         const event = {
@@ -1967,7 +2034,7 @@ const hivePollWorkersTool: MCPTool = {
       try {
         const outcomeStatus: 'completed' | 'failed' = completedCount > 0 ? 'completed' : 'failed';
         await withHiveLock(hiveId, () => {
-          const freshHive = loadHive(hiveId);
+          const freshHive = loadHive(hiveId, projectRoot);
           if (freshHive && freshHive.status === 'active') {
             console.error(`[hive_poll_workers] hive=${hiveId} auto-transitioning to ${outcomeStatus}`);
             freshHive.status = outcomeStatus;
@@ -1979,9 +2046,9 @@ const hivePollWorkersTool: MCPTool = {
               event: 'results-collected',
               detail: `Auto-${outcomeStatus}: ${completedCount} completed, ${failedCount} failed, ${idleCount} idle`,
             });
-            saveHive(hiveId, freshHive);
+            saveHive(hiveId, freshHive, projectRoot);
           }
-        });
+        }, projectRoot);
       } catch { /* best-effort transition */ }
     }
 
@@ -2020,6 +2087,7 @@ const queenPermissionRequestsTool: MCPTool = {
         enum: ['pending', 'approved', 'denied', 'redirected', 'redirect-failed', 'halted', 'all'],
         description: 'Optional request status filter; defaults to pending.',
       },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId', 'queenId'],
   },
@@ -2027,9 +2095,12 @@ const queenPermissionRequestsTool: MCPTool = {
     const hiveId = input.hiveId as string;
     const queenId = input.queenId as string;
     const statusFilter = (input.status as string | undefined) || 'pending';
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
     return withHiveLock(hiveId, () => {
-      const hive = loadHive(hiveId);
+      const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
         return { success: false, error: `Hive '${hiveId}' not found.` };
       }
@@ -2037,7 +2108,7 @@ const queenPermissionRequestsTool: MCPTool = {
         return { success: false, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
       }
 
-      const { requests, added } = mergeHivePermissionRequests(hive);
+      const { requests, added } = mergeHivePermissionRequests(hive, projectRoot);
       for (const request of added) {
         appendHiveAudit(hive, {
           event: 'permission-requested',
@@ -2046,7 +2117,7 @@ const queenPermissionRequestsTool: MCPTool = {
           workerId: request.workerId,
         });
       }
-      if (added.length > 0) saveHive(hiveId, hive);
+      if (added.length > 0) saveHive(hiveId, hive, projectRoot);
 
       const filtered = statusFilter === 'all'
         ? requests
@@ -2061,7 +2132,7 @@ const queenPermissionRequestsTool: MCPTool = {
         pendingCount: requests.filter(request => request.status === 'pending').length,
         requests: filtered,
       };
-    });
+    }, projectRoot);
   },
 };
 
@@ -2088,6 +2159,7 @@ const queenPermissionDecideTool: MCPTool = {
       reason: { type: 'string', description: 'Queen rationale for the decision' },
       guidance: { type: 'string', description: 'Required when decision=deny; concrete instructions for how the worker should continue without the denied permission' },
       redirectTask: { type: 'string', description: 'Required when decision=redirect; safe alternative task for the worker' },
+      ...PROJECT_ROOT_INPUT_PROPERTIES,
     },
     required: ['hiveId', 'queenId', 'requestId', 'decision'],
   },
@@ -2099,6 +2171,9 @@ const queenPermissionDecideTool: MCPTool = {
     const reason = stringValue(input.reason) || `Queen decision: ${decision}`;
     const guidance = stringValue(input.guidance);
     const redirectTask = stringValue(input.redirectTask);
+    const projectRootResult = resolveQueenProjectRoot(input as Record<string, unknown>);
+    if (!projectRootResult.success) return projectRootResult;
+    const { projectRoot } = projectRootResult;
 
     if (!['approve', 'deny', 'redirect', 'halt'].includes(decision)) {
       return { success: false, error: `Invalid permission decision '${String(input.decision)}'.` };
@@ -2114,7 +2189,7 @@ const queenPermissionDecideTool: MCPTool = {
     }
 
     const response = await withHiveLock(hiveId, async () => {
-      const hive = loadHive(hiveId);
+      const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
         return { success: false as const, error: `Hive '${hiveId}' not found.` };
       }
@@ -2122,7 +2197,7 @@ const queenPermissionDecideTool: MCPTool = {
         return { success: false as const, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
       }
 
-      const { requests, added } = mergeHivePermissionRequests(hive);
+      const { requests, added } = mergeHivePermissionRequests(hive, projectRoot);
       for (const request of added) {
         appendHiveAudit(hive, {
           event: 'permission-requested',
@@ -2134,7 +2209,7 @@ const queenPermissionDecideTool: MCPTool = {
 
       const request = requests.find(item => item.requestId === requestId);
       if (!request) {
-        if (added.length > 0) saveHive(hiveId, hive);
+        if (added.length > 0) saveHive(hiveId, hive, projectRoot);
         return { success: false as const, error: `Permission request '${requestId}' not found in hive '${hiveId}'.` };
       }
 
@@ -2151,6 +2226,7 @@ const queenPermissionDecideTool: MCPTool = {
           agentId: worker.agentId,
           force: true,
           reason: `Queen halted worker after permission request ${requestId}: ${reason}`,
+          projectRoot,
         });
         if (!terminateResult.success) {
           return {
@@ -2176,7 +2252,7 @@ const queenPermissionDecideTool: MCPTool = {
         request,
         ...(worker ? { workerId: worker.workerId, agentId: worker.agentId } : {}),
       };
-    });
+    }, projectRoot);
 
     if (!response.success) return response;
 
@@ -2186,11 +2262,12 @@ const queenPermissionDecideTool: MCPTool = {
         hiveId,
         workerId: response.workerId,
         task: redirectTask,
+        projectRoot,
       }) as Record<string, unknown>;
     }
 
     const finalized = await withHiveLock(hiveId, () => {
-      const hive = loadHive(hiveId);
+      const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
         return { success: false as const, error: `Hive '${hiveId}' not found.` };
       }
@@ -2198,7 +2275,7 @@ const queenPermissionDecideTool: MCPTool = {
         return { success: false as const, error: `Queen '${queenId}' does not own hive '${hiveId}'.` };
       }
 
-      const { requests, added } = mergeHivePermissionRequests(hive);
+      const { requests, added } = mergeHivePermissionRequests(hive, projectRoot);
       for (const addedRequest of added) {
         appendHiveAudit(hive, {
           event: 'permission-requested',
@@ -2210,7 +2287,7 @@ const queenPermissionDecideTool: MCPTool = {
 
       const request = requests.find(item => item.requestId === requestId);
       if (!request) {
-        if (added.length > 0) saveHive(hiveId, hive);
+        if (added.length > 0) saveHive(hiveId, hive, projectRoot);
         return { success: false as const, error: `Permission request '${requestId}' not found in hive '${hiveId}'.` };
       }
 
@@ -2255,7 +2332,7 @@ const queenPermissionDecideTool: MCPTool = {
           workerId: worker.workerId,
         });
       }
-      saveHive(hiveId, hive);
+      saveHive(hiveId, hive, projectRoot);
 
       return {
         success: !redirectFailed as boolean,
@@ -2265,7 +2342,7 @@ const queenPermissionDecideTool: MCPTool = {
         ...(worker ? { workerId: worker.workerId, agentId: worker.agentId } : {}),
         ...(redirectFailed ? { error: redirectError } : {}),
       };
-    });
+    }, projectRoot);
 
     if (!('request' in finalized)) {
       return {

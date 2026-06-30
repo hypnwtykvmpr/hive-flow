@@ -11,6 +11,10 @@ const mockAgentState = vi.hoisted(() => {
   const state: {
     store: AgentStore;
     calls: Record<'spawn' | 'task' | 'asyncTask' | 'terminate' | 'taskResult', number>;
+    lastSpawnInput?: Record<string, unknown>;
+    lastTaskInput?: Record<string, unknown>;
+    lastAsyncTaskInput?: Record<string, unknown>;
+    lastTerminateInput?: Record<string, unknown>;
     retryContextSymbol: symbol;
   } = {
     store: { agents: {}, version: '3.0.0' },
@@ -31,6 +35,7 @@ vi.mock('../agent-tools.js', () => {
       name: 'agent_spawn',
       handler: async (input: Record<string, unknown>, context: Record<string, unknown> = {}) => {
         mockAgentState.calls.spawn += 1;
+        mockAgentState.lastSpawnInput = { ...input };
         const agentId = String(input.agentId ?? `worker-${mockAgentState.calls.spawn}`);
         mockAgentState.store.agents[agentId] = {
           ...makeAgent(agentId, String(input.agentType ?? 'worker')),
@@ -55,6 +60,7 @@ vi.mock('../agent-tools.js', () => {
       name: 'agent_task',
       handler: async (input: Record<string, unknown>) => {
         mockAgentState.calls.task += 1;
+        mockAgentState.lastTaskInput = { ...input };
         if (!mockAgentState.store.agents[String(input.agentId)]) {
           return { success: false, error: `Agent '${String(input.agentId)}' not found` };
         }
@@ -65,6 +71,7 @@ vi.mock('../agent-tools.js', () => {
       name: 'agent_task_async',
       handler: async (input: Record<string, unknown>) => {
         mockAgentState.calls.asyncTask += 1;
+        mockAgentState.lastAsyncTaskInput = { ...input };
         return { success: true, taskId: `async-task-${mockAgentState.calls.asyncTask}`, agentId: input.agentId, status: 'running' };
       },
     },
@@ -84,6 +91,7 @@ vi.mock('../agent-tools.js', () => {
       name: 'agent_terminate',
       handler: async (input: Record<string, unknown>) => {
         mockAgentState.calls.terminate += 1;
+        mockAgentState.lastTerminateInput = { ...input };
         const agentId = String(input.agentId);
         if (mockAgentState.store.agents[agentId]) {
           mockAgentState.store.agents[agentId].status = 'terminated';
@@ -116,6 +124,10 @@ vi.mock('../agent-tools.js', () => {
       const fn = typeof scopeOrFn === 'function' ? scopeOrFn : maybeFn!;
       return fn();
     },
+    resolveProjectRootFromInput: (input: Record<string, unknown> | null | undefined) => ({
+      ok: true,
+      projectRoot: String(input?.projectRoot ?? input?.cwd ?? process.cwd()),
+    }),
     transitionAgent,
     propagateEnforcementToSubAgent: async () => undefined,
     resolveEffectiveAgentModeForSpawn: () => ({ ok: true, mode: 'full', parentMode: 'full', requestedMode: 'full' }),
@@ -157,6 +169,10 @@ function resetAgentMocks(): void {
     },
   };
   mockAgentState.calls = { spawn: 0, task: 0, asyncTask: 0, terminate: 0, taskResult: 0 };
+  delete mockAgentState.lastSpawnInput;
+  delete mockAgentState.lastTaskInput;
+  delete mockAgentState.lastAsyncTaskInput;
+  delete mockAgentState.lastTerminateInput;
 }
 
 // Persist the shared HMAC key once per sandbox so repeated writeSignedState()
@@ -196,8 +212,11 @@ function getHiveMindTool(name: string) {
   return tool;
 }
 
-function createActiveHive(owner: { ownerSessionId?: string; ownerClientKind?: string } = { ownerSessionId: 'hive-owner-session', ownerClientKind: 'codex' }): HiveRecord {
-  const hive = createHive('queen-1', { maxWorkers: 6 }, undefined, owner);
+function createActiveHive(
+  owner: { ownerSessionId?: string; ownerClientKind?: string } = { ownerSessionId: 'hive-owner-session', ownerClientKind: 'codex' },
+  projectRoot = root,
+): HiveRecord {
+  const hive = createHive('queen-1', { maxWorkers: 6 }, undefined, owner, projectRoot);
   hive.status = 'active';
   hive.workers.push({
     workerId: 'worker-1',
@@ -208,7 +227,7 @@ function createActiveHive(owner: { ownerSessionId?: string; ownerClientKind?: st
     spawnedAt: new Date(0).toISOString(),
   });
   hive.budget.workersAllocated = 1;
-  saveHive(hive.hiveId, hive);
+  saveHive(hive.hiveId, hive, projectRoot);
   return hive;
 }
 
@@ -490,6 +509,75 @@ describe('D-32: queen in-process dispatch gate', () => {
     const persistedHive = loadHive(String(result.hiveId));
     expect(persistedHive?.queenPid).toBe(process.pid);
     expect(persistedHive?.ownerSessionId).toBe('claude-queen-pid-session');
+  });
+
+  it('queen_mission_assign creates and reads hive records under the explicit projectRoot', async () => {
+    const otherRoot = mkdtempSync(join(tmpdir(), 'hive-flow-queen-project-root-'));
+    try {
+      const result = await getQueenTool('queen_mission_assign').handler({
+        queenId: 'queen-1',
+        scope: 'cross repo mission',
+        description: 'Verify hive records are scoped to the requested project root',
+        session_id: 'claude-cross-repo-session',
+        projectRoot: otherRoot,
+      }, { sessionId: 'claude-cross-repo-session', clientKind: 'claude' }) as Record<string, unknown>;
+
+      expect(result.success).toBe(true);
+      const hiveId = String(result.hiveId);
+      expect(existsSync(join(otherRoot, '.hive-flow', 'hives', hiveId, 'hive.json'))).toBe(true);
+      expect(existsSync(join(root, '.hive-flow', 'hives', hiveId, 'hive.json'))).toBe(false);
+      expect(loadHive(hiveId, otherRoot)?.ownerSessionId).toBe('claude-cross-repo-session');
+      expect(loadHive(hiveId, root)).toBeNull();
+
+      const statusResult = await getQueenTool('hive_status').handler({
+        hiveId,
+        projectRoot: otherRoot,
+      }) as Record<string, unknown>;
+      expect(statusResult.success).toBe(true);
+      expect((statusResult.hive as HiveRecord).hiveId).toBe(hiveId);
+
+      const wrongRootStatus = await getQueenTool('hive_status').handler({
+        hiveId,
+        projectRoot: root,
+      }) as Record<string, unknown>;
+      expect(wrongRootStatus.success).toBe(false);
+      expect(String(wrongRootStatus.error)).toContain('not found');
+    } finally {
+      rmSync(otherRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('queen_spawn_worker and queen_task_worker forward explicit projectRoot to delegated agent tools', async () => {
+    const otherRoot = mkdtempSync(join(tmpdir(), 'hive-flow-queen-forward-root-'));
+    try {
+      const hive = createActiveHive({ ownerSessionId: 'claude-forward-session', ownerClientKind: 'claude' }, otherRoot);
+
+      const spawnResult = await getQueenTool('queen_spawn_worker').handler({
+        hiveId: hive.hiveId,
+        queenId: hive.queenId,
+        role: 'reviewer',
+        provider: 'codex-cli',
+        model: 'sonnet',
+        projectRoot: otherRoot,
+      }, { sessionId: 'wrong-ambient-session', clientKind: 'codex' }) as Record<string, unknown>;
+
+      expect(spawnResult.success).toBe(true);
+      expect(mockAgentState.lastSpawnInput?.projectRoot).toBe(otherRoot);
+
+      const taskResult = await getQueenTool('queen_task_worker').handler({
+        hiveId: hive.hiveId,
+        workerId: String(spawnResult.workerId),
+        task: 'inspect the target repo only',
+        projectRoot: otherRoot,
+      }) as Record<string, unknown>;
+
+      expect(taskResult.success).toBe(true);
+      expect(mockAgentState.lastTaskInput?.projectRoot).toBe(otherRoot);
+      expect(loadHive(hive.hiveId, otherRoot)?.workers.find(worker => worker.workerId === spawnResult.workerId)?.status).toBe('busy');
+      expect(loadHive(hive.hiveId, root)).toBeNull();
+    } finally {
+      rmSync(otherRoot, { recursive: true, force: true });
+    }
   });
 
   it('queen_collect_results reads durable task results for queen-owned workers before agent_task_result consumption', async () => {

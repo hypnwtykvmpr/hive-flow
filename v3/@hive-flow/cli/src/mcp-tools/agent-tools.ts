@@ -310,7 +310,7 @@ function projectRootRealPath(projectRoot = process.cwd()): string {
   }
 }
 
-function resolveProjectRootFromInput(input: Record<string, unknown> | null | undefined): { ok: true; projectRoot: string } | { ok: false; error: string } {
+export function resolveProjectRootFromInput(input: Record<string, unknown> | null | undefined): { ok: true; projectRoot: string } | { ok: false; error: string } {
   const raw = input && typeof input === 'object'
     ? (input.projectRoot ?? input.project_root ?? input.cwd ?? input.currentWorkingDirectory ?? input.current_working_directory)
     : undefined;
@@ -793,8 +793,9 @@ export function saveAgentStore(store: AgentStore, projectRoot = process.cwd()): 
  */
 export async function withStoreLock<T>(fn: () => T): Promise<T>;
 export async function withStoreLock<T>(scope: string, fn: () => T): Promise<T>;
-export async function withStoreLock<T>(fnOrScope: string | (() => T), maybeFn?: () => T): Promise<T> {
-  return withStoreLockForProject(process.cwd(), fnOrScope as string | (() => T), maybeFn);
+export async function withStoreLock<T>(scope: string, fn: () => T, projectRoot: string): Promise<T>;
+export async function withStoreLock<T>(fnOrScope: string | (() => T), maybeFn?: () => T, projectRoot = process.cwd()): Promise<T> {
+  return withStoreLockForProject(projectRoot, fnOrScope as string | (() => T), maybeFn);
 }
 
 async function withStoreLockForProject<T>(
@@ -2360,18 +2361,18 @@ export const agentTools: MCPTool[] = [
         if (agentTaskCleared) try {
           const { loadHive, saveHive, withHiveLock } = await import('./hive-store.js');
           const { listHives } = await import('./hive-store.js');
-          const hives = listHives('active');
+          const hives = listHives('active', projectRoot);
           for (const hive of hives) {
             const worker = hive.workers?.find(w => w.agentId === tracking.agentId);
             if (worker && worker.status === 'busy') {
               await withHiveLock(hive.hiveId, () => {
-                const fresh = loadHive(hive.hiveId);
+                const fresh = loadHive(hive.hiveId, projectRoot);
                 if (!fresh) return;
                 const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
                 if (clearTerminalHiveWorkerTask(fw, taskId)) {
-                  saveHive(hive.hiveId, fresh);
+                  saveHive(hive.hiveId, fresh, projectRoot);
                 }
-              });
+              }, projectRoot);
               break;
             }
           }
@@ -2429,18 +2430,18 @@ export const agentTools: MCPTool[] = [
           if (agentTaskCleared) try {
             const { loadHive, saveHive, withHiveLock } = await import('./hive-store.js');
             const { listHives } = await import('./hive-store.js');
-            const hives = listHives('active');
+            const hives = listHives('active', projectRoot);
             for (const hive of hives) {
               const worker = hive.workers?.find(w => w.agentId === tracking.agentId);
               if (worker && worker.status === 'busy') {
                 await withHiveLock(hive.hiveId, () => {
-                  const fresh = loadHive(hive.hiveId);
+                  const fresh = loadHive(hive.hiveId, projectRoot);
                   if (!fresh) return;
                   const fw = fresh.workers?.find(w => w.agentId === tracking.agentId);
                   if (clearTerminalHiveWorkerTask(fw, taskId)) {
-                    saveHive(hive.hiveId, fresh);
+                    saveHive(hive.hiveId, fresh, projectRoot);
                   }
-                });
+                }, projectRoot);
                 break;
               }
             }

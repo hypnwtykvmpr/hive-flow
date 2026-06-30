@@ -37,6 +37,10 @@ vi.mock('../agent-tools.js', () => {
       const fn = typeof scopeOrFn === 'function' ? scopeOrFn : maybeFn!;
       return fn();
     },
+    resolveProjectRootFromInput: (input: Record<string, unknown> | null | undefined) => ({
+      ok: true,
+      projectRoot: String(input?.projectRoot ?? input?.cwd ?? process.cwd()),
+    }),
     transitionAgent: (agent: AgentRecord, status: AgentRecord['status']) => {
       agent.status = status;
       return true;

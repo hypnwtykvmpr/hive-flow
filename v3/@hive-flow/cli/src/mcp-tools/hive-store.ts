@@ -168,27 +168,27 @@ export interface HiveRecord {
 // Path helpers
 // ---------------------------------------------------------------------------
 
-function getHivesDir(): string {
-  return join(process.cwd(), STORAGE_DIR, HIVES_DIR);
+function getHivesDir(projectRoot = process.cwd()): string {
+  return join(projectRoot, STORAGE_DIR, HIVES_DIR);
 }
 
-function getHiveDir(hiveId: string): string {
+function getHiveDir(hiveId: string, projectRoot = process.cwd()): string {
   // A10: Use shared sanitizePathId utility to prevent path traversal
   const sanitized = sanitizePathId(hiveId, 128);
   if (!sanitized) throw new Error('Invalid hiveId');
-  return join(getHivesDir(), sanitized);
+  return join(getHivesDir(projectRoot), sanitized);
 }
 
-function getHivePath(hiveId: string): string {
-  return join(getHiveDir(hiveId), HIVE_FILE);
+function getHivePath(hiveId: string, projectRoot = process.cwd()): string {
+  return join(getHiveDir(hiveId, projectRoot), HIVE_FILE);
 }
 
-function getLockPath(hiveId: string): string {
-  return join(getHiveDir(hiveId), LOCK_FILE);
+function getLockPath(hiveId: string, projectRoot = process.cwd()): string {
+  return join(getHiveDir(hiveId, projectRoot), LOCK_FILE);
 }
 
-function ensureHiveDir(hiveId: string): void {
-  const dir = getHiveDir(hiveId);
+function ensureHiveDir(hiveId: string, projectRoot = process.cwd()): void {
+  const dir = getHiveDir(hiveId, projectRoot);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -209,9 +209,9 @@ function ensureHiveDir(hiveId: string): void {
  *
  * Lock path: `.hive-flow/hives/{hiveId}/.lock`
  */
-export async function withHiveLock<T>(hiveId: string, fn: () => T | Promise<T>): Promise<T> {
-  ensureHiveDir(hiveId);
-  const lockPath = getLockPath(hiveId);
+export async function withHiveLock<T>(hiveId: string, fn: () => T | Promise<T>, projectRoot = process.cwd()): Promise<T> {
+  ensureHiveDir(hiveId, projectRoot);
+  const lockPath = getLockPath(hiveId, projectRoot);
   const maxWait = 10000; // 10s timeout
   const start = Date.now();
   let acquired = false;
@@ -261,6 +261,7 @@ export function createHive(
   budget: Partial<HiveBudget> = {},
   config?: ModuleHiveConfig,
   owner?: { ownerSessionId?: string | null; ownerClientKind?: string | null; queenPid?: number },
+  projectRoot = process.cwd(),
 ): HiveRecord {
   const hiveId = `hive-${randomUUID()}`;
   const now = new Date().toISOString();
@@ -285,17 +286,17 @@ export function createHive(
     updatedAt: now,
   };
 
-  ensureHiveDir(hiveId);
-  saveHiveUnsafe(record);
+  ensureHiveDir(hiveId, projectRoot);
+  saveHiveUnsafe(record, projectRoot);
   return record;
 }
 
 /**
  * Load a hive record from disk. Returns null if not found.
  */
-export function loadHive(hiveId: string): HiveRecord | null {
+export function loadHive(hiveId: string, projectRoot = process.cwd()): HiveRecord | null {
   try {
-    const path = getHivePath(hiveId);
+    const path = getHivePath(hiveId, projectRoot);
     if (existsSync(path)) {
       const data = readFileSync(path, 'utf-8');
       return JSON.parse(data) as HiveRecord;
@@ -310,15 +311,15 @@ export function loadHive(hiveId: string): HiveRecord | null {
  * Save a hive record to disk. Uses atomic rename for crash safety.
  * Caller MUST hold the hive lock via `withHiveLock` (Condition 3).
  */
-export function saveHive(hiveId: string, record: HiveRecord): void {
+export function saveHive(hiveId: string, record: HiveRecord, projectRoot = process.cwd()): void {
   record.updatedAt = new Date().toISOString();
-  saveHiveUnsafe(record);
+  saveHiveUnsafe(record, projectRoot);
 }
 
 /** Internal save without updatedAt bump — used by createHive */
-function saveHiveUnsafe(record: HiveRecord): void {
-  ensureHiveDir(record.hiveId);
-  const targetPath = getHivePath(record.hiveId);
+function saveHiveUnsafe(record: HiveRecord, projectRoot = process.cwd()): void {
+  ensureHiveDir(record.hiveId, projectRoot);
+  const targetPath = getHivePath(record.hiveId, projectRoot);
   const tmpPath = targetPath + '.tmp.' + process.pid;
   writeFileSync(tmpPath, JSON.stringify(record, null, 2), 'utf-8');
   renameSync(tmpPath, targetPath);
@@ -327,8 +328,8 @@ function saveHiveUnsafe(record: HiveRecord): void {
 /**
  * List all hive records. Optionally filter by status.
  */
-export function listHives(statusFilter?: HiveStatus): HiveRecord[] {
-  const hivesDir = getHivesDir();
+export function listHives(statusFilter?: HiveStatus, projectRoot = process.cwd()): HiveRecord[] {
+  const hivesDir = getHivesDir(projectRoot);
   if (!existsSync(hivesDir)) return [];
 
   const results: HiveRecord[] = [];
@@ -336,7 +337,7 @@ export function listHives(statusFilter?: HiveStatus): HiveRecord[] {
     const entries = readdirSync(hivesDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && !entry.name.startsWith('.')) {
-        const record = loadHive(entry.name);
+        const record = loadHive(entry.name, projectRoot);
         if (record) {
           if (!statusFilter || record.status === statusFilter) {
             results.push(record);
@@ -390,8 +391,8 @@ export function isHiveStale(record: HiveRecord): boolean {
 /**
  * Find all stale hives (active beyond their timeout).
  */
-export function findStaleHives(): HiveRecord[] {
-  const activeHives = listHives('active');
+export function findStaleHives(projectRoot = process.cwd()): HiveRecord[] {
+  const activeHives = listHives('active', projectRoot);
   return activeHives.filter(isHiveStale);
 }
 
@@ -400,8 +401,8 @@ export function findStaleHives(): HiveRecord[] {
  * This function finds all active hives where updatedAt is older than stalenessTimeout,
  * changes their status to 'failed', sets error to 'queen-timeout', and saves them.
  */
-export async function markStaleHivesAsFailed(): Promise<{ failedHives: string[]; errors: string[] }> {
-  const staleHives = findStaleHives();
+export async function markStaleHivesAsFailed(projectRoot = process.cwd()): Promise<{ failedHives: string[]; errors: string[] }> {
+  const staleHives = findStaleHives(projectRoot);
   const failedHives: string[] = [];
   const errors: string[] = [];
 
@@ -409,7 +410,7 @@ export async function markStaleHivesAsFailed(): Promise<{ failedHives: string[];
     try {
       await withHiveLock(hive.hiveId, () => {
         // Re-load under lock to ensure freshness
-        const freshHive = loadHive(hive.hiveId);
+        const freshHive = loadHive(hive.hiveId, projectRoot);
         if (!freshHive || freshHive.status !== 'active') return;
         
         // Check if still stale under lock
@@ -428,9 +429,9 @@ export async function markStaleHivesAsFailed(): Promise<{ failedHives: string[];
         });
         
         // Save the updated hive
-        saveHive(freshHive.hiveId, freshHive);
+        saveHive(freshHive.hiveId, freshHive, projectRoot);
         failedHives.push(freshHive.hiveId);
-      });
+      }, projectRoot);
     } catch (error) {
       errors.push(`Failed to transition hive ${hive.hiveId}: ${error instanceof Error ? error.message : String(error)}`);
     }
