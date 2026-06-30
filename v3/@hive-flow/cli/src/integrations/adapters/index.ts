@@ -89,6 +89,7 @@ export const codexAdapter = makeTomlAdapter({
   canonicalKey: 'hive-flow',
   buildMain: (ctx) => ({
     command: ctx.launcherPath, args: [] as string[],
+    env_vars: ['CODEX_SESSION_ID', 'CODEX_THREAD_ID'],
     type: 'stdio', enabled: true,
     startup_timeout_sec: 30, tool_timeout_sec: 60,
   }),

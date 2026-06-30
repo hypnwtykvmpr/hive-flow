@@ -122,6 +122,10 @@ it('detects 7 agents, merges 5 existing configs, returns missing-config for abse
 
   // Sibling keys preserved
   expect(await fixture.read('home/.gemini/settings.json')).toContain('"filesystem"');
+
+  const codexConfig = await fixture.read('home/.codex/config.toml');
+  expect(codexConfig).toContain('env_vars = ["CODEX_SESSION_ID", "CODEX_THREAD_ID"]');
+  expect(codexConfig).toContain('[mcp_servers.hive-flow.env]');
 });
 
 // ---------------------------------------------------------------------------
