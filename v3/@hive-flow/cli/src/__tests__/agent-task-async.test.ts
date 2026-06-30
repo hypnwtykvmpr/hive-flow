@@ -185,6 +185,19 @@ describe('agent_task_async handler', () => {
     vi.clearAllMocks();
   });
 
+  it('exposes projectRoot and cwd in the async tool schema', () => {
+    expect(asyncTool.inputSchema.properties).toMatchObject({
+      projectRoot: {
+        type: 'string',
+        description: 'Effective project root/current repo for task files, bridge cwd, and notifications',
+      },
+      cwd: {
+        type: 'string',
+        description: 'Alias for projectRoot',
+      },
+    });
+  });
+
   // ------------------------------------------------------------------
   // 1. Happy path: returns success with taskId, agentId, status, pid
   // ------------------------------------------------------------------
@@ -263,6 +276,35 @@ describe('agent_task_async handler', () => {
     expect(tracking.ownerSessionId).toBe(agent.ownerSessionId);
     expect(tracking.ownerClientKind).toBe(agent.ownerClientKind);
     expect(tracking.pid).toBe(99);
+  });
+
+  it('honors projectRoot for async task files, tracking metadata, bridge cwd, and bridge env', async () => {
+    const agent = makeAgent();
+    const projectRoot = '/tmp/vampyre-project';
+    setupStoreMocks(makeStore({ [agent.agentId]: agent }));
+    mockDetachedSpawn(101);
+
+    const result = await asyncHandler({
+      agentId: agent.agentId,
+      task: 'cross-repo task',
+      projectRoot,
+    }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+
+    const taskWrite = atomicWriteForDestination((dest) => dest.endsWith('.task'));
+    expect(taskWrite.destination).toMatch(new RegExp(`^${projectRoot}/\\.hive-flow/tasks/task-.*\\.task$`));
+
+    const trackingWrite = atomicWriteForDestination((dest) =>
+      dest.endsWith('.json') && !dest.endsWith('store.json'));
+    expect(trackingWrite.destination).toMatch(new RegExp(`^${projectRoot}/\\.hive-flow/tasks/task-.*\\.json$`));
+    const tracking = JSON.parse(trackingWrite.contents);
+    expect(tracking.projectRoot).toBe(projectRoot);
+
+    const [, , options] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(options.cwd).toBe(projectRoot);
+    expect(options.env.HIVE_FLOW_PROJECT_ROOT).toBe(projectRoot);
+    expect(options.env.CLAUDE_PROJECT_DIR).toBe(projectRoot);
   });
 
   it('passes --agent-token from the stored spawn token to the bridge process', async () => {

@@ -2238,6 +2238,8 @@ export const agentTools: MCPTool[] = [
         agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
         task: { type: 'string', description: 'Task prompt to send to the agent' },
         timeout: { type: 'number', description: 'Timeout in ms (default: 300000)' },
+        projectRoot: { type: 'string', description: 'Effective project root/current repo for task files, bridge cwd, and notifications' },
+        cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
       required: ['agentId', 'task'],
     },
