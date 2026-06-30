@@ -14,6 +14,8 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const VALID_MODES = new Set(['inplace', 'headless']);
+const COMPACT_CONTEXT_FLOOR_PCT = 0.50;
+const MAX_CONTEXT_STATE_BYTES = 64 * 1024;
 const CORRECT_SELF_COMPACT_COMMAND = [
   'Correct current-session self-compaction command:',
   'node .claude/helpers/compact-now.cjs --mode inplace --reason "<why compaction is needed>" --next-step "<exact next step after compact>"',
@@ -113,6 +115,68 @@ function writeJsonAtomic(filePath, value) {
   const tmpPath = `${filePath}.tmp.${process.pid}.${Date.now()}`;
   fs.writeFileSync(tmpPath, JSON.stringify(value, null, 2), 'utf8');
   fs.renameSync(tmpPath, filePath);
+}
+
+function normalizePercentage(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (n <= 1) return n;
+  if (n <= 100) return n / 100;
+  return null;
+}
+
+function readJsonFileIfPresent(filePath, maxBytes = MAX_CONTEXT_STATE_BYTES) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile() || stat.size > maxBytes) return null;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function latestHistoryPercentage(state) {
+  if (!Array.isArray(state?.history)) return null;
+  for (let i = state.history.length - 1; i >= 0; i--) {
+    const pct = normalizePercentage(state.history[i]?.pct);
+    if (pct !== null) return pct;
+  }
+  return null;
+}
+
+function measuredContextPercentage(projectRoot, sessionId) {
+  const statePath = path.join(projectRoot, '.hive-flow', 'data', 'autopilot-state.json');
+  const state = readJsonFileIfPresent(statePath);
+  if (!state || typeof state !== 'object') return null;
+
+  const stateSession = sanitizeLine(state.sessionId || '', 200);
+  if (stateSession && sessionId && stateSession !== sessionId) return null;
+
+  const tokens = Number(state.lastTokenEstimate);
+  const contextWindow = Number(state.contextWindow);
+  let pct = null;
+  if (Number.isFinite(tokens) && tokens >= 0 && Number.isFinite(contextWindow) && contextWindow > 0) {
+    pct = Math.min(tokens / contextWindow, 1);
+  }
+  if (pct === null) pct = normalizePercentage(state.lastPercentage);
+  if (pct === null) pct = latestHistoryPercentage(state);
+
+  return pct === null ? null : { percentage: pct, statePath };
+}
+
+function assertContextFloorAllowsCompaction(projectRoot, sessionId) {
+  const measurement = measuredContextPercentage(projectRoot, sessionId);
+  if (!measurement) return null;
+  if (measurement.percentage < COMPACT_CONTEXT_FLOOR_PCT) {
+    const pct = (measurement.percentage * 100).toFixed(1);
+    throw new Error(
+      `Refusing compaction request: measured context is ${pct}%, below the 50% compaction request floor. ` +
+      `Compaction advice starts at 70%; continue without compacting until context reaches the floor. ` +
+      `Source: ${measurement.statePath}`,
+    );
+  }
+  return measurement;
 }
 
 function buildClaudeCompactArgs(prompt, resume) {
@@ -233,6 +297,7 @@ function main() {
   const handoffPath = path.join(dataDir, 'compaction-handoff.md');
   const requestPath = path.join(dataDir, 'compact-request.json');
   fs.mkdirSync(dataDir, { recursive: true });
+  const contextMeasurement = assertContextFloorAllowsCompaction(projectRoot, args.resume);
 
   const handoffWrittenAt = new Date().toISOString();
   const request = {
@@ -249,6 +314,13 @@ function main() {
     projectRoot,
     handoffPath,
     staleAfterMs: 300000,
+    contextMeasurement: contextMeasurement ? {
+      percentage: contextMeasurement.percentage,
+      percent: Number((contextMeasurement.percentage * 100).toFixed(1)),
+      source: contextMeasurement.statePath,
+      floorPercent: Number((COMPACT_CONTEXT_FLOOR_PCT * 100).toFixed(0)),
+      adviceStartsPercent: 70,
+    } : null,
     preservationPrompt: '',
   };
   request.preservationPrompt = buildPreservationPrompt(request);

@@ -65,9 +65,17 @@ describe('compact-now helper', () => {
     const requestPath = join(dataDir, 'compact-request.json');
     const fakeClaude = join(projectRoot, 'fake-claude.cjs');
     const argsPath = join(dataDir, 'fake-claude-args.json');
+    const statePath = join(dataDir, 'autopilot-state.json');
     mkdirSync(dataDir, { recursive: true });
 
     try {
+      writeFileSync(statePath, JSON.stringify({
+        sessionId: 'session-headless',
+        lastPercentage: 0.5,
+        lastTokenEstimate: 500000,
+        contextWindow: 1000000,
+        lastCheck: Date.now(),
+      }));
       writeFileSync(fakeClaude, [
         '#!/usr/bin/env node',
         "const fs = require('fs');",
@@ -105,6 +113,48 @@ describe('compact-now helper', () => {
       const output = JSON.parse(result.stdout);
       assert.equal(output.headless.compacted, true);
       assert.equal(output.headless.compactBoundary.compact_metadata.pre_tokens, 12345);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks compact requests when measured context is below the 50% floor', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-low-context-'));
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const handoffPath = join(dataDir, 'compaction-handoff.md');
+    const requestPath = join(dataDir, 'compact-request.json');
+    const statePath = join(dataDir, 'autopilot-state.json');
+    mkdirSync(dataDir, { recursive: true });
+
+    try {
+      writeFileSync(statePath, JSON.stringify({
+        sessionId: 'session-low',
+        lastPercentage: 0.2,
+        lastTokenEstimate: 200000,
+        contextWindow: 1000000,
+        lastCheck: Date.now(),
+      }));
+
+      const result = spawnSync(process.execPath, [
+        helperPath,
+        '--reason', 'too early',
+        '--mode', 'headless',
+        '--resume', 'session-low',
+      ], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+        },
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /20\.0%/);
+      assert.match(result.stderr, /below the 50% compaction request floor/);
+      assert.match(result.stderr, /Compaction advice starts at 70%/);
+      assert.equal(existsSync(handoffPath), false);
+      assert.equal(existsSync(requestPath), false);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }

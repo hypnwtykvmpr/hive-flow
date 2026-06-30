@@ -36,6 +36,8 @@ const {
   buildSessionStartRecoveryContext,
   detectContextWindowTokens,
   displayAutopilotPercentage,
+  resolveStatuslineContextMeasurement,
+  buildCompactPromptFloorDecision,
   modelIdToWindowSize,
   MODEL_CONTEXT_WINDOWS,
   DEFAULT_CONTEXT_WINDOW_TOKENS,
@@ -388,6 +390,87 @@ describe('context window detection', () => {
     }, 1000000);
 
     assert.equal(pct.toFixed(6), '0.258587');
+  });
+
+  it('should measure live context using the statusline stdin context window shape', () => {
+    const measurement = resolveStatuslineContextMeasurement({
+      context_window: {
+        used_tokens: 200000,
+        context_window_size: 1000000,
+      },
+      model: { model_id: 'claude-opus-4-8[1m]' },
+    });
+
+    assert.equal(measurement.percentage, 0.2);
+    assert.equal(measurement.contextWindow, 1000000);
+    assert.equal(measurement.source, 'stdin.context_window.used_tokens');
+  });
+
+  it('should block direct /compact prompts below the dynamically measured 50% floor', () => {
+    const decision = buildCompactPromptFloorDecision({
+      prompt: '/compact preserve state',
+      context_window: {
+        used_percentage: 49,
+        context_window_size: 1000000,
+      },
+      model: { model_id: 'claude-opus-4-8[1m]' },
+    });
+
+    assert.equal(decision.decision, 'block');
+    assert.equal(decision.continue, false);
+    assert.match(decision.stopReason, /49\.0%/);
+    assert.match(decision.stopReason, /below the 50% compaction request floor/);
+  });
+
+  it('should skip context measurement for every non-/compact prompt', () => {
+    for (const prompt of [
+      'please explain /compact behavior',
+      '/compactness is not the compact command',
+      '/compile the project',
+      'normal development prompt',
+      '',
+    ]) {
+      const input = { prompt };
+      Object.defineProperty(input, 'context_window', {
+        get() {
+          throw new Error(`context_window should not be read for ${JSON.stringify(prompt)}`);
+        },
+      });
+      Object.defineProperty(input, 'model', {
+        get() {
+          throw new Error(`model should not be read for ${JSON.stringify(prompt)}`);
+        },
+      });
+
+      assert.equal(buildCompactPromptFloorDecision(input), null);
+    }
+  });
+
+  it('should treat 20% of a 1M model as 20% actual context, not old-window equivalent pressure', () => {
+    const decision = buildCompactPromptFloorDecision({
+      prompt: '/compact',
+      context_window: {
+        used_tokens: 200000,
+        context_window_size: 1000000,
+      },
+      model: { model_id: 'claude-opus-4-8[1m]' },
+    });
+
+    assert.equal(decision.decision, 'block');
+    assert.match(decision.stopReason, /20\.0%/);
+  });
+
+  it('should allow direct /compact prompts at or above the dynamically measured 50% floor', () => {
+    const decision = buildCompactPromptFloorDecision({
+      prompt: '/compact',
+      context_window: {
+        used_percentage: 60,
+        context_window_size: 1000000,
+      },
+      model: { model_id: 'claude-opus-4-8[1m]' },
+    });
+
+    assert.equal(decision, null);
   });
 });
 
@@ -1194,16 +1277,22 @@ describe('compact advisory signal', () => {
   it('should emit threshold guidance that matches the human compaction policy', async () => {
     const cases = [
       {
+        name: 'below-compaction-floor',
+        pct: 0.49,
+        matches: [],
+        rejects: [/70%\+ warning zone/i, /50% is the low-context request floor/i, /hard redline/i],
+      },
+      {
         name: 'below-warning',
         pct: 0.62,
         matches: [],
-        rejects: [/Compaction is permissible when context is at or above 50%/i, /hard redline/i],
+        rejects: [/50% is the low-context request floor/i, /hard redline/i],
       },
       {
         name: 'warning',
         pct: 0.72,
-        matches: [/70%\+ warning zone/i, /Compaction is permissible when context is at or above 50%/],
-        rejects: [],
+        matches: [/70%\+ warning zone/i, /50% is the low-context request floor/i, /below 50% should be blocked/i],
+        rejects: [/Compaction is permissible when context is at or above 50%/i],
       },
       {
         name: 'historical-redline',

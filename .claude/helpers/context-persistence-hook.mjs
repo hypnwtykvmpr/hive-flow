@@ -68,6 +68,8 @@ const AUTOPILOT_ENABLED = process.env.HIVE_FLOW_CONTEXT_AUTOPILOT !== 'false'; /
 const CONTEXT_WINDOW_TOKENS = detectContextWindowTokens();
 const AUTOPILOT_WARN_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_WARN || '0.70');
 const AUTOPILOT_PRUNE_PCT = parseFloat(process.env.HIVE_FLOW_AUTOPILOT_PRUNE || '0.85');
+const COMPACT_CONTEXT_FLOOR_PCT = 0.50;
+const COMPACT_ADVICE_START_PCT = 0.70;
 const HUMAN_CONTEXT_HISTORICAL_REDLINE_PCT = 0.80;
 const HUMAN_CONTEXT_HARD_REDLINE_PCT = 0.95;
 const AUTOPILOT_STATE_PATH = join(DATA_DIR, 'autopilot-state.json');
@@ -78,6 +80,109 @@ const CHARS_PER_TOKEN = 3.5;
 function positiveInteger(value) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+}
+
+function finiteNumber(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function numberAt(value, path) {
+  let current = value;
+  for (const key of path) {
+    if (!current || typeof current !== 'object') return null;
+    current = current[key];
+  }
+  return finiteNumber(current);
+}
+
+function normalizePercentageFraction(value) {
+  const n = finiteNumber(value);
+  if (n === null || n < 0) return null;
+  if (n <= 1) return Math.min(n, 1);
+  if (n <= 100) return n / 100;
+  return null;
+}
+
+function contextWindowCurrentUsageTokens(input) {
+  const usage = input?.context_window?.current_usage;
+  if (!usage || typeof usage !== 'object') return 0;
+  return positiveInteger(usage.input_tokens)
+    + positiveInteger(usage.cache_creation_input_tokens)
+    + positiveInteger(usage.cache_read_input_tokens);
+}
+
+function resolveStatuslineContextMeasurement(input = {}, transcriptPath = '') {
+  const fromUsedPct = normalizePercentageFraction(
+    numberAt(input, ['context_window', 'used_percentage'])
+      ?? numberAt(input, ['context', 'percentage'])
+      ?? numberAt(input, ['context', 'percent']),
+  );
+  if (fromUsedPct !== null) {
+    return { percentage: fromUsedPct, source: 'stdin.context_window.used_percentage' };
+  }
+
+  const fromRemainingPct = normalizePercentageFraction(numberAt(input, ['context_window', 'remaining_percentage']));
+  if (fromRemainingPct !== null) {
+    return { percentage: Math.max(0, Math.min(1, 1 - fromRemainingPct)), source: 'stdin.context_window.remaining_percentage' };
+  }
+
+  const contextWindow = positiveInteger(
+    numberAt(input, ['context_window', 'context_window_size'])
+      ?? numberAt(input, ['context_window', 'max_tokens'])
+      ?? numberAt(input, ['context', 'max_tokens'])
+      ?? detectContextWindowTokens(input),
+  );
+  const usedTokens = positiveInteger(
+    numberAt(input, ['context_window', 'used_tokens'])
+      ?? numberAt(input, ['context', 'used_tokens']),
+  );
+  if (usedTokens > 0 && contextWindow > 0) {
+    return { percentage: Math.min(usedTokens / contextWindow, 1), source: 'stdin.context_window.used_tokens', tokens: usedTokens, contextWindow };
+  }
+
+  const currentUsageTokens = contextWindowCurrentUsageTokens(input);
+  if (currentUsageTokens > 0 && contextWindow > 0) {
+    return { percentage: Math.min(currentUsageTokens / contextWindow, 1), source: 'stdin.context_window.current_usage', tokens: currentUsageTokens, contextWindow };
+  }
+
+  if (transcriptPath) {
+    const estimated = estimateContextTokens(transcriptPath);
+    if (estimated.tokens > 0 && contextWindow > 0) {
+      return { percentage: Math.min(estimated.tokens / contextWindow, 1), source: `transcript.${estimated.method}`, tokens: estimated.tokens, contextWindow };
+    }
+  }
+
+  return null;
+}
+
+function compactPromptText(input = {}) {
+  const prompt = input.prompt ?? input.user_prompt ?? input.userPrompt ?? input.message;
+  return typeof prompt === 'string' ? prompt.trim() : '';
+}
+
+function isCompactSlashPrompt(input = {}) {
+  return /^\/compact(?:\s|$)/i.test(compactPromptText(input));
+}
+
+function buildCompactPromptFloorDecision(input = {}, transcriptPath = null) {
+  if (!isCompactSlashPrompt(input)) return null;
+  const resolvedTranscriptPath = transcriptPath ?? input?.transcript_path ?? input?.transcriptPath ?? '';
+  const measurement = resolveStatuslineContextMeasurement(input, resolvedTranscriptPath);
+  if (!measurement) return null;
+  if (measurement.percentage >= COMPACT_CONTEXT_FLOOR_PCT) return null;
+
+  const pct = (measurement.percentage * 100).toFixed(1);
+  const floor = (COMPACT_CONTEXT_FLOOR_PCT * 100).toFixed(0);
+  const advice = (COMPACT_ADVICE_START_PCT * 100).toFixed(0);
+  return {
+    decision: 'block',
+    continue: false,
+    suppressOutput: false,
+    stopReason: `[COMPACT_BLOCKED] Refusing /compact: measured context is ${pct}% using ${measurement.source}, below the ${floor}% compaction request floor. Compaction advice starts at ${advice}%. Continue without compacting.`,
+  };
 }
 
 function detectContextWindowTokens(input = null) {
@@ -1684,7 +1789,7 @@ function buildHumanCompactionGuidance(percentage) {
   const lines = [
     ` | Context at ${pct}%.`,
     `70%+ warning zone: start looking for a clean compaction boundary.`,
-    `Compaction is permissible when context is at or above 50%, but choose an ideal boundary rather than panic-compacting.`,
+    `50% is the low-context request floor, not advice to compact early; self-compaction requests below 50% should be blocked.`,
   ];
 
   if (percentage >= HUMAN_CONTEXT_HISTORICAL_REDLINE_PCT) {
@@ -2325,6 +2430,14 @@ async function doUserPromptSubmit() {
   if (!input) return;
 
   const { session_id: sessionId, transcript_path: transcriptPath } = input;
+  if (isCompactSlashPrompt(input)) {
+    const compactPromptBlock = buildCompactPromptFloorDecision(input, transcriptPath);
+    if (compactPromptBlock) {
+      process.stdout.write(JSON.stringify(compactPromptBlock));
+      return;
+    }
+  }
+
   if (!transcriptPath || !sessionId) return;
 
   const messages = parseTranscript(transcriptPath);
@@ -2518,6 +2631,8 @@ export {
   formatTokens,
   displayAutopilotPercentage,
   buildAutopilotReport,
+  resolveStatuslineContextMeasurement,
+  buildCompactPromptFloorDecision,
   consumeCompactSignalAdvisory,
   armCompactionRecoveryRequired,
   buildCompactionRecoveryInstructions,
