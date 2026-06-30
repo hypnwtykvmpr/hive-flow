@@ -1389,28 +1389,50 @@ function stripShellQuotes(token) {
   return trimmed;
 }
 
+function decodeAnsiCStringEscape(ch) {
+  if (ch === 'n') return '\n';
+  if (ch === 'r') return '\r';
+  if (ch === 't') return '\t';
+  return ch;
+}
+
 function normalizeShellWord(token) {
   const trimmed = stripShellQuotes(token);
   let normalized = '';
   let quote = null;
+  let dollarQuote = false;
   let escaped = false;
-  for (const ch of trimmed) {
+  for (let i = 0; i < trimmed.length; i++) {
+    const ch = trimmed[i];
     if (escaped) {
-      normalized += ch;
+      normalized += dollarQuote ? decodeAnsiCStringEscape(ch) : ch;
       escaped = false;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+        dollarQuote = false;
+      } else if (ch === '\\' && (quote === '"' || dollarQuote)) {
+        escaped = true;
+      } else {
+        normalized += ch;
+      }
+      continue;
+    }
+    if (ch === '$' && trimmed[i + 1] === "'") {
+      quote = "'";
+      dollarQuote = true;
+      i++;
       continue;
     }
     if (ch === '\\') {
       escaped = true;
       continue;
     }
-    if (quote) {
-      if (ch === quote) quote = null;
-      else normalized += ch;
-      continue;
-    }
     if (ch === '"' || ch === "'") {
       quote = ch;
+      dollarQuote = false;
       continue;
     }
     normalized += ch;
@@ -2391,6 +2413,90 @@ function isCompactNowProtectedGitActivation(command) {
   return foundCompactNowCheckout;
 }
 
+function startsCompactSlashCommand(value) {
+  const text = String(value || '').replace(/\\r\\n|\\n|\\r/g, '\n');
+  return /(?:^|\r?\n)[ \t]*\/compact(?:[ \t]|$)/i.test(text);
+}
+
+function recordedClaudeTmuxPane() {
+  try {
+    return fs.readFileSync(path.join(PROJECT_DIR, '.hive-flow', 'data', 'tmux-pane.txt'), 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
+
+function isClaudeTmuxTarget(target) {
+  const normalized = normalizeShellWord(stripShellQuotes(String(target || ''))).trim();
+  const recorded = recordedClaudeTmuxPane();
+  if (!normalized) return Boolean(recorded && process.env.TMUX_PANE === recorded);
+  if (recorded && normalized === recorded) return true;
+  return /claude|HIVE-FLOW-CORE/i.test(normalized);
+}
+
+function findTmuxSendKeysCompactBlock(execution) {
+  if (commandBasename(execution?.command || '') !== 'tmux') return null;
+  const args = execution.args || [];
+  const sendIndex = args.findIndex(arg => arg === 'send-keys' || arg === 'send');
+  if (sendIndex < 0) return null;
+
+  let target = '';
+  const payload = [];
+  for (let index = sendIndex + 1; index < args.length; index++) {
+    const arg = args[index] || '';
+    if (arg === '-t' || arg === '--target') {
+      target = args[index + 1] || '';
+      index++;
+      continue;
+    }
+    if (arg.startsWith('-t') && arg.length > 2) {
+      target = arg.slice(2);
+      continue;
+    }
+    if (arg.startsWith('--target=')) {
+      target = arg.slice('--target='.length);
+      continue;
+    }
+    if (arg === '--') continue;
+    if (arg === '-N' || arg === '-R') {
+      index++;
+      continue;
+    }
+    if (arg.startsWith('-') && arg !== '-') continue;
+    payload.push(arg);
+  }
+
+  const compactPayload = payload.find(startsCompactSlashCommand)
+    || (startsCompactSlashCommand(payload.join(' ')) ? payload.join(' ') : '');
+  if (!compactPayload) return null;
+  if (isClaudeTmuxTarget(target)) return null;
+  return `DENIED: /compact may only be sent to Claude panes. Refusing tmux send-keys target '${target || '<implicit>'}' with compact payload.`;
+}
+
+function findControlHelperCompactBlock(execution) {
+  const words = [execution?.command || '', ...((execution?.args || []))];
+  const helperIndex = words.findIndex(word => commandBasename(word) === 'hf-tmux-control.sh');
+  if (helperIndex < 0) return null;
+  const action = words[helperIndex + 1] || '';
+  const payload = words.slice(helperIndex + 2);
+  if (!payload.some(startsCompactSlashCommand)) return null;
+  if (action === 'send-claude' || action === 'compact-claude') return null;
+  if (action === 'send-codex' || action.startsWith('send-')) {
+    return `DENIED: /compact may only be sent to Claude panes. Refusing hf-tmux-control ${action || '<missing-action>'}.`;
+  }
+  return null;
+}
+
+function findNonClaudeCompactSend(command) {
+  for (const execution of collectShellCommandExecutions(command || '')) {
+    const helperBlock = findControlHelperCompactBlock(execution);
+    if (helperBlock) return helperBlock;
+    const tmuxBlock = findTmuxSendKeysCompactBlock(execution);
+    if (tmuxBlock) return tmuxBlock;
+  }
+  return null;
+}
+
 function loadCompactionRecoveryRequirement(input = {}) {
   let flag = null;
   try {
@@ -2583,6 +2689,16 @@ function detectCircumvention(toolName, toolInput, state) {
         substrateAttack: true,
         protectedEnforcementAttack: true,
         systemic: true,
+      };
+    }
+
+    const nonClaudeCompactSend = findNonClaudeCompactSend(command);
+    if (nonClaudeCompactSend) {
+      return {
+        circumvention: true,
+        denyOnly: true,
+        reason: nonClaudeCompactSend,
+        severity: 'normal',
       };
     }
 

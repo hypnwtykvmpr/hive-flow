@@ -9,7 +9,7 @@
  * Ported from Python permission_gate.py.
  */
 
-import { writeFileSync, appendFileSync, mkdirSync, renameSync, unlinkSync } from 'node:fs';
+import { writeFileSync, appendFileSync, mkdirSync, renameSync, unlinkSync, readFileSync } from 'node:fs';
 import { basename, dirname, resolve, relative, join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -537,11 +537,18 @@ export function splitShellCommands(cmd: string): string[] {
   let inDollarQuote = false;
   let escaped = false;
 
+  const decodeDollarQuoteEscape = (ch: string): string => {
+    if (ch === 'n') return '\n';
+    if (ch === 'r') return '\r';
+    if (ch === 't') return '\t';
+    return ch;
+  };
+
   for (let i = 0; i < cmd.length; i++) {
     const ch = cmd[i];
 
     if (escaped) {
-      current += ch;
+      current += inDollarQuote ? decodeDollarQuoteEscape(ch) : ch;
       escaped = false;
       continue;
     }
@@ -643,11 +650,18 @@ function shellWords(segment: string): string[] | null {
   let inDollarQuote = false;
   let escaped = false;
 
+  const decodeDollarQuoteEscape = (ch: string): string => {
+    if (ch === 'n') return '\n';
+    if (ch === 'r') return '\r';
+    if (ch === 't') return '\t';
+    return ch;
+  };
+
   for (let i = 0; i < segment.length; i += 1) {
     const ch = segment[i];
 
     if (escaped) {
-      current += ch;
+      current += inDollarQuote ? decodeDollarQuoteEscape(ch) : ch;
       escaped = false;
       continue;
     }
@@ -1127,6 +1141,157 @@ function findSecretBashReadArg(cmd: string): string | null {
     }
   } catch {
     return null;
+  }
+  return null;
+}
+
+function startsCompactSlashCommand(value: string): boolean {
+  const text = String(value || '').replace(/\\r\\n|\\n|\\r/g, '\n');
+  return /(?:^|\r?\n)[ \t]*\/compact(?:[ \t]|$)/i.test(text);
+}
+
+function normalizedExecutionTokens(tokens: string[]): string[] | null {
+  let index = 0;
+  while (index < tokens.length && isEnvAssignment(tokens[index])) index += 1;
+  if (!tokens[index]) return null;
+
+  let executable = commandBasename(tokens[index] || '');
+  if (executable === 'env') {
+    index += 1;
+    while (index < tokens.length) {
+      const token = tokens[index];
+      if (token === '--') {
+        index += 1;
+        break;
+      }
+      if (token.startsWith('-')) {
+        index += 1;
+        continue;
+      }
+      if (isEnvAssignment(token)) {
+        index += 1;
+        continue;
+      }
+      break;
+    }
+    executable = commandBasename(tokens[index] || '');
+  }
+
+  if (['command', 'builtin', 'nohup', 'setsid'].includes(executable)) {
+    index += 1;
+    while (tokens[index]?.startsWith('-')) index += 1;
+  } else if (executable === 'timeout') {
+    index += 1;
+    while (tokens[index]?.startsWith('-')) index += 1;
+    if (tokens[index]) index += 1;
+  }
+
+  return tokens[index] ? tokens.slice(index) : null;
+}
+
+function shellExecutionTokenLists(command: string): string[][] {
+  const executions: string[][] = [];
+  const collect = (body: string, depth: number) => {
+    if (depth > 4) return;
+    for (const segment of splitShellCommands(body || '')) {
+      const tokens = shellWords(stripCommand(segment));
+      if (!tokens || tokens.length === 0) continue;
+      const normalized = normalizedExecutionTokens(tokens);
+      if (!normalized?.length) continue;
+      executions.push(normalized);
+      const nested = shellWrapperBody(normalized);
+      if (nested) collect(nested, depth + 1);
+    }
+  };
+  collect(command, 0);
+  return executions;
+}
+
+function shellWrapperBody(tokens: string[]): string | null {
+  const executable = commandBasename(tokens[0] || '').toLowerCase();
+  if (!['bash', 'sh', 'zsh', 'dash', 'ksh'].includes(executable)) return null;
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index] || '';
+    if (token === '--') continue;
+    if (!token.startsWith('-')) return null;
+    if (token.includes('c')) return tokens[index + 1] || null;
+  }
+  return null;
+}
+
+function recordedClaudeTmuxPane(projectRoot: string): string {
+  try {
+    return readFileSync(join(projectRoot, '.hive-flow', 'data', 'tmux-pane.txt'), 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
+
+function isClaudeTmuxTarget(target: string, projectRoot: string): boolean {
+  const normalized = String(target || '').trim();
+  const recorded = recordedClaudeTmuxPane(projectRoot);
+  if (!normalized) return Boolean(recorded && process.env.TMUX_PANE === recorded);
+  if (recorded && normalized === recorded) return true;
+  return /claude|HIVE-FLOW-CORE/i.test(normalized);
+}
+
+function findTmuxSendKeysCompactBlock(tokens: string[], projectRoot: string): string | null {
+  if (commandBasename(tokens[0] || '') !== 'tmux') return null;
+  const sendIndex = tokens.findIndex(token => token === 'send-keys' || token === 'send');
+  if (sendIndex < 0) return null;
+
+  let target = '';
+  const payload: string[] = [];
+  for (let index = sendIndex + 1; index < tokens.length; index += 1) {
+    const arg = tokens[index] || '';
+    if (arg === '-t' || arg === '--target') {
+      target = tokens[index + 1] || '';
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('-t') && arg.length > 2) {
+      target = arg.slice(2);
+      continue;
+    }
+    if (arg.startsWith('--target=')) {
+      target = arg.slice('--target='.length);
+      continue;
+    }
+    if (arg === '--') continue;
+    if (arg === '-N' || arg === '-R') {
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('-') && arg !== '-') continue;
+    payload.push(arg);
+  }
+
+  const compactPayload = payload.find(startsCompactSlashCommand)
+    || (startsCompactSlashCommand(payload.join(' ')) ? payload.join(' ') : '');
+  if (!compactPayload) return null;
+  if (isClaudeTmuxTarget(target, projectRoot)) return null;
+  return `DENIED: /compact may only be sent to Claude panes. Refusing tmux send-keys target '${target || '<implicit>'}' with compact payload.`;
+}
+
+function findControlHelperCompactBlock(tokens: string[]): string | null {
+  const helperIndex = tokens.findIndex(token => commandBasename(token) === 'hf-tmux-control.sh');
+  if (helperIndex < 0) return null;
+  const action = tokens[helperIndex + 1] || '';
+  const payload = tokens.slice(helperIndex + 2);
+  if (!payload.some(startsCompactSlashCommand)) return null;
+  if (action === 'send-claude' || action === 'compact-claude') return null;
+  if (action === 'send-codex' || action.startsWith('send-')) {
+    return `DENIED: /compact may only be sent to Claude panes. Refusing hf-tmux-control ${action || '<missing-action>'}.`;
+  }
+  return null;
+}
+
+function findNonClaudeCompactSend(command: string, projectRoot: string): string | null {
+  for (const tokens of shellExecutionTokenLists(command || '')) {
+    const helperBlock = findControlHelperCompactBlock(tokens);
+    if (helperBlock) return helperBlock;
+    const tmuxBlock = findTmuxSendKeysCompactBlock(tokens, projectRoot);
+    if (tmuxBlock) return tmuxBlock;
   }
   return null;
 }
@@ -1692,6 +1857,12 @@ export async function evaluate(hookInput: HookInput, config: Partial<PermissionC
       const reason = `DENIED: command reads or exposes a secret/credential path ('${secretArg}'). Secret files, dotenv values, credentials, and key material cannot be read by agents.`;
       logDecision(config, toolName, inputSummary, 'deny', 'secret-read-bash', reason);
       return { decision: 'deny', reason };
+    }
+
+    const nonClaudeCompactSend = findNonClaudeCompactSend(cmd, policyRoot);
+    if (nonClaudeCompactSend) {
+      logDecision(config, toolName, inputSummary, 'deny', 'compact-route-guard', nonClaudeCompactSend);
+      return { decision: 'deny', reason: nonClaudeCompactSend };
     }
 
     // 5) Allow patterns

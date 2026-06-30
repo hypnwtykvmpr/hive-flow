@@ -16,6 +16,9 @@ const { spawnSync } = require('child_process');
 const VALID_MODES = new Set(['inplace', 'headless']);
 const COMPACT_CONTEXT_FLOOR_PCT = 0.50;
 const MAX_CONTEXT_STATE_BYTES = 64 * 1024;
+const MAX_STATUSLINE_RECORD_BYTES = 256 * 1024;
+const MAX_STATUSLINE_PROJECT_RECORDS = 512;
+const STATUSLINE_MAX_AGE_MS = 5 * 60 * 1000;
 const CORRECT_SELF_COMPACT_COMMAND = [
   'Correct current-session self-compaction command:',
   'node .claude/helpers/compact-now.cjs --mode inplace --reason "<why compaction is needed>" --next-step "<exact next step after compact>"',
@@ -128,8 +131,8 @@ function normalizePercentage(value) {
 function readJsonFileIfPresent(filePath, maxBytes = MAX_CONTEXT_STATE_BYTES) {
   try {
     if (!fs.existsSync(filePath)) return null;
-    const stat = fs.statSync(filePath);
-    if (!stat.isFile() || stat.size > maxBytes) return null;
+    const stat = fs.lstatSync(filePath);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > maxBytes) return null;
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch {
     return null;
@@ -145,7 +148,145 @@ function latestHistoryPercentage(state) {
   return null;
 }
 
+function numericAt(value, keys) {
+  let cursor = value;
+  for (const key of keys) {
+    if (!cursor || typeof cursor !== 'object') return null;
+    cursor = cursor[key];
+  }
+  const n = Number(cursor);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeStatuslinePercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (n <= 1) return Math.min(n, 1);
+  if (n <= 100) return n / 100;
+  return null;
+}
+
+function stripAnsi(value) {
+  return String(value || '').replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, '');
+}
+
+function renderedContextPercentage(rendered) {
+  const plain = stripAnsi(rendered);
+  const match = plain.match(/\b([0-9]+(?:\.[0-9]+)?)%\s+ctx\b/i);
+  return match ? normalizeStatuslinePercent(match[1]) : null;
+}
+
+function statuslineRecordContextPercentage(record) {
+  const pctFromRendered = renderedContextPercentage(record?.rendered);
+  if (pctFromRendered !== null) {
+    return { percentage: pctFromRendered, detail: 'rendered.context-percent' };
+  }
+
+  const snapshotContext = record?.snapshot?.context;
+  const pctFromSnapshot = normalizeStatuslinePercent(snapshotContext?.percentage);
+  if (pctFromSnapshot !== null) {
+    return { percentage: pctFromSnapshot, detail: 'snapshot.context.percentage' };
+  }
+
+  const tokenEstimate = numericAt(snapshotContext, ['tokenEstimate']);
+  const contextWindow = numericAt(snapshotContext, ['contextWindow']);
+  if (tokenEstimate !== null && tokenEstimate >= 0 && contextWindow !== null && contextWindow > 0) {
+    return {
+      percentage: Math.min(tokenEstimate / contextWindow, 1),
+      detail: 'snapshot.context.tokenEstimate/contextWindow',
+    };
+  }
+  return null;
+}
+
+function statuslineHomeRoot() {
+  const hiveFlowHome = process.env.HIVE_FLOW_HOME;
+  if (hiveFlowHome && path.isAbsolute(hiveFlowHome)) return path.join(hiveFlowHome, '.hive-flow', 'statusline');
+  const home = process.env.HOME || process.env.USERPROFILE;
+  if (!home || !path.isAbsolute(home)) return '';
+  return path.join(home, '.hive-flow', 'statusline');
+}
+
+function isFreshStatuslineRecord(record, nowMs = Date.now()) {
+  const renderedAt = Date.parse(String(record?.renderedAt || ''));
+  if (!Number.isFinite(renderedAt)) return false;
+  return nowMs - renderedAt >= 0 && nowMs - renderedAt <= STATUSLINE_MAX_AGE_MS;
+}
+
+function collectStatuslineRecordPaths(projectRoot) {
+  const root = statuslineHomeRoot();
+  if (!root) return [];
+  const paths = [];
+
+  const current = readJsonFileIfPresent(path.join(root, 'current.json'), MAX_STATUSLINE_RECORD_BYTES);
+  if (
+    current?.projectRoot === projectRoot
+    && typeof current.lastRender === 'string'
+    && isStatuslineRecordPath(root, current.lastRender)
+  ) {
+    paths.push(current.lastRender);
+  }
+
+  const projectsDir = path.join(root, 'projects');
+  try {
+    const entries = fs.readdirSync(projectsDir, { withFileTypes: true });
+    const recordPaths = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (!/^[0-9a-f]{16}$/.test(entry.name)) continue;
+      const recordPath = path.join(projectsDir, entry.name, 'last-render.json');
+      try {
+        const stat = fs.lstatSync(recordPath);
+        if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_STATUSLINE_RECORD_BYTES) continue;
+        recordPaths.push({ path: recordPath, mtimeMs: stat.mtimeMs });
+      } catch {
+        // Ignore stale project directories without a readable last-render record.
+      }
+    }
+    recordPaths.sort((a, b) => b.mtimeMs - a.mtimeMs);
+    for (const record of recordPaths.slice(0, MAX_STATUSLINE_PROJECT_RECORDS)) {
+      paths.push(record.path);
+    }
+  } catch {
+    // No global statusline cache is normal in test/headless contexts.
+  }
+
+  return [...new Set(paths)];
+}
+
+function isStatuslineRecordPath(root, candidate) {
+  try {
+    const relative = path.relative(path.resolve(root), path.resolve(candidate));
+    return /^[0-9a-f]{16}[/\\]last-render[.]json$/.test(
+      relative.replace(/^projects[/\\]/, ''),
+    ) && !relative.startsWith('..') && !path.isAbsolute(relative);
+  } catch {
+    return false;
+  }
+}
+
+function measuredStatuslineContextPercentage(projectRoot) {
+  const candidates = [];
+  for (const recordPath of collectStatuslineRecordPaths(projectRoot)) {
+    const record = readJsonFileIfPresent(recordPath, MAX_STATUSLINE_RECORD_BYTES);
+    if (!record || record.projectRoot !== projectRoot || !isFreshStatuslineRecord(record)) continue;
+    const context = statuslineRecordContextPercentage(record);
+    if (!context) continue;
+    candidates.push({
+      percentage: context.percentage,
+      statePath: recordPath,
+      detail: context.detail,
+      renderedAt: record.renderedAt,
+    });
+  }
+  candidates.sort((a, b) => String(b.renderedAt).localeCompare(String(a.renderedAt)));
+  return candidates[0] || null;
+}
+
 function measuredContextPercentage(projectRoot, sessionId) {
+  const statuslineMeasurement = measuredStatuslineContextPercentage(projectRoot);
+  if (statuslineMeasurement) return statuslineMeasurement;
+
   const statePath = path.join(projectRoot, '.hive-flow', 'data', 'autopilot-state.json');
   const state = readJsonFileIfPresent(statePath);
   if (!state || typeof state !== 'object') return null;
@@ -162,7 +303,7 @@ function measuredContextPercentage(projectRoot, sessionId) {
   if (pct === null) pct = normalizePercentage(state.lastPercentage);
   if (pct === null) pct = latestHistoryPercentage(state);
 
-  return pct === null ? null : { percentage: pct, statePath };
+  return pct === null ? null : { percentage: pct, statePath, detail: 'autopilot-state' };
 }
 
 function assertContextFloorAllowsCompaction(projectRoot, sessionId) {
@@ -173,7 +314,7 @@ function assertContextFloorAllowsCompaction(projectRoot, sessionId) {
     throw new Error(
       `Refusing compaction request: measured context is ${pct}%, below the 50% compaction request floor. ` +
       `Compaction advice starts at 70%; continue without compacting until context reaches the floor. ` +
-      `Source: ${measurement.statePath}`,
+      `Source: ${measurement.statePath}${measurement.detail ? ` (${measurement.detail})` : ''}`,
     );
   }
   return measurement;
@@ -318,6 +459,7 @@ function main() {
       percentage: contextMeasurement.percentage,
       percent: Number((contextMeasurement.percentage * 100).toFixed(1)),
       source: contextMeasurement.statePath,
+      detail: contextMeasurement.detail || '',
       floorPercent: Number((COMPACT_CONTEXT_FLOOR_PCT * 100).toFixed(0)),
       adviceStartsPercent: 70,
     } : null,

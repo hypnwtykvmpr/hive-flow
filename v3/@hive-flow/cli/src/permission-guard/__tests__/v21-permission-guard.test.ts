@@ -807,3 +807,88 @@ describe('git checkout -- . specifically denied', () => {
     expect(result.decision).toBe('deny');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Compact routing guard: /compact must never be delivered to non-Claude panes
+// ---------------------------------------------------------------------------
+
+describe('/compact routing guard', () => {
+  function broadAllowConfig(): PermissionConfig {
+    return makeConfig({
+      always_allow_bash_patterns: ['.*'],
+      always_deny_bash_patterns: [],
+      jury_escalation_bash_patterns: [],
+    });
+  }
+
+  it('denies helper sends that embed a /compact command line for Codex', async () => {
+    const result = await evaluate(
+      bashInput("timeout 25 .audit/scripts/hf-tmux-control.sh send-codex $'handoff\\n/compact preserve state\\ncontinue'"),
+      broadAllowConfig(),
+    );
+
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toMatch(/\/compact may only be sent to Claude panes/i);
+    expect(result.reason).toMatch(/send-codex/);
+  });
+
+  it('allows helper sends that deliver /compact to Claude', async () => {
+    const result = await evaluate(
+      bashInput('timeout 25 .audit/scripts/hf-tmux-control.sh send-claude "/compact preserve state"'),
+      broadAllowConfig(),
+    );
+
+    expect(result.decision).toBe('allow');
+  });
+
+  it('denies raw tmux sends that embed a /compact command line for Codex', async () => {
+    const result = await evaluate(
+      bashInput("tmux send-keys -t codex -l $'handoff\\n/Compact preserve state\\ncontinue'"),
+      broadAllowConfig(),
+    );
+
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toMatch(/\/compact may only be sent to Claude panes/i);
+    expect(result.reason).toMatch(/tmux send-keys target 'codex'/);
+  });
+
+  it('denies raw tmux compact sends with implicit targets unless Claude is proven', async () => {
+    const result = await evaluate(
+      bashInput('tmux send-keys -l "/compact preserve state"'),
+      broadAllowConfig(),
+    );
+
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toMatch(/\/compact may only be sent to Claude panes/i);
+    expect(result.reason).toMatch(/<implicit>/);
+  });
+
+  it('denies compact sends hidden inside shell wrapper bodies', async () => {
+    const result = await evaluate(
+      bashInput("bash -c \"tmux send-keys -t codex -l $'handoff\\\\n/compact preserve state\\\\ncontinue'\""),
+      broadAllowConfig(),
+    );
+
+    expect(result.decision).toBe('deny');
+    expect(result.reason).toMatch(/\/compact may only be sent to Claude panes/i);
+    expect(result.reason).toMatch(/tmux send-keys target 'codex'/);
+  });
+
+  it('allows prose about /compact that is not a slash command line', async () => {
+    const result = await evaluate(
+      bashInput('tmux send-keys -t codex -l "please explain /compact behavior"'),
+      broadAllowConfig(),
+    );
+
+    expect(result.decision).toBe('allow');
+  });
+
+  it('allows raw tmux sends that deliver /compact to Claude', async () => {
+    const result = await evaluate(
+      bashInput('tmux send-keys -t claude -l "/compact preserve state"'),
+      broadAllowConfig(),
+    );
+
+    expect(result.decision).toBe('allow');
+  });
+});

@@ -1,10 +1,10 @@
 {
-  "syncedAt": "2026-06-27T08:41:20.820Z",
+  "syncedAt": "2026-06-30T08:23:38.852Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
       "name": "enforcement.cjs",
-      "sha256": "65e1e51a3812c9f8fd5b50154691b680b7870e4f0993ab595713a5268a1284f3"
+      "sha256": "a82a1788205c6ad3336bf7e2c1596451fbe70dbcb21f9cb2d600df0062b3b16d"
     },
     {
       "name": "role-enforcement.cjs",
