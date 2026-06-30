@@ -141,6 +141,24 @@ type AgentListRecord = AgentRecord & {
 
 const UNKNOWN_HIVE_RUNTIME_CREATED_AT = new Date(0).toISOString();
 
+type AgentRuntimeStatus = 'idle' | 'running' | 'completed' | 'failed' | 'unknown';
+
+interface AgentRuntimeSnapshot {
+  taskId?: string;
+  status: AgentRuntimeStatus;
+  source: 'agent-store' | 'task-tracking' | 'task-result' | 'none';
+  currentTaskId?: string;
+  currentTaskPid?: number;
+  trackingStatus?: string;
+  trackingPid?: number;
+  pidAlive?: boolean;
+  resultAvailable?: boolean;
+  resultSuccess?: boolean;
+  resultParseError?: string;
+  deadlineAt?: string;
+  startedAt?: string;
+}
+
 function providerFromRuntime(value: string | undefined): AgentProvider | undefined {
   if (value === undefined) return undefined;
   return AGENT_PROVIDERS.has(value as AgentProvider) ? value as AgentProvider : undefined;
@@ -571,6 +589,123 @@ function isPidAlive(pid: number): boolean {
     // mean the process may still exist, so keep the task running fail-safe.
     return (err as NodeJS.ErrnoException)?.code !== 'ESRCH';
   }
+}
+
+function readTaskTracking(projectRoot: string, taskId: string): Record<string, unknown> | undefined {
+  const safeTaskId = sanitizePathId(taskId);
+  if (!safeTaskId) return undefined;
+  const trackingPath = join(projectRoot, STORAGE_DIR, 'tasks', `${safeTaskId}.json`);
+  if (!existsSync(trackingPath)) return undefined;
+  try {
+    return JSON.parse(readFileSync(trackingPath, 'utf-8')) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
+
+function newestTrackingForAgent(projectRoot: string, agentId: string): Record<string, unknown> | undefined {
+  const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');
+  if (!existsSync(tasksDir)) return undefined;
+  let newest: Record<string, unknown> | undefined;
+  let newestStarted = Number.NEGATIVE_INFINITY;
+  try {
+    for (const file of readdirSync(tasksDir)) {
+      if (!file.endsWith('.json') || file.endsWith('.result.json')) continue;
+      const trackingPath = join(tasksDir, file);
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(readFileSync(trackingPath, 'utf-8')) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+      if (parsed.agentId !== agentId) continue;
+      const startedAt = typeof parsed.startedAt === 'string' ? Date.parse(parsed.startedAt) : 0;
+      const comparable = Number.isFinite(startedAt) ? startedAt : 0;
+      if (!newest || comparable >= newestStarted) {
+        newest = parsed;
+        newestStarted = comparable;
+      }
+    }
+  } catch {
+    return newest;
+  }
+  return newest;
+}
+
+function readTaskResult(projectRoot: string, taskId: string): { exists: false } | { exists: true; parsed?: Record<string, unknown>; parseError?: string } {
+  const safeTaskId = sanitizePathId(taskId);
+  if (!safeTaskId) return { exists: false };
+  const resultPath = join(projectRoot, STORAGE_DIR, 'tasks', `${safeTaskId}.result.json`);
+  if (!existsSync(resultPath)) return { exists: false };
+  try {
+    return { exists: true, parsed: JSON.parse(readFileSync(resultPath, 'utf-8')) as Record<string, unknown> };
+  } catch (error) {
+    return {
+      exists: true,
+      parseError: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function buildAgentRuntimeSnapshot(projectRoot: string, agent: AgentRecord): AgentRuntimeSnapshot {
+  const explicitTaskId = typeof agent.currentTaskId === 'string' && agent.currentTaskId.length > 0
+    ? agent.currentTaskId
+    : typeof agent.taskId === 'string' && agent.taskId.length > 0
+      ? agent.taskId
+      : undefined;
+  const tracking = explicitTaskId
+    ? readTaskTracking(projectRoot, explicitTaskId)
+    : newestTrackingForAgent(projectRoot, agent.agentId);
+  const taskId = explicitTaskId
+    ?? (typeof tracking?.taskId === 'string' && tracking.taskId.length > 0 ? tracking.taskId : undefined);
+  const result = taskId ? readTaskResult(projectRoot, taskId) : { exists: false as const };
+  const trackingPid = typeof tracking?.pid === 'number' && Number.isInteger(tracking.pid) && tracking.pid > 1
+    ? tracking.pid
+    : undefined;
+  const currentTaskPid = typeof agent.currentTaskPid === 'number' && Number.isInteger(agent.currentTaskPid) && agent.currentTaskPid > 1
+    ? agent.currentTaskPid
+    : undefined;
+  const pid = trackingPid ?? currentTaskPid;
+  const pidAlive = pid === undefined ? undefined : isPidAlive(pid);
+  const trackingStatus = typeof tracking?.status === 'string' ? tracking.status : undefined;
+
+  let status: AgentRuntimeStatus = 'idle';
+  let source: AgentRuntimeSnapshot['source'] = 'none';
+  if (result.exists) {
+    source = 'task-result';
+    status = result.parseError
+      ? 'failed'
+      : result.parsed?.success === false
+        ? 'failed'
+        : 'completed';
+  } else if (tracking) {
+    source = 'task-tracking';
+    if (trackingStatus === 'completed') status = 'completed';
+    else if (trackingStatus === 'failed') status = 'failed';
+    else if (pidAlive === false) status = 'failed';
+    else status = 'running';
+  } else if (taskId || currentTaskPid !== undefined) {
+    source = 'agent-store';
+    if (pidAlive === false) status = 'failed';
+    else if (agent.status === 'busy' || pidAlive === true || taskId) status = 'running';
+    else status = 'unknown';
+  }
+
+  return {
+    ...(taskId ? { taskId } : {}),
+    status,
+    source,
+    ...(explicitTaskId ? { currentTaskId: explicitTaskId } : {}),
+    ...(currentTaskPid !== undefined ? { currentTaskPid } : {}),
+    ...(trackingStatus ? { trackingStatus } : {}),
+    ...(trackingPid !== undefined ? { trackingPid } : {}),
+    ...(pidAlive !== undefined ? { pidAlive } : {}),
+    ...(result.exists ? { resultAvailable: true } : { resultAvailable: false }),
+    ...(result.exists && result.parsed !== undefined ? { resultSuccess: result.parsed.success !== false } : {}),
+    ...(result.exists && result.parseError ? { resultParseError: result.parseError } : {}),
+    ...(typeof tracking?.deadlineAt === 'string' ? { deadlineAt: tracking.deadlineAt } : {}),
+    ...(typeof tracking?.startedAt === 'string' ? { startedAt: tracking.startedAt } : {}),
+  };
 }
 
 function getAgentDir(projectRoot = process.cwd()): string {
@@ -1720,6 +1855,7 @@ export const agentTools: MCPTool[] = [
         const agent = store.agents[agentId];
 
         if (agent) {
+          const runtime = buildAgentRuntimeSnapshot(projectRoot, agent);
           return {
             id: agent.agentId,
             agentId: agent.agentId,
@@ -1734,6 +1870,10 @@ export const agentTools: MCPTool[] = [
             resolvedModel: agent.resolvedModel,
             modelRoutedBy: agent.modelRoutedBy,
             projectRoot: agent.projectRoot,
+            currentTaskId: agent.currentTaskId,
+            currentTaskPid: agent.currentTaskPid,
+            taskId: agent.taskId,
+            runtime,
             mode: agent.mode ?? 'full',
             artifactDir: agent.artifactDir,
           };

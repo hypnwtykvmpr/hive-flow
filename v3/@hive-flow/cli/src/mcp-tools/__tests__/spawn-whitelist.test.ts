@@ -72,6 +72,21 @@ function writeRawAgentStore(root: string, agents: Record<string, Record<string, 
   }, null, 2), 'utf8');
 }
 
+function writeTaskTracking(root: string, taskId: string, tracking: Record<string, unknown>): void {
+  const tasksDir = join(root, '.hive-flow', 'tasks');
+  mkdirSync(tasksDir, { recursive: true });
+  writeFileSync(join(tasksDir, `${taskId}.json`), JSON.stringify({
+    taskId,
+    ...tracking,
+  }, null, 2), 'utf8');
+}
+
+function writeTaskResult(root: string, taskId: string, result: Record<string, unknown>): void {
+  const tasksDir = join(root, '.hive-flow', 'tasks');
+  mkdirSync(tasksDir, { recursive: true });
+  writeFileSync(join(tasksDir, `${taskId}.result.json`), JSON.stringify(result, null, 2), 'utf8');
+}
+
 function writeActiveHiveRuntimeWorker(root: string): void {
   const hiveDir = join(root, '.hive-flow', 'hives', 'hive-c4');
   const tasksDir = join(root, '.hive-flow', 'tasks');
@@ -919,6 +934,7 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentId?: string;
       agentType?: string;
       status?: string;
+      runtime?: Record<string, unknown>;
     };
 
     expect(status).toMatchObject({
@@ -926,6 +942,137 @@ describe('agent_spawn canonical roster whitelist', () => {
       agentId: 'status-implementer',
       agentType: 'implementer',
       status: 'idle',
+      runtime: {
+        status: 'idle',
+        source: 'none',
+        resultAvailable: false,
+      },
+    });
+  });
+
+  it('surfaces running task runtime from tracking files in agent_status', async () => {
+    writeRawAgentStore(tmpRoot, {
+      'runtime-agent': {
+        agentId: 'runtime-agent',
+        agentType: 'tester',
+        status: 'busy',
+        health: 100,
+        taskCount: 1,
+        config: {},
+        createdAt: '2026-06-30T00:00:00.000Z',
+        provider: 'deepseek',
+        currentTaskId: 'task-runtime',
+        currentTaskPid: process.pid,
+      },
+    });
+    writeTaskTracking(tmpRoot, 'task-runtime', {
+      agentId: 'runtime-agent',
+      status: 'running',
+      startedAt: '2026-06-30T00:01:00.000Z',
+      pid: process.pid,
+      deadlineAt: '2026-06-30T00:10:00.000Z',
+    });
+
+    const status = await statusTool.handler({ agentId: 'runtime-agent', projectRoot: tmpRoot }) as {
+      currentTaskId?: string;
+      currentTaskPid?: number;
+      runtime?: Record<string, unknown>;
+    };
+
+    expect(status.currentTaskId).toBe('task-runtime');
+    expect(status.currentTaskPid).toBe(process.pid);
+    expect(status.runtime).toMatchObject({
+      taskId: 'task-runtime',
+      status: 'running',
+      source: 'task-tracking',
+      currentTaskId: 'task-runtime',
+      currentTaskPid: process.pid,
+      trackingStatus: 'running',
+      trackingPid: process.pid,
+      pidAlive: true,
+      resultAvailable: false,
+      deadlineAt: '2026-06-30T00:10:00.000Z',
+      startedAt: '2026-06-30T00:01:00.000Z',
+    });
+  });
+
+  it('prefers terminal result files over stale busy agent_status store state', async () => {
+    writeRawAgentStore(tmpRoot, {
+      'finished-agent': {
+        agentId: 'finished-agent',
+        agentType: 'tester',
+        status: 'busy',
+        health: 100,
+        taskCount: 1,
+        config: {},
+        createdAt: '2026-06-30T00:00:00.000Z',
+        provider: 'deepseek',
+        currentTaskId: 'task-finished',
+        currentTaskPid: process.pid,
+      },
+    });
+    writeTaskTracking(tmpRoot, 'task-finished', {
+      agentId: 'finished-agent',
+      status: 'running',
+      startedAt: '2026-06-30T00:02:00.000Z',
+      pid: process.pid,
+    });
+    writeTaskResult(tmpRoot, 'task-finished', {
+      success: true,
+      result: 'done',
+    });
+
+    const status = await statusTool.handler({ agentId: 'finished-agent', projectRoot: tmpRoot }) as {
+      status?: string;
+      runtime?: Record<string, unknown>;
+    };
+
+    expect(status.status).toBe('busy');
+    expect(status.runtime).toMatchObject({
+      taskId: 'task-finished',
+      status: 'completed',
+      source: 'task-result',
+      currentTaskId: 'task-finished',
+      resultAvailable: true,
+      resultSuccess: true,
+    });
+  });
+
+  it('falls back to the newest task tracking file when agent_status store has no current task id', async () => {
+    writeRawAgentStore(tmpRoot, {
+      'tracking-only-agent': {
+        agentId: 'tracking-only-agent',
+        agentType: 'tester',
+        status: 'idle',
+        health: 100,
+        taskCount: 1,
+        config: {},
+        createdAt: '2026-06-30T00:00:00.000Z',
+        provider: 'deepseek',
+      },
+    });
+    writeTaskTracking(tmpRoot, 'task-old', {
+      agentId: 'tracking-only-agent',
+      status: 'completed',
+      startedAt: '2026-06-30T00:01:00.000Z',
+    });
+    writeTaskTracking(tmpRoot, 'task-new', {
+      agentId: 'tracking-only-agent',
+      status: 'failed',
+      startedAt: '2026-06-30T00:03:00.000Z',
+    });
+
+    const status = await statusTool.handler({ agentId: 'tracking-only-agent', projectRoot: tmpRoot }) as {
+      runtime?: Record<string, unknown>;
+    };
+
+    expect(status.runtime).toMatchObject({
+      taskId: 'task-new',
+      status: 'failed',
+      source: 'task-tracking',
+      trackingStatus: 'failed',
+      resultAvailable: false,
+      startedAt: '2026-06-30T00:03:00.000Z',
     });
   });
 
