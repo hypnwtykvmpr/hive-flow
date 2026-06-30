@@ -72,6 +72,47 @@ function writeRawAgentStore(root: string, agents: Record<string, Record<string, 
   }, null, 2), 'utf8');
 }
 
+function writeActiveHiveRuntimeWorker(root: string): void {
+  const hiveDir = join(root, '.hive-flow', 'hives', 'hive-c4');
+  const tasksDir = join(root, '.hive-flow', 'tasks');
+  mkdirSync(hiveDir, { recursive: true });
+  mkdirSync(tasksDir, { recursive: true });
+  writeFileSync(
+    join(hiveDir, 'hive.json'),
+    JSON.stringify({
+      hiveId: 'hive-c4',
+      status: 'active',
+      createdAt: '2026-06-30T00:00:00.000Z',
+      ownerSessionId: 'spawn-test-session',
+      queenId: 'queen-c4',
+      workers: [
+        {
+          agentId: 'worker-c4',
+          role: 'investigator',
+          status: 'busy',
+          spawnedAt: '2026-06-30T00:01:00.000Z',
+          taskId: 'task-c4',
+          provider: 'deepseek',
+          resolvedModel: 'deepseek-v4-pro',
+        },
+      ],
+    }, null, 2),
+    'utf8',
+  );
+  writeFileSync(
+    join(tasksDir, 'task-c4.json'),
+    JSON.stringify({
+      taskId: 'task-c4',
+      agentId: 'worker-c4',
+      status: 'running',
+      pid: process.pid,
+      provider: 'deepseek',
+      resolvedModel: 'deepseek-v4-pro',
+    }, null, 2),
+    'utf8',
+  );
+}
+
 function cliSpawnChoices(): string[] {
   const spawn = agentCommand.subcommands?.find(command => command.name === 'spawn');
   const typeOption = spawn?.options?.find(option => option.name === 'type');
@@ -782,6 +823,87 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(implementers.agents[0]).toMatchObject({
       agentId: 'list-implementer',
       agentType: 'implementer',
+    });
+  });
+
+  it('lists live hive-runtime workers when no agent-store row exists', async () => {
+    writeRawAgentStore(tmpRoot, {});
+    writeActiveHiveRuntimeWorker(tmpRoot);
+
+    const result = await listTool.handler({ projectRoot: tmpRoot }) as {
+      total: number;
+      agents: Array<{
+        agentId?: string;
+        agentType?: string;
+        status?: string;
+        source?: string;
+        hiveId?: string;
+        role?: string;
+        createdAt?: string;
+        provider?: string;
+        resolvedModel?: string;
+      }>;
+    };
+
+    expect(result.total).toBe(2);
+    expect(result.agents).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        agentId: 'queen-c4',
+        agentType: 'coordinator',
+        role: 'queen',
+        status: 'idle',
+        source: 'hive-runtime',
+        hiveId: 'hive-c4',
+        createdAt: '2026-06-30T00:00:00.000Z',
+      }),
+      expect.objectContaining({
+        agentId: 'worker-c4',
+        agentType: 'investigator',
+        role: 'worker',
+        status: 'busy',
+        source: 'hive-runtime',
+        hiveId: 'hive-c4',
+        createdAt: '2026-06-30T00:01:00.000Z',
+        provider: 'deepseek',
+        resolvedModel: 'deepseek-v4-pro',
+      }),
+    ]));
+
+    const active = await listTool.handler({ projectRoot: tmpRoot, status: 'active' }) as {
+      total: number;
+      agents: Array<{ agentId?: string }>;
+      filters?: Record<string, unknown>;
+    };
+    expect(active.total).toBe(2);
+    expect(active.filters?.status).toBe('active');
+    expect(active.agents.map(agent => agent.agentId).sort()).toEqual(['queen-c4', 'worker-c4']);
+
+    const investigators = await listTool.handler({ projectRoot: tmpRoot, agentType: 'investigator' }) as {
+      total: number;
+      agents: Array<{ agentId?: string; agentType?: string; role?: string; createdAt?: string }>;
+      filters?: Record<string, unknown>;
+    };
+    expect(investigators.total).toBe(1);
+    expect(investigators.filters?.agentType).toBe('investigator');
+    expect(investigators.agents[0]).toMatchObject({
+      agentId: 'worker-c4',
+      agentType: 'investigator',
+      role: 'worker',
+      createdAt: '2026-06-30T00:01:00.000Z',
+    });
+
+    const coordinators = await listTool.handler({ projectRoot: tmpRoot, agentType: 'coordinator' }) as {
+      total: number;
+      agents: Array<{ agentId?: string; agentType?: string; role?: string; createdAt?: string }>;
+      filters?: Record<string, unknown>;
+    };
+    expect(coordinators.total).toBe(1);
+    expect(coordinators.filters?.agentType).toBe('coordinator');
+    expect(coordinators.agents[0]).toMatchObject({
+      agentId: 'queen-c4',
+      agentType: 'coordinator',
+      role: 'queen',
+      createdAt: '2026-06-30T00:00:00.000Z',
     });
   });
 

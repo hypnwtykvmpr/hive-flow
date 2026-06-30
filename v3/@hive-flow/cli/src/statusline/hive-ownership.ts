@@ -15,15 +15,18 @@ interface HiveRecordShape {
   queenPid?: unknown;
   queen?: unknown;
   workers?: unknown;
+  createdAt?: unknown;
 }
 
 interface HiveWorkerShape {
   workerId?: unknown;
   agentId?: unknown;
+  role?: unknown;
   status?: unknown;
   taskId?: unknown;
   currentTaskPid?: unknown;
   pid?: unknown;
+  spawnedAt?: unknown;
   provider?: unknown;
   model?: unknown;
   resolvedModel?: unknown;
@@ -56,8 +59,10 @@ export interface ActiveHiveRuntimeAgent {
   agentId: string;
   ownerSessionId: string;
   role: 'queen' | 'worker';
+  agentType?: string;
   status: 'busy' | 'idle';
   hiveId: string;
+  createdAt?: string;
   currentTaskPid?: number;
   taskId?: string;
   provider?: string;
@@ -255,6 +260,8 @@ export async function collectActiveHiveRuntimeState(
       if (agentId !== null) {
         const taskId = optionalString(worker.taskId);
         const meta = taskId !== undefined ? await taskMetadata(tasksRoot, taskId) : undefined;
+        const workerAgentType = optionalString(worker.role);
+        const workerCreatedAt = optionalString(worker.spawnedAt) ?? optionalString(record.createdAt);
         const provider = optionalString(worker.provider) ?? optionalString(meta?.provider);
         const model =
           optionalString(worker.resolvedModel) ??
@@ -265,10 +272,12 @@ export async function collectActiveHiveRuntimeState(
           agentId,
           ownerSessionId,
           role: 'worker',
+          ...(workerAgentType !== undefined ? { agentType: workerAgentType } : {}),
           status: 'busy',
           hiveId: typeof record.hiveId === 'string' && record.hiveId.trim()
             ? record.hiveId.trim()
             : entry.name,
+          ...(workerCreatedAt !== undefined ? { createdAt: workerCreatedAt } : {}),
           currentTaskPid,
           ...(taskId !== undefined ? { taskId } : {}),
           ...(provider !== undefined ? { provider } : {}),
@@ -280,15 +289,18 @@ export async function collectActiveHiveRuntimeState(
     if (typeof record.queenId === 'string' && record.queenId.trim()) {
       const queenId = record.queenId.trim();
       if (hasLiveWorker || hasLiveQueen) {
+        const hiveCreatedAt = optionalString(record.createdAt);
         activeAgentIds.add(queenId);
         activeAgents.push({
           agentId: queenId,
           ownerSessionId,
           role: 'queen',
+          agentType: 'coordinator',
           status: 'idle',
           hiveId: typeof record.hiveId === 'string' && record.hiveId.trim()
             ? record.hiveId.trim()
             : entry.name,
+          ...(hiveCreatedAt !== undefined ? { createdAt: hiveCreatedAt } : {}),
         });
       }
     }

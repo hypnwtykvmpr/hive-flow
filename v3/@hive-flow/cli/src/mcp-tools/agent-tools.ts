@@ -33,6 +33,7 @@ import {
   type OwnerStampResult,
 } from './session-id.js';
 import { isProtectedWritePath } from '../permission-guard/protected-paths.js';
+import { collectActiveHiveRuntimeState } from '../statusline/hive-ownership.js';
 import {
   CANONICAL_AGENT_TYPES,
   DEFAULT_CANONICAL_AGENT_TYPE,
@@ -130,6 +131,63 @@ export interface AgentRecord {
 export interface AgentStore {
   agents: Record<string, AgentRecord>;
   version: string;
+}
+
+type AgentListRecord = AgentRecord & {
+  source?: 'agent-store' | 'hive-runtime';
+  hiveId?: string;
+  role?: 'queen' | 'worker';
+};
+
+const UNKNOWN_HIVE_RUNTIME_CREATED_AT = new Date(0).toISOString();
+
+function providerFromRuntime(value: string | undefined): AgentProvider | undefined {
+  if (value === undefined) return undefined;
+  return AGENT_PROVIDERS.has(value as AgentProvider) ? value as AgentProvider : undefined;
+}
+
+function canonicalAgentTypeFromRuntime(runtimeAgent: {
+  role: 'queen' | 'worker';
+  agentType?: string;
+}): CanonicalAgentType {
+  if (runtimeAgent.role === 'queen') return 'coordinator';
+  if (isCanonicalAgentType(runtimeAgent.agentType)) return runtimeAgent.agentType;
+  return DEFAULT_CANONICAL_AGENT_TYPE;
+}
+
+async function appendHiveRuntimeAgents(
+  projectRoot: string,
+  agents: AgentListRecord[],
+): Promise<AgentListRecord[]> {
+  const runtimeState = await collectActiveHiveRuntimeState(projectRoot).catch(() => undefined);
+  if (runtimeState === undefined || runtimeState.activeAgents.length === 0) return agents;
+  const seen = new Set(agents.map(agent => agent.agentId));
+  const runtimeAgents: AgentListRecord[] = [];
+  for (const runtimeAgent of runtimeState.activeAgents) {
+    if (seen.has(runtimeAgent.agentId)) continue;
+    seen.add(runtimeAgent.agentId);
+    const provider = providerFromRuntime(runtimeAgent.provider);
+    const runtimeRecord: AgentListRecord = {
+      agentId: runtimeAgent.agentId,
+      agentType: canonicalAgentTypeFromRuntime(runtimeAgent),
+      status: runtimeAgent.status,
+      health: 1,
+      taskCount: runtimeAgent.taskId ? 1 : 0,
+      config: { hiveId: runtimeAgent.hiveId },
+      createdAt: runtimeAgent.createdAt ?? UNKNOWN_HIVE_RUNTIME_CREATED_AT,
+      ownerSessionId: runtimeAgent.ownerSessionId,
+      projectRoot,
+      currentTaskPid: runtimeAgent.currentTaskPid,
+      currentTaskId: runtimeAgent.taskId,
+      ...(provider !== undefined ? { provider } : {}),
+      ...(runtimeAgent.model !== undefined ? { resolvedModel: runtimeAgent.model } : {}),
+      source: 'hive-runtime',
+      hiveId: runtimeAgent.hiveId,
+      role: runtimeAgent.role,
+    };
+    runtimeAgents.push(runtimeRecord);
+  }
+  return [...agents, ...runtimeAgents];
 }
 
 function clearTerminalTaskIfCurrent(agent: AgentRecord | undefined, taskId: string): boolean {
@@ -1714,12 +1772,17 @@ export const agentTools: MCPTool[] = [
       }
       const projectRoot = projectRootResult.projectRoot;
       const store = loadAgentStore(projectRoot);
-      let agents = Object.values(store.agents);
+      let agents: AgentListRecord[] = await appendHiveRuntimeAgents(
+        projectRoot,
+        Object.values(store.agents).map(agent => ({ ...agent, source: 'agent-store' as const })),
+      );
       const requestedStatus = typeof input.status === 'string' ? input.status.trim() : '';
       const includeAllStatuses = requestedStatus.toLowerCase() === 'all';
+      const includeLiveStatuses =
+        requestedStatus.toLowerCase() === 'active' || requestedStatus.toLowerCase() === 'live';
 
       // Filter by status
-      if (requestedStatus && !includeAllStatuses) {
+      if (requestedStatus && !includeAllStatuses && !includeLiveStatuses) {
         agents = agents.filter(a => a.status === requestedStatus);
       } else if (!input.includeTerminated) {
         agents = agents.filter(a => a.status !== 'terminated');
@@ -1752,6 +1815,12 @@ export const agentTools: MCPTool[] = [
           mode: a.mode ?? 'full',
           artifactDir: a.artifactDir,
           projectRoot: a.projectRoot,
+          source: a.source,
+          hiveId: a.hiveId,
+          role: a.role,
+          ownerSessionId: a.ownerSessionId,
+          currentTaskId: a.currentTaskId,
+          currentTaskPid: a.currentTaskPid,
         })),
         total: agents.length,
         filters: {
