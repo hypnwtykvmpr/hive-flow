@@ -683,12 +683,13 @@ export function terminalizeBridgeFailure({ error, code, reason, paths } = {}) {
     return false;
   }
 
-  const errorResponse = {
-    success: false,
-    error: error || 'Bridge terminated',
-    code: code || 'BRIDGE_ERROR',
-    ...(agentId && agentId !== 'unknown' ? { agentId } : {}),
-  };
+  const errorResponse = buildBridgeErrorResponse({
+    message: error || 'Bridge terminated',
+    ...(code ? { code } : {}),
+  }, {
+    agentId,
+    codeOverride: code || undefined,
+  });
 
   let wroteResult = false;
   if (resultFile) {
@@ -790,12 +791,21 @@ function bridgeLog(level, message, meta) {
 }
 
 /**
- * Classify an error into one of: shell_parsing, provider_api, timeout, or other.
+ * Classify an error into one of: shell_parsing, provider_api, timeout, aborted, or other.
  */
-function classifyError(err) {
-  const msg = String(err?.message || err || '').toLowerCase();
+export function classifyError(err) {
+  const msg = [
+    err?.name,
+    err?.code,
+    err?.message,
+    err,
+  ].filter(Boolean).map(value => String(value)).join(' ').toLowerCase();
   if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('etimedout') || msg.includes('sigkill')) {
     return 'timeout';
+  }
+  if (msg.includes('aborterror') || msg.includes('aborted') || msg.includes('operation was aborted')
+      || msg.includes('cancelled') || msg.includes('canceled') || msg.includes('sigterm')) {
+    return 'aborted';
   }
   if (msg.includes('enoent') || msg.includes('spawn') || msg.includes('not found') || msg.includes('arg_max') || msg.includes('e2big')) {
     return 'shell_parsing';
@@ -806,6 +816,48 @@ function classifyError(err) {
     return 'provider_api';
   }
   return 'other';
+}
+
+function bridgeErrorCodeForClassification(err, classification) {
+  const rawCode = typeof err?.code === 'string' && err.code.trim() ? err.code.trim() : '';
+  if (rawCode && rawCode !== 'ABORT_ERR') return rawCode;
+  if (classification === 'aborted') return 'BRIDGE_ABORTED';
+  if (classification === 'timeout') return 'BRIDGE_TIMEOUT';
+  if (classification === 'provider_api') return 'PROVIDER_API_ERROR';
+  if (classification === 'shell_parsing') return 'BRIDGE_SHELL_ERROR';
+  return rawCode || 'BRIDGE_ERROR';
+}
+
+function bridgeRetryHintForClassification(classification) {
+  switch (classification) {
+    case 'aborted':
+      return 'The bridge was aborted before completion. If the task is still needed, dispatch a fresh worker task and continue from saved artifacts.';
+    case 'timeout':
+      return 'The bridge timed out. Retry with a longer timeout, smaller task scope, or a different provider if capacity is suspected.';
+    case 'provider_api':
+      return 'The provider API failed. Back off, switch provider/model, or retry after checking provider availability.';
+    case 'shell_parsing':
+      return 'The bridge rejected the command/tool invocation. Rewrite the request with simpler supported tool arguments.';
+    default:
+      return 'Inspect bridge logs and retry only after correcting the underlying failure.';
+  }
+}
+
+export function buildBridgeErrorResponse(err, { agentId = 'unknown', codeOverride, includeOwnerFields = false } = {}) {
+  const classification = classifyError(err);
+  const code = codeOverride || bridgeErrorCodeForClassification(err, classification);
+  const response = {
+    success: false,
+    error: err?.message || String(err),
+    code,
+    classification,
+    retryHint: bridgeRetryHintForClassification(classification),
+    ...(agentId && agentId !== 'unknown' ? { agentId } : {}),
+  };
+  return {
+    ...response,
+    ...(includeOwnerFields ? bridgeDurableOwnerFields(process.env, { agentId: agentId !== 'unknown' ? agentId : undefined }) : {}),
+  };
 }
 
 // ===== Stderr Logger (prevents provider logs from corrupting stdout JSON) =====
@@ -6702,13 +6754,10 @@ async function handleMainError(err) {
     code: err.code || 'BRIDGE_ERROR',
   });
 
-  const errorResponse = {
-    success: false,
-    error: err.message || String(err),
-    code: err.code || 'BRIDGE_ERROR',
-    agentId: logAgentId !== 'unknown' ? logAgentId : undefined,
-    ...bridgeDurableOwnerFields(process.env, { agentId: logAgentId !== 'unknown' ? logAgentId : undefined }),
-  };
+  const errorResponse = buildBridgeErrorResponse(err, {
+    agentId: logAgentId,
+    includeOwnerFields: true,
+  });
 
   const argvResultIdx = process.argv.indexOf('--result-file');
   const rawResultFile = argvResultIdx !== -1 ? (process.argv[argvResultIdx + 1] || '') : '';

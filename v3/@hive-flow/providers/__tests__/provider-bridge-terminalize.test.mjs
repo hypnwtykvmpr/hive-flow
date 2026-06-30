@@ -22,6 +22,8 @@ const bridgePath = resolve(here, '../scripts/provider-agent-bridge.mjs');
 let terminalizeBridgeFailure;
 let callWithTimeout;
 let resolveCredentialHolderTimeoutMs;
+let classifyError;
+let buildBridgeErrorResponse;
 
 // The bridge registers SIGTERM/uncaughtException/unhandledRejection listeners on
 // import — capture the pre-import set so we can detach the bridge's listeners and
@@ -39,7 +41,7 @@ beforeAll(async () => {
   preSig = process.listeners('SIGTERM');
   preUncaught = process.listeners('uncaughtException');
   preRejection = process.listeners('unhandledRejection');
-  ({ terminalizeBridgeFailure, callWithTimeout, resolveCredentialHolderTimeoutMs } =
+  ({ terminalizeBridgeFailure, callWithTimeout, resolveCredentialHolderTimeoutMs, classifyError, buildBridgeErrorResponse } =
     await import(`${pathToFileURL(bridgePath).href}?terminalize=${Date.now()}`));
 });
 
@@ -88,6 +90,8 @@ describe('terminalizeBridgeFailure', () => {
       const result = JSON.parse(readFileSync(resultFile, 'utf-8'));
       expect(result.success).toBe(false);
       expect(result.code).toBe('UNCAUGHT_EXCEPTION');
+      expect(result.classification).toBe('other');
+      expect(result.retryHint).toMatch(/Inspect bridge logs/i);
       expect(result.agentId).toBe('agent-x');
 
       const agent = JSON.parse(readFileSync(storePath, 'utf-8')).agents['agent-x'];
@@ -193,6 +197,76 @@ describe('terminalizeBridgeFailure', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('writes abort classification and retry guidance into terminal result payloads', () => {
+    const { root, storeDir, tasksDir, storePath } = makeProject();
+    try {
+      writeFileSync(storePath, JSON.stringify({
+        agents: {
+          'agent-abort': {
+            agentId: 'agent-abort',
+            provider: 'openrouter',
+            status: 'busy',
+            currentTaskPid: 999998,
+            currentTaskId: 'task-abort',
+            taskId: 'task-abort',
+          },
+        },
+        version: '3.0.0',
+      }), 'utf-8');
+      const resultFile = join(tasksDir, 'task-abort.result.json');
+
+      const wrote = terminalizeBridgeFailure({
+        error: 'This operation was aborted',
+        code: 'SIGTERM',
+        paths: { agentId: 'agent-abort', storeDir, resultFile },
+      });
+
+      expect(wrote).toBe(true);
+      const result = JSON.parse(readFileSync(resultFile, 'utf-8'));
+      expect(result).toMatchObject({
+        success: false,
+        error: 'This operation was aborted',
+        code: 'SIGTERM',
+        classification: 'aborted',
+        agentId: 'agent-abort',
+      });
+      expect(result.retryHint).toMatch(/fresh worker task/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('bridge error classification', () => {
+  it('classifies AbortError and canceled operations as aborted', () => {
+    const abortErr = new Error('This operation was aborted');
+    abortErr.name = 'AbortError';
+    expect(classifyError(abortErr)).toBe('aborted');
+    expect(classifyError(new Error('request cancelled by supervisor'))).toBe('aborted');
+  });
+
+  it('keeps timeout classification ahead of SIGTERM abort wording', () => {
+    const timeoutErr = new Error('Bridge task timed out after 30000ms');
+    timeoutErr.code = 'SIGTERM';
+    expect(classifyError(timeoutErr)).toBe('timeout');
+  });
+
+  it('builds structured abort responses for result-file consumers', () => {
+    const abortErr = new Error('The operation was aborted');
+    abortErr.name = 'AbortError';
+
+    const response = buildBridgeErrorResponse(abortErr, { agentId: 'agent-response' });
+
+    expect(response).toMatchObject({
+      success: false,
+      error: 'The operation was aborted',
+      code: 'BRIDGE_ABORTED',
+      classification: 'aborted',
+      agentId: 'agent-response',
+    });
+    expect(response.retryHint).toMatch(/fresh worker task/i);
   });
 });
 
