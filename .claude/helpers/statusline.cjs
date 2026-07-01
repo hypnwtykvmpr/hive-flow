@@ -3,7 +3,7 @@
  * Hive Flow statusline compatibility launcher.
  *
  * This file intentionally does not collect status data. It delegates to the
- * canonical @hive-flow/cli bin/statusline.js renderer so existing
+ * canonical hive-flow bin/statusline.js renderer so existing
  * "node .claude/helpers/statusline.cjs" settings keep working without a
  * second, stale statusboard implementation.
  */
@@ -69,7 +69,6 @@ function statuslineCandidates() {
   for (const root of roots) {
     addCandidate(list, seen, path.join(root, 'cli', 'bin', 'statusline.js'));
     addCandidate(list, seen, path.join(root, 'bin', 'statusline.js'));
-    addCandidate(list, seen, path.join(root, 'node_modules', '@hive-flow', 'cli', 'bin', 'statusline.js'));
     addCandidate(list, seen, path.join(root, 'node_modules', 'hive-flow', 'bin', 'statusline.js'));
   }
 

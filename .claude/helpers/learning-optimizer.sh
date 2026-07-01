@@ -19,10 +19,11 @@ resolve_cli() {
     printf '%s\n' "$PROJECT_ROOT/cli/bin/cli.js"
     return 0
   fi
-  printf '%s\n' "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js"
+  echo "Hive Flow CLI not found at $PROJECT_ROOT/cli/bin/cli.js" >&2
+  return 1
 }
 
-CLI_PATH="$(resolve_cli)"
+CLI_PATH="$(resolve_cli)" || exit 0
 
 should_run() {
   if [ ! -f "$LAST_RUN_FILE" ]; then return 0; fi

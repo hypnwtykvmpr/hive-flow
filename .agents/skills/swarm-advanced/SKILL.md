@@ -16,7 +16,7 @@ Master advanced swarm patterns for distributed research, development, and testin
 ### Prerequisites
 ```bash
 # Add MCP server (private fork — invoke the local MCP server directly)
-claude mcp add hive-flow -- node v3/@hive-flow/cli/bin/mcp-server.js
+claude mcp add hive-flow -- hive-flow mcp start
 ```
 
 ### Basic Pattern
@@ -237,7 +237,7 @@ mcp__hive-flow__workflow_execute({
 ### CLI Fallback
 ```bash
 # Quick research swarm
-node v3/@hive-flow/cli/bin/cli.js swarm "research AI trends in 2025" \
+hive-flow swarm "research AI trends in 2025" \
   --strategy research \
   --mode distributed \
   --max-agents 6 \
@@ -381,7 +381,7 @@ mcp__hive-flow__pipeline_create({
 ### CLI Fallback
 ```bash
 # Quick development swarm
-node v3/@hive-flow/cli/bin/cli.js swarm "build REST API with authentication" \
+hive-flow swarm "build REST API with authentication" \
   --strategy development \
   --mode hierarchical \
   --monitor \
@@ -581,7 +581,7 @@ mcp__hive-flow__trend_analysis({
 ### CLI Fallback
 ```bash
 # Quick testing swarm
-node v3/@hive-flow/cli/bin/cli.js swarm "test application comprehensively" \
+hive-flow swarm "test application comprehensively" \
   --strategy testing \
   --mode star \
   --parallel \

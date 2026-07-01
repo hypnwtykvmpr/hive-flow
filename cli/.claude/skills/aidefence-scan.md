@@ -13,7 +13,7 @@ invocation:
 
 # Dependencies
 requires:
-  - "@hive-flow/cli/aidefence"
+  - "hive-flow/aidefence"
 ---
 
 # AIDefence Scan Skill
@@ -40,7 +40,7 @@ When this skill is invoked, execute the following:
 ### Step 1: Initialize AIDefence
 
 ```typescript
-import { createAIDefence } from '@hive-flow/cli/aidefence';
+import { createAIDefence } from 'hive-flow/aidefence';
 
 const aidefence = createAIDefence({ enableLearning: true });
 ```
@@ -145,7 +145,7 @@ Detection time: low-latency
 
 ## Integration Notes
 
-- This skill uses the embedded `@hive-flow/cli/aidefence` subpath
+- This skill uses the embedded `hive-flow/aidefence` subpath
 - No external server required
 - Learning is enabled by default for pattern improvement
 - Detection is designed for low-latency local scans

@@ -5,4 +5,4 @@
 set -e
 
 echo "Starting swarm monitor..."
-node v3/@hive-flow/cli/bin/cli.js swarm status --watch --interval 5
+hive-flow swarm status --watch --interval 5

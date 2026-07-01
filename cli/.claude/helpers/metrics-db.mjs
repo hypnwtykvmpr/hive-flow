@@ -13,7 +13,6 @@ import { execSync } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '../..');
-const V3_DIR = join(PROJECT_ROOT, 'v3');
 const DB_PATH = join(PROJECT_ROOT, '.hive-flow', 'metrics.db');
 
 // Ensure directory exists
@@ -182,6 +181,65 @@ const UTILITY_PACKAGES = new Set([
   'embeddings', 'deployment', 'performance', 'plugins', 'providers'
 ]);
 
+function resolveCliDir() {
+  const candidates = [
+    join(PROJECT_ROOT, 'cli'),
+    PROJECT_ROOT,
+    join(PROJECT_ROOT, 'node_modules', 'hive-flow'),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(join(candidate, 'src')) && existsSync(join(candidate, 'package.json'))) {
+      return candidate;
+    }
+  }
+
+  return join(PROJECT_ROOT, 'cli');
+}
+
+const CLI_DIR = resolveCliDir();
+
+function collectPackageRoots() {
+  const roots = [];
+  const seen = new Set();
+
+  function addRoot(root) {
+    if (!existsSync(root) || seen.has(root)) return;
+    seen.add(root);
+    roots.push(root);
+  }
+
+  addRoot(CLI_DIR);
+
+  const cliPackagesDir = join(CLI_DIR, 'packages');
+  if (existsSync(cliPackagesDir)) {
+    for (const entry of readdirSync(cliPackagesDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && !entry.name.startsWith('.')) {
+        addRoot(join(cliPackagesDir, entry.name));
+      }
+    }
+  }
+
+  const legacyPackagesDir = join(PROJECT_ROOT, 'v3', '@hive-flow');
+  if (existsSync(legacyPackagesDir)) {
+    for (const entry of readdirSync(legacyPackagesDir, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+      if (['cli', 'providers', 'embeddings'].includes(entry.name)) continue;
+      addRoot(join(legacyPackagesDir, entry.name));
+    }
+  }
+
+  return roots;
+}
+
+function packageName(root) {
+  return root === CLI_DIR ? 'cli' : basename(root);
+}
+
+function hasPackageRoot(name) {
+  return collectPackageRoots().some((root) => packageName(root) === name);
+}
+
 function calculateModuleProgress(moduleDir) {
   if (!existsSync(moduleDir)) return 0;
 
@@ -209,7 +267,7 @@ function calculateModuleProgress(moduleDir) {
  * Check security file status
  */
 function checkSecurityFile(filename, minLines = 100) {
-  const filePath = join(V3_DIR, '@hive-flow/cli/src/security', filename);
+  const filePath = join(CLI_DIR, 'src/security', filename);
   if (!existsSync(filePath)) return false;
 
   try {
@@ -247,48 +305,46 @@ function countProcesses() {
 async function syncMetrics() {
   const now = new Date().toISOString();
 
-  // Count V3 modules
-  const modulesDir = join(V3_DIR, '@hive-flow');
   let modules = [];
   let totalProgress = 0;
 
-  if (existsSync(modulesDir)) {
-    const entries = readdirSync(modulesDir, { withFileTypes: true });
-    for (const entry of entries) {
-      // Skip hidden directories (like .hive-flow, .hive-flow)
-      if (entry.isDirectory() && !entry.name.startsWith('.')) {
-        const moduleDir = join(modulesDir, entry.name);
-        const { files, lines } = countFilesAndLines(moduleDir);
-        const progress = calculateModuleProgress(moduleDir);
+  for (const moduleDir of collectPackageRoots()) {
+    const name = packageName(moduleDir);
+    const { files, lines } = countFilesAndLines(moduleDir);
+    const progress = calculateModuleProgress(moduleDir);
 
-        modules.push({ name: entry.name, files, lines, progress });
-        totalProgress += progress;
+    modules.push({ name, files, lines, progress });
+    totalProgress += progress;
 
-        // Update module_status table
-        db.run(`
-          INSERT OR REPLACE INTO module_status (name, files, lines, progress, has_src, has_tests, last_updated)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [
-          entry.name,
-          files,
-          lines,
-          progress,
-          existsSync(join(moduleDir, 'src')) ? 1 : 0,
-          existsSync(join(moduleDir, '__tests__')) ? 1 : 0,
-          now
-        ]);
-      }
-    }
+    // Update module_status table
+    db.run(`
+      INSERT OR REPLACE INTO module_status (name, files, lines, progress, has_src, has_tests, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      name,
+      files,
+      lines,
+      progress,
+      existsSync(join(moduleDir, 'src')) ? 1 : 0,
+      existsSync(join(moduleDir, '__tests__')) ? 1 : 0,
+      now
+    ]);
   }
 
   const avgProgress = modules.length > 0 ? Math.round(totalProgress / modules.length) : 0;
-  const totalStats = countFilesAndLines(V3_DIR);
+  const totalStats = collectPackageRoots().reduce((sum, root) => {
+    const stats = countFilesAndLines(root);
+    return { files: sum.files + stats.files, lines: sum.lines + stats.lines };
+  }, { files: 0, lines: 0 });
 
-  // Count completed domains (mapped to modules)
-  const domainModules = ['swarm', 'memory', 'performance', 'cli', 'integration'];
-  const domainsCompleted = domainModules.filter(m =>
-    modules.some(mod => mod.name === m && mod.progress >= 50)
-  ).length;
+  // Count completed domains (mapped to promoted CLI source plus remaining packages)
+  const domainsCompleted = [
+    existsSync(join(CLI_DIR, 'src/swarm')),
+    existsSync(join(CLI_DIR, 'src/memory')),
+    existsSync(join(CLI_DIR, 'src/performance')),
+    existsSync(CLI_DIR),
+    hasPackageRoot('integration'),
+  ].filter(Boolean).length;
 
   // Update v3_progress
   db.run(`

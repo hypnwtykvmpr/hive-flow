@@ -23,7 +23,7 @@ function resolveDefaultCliPath(projectRoot) {
     env: process.env,
     cwd: projectRoot,
     helperDir: __dirname,
-  }) || path.join(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'cli.js');
+  }) || path.join(projectRoot, 'cli', 'bin', 'cli.js');
 }
 
 function resolveRuntime(deps = {}) {

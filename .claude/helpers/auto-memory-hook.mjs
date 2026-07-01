@@ -179,15 +179,9 @@ async function loadMemoryPackage() {
     return await import('hive-flow/memory');
   } catch { /* fall through */ }
 
-  // Strategy 3: legacy npm installed @hive-flow/cli with memory subpath export
-  try {
-    return await import('@hive-flow/cli/memory');
-  } catch { /* fall through */ }
-
-  // Strategy 4: Installed package dist fallback
+  // Strategy 3: Installed package dist fallback
   const installedMemoryCandidates = [
     join(PROJECT_ROOT, 'node_modules/hive-flow/dist/src/memory/index.js'),
-    join(PROJECT_ROOT, 'node_modules/@hive-flow/cli/dist/src/memory/index.js'),
   ];
   for (const cliMemory of installedMemoryCandidates) {
     if (!existsSync(cliMemory)) continue;

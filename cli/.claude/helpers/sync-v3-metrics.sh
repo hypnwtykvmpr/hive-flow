@@ -4,7 +4,8 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-V3_DIR="$PROJECT_ROOT/v3"
+CLI_DIR=""
+LEGACY_PACKAGES_DIR="$PROJECT_ROOT/v3/@hive-flow"
 METRICS_DIR="$PROJECT_ROOT/.hive-flow/metrics"
 SECURITY_DIR="$PROJECT_ROOT/.hive-flow/cli/security"
 
@@ -21,28 +22,79 @@ log() {
     echo -e "${CYAN}[sync] $1${RESET}"
 }
 
-# Count V3 modules
-count_modules() {
-    local count=0
-    local modules=()
+resolve_cli_dir() {
+    local candidate
+    for candidate in \
+        "$PROJECT_ROOT/cli" \
+        "$PROJECT_ROOT" \
+        "$PROJECT_ROOT/node_modules/hive-flow"; do
+        if [ -d "$candidate/src" ] && [ -f "$candidate/package.json" ]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
 
-    if [ -d "$V3_DIR/@hive-flow" ]; then
-        for dir in "$V3_DIR/@hive-flow"/*/; do
-            if [ -d "$dir" ]; then
-                name=$(basename "$dir")
-                modules+=("$name")
-                ((count++))
-            fi
+    printf '%s\n' "$PROJECT_ROOT/cli"
+}
+
+CLI_DIR="$(resolve_cli_dir)"
+
+collect_module_dirs() {
+    local dir
+
+    if [ -d "$CLI_DIR" ]; then
+        printf '%s\n' "$CLI_DIR"
+    fi
+
+    if [ -d "$CLI_DIR/packages" ]; then
+        for dir in "$CLI_DIR/packages"/*/; do
+            [ -d "$dir" ] || continue
+            printf '%s\n' "${dir%/}"
         done
     fi
 
-    echo "$count"
+    if [ -d "$LEGACY_PACKAGES_DIR" ]; then
+        for dir in "$LEGACY_PACKAGES_DIR"/*/; do
+            [ -d "$dir" ] || continue
+            case "$(basename "$dir")" in
+                cli|providers|embeddings)
+                    continue
+                    ;;
+            esac
+            printf '%s\n' "${dir%/}"
+        done
+    fi
+}
+
+module_name() {
+    local module_dir="$1"
+    if [ "$module_dir" = "$CLI_DIR" ]; then
+        printf '%s\n' "cli"
+    else
+        basename "$module_dir"
+    fi
+}
+
+find_module_dir() {
+    local wanted="$1"
+    local dir
+    while IFS= read -r dir; do
+        [ "$(module_name "$dir")" = "$wanted" ] || continue
+        printf '%s\n' "$dir"
+        return 0
+    done < <(collect_module_dirs)
+
+    return 1
+}
+
+# Count active Hive Flow package roots
+count_modules() {
+    collect_module_dirs | wc -l | tr -d ' '
 }
 
 # Calculate module completion percentage
 calculate_module_progress() {
-    local module="$1"
-    local module_dir="$V3_DIR/@hive-flow/$module"
+    local module_dir="$1"
 
     if [ ! -d "$module_dir" ]; then
         echo "0"
@@ -73,7 +125,7 @@ calculate_module_progress() {
 # Check security CVE status
 check_security_status() {
     local cves_fixed=0
-    local security_dir="$V3_DIR/@hive-flow/cli/src/security"
+    local security_dir="$CLI_DIR/src/security"
 
     # CVE-1: Input validation - check for input-validator.ts
     if [ -f "$security_dir/input-validator.ts" ]; then
@@ -100,15 +152,13 @@ check_security_status() {
 calculate_ddd_progress() {
     local total_progress=0
     local module_count=0
+    local dir
 
-    for dir in "$V3_DIR/@hive-flow"/*/; do
-        if [ -d "$dir" ]; then
-            name=$(basename "$dir")
-            progress=$(calculate_module_progress "$name")
-            ((total_progress += progress))
-            ((module_count++))
-        fi
-    done
+    while IFS= read -r dir; do
+        progress=$(calculate_module_progress "$dir")
+        ((total_progress += progress))
+        ((module_count++))
+    done < <(collect_module_dirs)
 
     if [ "$module_count" -gt 0 ]; then
         echo $((total_progress / module_count))
@@ -119,24 +169,43 @@ calculate_ddd_progress() {
 
 # Count total lines of code
 count_total_lines() {
-    find "$V3_DIR" -name "*.ts" -type f -exec cat {} \; 2>/dev/null | wc -l
+    local total=0
+    local dir
+    local file
+
+    while IFS= read -r dir; do
+        while IFS= read -r file; do
+            lines=$(wc -l < "$file" 2>/dev/null || echo 0)
+            total=$((total + lines))
+        done < <(find "$dir" -name "*.ts" -type f 2>/dev/null)
+    done < <(collect_module_dirs)
+
+    echo "$total"
 }
 
 # Count total files
 count_total_files() {
-    find "$V3_DIR" -name "*.ts" -type f 2>/dev/null | wc -l
+    local total=0
+    local dir
+
+    while IFS= read -r dir; do
+        count=$(find "$dir" -name "*.ts" -type f 2>/dev/null | wc -l | tr -d ' ')
+        total=$((total + count))
+    done < <(collect_module_dirs)
+
+    echo "$total"
 }
 
 # Check domains (map modules to domains)
 count_domains() {
     local domains=0
 
-    # Map @hive-flow modules to DDD domains
-    [ -d "$V3_DIR/@hive-flow/cli/src/swarm" ] && ((domains++))      # task-management
-    [ -d "$V3_DIR/@hive-flow/cli/src/memory" ] && ((domains++))     # session-management
-    [ -d "$V3_DIR/@hive-flow/cli/src/performance" ] && ((domains++)) # health-monitoring
-    [ -d "$V3_DIR/@hive-flow/cli" ] && ((domains++))        # lifecycle-management
-    [ -d "$V3_DIR/@hive-flow/integration" ] && ((domains++)) # event-coordination
+    # Map Hive Flow modules to DDD domains
+    [ -d "$CLI_DIR/src/swarm" ] && ((domains++))       # task-management
+    [ -d "$CLI_DIR/src/memory" ] && ((domains++))      # session-management
+    [ -d "$CLI_DIR/src/performance" ] && ((domains++)) # health-monitoring
+    [ -d "$CLI_DIR" ] && ((domains++))                 # lifecycle-management
+    find_module_dir "integration" >/dev/null && ((domains++)) # event-coordination
 
     echo "$domains"
 }
@@ -171,11 +240,11 @@ sync_metrics() {
     "completed": $domains,
     "total": 5,
     "list": [
-      {"name": "task-management", "status": "$([ -d "$V3_DIR/@hive-flow/cli/src/swarm" ] && echo "complete" || echo "pending")", "module": "swarm"},
-      {"name": "session-management", "status": "$([ -d "$V3_DIR/@hive-flow/cli/src/memory" ] && echo "complete" || echo "pending")", "module": "memory"},
-      {"name": "health-monitoring", "status": "$([ -d "$V3_DIR/@hive-flow/cli/src/performance" ] && echo "complete" || echo "pending")", "module": "performance"},
-      {"name": "lifecycle-management", "status": "$([ -d "$V3_DIR/@hive-flow/cli" ] && echo "complete" || echo "pending")", "module": "cli"},
-      {"name": "event-coordination", "status": "$([ -d "$V3_DIR/@hive-flow/integration" ] && echo "complete" || echo "pending")", "module": "integration"}
+      {"name": "task-management", "status": "$([ -d "$CLI_DIR/src/swarm" ] && echo "complete" || echo "pending")", "module": "swarm"},
+      {"name": "session-management", "status": "$([ -d "$CLI_DIR/src/memory" ] && echo "complete" || echo "pending")", "module": "memory"},
+      {"name": "health-monitoring", "status": "$([ -d "$CLI_DIR/src/performance" ] && echo "complete" || echo "pending")", "module": "performance"},
+      {"name": "lifecycle-management", "status": "$([ -d "$CLI_DIR" ] && echo "complete" || echo "pending")", "module": "cli"},
+      {"name": "event-coordination", "status": "$(find_module_dir "integration" >/dev/null && echo "complete" || echo "pending")", "module": "integration"}
     ]
   },
   "ddd": {
@@ -188,7 +257,7 @@ sync_metrics() {
     "activeAgents": 0,
     "totalAgents": 15,
     "topology": "hierarchical-mesh",
-    "coordination": "$([ -d "$V3_DIR/@hive-flow/cli/src/swarm" ] && echo "ready" || echo "pending")"
+    "coordination": "$([ -d "$CLI_DIR/src/swarm" ] && echo "ready" || echo "pending")"
   },
   "lastUpdated": "$timestamp",
   "autoSynced": true
@@ -206,21 +275,21 @@ EOF
       "id": "CVE-1",
       "description": "Input validation bypass",
       "severity": "critical",
-      "status": "$([ -f "$V3_DIR/@hive-flow/cli/src/security/input-validator.ts" ] && echo "fixed" || echo "pending")",
+      "status": "$([ -f "$CLI_DIR/src/security/input-validator.ts" ] && echo "fixed" || echo "pending")",
       "fixedBy": "input-validator.ts"
     },
     {
       "id": "CVE-2",
       "description": "Path traversal vulnerability",
       "severity": "critical",
-      "status": "$([ -f "$V3_DIR/@hive-flow/cli/src/security/path-validator.ts" ] && echo "fixed" || echo "pending")",
+      "status": "$([ -f "$CLI_DIR/src/security/path-validator.ts" ] && echo "fixed" || echo "pending")",
       "fixedBy": "path-validator.ts"
     },
     {
       "id": "CVE-3",
       "description": "Command injection vulnerability",
       "severity": "critical",
-      "status": "$([ -f "$V3_DIR/@hive-flow/cli/src/security/safe-executor.ts" ] && echo "fixed" || echo "pending")",
+      "status": "$([ -f "$CLI_DIR/src/security/safe-executor.ts" ] && echo "fixed" || echo "pending")",
       "fixedBy": "safe-executor.ts"
     }
   ],

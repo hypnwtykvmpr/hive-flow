@@ -5,7 +5,7 @@
 set -e
 
 echo "Running memory consolidation..."
-node v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger consolidate
+hive-flow hooks worker dispatch --trigger consolidate
 
 echo "Memory consolidation complete"
-node v3/@hive-flow/cli/bin/cli.js memory stats
+hive-flow memory stats
