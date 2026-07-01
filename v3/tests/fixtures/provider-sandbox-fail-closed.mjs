@@ -1,10 +1,10 @@
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 import {
   sandboxExec,
-} from '../../@hive-flow/providers/scripts/sandbox-runner.mjs';
+} from '../../../cli/packages/providers/scripts/sandbox-runner.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'hf-provider-sandbox-bats-'));
 mkdirSync(join(root, '.claude'), { recursive: true });

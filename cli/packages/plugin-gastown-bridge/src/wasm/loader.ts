@@ -9,7 +9,7 @@
  *
  * Bundle impact: <5KB (loader only, WASM loaded separately)
  *
- * @module v3/plugins/gastown-bridge/wasm
+ * @module cli/packages/plugin-gastown-bridge/wasm
  */
 
 // Types for WASM modules

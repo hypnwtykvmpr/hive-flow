@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const providersRoot = resolve(here, '..');
-const cliRoot = resolve(here, '../../cli');
+const cliRoot = resolve(providersRoot, '../..');
 const providersDistPath = resolve(providersRoot, 'dist');
 const cliPermissionGuardDistPath = resolve(cliRoot, 'dist/src/permission-guard');
 const cliSharedUtilsDistPath = resolve(cliRoot, 'dist/src/shared/utils');

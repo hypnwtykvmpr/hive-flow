@@ -467,10 +467,12 @@
     "ws": "^8.19.0",
     "yaml": "^2.8.2",
     "zod": "^3.25.0",
-    "@hive-flow/providers": "3.0.0-alpha.6",
+    "@hive-flow/providers": "workspace:*",
     "undici": "^7.28.0"
   },
   "optionalDependencies": {
+    "@hive-flow/embeddings": "workspace:*",
+    "@hive-flow/plugin-gastown-bridge": "workspace:*",
     "better-sqlite3": "^11.0.0"
   },
   "publishConfig": {

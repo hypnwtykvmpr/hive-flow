@@ -75,11 +75,14 @@ importers:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  '@hive-flow/cli':
+  ../cli:
     dependencies:
       '@ast-grep/napi':
         specifier: ^0.43.0
         version: 0.43.0
+      '@hive-flow/providers':
+        specifier: workspace:*
+        version: link:packages/providers
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.0.0
@@ -128,6 +131,9 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+      undici:
+        specifier: ^7.28.0
+        version: 7.28.0
       ws:
         specifier: 8.21.0
         version: 8.21.0
@@ -140,13 +146,10 @@ importers:
     optionalDependencies:
       '@hive-flow/embeddings':
         specifier: workspace:*
-        version: link:../embeddings
+        version: link:packages/embeddings
       '@hive-flow/plugin-gastown-bridge':
         specifier: workspace:*
-        version: link:../../plugins/gastown-bridge
-      '@hive-flow/providers':
-        specifier: workspace:*
-        version: link:../providers
+        version: link:packages/plugin-gastown-bridge
       better-sqlite3:
         specifier: ^11.0.0
         version: 11.10.0
@@ -173,7 +176,13 @@ importers:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  '@hive-flow/embeddings':
+  ../cli/packages/cli-compat:
+    dependencies:
+      hive-flow:
+        specifier: workspace:*
+        version: link:../..
+
+  ../cli/packages/embeddings:
     dependencies:
       '@xenova/transformers':
         specifier: ^2.17.2
@@ -186,7 +195,47 @@ importers:
         specifier: 4.1.0
         version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  '@hive-flow/providers':
+  ../cli/packages/plugin-gastown-bridge:
+    dependencies:
+      '@iarna/toml':
+        specifier: ^2.2.5
+        version: 2.2.5
+      uuid:
+        specifier: ^11.1.1
+        version: 11.1.1
+      zod:
+        specifier: ^3.22.0
+        version: 3.25.76
+    devDependencies:
+      '@size-limit/preset-small-lib':
+        specifier: ^11.0.0
+        version: 11.2.0(size-limit@11.2.0)
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      '@types/uuid':
+        specifier: ^11.0.0
+        version: 11.0.0
+      esbuild:
+        specifier: ^0.28.1
+        version: 0.28.1
+      size-limit:
+        specifier: ^11.0.0
+        version: 11.2.0
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.10)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: 4.1.0
+        version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
+
+  ../cli/packages/providers:
     dependencies:
       undici:
         specifier: ^7.28.0
@@ -265,46 +314,6 @@ importers:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.27
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: 4.1.0
-        version: 4.1.0(@types/node@20.19.27)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  plugins/gastown-bridge:
-    dependencies:
-      '@iarna/toml':
-        specifier: ^2.2.5
-        version: 2.2.5
-      uuid:
-        specifier: ^11.1.1
-        version: 11.1.1
-      zod:
-        specifier: ^3.22.0
-        version: 3.25.76
-    devDependencies:
-      '@size-limit/preset-small-lib':
-        specifier: ^11.0.0
-        version: 11.2.0(size-limit@11.2.0)
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.27
-      '@types/uuid':
-        specifier: ^11.0.0
-        version: 11.0.0
-      esbuild:
-        specifier: ^0.28.1
-        version: 0.28.1
-      size-limit:
-        specifier: ^11.0.0
-        version: 11.2.0
-      tsup:
-        specifier: ^8.0.0
-        version: 8.5.1(jiti@2.7.0)(postcss@8.5.10)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
-      tsx:
-        specifier: ^4.0.0
-        version: 4.21.0
       typescript:
         specifier: ^5.4.0
         version: 5.9.3
@@ -2739,9 +2748,6 @@ packages:
     resolution: {integrity: sha512-kVCxPF3vQM/N0B1PmoqVUqgHP+EeVjmZSQn+1oCRPxd2P21P2F19lIgbR3HBosbB1PUhOAoctJnfEn2GbN2eZA==}
     engines: {node: '>=18'}
 
-  get-tsconfig@4.13.0:
-    resolution: {integrity: sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ==}
-
   get-tsconfig@4.14.0:
     resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
 
@@ -2858,10 +2864,6 @@ packages:
   human-signals@8.0.1:
     resolution: {integrity: sha512-eKCa6bwnJhvxj14kZk5NCPc6Hb6BdsU9DZcOnmQKSnO1VKrfV0zCvtttPZUsBvjmNDn8rpcJfpwSYnHBjc95MQ==}
     engines: {node: '>=18.18.0'}
-
-  iconv-lite@0.7.1:
-    resolution: {integrity: sha512-2Tth85cXwGFHfvRgZWszZSvdo+0Xsqmw8k8ZwxScfcBneNUraK+dxRxRm24nszx80Y0TVio8kKLt5sLE7ZCLlw==}
-    engines: {node: '>=0.10.0'}
 
   iconv-lite@0.7.2:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
@@ -4086,10 +4088,6 @@ packages:
     resolution: {integrity: sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg==}
     engines: {node: '>=18'}
 
-  tinyglobby@0.2.15:
-    resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
-    engines: {node: '>=12.0.0'}
-
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
@@ -5017,7 +5015,7 @@ snapshots:
   '@inquirer/external-editor@1.0.3(@types/node@20.19.27)':
     dependencies:
       chardet: 2.1.1
-      iconv-lite: 0.7.1
+      iconv-lite: 0.7.2
     optionalDependencies:
       '@types/node': 20.19.27
 
@@ -6120,7 +6118,7 @@ snapshots:
       content-type: 1.0.5
       debug: 4.4.3
       http-errors: 2.0.1
-      iconv-lite: 0.7.1
+      iconv-lite: 0.7.2
       on-finished: 2.4.1
       qs: 6.15.2
       raw-body: 3.0.2
@@ -6859,10 +6857,6 @@ snapshots:
       '@sec-ant/readable-stream': 0.4.1
       is-stream: 4.0.1
 
-  get-tsconfig@4.13.0:
-    dependencies:
-      resolve-pkg-maps: 1.0.0
-
   get-tsconfig@4.14.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
@@ -6989,10 +6983,6 @@ snapshots:
   human-signals@5.0.0: {}
 
   human-signals@8.0.1: {}
-
-  iconv-lite@0.7.1:
-    dependencies:
-      safer-buffer: 2.1.2
 
   iconv-lite@0.7.2:
     dependencies:
@@ -7733,7 +7723,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       http-errors: 2.0.1
-      iconv-lite: 0.7.1
+      iconv-lite: 0.7.2
       unpipe: 1.0.0
 
   rc@1.2.8:
@@ -8028,7 +8018,7 @@ snapshots:
       lilconfig: 3.1.3
       nanospinner: 1.2.2
       picocolors: 1.1.1
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
 
   skin-tone@2.0.0:
     dependencies:
@@ -8241,11 +8231,6 @@ snapshots:
 
   tinyexec@1.0.2: {}
 
-  tinyglobby@0.2.15:
-    dependencies:
-      fdir: 6.5.0(picomatch@4.0.4)
-      picomatch: 4.0.4
-
   tinyglobby@0.2.17:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
@@ -8294,7 +8279,7 @@ snapshots:
       source-map: 0.7.6
       sucrase: 3.35.1
       tinyexec: 0.3.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.17
       tree-kill: 1.2.2
     optionalDependencies:
       postcss: 8.5.10
@@ -8308,7 +8293,7 @@ snapshots:
   tsx@4.21.0:
     dependencies:
       esbuild: 0.28.1
-      get-tsconfig: 4.13.0
+      get-tsconfig: 4.14.0
     optionalDependencies:
       fsevents: 2.3.3
 

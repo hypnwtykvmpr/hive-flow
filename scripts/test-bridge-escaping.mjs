@@ -30,7 +30,7 @@ const TASK_TEXT =
 
 const BRIDGE_PATH = join(
   PROJECT_ROOT,
-  'v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs'
+  'cli/packages/providers/scripts/provider-agent-bridge.mjs'
 );
 
 const TEST_STORE_DIR = join(PROJECT_ROOT, '.test-bridge-escaping');

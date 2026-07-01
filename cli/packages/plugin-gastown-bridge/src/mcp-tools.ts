@@ -35,7 +35,7 @@
  *
  * Based on ADR-043: Gas Town Bridge Plugin for Hive Flow V3
  *
- * @module v3/plugins/gastown-bridge/mcp-tools
+ * @module cli/packages/plugin-gastown-bridge/mcp-tools
  */
 
 import { z } from 'zod';

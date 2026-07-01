@@ -50,7 +50,7 @@ function currentCliRoot(): string {
 function currentProvidersRoot(): string {
   const promoted = resolve(REPO_ROOT, 'cli/packages/providers');
   if (existsSync(resolve(promoted, 'package.json'))) return promoted;
-  return resolve(REPO_ROOT, 'v3/@hive-flow/providers');
+  return resolve(REPO_ROOT, 'cli/packages/providers');
 }
 
 describe('Phase 2B C3 pack/install smoke harness', () => {

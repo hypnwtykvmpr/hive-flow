@@ -12,7 +12,7 @@
  * - Argument sanitization
  * - JSONL streaming support
  *
- * @module v3/plugins/gastown-bridge/bridges/bd-bridge
+ * @module cli/packages/plugin-gastown-bridge/bridges/bd-bridge
  */
 
 import { execFile, spawn, ChildProcess } from 'child_process';

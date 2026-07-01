@@ -7,7 +7,7 @@
  * - Step dependency resolution
  * - Progress tracking and cancellation
  *
- * @module v3/plugins/gastown-bridge/formula
+ * @module cli/packages/plugin-gastown-bridge/formula
  */
 
 // Main executor

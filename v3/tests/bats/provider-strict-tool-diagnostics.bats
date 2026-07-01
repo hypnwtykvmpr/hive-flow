@@ -2,7 +2,7 @@
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
-  SCRIPT="$REPO_ROOT/v3/@hive-flow/providers/scripts/diagnose-strict-provider-tools.mjs"
+  SCRIPT="$REPO_ROOT/cli/packages/providers/scripts/diagnose-strict-provider-tools.mjs"
 }
 
 @test "strict provider diagnostic script documents the live-only contract" {

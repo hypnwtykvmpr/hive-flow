@@ -50,7 +50,7 @@ setup() {
 }
 
 @test "adjacent packages and workers no longer point at retired integration package" {
-  run grep -F '"@hive-flow/integration"' "$REPO_ROOT/v3/@hive-flow/embeddings/package.json"
+  run grep -F '"@hive-flow/integration"' "$REPO_ROOT/cli/packages/embeddings/package.json"
   [ "$status" -eq 1 ]
   run grep -F "'@hive-flow/cli/integration'" "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts"
   [ "$status" -eq 0 ]

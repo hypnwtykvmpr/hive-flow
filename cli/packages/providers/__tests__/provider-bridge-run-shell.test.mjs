@@ -17,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bridgePath = resolve(here, '../scripts/provider-agent-bridge.mjs');
-const gatePath = resolve(here, '../../cli/dist/src/permission-guard/gate.js');
+const gatePath = resolve(here, '../../../dist/src/permission-guard/gate.js');
 
 const previousEnv = {
   CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,

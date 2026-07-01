@@ -43,11 +43,11 @@ setup() {
 }
 
 @test "providers hardening test rewires to cli testing source" {
-  run grep -F "@hive-flow/testing" "$REPO_ROOT/v3/@hive-flow/providers/src/__tests__/openrouter-hardening.test.ts"
+  run grep -F "@hive-flow/testing" "$REPO_ROOT/cli/packages/providers/src/__tests__/openrouter-hardening.test.ts"
   [ "$status" -eq 1 ]
-  run grep -F "../../../cli/src/testing/helpers/hardening.js" "$REPO_ROOT/v3/@hive-flow/providers/src/__tests__/openrouter-hardening.test.ts"
+  run grep -F "../../../cli/src/testing/helpers/hardening.js" "$REPO_ROOT/cli/packages/providers/src/__tests__/openrouter-hardening.test.ts"
   [ "$status" -eq 0 ]
-  run grep -F '"@hive-flow/testing"' "$REPO_ROOT/v3/@hive-flow/providers/package.json"
+  run grep -F '"@hive-flow/testing"' "$REPO_ROOT/cli/packages/providers/package.json"
   [ "$status" -eq 1 ]
 }
 

@@ -2,7 +2,7 @@
  * Bridge Tool Execution Tests (async / fire-and-forget contract)
  *
  * The bridge lives at:
- *   v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs
+ *   cli/packages/providers/scripts/provider-agent-bridge.mjs
  *
  * Contract change (commit 7932630c8 "feat: agent_task always async"):
  * `agent_task` no longer waits for the bridge. It now:

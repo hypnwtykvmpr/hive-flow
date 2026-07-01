@@ -11,7 +11,7 @@
  * - Command allowlist enforcement
  * - Argument sanitization
  *
- * @module v3/plugins/gastown-bridge/bridges/gt-bridge
+ * @module cli/packages/plugin-gastown-bridge/bridges/gt-bridge
  */
 
 import { execFile } from 'child_process';

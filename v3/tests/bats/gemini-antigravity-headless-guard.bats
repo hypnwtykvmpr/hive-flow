@@ -13,16 +13,16 @@
 # dead gemini flags --output-format / --skip-trust (which agy rejects).
 #
 # These checks are intentionally REDUNDANT with the vitest guards in
-# v3/@hive-flow/providers/src/__tests__/gemini-antigravity-guard.test.ts and
+# cli/packages/providers/src/__tests__/gemini-antigravity-guard.test.ts and
 # cli-providers.test.ts. They assert the source-level invariant directly so a
 # regression fails loudly even if the unit suite is skipped. Static (grep) by
 # default; the final test is a LIVE smoke test that runs only if `agy` is present.
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
-  PROVIDER_SRC="$REPO_ROOT/v3/@hive-flow/providers/src/gemini-cli-provider.ts"
-  CONSTANTS_SRC="$REPO_ROOT/v3/@hive-flow/providers/src/gemini-cli-constants.ts"
-  GATE_SRC="$REPO_ROOT/v3/@hive-flow/cli/src/mcp-tools/mcp-enforcement-gate.ts"
+  PROVIDER_SRC="$REPO_ROOT/cli/packages/providers/src/gemini-cli-provider.ts"
+  CONSTANTS_SRC="$REPO_ROOT/cli/packages/providers/src/gemini-cli-constants.ts"
+  GATE_SRC="$REPO_ROOT/cli/src/mcp-tools/mcp-enforcement-gate.ts"
   # Isolated home so nothing in these tests touches the real state tree.
   export HIVE_FLOW_HOME="$BATS_TEST_TMPDIR/hive-home"
   mkdir -p "$HIVE_FLOW_HOME"

@@ -113,8 +113,7 @@ function resolveRepoRoot(cliRoot) {
 
 function resolveProvidersRoot({ cliRoot, repoRoot }) {
   const candidates = [
-    resolve(repoRoot, 'cli/packages/providers'),
-    resolve(repoRoot, 'v3/@hive-flow/providers'),
+    resolve(cliRoot, 'packages/providers'),
     resolve(cliRoot, '../providers'),
   ];
   return firstExistingDirectory(candidates) ?? candidates[0];

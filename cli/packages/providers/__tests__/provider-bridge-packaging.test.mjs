@@ -17,7 +17,7 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const providersRoot = resolve(here, '..');
-const cliRoot = resolve(here, '../../cli');
+const cliRoot = resolve(providersRoot, '../..');
 const bridgePath = resolve(providersRoot, 'scripts/provider-agent-bridge.mjs');
 const cliPermissionGuardDistPath = resolve(cliRoot, 'dist/src/permission-guard');
 const cliSharedUtilsDistPath = resolve(cliRoot, 'dist/src/shared/utils');
@@ -197,6 +197,7 @@ describe('provider bridge packaging contract', () => {
     expect(source).not.toContain('@hive-flow/cli/dist/src/permission-guard/');
     expect(source).not.toContain('@hive-flow/cli');
     expect(source).not.toContain('mcp-client');
+    expect(source).toContain("'..', '..', '..', 'dist', 'src', 'permission-guard', moduleName");
     expect(source).toContain("'..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName");
     expect(source).toContain("'..', '..', '..', '..', 'dist', 'src', 'permission-guard', moduleName");
     expect(source).toContain('CLI permission-guard dist artifact missing; tried:');
@@ -205,8 +206,8 @@ describe('provider bridge packaging contract', () => {
   });
 
   it('can resolve sibling CLI dist permission-guard modules in repo and node_modules layouts', async () => {
-    const repoPolicy = resolve(dirname(bridgePath), '../../cli/dist/src/permission-guard/protected-paths.js');
-    const repoGate = resolve(dirname(bridgePath), '../../cli/dist/src/permission-guard/gate.js');
+    const repoPolicy = resolve(dirname(bridgePath), '../../../dist/src/permission-guard/protected-paths.js');
+    const repoGate = resolve(dirname(bridgePath), '../../../dist/src/permission-guard/gate.js');
 
     expect(existsSync(repoPolicy)).toBe(true);
     expect(existsSync(repoGate)).toBe(true);

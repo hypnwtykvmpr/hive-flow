@@ -12,8 +12,8 @@ import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-import { BinaryEmbeddingCache } from '../v3/@hive-flow/embeddings/src/binary-embedding-cache.js';
-import { LocalEmbeddingService } from '../v3/@hive-flow/embeddings/src/local-embedding-service.js';
+import { BinaryEmbeddingCache } from '../cli/packages/embeddings/src/binary-embedding-cache.js';
+import { LocalEmbeddingService } from '../cli/packages/embeddings/src/local-embedding-service.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

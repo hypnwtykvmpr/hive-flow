@@ -18,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const providersRoot = resolve(here, '..');
 const bridgePath = resolve(providersRoot, 'scripts/provider-agent-bridge.mjs');
-const policyPath = resolve(here, '../../cli/dist/src/permission-guard/protected-paths.js');
+const policyPath = resolve(here, '../../../dist/src/permission-guard/protected-paths.js');
 const propertyRuns = Number.parseInt(process.env.HF_BRIDGE_PARITY_RUNS || '120', 10);
 
 const OP_CLASSES = [

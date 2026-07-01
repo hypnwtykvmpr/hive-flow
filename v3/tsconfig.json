@@ -10,10 +10,10 @@
         "../cli/src/*"
       ],
       "@hive-flow/embeddings": [
-        "./@hive-flow/embeddings/src"
+        "../cli/packages/embeddings/src"
       ],
       "@hive-flow/providers": [
-        "./@hive-flow/providers/src"
+        "../cli/packages/providers/src"
       ]
     }
   },
@@ -22,10 +22,10 @@
       "path": "../cli"
     },
     {
-      "path": "./@hive-flow/embeddings"
+      "path": "../cli/packages/embeddings"
     },
     {
-      "path": "./@hive-flow/providers"
+      "path": "../cli/packages/providers"
     }
   ],
   "include": [],

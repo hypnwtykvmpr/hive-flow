@@ -14,7 +14,7 @@ import { pathToFileURL } from 'node:url';
 
 const mode = process.argv[2] || 'all';
 const repoRoot = resolve(process.argv[3] || process.cwd());
-const bridgePath = join(repoRoot, 'v3', '@hive-flow', 'providers', 'scripts', 'provider-agent-bridge.mjs');
+const bridgePath = join(repoRoot, 'cli', 'packages', 'providers', 'scripts', 'provider-agent-bridge.mjs');
 
 function writeKey(root, key = randomBytes(32).toString('hex')) {
   const keyPath = join(root, '.hive-flow', 'enforcement', '.hmac-key');

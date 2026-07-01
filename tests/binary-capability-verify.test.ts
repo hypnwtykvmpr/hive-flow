@@ -27,8 +27,8 @@ import { BinaryBackend } from '../v3/@hive-flow/cli/src/memory/binary-backend.js
 import type { BinaryBackendConfig } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
 import { HnswLite, cosineSimilarity } from '../v3/@hive-flow/cli/src/memory/hnsw-lite.js';
 import { BinaryEventLog } from '../v3/@hive-flow/cli/src/shared/events/binary-event-log.js';
-import { BinaryEmbeddingCache } from '../v3/@hive-flow/embeddings/src/binary-embedding-cache.js';
-import { LocalEmbeddingService } from '../v3/@hive-flow/embeddings/src/local-embedding-service.js';
+import { BinaryEmbeddingCache } from '../cli/packages/embeddings/src/binary-embedding-cache.js';
+import { LocalEmbeddingService } from '../cli/packages/embeddings/src/local-embedding-service.js';
 import { BinaryMigrator } from '../v3/@hive-flow/cli/src/memory/binary-migration.js';
 
 // --- Helpers ---

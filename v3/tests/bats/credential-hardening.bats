@@ -26,7 +26,7 @@ setup() {
 }
 
 @test "provider bridge serializes logs and results through credential redaction" {
-  bridge="$REPO_ROOT/v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs"
+  bridge="$REPO_ROOT/cli/packages/providers/scripts/provider-agent-bridge.mjs"
 
   run grep -E "redactBridgeCredentialMaterial|safeBridgeJsonStringify|BRIDGE_SECRET_VALUE_PATTERNS" "$bridge"
   [ "$status" -eq 0 ]

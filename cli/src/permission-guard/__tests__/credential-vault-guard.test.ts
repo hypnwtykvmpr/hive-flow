@@ -167,7 +167,7 @@ describe('credential vault jury and bridge coverage', () => {
 
   it('provider bridge run_shell deny-list names credential exposure primitives', () => {
     const bridge = readFileSync(
-      join(repoRoot, 'v3', '@hive-flow', 'providers', 'scripts', 'provider-agent-bridge.mjs'),
+      join(repoRoot, 'cli', 'packages', 'providers', 'scripts', 'provider-agent-bridge.mjs'),
       'utf8',
     );
 

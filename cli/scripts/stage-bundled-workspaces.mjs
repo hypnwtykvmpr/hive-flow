@@ -71,10 +71,8 @@ function findPackageRoot(startDir) {
 }
 
 const packageRoot = findPackageRoot(__dirname);
-const repoRoot = resolve(packageRoot, '..');
 const wsRootCandidates = [
   join(packageRoot, 'packages'),
-  join(repoRoot, 'v3', '@hive-flow'),
 ];
 const destRoot = join(packageRoot, 'node_modules', '@hive-flow');
 

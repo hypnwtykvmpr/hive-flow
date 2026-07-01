@@ -48,8 +48,8 @@ importers:
         specifier: ^0.43.0
         version: 0.43.0
       '@hive-flow/providers':
-        specifier: 3.0.0-alpha.6
-        version: link:v3/@hive-flow/providers
+        specifier: workspace:*
+        version: link:cli/packages/providers
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.1.0
@@ -109,8 +109,8 @@ importers:
         specifier: ^0.43.0
         version: 0.43.0
       '@hive-flow/providers':
-        specifier: 3.0.0-alpha.6
-        version: link:../v3/@hive-flow/providers
+        specifier: workspace:*
+        version: link:packages/providers
       '@noble/ed25519':
         specifier: ^3.0.0
         version: 3.1.0
@@ -172,6 +172,12 @@ importers:
         specifier: ^3.25.0
         version: 3.25.76
     optionalDependencies:
+      '@hive-flow/embeddings':
+        specifier: workspace:*
+        version: link:packages/embeddings
+      '@hive-flow/plugin-gastown-bridge':
+        specifier: workspace:*
+        version: link:packages/plugin-gastown-bridge
       better-sqlite3:
         specifier: ^11.0.0
         version: 11.10.0
@@ -204,7 +210,7 @@ importers:
         specifier: workspace:*
         version: link:../..
 
-  v3/@hive-flow/embeddings:
+  cli/packages/embeddings:
     dependencies:
       '@xenova/transformers':
         specifier: ^2.17.2
@@ -217,7 +223,47 @@ importers:
         specifier: ^4.0.16
         version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
-  v3/@hive-flow/providers:
+  cli/packages/plugin-gastown-bridge:
+    dependencies:
+      '@iarna/toml':
+        specifier: ^2.2.5
+        version: 2.2.5
+      uuid:
+        specifier: ^11.1.1
+        version: 11.1.1
+      zod:
+        specifier: ^3.22.0
+        version: 3.25.76
+    devDependencies:
+      '@size-limit/preset-small-lib':
+        specifier: ^11.0.0
+        version: 11.2.0(size-limit@11.2.0)
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.37
+      '@types/uuid':
+        specifier: ^11.0.0
+        version: 11.0.0
+      esbuild:
+        specifier: ^0.28.1
+        version: 0.28.1
+      size-limit:
+        specifier: ^11.0.0
+        version: 11.2.0
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.15)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.16
+        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
+
+  cli/packages/providers:
     dependencies:
       undici:
         specifier: ^7.28.0
@@ -296,46 +342,6 @@ importers:
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.37
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.8(@types/node@20.19.37)(@vitest/coverage-v8@4.1.8)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-
-  v3/plugins/gastown-bridge:
-    dependencies:
-      '@iarna/toml':
-        specifier: ^2.2.5
-        version: 2.2.5
-      uuid:
-        specifier: ^11.1.1
-        version: 11.1.1
-      zod:
-        specifier: ^3.22.0
-        version: 3.25.76
-    devDependencies:
-      '@size-limit/preset-small-lib':
-        specifier: ^11.0.0
-        version: 11.2.0(size-limit@11.2.0)
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.37
-      '@types/uuid':
-        specifier: ^11.0.0
-        version: 11.0.0
-      esbuild:
-        specifier: ^0.28.1
-        version: 0.28.1
-      size-limit:
-        specifier: ^11.0.0
-        version: 11.2.0
-      tsup:
-        specifier: ^8.0.0
-        version: 8.5.1(jiti@2.7.0)(postcss@8.5.15)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
-      tsx:
-        specifier: ^4.0.0
-        version: 4.21.0
       typescript:
         specifier: ^5.4.0
         version: 5.9.3

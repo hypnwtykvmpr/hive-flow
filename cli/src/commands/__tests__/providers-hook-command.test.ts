@@ -13,10 +13,7 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../..');
-const SETUP_PROVIDER_AGENTS_CANDIDATES = [
-  'cli/packages/providers/scripts/setup-provider-agents.ts',
-  'v3/@hive-flow/providers/scripts/setup-provider-agents.ts',
-] as const;
+const SETUP_PROVIDER_AGENTS_PATH = 'cli/packages/providers/scripts/setup-provider-agents.ts';
 
 function makeHome(): string {
   return mkdtempSync(join(tmpdir(), 'hf-provider-hook-test-'));
@@ -87,19 +84,18 @@ describe('providers hook command surface', () => {
   });
 
   it('installs stable CLI hook commands instead of provider script paths', () => {
-    const setupProviderAgentsPath = SETUP_PROVIDER_AGENTS_CANDIDATES
-      .map((candidate) => resolve(repoRoot, candidate))
-      .find((candidate) => existsSync(candidate));
+    const setupProviderAgentsPath = resolve(repoRoot, SETUP_PROVIDER_AGENTS_PATH);
     expect(setupProviderAgentsPath).toBeTruthy();
+    expect(existsSync(setupProviderAgentsPath)).toBe(true);
 
     const source = readFileSync(
-      setupProviderAgentsPath!,
+      setupProviderAgentsPath,
       'utf8',
     );
 
     expect(source).toContain('hive-flow providers hook route');
     expect(source).toContain('hive-flow providers hook status');
-    expect(source).not.toContain('v3/@hive-flow/providers/scripts/provider-route-hook.mjs');
-    expect(source).not.toContain('v3/@hive-flow/providers/scripts/provider-status-hook.mjs');
+    expect(source).not.toContain('provider-route-hook.mjs');
+    expect(source).not.toContain('provider-status-hook.mjs');
   });
 });

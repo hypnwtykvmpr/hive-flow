@@ -36,7 +36,7 @@ import { GeminiCLIProvider } from '../gemini-cli-provider.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // __tests__ lives in providers/src/__tests__ → package root is two levels up.
 const PROVIDERS_ROOT = join(__dirname, '..', '..');
-const CLI_ROOT = join(PROVIDERS_ROOT, '..', 'cli');
+const CLI_ROOT = join(PROVIDERS_ROOT, '..', '..');
 
 const mockSpawn = spawn as unknown as ReturnType<typeof vi.fn>;
 const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;

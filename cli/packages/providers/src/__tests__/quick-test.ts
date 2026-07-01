@@ -5,7 +5,7 @@
  * Tests all available providers using .env credentials
  *
  * Usage:
- *   cd v3/@hive-flow/providers
+ *   cd cli/packages/providers
  *   npm run test:quick
  *
  * Or directly:

@@ -21,7 +21,7 @@ import {
   checkModelEnforcement,
   classifyTool,
   ToolRisk,
-} from '../../cli/src/mcp-tools/mcp-enforcement-gate.ts';
+} from '../../../src/mcp-tools/mcp-enforcement-gate.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bridgePath = resolve(here, '../scripts/provider-agent-bridge.mjs');

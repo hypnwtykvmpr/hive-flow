@@ -346,7 +346,7 @@ function notifyCompletedTaskIfReady(projectRoot, taskId, options = {}) {
 }
 
 async function importJournalModule(projectRoot) {
-  const sourcePath = path.join(projectRoot, 'v3', '@hive-flow', 'providers', 'scripts', 'agent-task-journal.mjs');
+  const sourcePath = path.join(projectRoot, 'cli', 'packages', 'providers', 'scripts', 'agent-task-journal.mjs');
   try {
     if (fs.existsSync(sourcePath)) {
       return import(pathToFileURL(sourcePath).href);

@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.argv[2];
-const bridgeSource = readFileSync(join(root, 'v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs'), 'utf8');
-const configSource = readFileSync(join(root, 'v3/@hive-flow/providers/src/openrouter-model-config.ts'), 'utf8');
-const resolverSource = readFileSync(join(root, 'v3/@hive-flow/providers/src/model-alias-resolver.ts'), 'utf8');
-const providerSource = readFileSync(join(root, 'v3/@hive-flow/providers/src/openrouter-provider.ts'), 'utf8');
+const bridgeSource = readFileSync(join(root, 'cli/packages/providers/scripts/provider-agent-bridge.mjs'), 'utf8');
+const configSource = readFileSync(join(root, 'cli/packages/providers/src/openrouter-model-config.ts'), 'utf8');
+const resolverSource = readFileSync(join(root, 'cli/packages/providers/src/model-alias-resolver.ts'), 'utf8');
+const providerSource = readFileSync(join(root, 'cli/packages/providers/src/openrouter-provider.ts'), 'utf8');
 
 const miniMaxM3 = 'minimax/minimax-m3';
 const qwenPlus = 'qwen/qwen3.7-plus';

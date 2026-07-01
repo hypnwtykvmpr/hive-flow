@@ -5,7 +5,7 @@
  * Provides secure command execution with input validation and
  * HiveMemory synchronization.
  *
- * @module v3/plugins/gastown-bridge/bridges
+ * @module cli/packages/plugin-gastown-bridge/bridges
  */
 
 // Gas Town CLI Bridge

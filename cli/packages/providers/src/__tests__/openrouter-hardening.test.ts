@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { assertNoSecretLeak } from '../../../cli/src/testing/helpers/hardening.js';
+import { assertNoSecretLeak } from '../../../../src/testing/helpers/hardening.js';
 
 import { OpenRouterProvider } from '../openrouter-provider.js';
 import { AuthenticationError } from '../types.js';

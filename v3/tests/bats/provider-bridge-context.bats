@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const root = process.argv[2];
-const bridge = await import(pathToFileURL(join(root, 'v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs')).href);
+const bridge = await import(pathToFileURL(join(root, 'cli/packages/providers/scripts/provider-agent-bridge.mjs')).href);
 
 function toolCallsOf(msg) {
   if (Array.isArray(msg.toolCalls)) return msg.toolCalls;
@@ -119,7 +119,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const root = process.argv[2];
-const bridge = await import(pathToFileURL(join(root, 'v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs')).href);
+const bridge = await import(pathToFileURL(join(root, 'cli/packages/providers/scripts/provider-agent-bridge.mjs')).href);
 
 function toolCallsOf(msg) {
   if (Array.isArray(msg.toolCalls)) return msg.toolCalls;

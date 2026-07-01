@@ -24,10 +24,10 @@ const DUPLICATE_ROSTER_ROOTS = [
   'agents',
   'v3/agents',
   'v3/@hive-flow/agents',
-  'v3/@hive-flow/embeddings/agents',
+  'cli/packages/embeddings/agents',
   'v3/@hive-flow/cli/src/memory/agents',
   'v3/plugins/agentic-qe/agents',
-  'v3/plugins/gastown-bridge/agents',
+  'cli/packages/plugin-gastown-bridge/agents',
 ] as const;
 
 function agentOnlyOptions(targetDir: string): InitOptions {

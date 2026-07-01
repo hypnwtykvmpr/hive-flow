@@ -9,7 +9,7 @@
  * - Molecule generation from cooked formulas
  * - Cancellation support
  *
- * @module v3/plugins/gastown-bridge/formula/executor
+ * @module cli/packages/plugin-gastown-bridge/formula/executor
  */
 
 import { EventEmitter } from 'events';

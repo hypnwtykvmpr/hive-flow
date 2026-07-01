@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..');
 const STORE_DIR = join(PROJECT_ROOT, '.hive-flow', 'agents');
 const STORE_PATH = join(STORE_DIR, 'store.json');
-const BRIDGE_PATH = join(PROJECT_ROOT, 'v3', '@hive-flow', 'providers', 'scripts', 'provider-agent-bridge.mjs');
+const BRIDGE_PATH = join(PROJECT_ROOT, 'cli', 'packages', 'providers', 'scripts', 'provider-agent-bridge.mjs');
 
 // ===== Helpers =====
 

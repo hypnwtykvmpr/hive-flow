@@ -15,7 +15,7 @@ setup() {
 }
 
 @test "provider sandbox runner scripts parse cleanly" {
-  run node --check "$REPO_ROOT/v3/@hive-flow/providers/scripts/sandbox-runner.mjs"
+  run node --check "$REPO_ROOT/cli/packages/providers/scripts/sandbox-runner.mjs"
 
   [ "$status" -eq 0 ]
 }

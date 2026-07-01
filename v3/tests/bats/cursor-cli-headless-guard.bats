@@ -7,14 +7,14 @@
 # surfaces as a hard ~300s caller timeout (SIGKILL) with an empty response.
 #
 # These checks are intentionally REDUNDANT with the vitest argv-guard tests in
-# v3/@hive-flow/providers/src/__tests__/cli-providers.test.ts. They assert the
+# cli/packages/providers/src/__tests__/cli-providers.test.ts. They assert the
 # source-level invariant directly so a regression fails loudly even if the unit
 # suite is skipped. Static (grep) only — no live cursor-agent API calls.
 
 setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
-  PROVIDER_SRC="$REPO_ROOT/v3/@hive-flow/providers/src/cursor-cli-provider.ts"
-  AGENTIC_WRAPPER="$REPO_ROOT/v3/@hive-flow/providers/src/agentic-wrapper.ts"
+  PROVIDER_SRC="$REPO_ROOT/cli/packages/providers/src/cursor-cli-provider.ts"
+  AGENTIC_WRAPPER="$REPO_ROOT/cli/packages/providers/src/agentic-wrapper.ts"
   # Isolated home so nothing in these tests touches the real state tree.
   export HIVE_FLOW_HOME="$BATS_TEST_TMPDIR/hive-home"
   mkdir -p "$HIVE_FLOW_HOME"
@@ -64,6 +64,6 @@ setup() {
 @test "no Cursor IDE / Background Agents path exists across the providers package" {
   # Repo-wide guard over source (excludes build output, deps, comment lines, and
   # the guard test file itself which references the forbidden strings on purpose).
-  run bash -c "grep -rIn --include='*.ts' --include='*.mjs' --include='*.cjs' -E 'background-agent|background_agent' \"$REPO_ROOT/v3/@hive-flow/providers/src\" \"$REPO_ROOT/v3/@hive-flow/providers/scripts\" 2>/dev/null | grep -vE ':\s*//|:\s*\*|not\.toContain|cli-providers\.test\.ts'"
+  run bash -c "grep -rIn --include='*.ts' --include='*.mjs' --include='*.cjs' -E 'background-agent|background_agent' \"$REPO_ROOT/cli/packages/providers/src\" \"$REPO_ROOT/cli/packages/providers/scripts\" 2>/dev/null | grep -vE ':\s*//|:\s*\*|not\.toContain|cli-providers\.test\.ts'"
   [ -z "$output" ]
 }

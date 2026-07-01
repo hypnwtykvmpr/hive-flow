@@ -12,7 +12,7 @@
  * - Transaction-safe operations
  * - Embedding preservation
  *
- * @module v3/plugins/gastown-bridge/bridges/sync-bridge
+ * @module cli/packages/plugin-gastown-bridge/bridges/sync-bridge
  */
 
 import { z } from 'zod';

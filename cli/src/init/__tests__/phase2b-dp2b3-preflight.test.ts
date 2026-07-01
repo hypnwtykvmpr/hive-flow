@@ -45,10 +45,10 @@ function hasMovedRootPathReference(source: string): boolean {
   if (MOVED_ROOTS.some((root) => source.includes(root))) return true;
 
   const pathAssemblyPatterns = [
-    /(?:join|resolve)\([^)]*['"`]v3['"`][^)]*['"`]@hive-flow['"`][^)]*['"`](?:providers|embeddings)['"`]/s,
-    /(?:join|resolve)\([^)]*['"`]v3['"`][^)]*['"`]plugins['"`][^)]*['"`]gastown-bridge['"`]/s,
-    /(?:join|resolve)\([^)]*['"`]@hive-flow\/(?:providers|embeddings)['"`]/s,
-    /(?:join|resolve)\([^)]*['"`]plugins\/gastown-bridge['"`]/s,
+    /(?<!\.)\b(?:join|resolve)\([^)]*['"`]v3['"`][^)]*['"`]@hive-flow['"`][^)]*['"`](?:providers|embeddings)['"`]/s,
+    /(?<!\.)\b(?:join|resolve)\([^)]*['"`]v3['"`][^)]*['"`]plugins['"`][^)]*['"`]gastown-bridge['"`]/s,
+    /(?<!\.)\b(?:join|resolve)\([^)]*['"`]@hive-flow\/(?:providers|embeddings)['"`]/s,
+    /(?<!\.)\b(?:join|resolve)\([^)]*['"`]plugins\/gastown-bridge['"`]/s,
   ];
   return pathAssemblyPatterns.some((pattern) => pattern.test(source));
 }

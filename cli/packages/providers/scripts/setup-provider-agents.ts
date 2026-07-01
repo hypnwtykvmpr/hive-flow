@@ -5,7 +5,7 @@
  * Registers provider-backed agent types, creates hook entries,
  * and validates provider binaries. Idempotent — safe to run multiple times.
  *
- * Usage: tsx v3/@hive-flow/providers/scripts/setup-provider-agents.ts
+ * Usage: tsx cli/packages/providers/scripts/setup-provider-agents.ts
  *
  * @module @hive-flow/providers/scripts/setup-provider-agents
  */

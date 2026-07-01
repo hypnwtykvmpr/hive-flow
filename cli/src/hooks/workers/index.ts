@@ -1303,7 +1303,7 @@ export function createADRWorker(projectRoot: string): WorkerHandler {
         .catch(() => ({ compliant: false, reason: 'Package not readable' })),
 
       // ADR-011: LLM Provider System
-      fs.access(path.join(v3Path, '@hive-flow', 'providers'))
+      fs.access(path.join(projectRoot, 'cli', 'packages', 'providers'))
         .then(() => ({ compliant: true, reason: 'Providers package exists' }))
         .catch(() => ({ compliant: false, reason: 'No providers package' })),
 
@@ -1379,7 +1379,7 @@ export function createDDDWorker(projectRoot: string): WorkerHandler {
       { mod: '@hive-flow/cli/hooks', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'hooks') },
       { mod: '@hive-flow/cli/mcp', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'mcp') },
       { mod: '@hive-flow/cli/integration', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'integration') },
-      { mod: '@hive-flow/providers', srcPath: path.join(v3Path, '@hive-flow/providers', 'src') },
+      { mod: '@hive-flow/providers', srcPath: path.join(projectRoot, 'cli', 'packages', 'providers', 'src') },
       { mod: '@hive-flow/cli/memory', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'memory') },
       { mod: '@hive-flow/cli/security', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'security') },
     ];
