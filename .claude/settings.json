@@ -347,7 +347,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "hive-flow providers hook route",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/cli/bin/cli.js providers hook route",
             "timeout": 5000
           }
         ]
@@ -406,7 +406,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "hive-flow providers hook status",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/cli/bin/cli.js providers hook status",
             "timeout": 5000
           }
         ]
