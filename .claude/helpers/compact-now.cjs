@@ -2,9 +2,9 @@
 /*
  * compact-now.cjs
  *
- * Volitional self-compaction trigger. This helper never decides to compact from
- * context percentage. It writes a recovery handoff first, then arms a one-shot
- * compact request consumed by context-persistence-hook.mjs.
+ * Volitional self-compaction trigger. This helper never auto-decides to compact
+ * from context percentage, but it does enforce the human's compaction request
+ * floor before writing the recovery handoff and arming a one-shot request.
  */
 
 'use strict';
@@ -23,6 +23,7 @@ const CORRECT_SELF_COMPACT_COMMAND = [
   'Correct current-session self-compaction command:',
   'node .claude/helpers/compact-now.cjs --mode inplace --reason "<why compaction is needed>" --next-step "<exact next step after compact>"',
   'This writes .hive-flow/data/compaction-handoff.md first, then submits /compact back into Claude\'s own tmux pane when run from that pane.',
+  'If context usage cannot be measured, stop and request human intervention; the context measurement layer must be repaired before compaction can be safely requested.',
   'compact-now.cjs --mode headless launches a separate Claude process and must not be used when the current pane/session needs compaction.',
   'Do not git checkout or edit .claude/helpers to activate compaction from inside a governed Claude session.',
 ].join('\n');
@@ -308,7 +309,14 @@ function measuredContextPercentage(projectRoot, sessionId) {
 
 function assertContextFloorAllowsCompaction(projectRoot, sessionId) {
   const measurement = measuredContextPercentage(projectRoot, sessionId);
-  if (!measurement) return null;
+  if (!measurement) {
+    throw new Error(
+      `Refusing compaction request: unable to measure current context usage, so the 50% compaction request floor cannot be verified. ` +
+      `Continue without compacting until statusline or autopilot context measurement is available. ` +
+      `Request human intervention: the context measurement layer must be repaired before compaction can be safely requested.\n\n` +
+      `${CORRECT_SELF_COMPACT_COMMAND}`,
+    );
+  }
   if (measurement.percentage < COMPACT_CONTEXT_FLOOR_PCT) {
     const pct = (measurement.percentage * 100).toFixed(1);
     throw new Error(
@@ -456,8 +464,10 @@ function main() {
     handoffPath,
     staleAfterMs: 300000,
     contextMeasurement: contextMeasurement ? {
-      percentage: contextMeasurement.percentage,
-      percent: Number((contextMeasurement.percentage * 100).toFixed(1)),
+      percentage: typeof contextMeasurement.percentage === 'number' ? contextMeasurement.percentage : null,
+      percent: typeof contextMeasurement.percentage === 'number'
+        ? Number((contextMeasurement.percentage * 100).toFixed(1))
+        : null,
       source: contextMeasurement.statePath,
       detail: contextMeasurement.detail || '',
       floorPercent: Number((COMPACT_CONTEXT_FLOOR_PCT * 100).toFixed(0)),

@@ -1744,11 +1744,19 @@ export function buildProviderLastResult(response, request, toolUse, resultFile) 
 }
 
 export function trimMessages(messages, limits) {
-  if (!limits) {
-    throw new Error('trimMessages requires limits');
-  }
   if (!Array.isArray(messages) || messages.length === 0) {
     return Array.isArray(messages) ? messages : [];
+  }
+  if (
+    !limits ||
+    typeof limits.maxTokens !== 'number' ||
+    !Number.isFinite(limits.maxTokens) ||
+    limits.maxTokens <= 0
+  ) {
+    bridgeLog('warn', 'Context limits unavailable — fail-open without budget trimming', {
+      messageCount: messages.length,
+    });
+    return normalizeForProvider(messages);
   }
 
   const maxEntries = typeof limits.maxEntries === 'number' ? limits.maxEntries + 2 : Number.POSITIVE_INFINITY;

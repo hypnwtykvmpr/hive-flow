@@ -177,6 +177,23 @@ describe('Slice A microcompaction budget heuristic', () => {
     expect(limits.warningThreshold).toBe(850_000);
     expect(paddedEstimate).toBeLessThan(limits.warningThreshold);
   });
+
+  it('fails open when agent context limits are unavailable', () => {
+    const messages = [
+      { role: 'system', content: 'system' },
+      { role: 'user', content: 'task' },
+      { role: 'tool', toolCallId: 'orphan', name: 'read_file', content: 'orphan payload' },
+      { role: 'user', content: 'latest' },
+    ];
+
+    const trimmed = bridge.trimMessages(JSON.parse(JSON.stringify(messages)), undefined);
+
+    expect(trimmed).toEqual([
+      { role: 'system', content: 'system' },
+      { role: 'user', content: 'task' },
+      { role: 'user', content: 'latest' },
+    ]);
+  });
 });
 
 describe('Slice B microcompaction old tool-result eviction', () => {
@@ -245,6 +262,21 @@ describe('Slice B microcompaction old tool-result eviction', () => {
     const evicted = bridge.evictOldToolResults(JSON.parse(JSON.stringify(alreadyEvicted)));
 
     expect(evicted).toEqual(alreadyEvicted);
+  });
+
+  it('keeps nonblocking tool-result microcompaction when agent limits are unavailable', () => {
+    const messages = toolHistory(4);
+
+    const prepared = bridge.prepareForProvider(JSON.parse(JSON.stringify(messages)), undefined);
+    const tools = toolMessages(prepared);
+
+    expect(tools).toHaveLength(4);
+    expect(tools[0].content).toBe(bridge.EVICTED_TOOL_RESULT_MARKER);
+    expect(tools.slice(1).map((msg) => msg.content)).toEqual(['payload-1', 'payload-2', 'payload-3']);
+    expect(prepared._compactionMeta).toMatchObject({
+      evictedToolResults: 1,
+      keptRecentToolResults: 3,
+    });
   });
 });
 

@@ -171,7 +171,15 @@ function buildCompactPromptFloorDecision(input = {}, transcriptPath = null) {
   if (!isCompactSlashPrompt(input)) return null;
   const resolvedTranscriptPath = transcriptPath ?? input?.transcript_path ?? input?.transcriptPath ?? '';
   const measurement = resolveStatuslineContextMeasurement(input, resolvedTranscriptPath);
-  if (!measurement) return null;
+  if (!measurement) {
+    const floor = (COMPACT_CONTEXT_FLOOR_PCT * 100).toFixed(0);
+    return {
+      decision: 'block',
+      continue: false,
+      suppressOutput: false,
+      stopReason: `[COMPACT_BLOCKED] Refusing /compact: unable to measure current context usage, so the ${floor}% compaction request floor cannot be verified. Continue without compacting and request human intervention: the context measurement layer must be repaired before compaction can be safely requested.`,
+    };
+  }
   if (measurement.percentage >= COMPACT_CONTEXT_FLOOR_PCT) return null;
 
   const pct = (measurement.percentage * 100).toFixed(1);

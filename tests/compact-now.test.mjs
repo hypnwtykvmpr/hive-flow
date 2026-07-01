@@ -25,6 +25,18 @@ const repoRoot = join(__dirname, '..');
 const helperPath = join(repoRoot, '.claude', 'helpers', 'compact-now.cjs');
 const PROPERTY_RUNS = Number(process.env.HIVE_FLOW_PROPERTY_RUNS || process.env.HF_PROPERTY_RUNS || 25);
 
+function writeMeasuredContext(projectRoot, sessionId, percentage = 0.6) {
+  const dataDir = join(projectRoot, '.hive-flow', 'data');
+  mkdirSync(dataDir, { recursive: true });
+  writeFileSync(join(dataDir, 'autopilot-state.json'), JSON.stringify({
+    sessionId,
+    lastPercentage: percentage,
+    lastTokenEstimate: Math.round(percentage * 1000000),
+    contextWindow: 1000000,
+    lastCheck: Date.now(),
+  }));
+}
+
 describe('compact-now helper', () => {
   it('writes a durable recovery note before arming a valid compact request', () => {
     const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-'));
@@ -38,6 +50,7 @@ describe('compact-now helper', () => {
     mkdirSync(binDir, { recursive: true });
 
     try {
+      writeMeasuredContext(projectRoot, 'session-123', 0.6);
       writeFileSync(fakeTmux, [
         '#!/bin/sh',
         'printf "%s\\n" "$*" >> "$HF_FAKE_TMUX_LOG"',
@@ -83,6 +96,40 @@ describe('compact-now helper', () => {
       const tmuxLog = readFileSync(fakeTmuxLog, 'utf8');
       assert.match(tmuxLog, /send-keys -t %42 -l \/compact /);
       assert.match(tmuxLog, /send-keys -t %42 Enter/);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('blocks compact requests when context usage cannot be measured', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-unmeasured-'));
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const handoffPath = join(dataDir, 'compaction-handoff.md');
+    const requestPath = join(dataDir, 'compact-request.json');
+    mkdirSync(dataDir, { recursive: true });
+
+    try {
+      const result = spawnSync(process.execPath, [
+        helperPath,
+        '--reason', 'unmeasured should fail closed',
+        '--mode', 'headless',
+        '--resume', 'session-unmeasured',
+      ], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+        },
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /unable to measure current context usage/);
+      assert.match(result.stderr, /50% compaction request floor cannot be verified/);
+      assert.match(result.stderr, /Request human intervention/);
+      assert.match(result.stderr, /context measurement layer must be repaired/);
+      assert.equal(existsSync(handoffPath), false);
+      assert.equal(existsSync(requestPath), false);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
     }
@@ -492,6 +539,7 @@ describe('compact-now helper', () => {
         mkdirSync(dataDir, { recursive: true });
 
         try {
+          writeMeasuredContext(projectRoot, resume, 0.6);
           writeFileSync(fakeClaude, [
             '#!/usr/bin/env node',
             "const fs = require('fs');",
@@ -579,6 +627,7 @@ describe('compact-now helper', () => {
     mkdirSync(dataDir, { recursive: true });
 
     try {
+      writeMeasuredContext(projectRoot, 'session-no-boundary', 0.6);
       writeFileSync(fakeClaude, [
         '#!/usr/bin/env node',
         "const fs = require('fs');",

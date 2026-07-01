@@ -15,6 +15,15 @@ function makeRoot(): string {
   return root;
 }
 
+function writeMeasuredContext(root: string, percentage = 0.6): void {
+  writeFileSync(join(root, '.hive-flow', 'data', 'autopilot-state.json'), JSON.stringify({
+    lastPercentage: percentage,
+    lastTokenEstimate: Math.round(percentage * 1000000),
+    contextWindow: 1000000,
+    lastCheck: Date.now(),
+  }), 'utf8');
+}
+
 function writeFakeTmux(binDir: string, logPath: string): void {
   mkdirSync(binDir, { recursive: true });
   const fakeTmux = join(binDir, 'tmux');
@@ -44,6 +53,7 @@ describe('compact-now current-session in-place compaction', () => {
     const binDir = join(root, 'bin');
     const tmuxLog = join(root, 'tmux.log');
     writeFakeTmux(binDir, tmuxLog);
+    writeMeasuredContext(root);
     writeFileSync(join(root, '.hive-flow', 'data', 'tmux-pane.txt'), '%claude\n', 'utf8');
 
     const output = execFileSync(process.execPath, [
@@ -101,6 +111,7 @@ describe('compact-now current-session in-place compaction', () => {
     const binDir = join(root, 'bin');
     const tmuxLog = join(root, 'tmux.log');
     writeFakeTmux(binDir, tmuxLog);
+    writeMeasuredContext(root);
     writeFileSync(join(root, '.hive-flow', 'data', 'tmux-pane.txt'), '%claude\n', 'utf8');
 
     expect(() => execFileSync(process.execPath, [

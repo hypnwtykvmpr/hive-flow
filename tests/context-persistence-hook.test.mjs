@@ -422,6 +422,19 @@ describe('context window detection', () => {
     assert.match(decision.stopReason, /below the 50% compaction request floor/);
   });
 
+  it('should block direct /compact prompts when context usage cannot be measured', () => {
+    const decision = buildCompactPromptFloorDecision({
+      prompt: '/compact preserve state',
+    });
+
+    assert.equal(decision.decision, 'block');
+    assert.equal(decision.continue, false);
+    assert.match(decision.stopReason, /unable to measure current context usage/);
+    assert.match(decision.stopReason, /50% compaction request floor cannot be verified/);
+    assert.match(decision.stopReason, /request human intervention/);
+    assert.match(decision.stopReason, /context measurement layer must be repaired/);
+  });
+
   it('should skip context measurement for every non-/compact prompt', () => {
     for (const prompt of [
       'please explain /compact behavior',
