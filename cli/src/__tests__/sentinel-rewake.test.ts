@@ -14,12 +14,12 @@ const PROPERTY_RUNS = propertyRunsFromEnv(200);
 
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
-const agentRewakeScript = resolve(here, '../../../../../.claude/helpers/agent-task-rewake.cjs');
+const agentRewakeScript = resolve(here, '../../../.claude/helpers/agent-task-rewake.cjs');
 const agentRewake = require(agentRewakeScript);
-const drain = require(resolve(here, '../../../../../.claude/helpers/drain-notifications.cjs'));
-const hiveRewakeScript = resolve(here, '../../../../../.claude/helpers/hive-completion-rewake.cjs');
+const drain = require(resolve(here, '../../../.claude/helpers/drain-notifications.cjs'));
+const hiveRewakeScript = resolve(here, '../../../.claude/helpers/hive-completion-rewake.cjs');
 const hiveRewake = require(hiveRewakeScript);
-const dedup = require(resolve(here, '../../../../../.claude/helpers/dedup-marker.cjs'));
+const dedup = require(resolve(here, '../../../.claude/helpers/dedup-marker.cjs'));
 const mutableFs = require('node:fs');
 
 function makeTempProject(): string {
@@ -987,6 +987,67 @@ describe('sentinel agent task rewake', () => {
       expect(pending).toHaveLength(3);
       expect(JSON.parse(pending[2])).toMatchObject({ kind: 'task', taskId: 'task-timeout-dedupe' });
       expect(existsSync(join(dataDir, 'task-task-timeout-dedupe.notified'))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('rewake terminal-status monitor', () => {
+  it('reads persisted terminal task status when result.json is absent', () => {
+    const root = makeTempProject();
+    try {
+      writeTracking(root, 'task-terminal-failed', { taskId: 'task-terminal-failed', status: 'failed' });
+      writeTracking(root, 'task-terminal-completed', { taskId: 'task-terminal-completed', status: 'completed' });
+      writeTracking(root, 'task-terminal-terminated', { taskId: 'task-terminal-terminated', status: 'terminated' });
+      expect(agentRewake.persistedTerminalTaskStatus(root, 'task-terminal-failed')).toBe('failed');
+      expect(agentRewake.persistedTerminalTaskStatus(root, 'task-terminal-completed')).toBe('completed');
+      expect(agentRewake.persistedTerminalTaskStatus(root, 'task-terminal-terminated')).toBe('terminated');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps monitoring tasks whose persisted status is not terminal', () => {
+    const root = makeTempProject();
+    try {
+      writeTracking(root, 'task-still-running', { taskId: 'task-still-running', status: 'running' });
+      expect(agentRewake.persistedTerminalTaskStatus(root, 'task-still-running')).toBe(null);
+      expect(agentRewake.persistedTerminalTaskStatus(root, 'task-untracked')).toBe(null);
+      const taskDir = join(root, '.hive-flow', 'tasks');
+      mkdirSync(taskDir, { recursive: true });
+      writeFileSync(join(taskDir, 'task-corrupt.json'), '{not-json');
+      expect(agentRewake.persistedTerminalTaskStatus(root, 'task-corrupt')).toBe(null);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('exits quietly instead of nagging forever for a result-less terminal task', () => {
+    const root = makeTempProject();
+    try {
+      // Terminal failed status persisted (e.g. process-exited-without-result),
+      // but NO result.json was ever written: the monitor must stop instead of
+      // emitting the [TASK CHECK DUE] Stop-hook block on every restart.
+      writeTracking(root, 'task-dead-noresult', { taskId: 'task-dead-noresult', status: 'failed' });
+      const payload = JSON.stringify({
+        tool_name: 'mcp__hive-flow__agent_task',
+        tool_response: { taskId: 'task-dead-noresult' },
+      });
+      const run = spawnSync(process.execPath, [agentRewakeScript], {
+        input: payload,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: root,
+          HIVE_FLOW_REWAKE_MAX_WAIT_MS: '400',
+          HIVE_FLOW_REWAKE_POLL_MS: '50',
+        },
+        encoding: 'utf8',
+        timeout: 15000,
+      });
+      expect(run.status).toBe(0);
+      expect(String(run.stderr)).not.toContain('TASK CHECK DUE');
+      expect(existsSync(join(root, '.hive-flow', 'data', 'task-task-dead-noresult.check-due'))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

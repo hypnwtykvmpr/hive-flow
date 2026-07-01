@@ -214,6 +214,25 @@ function clearTimeoutCheck(dataDir, taskId) {
   }
 }
 
+const TERMINAL_TASK_STATUSES = new Set(['failed', 'completed', 'terminated']);
+
+// Result-less terminal tasks (e.g. process-exited-without-result) never get a
+// `<taskId>.result.json`, so the completion notifier can never fire. The
+// persisted tracking record is the source of truth for those: a terminal
+// status there means the outcome is already decided and the monitor must stop
+// instead of nagging forever.
+function persistedTerminalTaskStatus(projectRoot, taskId) {
+  try {
+    const trackingPath = path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.json`);
+    if (!fs.existsSync(trackingPath)) return null;
+    const tracking = JSON.parse(fs.readFileSync(trackingPath, 'utf8'));
+    const status = typeof tracking.status === 'string' ? tracking.status : '';
+    return TERMINAL_TASK_STATUSES.has(status) ? status : null;
+  } catch {
+    return null;
+  }
+}
+
 function isAgentTaskResultPayload(raw) {
   try {
     const parsed = JSON.parse(raw);
@@ -398,6 +417,7 @@ async function main() {
   }
   const sessionInput = extractSessionInput(raw, process.env);
 
+  const resultFilePath = path.join(dir, '.hive-flow', 'tasks', `${taskId}.result.json`);
   const deadline = Date.now() + MAX_WAIT_MS;
   while (Date.now() < deadline) {
     const result = notifyCompletedTaskIfReady(dir, taskId, { sessionInput, env: process.env });
@@ -408,7 +428,23 @@ async function main() {
       process.exit(2);
     }
     if (result.reason === 'already-notified') process.exit(0);
+    if (!fs.existsSync(resultFilePath)) {
+      const terminalStatus = persistedTerminalTaskStatus(dir, taskId);
+      if (terminalStatus) {
+        clearTimeoutCheck(dataDir, taskId);
+        await appendRewakeJournalEvent(dir, taskId, { reason: 'terminal-status', status: terminalStatus });
+        process.exit(0);
+      }
+    }
     await new Promise((res) => setTimeout(res, POLL_MS));
+  }
+  if (!fs.existsSync(resultFilePath)) {
+    const terminalStatus = persistedTerminalTaskStatus(dir, taskId);
+    if (terminalStatus) {
+      clearTimeoutCheck(dataDir, taskId);
+      await appendRewakeJournalEvent(dir, taskId, { reason: 'terminal-status', status: terminalStatus });
+      process.exit(0);
+    }
   }
   const summary = timeoutSummary(taskId);
   const won = appendTimeoutCheckOnce(
@@ -437,6 +473,7 @@ module.exports = {
   timeoutSummary,
   timeoutCheckPath,
   clearTimeoutCheck,
+  persistedTerminalTaskStatus,
   isAgentTaskResultPayload,
   appendTimeoutCheckOnce,
   claimNotifiedMarker,
