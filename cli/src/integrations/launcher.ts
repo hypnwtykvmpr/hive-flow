@@ -120,11 +120,11 @@ export function hiveFlowMcpEnv(): Record<string, string> {
 }
 
 /**
- * Resolve the runtime path to `bin/statusline.js` inside the installed (or
- * checked-out) `@hive-flow/cli` package.
+ * Resolve the runtime path to `bin/statusline.js` inside the installed package
+ * or promoted `cli/` workspace.
  *
  * Two-strategy resolution:
- *   1. Monorepo/source layout: `<projectRoot>/v3/@hive-flow/cli/bin/statusline.js`.
+ *   1. Monorepo/source layout: `<projectRoot>/cli/bin/statusline.js`.
  *      Used during local development and inside the hive-flow worktree.
  *   2. Installed package layout: walk up from this file's directory (compiled
  *      output lives in `dist/integrations/`, source in `src/integrations/`) up
@@ -135,10 +135,8 @@ export function hiveFlowMcpEnv(): Record<string, string> {
  * rather than silently writing a launcher that points at a missing file.
  */
 export function resolveStatuslineRuntimeEntrypoint(projectRoot: string): string {
-  // Strategy 1: monorepo/source checkout. The directory is literally named
-  // `@hive-flow` then `cli`, so build it segment-by-segment to avoid any
-  // shell-style expansion concerns when this path is embedded in a shim later.
-  const monorepoPath = resolve(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'statusline.js');
+  // Strategy 1: promoted monorepo/source checkout.
+  const monorepoPath = resolve(projectRoot, 'cli', 'bin', 'statusline.js');
   if (existsSync(monorepoPath)) return monorepoPath;
 
   // Strategy 2: walk up from this module's directory looking for bin/statusline.js.

@@ -149,7 +149,7 @@ export function formatSessionStartOutput(result: SessionHookResult): string {
  * Generate a shell hook script for integration with .claude/settings.json
  */
 export function generateShellHook(projectRoot: string): string {
-  const cliPath = path.join(projectRoot, 'v3', '@hive-flow', 'cli');
+  const cliPath = path.join(projectRoot, 'cli');
 
   return `#!/bin/bash
 # Hive Flow V3 Workers - Session Start Hook

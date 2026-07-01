@@ -773,7 +773,7 @@ ALWAYS publish both packages. MUST update all dist-tags.
 NEVER forget the umbrella alpha tag.
 
 \`\`\`bash
-cd v3/@hive-flow/cli
+cd cli
 npm version 3.0.0-alpha.XXX --no-git-tag-version
 npm run build
 npm publish --tag alpha

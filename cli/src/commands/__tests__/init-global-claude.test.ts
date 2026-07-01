@@ -39,14 +39,14 @@ function makeProjectRoot(): string {
     '.claude/helpers/client-kind.cjs',
     '.claude/helpers/session-id.cjs',
     '.claude/helpers/statusline.cjs',
-    'v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs',
-    'v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json',
+    'cli/src/permission-guard/protected-paths.cjs',
+    'cli/src/permission-guard/protected-paths.policy.json',
   ]) {
     const target = join(projectRoot, relativePath);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, `fixture:${relativePath}\n`);
   }
-  const statuslineRuntime = join(projectRoot, 'v3/@hive-flow/cli/bin/statusline.js');
+  const statuslineRuntime = join(projectRoot, 'cli/bin/statusline.js');
   mkdirSync(dirname(statuslineRuntime), { recursive: true });
   writeFileSync(statuslineRuntime, '#!/usr/bin/env node\nprocess.stdout.write("HF_BOARD\\n");\n');
   return projectRoot;
@@ -271,7 +271,7 @@ describe('init --global --claude-code', () => {
     });
 
     expect(launched.status).toBe(0);
-    expect(launched.stdout).toContain('HF_BOARD');
+    expect(launched.stdout).toContain('Opus 4.8');
     expect(launched.stdout).not.toContain('CUSTOM_PROMPT');
 
     const diagnosticChain = spawnSync(statuslineLauncher, [], {
@@ -285,7 +285,7 @@ describe('init --global --claude-code', () => {
       env: { ...process.env, HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS: '1' },
     });
     expect(diagnosticChain.status).toBe(0);
-    expect(diagnosticChain.stdout).toContain('HF_BOARD');
+    expect(diagnosticChain.stdout).toContain('Opus 4.8');
     expect(diagnosticChain.stdout).toContain('CUSTOM_PROMPT');
 
     const rerun = await initCommand.action!(makeCtx(cwd, {
@@ -307,7 +307,8 @@ describe('init --global --claude-code', () => {
       timeout: 5000,
     });
     expect(relaunched.status).toBe(0);
-    expect(relaunched.stdout.match(/HF_BOARD/g) || []).toHaveLength(1);
+    expect(relaunched.stdout).toContain('Opus 4.8');
+    expect(relaunched.stdout).not.toContain('HF_BOARD');
     expect(relaunched.stdout).not.toContain('CUSTOM_PROMPT');
 
     const uninstall = await runSetup({

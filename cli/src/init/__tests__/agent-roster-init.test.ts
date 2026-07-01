@@ -20,12 +20,12 @@ function workspaceRoot(): string {
 }
 
 const DUPLICATE_ROSTER_ROOTS = [
-  'v3/@hive-flow/cli/.claude/agents',
+  'cli/.claude/agents',
   'agents',
   'v3/agents',
   'v3/@hive-flow/agents',
   'cli/packages/embeddings/agents',
-  'v3/@hive-flow/cli/src/memory/agents',
+  'cli/src/memory/agents',
   'v3/plugins/agentic-qe/agents',
   'cli/packages/plugin-gastown-bridge/agents',
 ] as const;

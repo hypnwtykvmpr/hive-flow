@@ -3,7 +3,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from './debrand-static-scope.js';
 
-const CANONICAL_ROOT = 'v3/@hive-flow/cli/helpers/';
+const CANONICAL_ROOT = 'cli/helpers/';
 const RETIRED_ROOT = 'v3/helpers/';
 
 const expectedHelperAssets = [
@@ -27,7 +27,7 @@ function trackedFiles(...pathspecs: string[]): string[] {
 }
 
 describe('helper asset location', () => {
-  it('keeps every helper asset under v3/@hive-flow/cli/helpers', () => {
+  it('keeps every helper asset under cli/helpers', () => {
     const tracked = new Set(trackedFiles(CANONICAL_ROOT, RETIRED_ROOT));
 
     fc.assert(
@@ -48,7 +48,7 @@ describe('helper asset location', () => {
         '--',
         ':!tests/packaging-proof.test.mjs',
         ':!v3/tests/bats/helper-assets-location.bats',
-        ':!v3/@hive-flow/cli/src/init/__tests__/helper-assets-location.test.ts',
+        ':!cli/src/init/__tests__/helper-assets-location.test.ts',
       ],
       {
         cwd: REPO_ROOT,

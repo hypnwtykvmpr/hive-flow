@@ -1,10 +1,25 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const REPO_ROOT = resolve(__dirname, '../../../../..');
+function findRepoRoot(start = __dirname): string {
+  let current = resolve(start);
+  for (;;) {
+    if (
+      existsSync(resolve(current, 'package.json')) &&
+      existsSync(resolve(current, 'cli', 'package.json'))
+    ) {
+      return current;
+    }
+    const parent = resolve(current, '..');
+    if (parent === current) throw new Error('Unable to locate hive-flow repo root');
+    current = parent;
+  }
+}
+
+const REPO_ROOT = findRepoRoot();
 
 /** Build a realistic cacache JSONL line for a given npm registry URL. */
 function makeCacheLine(url: string): string {
@@ -17,8 +32,8 @@ describe('npx cache repair pruning', () => {
     const files = [
       'package.json',
       'hive-flow-npm/package.json',
-      'v3/@hive-flow/cli/bin/npx-repair.js',
-      'v3/@hive-flow/cli/bin/preinstall.cjs',
+      'cli/bin/npx-repair.js',
+      'cli/bin/preinstall.cjs',
     ];
     const duplicateHiveFlowPredicate =
       /(content|content2|c)\.(?:includes\('hive-flow'\)|indexOf\('hive-flow'\)\s*!==\s*-1)\s*\|\|\s*\1\.(?:includes\('hive-flow'\)|indexOf\('hive-flow'\)\s*!==\s*-1)/;
@@ -31,7 +46,7 @@ describe('npx cache repair pruning', () => {
   });
 
   it('classifies hive-flow cacache entries without pruning unrelated package entries', async () => {
-    const repairModule = (await import(pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href)) as {
+    const repairModule = (await import(pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href)) as {
       isHiveFlowCacheIndexEntry: (content: string) => boolean;
     };
 
@@ -69,7 +84,7 @@ describe('npx cache repair pruning', () => {
   });
 
   it('pruneHiveFlowCacheIndexBucket removes only hive-flow lines and flags empty buckets', async () => {
-    const repairModule = (await import(pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href)) as {
+    const repairModule = (await import(pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href)) as {
       pruneHiveFlowCacheIndexBucket: (content: string) => {
         removed: number;
         survivors: string;
@@ -106,7 +121,7 @@ describe('npx cache repair pruning', () => {
 // ── d8-003: preinstall.cjs anchored matching ───────────────────────────────
 
 describe('d8-003: preinstall.cjs uses anchored cacache matching', () => {
-  const preinstallPath = resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/preinstall.cjs');
+  const preinstallPath = resolve(REPO_ROOT, 'cli/bin/preinstall.cjs');
 
   it('preinstall.cjs no longer contains the broad naive substring predicate', () => {
     const src = readFileSync(preinstallPath, 'utf8');
@@ -197,43 +212,43 @@ describe('d8-003 behavioral: encoded @hive-flow scope matches in both repair fil
     return `abc123def456\t${JSON.stringify({ key, integrity: 'sha512-fake==', time: 1000, size: 100 })}`;
   }
 
-  // ── v3/@hive-flow/cli/bin/npx-repair.js (ESM) ────────────────────────────
+  // ── cli/bin/npx-repair.js (ESM) ────────────────────────────
 
-  it('v3/@hive-flow/cli/bin/npx-repair.js: matches encoded %2f (lowercase)', async () => {
+  it('cli/bin/npx-repair.js: matches encoded %2f (lowercase)', async () => {
     const { isHiveFlowCacheIndexEntry } = (await import(
-      pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href
+      pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href
     )) as { isHiveFlowCacheIndexEntry: (content: string) => boolean };
 
     expect(isHiveFlowCacheIndexEntry(makeEncodedCacheLine('https://registry.npmjs.org/@hive-flow%2fcli'))).toBe(true);
   });
 
-  it('v3/@hive-flow/cli/bin/npx-repair.js: matches encoded %2F (uppercase)', async () => {
+  it('cli/bin/npx-repair.js: matches encoded %2F (uppercase)', async () => {
     const { isHiveFlowCacheIndexEntry } = (await import(
-      pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href
+      pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href
     )) as { isHiveFlowCacheIndexEntry: (content: string) => boolean };
 
     expect(isHiveFlowCacheIndexEntry(makeEncodedCacheLine('https://registry.npmjs.org/@hive-flow%2Fcli'))).toBe(true);
   });
 
-  it('v3/@hive-flow/cli/bin/npx-repair.js: matches unencoded @hive-flow/cli', async () => {
+  it('cli/bin/npx-repair.js: matches unencoded @hive-flow/cli', async () => {
     const { isHiveFlowCacheIndexEntry } = (await import(
-      pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href
+      pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href
     )) as { isHiveFlowCacheIndexEntry: (content: string) => boolean };
 
     expect(isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/@hive-flow/cli'))).toBe(true);
   });
 
-  it('v3/@hive-flow/cli/bin/npx-repair.js: matches bare hive-flow package', async () => {
+  it('cli/bin/npx-repair.js: matches bare hive-flow package', async () => {
     const { isHiveFlowCacheIndexEntry } = (await import(
-      pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href
+      pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href
     )) as { isHiveFlowCacheIndexEntry: (content: string) => boolean };
 
     expect(isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/hive-flow'))).toBe(true);
   });
 
-  it('v3/@hive-flow/cli/bin/npx-repair.js: rejects false positives (left-pad, claude-flow, not-hive-flow, my-hive-flow-helper)', async () => {
+  it('cli/bin/npx-repair.js: rejects false positives (left-pad, claude-flow, not-hive-flow, my-hive-flow-helper)', async () => {
     const { isHiveFlowCacheIndexEntry } = (await import(
-      pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href
+      pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href
     )) as { isHiveFlowCacheIndexEntry: (content: string) => boolean };
 
     expect(isHiveFlowCacheIndexEntry(makeCacheLine('https://registry.npmjs.org/left-pad'))).toBe(false);
@@ -246,9 +261,9 @@ describe('d8-003 behavioral: encoded @hive-flow scope matches in both repair fil
     expect(isHiveFlowCacheIndexEntry(leftPadMentionLine)).toBe(false);
   });
 
-  it('v3/@hive-flow/cli/bin/npx-repair.js: pruneHiveFlowCacheIndexBucket removes encoded @hive-flow lines, preserves unrelated', async () => {
+  it('cli/bin/npx-repair.js: pruneHiveFlowCacheIndexBucket removes encoded @hive-flow lines, preserves unrelated', async () => {
     const { pruneHiveFlowCacheIndexBucket } = (await import(
-      pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/npx-repair.js')).href
+      pathToFileURL(resolve(REPO_ROOT, 'cli/bin/npx-repair.js')).href
     )) as {
       pruneHiveFlowCacheIndexBucket: (content: string) => { removed: number; survivors: string; deleteBucket: boolean };
     };
@@ -269,7 +284,7 @@ describe('d8-003 behavioral: encoded @hive-flow scope matches in both repair fil
     expect(allEncoded.deleteBucket).toBe(true);
   });
 
-  // ── v3/@hive-flow/cli/bin/preinstall.cjs: integration probe via temp HOME ──
+  // ── cli/bin/preinstall.cjs: integration probe via temp HOME ──
 
   it('preinstall.cjs: prunes encoded @hive-flow%2fcli line and preserves left-pad (Repro 2 scenario)', async () => {
     const { spawnSync } = await import('node:child_process');
@@ -289,7 +304,7 @@ describe('d8-003 behavioral: encoded @hive-flow scope matches in both repair fil
 
     spawnSync(
       process.execPath,
-      [resolve(REPO_ROOT, 'v3/@hive-flow/cli/bin/preinstall.cjs')],
+      [resolve(REPO_ROOT, 'cli/bin/preinstall.cjs')],
       {
         stdio: 'pipe',
         env: {

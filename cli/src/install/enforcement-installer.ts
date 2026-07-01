@@ -304,16 +304,13 @@ function sourceCandidates(projectRoot: string, sourceRel: string): string[] {
   const baseName = path.basename(sourceRel);
   const candidates = [join(projectRoot, sourceRel)];
   if (
-    sourceRel.startsWith('cli/src/permission-guard/') ||
-    sourceRel.startsWith('v3/@hive-flow/cli/src/permission-guard/')
+    sourceRel.startsWith('cli/src/permission-guard/')
   ) {
     candidates.push(
       join(projectRoot, 'src', 'permission-guard', baseName),
       join(projectRoot, 'dist', 'src', 'permission-guard', baseName),
       join(projectRoot, 'cli', 'src', 'permission-guard', baseName),
       join(projectRoot, 'cli', 'dist', 'src', 'permission-guard', baseName),
-      join(projectRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', baseName),
-      join(projectRoot, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', baseName),
     );
   }
   if (sourceRel.startsWith('.claude/helpers/')) {

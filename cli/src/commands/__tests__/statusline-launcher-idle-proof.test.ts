@@ -50,8 +50,8 @@ function makeProjectRoot(): string {
     '.claude/helpers/provider-tracker.cjs',
     '.claude/helpers/client-kind.cjs',
     '.claude/helpers/session-id.cjs',
-    'v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs',
-    'v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json',
+    'cli/src/permission-guard/protected-paths.cjs',
+    'cli/src/permission-guard/protected-paths.policy.json',
   ]) {
     const target = join(projectRoot, relativePath);
     mkdirSync(dirname(target), { recursive: true });
@@ -59,7 +59,7 @@ function makeProjectRoot(): string {
   }
   // Retained only to prove a project-local statusline stub is not used by
   // the global launcher; the launcher must delegate to the canonical renderer.
-  const statuslineRuntime = join(projectRoot, 'v3/@hive-flow/cli/bin/statusline.js');
+  const statuslineRuntime = join(projectRoot, 'cli/bin/statusline.js');
   mkdirSync(dirname(statuslineRuntime), { recursive: true });
   writeFileSync(statuslineRuntime, '#!/usr/bin/env node\nprocess.stdout.write("HF_BOARD\\n");\n');
   return projectRoot;

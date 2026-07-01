@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { HNSWIndex } from './hnsw-index.js';
 import { HybridBackend, LocalVectorBackend, UnifiedMemoryService } from './index.js';
 
-const REPO_ROOT = resolve(__dirname, '../../../../..');
-const CLI_ROOT = resolve(REPO_ROOT, 'v3/@hive-flow/cli');
+const REPO_ROOT = resolve(__dirname, '../../..');
+const CLI_ROOT = resolve(REPO_ROOT, 'cli');
 const SRC_ROOT = resolve(CLI_ROOT, 'src/memory');
 const V3_ROOT = resolve(REPO_ROOT, 'v3');
 

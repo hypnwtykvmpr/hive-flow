@@ -1370,18 +1370,17 @@ export function createDDDWorker(projectRoot: string): WorkerHandler {
   return async (): Promise<WorkerResult> => {
     const startTime = Date.now();
 
-    const v3Path = path.join(projectRoot, 'v3');
     const dddMetrics: Record<string, Record<string, number>> = {};
     let totalScore = 0;
     let maxScore = 0;
 
     const modules = [
-      { mod: '@hive-flow/cli/hooks', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'hooks') },
-      { mod: '@hive-flow/cli/mcp', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'mcp') },
-      { mod: '@hive-flow/cli/integration', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'integration') },
+      { mod: '@hive-flow/cli/hooks', srcPath: path.join(projectRoot, 'cli', 'src', 'hooks') },
+      { mod: '@hive-flow/cli/mcp', srcPath: path.join(projectRoot, 'cli', 'src', 'mcp') },
+      { mod: '@hive-flow/cli/integration', srcPath: path.join(projectRoot, 'cli', 'src', 'integration') },
       { mod: '@hive-flow/providers', srcPath: path.join(projectRoot, 'cli', 'packages', 'providers', 'src') },
-      { mod: '@hive-flow/cli/memory', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'memory') },
-      { mod: '@hive-flow/cli/security', srcPath: path.join(v3Path, '@hive-flow/cli', 'src', 'security') },
+      { mod: '@hive-flow/cli/memory', srcPath: path.join(projectRoot, 'cli', 'src', 'memory') },
+      { mod: '@hive-flow/cli/security', srcPath: path.join(projectRoot, 'cli', 'src', 'security') },
     ];
 
     // Process all modules in parallel for 70-90% speedup
@@ -1832,7 +1831,7 @@ export function createV3ProgressWorker(projectRoot: string): WorkerHandler {
   return async (): Promise<WorkerResult> => {
     const startTime = Date.now();
     const v3Path = path.join(projectRoot, 'v3');
-    const cliPath = path.join(v3Path, '@hive-flow', 'cli', 'src');
+    const cliPath = path.join(projectRoot, 'cli', 'src');
 
     // Count CLI commands (excluding index.ts)
     let cliCommands = 0;

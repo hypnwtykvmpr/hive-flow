@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../../../..');
+const repoRoot = resolve(here, '../../..');
 
 function collectSourceFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
@@ -29,8 +29,8 @@ function collectSourceFiles(dir: string): string[] {
 
 function shippedSourceFiles(): string[] {
   return [
-    resolve(repoRoot, 'v3/@hive-flow/cli/src/memory'),
-    resolve(repoRoot, 'v3/@hive-flow/cli/src/neural'),
+    resolve(repoRoot, 'cli/src/memory'),
+    resolve(repoRoot, 'cli/src/neural'),
   ].flatMap(collectSourceFiles);
 }
 
@@ -48,11 +48,11 @@ function matchingFilesExcept(pattern: RegExp, allowedFiles: string[]): string[] 
 describe('CA-3 EWC architecture honesty', () => {
   it('keeps the Fisher-matrix EWC consolidator as the only EWC consolidation implementation', () => {
     expect(matchingFiles(/\bclass\s+EWCConsolidator\b/)).toEqual([
-      'v3/@hive-flow/cli/src/memory/ewc-consolidation.ts',
+      'cli/src/memory/ewc-consolidation.ts',
     ]);
 
     expect(matchingFiles(/\bcomputeFisherMatrix\b|\bglobalFisher\b/)).toEqual([
-      'v3/@hive-flow/cli/src/memory/ewc-consolidation.ts',
+      'cli/src/memory/ewc-consolidation.ts',
     ]);
   });
 
@@ -70,7 +70,7 @@ describe('CA-3 EWC architecture honesty', () => {
     expect(
       matchingFilesExcept(
         /\bconsolidateEWC\b|\bgetEWCConfig\b|\bEWCConfig\b|\btaskCount\b|\blastConsolidation\b/,
-        ['v3/@hive-flow/cli/src/memory/ewc-consolidation.ts']
+        ['cli/src/memory/ewc-consolidation.ts']
       )
     ).toEqual([]);
   });

@@ -73,25 +73,6 @@ describe('provider bridge resolver', () => {
     });
   });
 
-  it('resolves the legacy v3 providers bridge for an old live MCP child', () => {
-    const root = makeRoot();
-    const bridge = touchBridge(root, 'v3', '@hive-flow', 'providers');
-
-    const resolved = resolveProviderBridgePath({
-      projectRoot: root,
-      moduleUrl: moduleUrl(root, 'v3', '@hive-flow', 'cli'),
-      packageResolve: () => {
-        throw new Error('not installed');
-      },
-    });
-
-    expect(resolved).toMatchObject({
-      ok: true,
-      bridgePath: bridge,
-      source: 'project-root-legacy-v3',
-    });
-  });
-
   it('resolves the bundled providers package beside an installed hive-flow package', () => {
     const root = makeRoot();
     const bridge = touchBridge(root, 'node_modules', 'hive-flow', 'node_modules', '@hive-flow', 'providers');
@@ -126,7 +107,6 @@ describe('provider bridge resolver', () => {
       expect(resolved.error).toContain('Provider bridge script not found');
       expect(resolved.candidates.map((candidate) => candidate.source)).toEqual([
         'project-root-cli-packages',
-        'project-root-legacy-v3',
         'project-root-cli-node-modules',
         'project-root-node-modules',
       ]);

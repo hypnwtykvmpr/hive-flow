@@ -44,7 +44,7 @@ const REPO_ROOT = findRepoRoot();
 function currentCliRoot(): string {
   const promoted = resolve(REPO_ROOT, 'cli');
   if (existsSync(resolve(promoted, 'package.json'))) return promoted;
-  return resolve(REPO_ROOT, 'v3/@hive-flow/cli');
+  throw new Error('Promoted cli/package.json not found');
 }
 
 function currentProvidersRoot(): string {

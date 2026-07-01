@@ -284,14 +284,14 @@ Cross-platform automation for V3 development:
 
 ```bash
 # Linux/macOS
-./@hive-flow/cli/helpers/hive-flow-v3.sh init
-./@hive-flow/cli/helpers/hive-flow-v3.sh status
-./@hive-flow/cli/helpers/hive-flow-v3.sh update domain 3
+../cli/helpers/hive-flow-v3.sh init
+../cli/helpers/hive-flow-v3.sh status
+../cli/helpers/hive-flow-v3.sh update domain 3
 
 # Windows (PowerShell)
-.\@hive-flow\cli\helpers\hive-flow-v3.ps1 init
-.\@hive-flow\cli\helpers\hive-flow-v3.ps1 status
-.\@hive-flow\cli\helpers\hive-flow-v3.ps1 update domain 3
+..\cli\helpers\hive-flow-v3.ps1 init
+..\cli\helpers\hive-flow-v3.ps1 status
+..\cli\helpers\hive-flow-v3.ps1 update domain 3
 ```
 
 Features:
@@ -351,27 +351,27 @@ pnpm test:coverage
 ## Links
 
 ### Documentation
-- [Helper System](./@hive-flow/cli/helpers/README.md)
+- [Helper System](../cli/helpers/README.md)
 
 ### Modules
-- [@hive-flow/cli/security](./@hive-flow/cli/docs/security/README.md)
-- [@hive-flow/cli/memory](./@hive-flow/cli/docs/memory/)
-- [@hive-flow/cli/swarm](./@hive-flow/cli/src/swarm/)
-- [@hive-flow/cli/integration](./@hive-flow/cli/src/integration/)
-- [@hive-flow/cli/performance](./@hive-flow/cli/docs/performance/)
-- [@hive-flow/cli/neural](./@hive-flow/cli/neural/)
-- [@hive-flow/cli](./@hive-flow/cli/)
-- [@hive-flow/cli/testing](./@hive-flow/cli/src/testing/)
-- [@hive-flow/cli/shared](./@hive-flow/cli/docs/shared/)
+- [@hive-flow/cli/security](../cli/docs/security/README.md)
+- [@hive-flow/cli/memory](../cli/docs/memory/)
+- [@hive-flow/cli/swarm](../cli/src/swarm/)
+- [@hive-flow/cli/integration](../cli/src/integration/)
+- [@hive-flow/cli/performance](../cli/docs/performance/)
+- [@hive-flow/cli/neural](../cli/src/neural/)
+- [@hive-flow/cli](../cli/)
+- [@hive-flow/cli/testing](../cli/src/testing/)
+- [@hive-flow/cli/shared](../cli/docs/shared/)
 
 ### Examples
-- [HiveMemory Example](./@hive-flow/cli/docs/memory/examples/hivememory-example.ts)
-- [Cross-Platform Usage](./@hive-flow/cli/docs/memory/examples/cross-platform-usage.ts)
+- [HiveMemory Example](../cli/docs/memory/examples/hivememory-example.ts)
+- [Cross-Platform Usage](../cli/docs/memory/examples/cross-platform-usage.ts)
 
 ### MCP Tools
-- [CLI MCP Tool Registry](./@hive-flow/cli/src/mcp-client.ts)
-- [CLI MCP Tools](./@hive-flow/cli/src/mcp-tools/)
-- [CLI MCP Server](./@hive-flow/cli/src/mcp/)
+- [CLI MCP Tool Registry](../cli/src/mcp-client.ts)
+- [CLI MCP Tools](../cli/src/mcp-tools/)
+- [CLI MCP Server](../cli/src/mcp/)
 
 ### External
 

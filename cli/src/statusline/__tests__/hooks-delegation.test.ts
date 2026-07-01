@@ -164,7 +164,7 @@ describe('hooks statusline delegation (§12.4)', () => {
   it('stable statusline launcher executes the lightweight runtime entrypoint', async () => {
     const cwd = makeFixture();
     const launcher = join(cwd, '.hive-flow', 'bin', 'claude-code-statusline');
-    const runtime = join(cwd, 'v3', '@hive-flow', 'cli', 'bin', 'statusline.js');
+    const runtime = join(cwd, 'cli', 'bin', 'statusline.js');
 
     // The runtime file does not need to exist for writeStableStatuslineLauncher
     // — the launcher records the path inside a bash shim that resolves at

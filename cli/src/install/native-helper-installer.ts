@@ -75,8 +75,8 @@ export function helperSourceDir(projectRoot: string): string {
   const candidates = [
     join(projectRoot, 'dist', 'credential-store', 'helpers'),
     join(projectRoot, 'src', 'credential-store', 'helpers'),
-    join(projectRoot, 'v3', '@hive-flow', 'cli', 'dist', 'credential-store', 'helpers'),
-    join(projectRoot, 'v3', '@hive-flow', 'cli', 'src', 'credential-store', 'helpers'),
+    join(projectRoot, 'cli', 'dist', 'credential-store', 'helpers'),
+    join(projectRoot, 'cli', 'src', 'credential-store', 'helpers'),
     ...moduleRelativeCandidates(),
   ];
   const found = candidates.find(candidate => existsSync(candidate));

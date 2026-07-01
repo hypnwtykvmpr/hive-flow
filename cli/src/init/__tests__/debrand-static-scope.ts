@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 
-export const REPO_ROOT = resolve(__dirname, '../../../../../..');
+export const REPO_ROOT = resolve(__dirname, '../../../..');
 
 export const SHIPPED_SURFACE_ROOTS = [
   'AGENTS.md',
@@ -25,7 +25,7 @@ export const SHIPPED_SURFACE_ROOTS = [
   'plugin',
   '.github/dependabot.yml',
   '.gitignore',
-  'v3/@hive-flow',
+  'cli',
   'hive-flow-npm',
 ] as const;
 

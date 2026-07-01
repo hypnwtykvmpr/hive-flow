@@ -511,7 +511,7 @@ All 23 tests pass:
 ## File Structure
 
 ```
-v3/@hive-flow/cli/src/shared/hooks/
+cli/src/shared/hooks/
 ├── types.ts           # Type definitions (~150 lines)
 ├── registry.ts        # Hook registry (~200 lines)
 ├── executor.ts        # Hook executor (~250 lines)

@@ -456,7 +456,10 @@ describe('Pipeline MCP Tools (workflow-tools.ts)', () => {
 // before/after each test to avoid cross-test contamination.
 
 const ENFORCEMENT_CJS_SOURCE_PATH = nodePath.resolve(
-  __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'enforcement.cjs'
+  __dirname, '..', '..', '..', '.claude', 'helpers', 'enforcement.cjs'
+);
+const ENFORCEMENT_LAYOUT_PATHS_SOURCE_PATH = nodePath.resolve(
+  __dirname, '..', '..', '..', '.claude', 'helpers', 'layout-paths.cjs'
 );
 const ENFORCEMENT_POLICY_SOURCE_PATH = nodePath.resolve(
   __dirname, '..', 'permission-guard', 'protected-paths.cjs'
@@ -473,8 +476,12 @@ const ENFORCEMENT_CJS_PATH = nodePath.join(
 );
 realFs.mkdirSync(nodePath.dirname(ENFORCEMENT_CJS_PATH), { recursive: true });
 realFs.copyFileSync(ENFORCEMENT_CJS_SOURCE_PATH, ENFORCEMENT_CJS_PATH);
+realFs.copyFileSync(
+  ENFORCEMENT_LAYOUT_PATHS_SOURCE_PATH,
+  nodePath.join(nodePath.dirname(ENFORCEMENT_CJS_PATH), 'layout-paths.cjs'),
+);
 const ENFORCEMENT_POLICY_TEST_PATH = nodePath.join(
-  ENFORCEMENT_CJS_TEST_ROOT, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'
+  ENFORCEMENT_CJS_TEST_ROOT, 'cli', 'src', 'permission-guard', 'protected-paths.cjs'
 );
 realFs.mkdirSync(nodePath.dirname(ENFORCEMENT_POLICY_TEST_PATH), { recursive: true });
 realFs.copyFileSync(ENFORCEMENT_POLICY_SOURCE_PATH, ENFORCEMENT_POLICY_TEST_PATH);

@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const sourceHook = resolve(here, '../../../../../.claude/helpers/hive-enforcement.cjs');
+const sourceHook = resolve(here, '../../../.claude/helpers/hive-enforcement.cjs');
+const layoutPathsSource = resolve(here, '../../../.claude/helpers/layout-paths.cjs');
 const protectedPathsSource = resolve(here, '../permission-guard/protected-paths.cjs');
 const protectedPathsPolicySource = resolve(here, '../permission-guard/protected-paths.policy.json');
 
@@ -34,12 +35,13 @@ function waitForFile(filePath: string, timeoutMs = 2000): boolean {
 
 function installHookAndWatcher(root: string): void {
   const helperDir = join(root, '.claude', 'helpers');
-  const policyDir = join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard');
+  const policyDir = join(root, 'cli', 'src', 'permission-guard');
   const scriptsDir = join(root, 'scripts');
   mkdirSync(helperDir, { recursive: true });
   mkdirSync(policyDir, { recursive: true });
   mkdirSync(scriptsDir, { recursive: true });
   writeFileSync(join(helperDir, 'hive-enforcement.cjs'), readFileSync(sourceHook, 'utf8'), 'utf8');
+  writeFileSync(join(helperDir, 'layout-paths.cjs'), readFileSync(layoutPathsSource, 'utf8'), 'utf8');
   copyFileSync(protectedPathsSource, join(policyDir, 'protected-paths.cjs'));
   copyFileSync(protectedPathsPolicySource, join(policyDir, 'protected-paths.policy.json'));
   writeFileSync(

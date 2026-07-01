@@ -33,7 +33,10 @@ function makeRoleEnvelope(state: Record<string, unknown>) {
 
 // Use dynamic require path based on project structure
 const ROLE_ENFORCEMENT_SOURCE_PATH = require('path').resolve(
-  __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'role-enforcement.cjs'
+  __dirname, '..', '..', '..', '.claude', 'helpers', 'role-enforcement.cjs'
+);
+const ROLE_LAYOUT_PATHS_SOURCE_PATH = require('path').resolve(
+  __dirname, '..', '..', '..', '.claude', 'helpers', 'layout-paths.cjs'
 );
 const ROLE_POLICY_SOURCE_PATH = require('path').resolve(
   __dirname, '..', 'permission-guard', 'protected-paths.cjs'
@@ -53,8 +56,12 @@ const ROLE_ENFORCEMENT_PATH = require('path').join(
 );
 mkdirSync(require('path').dirname(ROLE_ENFORCEMENT_PATH), { recursive: true });
 copyFileSync(ROLE_ENFORCEMENT_SOURCE_PATH, ROLE_ENFORCEMENT_PATH);
+copyFileSync(
+  ROLE_LAYOUT_PATHS_SOURCE_PATH,
+  require('path').join(require('path').dirname(ROLE_ENFORCEMENT_PATH), 'layout-paths.cjs'),
+);
 const ROLE_POLICY_PATH = require('path').join(
-  ROLE_TEST_PROJECT_REAL_DIR, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'
+  ROLE_TEST_PROJECT_REAL_DIR, 'cli', 'src', 'permission-guard', 'protected-paths.cjs'
 );
 mkdirSync(require('path').dirname(ROLE_POLICY_PATH), { recursive: true });
 copyFileSync(ROLE_POLICY_SOURCE_PATH, ROLE_POLICY_PATH);

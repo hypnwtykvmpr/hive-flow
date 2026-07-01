@@ -377,7 +377,7 @@ pnpm install
 pnpm run build:ts
 
 # Run from the clone
-node v3/@hive-flow/cli/bin/cli.js --help
+node cli/bin/cli.js --help
 
 # Link this checkout globally after building
 npm link
@@ -1460,8 +1460,8 @@ chain.verify(envelope); // true — tamper-evident
 
 ### Documentation
 
-- [Full README](v3/@hive-flow/cli/docs/guidance/README.md) — architecture, API examples, module reference, ADR index
-- Source: [`v3/@hive-flow/cli/src/guidance/`](v3/@hive-flow/cli/src/guidance/)
+- [Full README](cli/docs/guidance/README.md) — architecture, API examples, module reference, ADR index
+- Source: [`cli/src/guidance/`](cli/src/guidance/)
 
 </details>
 
@@ -1822,7 +1822,7 @@ hive-flow hooks worker status
 **Provider concurrency caps:** API-backed provider limits are unknown until measured for the configured account. Run the built-in probe to launch real Hive Flow agents against each configured provider, cool down, narrow the failing range, and write an evidence-backed safe cap to `.hive-flow/provider-concurrency.json`:
 
 ```bash
-cd v3/@hive-flow/cli
+cd cli
 npm run build
 npm run probe:provider-concurrency -- --providers deepseek,openrouter
 ```
@@ -5153,7 +5153,7 @@ const template = getWorkflow('login-basic');
 // { steps: [{action: 'open'}, {action: 'fill'}, ...], variables: [...] }
 ```
 
-📖 [Full Documentation](./v3/@hive-flow/cli/docs/browser/README.md)
+📖 [Full Documentation](./cli/docs/browser/README.md)
 
 </details>
 
@@ -6481,22 +6481,22 @@ cp -r ./data-backup-v2 ./data
 
 | Module | Description | Docs |
 |--------|-------------|------|
-| `@hive-flow/cli/plugin-sdk` | Plugin SDK with workers, hooks, providers, security | [README](./v3/@hive-flow/cli/docs/plugin-sdk/README.md) |
-| `@hive-flow/cli/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./v3/@hive-flow/cli/src/hooks/) |
-| `@hive-flow/cli/memory` | HiveMemory unification with HNSW indexing | [Source](./v3/@hive-flow/cli/docs/memory/) |
-| `@hive-flow/cli/security` | CVE remediation & security patterns | [Source](./v3/@hive-flow/cli/docs/security/README.md) |
-| `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./v3/@hive-flow/cli/src/swarm/) |
-| `@hive-flow/cli` | CLI modernization | [Source](./v3/@hive-flow/cli/) |
-| `@hive-flow/cli/neural` | Local pattern learning helpers | [Source](./v3/@hive-flow/cli/src/neural/) |
-| `@hive-flow/cli/testing` | TDD London School framework | [Source](./v3/@hive-flow/cli/src/testing/) |
-| `@hive-flow/cli/mcp` | MCP server & tools | [Source](./v3/@hive-flow/cli/src/mcp/) |
+| `@hive-flow/cli/plugin-sdk` | Plugin SDK with workers, hooks, providers, security | [README](./cli/docs/plugin-sdk/README.md) |
+| `@hive-flow/cli/hooks` | Event-driven lifecycle hooks + ReasoningBank | [Source](./cli/src/hooks/) |
+| `@hive-flow/cli/memory` | HiveMemory unification with HNSW indexing | [Source](./cli/docs/memory/) |
+| `@hive-flow/cli/security` | CVE remediation & security patterns | [Source](./cli/docs/security/README.md) |
+| `@hive-flow/cli/swarm` | 150-agent coordination engine | [Source](./cli/src/swarm/) |
+| `@hive-flow/cli` | CLI modernization | [Source](./cli/) |
+| `@hive-flow/cli/neural` | Local pattern learning helpers | [Source](./cli/src/neural/) |
+| `@hive-flow/cli/testing` | TDD London School framework | [Source](./cli/src/testing/) |
+| `@hive-flow/cli/mcp` | MCP server & tools | [Source](./cli/src/mcp/) |
 | `@hive-flow/embeddings` | Vector embedding providers | [Source](./cli/packages/embeddings/) |
 | `@hive-flow/providers` | LLM provider integrations | [Source](./cli/packages/providers/) |
-| `@hive-flow/cli/integration` | Optional hive-flow integration | [Source](./v3/@hive-flow/cli/src/integration/) |
-| `@hive-flow/cli/performance` | Benchmarking & optimization | [Source](./v3/@hive-flow/cli/docs/performance/) |
-| `@hive-flow/cli/deployment` | Release helper internals | [Source](./v3/@hive-flow/cli/src/deployment/) |
-| `@hive-flow/cli/shared` | Shared utilities, types & V3ProgressService | [Source](./v3/@hive-flow/cli/docs/shared/) |
-| `@hive-flow/cli/browser` | AI-optimized browser automation with agent-browser | [README](./v3/@hive-flow/cli/docs/browser/README.md) |
+| `@hive-flow/cli/integration` | Optional hive-flow integration | [Source](./cli/src/integration/) |
+| `@hive-flow/cli/performance` | Benchmarking & optimization | [Source](./cli/docs/performance/) |
+| `@hive-flow/cli/deployment` | Release helper internals | [Source](./cli/src/deployment/) |
+| `@hive-flow/cli/shared` | Shared utilities, types & V3ProgressService | [Source](./cli/docs/shared/) |
+| `@hive-flow/cli/browser` | AI-optimized browser automation with agent-browser | [README](./cli/docs/browser/README.md) |
 
 ### Additional Resources
 

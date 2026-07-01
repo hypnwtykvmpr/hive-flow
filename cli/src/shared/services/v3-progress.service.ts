@@ -113,7 +113,7 @@ export class V3ProgressService extends EventEmitter {
     super();
     this.projectRoot = options.projectRoot || process.cwd();
     this.v3Path = join(this.projectRoot, 'v3');
-    this.cliPath = join(this.v3Path, '@hive-flow', 'cli', 'src');
+    this.cliPath = join(this.projectRoot, 'cli', 'src');
     this.metricsPath = options.outputPath || join(this.projectRoot, '.hive-flow', 'metrics', 'v3-progress.json');
   }
 

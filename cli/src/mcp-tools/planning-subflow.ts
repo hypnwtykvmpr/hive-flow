@@ -385,19 +385,19 @@ export function findReferenceCode(solutions: Solution[]): Solution[] {
     const lower = sol.approach.toLowerCase();
 
     if (lower.includes('plugin') || lower.includes('extension')) {
-      refs.push('src/plugins/', 'v3/@hive-flow/cli/src/plugins/');
+      refs.push('cli/src/plugins/');
     }
     if (lower.includes('event') || lower.includes('hook')) {
-      refs.push('v3/@hive-flow/cli/src/hooks/');
+      refs.push('cli/src/hooks/');
     }
     if (lower.includes('test') || lower.includes('tdd')) {
-      refs.push('v3/@hive-flow/cli/src/__tests__/');
+      refs.push('cli/src/__tests__/');
     }
     if (lower.includes('refactor')) {
-      refs.push('v3/@hive-flow/cli/src/mcp-tools/');
+      refs.push('cli/src/mcp-tools/');
     }
     if (lower.includes('security') || lower.includes('auth')) {
-      refs.push('v3/@hive-flow/cli/src/security/');
+      refs.push('cli/src/security/');
     }
 
     // Note: in practice, use grep/glob MCP tools for real discovery

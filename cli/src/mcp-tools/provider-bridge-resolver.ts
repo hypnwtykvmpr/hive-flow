@@ -50,21 +50,12 @@ function inferPackageRootFromCompiledModule(modulePath: string): string | null {
   return normalizedPath.slice(0, idx);
 }
 
-function inferLegacyRepoRootFromCompiledModule(modulePath: string): string | null {
-  const normalized = resolve(modulePath).replace(/\\/g, '/');
-  const marker = '/v3/@hive-flow/cli/dist/src/mcp-tools/';
-  const idx = normalized.indexOf(marker);
-  if (idx < 0) return null;
-  return normalized.slice(0, idx);
-}
-
 export function collectProviderBridgeCandidates(options: ProviderBridgeResolverOptions = {}): ProviderBridgeCandidate[] {
   const candidates: ProviderBridgeCandidate[] = [];
   const seen = new Set<string>();
   const moduleUrl = options.moduleUrl ?? import.meta.url;
   const modulePath = fileURLToPath(moduleUrl);
   const packageRoot = inferPackageRootFromCompiledModule(modulePath);
-  const legacyRepoRoot = inferLegacyRepoRootFromCompiledModule(modulePath);
 
   try {
     const resolved = options.packageResolve
@@ -78,7 +69,6 @@ export function collectProviderBridgeCandidates(options: ProviderBridgeResolverO
   if (options.projectRoot) {
     const projectRoot = resolve(options.projectRoot);
     pushCandidate(candidates, seen, 'project-root-cli-packages', join(projectRoot, 'cli', 'packages', 'providers', PROVIDER_BRIDGE_RELATIVE_PATH));
-    pushCandidate(candidates, seen, 'project-root-legacy-v3', join(projectRoot, 'v3', '@hive-flow', 'providers', PROVIDER_BRIDGE_RELATIVE_PATH));
     pushCandidate(candidates, seen, 'project-root-cli-node-modules', join(projectRoot, 'cli', 'node_modules', '@hive-flow', 'providers', PROVIDER_BRIDGE_RELATIVE_PATH));
     pushCandidate(candidates, seen, 'project-root-node-modules', join(projectRoot, 'node_modules', '@hive-flow', 'providers', PROVIDER_BRIDGE_RELATIVE_PATH));
   }
@@ -86,10 +76,6 @@ export function collectProviderBridgeCandidates(options: ProviderBridgeResolverO
   if (packageRoot) {
     pushCandidate(candidates, seen, 'package-root-cli-packages', join(packageRoot, 'packages', 'providers', PROVIDER_BRIDGE_RELATIVE_PATH));
     pushCandidate(candidates, seen, 'package-root-node-modules', join(packageRoot, 'node_modules', '@hive-flow', 'providers', PROVIDER_BRIDGE_RELATIVE_PATH));
-  }
-
-  if (legacyRepoRoot) {
-    pushCandidate(candidates, seen, 'legacy-module-v3-providers', join(legacyRepoRoot, 'v3', '@hive-flow', 'providers', PROVIDER_BRIDGE_RELATIVE_PATH));
   }
 
   return candidates;

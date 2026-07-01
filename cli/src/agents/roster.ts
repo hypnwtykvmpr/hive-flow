@@ -63,7 +63,7 @@ export function resolveCanonicalAgentsDir(): string {
     resolve(base, '..', '..', 'agents'),
     resolve(base, '..', '..', '..', 'agents'),
     resolve(process.cwd(), 'agents'),
-    resolve(process.cwd(), 'v3', '@hive-flow', 'cli', 'agents'),
+    resolve(process.cwd(), 'cli', 'agents'),
   ];
 
   for (const candidate of candidates) {

@@ -668,10 +668,6 @@ export function resolveMcpServerEntry(projectRoot: string): string {
   const workspaceCandidate = resolve(projectRoot, 'cli', 'bin', 'mcp-server.js');
   if (existsSync(workspaceCandidate)) return workspaceCandidate;
 
-  // Candidate 1b: legacy source layout fallback for older checkouts.
-  const legacyWorkspaceCandidate = resolve(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'mcp-server.js');
-  if (existsSync(legacyWorkspaceCandidate)) return legacyWorkspaceCandidate;
-
   // Candidate 2: relative to this source file. Walk upward looking for bin/mcp-server.js.
   // Handles both dist/src/commands/ (tsc default preserves src as a root) and dist/commands/
   // (flat) layouts plus npm-linked global installs.

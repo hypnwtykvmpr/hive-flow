@@ -778,8 +778,8 @@ function findPermissionGuardSourceDir(options: InitOptions, helpersDir: string):
     possiblePaths.add(root);
     possiblePaths.add(path.join(root, 'src', 'permission-guard'));
     possiblePaths.add(path.join(root, 'dist', 'src', 'permission-guard'));
-    possiblePaths.add(path.join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard'));
-    possiblePaths.add(path.join(root, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard'));
+    possiblePaths.add(path.join(root, 'cli', 'src', 'permission-guard'));
+    possiblePaths.add(path.join(root, 'cli', 'dist', 'src', 'permission-guard'));
   }
 
   for (const candidate of possiblePaths) {
@@ -1993,7 +1993,7 @@ function findSourceDir(type: 'skills' | 'commands' | 'agents', sourceBaseDir?: s
   // Also check relative to process.cwd() for development
   const cwdBased = type === 'agents'
     ? [
-        path.join(process.cwd(), 'v3', '@hive-flow', 'cli', 'agents'),
+        path.join(process.cwd(), 'cli', 'agents'),
         path.join(process.cwd(), 'agents'),
       ]
     : [
@@ -2006,8 +2006,8 @@ function findSourceDir(type: 'skills' | 'commands' | 'agents', sourceBaseDir?: s
   // Check v2 directory for agents
   if (type === 'agents') {
     possiblePaths.push(
-      path.join(process.cwd(), 'v3', '@hive-flow', 'cli', 'agents'),
-      path.join(process.cwd(), '..', 'v3', '@hive-flow', 'cli', 'agents'),
+      path.join(process.cwd(), 'cli', 'agents'),
+      path.join(process.cwd(), '..', 'cli', 'agents'),
     );
   }
 

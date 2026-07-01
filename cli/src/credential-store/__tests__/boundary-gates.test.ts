@@ -6,7 +6,7 @@ import {
   getCredentialBoundaryGate,
 } from '../boundary-gates.js';
 
-const repoRoot = resolve(__dirname, '..', '..', '..', '..', '..', '..');
+const repoRoot = resolve(__dirname, '..', '..', '..', '..');
 
 function listFiles(root: string): string[] {
   const result: string[] = [];
@@ -56,8 +56,8 @@ describe('credential boundary gate registry', () => {
 describe('credential raw-key boundary registration', () => {
   it('does not expose getKey or retrieveSecret through CLI or MCP surface names', () => {
     const scannedRoots = [
-      join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'commands'),
-      join(repoRoot, 'v3', '@hive-flow', 'cli', 'src', 'mcp-tools'),
+      join(repoRoot, 'cli', 'src', 'commands'),
+      join(repoRoot, 'cli', 'src', 'mcp-tools'),
     ];
 
     const offenders = scannedRoots

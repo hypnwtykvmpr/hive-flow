@@ -10,19 +10,19 @@ const CLASSIFIED_STATIC_EXCEPTIONS: ReadonlyMap<string, string> = new Map([
     'Installer performs the package-manager install operation; user-facing URL/install guidance is otherwise removed.',
   ],
   [
-    'v3/@hive-flow/cli/docker/browser/Dockerfile:content:npm install guidance',
+    'cli/docker/browser/Dockerfile:content:npm install guidance',
     'Browser fixture Docker build layer installs package dependencies; this is build logic, not docs guidance.',
   ],
   [
-    'v3/@hive-flow/cli/docker/Dockerfile:content:npm install guidance',
+    'cli/docker/Dockerfile:content:npm install guidance',
     'Docker build layer installs the published CLI; this is build logic, not docs guidance.',
   ],
   [
-    'v3/@hive-flow/cli/docker/Dockerfile.full:content:npm install guidance',
+    'cli/docker/Dockerfile.full:content:npm install guidance',
     'Docker build layer installs the published CLI; this is build logic, not docs guidance.',
   ],
   [
-    'v3/@hive-flow/cli/src/commands/doctor.ts:content:npm install guidance',
+    'cli/src/commands/doctor.ts:content:npm install guidance',
     'Doctor --install performs the requested Claude Code install action; ordinary guidance was rewritten.',
   ],
 ]);
@@ -60,12 +60,12 @@ describe('DB-5 static prohibited debrand sweep', () => {
     const forbidden = trackedFilesForShippedSurfaces()
       .filter((file) => existsSync(resolve(REPO_ROOT, file)))
       .filter((file) =>
-        /^v3\/@hive-flow\/cli\/docs\/neural\/(?:DELETE_README\.md|DELETE_.*\.md|tmp\.json)$/.test(file),
+        /^cli\/docs\/neural\/(?:DELETE_README\.md|DELETE_.*\.md|tmp\.json)$/.test(file),
       );
     const missingRenames = [
-      'v3/@hive-flow/cli/docs/neural/README.md',
-      'v3/@hive-flow/cli/docs/neural/SONA_INTEGRATION.md',
-      'v3/@hive-flow/cli/docs/neural/SONA_QUICKSTART.md',
+      'cli/docs/neural/README.md',
+      'cli/docs/neural/SONA_INTEGRATION.md',
+      'cli/docs/neural/SONA_QUICKSTART.md',
     ].filter((file) => !existsSync(resolve(REPO_ROOT, file)));
 
     expect(forbidden).toEqual([]);

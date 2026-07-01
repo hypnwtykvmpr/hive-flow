@@ -1,11 +1,26 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../../../..');
+function findRepoRoot(start = here): string {
+  let current = resolve(start);
+  for (;;) {
+    if (
+      existsSync(resolve(current, 'package.json')) &&
+      existsSync(resolve(current, 'cli', 'package.json'))
+    ) {
+      return current;
+    }
+    const parent = resolve(current, '..');
+    if (parent === current) throw new Error('Unable to locate hive-flow repo root');
+    current = parent;
+  }
+}
+
+const repoRoot = findRepoRoot();
 const requireFromHere = createRequire(import.meta.url);
 
 const RUNTIME_FILES = [
@@ -15,11 +30,11 @@ const RUNTIME_FILES = [
   '.claude/helpers/sentinel-recovery.cjs',
   '.claude/helpers/wake-paths.cjs',
   'scripts/hive-watcher.cjs',
-  'v3/@hive-flow/cli/src/commands/statusline.ts',
-  'v3/@hive-flow/cli/src/init/settings-generator.ts',
-  'v3/@hive-flow/cli/src/mcp-tools/hive-store.ts',
-  'v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts',
-  'v3/@hive-flow/cli/src/shared/utils/resolve-hive-home.ts',
+  'cli/src/commands/statusline.ts',
+  'cli/src/init/settings-generator.ts',
+  'cli/src/mcp-tools/hive-store.ts',
+  'cli/src/mcp-tools/queen-tools.ts',
+  'cli/src/shared/utils/resolve-hive-home.ts',
 ] as const;
 
 const FORBIDDEN_ACTIVE_TMUX_PATTERNS: Array<[RegExp, string]> = [
@@ -52,11 +67,12 @@ describe('de-tmux runtime invariant', () => {
 
   it('keeps the private tmux control allowance limited to enforcement detection', () => {
     const root = readFileSync(resolve(repoRoot, '.claude/helpers/enforcement.cjs'), 'utf8');
-    const anchor = readFileSync(resolve(repoRoot, 'v3/@hive-flow/cli/.claude/helpers/enforcement.cjs'), 'utf8');
+    const anchor = readFileSync(resolve(repoRoot, 'cli/.claude/helpers/enforcement.cjs'), 'utf8');
 
     for (const source of [root, anchor]) {
       expect(source).toContain("commandBasename(word) !== 'hf-tmux-control.sh'");
-      expect(source).not.toMatch(/\btmux\s+(send-keys|capture-pane|display-message)\b/);
+      expect(source).not.toMatch(/\b(?:execFileSync|execFile|spawnSync|spawn|exec)\([^)]*['"]tmux['"]/s);
+      expect(source).not.toMatch(/['"]tmux['"]\s*,\s*\[/);
     }
   });
 

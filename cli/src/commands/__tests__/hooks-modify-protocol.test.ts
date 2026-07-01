@@ -209,7 +209,7 @@ describe('hooks modify-file/modify-bash protocol compatibility', () => {
       '.claude/helpers/hook-handler.cjs',
       '.hive-flow/enforcement/state.json',
       '.git/info/exclude',
-      'v3/@hive-flow/cli/src/permission-guard/gate.ts',
+      'cli/src/permission-guard/gate.ts',
     ];
 
     for (const target of targets) {
