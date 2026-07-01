@@ -65,6 +65,9 @@ async function importCliPermissionGuardDist(moduleName) {
     //   current v3 provider scripts -> current v3 cli dist
     //   scoped provider package scripts -> scoped cli package dist
     join(scriptDir, '..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName),
+    // Post-cutover repo layout while providers remain under v3:
+    //   v3/@hive-flow/providers/scripts -> top-level cli/dist
+    join(scriptDir, '..', '..', '..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName),
     // Future promoted public package layout:
     //   node_modules/hive-flow/node_modules/@hive-flow/providers/scripts
     //     -> node_modules/hive-flow/dist

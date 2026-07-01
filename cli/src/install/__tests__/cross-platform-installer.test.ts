@@ -1,0 +1,336 @@
+import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path, { dirname, join } from 'node:path';
+import { portableConfirm, readRequiredSecret } from '../portable-prompt.js';
+import {
+  ENGINE_MANIFEST_FILE,
+  ENGINE_TARGET_FILES,
+  buildRelocatedCommand,
+  copyEngineFiles,
+  installRelocatedEnforcement,
+  mergeUserSettings,
+  resolveEnforcementBinDir,
+} from '../enforcement-installer.js';
+import { getPlatformProviderForPlatform } from '../../permission-guard/biometric-override.js';
+import { installCommand } from '../../commands/install.js';
+
+function sha256(filePath: string): string {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex');
+}
+
+function makeProjectRoot(): string {
+  const projectRoot = mkdtempSync(join(tmpdir(), 'hf-p2-project-'));
+  for (const relativePath of [
+    '.claude/helpers/layout-paths.cjs',
+    '.claude/helpers/hive-flow-mcp-launcher.cjs',
+    '.claude/helpers/hive-composition-gate.cjs',
+    '.claude/helpers/role-enforcement.cjs',
+    '.claude/helpers/enforcement.cjs',
+    '.claude/helpers/hook-handler.cjs',
+    '.claude/helpers/settings-reconciler.cjs',
+    '.claude/helpers/provider-tracker.cjs',
+    '.claude/helpers/client-kind.cjs',
+    '.claude/helpers/session-id.cjs',
+    '.claude/helpers/statusline.cjs',
+    'cli/src/permission-guard/protected-paths.cjs',
+    'cli/src/permission-guard/protected-paths.policy.json',
+  ]) {
+    const target = join(projectRoot, relativePath);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, `fixture:${relativePath}\n`);
+  }
+  return projectRoot;
+}
+
+function allHookCommands(settings: { hooks?: Record<string, Array<{ hooks?: Array<{ command?: string }> }>> }): string[] {
+  return Object.values(settings.hooks || {})
+    .flat()
+    .flatMap((group) => group.hooks || [])
+    .map((hook) => hook.command || '')
+    .filter(Boolean);
+}
+
+describe('cross-platform enforcement installer', () => {
+  it('emits absolute relocated hook commands without home env literals', () => {
+    const homeDir = join(tmpdir(), 'hf-p2-home-with spaces');
+    const binDir = resolveEnforcementBinDir(homeDir);
+    const settings = mergeUserSettings({}, { homeDir });
+    const commands = allHookCommands(settings);
+
+    expect(binDir).toBe(path.join(homeDir, '.hive-flow', 'enforcement', 'bin'));
+    expect(commands).toContain(buildRelocatedCommand('enforcement.cjs', { homeDir }));
+    expect(commands).toContain(buildRelocatedCommand('hook-handler.cjs', { homeDir, args: 'permission-guard' }));
+    expect(commands.join('\n')).not.toContain('$HOME');
+    expect(commands.join('\n')).not.toContain('%USERPROFILE%');
+    expect(commands.every((command) => command.includes(binDir) || !command.includes('.hive-flow/enforcement/bin'))).toBe(true);
+  });
+
+  it('skips chmod on win32 and routes keypair storage to the Windows PBKDF2 AES provider', async () => {
+    const projectRoot = makeProjectRoot();
+    const binDir = mkdtempSync(join(tmpdir(), 'hf-p2-win-bin-'));
+    const chmodCalls: Array<{ target: string; mode: number }> = [];
+    try {
+      await copyEngineFiles(projectRoot, binDir, {
+        platform: 'win32',
+        chmodFile: async (target, mode) => {
+          chmodCalls.push({ target, mode });
+        },
+      });
+
+      expect(chmodCalls).toEqual([]);
+      expect(getPlatformProviderForPlatform('win32').name).toContain('Windows PBKDF2 + AES-256-CBC');
+      expect(existsSync(join(binDir, 'provider-tracker.cjs'))).toBe(true);
+      expect(existsSync(join(binDir, 'client-kind.cjs'))).toBe(true);
+      expect(existsSync(join(binDir, 'session-id.cjs'))).toBe(true);
+      expect(existsSync(join(binDir, ENGINE_MANIFEST_FILE))).toBe(true);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+      rmSync(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('copies protected policy files from promoted package-root fallbacks', async () => {
+    for (const policyRoot of ['src/permission-guard', 'dist/src/permission-guard']) {
+      const projectRoot = mkdtempSync(join(tmpdir(), 'hf-p2-package-root-'));
+      const binDir = mkdtempSync(join(tmpdir(), 'hf-p2-package-bin-'));
+      try {
+        for (const relativePath of [
+          '.claude/helpers/layout-paths.cjs',
+          '.claude/helpers/hive-flow-mcp-launcher.cjs',
+          '.claude/helpers/hive-composition-gate.cjs',
+          '.claude/helpers/role-enforcement.cjs',
+          '.claude/helpers/enforcement.cjs',
+          '.claude/helpers/hook-handler.cjs',
+          '.claude/helpers/settings-reconciler.cjs',
+          '.claude/helpers/provider-tracker.cjs',
+          '.claude/helpers/client-kind.cjs',
+          '.claude/helpers/session-id.cjs',
+          '.claude/helpers/statusline.cjs',
+        ]) {
+          const target = join(projectRoot, relativePath);
+          mkdirSync(dirname(target), { recursive: true });
+          writeFileSync(target, `fixture:${relativePath}\n`);
+        }
+        const policyDir = join(projectRoot, policyRoot);
+        mkdirSync(policyDir, { recursive: true });
+        writeFileSync(join(policyDir, 'protected-paths.cjs'), `fixture:${policyRoot}/protected-paths.cjs\n`);
+        writeFileSync(join(policyDir, 'protected-paths.policy.json'), `fixture:${policyRoot}/protected-paths.policy.json\n`);
+
+        await copyEngineFiles(projectRoot, binDir);
+
+        expect(readFileSync(join(binDir, 'protected-paths.cjs'), 'utf8')).toBe(`fixture:${policyRoot}/protected-paths.cjs\n`);
+        expect(readFileSync(join(binDir, 'protected-paths.policy.json'), 'utf8')).toBe(`fixture:${policyRoot}/protected-paths.policy.json\n`);
+      } finally {
+        rmSync(projectRoot, { recursive: true, force: true });
+        rmSync(binDir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('fails closed for headless confirmation unless --yes or headless default is supplied', async () => {
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      platform: 'linux',
+      ttyAvailable: false,
+      stdinIsTTY: false,
+    })).resolves.toBe(false);
+
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      headlessDefault: true,
+      platform: 'linux',
+      ttyAvailable: false,
+      stdinIsTTY: false,
+    })).resolves.toBe(true);
+
+    await expect(portableConfirm('Install enforcement?', {
+      yes: true,
+      platform: 'linux',
+      ttyAvailable: false,
+      stdinIsTTY: false,
+    })).resolves.toBe(true);
+
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      platform: 'linux',
+      ttyAvailable: true,
+      ask: async () => 'yes',
+    })).resolves.toBe(true);
+  });
+
+  it('falls back when /dev/tty exists but cannot be opened', async () => {
+    const err = Object.assign(new Error('device not configured'), { code: 'ENXIO' });
+    const sources: string[] = [];
+
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      platform: 'linux',
+      ttyAvailable: true,
+      stdinIsTTY: false,
+      ask: async (_question, source) => {
+        sources.push(source);
+        throw err;
+      },
+    })).resolves.toBe(false);
+    expect(sources).toEqual(['tty']);
+
+    const headlessDefaultSources: string[] = [];
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      headlessDefault: true,
+      platform: 'linux',
+      ttyAvailable: true,
+      stdinIsTTY: false,
+      ask: async (_question, source) => {
+        headlessDefaultSources.push(source);
+        throw err;
+      },
+    })).resolves.toBe(true);
+    expect(headlessDefaultSources).toEqual(['tty']);
+
+    const fallbackSources: string[] = [];
+    await expect(portableConfirm('Install enforcement?', {
+      yes: false,
+      platform: 'linux',
+      ttyAvailable: true,
+      stdinIsTTY: true,
+      ask: async (_question, source) => {
+        fallbackSources.push(source);
+        if (source === 'tty') throw err;
+        return 'yes';
+      },
+    })).resolves.toBe(true);
+    expect(fallbackSources).toEqual(['tty', 'stdin']);
+  });
+
+  it('fails closed instead of accepting an empty non-TTY secret', async () => {
+    await expect(readRequiredSecret('Credential unlock: ', {
+      input: { isTTY: false } as NodeJS.ReadStream,
+      output: { write: () => true } as unknown as NodeJS.WriteStream,
+      purpose: 'credential vault unlock',
+    })).rejects.toThrow(/credential vault unlock|non-interactive|empty secret/i);
+  });
+
+  it('performs engine-only then hooks-only install with the complete 13-file relocated set', async () => {
+    const projectRoot = makeProjectRoot();
+    const homeDir = mkdtempSync(join(tmpdir(), 'hf-p2-e2e-home-'));
+    try {
+      await installRelocatedEnforcement({
+        projectRoot,
+        homeDir,
+        yes: true,
+        engineOnly: true,
+        setupKeypair: false,
+      });
+      await installRelocatedEnforcement({
+        projectRoot,
+        homeDir,
+        yes: true,
+        hooksOnly: true,
+        setupKeypair: false,
+      });
+
+      const binDir = resolveEnforcementBinDir(homeDir);
+      for (const file of ENGINE_TARGET_FILES) {
+        expect(existsSync(join(binDir, file)), file).toBe(true);
+      }
+      expect(ENGINE_TARGET_FILES).toHaveLength(13);
+      expect(existsSync(join(binDir, '.version'))).toBe(true);
+      const manifest = JSON.parse(readFileSync(join(binDir, ENGINE_MANIFEST_FILE), 'utf8')) as {
+        files: Array<{ name: string; sha256: string }>;
+      };
+      expect(manifest.files.map((file) => file.name).sort()).toEqual([...ENGINE_TARGET_FILES].sort());
+      const clientKind = manifest.files.find((file) => file.name === 'client-kind.cjs');
+      expect(clientKind?.sha256).toBe(sha256(join(binDir, 'client-kind.cjs')));
+
+      const settings = JSON.parse(readFileSync(join(homeDir, '.claude', 'settings.json'), 'utf8'));
+      const commands = allHookCommands(settings);
+      expect(commands).toContain(buildRelocatedCommand('settings-reconciler.cjs', { homeDir }));
+      expect(commands.join('\n')).not.toContain('$HOME');
+      expect(commands.join('\n')).toContain(binDir);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+      rmSync(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  it('cleans stale global hook cruft while preserving unrelated user settings', () => {
+    const homeDir = join(tmpdir(), 'hf-p2-cleanup-home');
+    const staleSessionEnd = 'node /old/hive-flow/cli.js hooks session-end --generate-summary';
+    const keepStop = 'node /user/keep-stop-hook.cjs';
+    const reconciler = buildRelocatedCommand('settings-reconciler.cjs', { homeDir });
+    const settings = mergeUserSettings({
+      disableAllHooks: true,
+      permissions: {
+        allow: ['Bash(echo ok)'],
+        deny: ['Read(./.env)'],
+      },
+      env: { KEEP_ME: '1' },
+      hooks: {
+        PreToolUse: [
+          {
+            matcher: 'Bash',
+            hooks: [{ type: 'command', command: 'hive-flow hooks modify-bash --command "$CMD"' }],
+          },
+          {
+            matcher: 'Write',
+            hooks: [{ type: 'command', command: 'hive-flow hooks modify-file --file "$FILE"' }],
+          },
+          {
+            matcher: 'Read',
+            hooks: [{ type: 'command', command: 'node /user/custom-read-hook.cjs' }],
+          },
+        ],
+        PostToolUse: [
+          { matcher: 'Write', hooks: [{ type: 'command', command: reconciler }] },
+          { matcher: 'Edit', hooks: [{ type: 'command', command: reconciler }] },
+          { matcher: 'Write', hooks: [{ type: 'command', command: 'node /user/post-edit.cjs' }] },
+        ],
+        Stop: [
+          {
+            hooks: [
+              { type: 'command', command: staleSessionEnd },
+              { type: 'command', command: keepStop },
+            ],
+          },
+        ],
+      },
+    }, { homeDir });
+
+    const commands = allHookCommands(settings);
+    expect(settings.disableAllHooks).toBeUndefined();
+    expect(settings.permissions).toEqual({
+      allow: ['Bash(echo ok)'],
+      deny: ['Read(./.env)'],
+    });
+    expect(settings.env).toEqual({ KEEP_ME: '1' });
+    expect(commands.some((command) => /modify-(?:bash|file)/.test(command))).toBe(false);
+    expect((settings.hooks.Stop || []).flatMap((group: { hooks?: Array<{ command?: string }> }) =>
+      (group.hooks || []).map((hook) => hook.command || '')
+    )).toEqual(expect.arrayContaining([keepStop, reconciler]));
+    expect((settings.hooks.Stop || []).flatMap((group: { hooks?: Array<{ command?: string }> }) =>
+      (group.hooks || []).map((hook) => hook.command || '')
+    )).not.toContain(staleSessionEnd);
+    expect((settings.hooks.SessionEnd || []).flatMap((group: { hooks?: Array<{ command?: string }> }) =>
+      (group.hooks || []).map((hook) => hook.command || '')
+    )).toContain(staleSessionEnd);
+    expect(commands.filter((command) => command === reconciler)).toHaveLength(3);
+    expect(commands).toContain('node /user/custom-read-hook.cjs');
+    expect(commands).toContain('node /user/post-edit.cjs');
+  });
+
+  it('exposes the global install command with engine-only and hooks-only flags', () => {
+    const optionNames = new Set((installCommand.options || []).map((option) => option.name));
+
+    expect(installCommand.name).toBe('install');
+    expect(optionNames.has('global')).toBe(true);
+    expect(optionNames.has('yes')).toBe(true);
+    expect(optionNames.has('engine-only')).toBe(true);
+    expect(optionNames.has('hooks-only')).toBe(true);
+    expect(optionNames.has('keypair-only')).toBe(true);
+    expect(optionNames.has('credentials')).toBe(true);
+    expect(optionNames.has('degraded')).toBe(true);
+  });
+});

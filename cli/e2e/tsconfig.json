@@ -1,0 +1,24 @@
+{
+  "extends": "../../v3/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "types": ["node", "vitest/globals"],
+    "baseUrl": "..",
+    "paths": {
+      "@hive-flow/cli/plugin-sdk": ["src/plugin-sdk/index.ts"],
+      "@hive-flow/cli/plugin-sdk/*": ["src/plugin-sdk/*"],
+      "@hive-flow/cli/swarm": ["src/swarm/index.ts"],
+      "@hive-flow/cli/swarm/*": ["src/swarm/*"],
+      "@hive-flow/cli/memory": ["src/memory/index.ts"],
+      "@hive-flow/cli/memory/*": ["src/memory/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "__tests__/**/*.ts",
+    "../src/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "../src/**/__tests__/**", "../src/**/*.test.ts"]
+}

@@ -1,0 +1,58 @@
+{
+  "syncedAt": "2026-07-01T08:24:30.597Z",
+  "version": "3.1.0-alpha.52",
+  "files": [
+    {
+      "name": "layout-paths.cjs",
+      "sha256": "a4a3aeefcf6dbaa2454714840a79fb01bc89b89eccadf17123aaa81cf7f299c2"
+    },
+    {
+      "name": "hive-flow-mcp-launcher.cjs",
+      "sha256": "1c7084aa5298202b2af9d50b2e6fb7e87f40b6d79fb9e5bcc881f67ec22a5571"
+    },
+    {
+      "name": "enforcement.cjs",
+      "sha256": "1cc5d9a650cacf7aa384f40a620a6a7e07480068e5cb88fddd51b8e2ec12b365"
+    },
+    {
+      "name": "role-enforcement.cjs",
+      "sha256": "227d2cab8be6bbd89480520a74e8e25fc86035ed27a482e1317619ed3bb85579"
+    },
+    {
+      "name": "hive-composition-gate.cjs",
+      "sha256": "6beed382cf67267d5e4b5fb7e15740387c3d9ba12c35c56133203e2e834e8017"
+    },
+    {
+      "name": "hook-handler.cjs",
+      "sha256": "1644ce657e75e3309679fe4dc703f52222234e1fdf89bc6dbd664487d3e38198"
+    },
+    {
+      "name": "settings-reconciler.cjs",
+      "sha256": "e619708eeb66b37229f3bf5cfea200a2188c683525f03d2a337fc2bb9a5ad43e"
+    },
+    {
+      "name": "provider-tracker.cjs",
+      "sha256": "41ce7aba580572e5357f1fd4d6335f0af637136618ff70ecf4fe8b819c68f949"
+    },
+    {
+      "name": "client-kind.cjs",
+      "sha256": "1b162bbc0a4d218340e8d5cccc91596a1379881989fb2bf96c5ca5b03ad13d72"
+    },
+    {
+      "name": "session-id.cjs",
+      "sha256": "d4c1798a4156c1cb3eb0dc0bb7124977fa85bf9a27d2c6398083081ee82260ad"
+    },
+    {
+      "name": "statusline.cjs",
+      "sha256": "1f46edfd7209964671ef1714f0c632812bcb27509d2cecd6dc0416d6d01dfc1e"
+    },
+    {
+      "name": "protected-paths.cjs",
+      "sha256": "c881400612273de7d0ec31d014ab236d5d37a0552ed8c7b13cc1d059874e34d4"
+    },
+    {
+      "name": "protected-paths.policy.json",
+      "sha256": "25f1b3bc74eb8199c8ed63b3ae50f9d2f2802e04fa6e99200b18552d807d7c30"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
 packages:
+  - "cli"
   - "v3/@hive-flow/*"
   - "v3/plugins/*"

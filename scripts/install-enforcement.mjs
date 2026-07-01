@@ -41,6 +41,8 @@ const GUARDED_TOOL_MATCHER = [
 ].join('|');
 
 const ENGINE_FILES = [
+  ['.claude/helpers/layout-paths.cjs', 'layout-paths.cjs'],
+  ['.claude/helpers/hive-flow-mcp-launcher.cjs', 'hive-flow-mcp-launcher.cjs'],
   ['.claude/helpers/hive-composition-gate.cjs', 'hive-composition-gate.cjs'],
   ['.claude/helpers/role-enforcement.cjs', 'role-enforcement.cjs'],
   ['.claude/helpers/enforcement.cjs', 'enforcement.cjs'],
@@ -49,8 +51,9 @@ const ENGINE_FILES = [
   ['.claude/helpers/provider-tracker.cjs', 'provider-tracker.cjs'],
   ['.claude/helpers/client-kind.cjs', 'client-kind.cjs'],
   ['.claude/helpers/session-id.cjs', 'session-id.cjs'],
-  ['v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs', 'protected-paths.cjs'],
-  ['v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json', 'protected-paths.policy.json'],
+  ['.claude/helpers/statusline.cjs', 'statusline.cjs'],
+  ['cli/src/permission-guard/protected-paths.cjs', 'protected-paths.cjs'],
+  ['cli/src/permission-guard/protected-paths.policy.json', 'protected-paths.policy.json'],
 ];
 const ENGINE_MANIFEST_FILE = '.engine-manifest.json';
 

@@ -53,6 +53,8 @@ function installIsolatedHookHelpers(root) {
   mkdirSync(helpersDir, { recursive: true });
   for (const file of [
     'hook-handler.cjs',
+    'layout-paths.cjs',
+    'client-kind.cjs',
     'role-enforcement.cjs',
     'enforcement.cjs',
     'session-id.cjs',
@@ -60,8 +62,12 @@ function installIsolatedHookHelpers(root) {
     copyFileSync(join(REPO_ROOT, '.claude', 'helpers', file), join(helpersDir, file));
   }
   copyFileSync(
-    join(REPO_ROOT, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    join(REPO_ROOT, 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
     join(helpersDir, 'protected-paths.cjs'),
+  );
+  copyFileSync(
+    join(REPO_ROOT, 'cli', 'src', 'permission-guard', 'protected-paths.policy.json'),
+    join(helpersDir, 'protected-paths.policy.json'),
   );
   return join(helpersDir, 'hook-handler.cjs');
 }

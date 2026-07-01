@@ -1,59 +1,24 @@
 {
-  "name": "hive-flow",
+  "name": "hive-flow-workspace",
   "version": "3.1.0-alpha.52",
   "description": "Enterprise AI agent orchestration for Claude Code - Deploy 60+ specialized agents in coordinated swarms with self-learning, fault-tolerant consensus, vector memory, and MCP integration",
   "main": "dist/index.js",
   "type": "module",
-  "bin": {
-    "hive-flow": "./v3/@hive-flow/cli/bin/cli.js"
-  },
-  "files": [
-    "v3/@hive-flow/cli/bin/**",
-    "v3/@hive-flow/cli/dist/**/*.js",
-    "v3/@hive-flow/cli/dist/**/*.d.ts",
-    "v3/@hive-flow/cli/dist/src/guidance/wasm-pkg/**",
-    "v3/@hive-flow/cli/dist/credential-store/helpers/**",
-    "!v3/@hive-flow/cli/dist/**/*.map",
-    "v3/@hive-flow/cli/package.json",
-    "v3/@hive-flow/cli/scripts/verify-appliance.sh",
-    "v3/@hive-flow/cli/helpers/**",
-    "v3/@hive-flow/cli/agents/**/*.yaml",
-    "v3/@hive-flow/cli/.claude/commands/**",
-    "v3/@hive-flow/cli/.claude/helpers/**",
-    "v3/@hive-flow/cli/.claude/skills/**",
-    "v3/@hive-flow/cli/.claude/settings.json",
-    ".claude-plugin/**",
-    "!**/DELETE_*",
-    "!**/.hive-flow/**",
-    "!**/*.db",
-    "!**/*.db-shm",
-    "!**/*.db-wal",
-    "!**/*.db-journal",
-    "!**/.context-tracker.json",
-    "!**/checkpoints/**",
-    "!**/__tests__/**",
-    "!**/*.map",
-    "!TRASH/**",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
-    "preinstall": "node v3/@hive-flow/cli/bin/preinstall.cjs || true",
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "build:ts": "cd v3/@hive-flow/cli && npm run build",
+    "preinstall": "node cli/bin/preinstall.cjs || true",
+    "build": "npm --prefix cli run build",
+    "build:ts": "npm --prefix cli run build",
+    "pack:install-smoke": "npm --prefix cli run pack:install-smoke",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:security": "vitest run v3/__tests__/security/",
-    "lint": "cd v3/@hive-flow/cli && npm run lint",
+    "lint": "npm --prefix cli run typecheck",
     "security:audit": "npm audit --audit-level high",
     "security:fix": "npm audit fix",
     "security:test": "npm run test:security",
     "v3:domains": "npm run build:domains",
     "v3:swarm": "npm run start:swarm",
-    "v3:security": "npm run security:audit && npm run security:test",
-    "prepack": "node v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs",
-    "postinstall": "node v3/@hive-flow/cli/dist/src/install/postinstall-check.js || exit 0"
+    "v3:security": "npm run security:audit && npm run security:test"
   },
   "dependencies": {
     "@ast-grep/napi": "^0.43.0",
@@ -69,9 +34,6 @@
     "ws": "^8.19.0",
     "zod": "^3.25.0"
   },
-  "bundledDependencies": [
-    "@hive-flow/providers"
-  ],
   "overrides": {
     "hono": ">=4.12.4",
     "tar": ">=6.2.1",
@@ -173,8 +135,5 @@
     }
   ],
   "license": "MIT",
-  "publishConfig": {
-    "access": "public",
-    "tag": "v3alpha"
-  }
+  "private": true
 }

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
-const SCRIPT = join(REPO_ROOT, 'v3/@hive-flow/cli/src/commands/provider-hook-runtime.ts');
+const SCRIPT = join(REPO_ROOT, 'cli/src/commands/provider-hook-runtime.ts');
 
 describe('provider hook runtime (WP-43)', () => {
   it('should not contain bare execSync (only execFileSync)', () => {
