@@ -16,7 +16,7 @@ function makeRoot(): string {
   return root;
 }
 
-const noGemini = () => ({ ok: false });
+const noAgy = () => ({ ok: false });
 
 afterEach(() => {
   for (const root of roots.splice(0)) {
@@ -30,7 +30,7 @@ describe('provider setup strict API credential holder boundary', () => {
     const report = await inspectProviderSetup({
       cwd: root,
       env: { OPENROUTER_API_KEY: 'or-secret-that-must-not-be-used' },
-      versionRunner: noGemini,
+      versionRunner: noAgy,
       holderStatus: { available: false, socketPath: '/tmp/missing.sock', reason: 'missing' },
     });
 
@@ -51,7 +51,7 @@ describe('provider setup strict API credential holder boundary', () => {
     const report = await inspectProviderSetup({
       cwd: root,
       env: {},
-      versionRunner: noGemini,
+      versionRunner: noAgy,
       holderStatus: { available: true, socketPath: '/tmp/hive-flow-holder.sock' },
     });
 
@@ -70,7 +70,7 @@ describe('provider setup strict API credential holder boundary', () => {
     const first = await inspectProviderSetup({
       cwd: root,
       env: {},
-      versionRunner: noGemini,
+      versionRunner: noAgy,
       holderStatus: { available: true },
     });
     writeProviderCredentialReferences(root, first);
@@ -78,7 +78,7 @@ describe('provider setup strict API credential holder boundary', () => {
     const second = await inspectProviderSetup({
       cwd: root,
       env: {},
-      versionRunner: noGemini,
+      versionRunner: noAgy,
       holderStatus: { available: false, reason: 'not running during dry-run' },
     });
 
@@ -97,7 +97,7 @@ describe('provider setup strict API credential holder boundary', () => {
         const report = await inspectProviderSetup({
           cwd: root,
           env: { OPENROUTER_API_KEY: secret },
-          versionRunner: noGemini,
+          versionRunner: noAgy,
           holderStatus: { available: false, reason: 'property-test unavailable' },
         });
         const configPath = writeProviderCredentialReferences(root, report);
@@ -108,5 +108,36 @@ describe('provider setup strict API credential holder boundary', () => {
       }),
       { numRuns: 50 },
     );
+  });
+
+  it('probes Antigravity agy for gemini-cli setup and never the dead gemini binary', async () => {
+    const root = makeRoot();
+    const checkedBins: string[] = [];
+    const report = await inspectProviderSetup({
+      cwd: root,
+      env: {},
+      versionRunner: (bin) => {
+        checkedBins.push(bin);
+        return bin === 'agy' ? { ok: true, version: 'agy version 1.2.3' } : { ok: false };
+      },
+      holderStatus: { available: false, reason: 'not running during dry-run' },
+    });
+
+    expect(checkedBins).toContain('agy');
+    expect(checkedBins).not.toContain('gemini');
+    expect(report.providers.gemini).toMatchObject({
+      configured: true,
+      checks: {
+        cliPresent: true,
+        binary: 'agy',
+        authVerification: 'live-agent-task-required',
+      },
+    });
+    expect(report.providers.gemini.action).toBeUndefined();
+
+    const configText = readFileSync(writeProviderCredentialReferences(root, report), 'utf8');
+    expect(configText).toContain('antigravity-oauth:agy');
+    expect(configText).not.toContain('~/.gemini/oauth_creds.json');
+    expect(configText).not.toContain('Run gemini');
   });
 });

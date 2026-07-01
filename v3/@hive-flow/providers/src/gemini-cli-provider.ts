@@ -35,6 +35,63 @@ import {
 } from './gemini-cli-constants.js';
 
 const GEMINI_STDIN_PROMPT_THRESHOLD = 24_000;
+const ANTIGRAVITY_BASE_ENV_KEYS = [
+  'PATH',
+  'HOME',
+  'USER',
+  'LOGNAME',
+  'SHELL',
+  'LANG',
+  'LC_ALL',
+  'LC_CTYPE',
+  'TERM',
+  'TMPDIR',
+  'GOOGLE_APPLICATION_CREDENTIALS',
+  'GEMINI_API_KEY',
+  'GOOGLE_API_KEY',
+  'GOOGLE_CLOUD_PROJECT',
+  'GOOGLE_CLOUD_LOCATION',
+  'XDG_CONFIG_HOME',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
+] as const;
+const ANTIGRAVITY_SESSION_ENV_KEYS = [
+  'XDG_CACHE_HOME',
+  'XDG_DATA_HOME',
+  'XDG_STATE_HOME',
+  'XDG_RUNTIME_DIR',
+  'DISPLAY',
+  'WAYLAND_DISPLAY',
+  'BROWSER',
+  'DBUS_SESSION_BUS_ADDRESS',
+  'SSH_AUTH_SOCK',
+  'AGY_HOME',
+  'AGY_CONFIG_HOME',
+  'AGY_CACHE_HOME',
+  'ANTIGRAVITY_HOME',
+  'ANTIGRAVITY_CONFIG_HOME',
+  'ANTIGRAVITY_CACHE_HOME',
+] as const;
+const PROVIDER_CHILD_DENIED_ENV_KEYS = new Set([
+  'HIVE_FLOW_DEV_OVERRIDE_TOKEN',
+  'HIVE_FLOW_DEV_OVERRIDE',
+  'HIVE_FLOW_ENFORCEMENT_DISABLED',
+  'HIVE_FLOW_PERMISSION_OVERRIDE',
+]);
+const PROVIDER_CHILD_DENIED_SECRET_ENV =
+  /^(?:OPENROUTER|OPENAI|ANTHROPIC|DEEPSEEK|CURSOR|QWEN|DASHSCOPE|HF|HUGGINGFACE|GITHUB|NPM|AWS|AZURE)_[A-Z0-9_]*(?:API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?)$/i;
+const PROVIDER_CHILD_GENERIC_SECRET_ENV =
+  /(?:API_?KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS?|AUTHORIZATION|COOKIE)$/i;
+const PROVIDER_CHILD_ALLOWED_SECRET_ENV_KEYS = new Set([
+  'HIVE_FLOW_AGENT_TOKEN',
+  'GOOGLE_APPLICATION_CREDENTIALS',
+  'GEMINI_API_KEY',
+  'GOOGLE_API_KEY',
+]);
 
 export class GeminiCLIProvider extends BaseProvider {
   readonly name: LLMProvider = 'gemini-cli';
@@ -104,7 +161,7 @@ export class GeminiCLIProvider extends BaseProvider {
         this.activeChildren.delete(child);
         if (!stdout.trim() && !stderr.trim()) {
           reject(this.authOutputToError(
-            'Gemini CLI produced no output before timeout; cached OAuth may be invalid or blocked in headless mode.',
+            'Antigravity CLI (agy) produced no output before timeout; cached OAuth may be invalid or blocked in detached/headless mode.',
             null,
           ));
           return;
@@ -274,7 +331,7 @@ export class GeminiCLIProvider extends BaseProvider {
           yield {
             type: 'error',
             error: this.authOutputToError(
-              'Gemini CLI produced no output before timeout; cached OAuth may be invalid or blocked in headless mode.',
+              'Antigravity CLI (agy) produced no output before timeout; cached OAuth may be invalid or blocked in detached/headless mode.',
               null,
             ),
           };
@@ -415,28 +472,23 @@ export class GeminiCLIProvider extends BaseProvider {
   }
 
   private minimalEnv(): Record<string, string | undefined> {
-    return {
-      PATH: process.env.PATH,
-      HOME: process.env.HOME,
-      USER: process.env.USER,
-      SHELL: process.env.SHELL,
-      LANG: process.env.LANG,
-      TERM: process.env.TERM,
-      TMPDIR: process.env.TMPDIR,
-      GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
-      GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
-      GOOGLE_CLOUD_LOCATION: process.env.GOOGLE_CLOUD_LOCATION,
-      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
-      HTTP_PROXY: process.env.HTTP_PROXY,
-      HTTPS_PROXY: process.env.HTTPS_PROXY,
-      NO_PROXY: process.env.NO_PROXY,
-      http_proxy: process.env.http_proxy,
-      https_proxy: process.env.https_proxy,
-      no_proxy: process.env.no_proxy,
-      ...(this.config.env || {}),
-    };
+    const env: Record<string, string | undefined> = {};
+    for (const key of [...ANTIGRAVITY_BASE_ENV_KEYS, ...ANTIGRAVITY_SESSION_ENV_KEYS]) {
+      const value = process.env[key];
+      if (value !== undefined) env[key] = value;
+    }
+    for (const [key, value] of Object.entries(this.config.env || {})) {
+      if (this.isDeniedProviderChildEnvKey(key)) continue;
+      env[key] = value;
+    }
+    return env;
+  }
+
+  private isDeniedProviderChildEnvKey(key: string): boolean {
+    if (PROVIDER_CHILD_DENIED_ENV_KEYS.has(key)) return true;
+    if (PROVIDER_CHILD_ALLOWED_SECRET_ENV_KEYS.has(key)) return false;
+    return PROVIDER_CHILD_DENIED_SECRET_ENV.test(key)
+      || PROVIDER_CHILD_GENERIC_SECRET_ENV.test(key);
   }
 
   private ensureBinary(): void {

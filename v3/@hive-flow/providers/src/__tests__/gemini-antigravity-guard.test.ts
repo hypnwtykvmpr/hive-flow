@@ -208,6 +208,12 @@ describe('gemini-cli binary-surface guard (static / offline)', () => {
     expect(src).not.toMatch(/name:\s*'gemini-cli',\s*binary:\s*'gemini'/);
   });
 
+  it('provider auth guidance points agents at agy, not the dead gemini OAuth path', () => {
+    const src = readSource(join('scripts', 'provider-auth-helpers.mjs'));
+    expect(src).toContain('Run/repair agy in a real terminal or the Antigravity app');
+    expect(src).not.toMatch(/Run gemini|oauth_creds|~\/\.gemini/);
+  });
+
   it('no providers source file wires a gemini-cli provider to the literal `gemini` binary', () => {
     // Belt-and-suspenders across every known binary-resolution surface. If a new
     // surface adds `gemini-cli -> gemini`, this fails so it cannot silently revert.

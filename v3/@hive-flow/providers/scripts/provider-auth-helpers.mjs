@@ -5,7 +5,7 @@ export const OPENROUTER_AUTH_MESSAGE =
   'OpenRouter credentials missing/invalid. Unlock the Hive Flow credential holder and retry; strict API keys must not be injected through env/config.';
 
 export const GEMINI_AUTH_MESSAGE =
-  'Gemini CLI requires sign-in. Run gemini in a terminal and complete Google OAuth (or set GEMINI_API_KEY/GOOGLE_API_KEY). Hive Flow reuses ~/.gemini/oauth_creds.json via HOME.';
+  'Antigravity CLI (agy) requires sign-in for provider gemini-cli. Run/repair agy in a real terminal or the Antigravity app, complete Google sign-in, then retry. Hive Flow cannot complete interactive OAuth inside detached provider workers.';
 
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
@@ -109,6 +109,27 @@ export function authMessageForProvider(providerName) {
   return `Provider credentials missing/invalid for ${providerName}. Reconfigure credentials and restart the hive-flow daemon/MCP server.`;
 }
 
+export function providerAuthNextActions(providerName) {
+  if (providerName === 'gemini-cli') {
+    return [
+      'Run/repair agy in a real terminal or the Antigravity app, complete Google sign-in, then retry.',
+      'Retry agent_task after agy works non-interactively from a detached Hive Flow worker.',
+      'If agy still requires interactive auth from detached workers, redispatch this task to codex-cli or anthropic-cli until Antigravity auth is repaired.',
+    ];
+  }
+  if (providerName === 'openrouter') {
+    return [
+      'Unlock/start the Hive Flow credential holder for OpenRouter and retry.',
+      'Do not pass strict API keys through env/config/tool output.',
+    ];
+  }
+  const providerLabel = providerName || 'the provider';
+  return [
+    `Repair credentials for ${providerLabel} and retry.`,
+    'If the provider remains unavailable, redispatch the task to another provider with equivalent policy coverage.',
+  ];
+}
+
 function redactReason(reason) {
   return String(reason || '')
     .replace(/or-[A-Za-z0-9._-]+/g, '[redacted]')
@@ -127,6 +148,7 @@ export async function notifyProviderAuthRequired({ providerName, reason, callMCP
         provider: providerName,
         category: 'provider-auth',
         reason: redactReason(reason),
+        nextActions: providerAuthNextActions(providerName),
       },
     });
   } catch {

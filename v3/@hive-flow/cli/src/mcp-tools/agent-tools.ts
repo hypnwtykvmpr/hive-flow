@@ -790,7 +790,7 @@ const AGENT_FAILURE_NEXT_ACTIONS: Record<string, string[]> = {
     'Respawn the worker with a supported provider and redispatch the task.',
   ],
   'provider-auth-unavailable': [
-    'Configure the required provider credentials or credential holder for this provider.',
+    'Use the provider-specific recovery guidance returned with this error.',
     'Rerun provider preflight by retrying agent_task after credentials are available.',
   ],
   'model-policy-rejected': [
@@ -838,6 +838,11 @@ const AGENT_FAILURE_RETRYABLE = new Set([
   'invalid-agent-state',
   'bridge-spawn-failed',
   'process-exited-without-result',
+]);
+const BRIDGE_PROVIDER_AUTH_FAILURE_CODES = new Set([
+  'provider-auth-unavailable',
+  'PROVIDER_AUTH_FAILED',
+  'AUTHENTICATION',
 ]);
 
 function uniqueStrings(values: string[]): string[] {
@@ -912,6 +917,64 @@ function withAgentFailureGuidance<T extends Record<string, unknown>>(
       action: nextActions[0],
     },
   };
+}
+
+function providerAuthFailureNextActions(provider: unknown): string[] {
+  const normalized = typeof provider === 'string' ? provider.trim().toLowerCase() : '';
+  if (normalized === 'gemini-cli') {
+    return [
+      'Run/repair agy in a real terminal or the Antigravity app, complete Google sign-in, then retry.',
+      'Retry agent_task after agy works non-interactively from a detached Hive Flow worker.',
+      'If agy still requires interactive auth from detached workers, redispatch this task to codex-cli or anthropic-cli until Antigravity auth is repaired.',
+    ];
+  }
+  if (normalized === 'openrouter') {
+    return [
+      'Unlock/start the Hive Flow credential holder for OpenRouter and retry.',
+      'Do not pass strict API keys through env/config/tool output.',
+    ];
+  }
+  return [];
+}
+
+function providerAuthBridgeFailureGuidance(params: {
+  result: Record<string, unknown>;
+  taskId: string;
+  projectRoot: string;
+  agentId?: string;
+  provider?: unknown;
+  alreadyConsumed?: boolean;
+}): Record<string, unknown> | null {
+  const { result, taskId, projectRoot, agentId, provider, alreadyConsumed } = params;
+  if (result.success !== false) return null;
+  const code = typeof result.code === 'string' ? result.code.trim() : '';
+  if (!BRIDGE_PROVIDER_AUTH_FAILURE_CODES.has(code)) return null;
+  const bridgedProvider = provider ?? result.provider;
+  const error = typeof result.error === 'string' && result.error.trim()
+    ? result.error.trim()
+    : 'Provider authentication is unavailable.';
+  return withAgentFailureGuidance(
+    {
+      success: false,
+      taskId,
+      ...(agentId ? { agentId } : {}),
+      status: 'failed',
+      terminal: true,
+      ...(alreadyConsumed ? { alreadyConsumed: true } : {}),
+      error,
+      result,
+    },
+    'provider-auth-unavailable',
+    {
+      projectRoot,
+      taskId,
+      agentId,
+      provider: bridgedProvider,
+      retryable: true,
+      terminal: true,
+      nextActions: providerAuthFailureNextActions(bridgedProvider),
+    },
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -2550,6 +2613,9 @@ export const agentTools: MCPTool[] = [
               || failureCode === 'provider-auth-unavailable'
               || failureCode === 'invalid-agent-state'
               || failureCode === 'bridge-spawn-failed',
+            nextActions: failureCode === 'provider-auth-unavailable'
+              ? providerAuthFailureNextActions(details.provider)
+              : undefined,
           },
         );
       }
@@ -2653,6 +2719,15 @@ export const agentTools: MCPTool[] = [
               provider: typeof result.provider === 'string' ? result.provider : undefined,
               meta: { alreadyConsumed: true, status: 'completed' },
             });
+            const guidedFailure = providerAuthBridgeFailureGuidance({
+              result,
+              taskId,
+              projectRoot,
+              agentId: typeof result.agentId === 'string' ? result.agentId : undefined,
+              provider: result.provider,
+              alreadyConsumed: true,
+            });
+            if (guidedFailure) return guidedFailure;
             return { success: true, taskId, status: 'completed', alreadyConsumed: true, result };
           } catch (err) {
             const errorDetail = err instanceof Error ? err.message : String(err);
@@ -2768,6 +2843,15 @@ export const agentTools: MCPTool[] = [
           provider: tracking.provider,
           meta: { status: 'completed' },
         });
+
+        const guidedFailure = providerAuthBridgeFailureGuidance({
+          result,
+          taskId,
+          projectRoot,
+          agentId: tracking.agentId,
+          provider: tracking.provider ?? result.provider,
+        });
+        if (guidedFailure) return guidedFailure;
 
         return { success: true, taskId, agentId: tracking.agentId, status: 'completed', result };
       }

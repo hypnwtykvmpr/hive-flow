@@ -50,6 +50,7 @@ import {
   buildProviderConfig,
   isProviderAuthError,
   notifyProviderAuthRequired,
+  providerAuthNextActions,
 } from './provider-auth-helpers.mjs';
 import {
   sandboxExec,
@@ -845,13 +846,23 @@ function bridgeRetryHintForClassification(classification) {
 
 export function buildBridgeErrorResponse(err, { agentId = 'unknown', codeOverride, includeOwnerFields = false } = {}) {
   const classification = classifyError(err);
-  const code = codeOverride || bridgeErrorCodeForClassification(err, classification);
+  const providerAuthFailure = isProviderAuthError(err);
+  const providerName = bridgeStringValue(err?.provider);
+  const code = codeOverride || (providerAuthFailure
+    ? 'provider-auth-unavailable'
+    : bridgeErrorCodeForClassification(err, classification));
+  const nextActions = providerAuthFailure ? providerAuthNextActions(providerName) : undefined;
   const response = {
     success: false,
     error: err?.message || String(err),
     code,
     classification,
-    retryHint: bridgeRetryHintForClassification(classification),
+    retryHint: providerAuthFailure && nextActions?.[0]
+      ? nextActions[0]
+      : bridgeRetryHintForClassification(classification),
+    ...(providerName ? { provider: providerName } : {}),
+    ...(providerAuthFailure ? { retryable: true } : {}),
+    ...(nextActions ? { nextActions } : {}),
     ...(agentId && agentId !== 'unknown' ? { agentId } : {}),
   };
   return {

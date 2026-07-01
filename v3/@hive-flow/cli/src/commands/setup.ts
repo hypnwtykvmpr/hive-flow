@@ -151,13 +151,12 @@ export async function inspectProviderSetup(opts: {
   holderStatus?: CredentialHolderProbeStatus;
 }): Promise<ProviderSetupReport> {
   const env = opts.env ?? process.env;
-  const homeDir = opts.homeDir ?? homedir();
+  void opts.homeDir;
   const versionRunner = opts.versionRunner ?? defaultVersionRunner;
   const openrouterEnv = typeof env.OPENROUTER_API_KEY === 'string' && env.OPENROUTER_API_KEY.length > 0;
   const openrouterConfig = hasOpenRouterHolderConfigReference(opts.cwd);
   const openrouterHolder = opts.holderStatus ?? await probeCredentialHolderStatus(env);
-  const geminiCli = versionRunner('gemini');
-  const geminiOauth = existsSync(join(homeDir, '.gemini', 'oauth_creds.json'));
+  const antigravityCli = versionRunner('agy');
   const geminiApiKey = Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
   const geminiApiKeyEnvName = env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : env.GOOGLE_API_KEY ? 'GOOGLE_API_KEY' : undefined;
 
@@ -178,17 +177,18 @@ export async function inspectProviderSetup(opts: {
       },
       gemini: {
         provider: 'gemini-cli',
-        configured: geminiCli.ok && (geminiOauth || geminiApiKey),
+        configured: antigravityCli.ok,
         checks: {
-          cliPresent: geminiCli.ok,
-          version: geminiCli.version,
-          oauthPresent: geminiOauth,
+          cliPresent: antigravityCli.ok,
+          binary: 'agy',
+          version: antigravityCli.version,
+          authVerification: antigravityCli.ok ? 'live-agent-task-required' : undefined,
           apiKeyEnvPresent: geminiApiKey,
           apiKeyEnvName: geminiApiKeyEnvName,
         },
-        action: geminiCli.ok && (geminiOauth || geminiApiKey)
+        action: antigravityCli.ok
           ? undefined
-          : 'Run gemini in a terminal and complete Google OAuth, or set GEMINI_API_KEY/GOOGLE_API_KEY.',
+          : 'Install/repair agy, run it in a real terminal or the Antigravity app, complete Google sign-in, then retry.',
       },
     },
   };
@@ -209,10 +209,10 @@ export function writeProviderCredentialReferences(projectRoot: string, report: P
     };
   }
 
-  if (report.providers.gemini.checks.oauthPresent) {
+  if (report.providers.gemini.checks.cliPresent) {
     values.gemini = {
       ...(getObject(values.gemini) ?? {}),
-      credentialSource: 'oauth:~/.gemini/oauth_creds.json',
+      credentialSource: 'antigravity-oauth:agy',
     };
   } else if (report.providers.gemini.checks.apiKeyEnvPresent) {
     const envName = typeof report.providers.gemini.checks.apiKeyEnvName === 'string'

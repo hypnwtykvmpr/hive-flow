@@ -1611,20 +1611,26 @@ describe('agent_task_result: bridge result-file failure surfacing', () => {
 
   it('surfaces a provider authentication failure written by the bridge to the result file', async () => {
     // Was: bridge-tool-execution.test.ts "should return error when provider authentication fails"
-    // Bridge classifyError() maps 401/unauthorized/invalid API key to 'provider_api'
-    // (see provider-agent-bridge.mjs lines 155-158)
     const authErrorPayload = {
       success: false,
       error: 'API authentication failed: 401 Unauthorized — invalid api key',
       code: 'PROVIDER_AUTH_FAILED',
+      provider: 'gemini-cli',
     };
     setupResultFile(authErrorPayload);
 
     const result = await resultHandler({ taskId: TASK_ID }) as Record<string, unknown>;
 
-    expect(result.success).toBe(true);
-    expect(result.status).toBe('completed');
+    expect(result.success).toBe(false);
+    expect(result.status).toBe('failed');
     expect(result.agentId).toBe(AGENT_ID);
+    expect(result.code).toBe('provider-auth-unavailable');
+    expect(result.retryable).toBe(true);
+    expect(result.terminal).toBe(true);
+    expect(result.nextActions).toEqual(expect.arrayContaining([
+      expect.stringMatching(/Run\/repair agy/i),
+      expect.stringMatching(/codex-cli|anthropic-cli/i),
+    ]));
     const inner = result.result as Record<string, unknown>;
     expect(inner.success).toBe(false);
     expect(inner.error).toMatch(/authentication|unauthorized|api key/i);

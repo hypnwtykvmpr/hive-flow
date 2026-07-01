@@ -300,6 +300,76 @@ describe('GeminiCLIProvider', () => {
     await completePromise;
   });
 
+  it('passes Antigravity session env while filtering unrelated provider secrets', async () => {
+    const originalEnv = {
+      XDG_CACHE_HOME: process.env.XDG_CACHE_HOME,
+      XDG_DATA_HOME: process.env.XDG_DATA_HOME,
+      XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR,
+      DISPLAY: process.env.DISPLAY,
+      BROWSER: process.env.BROWSER,
+      DBUS_SESSION_BUS_ADDRESS: process.env.DBUS_SESSION_BUS_ADDRESS,
+      SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
+      ANTIGRAVITY_CACHE_HOME: process.env.ANTIGRAVITY_CACHE_HOME,
+    };
+    Object.assign(process.env, {
+      XDG_CACHE_HOME: '/tmp/hf-xdg-cache',
+      XDG_DATA_HOME: '/tmp/hf-xdg-data',
+      XDG_RUNTIME_DIR: '/tmp/hf-xdg-runtime',
+      DISPLAY: ':0',
+      BROWSER: 'open',
+      DBUS_SESSION_BUS_ADDRESS: 'unix:path=/tmp/dbus-session',
+      SSH_AUTH_SOCK: '/tmp/ssh-agent.sock',
+      ANTIGRAVITY_CACHE_HOME: '/tmp/antigravity-cache',
+    });
+    try {
+      mockBinaryFound('agy');
+      provider = new GeminiCLIProvider({
+        config: {
+          provider: 'gemini-cli',
+          model: 'gemini-3.5-flash',
+          env: {
+            HIVE_FLOW_AGENT_TOKEN: 'agent-token-123',
+            HIVE_FLOW_DEV_OVERRIDE_TOKEN: 'must-not-leak',
+            OPENROUTER_API_KEY: 'or-secret-that-must-not-leak',
+            ANTIGRAVITY_TOKEN: 'antigravity-token-that-must-not-leak',
+          },
+        },
+        logger: noopLogger,
+      });
+      await provider.initialize();
+
+      const mockChild = createMockChild();
+      mockSpawn.mockReturnValue(mockChild);
+
+      const completePromise = provider.complete({
+        messages: [{ role: 'user', content: 'test' }],
+      });
+
+      const spawnEnv = mockSpawn.mock.calls[0][2].env as Record<string, string | undefined>;
+      expect(spawnEnv.XDG_CACHE_HOME).toBe('/tmp/hf-xdg-cache');
+      expect(spawnEnv.XDG_DATA_HOME).toBe('/tmp/hf-xdg-data');
+      expect(spawnEnv.XDG_RUNTIME_DIR).toBe('/tmp/hf-xdg-runtime');
+      expect(spawnEnv.DISPLAY).toBe(':0');
+      expect(spawnEnv.BROWSER).toBe('open');
+      expect(spawnEnv.DBUS_SESSION_BUS_ADDRESS).toBe('unix:path=/tmp/dbus-session');
+      expect(spawnEnv.SSH_AUTH_SOCK).toBe('/tmp/ssh-agent.sock');
+      expect(spawnEnv.ANTIGRAVITY_CACHE_HOME).toBe('/tmp/antigravity-cache');
+      expect(spawnEnv.HIVE_FLOW_AGENT_TOKEN).toBe('agent-token-123');
+      expect(spawnEnv.HIVE_FLOW_DEV_OVERRIDE_TOKEN).toBeUndefined();
+      expect(spawnEnv.OPENROUTER_API_KEY).toBeUndefined();
+      expect(spawnEnv.ANTIGRAVITY_TOKEN).toBeUndefined();
+
+      mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
+      mockChild.emit('close', 0);
+      await completePromise;
+    } finally {
+      for (const [key, value] of Object.entries(originalEnv)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
+
   it('passes small prompts through --prompt for headless execution', async () => {
     mockBinaryFound('agy');
     await provider.initialize();

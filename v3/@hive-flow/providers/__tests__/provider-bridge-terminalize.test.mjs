@@ -268,6 +268,30 @@ describe('bridge error classification', () => {
     });
     expect(response.retryHint).toMatch(/fresh worker task/i);
   });
+
+  it('builds actionable provider-auth responses for Antigravity auth failures', () => {
+    const authErr = new Error('Antigravity CLI (agy) requires sign-in');
+    authErr.name = 'AuthenticationError';
+    authErr.code = 'AUTHENTICATION';
+    authErr.provider = 'gemini-cli';
+    authErr.statusCode = 401;
+
+    const response = buildBridgeErrorResponse(authErr, { agentId: 'agent-auth' });
+
+    expect(response).toMatchObject({
+      success: false,
+      error: 'Antigravity CLI (agy) requires sign-in',
+      code: 'provider-auth-unavailable',
+      provider: 'gemini-cli',
+      retryable: true,
+      agentId: 'agent-auth',
+    });
+    expect(response.nextActions).toEqual(expect.arrayContaining([
+      expect.stringMatching(/Run\/repair agy/i),
+      expect.stringMatching(/codex-cli|anthropic-cli/i),
+    ]));
+    expect(response.retryHint).toMatch(/Run\/repair agy/i);
+  });
 });
 
 describe('callWithTimeout (credential-holder bound)', () => {
