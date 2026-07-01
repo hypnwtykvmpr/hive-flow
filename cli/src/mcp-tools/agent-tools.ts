@@ -7,9 +7,8 @@
 
 import { randomUUID, createHmac, timingSafeEqual, createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync, readdirSync, realpathSync } from 'node:fs';
-import { join, dirname, isAbsolute, resolve, relative } from 'node:path';
+import { join, isAbsolute, resolve, relative } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import type { MCPTool } from './types.js';
 import { sanitizePathId } from '../shared/index.js';
 import { appendTaskJournalEvent } from '@hive-flow/providers/scripts/agent-task-journal.mjs';
@@ -24,6 +23,7 @@ import { checkModelEnforcement } from './mcp-enforcement-gate.js';
 import { assertSubagentIdentityMarker } from './subagent-markers.js';
 import { providerKeyPreflight } from './provider-key-preflight.js';
 import { isEnvOnlyCliProvider } from '../credential-store/strict-api-provider.js';
+import { resolveProviderBridgePath } from './provider-bridge-resolver.js';
 import {
   normalizeClientKind,
   operatorSessionEnvKeys,
@@ -766,7 +766,8 @@ const AGENT_FAILURE_NEXT_ACTIONS: Record<string, string[]> = {
     'If the taskId is unavailable, dispatch a fresh agent_task and poll the new taskId.',
   ],
   'bridge-missing': [
-    'Rebuild or reinstall Hive Flow so v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs is present.',
+    'Rebuild or reinstall Hive Flow so @hive-flow/providers/scripts/provider-agent-bridge.mjs resolves from the active Hive Flow layout.',
+    'If running from a source checkout, build the providers workspace and confirm cli/packages/providers or the legacy v3 provider bridge shim exists.',
     'After the bridge exists, retry agent_task with the same agentId and task prompt.',
   ],
   'agent-not-found': [
@@ -2434,17 +2435,17 @@ export const agentTools: MCPTool[] = [
 
       const taskId = `task-${randomUUID()}`;
 
-      // Resolve bridge script path relative to compiled output location
-      const thisDir = dirname(fileURLToPath(import.meta.url));
-      const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
+      const bridgeResolution = resolveProviderBridgePath({ projectRoot });
 
-      if (!existsSync(bridgePath)) {
+      if (!bridgeResolution.ok) {
+        const artifactHints = bridgeResolution.candidates.map((candidate) => candidate.path);
         return withAgentFailureGuidance(
-          { success: false, agentId, error: `Bridge script not found at ${bridgePath}` },
+          { success: false, agentId, error: bridgeResolution.error },
           'bridge-missing',
-          { projectRoot, agentId, retryable: false, artifactHints: [bridgePath] },
+          { projectRoot, agentId, retryable: false, artifactHints },
         );
       }
+      const bridgePath = bridgeResolution.bridgePath;
 
       // Create task directory and files
       const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');

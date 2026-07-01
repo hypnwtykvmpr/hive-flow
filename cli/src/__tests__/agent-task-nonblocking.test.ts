@@ -45,12 +45,11 @@ import { AGENT_TASK_RETRY_CONTEXT, agentTools } from '../mcp-tools/agent-tools.j
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Bridge path computed from the mocked fileURLToPath */
-// fileURLToPath returns '/fake/dist/src/mcp-tools/agent-tools.js'
-// dirname  => '/fake/dist/src/mcp-tools'
-// join('/fake/dist/src/mcp-tools', '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs')
-// => '/providers/scripts/provider-agent-bridge.mjs'
-const EXPECTED_BRIDGE_PATH = '/providers/scripts/provider-agent-bridge.mjs';
+const EXPECTED_BRIDGE_PATH_SUFFIX = '/providers/scripts/provider-agent-bridge.mjs';
+
+function isExpectedBridgePath(path: unknown): path is string {
+  return typeof path === 'string' && path.endsWith(EXPECTED_BRIDGE_PATH_SUFFIX);
+}
 
 interface AgentRecord {
   agentId: string;
@@ -101,7 +100,7 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
 
   (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
     if (typeof p === 'string' && p.endsWith('store.json')) return true;
-    if (p === EXPECTED_BRIDGE_PATH) return true;
+    if (isExpectedBridgePath(p)) return true;
     return false;
   });
 
@@ -1267,7 +1266,7 @@ describe('parallel dispatch', () => {
 
     (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
       if (typeof p === 'string' && p.endsWith('store.json')) return true;
-      if (p === EXPECTED_BRIDGE_PATH) return true;
+      if (isExpectedBridgePath(p)) return true;
       return false;
     });
 

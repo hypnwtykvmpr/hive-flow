@@ -4,6 +4,10 @@ import fc from 'fast-check';
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
   lstatSync: vi.fn(),
+  statSync: vi.fn(),
+  realpathSync: Object.assign(vi.fn((path: string) => path), {
+    native: vi.fn((path: string) => path),
+  }),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
@@ -41,14 +45,18 @@ vi.mock('@hive-flow/providers', () => ({
   }),
 }));
 
-import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, lstatSync, statSync, readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { providerKeyPreflight } from '../mcp-tools/provider-key-preflight.js';
 import { agentTools } from '../mcp-tools/agent-tools.js';
 
 const agentSpawnTool = agentTools.find((tool) => tool.name === 'agent_spawn')!;
 const agentTaskTool = agentTools.find((tool) => tool.name === 'agent_task')!;
-const EXPECTED_BRIDGE_PATH = '/providers/scripts/provider-agent-bridge.mjs';
+const EXPECTED_BRIDGE_PATH_SUFFIX = '/providers/scripts/provider-agent-bridge.mjs';
+
+function isExpectedBridgePath(path: unknown): path is string {
+  return typeof path === 'string' && path.endsWith(EXPECTED_BRIDGE_PATH_SUFFIX);
+}
 
 interface AgentRecord {
   agentId: string;
@@ -91,9 +99,12 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
 
   vi.mocked(existsSync).mockImplementation((path: string) => {
     if (typeof path === 'string' && path.endsWith('store.json')) return true;
-    if (path === EXPECTED_BRIDGE_PATH) return true;
+    if (isExpectedBridgePath(path)) return true;
     return false;
   });
+  vi.mocked(statSync).mockImplementation(() => ({
+    isDirectory: () => true,
+  }) as ReturnType<typeof statSync>);
   vi.mocked(lstatSync).mockImplementation(() => {
     throw new Error('not expected in this test');
   });

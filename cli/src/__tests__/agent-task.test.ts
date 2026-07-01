@@ -88,8 +88,12 @@ const handler = agentTaskTool.handler;
 const agentUpdateTool = agentTools.find((t) => t.name === 'agent_update')!;
 const updateHandler = agentUpdateTool.handler;
 
-/** The bridge path that the handler will compute from the mocked fileURLToPath */
-const EXPECTED_BRIDGE_PATH = '/providers/scripts/provider-agent-bridge.mjs';
+const EXPECTED_BRIDGE_PATH_SUFFIX = '/providers/scripts/provider-agent-bridge.mjs';
+const EXPECTED_BRIDGE_PATH_MATCHER = /\/providers\/scripts\/provider-agent-bridge\.mjs$/;
+
+function isExpectedBridgePath(path: unknown): path is string {
+  return typeof path === 'string' && path.endsWith(EXPECTED_BRIDGE_PATH_SUFFIX);
+}
 
 interface AgentRecord {
   agentId: string;
@@ -138,7 +142,7 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
 
   (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
     if (typeof p === 'string' && p.endsWith('store.json')) return true;
-    if (p === EXPECTED_BRIDGE_PATH) return true;
+    if (isExpectedBridgePath(p)) return true;
     if (p === '/tmp/hive-flow-test-holder.sock') return true;
     return false;
   });
@@ -453,7 +457,7 @@ describe('agent_task handler (non-blocking)', () => {
 
     (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
       if (typeof p === 'string' && p.endsWith('store.json')) return true;
-      if (p === EXPECTED_BRIDGE_PATH) return false;
+      if (isExpectedBridgePath(p)) return false;
       return false;
     });
 
@@ -462,11 +466,11 @@ describe('agent_task handler (non-blocking)', () => {
     expect(result).toMatchObject({
       success: false,
       agentId: agent.agentId,
-      error: expect.stringContaining('Bridge script not found'),
+      error: expect.stringContaining('Provider bridge script not found'),
       code: 'bridge-missing',
       retryable: false,
       nextActions: expect.arrayContaining([expect.stringMatching(/Rebuild or reinstall Hive Flow/i)]),
-      artifactHints: expect.arrayContaining([EXPECTED_BRIDGE_PATH]),
+      artifactHints: expect.arrayContaining([expect.stringMatching(EXPECTED_BRIDGE_PATH_MATCHER)]),
     });
 
     const store = getPersistedStore();
@@ -712,7 +716,7 @@ describe('agent_task handler (non-blocking)', () => {
     const store = makeStore({ [busy.agentId]: busy, [idle.agentId]: idle });
     (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
       if (typeof p === 'string' && p.endsWith('store.json')) return true;
-      if (p === EXPECTED_BRIDGE_PATH) return true;
+      if (isExpectedBridgePath(p)) return true;
       if (typeof p === 'string' && p.endsWith('.hive-flow/provider-concurrency.json')) return true;
       return false;
     });
@@ -764,7 +768,7 @@ describe('agent_task handler (non-blocking)', () => {
     const store = makeStore({ [idle.agentId]: idle });
     (existsSync as ReturnType<typeof vi.fn>).mockImplementation((p: string) => {
       if (typeof p === 'string' && p.endsWith('store.json')) return true;
-      if (p === EXPECTED_BRIDGE_PATH) return true;
+      if (isExpectedBridgePath(p)) return true;
       if (typeof p === 'string' && p.endsWith('.hive-flow/provider-concurrency.json')) return true;
       return false;
     });
@@ -915,7 +919,7 @@ describe('agent_task handler (non-blocking)', () => {
 
       const { args } = getSpawnCall();
 
-      expect(args[0]).toBe(EXPECTED_BRIDGE_PATH);
+      expect(args[0]).toEqual(expect.stringMatching(EXPECTED_BRIDGE_PATH_MATCHER));
       expect(args).toContain('--agent-id');
       expect(args[args.indexOf('--agent-id') + 1]).toBe(agent.agentId);
       expect(args).toContain('--task-file');

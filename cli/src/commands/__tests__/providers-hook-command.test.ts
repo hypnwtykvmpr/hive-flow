@@ -12,7 +12,11 @@ import {
 } from '../provider-hook-runtime.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../../../../..');
+const repoRoot = resolve(here, '../../../..');
+const SETUP_PROVIDER_AGENTS_CANDIDATES = [
+  'cli/packages/providers/scripts/setup-provider-agents.ts',
+  'v3/@hive-flow/providers/scripts/setup-provider-agents.ts',
+] as const;
 
 function makeHome(): string {
   return mkdtempSync(join(tmpdir(), 'hf-provider-hook-test-'));
@@ -83,8 +87,13 @@ describe('providers hook command surface', () => {
   });
 
   it('installs stable CLI hook commands instead of provider script paths', () => {
+    const setupProviderAgentsPath = SETUP_PROVIDER_AGENTS_CANDIDATES
+      .map((candidate) => resolve(repoRoot, candidate))
+      .find((candidate) => existsSync(candidate));
+    expect(setupProviderAgentsPath).toBeTruthy();
+
     const source = readFileSync(
-      resolve(repoRoot, 'v3/@hive-flow/providers/scripts/setup-provider-agents.ts'),
+      setupProviderAgentsPath!,
       'utf8',
     );
 
