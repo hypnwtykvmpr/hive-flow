@@ -404,6 +404,7 @@
     "test:testing": "vitest run src/testing/__tests__/**/*.test.ts",
     "test:plugin-store": "tsx src/plugins/tests/standalone-test.ts",
     "test:pattern-store": "tsx src/transfer/store/tests/standalone-test.ts",
+    "pack:install-smoke": "npm run build && node scripts/pack-install-smoke.mjs",
     "probe:provider-concurrency": "node scripts/probe-provider-concurrency.mjs",
     "bench:performance": "vitest bench benchmarks/performance",
     "bench:performance:attention": "vitest bench benchmarks/performance/attention",

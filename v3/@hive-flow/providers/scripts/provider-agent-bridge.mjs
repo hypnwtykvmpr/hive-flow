@@ -59,11 +59,23 @@ import {
 const bridgeRequire = createRequire(import.meta.url);
 
 async function importCliPermissionGuardDist(moduleName) {
-  const modulePath = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName);
-  if (!existsSync(modulePath)) {
-    throw new Error(`CLI permission-guard dist artifact missing: ${modulePath}`);
+  const scriptDir = dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    // Current repo and package-preserving workspace layout:
+    //   current v3 provider scripts -> current v3 cli dist
+    //   scoped provider package scripts -> scoped cli package dist
+    join(scriptDir, '..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName),
+    // Future promoted public package layout:
+    //   node_modules/hive-flow/node_modules/@hive-flow/providers/scripts
+    //     -> node_modules/hive-flow/dist
+    join(scriptDir, '..', '..', '..', '..', 'dist', 'src', 'permission-guard', moduleName),
+  ];
+  for (const modulePath of candidates) {
+    if (existsSync(modulePath)) {
+      return import(pathToFileURL(modulePath).href);
+    }
   }
-  return import(pathToFileURL(modulePath).href);
+  throw new Error(`CLI permission-guard dist artifact missing; tried: ${candidates.join(', ')}`);
 }
 
 const protectedPathPolicy = await importCliPermissionGuardDist('protected-paths.js');

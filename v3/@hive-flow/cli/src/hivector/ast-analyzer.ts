@@ -7,7 +7,8 @@
  * @module ast-analyzer
  */
 
-import { Lang, kind, parse, type SgNode } from '@ast-grep/napi';
+import { createRequire } from 'node:module';
+import type { Lang, SgNode } from '@ast-grep/napi';
 
 export interface ASTAnalyzerConfig {
   maxFileSize: number;
@@ -47,6 +48,21 @@ export interface ASTAnalysis {
 interface AstGrepEntry {
   source: SgNode;
   ast: ASTNode;
+}
+
+type AstGrepModule = typeof import('@ast-grep/napi');
+
+const require = createRequire(import.meta.url);
+let astGrepModule: AstGrepModule | null | undefined;
+
+function loadAstGrepModule(): AstGrepModule | null {
+  if (astGrepModule !== undefined) return astGrepModule;
+  try {
+    astGrepModule = require('@ast-grep/napi') as AstGrepModule;
+  } catch {
+    astGrepModule = null;
+  }
+  return astGrepModule;
 }
 
 const DEFAULT_CONFIG: ASTAnalyzerConfig = {
@@ -553,6 +569,9 @@ export class ASTAnalyzer {
   }
 
   private getAstGrepLang(language: string, filePath: string): Lang | null {
+    const astGrep = loadAstGrepModule();
+    if (!astGrep) return null;
+    const { Lang } = astGrep;
     if (/\.tsx$/i.test(filePath)) return Lang.Tsx;
     if (/\.jsx$/i.test(filePath)) return Lang.Tsx;
     if (/\.mjs$/i.test(filePath) || /\.cjs$/i.test(filePath) || /\.js$/i.test(filePath)) return Lang.JavaScript;
@@ -564,7 +583,9 @@ export class ASTAnalyzer {
 
   private parseAstGrepRoot(code: string, lang: Lang): SgNode | null {
     try {
-      return parse(lang, code).root();
+      const astGrep = loadAstGrepModule();
+      if (!astGrep) return null;
+      return astGrep.parse(lang, code).root();
     } catch {
       return null;
     }
@@ -572,7 +593,9 @@ export class ASTAnalyzer {
 
   private findAllAstGrepKind(node: SgNode, lang: Lang, kindName: string): SgNode[] {
     try {
-      return node.findAll(kind(lang, kindName));
+      const astGrep = loadAstGrepModule();
+      if (!astGrep) return [];
+      return node.findAll(astGrep.kind(lang, kindName));
     } catch {
       return [];
     }

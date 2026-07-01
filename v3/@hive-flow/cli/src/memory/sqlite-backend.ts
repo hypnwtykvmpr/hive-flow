@@ -11,7 +11,7 @@
 import { EventEmitter } from 'node:events';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import {
   AccessLevel,
   IMemoryBackend,
@@ -116,6 +116,22 @@ const DEFAULT_CONFIG: SQLiteBackendConfig = {
   verbose: false,
 };
 
+type BetterSqlite3Constructor = typeof Database;
+
+async function loadBetterSqlite3(): Promise<BetterSqlite3Constructor> {
+  try {
+    const mod = await import('better-sqlite3' as string);
+    return (mod.default ?? mod) as BetterSqlite3Constructor;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      'better-sqlite3 optional dependency is not available. ' +
+      'Use createDatabase() with provider:auto, provider:binary, or provider:sql.js for fallback selection, ' +
+      `or install/build better-sqlite3. Cause: ${message}`,
+    );
+  }
+}
+
 /**
  * SQLite Backend for Structured Memory Storage
  *
@@ -155,7 +171,10 @@ export class SQLiteBackend extends EventEmitter implements IMemoryBackend {
       mkdirSync(dirname(this.config.databasePath), { recursive: true });
     }
 
-    // Open database connection
+    // Open database connection. better-sqlite3 is optional/native; load it
+    // lazily so importing hive-flow/memory works when the native package is
+    // absent and callers can still use binary/sql.js fallback providers.
+    const Database = await loadBetterSqlite3();
     this.db = new Database(this.config.databasePath, {
       verbose: this.config.verbose ? console.log : undefined,
     });

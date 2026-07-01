@@ -198,6 +198,8 @@ describe('provider bridge packaging contract', () => {
     expect(source).not.toContain('@hive-flow/cli');
     expect(source).not.toContain('mcp-client');
     expect(source).toContain("'..', '..', 'cli', 'dist', 'src', 'permission-guard', moduleName");
+    expect(source).toContain("'..', '..', '..', '..', 'dist', 'src', 'permission-guard', moduleName");
+    expect(source).toContain('CLI permission-guard dist artifact missing; tried:');
     expect(source).toContain("importCliPermissionGuardDist('protected-paths.js')");
     expect(source).toContain("importCliPermissionGuardDist('gate.js')");
   });
