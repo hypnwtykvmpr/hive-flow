@@ -67,6 +67,7 @@ function statuslineCandidates() {
   ];
 
   for (const root of roots) {
+    addCandidate(list, seen, path.join(root, 'cli', 'bin', 'statusline.js'));
     addCandidate(list, seen, path.join(root, 'v3', '@hive-flow', 'cli', 'bin', 'statusline.js'));
     addCandidate(list, seen, path.join(root, 'bin', 'statusline.js'));
     addCandidate(list, seen, path.join(root, 'node_modules', '@hive-flow', 'cli', 'bin', 'statusline.js'));

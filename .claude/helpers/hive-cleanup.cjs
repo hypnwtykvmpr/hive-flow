@@ -23,6 +23,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const { resolveHiveFlowCliFile } = require('./layout-paths.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -147,11 +148,13 @@ let _agentTerminateHandler = null;
 async function getTerminateHandler() {
   if (_agentTerminateHandler) return _agentTerminateHandler;
 
-  const agentToolsPath = path.join(
-    __dirname, '..', '..', 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'agent-tools.js'
-  );
+  const agentToolsPath = resolveHiveFlowCliFile('dist/src/mcp-tools/agent-tools.js', {
+    env: process.env,
+    cwd: process.cwd(),
+    helperDir: __dirname,
+  });
 
-  if (!fs.existsSync(agentToolsPath)) {
+  if (!agentToolsPath || !fs.existsSync(agentToolsPath)) {
     return null;
   }
 

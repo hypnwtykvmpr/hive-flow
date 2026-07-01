@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -20,19 +20,35 @@ function readJson(path: string): Record<string, any> {
   return JSON.parse(readFileSync(path, 'utf8')) as Record<string, any>;
 }
 
+function currentCliRoot(): string {
+  const promoted = resolve(REPO_ROOT, 'cli');
+  if (existsSync(resolve(promoted, 'package.json'))) return promoted;
+  return resolve(REPO_ROOT, 'v3/@hive-flow/cli');
+}
+
+function currentProvidersRoot(): string {
+  const promoted = resolve(REPO_ROOT, 'cli/packages/providers');
+  if (existsSync(resolve(promoted, 'package.json'))) return promoted;
+  return resolve(REPO_ROOT, 'v3/@hive-flow/providers');
+}
+
 describe('Phase 2B C3 pack/install smoke harness', () => {
   let smoke: PackSmokeModule;
   let rootPackage: Record<string, any>;
   let cliPackage: Record<string, any>;
   let providersPackage: Record<string, any>;
+  let cliRoot: string;
+  let providersRoot: string;
 
   beforeAll(async () => {
+    cliRoot = currentCliRoot();
+    providersRoot = currentProvidersRoot();
     smoke = await import(
-      pathToFileURL(resolve(REPO_ROOT, 'v3/@hive-flow/cli/scripts/pack-install-smoke.mjs')).href
+      pathToFileURL(resolve(cliRoot, 'scripts/pack-install-smoke.mjs')).href
     ) as PackSmokeModule;
     rootPackage = readJson(resolve(REPO_ROOT, 'package.json'));
-    cliPackage = readJson(resolve(REPO_ROOT, 'v3/@hive-flow/cli/package.json'));
-    providersPackage = readJson(resolve(REPO_ROOT, 'v3/@hive-flow/providers/package.json'));
+    cliPackage = readJson(resolve(cliRoot, 'package.json'));
+    providersPackage = readJson(resolve(providersRoot, 'package.json'));
   });
 
   it('synthesizes an installable hive-flow manifest without workspace-only optional packages', () => {
@@ -77,7 +93,7 @@ describe('Phase 2B C3 pack/install smoke harness', () => {
 
   it('does not use CommonJS package resolution for the ESM-only providers main export', () => {
     const source = readFileSync(
-      resolve(REPO_ROOT, 'v3/@hive-flow/cli/scripts/pack-install-smoke.mjs'),
+      resolve(cliRoot, 'scripts/pack-install-smoke.mjs'),
       'utf8',
     );
 
@@ -88,15 +104,15 @@ describe('Phase 2B C3 pack/install smoke harness', () => {
 
   it('forces optional-free install and keeps native optional imports lazy', () => {
     const smokeSource = readFileSync(
-      resolve(REPO_ROOT, 'v3/@hive-flow/cli/scripts/pack-install-smoke.mjs'),
+      resolve(cliRoot, 'scripts/pack-install-smoke.mjs'),
       'utf8',
     );
     const sqliteBackendSource = readFileSync(
-      resolve(REPO_ROOT, 'v3/@hive-flow/cli/src/memory/sqlite-backend.ts'),
+      resolve(cliRoot, 'src/memory/sqlite-backend.ts'),
       'utf8',
     );
     const astAnalyzerSource = readFileSync(
-      resolve(REPO_ROOT, 'v3/@hive-flow/cli/src/hivector/ast-analyzer.ts'),
+      resolve(cliRoot, 'src/hivector/ast-analyzer.ts'),
       'utf8',
     );
 

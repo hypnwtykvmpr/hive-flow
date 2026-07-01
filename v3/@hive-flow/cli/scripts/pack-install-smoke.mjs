@@ -19,8 +19,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 export const DEFAULT_CLI_ROOT = resolve(scriptDir, '..');
-export const DEFAULT_REPO_ROOT = resolve(DEFAULT_CLI_ROOT, '../../..');
-export const DEFAULT_PROVIDERS_ROOT = resolve(DEFAULT_CLI_ROOT, '../providers');
+export const DEFAULT_REPO_ROOT = resolveRepoRoot(DEFAULT_CLI_ROOT);
+export const DEFAULT_PROVIDERS_ROOT = resolveProvidersRoot({
+  cliRoot: DEFAULT_CLI_ROOT,
+  repoRoot: DEFAULT_REPO_ROOT,
+});
 
 export const REQUIRED_EXACT_PACK_PATHS = Object.freeze([
   'bin/cli.js',
@@ -74,6 +77,44 @@ const PROVIDER_COPY_FALLBACK = Object.freeze([
 
 function normalizePath(path) {
   return path.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
+function directoryExists(path) {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function fileExists(path) {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function firstExistingDirectory(candidates) {
+  return candidates.find((candidate) => directoryExists(candidate));
+}
+
+function resolveRepoRoot(cliRoot) {
+  const candidates = [
+    resolve(cliRoot, '..'),
+    resolve(cliRoot, '../../..'),
+  ];
+  const found = candidates.find((candidate) => fileExists(join(candidate, 'package.json')));
+  return found ?? candidates[0];
+}
+
+function resolveProvidersRoot({ cliRoot, repoRoot }) {
+  const candidates = [
+    resolve(repoRoot, 'cli/packages/providers'),
+    resolve(repoRoot, 'v3/@hive-flow/providers'),
+    resolve(cliRoot, '../providers'),
+  ];
+  return firstExistingDirectory(candidates) ?? candidates[0];
 }
 
 export function readJson(path) {
@@ -320,7 +361,7 @@ function assertBuiltRuntime({ cliRoot, providersRoot }) {
   if (missing.length) {
     throw new Error(
       `[pack-smoke] built runtime missing:\n  - ${missing.join('\n  - ')}\n` +
-        'Run: npm --prefix v3/@hive-flow/cli run build && npm --prefix v3/@hive-flow/providers run build',
+        'Run: npm --prefix cli run build after cutover, or npm --prefix v3/@hive-flow/cli run build before cutover; also build the active providers workspace.',
     );
   }
 }
@@ -328,7 +369,7 @@ function assertBuiltRuntime({ cliRoot, providersRoot }) {
 export function prepareSyntheticPackRoot(options = {}) {
   const repoRoot = resolve(options.repoRoot ?? DEFAULT_REPO_ROOT);
   const cliRoot = resolve(options.cliRoot ?? DEFAULT_CLI_ROOT);
-  const providersRoot = resolve(options.providersRoot ?? DEFAULT_PROVIDERS_ROOT);
+  const providersRoot = resolve(options.providersRoot ?? resolveProvidersRoot({ cliRoot, repoRoot }));
   const packRoot = resolve(options.packRoot ?? mkdtempSync(join(tmpdir(), 'hf-pack-smoke-root-')));
 
   assertBuiltRuntime({ cliRoot, providersRoot });
@@ -622,7 +663,7 @@ function usage() {
   return [
     'Usage: node scripts/pack-install-smoke.mjs [--keep-temp] [--repo-root PATH]',
     '',
-    'Builds a temporary future hive-flow package root from v3/@hive-flow/cli,',
+    'Builds a temporary future hive-flow package root from cli/ or v3/@hive-flow/cli,',
     'packs it, installs the tarball into a temporary prefix, and probes CLI,',
     'MCP, public exports, bundled providers, and undici resolution.',
   ].join('\n');

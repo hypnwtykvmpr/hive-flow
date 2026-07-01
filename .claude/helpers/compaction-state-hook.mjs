@@ -25,27 +25,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const require = createRequire(import.meta.url);
 
-function loadProtectedPathPolicyModule() {
-  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
-  const candidates = [
-    envProjectRoot && join(resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    join(resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    join(resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    join(__dirname, 'protected-paths.cjs'),
-  ].filter(Boolean);
+const { loadProtectedPathPolicyModule } = require('./layout-paths.cjs');
 
-  for (const candidate of candidates) {
-    try {
-      if (existsSync(candidate)) return require(candidate);
-    } catch {
-      // Try the next candidate.
-    }
-  }
-
-  return require(join(resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
-}
-
-const protectedPathPolicy = loadProtectedPathPolicyModule();
+const protectedPathPolicy = loadProtectedPathPolicyModule({ env: process.env, cwd: process.cwd(), helperDir: __dirname });
 // Hook-child env is trusted; agent Bash exports do not mutate the hook process env.
 const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
   env: process.env,

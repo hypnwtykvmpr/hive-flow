@@ -15,9 +15,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { spawn } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
+const { resolveHiveFlowCliFile } = require('./layout-paths.cjs');
 const PROJECT_ROOT = join(__dirname, '../..');
 const DATA_DIR = join(PROJECT_ROOT, '.hive-flow', 'data');
 const STORE_PATH = join(DATA_DIR, 'auto-memory-store.json');
@@ -160,21 +163,34 @@ class JsonFileBackend {
 
 async function loadMemoryPackage() {
   // Strategy 1: Local dev (built dist)
-  const localDist = join(PROJECT_ROOT, 'v3/@hive-flow/cli/dist/src/memory/index.js');
-  if (existsSync(localDist)) {
+  const localDist = resolveHiveFlowCliFile('dist/src/memory/index.js', {
+    env: process.env,
+    cwd: PROJECT_ROOT,
+    helperDir: __dirname,
+  });
+  if (localDist && existsSync(localDist)) {
     try {
       return await import(`file://${localDist}`);
     } catch { /* fall through */ }
   }
 
-  // Strategy 2: npm installed @hive-flow/cli with memory subpath export
+  // Strategy 2: npm installed public package with memory subpath export
+  try {
+    return await import('hive-flow/memory');
+  } catch { /* fall through */ }
+
+  // Strategy 3: legacy npm installed @hive-flow/cli with memory subpath export
   try {
     return await import('@hive-flow/cli/memory');
   } catch { /* fall through */ }
 
-  // Strategy 3: Installed package dist fallback
-  const cliMemory = join(PROJECT_ROOT, 'node_modules/@hive-flow/cli/dist/src/memory/index.js');
-  if (existsSync(cliMemory)) {
+  // Strategy 4: Installed package dist fallback
+  const installedMemoryCandidates = [
+    join(PROJECT_ROOT, 'node_modules/hive-flow/dist/src/memory/index.js'),
+    join(PROJECT_ROOT, 'node_modules/@hive-flow/cli/dist/src/memory/index.js'),
+  ];
+  for (const cliMemory of installedMemoryCandidates) {
+    if (!existsSync(cliMemory)) continue;
     try {
       return await import(`file://${cliMemory}`);
     } catch { /* fall through */ }

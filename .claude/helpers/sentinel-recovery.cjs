@@ -23,27 +23,9 @@ const path = require('path');
 const childProcess = require('child_process');
 const { resolveSessionId } = require('./session-id.cjs');
 
-function loadProtectedPathPolicyModule() {
-  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
-  const candidates = [
-    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(__dirname, 'protected-paths.cjs'),
-  ].filter(Boolean);
+const { loadProtectedPathPolicyModule } = require('./layout-paths.cjs');
 
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) return require(candidate);
-    } catch {
-      // Try the next candidate.
-    }
-  }
-
-  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
-}
-
-const protectedPathPolicy = loadProtectedPathPolicyModule();
+const protectedPathPolicy = loadProtectedPathPolicyModule({ env: process.env, cwd: process.cwd(), helperDir: __dirname });
 
 // ---------------------------------------------------------------------------
 // Constants

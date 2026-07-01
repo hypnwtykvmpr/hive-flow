@@ -41,27 +41,9 @@ const { resolveSessionId } = require('./session-id.cjs');
 
 const helpersDir = __dirname;
 
-function loadProtectedPathPolicyModule() {
-  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
-  const candidates = [
-    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(__dirname, 'protected-paths.cjs'),
-  ].filter(Boolean);
+const { loadProtectedPathPolicyModule, resolveHiveFlowCliFile } = require('./layout-paths.cjs');
 
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) return require(candidate);
-    } catch {
-      // Try the next candidate.
-    }
-  }
-
-  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
-}
-
-const protectedPathPolicy = loadProtectedPathPolicyModule();
+const protectedPathPolicy = loadProtectedPathPolicyModule({ env: process.env, cwd: process.cwd(), helperDir: __dirname });
 
 const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
   env: process.env,
@@ -69,6 +51,24 @@ const PROJECT_DIR = protectedPathPolicy.resolveProjectRoot({
   fallbackRoot: process.cwd(),
 });
 const OWNER_ACK_GRACE_MS = 15_000;
+
+function resolveCliFile(relativePath) {
+  return resolveHiveFlowCliFile(relativePath, { env: process.env, cwd: process.cwd(), helperDir: helpersDir });
+}
+
+function requireCliFile(relativePath) {
+  const resolved = resolveCliFile(relativePath);
+  if (resolved) return resolved;
+  return path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', relativePath);
+}
+
+function cliRootFromFile(relativePath) {
+  const file = requireCliFile(relativePath);
+  const parts = relativePath.split(/[\\/]+/).filter(Boolean);
+  let root = file;
+  for (let index = 0; index < parts.length; index += 1) root = path.dirname(root);
+  return root;
+}
 
 function resolveDoneOwnerSessionId(item) {
   return resolveSessionId({ session_id: item?.data?.ownerSessionId }, {});
@@ -125,17 +125,25 @@ function permissionGuardAllow(additionalContext) {
 function permissionGuardGateMissingDecision(projectDir) {
   const roots = permissionGuardCandidateRoots(projectDir);
   if (roots.some((root) => fs.existsSync(permissionGuardSourcePath(root)))) {
-    return permissionGuardAllow('[PERMISSION GUARD] Compiled gate not built — run npm run build in v3/@hive-flow/cli. Degraded (allow) for first-run.');
+    return permissionGuardAllow('[PERMISSION GUARD] Compiled gate not built — run npm run build in cli or v3/@hive-flow/cli. Degraded (allow) for first-run.');
   }
   return permissionGuardDeny('[PERMISSION GUARD] Compiled gate not found at relocated root. Tool blocked for safety.');
 }
 
 function permissionGuardGatePath(root) {
-  return path.join(root, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js');
+  const candidates = [
+    path.join(root, 'cli', 'dist', 'src', 'permission-guard', 'gate.js'),
+    path.join(root, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'permission-guard', 'gate.js'),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
 }
 
 function permissionGuardSourcePath(root) {
-  return path.join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts');
+  const candidates = [
+    path.join(root, 'cli', 'src', 'permission-guard', 'gate.ts'),
+    path.join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts'),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
 }
 
 function readInstalledEngineSourceRoot() {
@@ -219,7 +227,7 @@ function isPermissionGuardRebuildCommand(input) {
 
   const tokens = trimmed.split(/\s+/).filter(Boolean);
   const cwd = path.resolve(input.cwd || input.tool_input?.cwd || PROJECT_DIR);
-  const cliDir = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli');
+  const cliDir = cliRootFromFile('bin/cli.js');
   const cliDirKey = normalizePermissionGuardRebuildPath(cliDir);
   const inCliDir = normalizePermissionGuardRebuildPath(cwd) === cliDirKey;
 
@@ -303,8 +311,8 @@ function providerSummaryLine() {
 // Returns null if the module is not compiled or cannot be loaded (fail-open).
 function loadEnforcerModule() {
   try {
-    const enforcerPath = path.join(PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'workflow-enforcer.js');
-    if (!fs.existsSync(enforcerPath)) return null;
+    const enforcerPath = resolveCliFile(path.join('dist', 'src', 'mcp-tools', 'workflow-enforcer.js'));
+    if (!enforcerPath || !fs.existsSync(enforcerPath)) return null;
     const { pathToFileURL } = require('url');
     // Note: dynamic import returns a promise, caller must await
     return import(pathToFileURL(enforcerPath).href);
@@ -1635,7 +1643,7 @@ const handlers = {
           console.log(permissionGuardAllow('[PERMISSION GUARD] Compiled gate is stale or failed to load. Allowing the project-local permission-guard rebuild command only.'));
           return;
         }
-        console.log(permissionGuardDeny('[PERMISSION GUARD] Compiled gate is stale or failed to load. Tool blocked for safety; run `corepack pnpm --dir v3/@hive-flow/cli build` without pipes, redirects, or chained commands.'));
+        console.log(permissionGuardDeny('[PERMISSION GUARD] Compiled gate is stale or failed to load. Tool blocked for safety; run `corepack pnpm --dir cli build` after cutover or `corepack pnpm --dir v3/@hive-flow/cli build` before cutover, without pipes, redirects, or chained commands.'));
         process.exit(0);
       }
 
@@ -1667,10 +1675,8 @@ const handlers = {
       }
 
       const { pathToFileURL } = require('url');
-      const agentToolsPath = path.join(
-        projectDir, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'agent-tools.js'
-      );
-      if (!fs.existsSync(agentToolsPath)) {
+      const agentToolsPath = resolveCliFile(path.join('dist', 'src', 'mcp-tools', 'agent-tools.js'));
+      if (!agentToolsPath || !fs.existsSync(agentToolsPath)) {
         console.log('{}');
         return;
       }

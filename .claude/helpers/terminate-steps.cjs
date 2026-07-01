@@ -13,15 +13,24 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { resolveHiveFlowCliFile } = require('./layout-paths.cjs');
 
 const DEFAULT_TIMEOUT_MS = 300_000; // 300 seconds
 const DEFAULT_MAX_ATTEMPTS = 3; // 1 initial + 2 retries
+
+function resolveDefaultCliPath(projectRoot) {
+  return resolveHiveFlowCliFile('bin/cli.js', {
+    env: process.env,
+    cwd: projectRoot,
+    helperDir: __dirname,
+  }) || path.join(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'cli.js');
+}
 
 function resolveRuntime(deps = {}) {
   const projectRoot = deps.projectRoot || path.resolve(__dirname, '..', '..'); // BUG-10: removed env-poisonable fallback
   return {
     projectRoot,
-    cliPath: deps.cliPath || path.join(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'cli.js'),
+    cliPath: deps.cliPath || resolveDefaultCliPath(projectRoot),
     timeoutMs: Number.isFinite(Number(deps.timeoutMs)) ? Number(deps.timeoutMs) : DEFAULT_TIMEOUT_MS,
     exec: deps.execFileSync || execFileSync,
     logPath: deps.logPath || path.join(projectRoot, '.hive-flow', 'sessions', 'terminate-steps.log.jsonl'),

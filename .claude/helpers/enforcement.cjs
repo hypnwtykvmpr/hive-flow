@@ -28,27 +28,9 @@ const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 
-function loadProtectedPathPolicyModule() {
-  const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
-  const candidates = [
-    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(__dirname, 'protected-paths.cjs'),
-  ].filter(Boolean);
+const { loadProtectedPathPolicyModule } = require('./layout-paths.cjs');
 
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) return require(candidate);
-    } catch {
-      // Try the next candidate.
-    }
-  }
-
-  return require(path.join(path.resolve(__dirname, '..', '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
-}
-
-const protectedPathPolicy = loadProtectedPathPolicyModule();
+const protectedPathPolicy = loadProtectedPathPolicyModule({ env: process.env, cwd: process.cwd(), helperDir: __dirname });
 
 // Resolve PROJECT_DIR from the shared policy resolver. Hook-child env is trusted
 // because agent Bash exports do not mutate Claude Code's hook process env; the

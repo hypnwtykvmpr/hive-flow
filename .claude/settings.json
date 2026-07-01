@@ -614,7 +614,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "node \"$CLAUDE_PROJECT_DIR\"/v3/@hive-flow/cli/bin/statusline.js",
+    "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/helpers/statusline.cjs",
     "padding": 0,
     "refreshInterval": 1
   },

@@ -4,31 +4,9 @@
 const path = require('node:path');
 const { envSessionValue } = require('./client-kind.cjs');
 
-function loadProtectedPathPolicyModule() {
-  const projectRoot = path.resolve(__dirname, '..', '..');
-  const candidates = [
-    path.join(projectRoot, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-  ];
+const { loadProtectedPathPolicyModule } = require('./layout-paths.cjs');
 
-  for (const candidate of candidates) {
-    try {
-      return require(candidate);
-    } catch {
-      // Try the next candidate.
-    }
-  }
-
-  return {
-    sanitizeScopeId(id, fallback = '', maxLen = 64) {
-      if (typeof id !== 'string' || !id.trim()) return fallback;
-      const sanitized = id.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, maxLen);
-      return sanitized || fallback;
-    },
-  };
-}
-
-const protectedPathPolicy = loadProtectedPathPolicyModule();
+const protectedPathPolicy = loadProtectedPathPolicyModule({ env: process.env, cwd: process.cwd(), helperDir: __dirname });
 
 function asNonEmptyString(value) {
   return typeof value === 'string' && value.trim() ? value : null;

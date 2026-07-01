@@ -12,6 +12,16 @@ LAST_RUN_FILE="$METRICS_DIR/.perf-last-run"
 
 mkdir -p "$METRICS_DIR"
 
+resolve_cli() {
+  if [ -f "$PROJECT_ROOT/cli/bin/cli.js" ]; then
+    printf '%s\n' "$PROJECT_ROOT/cli/bin/cli.js"
+    return 0
+  fi
+  printf '%s\n' "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js"
+}
+
+CLI_PATH="$(resolve_cli)"
+
 # Check if we should run (throttle to once per 5 minutes)
 should_run() {
   if [ ! -f "$LAST_RUN_FILE" ]; then
@@ -67,7 +77,7 @@ benchmark_startup() {
   local start=$(date +%s%3N)
 
   # Quick check of hive-flow CLI responsiveness
-  timeout 5 node "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js" --version >/dev/null 2>&1 || true
+  timeout 5 node "$CLI_PATH" --version >/dev/null 2>&1 || true
 
   local end=$(date +%s%3N)
   local duration=$((end - start))
@@ -116,7 +126,7 @@ run_benchmarks() {
 run_deep_benchmark() {
   echo "[$(date +%H:%M:%S)] Spawning perf-analyzer agent..."
 
-  node "$PROJECT_ROOT/v3/@hive-flow/cli/bin/cli.js" agent spawn -t perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
+  node "$CLI_PATH" agent spawn -t perf-analyzer --task "Analyze current system performance and update metrics" 2>/dev/null &
   local pid=$!
 
   # Don't wait, let it run in background

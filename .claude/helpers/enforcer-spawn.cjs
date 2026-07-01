@@ -7,6 +7,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
+const { resolveHiveFlowCliFile } = require('./layout-paths.cjs');
 
 const PROJECT_DIR = path.resolve(__dirname, '..', '..');
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
@@ -135,10 +136,12 @@ async function main() {
     return;
   }
 
-  const agentToolsPath = path.join(
-    PROJECT_DIR, 'v3', '@hive-flow', 'cli', 'dist', 'src', 'mcp-tools', 'agent-tools.js'
-  );
-  if (!fs.existsSync(agentToolsPath)) {
+  const agentToolsPath = resolveHiveFlowCliFile('dist/src/mcp-tools/agent-tools.js', {
+    env: process.env,
+    cwd: process.cwd(),
+    helperDir: __dirname,
+  });
+  if (!agentToolsPath || !fs.existsSync(agentToolsPath)) {
     console.log('{}');
     return;
   }

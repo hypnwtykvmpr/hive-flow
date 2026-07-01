@@ -2,7 +2,7 @@
   "mcpServers": {
     "hive-flow": {
       "command": "node",
-      "args": ["v3/@hive-flow/cli/bin/mcp-server.js"]
+      "args": [".claude/helpers/hive-flow-mcp-launcher.cjs"]
     }
   }
 }
