@@ -14,6 +14,7 @@ import {
   probeCredentialHolderStatus,
 } from '../credential-store/strict-api-provider.js';
 import { storeProviderCredential } from '../credential-store/holder-runtime.js';
+import { runProviderRouteHook, runProviderStatusHook } from './provider-hook-runtime.js';
 
 /** Shared registry instance, lazily initialized on first use */
 let _registry: ProviderRegistry | undefined;
@@ -319,11 +320,38 @@ const usageCommand: Command = {
   },
 };
 
+const providerHookRouteCommand: Command = {
+  name: 'route',
+  description: 'Run the provider route hook protocol',
+  hidden: true,
+  action: async (): Promise<CommandResult> => {
+    await runProviderRouteHook();
+    return { success: true };
+  },
+};
+
+const providerHookStatusCommand: Command = {
+  name: 'status',
+  description: 'Run the provider status hook protocol',
+  hidden: true,
+  action: async (): Promise<CommandResult> => {
+    await runProviderStatusHook();
+    return { success: true };
+  },
+};
+
+const providerHookCommand: Command = {
+  name: 'hook',
+  description: 'Internal provider hook protocol commands',
+  hidden: true,
+  subcommands: [providerHookRouteCommand, providerHookStatusCommand],
+};
+
 // Main providers command
 export const providersCommand: Command = {
   name: 'providers',
   description: 'Manage AI providers, models, and configurations',
-  subcommands: [listCommand, configureCommand, testCommand, modelsCommand, usageCommand],
+  subcommands: [listCommand, configureCommand, testCommand, modelsCommand, usageCommand, providerHookCommand],
   examples: [
     { command: 'hive-flow providers list', description: 'List all providers' },
     { command: 'hive-flow providers configure -p openai', description: 'Configure OpenAI' },

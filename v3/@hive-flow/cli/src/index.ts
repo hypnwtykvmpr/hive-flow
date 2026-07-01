@@ -89,11 +89,18 @@ export class CLI {
         this.output.setVerbosity(process.env.DEBUG ? 'debug' : 'verbose');
       }
 
-      const hookProtocolSubcommand = commandPath[0] === 'hooks' && (
-        commandPath[1] === 'modify-file'
-        || commandPath[1] === 'modify-bash'
-        || positional[0] === 'modify-file'
-        || positional[0] === 'modify-bash'
+      const hookProtocolSubcommand = (
+        commandPath[0] === 'hooks' && (
+          commandPath[1] === 'modify-file'
+          || commandPath[1] === 'modify-bash'
+          || positional[0] === 'modify-file'
+          || positional[0] === 'modify-bash'
+        )
+      ) || (
+        commandPath[0] === 'providers' && (
+          commandPath[1] === 'hook'
+          || positional[0] === 'hook'
+        )
       );
 
       // Verbose mode: show parsed arguments. Hook protocol commands must keep stdout machine-only.

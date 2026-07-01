@@ -253,24 +253,18 @@ function createClaudeHookEntries(): HookRegistrationResult {
   const projectRoot = findProjectRoot();
   const settingsPath = path.join(projectRoot, '.claude', 'settings.json');
 
-  // Claude Code runs hooks from project root — relative paths work
-  const routeHookCommand = 'node v3/@hive-flow/providers/scripts/provider-route-hook.mjs';
-  const statusHookCommand = 'node v3/@hive-flow/providers/scripts/provider-status-hook.mjs';
+  const routeHookCommand = 'hive-flow providers hook route';
+  const statusHookCommand = 'hive-flow providers hook status';
 
   return writeHookEntries(settingsPath, routeHookCommand, statusHookCommand, 'claude');
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function createCodexHookEntries(): HookRegistrationResult {
   const projectRoot = findProjectRoot();
   const hooksPath = path.join(projectRoot, '.codex', 'hooks.json');
 
-  // Codex hooks run with various working directories — use absolute paths for safety
-  const routeHookCommand = `node ${shellQuote(path.join(projectRoot, 'v3/@hive-flow/providers/scripts/provider-route-hook.mjs'))}`;
-  const statusHookCommand = `node ${shellQuote(path.join(projectRoot, 'v3/@hive-flow/providers/scripts/provider-status-hook.mjs'))}`;
+  const routeHookCommand = 'hive-flow providers hook route';
+  const statusHookCommand = 'hive-flow providers hook status';
 
   return writeHookEntries(hooksPath, routeHookCommand, statusHookCommand, 'codex');
 }
