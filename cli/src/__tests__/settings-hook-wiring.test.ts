@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const settingsPath = resolve(here, '../../../../../.claude/settings.json');
+const settingsPath = resolve(here, '../../../.claude/settings.json');
 
 interface HookCommand {
   command?: string;

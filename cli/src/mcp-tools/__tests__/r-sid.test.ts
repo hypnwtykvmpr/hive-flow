@@ -63,7 +63,7 @@ import { setWorkflowHookDispatcher } from '../workflow-executor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const repoRoot = resolve(__dirname, '../../../../../..');
+const repoRoot = resolve(__dirname, '../../../..');
 const requireFromHere = createRequire(import.meta.url);
 const cjsSession = requireFromHere(join(repoRoot, '.claude/helpers/session-id.cjs')) as {
   resolveSessionId: (
@@ -291,6 +291,51 @@ describe('R-sid multi-session enabler', () => {
         input: {},
         env: {},
         expected: null,
+      },
+      // Kind-aware resolution: when the transport context carries a
+      // classified operator kind, leaked markers from OTHER operators
+      // sharing the machine/tmux env must not hijack the session.
+      {
+        input: { session_id: 'payload-session' },
+        env: { CODEX_THREAD_ID: 'codex-thread' },
+        context: { sessionId: 'context-session', clientKind: 'claude' },
+        expected: 'payload-session',
+      },
+      {
+        input: {},
+        env: { CODEX_THREAD_ID: 'codex-thread', CLAUDE_CODE_SESSION_ID: 'claude-code-session' },
+        context: { sessionId: 'context-session', clientKind: 'claude' },
+        expected: 'claude-code-session',
+      },
+      {
+        input: {},
+        env: { CODEX_THREAD_ID: 'codex-thread' },
+        context: { sessionId: 'context-session', clientKind: 'claude' },
+        expected: 'context-session',
+      },
+      {
+        input: {},
+        env: { CODEX_THREAD_ID: 'codex-thread' },
+        context: { sessionId: 'mcp-1790000000000-deadbeef', clientKind: 'claude' },
+        expected: null,
+      },
+      {
+        input: {},
+        env: { CODEX_THREAD_ID: 'codex-thread' },
+        context: { sessionId: 'context-session', clientKind: 'codex' },
+        expected: 'codex-thread',
+      },
+      {
+        input: {},
+        env: { HIVE_FLOW_SESSION_ID: 'provider-session', HIVE_FLOW_CLIENT_KIND: 'claude', CODEX_THREAD_ID: 'codex-thread' },
+        context: { sessionId: 'context-session', clientKind: 'claude' },
+        expected: 'provider-session',
+      },
+      {
+        input: {},
+        env: { CODEX_THREAD_ID: 'codex-thread', CLAUDE_SESSION_ID: 'claude-session' },
+        context: { session_id: 'context-session', client_kind: 'claude-code' },
+        expected: 'claude-session',
       },
     ];
 

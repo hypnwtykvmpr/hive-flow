@@ -114,12 +114,28 @@ function asOperatorContextSessionId(value: unknown): string | null {
   return raw;
 }
 
+function contextClientKind(context: Record<string, unknown> | null | undefined): OperatorClientKind {
+  return normalizeClientKind(context?.client_kind ?? context?.clientKind);
+}
+
+function sessionEnvKeysForContextKind(env: SessionEnv, contextKind: OperatorClientKind): readonly string[] {
+  if (contextKind === 'unknown') return operatorSessionEnvKeys();
+  // The transport already classified this operator connection; a leaked
+  // session marker from a DIFFERENT operator sharing the machine/tmux env
+  // (e.g. CODEX_THREAD_ID inside a Claude-classified connection) must not
+  // hijack ownership. Only kind-agreeing markers may resolve the session.
+  return [
+    ...SESSION_ENV_KEYS_BY_KIND[contextKind],
+    ...(normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND) === contextKind ? ['HIVE_FLOW_SESSION_ID'] : []),
+  ];
+}
+
 export function resolveSessionId(
   input: Record<string, unknown> | null | undefined = null,
   env: SessionEnv = process.env,
   context: Record<string, unknown> | null | undefined = null,
 ): string | null {
-  const envSource = operatorSessionEnvKeys()
+  const envSource = sessionEnvKeysForContextKind(env, contextClientKind(context))
     .map((key) => asNonEmptyString(env[key]))
     .find((value): value is string => Boolean(value));
 
@@ -205,6 +221,12 @@ export function resolveOwnerClientKind(
   const normalizedOwnerSessionId = sanitizeSessionId(ownerSessionId);
   if (!normalizedOwnerSessionId) return 'unknown';
 
+  // An env-ATTESTED session id determines the kind even across transports:
+  // deliberate cross-lane assignment (one operator stamping ownership for a
+  // session another operator's env attests) is the established contract.
+  // Contamination is prevented upstream: resolveSessionId never lets a
+  // leaked foreign marker RESOLVE the session for a classified transport,
+  // and unattested claims still fail closed below.
   const sessionKind = resolveClientKindForSessionId(ownerSessionId, env);
   if (sessionKind !== 'unknown') return sessionKind;
 

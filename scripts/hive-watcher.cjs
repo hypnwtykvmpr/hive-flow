@@ -51,9 +51,9 @@ const HIVE_HOME = resolveHiveHome();
 function loadProtectedPathPolicyModule() {
   const envProjectRoot = process.env.HIVE_FLOW_PROJECT_ROOT || process.env.CLAUDE_PROJECT_DIR || '';
   const candidates = [
-    envProjectRoot && path.join(path.resolve(envProjectRoot), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(process.cwd()), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
-    path.join(path.resolve(__dirname, '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    envProjectRoot && path.join(path.resolve(envProjectRoot), 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(process.cwd()), 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
+    path.join(path.resolve(__dirname, '..'), 'cli', 'src', 'permission-guard', 'protected-paths.cjs'),
   ].filter(Boolean);
 
   for (const candidate of candidates) {
@@ -64,7 +64,7 @@ function loadProtectedPathPolicyModule() {
     }
   }
 
-  return require(path.join(path.resolve(__dirname, '..'), 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
+  return require(path.join(path.resolve(__dirname, '..'), 'cli', 'src', 'permission-guard', 'protected-paths.cjs'));
 }
 
 const protectedPathPolicy = loadProtectedPathPolicyModule();

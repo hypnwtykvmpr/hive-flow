@@ -90,8 +90,18 @@ function operatorSessionEnvKeys(kind = null) {
   ];
 }
 
-function envSessionValue(env = process.env) {
-  for (const key of operatorSessionEnvKeys()) {
+function envSessionValue(env = process.env, kind = null) {
+  const normalized = normalizeClientKind(kind);
+  // When the caller already classified the operator connection, only
+  // kind-agreeing session markers may resolve the session; a leaked marker
+  // from another operator sharing the machine/tmux env must not hijack it.
+  const keys = normalized
+    ? [
+      ...operatorSessionEnvKeys(normalized),
+      ...(normalizeClientKind(env && env.HIVE_FLOW_CLIENT_KIND) === normalized ? ['HIVE_FLOW_SESSION_ID'] : []),
+    ]
+    : operatorSessionEnvKeys();
+  for (const key of keys) {
     const value = stringValue(env && env[key]);
     if (value) return value;
   }

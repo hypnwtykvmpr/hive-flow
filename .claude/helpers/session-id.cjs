@@ -2,7 +2,7 @@
 'use strict';
 
 const path = require('node:path');
-const { envSessionValue } = require('./client-kind.cjs');
+const { envSessionValue, normalizeClientKind } = require('./client-kind.cjs');
 
 const { loadProtectedPathPolicyModule } = require('./layout-paths.cjs');
 
@@ -25,10 +25,14 @@ function asOperatorContextSessionId(value) {
 }
 
 function resolveSessionId(input = null, env = process.env, context = null) {
+  const rawContextKind = context
+    ? (context.client_kind != null ? context.client_kind : context.clientKind)
+    : null;
+  const contextKind = normalizeClientKind(rawContextKind);
   const source =
     asNonEmptyString(input && input.session_id)
     || asNonEmptyString(input && input.sessionId)
-    || envSessionValue(env)
+    || envSessionValue(env, contextKind)
     || asOperatorContextSessionId(context && context.session_id)
     || asOperatorContextSessionId(context && context.sessionId);
 

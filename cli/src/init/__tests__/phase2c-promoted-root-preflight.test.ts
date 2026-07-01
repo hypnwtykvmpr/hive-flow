@@ -28,7 +28,10 @@ const DELIBERATE_OLD_CLI_SENTINELS = new Set([
 ]);
 
 function trackedCliSourceFiles(): string[] {
-  return execFileSync('git', ['ls-files', '-z', '--', 'cli/src'], {
+  // `scripts/` holds repo-root runtime helpers (sentinel watcher, installers)
+  // that load promoted-CLI modules at runtime; they must not regress to the
+  // old layout either (a stale watcher path escaped the cli/src-only scan).
+  return execFileSync('git', ['ls-files', '-z', '--', 'cli/src', 'scripts'], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
   })

@@ -17,7 +17,7 @@ import { resolve, join } from 'node:path';
 // Paths to the actual files under test
 // ---------------------------------------------------------------------------
 
-const ROOT = resolve(__dirname, '..', '..', '..', '..', '..', '..');
+const ROOT = resolve(__dirname, '..', '..', '..', '..');
 const HOOK_HANDLER_PATH = join(ROOT, '.claude', 'helpers', 'hook-handler.cjs');
 const SETTINGS_PATH = join(ROOT, '.claude', 'settings.json');
 
