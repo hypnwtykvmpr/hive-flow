@@ -339,7 +339,7 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
             if (
               pkg.version &&
               typeof pkg.name === 'string' &&
-              (pkg.name === '@hive-flow/cli' || pkg.name === 'hive-flow' || pkg.name === 'hive-flow')
+              (pkg.name === '@hive-flow/cli' || pkg.name === 'hive-flow')
             ) {
               currentVersion = pkg.version;
               break;
@@ -365,7 +365,7 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
     // Query npm for latest version (using alpha tag since that's what we publish to)
     let latestVersion = currentVersion;
     try {
-      const npmInfo = await runCommand('npm view @hive-flow/cli@alpha version', 5000);
+      const npmInfo = await runCommand('npm view hive-flow@v3alpha version', 5000);
       latestVersion = npmInfo.trim();
     } catch {
       // Can't reach npm registry - skip check
@@ -402,7 +402,7 @@ async function checkVersionFreshness(): Promise<HealthCheck> {
     if (isOutdated) {
       const fix = isNpx
         ? 'rm -rf ~/.npm/_npx/* && hive-flow'
-        : 'npm update @hive-flow/cli';
+        : 'npm update hive-flow';
 
       return {
         name: 'Version Freshness',

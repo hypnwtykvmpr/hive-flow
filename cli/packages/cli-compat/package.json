@@ -1,0 +1,363 @@
+{
+  "name": "@hive-flow/cli",
+  "version": "3.1.0-alpha.52",
+  "type": "module",
+  "description": "Compatibility shim for the renamed hive-flow package",
+  "main": "./exports/index.js",
+  "types": "./exports/index.d.ts",
+  "sideEffects": false,
+  "bin": {
+    "cli": "./bin/cli.js",
+    "hive-flow": "./bin/hive-flow.js",
+    "hive-flow-codex": "./bin/hive-flow-codex.js",
+    "hive-flow-mcp": "./bin/hive-flow-mcp.js",
+    "hive-flow-statusline": "./bin/hive-flow-statusline.js",
+    "hooks-daemon": "./bin/hooks-daemon.js",
+    "hooks-statusline": "./bin/hooks-statusline.js",
+    "hive-flow-hooks": "./bin/hive-flow-hooks.js",
+    "guidance": "./bin/guidance.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./exports/index.d.ts",
+      "import": "./exports/index.js"
+    },
+    "./hivector": {
+      "types": "./exports/hivector.d.ts",
+      "import": "./exports/hivector.js"
+    },
+    "./hivector/*": {
+      "types": "./exports/hivector/*.d.ts",
+      "import": "./exports/hivector/*.js"
+    },
+    "./guidance": {
+      "types": "./exports/guidance.d.ts",
+      "import": "./exports/guidance.js"
+    },
+    "./guidance/*": {
+      "types": "./exports/guidance/*.d.ts",
+      "import": "./exports/guidance/*.js"
+    },
+    "./hooks": {
+      "types": "./exports/hooks.d.ts",
+      "import": "./exports/hooks.js"
+    },
+    "./hooks/types": {
+      "types": "./exports/hooks/types.d.ts",
+      "import": "./exports/hooks/types.js"
+    },
+    "./hooks/registry": {
+      "types": "./exports/hooks/registry.d.ts",
+      "import": "./exports/hooks/registry.js"
+    },
+    "./hooks/executor": {
+      "types": "./exports/hooks/executor.d.ts",
+      "import": "./exports/hooks/executor.js"
+    },
+    "./hooks/daemons": {
+      "types": "./exports/hooks/daemons.d.ts",
+      "import": "./exports/hooks/daemons.js"
+    },
+    "./hooks/mcp": {
+      "types": "./exports/hooks/mcp.d.ts",
+      "import": "./exports/hooks/mcp.js"
+    },
+    "./hooks/reasoningbank": {
+      "types": "./exports/hooks/reasoningbank.d.ts",
+      "import": "./exports/hooks/reasoningbank.js"
+    },
+    "./hooks/guidance": {
+      "types": "./exports/hooks/guidance.d.ts",
+      "import": "./exports/hooks/guidance.js"
+    },
+    "./hooks/bridge": {
+      "types": "./exports/hooks/bridge.d.ts",
+      "import": "./exports/hooks/bridge.js"
+    },
+    "./hooks/swarm": {
+      "types": "./exports/hooks/swarm.d.ts",
+      "import": "./exports/hooks/swarm.js"
+    },
+    "./hooks/workers": {
+      "types": "./exports/hooks/workers.d.ts",
+      "import": "./exports/hooks/workers.js"
+    },
+    "./hooks/workers/mcp-tools": {
+      "types": "./exports/hooks/workers/mcp-tools.d.ts",
+      "import": "./exports/hooks/workers/mcp-tools.js"
+    },
+    "./hooks/workers/session-hook": {
+      "types": "./exports/hooks/workers/session-hook.d.ts",
+      "import": "./exports/hooks/workers/session-hook.js"
+    },
+    "./hooks/llm": {
+      "types": "./exports/hooks/llm.d.ts",
+      "import": "./exports/hooks/llm.js"
+    },
+    "./hooks/cli/guidance-cli": {
+      "types": "./exports/hooks/cli/guidance-cli.d.ts",
+      "import": "./exports/hooks/cli/guidance-cli.js"
+    },
+    "./browser": {
+      "types": "./exports/browser.d.ts",
+      "import": "./exports/browser.js"
+    },
+    "./browser/mcp-tools": {
+      "types": "./exports/browser/mcp-tools.d.ts",
+      "import": "./exports/browser/mcp-tools.js"
+    },
+    "./browser/skill": {
+      "types": "./exports/browser/skill.d.ts",
+      "import": "./exports/browser/skill.js"
+    },
+    "./browser/agent": {
+      "types": "./exports/browser/agent.d.ts",
+      "import": "./exports/browser/agent.js"
+    },
+    "./security": {
+      "types": "./exports/security.d.ts",
+      "import": "./exports/security.js"
+    },
+    "./security/application": {
+      "types": "./exports/security/application.d.ts",
+      "import": "./exports/security/application.js"
+    },
+    "./security/domain": {
+      "types": "./exports/security/domain.d.ts",
+      "import": "./exports/security/domain.js"
+    },
+    "./security/*": {
+      "types": "./exports/security/*.d.ts",
+      "import": "./exports/security/*.js"
+    },
+    "./plugin-sdk": {
+      "types": "./exports/plugin-sdk.d.ts",
+      "import": "./exports/plugin-sdk.js"
+    },
+    "./plugin-sdk/sdk": {
+      "types": "./exports/plugin-sdk/sdk.d.ts",
+      "import": "./exports/plugin-sdk/sdk.js"
+    },
+    "./plugin-sdk/workers": {
+      "types": "./exports/plugin-sdk/workers.d.ts",
+      "import": "./exports/plugin-sdk/workers.js"
+    },
+    "./plugin-sdk/hooks": {
+      "types": "./exports/plugin-sdk/hooks.d.ts",
+      "import": "./exports/plugin-sdk/hooks.js"
+    },
+    "./plugin-sdk/providers": {
+      "types": "./exports/plugin-sdk/providers.d.ts",
+      "import": "./exports/plugin-sdk/providers.js"
+    },
+    "./plugin-sdk/examples/plugin-creator": {
+      "types": "./exports/plugin-sdk/examples/plugin-creator.d.ts",
+      "import": "./exports/plugin-sdk/examples/plugin-creator.js"
+    },
+    "./plugin-sdk/*": {
+      "types": "./exports/plugin-sdk/*.d.ts",
+      "import": "./exports/plugin-sdk/*.js"
+    },
+    "./codex": {
+      "types": "./exports/codex.d.ts",
+      "import": "./exports/codex.js"
+    },
+    "./codex/generators": {
+      "types": "./exports/codex/generators.d.ts",
+      "import": "./exports/codex/generators.js"
+    },
+    "./codex/templates": {
+      "types": "./exports/codex/templates.d.ts",
+      "import": "./exports/codex/templates.js"
+    },
+    "./codex/migrations": {
+      "types": "./exports/codex/migrations.d.ts",
+      "import": "./exports/codex/migrations.js"
+    },
+    "./codex/dual-mode": {
+      "types": "./exports/codex/dual-mode.d.ts",
+      "import": "./exports/codex/dual-mode.js"
+    },
+    "./codex/*": {
+      "types": "./exports/codex/*.d.ts",
+      "import": "./exports/codex/*.js"
+    },
+    "./memory": {
+      "types": "./exports/memory.d.ts",
+      "import": "./exports/memory.js"
+    },
+    "./memory/application": {
+      "types": "./exports/memory/application.d.ts",
+      "import": "./exports/memory/application.js"
+    },
+    "./memory/domain": {
+      "types": "./exports/memory/domain.d.ts",
+      "import": "./exports/memory/domain.js"
+    },
+    "./memory/infrastructure": {
+      "types": "./exports/memory/infrastructure.d.ts",
+      "import": "./exports/memory/infrastructure.js"
+    },
+    "./memory/*": {
+      "types": "./exports/memory/*.d.ts",
+      "import": "./exports/memory/*.js"
+    },
+    "./shared": {
+      "types": "./exports/shared.d.ts",
+      "import": "./exports/shared.js"
+    },
+    "./shared/types": {
+      "types": "./exports/shared/types.d.ts",
+      "import": "./exports/shared/types.js"
+    },
+    "./shared/core": {
+      "types": "./exports/shared/core.d.ts",
+      "import": "./exports/shared/core.js"
+    },
+    "./shared/core/config/defaults": {
+      "types": "./exports/shared/core/config/defaults.d.ts",
+      "import": "./exports/shared/core/config/defaults.js"
+    },
+    "./shared/events": {
+      "types": "./exports/shared/events.d.ts",
+      "import": "./exports/shared/events.js"
+    },
+    "./shared/hooks": {
+      "types": "./exports/shared/hooks.d.ts",
+      "import": "./exports/shared/hooks.js"
+    },
+    "./shared/mcp": {
+      "types": "./exports/shared/mcp.d.ts",
+      "import": "./exports/shared/mcp.js"
+    },
+    "./shared/security": {
+      "types": "./exports/shared/security.d.ts",
+      "import": "./exports/shared/security.js"
+    },
+    "./shared/resilience": {
+      "types": "./exports/shared/resilience.d.ts",
+      "import": "./exports/shared/resilience.js"
+    },
+    "./shared/utils/*": {
+      "types": "./exports/shared/utils/*.d.ts",
+      "import": "./exports/shared/utils/*.js"
+    },
+    "./shared/workflow": {
+      "types": "./exports/shared/workflow.d.ts",
+      "import": "./exports/shared/workflow.js"
+    },
+    "./package.json": "./package.json",
+    "./mcp-tools": {
+      "types": "./exports/mcp-tools.d.ts",
+      "import": "./exports/mcp-tools.js"
+    },
+    "./mcp": {
+      "types": "./exports/mcp.d.ts",
+      "import": "./exports/mcp.js"
+    },
+    "./mcp/*": {
+      "types": "./exports/mcp/*.d.ts",
+      "import": "./exports/mcp/*.js"
+    },
+    "./deployment": {
+      "types": "./exports/deployment.d.ts",
+      "import": "./exports/deployment.js"
+    },
+    "./performance": {
+      "types": "./exports/performance.d.ts",
+      "import": "./exports/performance.js"
+    },
+    "./performance/*": {
+      "types": "./exports/performance/*.d.ts",
+      "import": "./exports/performance/*.js"
+    },
+    "./claims": {
+      "types": "./exports/claims.d.ts",
+      "import": "./exports/claims.js"
+    },
+    "./claims/*": {
+      "types": "./exports/claims/*.d.ts",
+      "import": "./exports/claims/*.js"
+    },
+    "./testing": {
+      "types": "./exports/testing.d.ts",
+      "import": "./exports/testing.js"
+    },
+    "./testing/helpers": {
+      "types": "./exports/testing/helpers.d.ts",
+      "import": "./exports/testing/helpers.js"
+    },
+    "./testing/fixtures": {
+      "types": "./exports/testing/fixtures.d.ts",
+      "import": "./exports/testing/fixtures.js"
+    },
+    "./testing/mocks": {
+      "types": "./exports/testing/mocks.d.ts",
+      "import": "./exports/testing/mocks.js"
+    },
+    "./testing/setup": {
+      "types": "./exports/testing/setup.d.ts",
+      "import": "./exports/testing/setup.js"
+    },
+    "./testing/v2-compat": {
+      "types": "./exports/testing/v2-compat.d.ts",
+      "import": "./exports/testing/v2-compat.js"
+    },
+    "./integration": {
+      "types": "./exports/integration.d.ts",
+      "import": "./exports/integration.js"
+    },
+    "./integration/*": {
+      "types": "./exports/integration/*.d.ts",
+      "import": "./exports/integration/*.js"
+    },
+    "./aidefence": {
+      "types": "./exports/aidefence.d.ts",
+      "import": "./exports/aidefence.js"
+    },
+    "./aidefence/detection": {
+      "types": "./exports/aidefence/detection.d.ts",
+      "import": "./exports/aidefence/detection.js"
+    },
+    "./aidefence/learning": {
+      "types": "./exports/aidefence/learning.d.ts",
+      "import": "./exports/aidefence/learning.js"
+    },
+    "./swarm": {
+      "types": "./exports/swarm.d.ts",
+      "import": "./exports/swarm.js"
+    },
+    "./swarm/*": {
+      "types": "./exports/swarm/*.d.ts",
+      "import": "./exports/swarm/*.js"
+    },
+    "./neural": {
+      "types": "./exports/neural.d.ts",
+      "import": "./exports/neural.js"
+    },
+    "./neural/*": {
+      "types": "./exports/neural/*.d.ts",
+      "import": "./exports/neural/*.js"
+    }
+  },
+  "files": [
+    "exports",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/generate-compat.mjs",
+    "prepack": "node scripts/generate-compat.mjs"
+  },
+  "dependencies": {
+    "hive-flow": "workspace:*"
+  },
+  "keywords": [
+    "hive-flow",
+    "compatibility",
+    "cli"
+  ],
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.9"
+}

@@ -37,7 +37,7 @@ const DEFAULT_CONFIG: UpdateConfig = {
     major: false,
   },
   priority: {
-    '@hive-flow/cli': 'high',
+    'hive-flow': 'high',
     '@hive-flow/embeddings': 'normal',
   },
   exclude: [],
@@ -45,7 +45,7 @@ const DEFAULT_CONFIG: UpdateConfig = {
 
 // Packages to check for updates
 const HIVE_FLOW_PACKAGES = [
-  '@hive-flow/cli',
+  'hive-flow',
   '@hive-flow/embeddings',
 ];
 

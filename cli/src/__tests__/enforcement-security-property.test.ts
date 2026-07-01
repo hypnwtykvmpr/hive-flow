@@ -15,8 +15,25 @@ const PROPERTY_RUNS = propertyRunsFromEnv(100);
 const require = createRequire(import.meta.url);
 const fsForLockSpy = require('node:fs') as typeof import('node:fs');
 const here = dirname(fileURLToPath(import.meta.url));
-const source = resolve(here, '../../../../../.claude/helpers/enforcement.cjs');
-const settingsSource = resolve(here, '../../../../../.claude/settings.json');
+function findRepoRoot(start = here): string {
+  let current = resolve(start);
+  for (;;) {
+    if (
+      existsSync(join(current, 'package.json')) &&
+      existsSync(join(current, 'cli', 'package.json')) &&
+      existsSync(join(current, '.claude', 'helpers', 'enforcement.cjs'))
+    ) {
+      return current;
+    }
+    const parent = dirname(current);
+    if (parent === current) throw new Error('Unable to locate hive-flow repo root');
+    current = parent;
+  }
+}
+
+const repoRoot = findRepoRoot();
+const source = resolve(repoRoot, '.claude/helpers/enforcement.cjs');
+const settingsSource = resolve(repoRoot, '.claude/settings.json');
 const policySource = resolve(here, '../permission-guard/protected-paths.cjs');
 const policyJsonSource = resolve(here, '../permission-guard/protected-paths.policy.json');
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'hive-flow-enforcement-security-')));
@@ -24,7 +41,8 @@ const previousHiveFlowHome = process.env.HIVE_FLOW_HOME;
 const helperPath = join(root, '.claude', 'helpers', 'enforcement.cjs');
 mkdirSync(dirname(helperPath), { recursive: true });
 copyFileSync(source, helperPath);
-const policyPath = join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
+copyFileSync(resolve(repoRoot, '.claude/helpers/layout-paths.cjs'), join(dirname(helperPath), 'layout-paths.cjs'));
+const policyPath = join(root, 'cli', 'src', 'permission-guard', 'protected-paths.cjs');
 mkdirSync(dirname(policyPath), { recursive: true });
 copyFileSync(policySource, policyPath);
 copyFileSync(policyJsonSource, join(dirname(policyPath), 'protected-paths.policy.json'));
@@ -218,7 +236,7 @@ function settingsContent(mutation: SettingsMutation): string {
     settings.permissions = { allow: [...SETTINGS_BASELINE_ALLOW, 'Write(.claude/settings.json)'] };
   }
   if (mutation === 'bare-governance-allow') {
-    settings.permissions = { allow: [...SETTINGS_BASELINE_ALLOW, 'v3/@hive-flow/cli/src/permission-guard/gate.ts'] };
+    settings.permissions = { allow: [...SETTINGS_BASELINE_ALLOW, 'cli/src/permission-guard/gate.ts'] };
   }
   return JSON.stringify(settings);
 }
@@ -314,8 +332,8 @@ describe('enforcement security property contracts', () => {
       '.claude/helpers/enforcement.cjs',
       '.claude/helpers/role-enforcement.cjs',
       '.hive-flow/enforcement/state.json',
-      'v3/@hive-flow/cli/src/permission-guard/gate.ts',
-      'v3/@hive-flow/cli/dist/src/mcp-tools/index.js',
+      'cli/src/permission-guard/gate.ts',
+      'cli/dist/src/mcp-tools/index.js',
       'scripts/permission-guard-setup.mjs',
     );
     const toolName = fc.constantFrom(
@@ -361,7 +379,7 @@ describe('enforcement security property contracts', () => {
 
     for (const toolName of ['mcp__filesystem__rename_file', 'mcp__filesystem__copy_file']) {
       const result = enf.detectCircumvention(toolName, {
-        source: 'v3/@hive-flow/cli/src/permission-guard/gate.ts',
+        source: 'cli/src/permission-guard/gate.ts',
         destination: 'tmp/gate.ts',
       }, state);
 
@@ -434,8 +452,8 @@ describe('enforcement security property contracts', () => {
     expect(enf.isProtectedPath(join(root, '.HIVE-FLOW', 'WORKFLOWS', 'state.json'))).toBe(true);
     expect(enf.isProtectedPath(join(root, '.hive-flow', 'workflows-old', 'state.json'))).toBe(false);
 
-    expect(enf.isProtectedPath(join(root, 'v3', '@hive-flow', 'cli', 'src', 'permission-guard', 'gate.ts'))).toBe(true);
-    expect(enf.isProtectedPath(join(root, 'v3', '@hive-flow', 'cli', 'src', 'PERMISSION-GUARD', 'gate.ts'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, 'cli', 'src', 'permission-guard', 'gate.ts'))).toBe(true);
+    expect(enf.isProtectedPath(join(root, 'cli', 'src', 'PERMISSION-GUARD', 'gate.ts'))).toBe(true);
     expect(enf.isProtectedPath(join(root, 'scripts', 'permission-guard-setup.mjs'))).toBe(true);
     expect(enf.isProtectedPath(join(process.env.HOME || '/tmp', '.hive-flow', 'permission-guard', 'config.json'))).toBe(true);
   });
@@ -615,7 +633,7 @@ describe('enforcement security property contracts', () => {
     for (const [index, command] of [
       'export HIVE_FLOW_ENFORCEMENT_DISABLED=1',
       'HIVE_FLOW_PIPELINE_OVERRIDE=1 node .claude/helpers/hook-handler.cjs permission-guard',
-      'CF_WF_7D=1 pnpm --dir v3 --filter @hive-flow/cli test:enforcement',
+      'CF_WF_7D=1 pnpm --dir v3 --filter hive-flow test:enforcement',
     ].entries()) {
       const sessionId = `session-gate-bypass-${index}`;
       clearAgentEnv();
@@ -841,7 +859,7 @@ describe('enforcement security property contracts', () => {
     for (const [index, command] of [
       'export HIVE_FLOW_ENFORCEMENT_DISABLED=1',
       'HIVE_FLOW_PIPELINE_OVERRIDE=1 node .claude/helpers/hook-handler.cjs permission-guard',
-      'CF_WF_7D=1 pnpm --dir v3 --filter @hive-flow/cli test:enforcement',
+      'CF_WF_7D=1 pnpm --dir v3 --filter hive-flow test:enforcement',
     ].entries()) {
       const sessionId = `gate-bypass-session-${index}`;
       clearAgentEnv();
@@ -1148,7 +1166,7 @@ describe('enforcement security property contracts', () => {
 
   it('escalates coordinator non-substrate attacks to project scope without global halt', () => {
     for (const command of [
-      'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node v3/@hive-flow/cli/bin/cli.js status',
+      'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node cli/bin/cli.js status',
       'export CLAUDE_PROJECT_DIR=/tmp/spoofed',
       'rm -rf /',
     ]) {
@@ -1207,8 +1225,8 @@ describe('enforcement security property contracts', () => {
 
   it('denies first non-substrate global protected writes and escalates only on cross-channel repeat', () => {
     const globalProtectedTargets = [
-      'v3/@hive-flow/cli/src/permission-guard/gate.ts',
-      'v3/@hive-flow/cli/dist/src/mcp-tools/index.js',
+      'cli/src/permission-guard/gate.ts',
+      'cli/dist/src/mcp-tools/index.js',
       'scripts/install-enforcement.mjs',
       '.env',
     ];
@@ -1238,11 +1256,11 @@ describe('enforcement security property contracts', () => {
 
     enf.processPreToolUse({
       tool_name: 'Write',
-      tool_input: { file_path: 'v3/@hive-flow/cli/src/permission-guard/gate.ts' },
+      tool_input: { file_path: 'cli/src/permission-guard/gate.ts' },
     });
     const repeat = enf.processPreToolUse({
       tool_name: 'Bash',
-      tool_input: { command: 'printf x >> v3/@hive-flow/cli/src/permission-guard/gate.ts' },
+      tool_input: { command: 'printf x >> cli/src/permission-guard/gate.ts' },
     });
 
     expect(repeat.hookSpecificOutput.permissionDecision).toBe('deny');
@@ -1432,7 +1450,7 @@ describe('enforcement security property contracts', () => {
 
     expect(enf.detectCircumvention(
       'Bash',
-      { command: 'node --test v3/@hive-flow/cli/src/__tests__/enforcement-security-property.test.ts' },
+      { command: 'node --test cli/src/__tests__/enforcement-security-property.test.ts' },
       restricted,
     ).circumvention).toBe(false);
   });
@@ -1760,7 +1778,7 @@ describe('enforcement security property contracts', () => {
       tool_input: {
         file_path: filePath,
         old_string: SETTINGS_BASELINE_ALLOW[0],
-        new_string: `${SETTINGS_BASELINE_ALLOW[0]}","v3/@hive-flow/cli/src/permission-guard/gate.ts`,
+        new_string: `${SETTINGS_BASELINE_ALLOW[0]}","cli/src/permission-guard/gate.ts`,
       },
     });
     expect(bareGovernanceAllow.hookSpecificOutput.permissionDecision).toBe('deny');
@@ -1977,7 +1995,7 @@ describe('enforcement security property contracts', () => {
       { protectedPath: '.claude/settings.local.json', siblingPath: '.claude/settings.local.json.bak' },
       { protectedPath: '.env', siblingPath: '.env.example' },
       { protectedPath: '.hive-flow/enforcement/state.json', siblingPath: '.hive-flow/enforcement-old/state.json' },
-      { protectedPath: 'v3/@hive-flow/cli/src/permission-guard/gate.ts', siblingPath: 'v3/@hive-flow/cli/src/permission-guard-old/gate.ts' },
+      { protectedPath: 'cli/src/permission-guard/gate.ts', siblingPath: 'cli/src/permission-guard-old/gate.ts' },
     );
 
     fc.assert(
@@ -2001,7 +2019,7 @@ describe('enforcement security property contracts', () => {
 
     const rootSpoofInline = enf.detectCircumvention(
       'Bash',
-      { command: 'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node v3/@hive-flow/cli/bin/cli.js status' },
+      { command: 'HIVE_FLOW_PROJECT_ROOT=/tmp/spoofed node cli/bin/cli.js status' },
       state,
     );
     expect(rootSpoofInline).toMatchObject({ circumvention: true });
@@ -2148,7 +2166,7 @@ describe('enforcement security property contracts', () => {
     for (const command of [
       'bash -c "node --eval \\"console.log(1)\\""',
       'npx node -e "console.log(1)"',
-      'pnpm --dir v3 --filter @hive-flow/cli exec node -e "console.log(1)"',
+      'pnpm --dir v3 --filter hive-flow exec node -e "console.log(1)"',
       'npm exec -- node -e "console.log(1)"',
       'yarn node -e "console.log(1)"',
       'nice node -e "console.log(1)"',
@@ -2228,7 +2246,7 @@ describe('enforcement security property contracts', () => {
     };
 
     for (const command of [
-      'pnpm --dir v3 --filter @hive-flow/cli exec vitest run src/__tests__/enforcement-security-property.test.ts',
+      'pnpm --dir v3 --filter hive-flow exec vitest run src/__tests__/enforcement-security-property.test.ts',
       'npx tsc --noEmit',
       'npm exec eslint -- src/index.ts',
       'yarn vitest run src/__tests__/enforcement-security-property.test.ts',

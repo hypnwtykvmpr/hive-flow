@@ -20,17 +20,17 @@ interface PackageCompatibility {
 
 // Known compatibility matrix between @hive-flow packages
 const COMPATIBILITY_MATRIX: Record<string, Record<string, PackageCompatibility>> = {
-  '@hive-flow/cli': {
+  'hive-flow': {
     '@hive-flow/embeddings': { minVersion: '3.0.0-alpha.1' },
   },
   '@hive-flow/embeddings': {
-    '@hive-flow/cli': { minVersion: '3.0.0-alpha.50' },
+    'hive-flow': { minVersion: '3.0.0-alpha.50' },
   },
 };
 
 // Known breaking changes by version
 const BREAKING_CHANGES: Record<string, Record<string, string[]>> = {
-  '@hive-flow/cli': {
+  'hive-flow': {
     '3.0.0': [
       'Memory API changed from key-value to vector-based',
       'Hooks system completely redesigned',

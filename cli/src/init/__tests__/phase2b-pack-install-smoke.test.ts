@@ -1,12 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { REPO_ROOT } from './debrand-static-scope.js';
 
 type PackSmokeModule = {
   REQUIRED_EXACT_PACK_PATHS: readonly string[];
   assertPackageFileList(files: string[]): void;
+  assertCompatShimManifest(
+    manifest: Record<string, unknown>,
+    canonicalPackage: Record<string, unknown>,
+  ): void;
   createBundledProviderManifest(providersPackage: Record<string, unknown>): Record<string, unknown>;
   createFutureHiveFlowManifest(args: {
     cliPackage: Record<string, unknown>;
@@ -19,6 +22,24 @@ type PackSmokeModule = {
 function readJson(path: string): Record<string, any> {
   return JSON.parse(readFileSync(path, 'utf8')) as Record<string, any>;
 }
+
+function findRepoRoot(start = __dirname): string {
+  let current = resolve(start);
+  for (;;) {
+    if (
+      existsSync(join(current, 'package.json')) &&
+      existsSync(join(current, 'cli', 'package.json')) &&
+      existsSync(join(current, 'v3'))
+    ) {
+      return current;
+    }
+    const parent = dirname(current);
+    if (parent === current) throw new Error('Unable to locate hive-flow repo root');
+    current = parent;
+  }
+}
+
+const REPO_ROOT = findRepoRoot();
 
 function currentCliRoot(): string {
   const promoted = resolve(REPO_ROOT, 'cli');
@@ -72,6 +93,32 @@ describe('Phase 2B C3 pack/install smoke harness', () => {
     expect(JSON.stringify(manifest)).not.toContain('@hive-flow/embeddings');
     expect(JSON.stringify(manifest)).not.toContain('@hive-flow/plugin-gastown-bridge');
     expect(manifest.devDependencies).toBeUndefined();
+  });
+
+  it('requires the @hive-flow/cli compat shim to pack with a concrete hive-flow dependency', () => {
+    const shimManifest = {
+      name: '@hive-flow/cli',
+      version: cliPackage.version,
+      dependencies: {
+        'hive-flow': cliPackage.version,
+      },
+      exports: cliPackage.exports,
+      bin: cliPackage.bin,
+    };
+
+    expect(() => smoke.assertCompatShimManifest(shimManifest, cliPackage)).not.toThrow();
+    expect(() => smoke.assertCompatShimManifest({
+      ...shimManifest,
+      dependencies: {
+        'hive-flow': 'workspace:*',
+      },
+    }, cliPackage)).toThrow(/workspace/);
+    expect(() => smoke.assertCompatShimManifest({
+      ...shimManifest,
+      exports: {
+        '.': cliPackage.exports['.'],
+      },
+    }, cliPackage)).toThrow(/export keys/);
   });
 
   it('keeps third-party deps out of the bundled providers manifest while root declares undici', () => {

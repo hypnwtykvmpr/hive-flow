@@ -1060,9 +1060,15 @@ function findSourceHelpersDir(
   // Strategy 1: require.resolve to find package root (most reliable for npx)
   try {
     const esmRequire = createRequire(import.meta.url);
-    const pkgJsonPath = esmRequire.resolve('@hive-flow/cli/package.json');
-    const pkgRoot = path.dirname(pkgJsonPath);
-    possiblePaths.push(path.join(pkgRoot, '.claude', 'helpers'));
+    for (const packageName of ['hive-flow', '@hive-flow/cli']) {
+      try {
+        const pkgJsonPath = esmRequire.resolve(`${packageName}/package.json`);
+        const pkgRoot = path.dirname(pkgJsonPath);
+        possiblePaths.push(path.join(pkgRoot, '.claude', 'helpers'));
+      } catch {
+        // Try the next package identity.
+      }
+    }
   } catch {
     // Not installed as a package — skip
   }

@@ -959,7 +959,7 @@ export class MCPServerManager extends EventEmitter {
     } catch (importErr) {
       throw new Error(
         `HTTP/WebSocket MCP transport requires the local MCP implementation which could not be loaded: ${(importErr as Error).message}. ` +
-        `Use --transport stdio (default) or run 'pnpm install' and 'pnpm --filter @hive-flow/cli build'.`,
+        `Use --transport stdio (default) or run 'pnpm install' and 'pnpm --filter hive-flow build'.`,
       );
     }
 

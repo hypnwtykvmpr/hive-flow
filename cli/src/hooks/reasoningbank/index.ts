@@ -296,7 +296,7 @@ export class ReasoningBank extends EventEmitter {
       }
     };
 
-    const memoryModule = await dynamicImport('@hive-flow/cli/memory');
+    const memoryModule = await dynamicImport('hive-flow/memory');
     if (memoryModule) {
       LocalVectorBackend = memoryModule.LocalVectorBackend;
       HNSWIndex = memoryModule.HNSWIndex;

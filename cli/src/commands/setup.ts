@@ -664,9 +664,13 @@ async function uninstallAdapter(id: AdapterId, ctx: any) {
 }
 
 export function resolveMcpServerEntry(projectRoot: string): string {
-  // Candidate 1: running from workspace root (e.g., repo root → v3/@hive-flow/cli/bin/)
-  const workspaceCandidate = resolve(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'mcp-server.js');
+  // Candidate 1: running from the promoted workspace root (repo root -> cli/bin/).
+  const workspaceCandidate = resolve(projectRoot, 'cli', 'bin', 'mcp-server.js');
   if (existsSync(workspaceCandidate)) return workspaceCandidate;
+
+  // Candidate 1b: legacy source layout fallback for older checkouts.
+  const legacyWorkspaceCandidate = resolve(projectRoot, 'v3', '@hive-flow', 'cli', 'bin', 'mcp-server.js');
+  if (existsSync(legacyWorkspaceCandidate)) return legacyWorkspaceCandidate;
 
   // Candidate 2: relative to this source file. Walk upward looking for bin/mcp-server.js.
   // Handles both dist/src/commands/ (tsc default preserves src as a root) and dist/commands/
@@ -685,13 +689,22 @@ export function resolveMcpServerEntry(projectRoot: string): string {
 
   try {
     const req = createRequire(import.meta.url);
-    return req.resolve('@hive-flow/cli/bin/mcp-server.js');
+    for (const packageName of ['hive-flow', '@hive-flow/cli']) {
+      try {
+        const packageJsonPath = req.resolve(`${packageName}/package.json`);
+        return resolve(packageJsonPath, '..', 'bin', 'mcp-server.js');
+      } catch {
+        // Try the next package identity.
+      }
+    }
   } catch {
-    throw new Error(
-      `Cannot resolve @hive-flow/cli/bin/mcp-server.js. ` +
-      `Run from the workspace root or install @hive-flow/cli into the current project.`,
-    );
+    // Fall through to the explicit error below.
   }
+
+  throw new Error(
+    `Cannot resolve hive-flow/bin/mcp-server.js. ` +
+    `Run from the workspace root or install hive-flow into the current project.`,
+  );
 }
 
 async function runReadOnly(opts: any) {

@@ -24,6 +24,9 @@ export const DEFAULT_PROVIDERS_ROOT = resolveProvidersRoot({
   cliRoot: DEFAULT_CLI_ROOT,
   repoRoot: DEFAULT_REPO_ROOT,
 });
+export const DEFAULT_COMPAT_ROOT = resolveCompatRoot({
+  cliRoot: DEFAULT_CLI_ROOT,
+});
 
 export const REQUIRED_EXACT_PACK_PATHS = Object.freeze([
   'bin/cli.js',
@@ -115,6 +118,10 @@ function resolveProvidersRoot({ cliRoot, repoRoot }) {
     resolve(cliRoot, '../providers'),
   ];
   return firstExistingDirectory(candidates) ?? candidates[0];
+}
+
+function resolveCompatRoot({ cliRoot }) {
+  return resolve(cliRoot, 'packages', 'cli-compat');
 }
 
 export function readJson(path) {
@@ -258,6 +265,39 @@ export function assertManifestInstallable(manifest, providersPackage) {
   }
   if (hasWorkspaceSpec(manifest.dependencies) || hasWorkspaceSpec(manifest.optionalDependencies)) {
     throw new Error('future manifest contains a workspace dependency spec');
+  }
+}
+
+export function assertCompatShimManifest(manifest, canonicalPackage) {
+  const serialized = JSON.stringify(manifest);
+  const canonicalExportKeys = Object.keys(canonicalPackage.exports ?? {});
+  const shimExportKeys = Object.keys(manifest.exports ?? {});
+  const canonicalBinKeys = Object.keys(canonicalPackage.bin ?? {});
+  const shimBinKeys = Object.keys(manifest.bin ?? {});
+
+  if (manifest.name !== '@hive-flow/cli') {
+    throw new Error(`compat shim manifest must be named @hive-flow/cli, got ${manifest.name}`);
+  }
+  if (manifest.version !== canonicalPackage.version) {
+    throw new Error(`compat shim version must match hive-flow ${canonicalPackage.version}, got ${manifest.version}`);
+  }
+  if (serialized.includes('workspace:')) {
+    throw new Error('compat shim packed manifest must not contain workspace:* specs');
+  }
+  if (manifest.dependencies?.['hive-flow'] !== canonicalPackage.version) {
+    throw new Error('compat shim packed manifest must depend on the concrete hive-flow version');
+  }
+  if (manifest.devDependencies || manifest.bundledDependencies) {
+    throw new Error('compat shim packed manifest must not ship dev or bundled dependencies');
+  }
+  if (JSON.stringify(canonicalExportKeys) !== JSON.stringify(shimExportKeys)) {
+    throw new Error('compat shim export keys must mirror canonical hive-flow export keys');
+  }
+  if (JSON.stringify(canonicalBinKeys) !== JSON.stringify(shimBinKeys)) {
+    throw new Error('compat shim bin keys must mirror canonical hive-flow bin keys');
+  }
+  if (!manifest.exports?.['./memory'] || !manifest.exports?.['./shared/utils/*']) {
+    throw new Error('compat shim manifest must preserve memory and wildcard utility exports');
   }
 }
 
@@ -442,6 +482,75 @@ function npmPack(packRoot, workRoot, { dryRun }) {
   };
 }
 
+function listTarballs(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((entry) => entry.endsWith('.tgz'))
+    .map((entry) => join(dir, entry));
+}
+
+function listTarballFiles(tarballPath) {
+  return execFileSync('tar', ['-tf', tarballPath], {
+    encoding: 'utf8',
+    timeout: 30_000,
+  })
+    .split('\n')
+    .map((line) => normalizePath(line.trim()))
+    .filter(Boolean)
+    .map((line) => line.replace(/^package\//, ''));
+}
+
+function readTarballPackageJson(tarballPath) {
+  const stdout = execFileSync('tar', ['-xOf', tarballPath, 'package/package.json'], {
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
+  return JSON.parse(stdout);
+}
+
+function pnpmPackCompatShim({ compatRoot, workRoot, canonicalPackage }) {
+  if (!directoryExists(compatRoot)) {
+    throw new Error(`[pack-smoke] compat shim root missing: ${compatRoot}`);
+  }
+
+  const before = new Set(listTarballs(workRoot));
+  execFileSync('pnpm', ['--dir', compatRoot, 'pack', '--pack-destination', workRoot], {
+    cwd: compatRoot,
+    env: npmEnv(workRoot),
+    encoding: 'utf8',
+    timeout: 120_000,
+  });
+  const created = listTarballs(workRoot).filter((path) => !before.has(path));
+  if (created.length !== 1) {
+    throw new Error(`[pack-smoke] expected one compat shim tarball, got ${created.length}`);
+  }
+
+  const tarballPath = created[0];
+  const manifest = readTarballPackageJson(tarballPath);
+  assertCompatShimManifest(manifest, canonicalPackage);
+
+  const files = listTarballFiles(tarballPath);
+  const requiredFiles = [
+    'package.json',
+    'exports/index.js',
+    'exports/memory.js',
+    'exports/shared/utils/resolve-project-root.js',
+    'bin/cli.js',
+    'bin/hive-flow.js',
+    'bin/hive-flow-statusline.js',
+  ];
+  const missing = requiredFiles.filter((path) => !files.includes(path));
+  if (missing.length) {
+    throw new Error(`[pack-smoke] compat shim tarball missing required files: ${missing.join(', ')}`);
+  }
+
+  return {
+    files,
+    manifest,
+    tarballPath,
+  };
+}
+
 function npmInstallTarball(tarballPath, installRoot, workRoot) {
   mkdirSync(installRoot, { recursive: true });
   execFileSync('npm', [
@@ -499,6 +608,13 @@ const loaded = [];
 for (const specifier of [
   'hive-flow',
   'hive-flow/memory',
+  '@hive-flow/cli',
+  '@hive-flow/cli/memory',
+  '@hive-flow/cli/shared',
+  '@hive-flow/cli/hooks',
+  '@hive-flow/cli/mcp',
+  '@hive-flow/cli/plugin-sdk',
+  '@hive-flow/cli/shared/utils/resolve-project-root',
   '@hive-flow/providers',
   '@hive-flow/providers/scripts/agent-task-journal.mjs',
 ]) {
@@ -529,6 +645,30 @@ process.stdout.write(JSON.stringify({
     timeout: 60_000,
   });
   return JSON.parse(stdout);
+}
+
+function probeInstalledBin(installRoot, binName, args = []) {
+  return execFileSync(join(installRoot, 'node_modules', '.bin', binName), args, {
+    cwd: installRoot,
+    env: probeEnv(installRoot),
+    encoding: 'utf8',
+    timeout: 30_000,
+  }).trim();
+}
+
+function probeCompatBins(installRoot) {
+  const statuslineOutput = execFileSync(join(installRoot, 'node_modules', '.bin', 'hive-flow-statusline'), [], {
+    cwd: installRoot,
+    env: probeEnv(installRoot),
+    input: '',
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
+  return {
+    cli: probeInstalledBin(installRoot, 'cli', ['--version']),
+    hiveFlow: probeInstalledBin(installRoot, 'hive-flow', ['--version']),
+    hiveFlowStatuslineExited: typeof statuslineOutput === 'string',
+  };
 }
 
 function probeMcpServer(packageRoot, installRoot) {
@@ -609,12 +749,19 @@ export async function runPackInstallSmoke(options = {}) {
     if (!packed.tarballPath || !existsSync(packed.tarballPath)) {
       throw new Error('[pack-smoke] npm pack did not create a tarball');
     }
+    const compatPacked = pnpmPackCompatShim({
+      compatRoot: resolve(options.compatRoot ?? DEFAULT_COMPAT_ROOT),
+      workRoot,
+      canonicalPackage: prepared.manifest,
+    });
 
     npmInstallTarball(packed.tarballPath, installRoot, workRoot);
+    npmInstallTarball(compatPacked.tarballPath, installRoot, workRoot);
 
     const packageRoot = join(installRoot, 'node_modules', 'hive-flow');
     const versionOutput = probeCliVersion(packageRoot, installRoot);
     const importProbe = runImportProbe(packageRoot, installRoot);
+    const compatBinProbe = probeCompatBins(installRoot);
     const mcpProbe = await probeMcpServer(packageRoot, installRoot);
 
     success = true;
@@ -624,8 +771,10 @@ export async function runPackInstallSmoke(options = {}) {
       generatedPackageVersion: prepared.manifest.version,
       dryRunFileCount: dryRun.files.length,
       packedFileCount: packed.files.length,
+      compatPackedFileCount: compatPacked.files.length,
       versionOutput,
       importProbe,
+      compatBinProbe,
       mcpProbe,
       omittedWorkspaceOptionals: prepared.omittedWorkspaceOptionals,
       providerUndiciSpec: prepared.manifest.dependencies.undici,
@@ -633,6 +782,7 @@ export async function runPackInstallSmoke(options = {}) {
       packRoot,
       installRoot,
       tarballPath: packed.tarballPath,
+      compatTarballPath: compatPacked.tarballPath,
       tempRetained: keepTemp,
     };
   } finally {

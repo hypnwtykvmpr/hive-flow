@@ -41,7 +41,7 @@ export interface LearningBridgeConfig {
   enabled?: boolean;
   /**
    * Optional factory for the neural learning system.
-   * When provided, this replaces the default dynamic import of @hive-flow/cli/neural.
+   * When provided, this replaces the default dynamic import of hive-flow/neural.
    * Primarily used for testing.
    */
   neuralLoader?: NeuralLoader;
@@ -396,7 +396,7 @@ export class LearningBridge extends EventEmitter {
         return;
       }
 
-      const mod = await import('@hive-flow/cli/neural' as string);
+      const mod = await import('hive-flow/neural' as string);
       const NeuralLearningSystem = mod.NeuralLearningSystem ?? mod.default;
       if (!NeuralLearningSystem) return;
 
@@ -411,7 +411,7 @@ export class LearningBridge extends EventEmitter {
 
       this.neural = instance;
     } catch {
-      // @hive-flow/cli/neural not installed or failed to initialize.
+      // hive-flow/neural not installed or failed to initialize.
       // This is expected in many environments; degrade silently.
       this.neural = null;
     }

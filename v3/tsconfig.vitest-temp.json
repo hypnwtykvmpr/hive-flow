@@ -25,10 +25,10 @@
     "baseUrl": "./",
     "paths": {
       "@hive-flow/cli": [
-        "./@hive-flow/cli/src"
+        "../cli/src"
       ],
       "@hive-flow/cli/*": [
-        "./@hive-flow/cli/src/*"
+        "../cli/src/*"
       ]
     },
     "emitDeclarationOnly": false,
@@ -36,7 +36,7 @@
   },
   "references": [
     {
-      "path": "./@hive-flow/cli"
+      "path": "../cli"
     }
   ],
   "include": [],

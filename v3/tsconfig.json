@@ -4,10 +4,10 @@
     "baseUrl": ".",
     "paths": {
       "@hive-flow/cli": [
-        "./@hive-flow/cli/src"
+        "../cli/src"
       ],
       "@hive-flow/cli/*": [
-        "./@hive-flow/cli/src/*"
+        "../cli/src/*"
       ],
       "@hive-flow/embeddings": [
         "./@hive-flow/embeddings/src"
@@ -19,7 +19,7 @@
   },
   "references": [
     {
-      "path": "./@hive-flow/cli"
+      "path": "../cli"
     },
     {
       "path": "./@hive-flow/embeddings"

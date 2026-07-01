@@ -67,7 +67,7 @@ function findCliRoot(startDir: string): string {
     if (existsSync(packageJsonPath)) {
       try {
         const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-        if (pkg.name === '@hive-flow/cli') {
+        if (pkg.name === 'hive-flow' || pkg.name === '@hive-flow/cli') {
           return current;
         }
       } catch {
@@ -77,7 +77,7 @@ function findCliRoot(startDir: string): string {
 
     const parent = dirname(current);
     if (parent === current) {
-      throw new Error('[appliance-builder] unable to locate @hive-flow/cli package root');
+      throw new Error('[appliance-builder] unable to locate hive-flow package root');
     }
     current = parent;
   }

@@ -364,7 +364,7 @@ describe('checkBashSelfProtection', () => {
 
   it.each([
     'npx node -e "console.log(1)"',
-    'pnpm --dir v3 --filter @hive-flow/cli exec node -e "console.log(1)"',
+    'pnpm --dir v3 --filter hive-flow exec node -e "console.log(1)"',
     'npm exec -- node -e "console.log(1)"',
     'yarn node -e "console.log(1)"',
   ])('blocks package-runner inline eval with the same guided denial: %s', (command) => {

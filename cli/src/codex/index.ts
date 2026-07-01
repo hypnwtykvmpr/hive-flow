@@ -80,7 +80,7 @@ function getPackageVersion(): string {
 
     try {
       const pkg = JSON.parse(readFileSync(candidate, 'utf8')) as { name?: string; version?: string };
-      if (pkg.name === '@hive-flow/cli' && pkg.version) {
+      if ((pkg.name === 'hive-flow' || pkg.name === '@hive-flow/cli') && pkg.version) {
         return pkg.version;
       }
     } catch {
