@@ -24,6 +24,25 @@ NODE
   export HF_FAKE_CLAUDE_ARGS="$FAKE_ARGS"
 }
 
+write_measured_context() {
+  local session_id="$1"
+  local percentage="$2"
+  PROJECT_DIR="$PROJECT_DIR" SESSION_ID="$session_id" PERCENTAGE="$percentage" node <<'NODE'
+const fs = require('fs');
+const path = require('path');
+const dataDir = path.join(process.env.PROJECT_DIR, '.hive-flow', 'data');
+const percentage = Number(process.env.PERCENTAGE);
+fs.mkdirSync(dataDir, { recursive: true });
+fs.writeFileSync(path.join(dataDir, 'autopilot-state.json'), JSON.stringify({
+  sessionId: process.env.SESSION_ID,
+  lastPercentage: percentage,
+  lastTokenEstimate: Math.round(percentage * 1000000),
+  contextWindow: 1000000,
+  lastCheck: Date.now(),
+}));
+NODE
+}
+
 teardown() {
   rm -rf "$PROJECT_DIR"
   unset CLAUDE_PROJECT_DIR
@@ -31,7 +50,21 @@ teardown() {
   unset HF_FAKE_CLAUDE_ARGS
 }
 
+@test "compact-now headless fails closed when context usage is unmeasurable" {
+  run node "$SCRIPT" --mode headless --reason "bats compaction" --resume "bats-session" --next-step "continue after compact"
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"unable to measure current context usage"* ]]
+  [[ "$output" == *"50% compaction request floor cannot be verified"* ]]
+  [[ "$output" == *"context measurement layer must be repaired"* ]]
+  [ ! -f "$DATA_DIR/compaction-handoff.md" ]
+  [ ! -f "$DATA_DIR/compact-request.json" ]
+  [ ! -f "$FAKE_ARGS" ]
+}
+
 @test "compact-now headless writes handoff and invokes claude compact prompt with resume" {
+  write_measured_context "bats-session" "0.60"
+
   run node "$SCRIPT" --mode headless --reason "bats compaction" --resume "bats-session" --next-step "continue after compact"
 
   [ "$status" -eq 0 ]
