@@ -532,7 +532,7 @@ child_agents_md = true
 
 [mcp_servers.hive_flow]
 command = "npx"
-args = ["-y", "@hive-flow/cli@latest"]
+args = ["-y", "hive-flow@v3alpha"]
 enabled = true
 
 [profiles.dev]
@@ -860,7 +860,7 @@ child_agents_md = true
 
 [mcp_servers.hive_flow]
 command = "npx"
-args = ["-y", "@hive-flow/cli@latest"]
+args = ["-y", "hive-flow@v3alpha"]
 enabled = true
 
 [profiles.dev]

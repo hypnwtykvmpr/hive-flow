@@ -198,7 +198,7 @@ describe('AUDIT 7: Edge cases', () => {
     'npm run "build"',
     'git log --pretty=format:"%H %s" -10',
     'node ./dist/index.js',
-    'npx @hive-flow/cli@latest doctor',
+    'npx hive-flow@v3alpha doctor',
     'curl -s -H "Accept: application/json" https://api.example.com',
     'docker compose up -d',
     'pip3 install -r requirements.txt',

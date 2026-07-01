@@ -128,7 +128,7 @@ _hive_flow_completions() {
 }
 
 complete -F _hive_flow_completions hive-flow
-complete -F _hive_flow_completions npx\\ @hive-flow/cli@v3alpha
+complete -F _hive_flow_completions npx\\ hive-flow@v3alpha
 `;
 }
 

@@ -1060,8 +1060,8 @@ export function generateCompatibilityReport(report: FullValidationReport): strin
   lines.push("import { SwarmCoordinator } from 'hive-flow/swarm';");
   lines.push('');
   lines.push("// V3 imports (using aliases)");
-  lines.push("import { UnifiedSwarmCoordinator as HiveMind } from '@hive-flow/cli/swarm';");
-  lines.push("import { UnifiedSwarmCoordinator as SwarmCoordinator } from '@hive-flow/cli/swarm';");
+  lines.push("import { UnifiedSwarmCoordinator as HiveMind } from 'hive-flow/swarm';");
+  lines.push("import { UnifiedSwarmCoordinator as SwarmCoordinator } from 'hive-flow/swarm';");
   lines.push('```');
   lines.push('');
   lines.push('---');

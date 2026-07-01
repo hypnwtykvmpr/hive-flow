@@ -72,7 +72,7 @@ export function generateMCPConfig(options: InitOptions): object {
   // Hive Flow MCP server (core)
   if (config.hiveFlow) {
     mcpServers['hive-flow'] = createMCPServerEntry(
-      ['hive-flow@latest', 'mcp', 'start'],
+      ['hive-flow@v3alpha', 'mcp', 'start'],
       {
         ...npmCacheEnv,
         HIVE_FLOW_MODE: 'v3',

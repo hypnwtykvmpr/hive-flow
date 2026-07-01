@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { ApplianceWriter } from '../../appliance/appliance-format.js';
 import type { CommandContext, CommandResult, Command } from '../../types.js';
 
-// `build` shells out to `npm pack hive-flow@latest` (network) via the real ApplianceBuilder, so
+// `build` shells out to `npm pack hive-flow@v3alpha` (network) via the real ApplianceBuilder, so
 // we mock the builder module to a network-free seam that records constructor args. This both
 // keeps the test hermetic and asserts the wrapper passes the REAL BuildOptions keys.
 const builderCalls: Array<Record<string, unknown>> = [];

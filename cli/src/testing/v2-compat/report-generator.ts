@@ -209,9 +209,9 @@ function generateEnhancedMarkdown(report: FullValidationReport, options: ReportO
   lines.push('');
   lines.push('| V2 Import | V3 Import |');
   lines.push('|-----------|-----------|');
-  lines.push('| hive-flow/hive-mind | @hive-flow/cli/swarm |');
-  lines.push('| hive-flow/swarm | @hive-flow/cli/swarm |');
-  lines.push('| hive-flow/memory | @hive-flow/cli/memory |');
+  lines.push('| hive-flow/hive-mind | hive-flow/swarm |');
+  lines.push('| hive-flow/swarm | hive-flow/swarm |');
+  lines.push('| hive-flow/memory | hive-flow/memory |');
   lines.push('| hive-flow/agents | @hive-flow/agent-lifecycle |');
   lines.push('| hive-flow/tasks | @hive-flow/task-execution |');
   lines.push('');
@@ -331,8 +331,8 @@ function generateExamplesSection(): string[] {
   lines.push("import { MemoryManager } from 'hive-flow/memory';");
   lines.push('');
   lines.push('// V3 imports with aliases');
-  lines.push("import { UnifiedSwarmCoordinator as HiveMind } from '@hive-flow/cli/swarm';");
-  lines.push("import { UnifiedMemoryService as MemoryManager } from '@hive-flow/cli/memory';");
+  lines.push("import { UnifiedSwarmCoordinator as HiveMind } from 'hive-flow/swarm';");
+  lines.push("import { UnifiedMemoryService as MemoryManager } from 'hive-flow/memory';");
   lines.push('');
   lines.push('// Usage remains the same');
   lines.push('const hive = new HiveMind();');

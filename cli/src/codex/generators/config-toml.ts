@@ -161,7 +161,7 @@ export async function generateConfigToml(options: ExtendedConfigTomlOptions = {}
       lines.push(...generateMcpServer({
         name: 'hive-flow',
         command: 'npx',
-        args: ['-y', '@hive-flow/cli@latest'],
+        args: ['-y', 'hive-flow@v3alpha'],
         enabled: true,
         toolTimeout: 120,
       }));
@@ -534,7 +534,7 @@ sandbox_mode = "${sandboxMode}"
 
 [mcp_servers.hive-flow]
 command = "npx"
-args = ["-y", "@hive-flow/cli@latest"]
+args = ["-y", "hive-flow@v3alpha"]
 enabled = true
 `;
 }
@@ -567,7 +567,7 @@ request_rule = false
 
 [mcp_servers.hive-flow]
 command = "npx"
-args = ["-y", "@hive-flow/cli@latest"]
+args = ["-y", "hive-flow@v3alpha"]
 enabled = true
 tool_timeout_sec = 300
 
@@ -645,7 +645,7 @@ remote_compaction = true
 
 [mcp_servers.hive-flow]
 command = "npx"
-args = ["-y", "@hive-flow/cli@latest"]
+args = ["-y", "hive-flow@v3alpha"]
 enabled = true
 tool_timeout_sec = 120
 
@@ -850,7 +850,7 @@ remote_compaction = true
 
 [mcp_servers.hive-flow]
 command = "npx"
-args = ["-y", "@hive-flow/cli@latest"]
+args = ["-y", "hive-flow@v3alpha"]
 enabled = true
 tool_timeout_sec = 120
 
@@ -931,7 +931,7 @@ remote_compaction = false
 
 [mcp_servers.hive-flow]
 command = "npx"
-args = ["-y", "@hive-flow/cli@latest"]
+args = ["-y", "hive-flow@v3alpha"]
 enabled = true
 tool_timeout_sec = 60
 

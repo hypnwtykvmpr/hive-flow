@@ -7,8 +7,8 @@
  *
  * @example
  * ```typescript
- * import { pluginCreatorPlugin } from '@hive-flow/cli/plugin-sdk/examples/plugin-creator';
- * import { getDefaultRegistry } from '@hive-flow/cli/plugin-sdk';
+ * import { pluginCreatorPlugin } from 'hive-flow/plugin-sdk/examples/plugin-creator';
+ * import { getDefaultRegistry } from 'hive-flow/plugin-sdk';
  *
  * await getDefaultRegistry().register(pluginCreatorPlugin);
  * ```
@@ -320,7 +320,7 @@ export function generatePlugin(options: CreatePluginOptions): GeneratedPlugin {
   codeBlocks.push(`import {
   PluginBuilder,${enabledFeatures.tools ? '\n  MCPToolBuilder,' : ''}${enabledFeatures.hooks ? '\n  HookBuilder,\n  HookEvent,\n  HookPriority,' : ''}${enabledFeatures.workers ? '\n  WorkerFactory,' : ''}${enabledFeatures.security ? '\n  Security,' : ''}
   type IPlugin,${enabledFeatures.workers ? '\n  type WorkerDefinition,' : ''}${agents.length > 0 ? '\n  type AgentTypeDefinition,' : ''}
-} from '@hive-flow/cli/plugin-sdk';
+} from 'hive-flow/plugin-sdk';
 `);
 
   // Generate tools

@@ -650,7 +650,7 @@ describe('generateConfigToml', () => {
 
       expect(result).toContain('[mcp_servers.hive-flow]');
       expect(result).toContain('command = "npx"');
-      expect(result).toContain('args = ["-y", "@hive-flow/cli@latest"]');
+      expect(result).toContain('args = ["-y", "hive-flow@v3alpha"]');
       expect(result).toContain('enabled = true');
     });
 

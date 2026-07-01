@@ -55,12 +55,6 @@ function hasCanonicalDualAccept(source: string, index: number): boolean {
   return /name\s*={2,3}\s*['"]hive-flow['"]/.test(window);
 }
 
-const GENERATED_IMPORT_TEXT_ALLOWLIST = new Set([
-  'src/plugin-sdk/examples/plugin-creator/index.ts',
-  'src/testing/v2-compat/report-generator.ts',
-  'src/testing/v2-compat/compatibility-validator.ts',
-]);
-
 const RUNTIME_SHIM_PATTERNS = [
   { label: 'dynamic import', pattern: /\bimport\s*\(\s*['"]@hive-flow\/cli(?:\/|['"])/g },
   { label: 'require', pattern: /\brequire\s*\(\s*['"]@hive-flow\/cli(?:\/|['"])/g },
@@ -93,13 +87,9 @@ function collectRuntimeShimViolations(rel: string, rawSource: string): string[] 
     }
   }
 
-  // These files intentionally generate legacy example import text. They are
-  // documentation/scaffold output and will be retargeted in the Phase 2C sweep.
-  if (!GENERATED_IMPORT_TEXT_ALLOWLIST.has(rel)) {
-    for (const { label, pattern } of STATIC_SHIM_PATTERNS) {
-      for (const match of source.matchAll(pattern)) {
-        violations.push(`${rel}: ${label} shim resolution ${match[0]}`);
-      }
+  for (const { label, pattern } of STATIC_SHIM_PATTERNS) {
+    for (const match of source.matchAll(pattern)) {
+      violations.push(`${rel}: ${label} shim resolution ${match[0]}`);
     }
   }
 
