@@ -23,9 +23,6 @@ const DP2B3_OLD_PATH_ALLOWLIST = new Set([
   'cli/src/init/__tests__/phase2b-dp2b3-preflight.test.ts',
   'cli/src/mcp-tools/provider-bridge-resolver.ts',
   'cli/src/mcp-tools/__tests__/provider-bridge-resolver.test.ts',
-  'v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs',
-  'v3/@hive-flow/providers/scripts/agent-task-journal.mjs',
-  'v3/@hive-flow/providers/scripts/agent-task-journal.d.ts',
 ]);
 
 function gitTrackedFiles(): string[] {
