@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
-const SCRIPT = join(REPO_ROOT, 'v3/@hive-flow/providers/scripts/provider-status-hook.mjs');
+const SCRIPT = join(REPO_ROOT, 'v3/@hive-flow/cli/src/commands/provider-hook-runtime.ts');
 
-describe('provider-status-hook (WP-43)', () => {
+describe('provider hook runtime (WP-43)', () => {
   it('should not contain bare execSync (only execFileSync)', () => {
     const source = readFileSync(SCRIPT, 'utf-8');
 
@@ -24,8 +24,8 @@ describe('provider-status-hook (WP-43)', () => {
   it('should import execFileSync from node:child_process', () => {
     const source = readFileSync(SCRIPT, 'utf-8');
     assert.ok(
-      /import\s*\{[^}]*execFileSync[^}]*\}\s*from\s*['"]child_process['"]/.test(source),
-      'Should import execFileSync from child_process',
+      /import\s*\{[^}]*execFileSync[^}]*\}\s*from\s*['"]node:child_process['"]/.test(source),
+      'Should import execFileSync from node:child_process',
     );
   });
 
@@ -45,15 +45,13 @@ describe('provider-status-hook (WP-43)', () => {
   it('should use array arguments for execFileSync calls', () => {
     const source = readFileSync(SCRIPT, 'utf-8');
 
-    // All execFileSync calls should have an array as second argument
-    const execFileCalls = source.match(/execFileSync\s*\([^)]+\)/g) || [];
-    assert.ok(execFileCalls.length > 0, 'Should have execFileSync calls');
-
-    for (const call of execFileCalls) {
-      assert.ok(
-        /execFileSync\s*\(\s*['"]?\w/.test(call) || /execFileSync\s*\(\s*\w+\s*,\s*\[/.test(call),
-        `execFileSync call should use array arguments: ${call}`,
-      );
-    }
+    assert.ok(
+      source.includes("execFile('which', [binary]"),
+      'which probe should pass binary as an execFile array argument',
+    );
+    assert.ok(
+      source.includes("execFile(binary, ['--version']"),
+      'version probe should pass --version as an execFile array argument',
+    );
   });
 });

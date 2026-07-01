@@ -36,6 +36,7 @@ import { GeminiCLIProvider } from '../gemini-cli-provider.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // __tests__ lives in providers/src/__tests__ → package root is two levels up.
 const PROVIDERS_ROOT = join(__dirname, '..', '..');
+const CLI_ROOT = join(PROVIDERS_ROOT, '..', 'cli');
 
 const mockSpawn = spawn as unknown as ReturnType<typeof vi.fn>;
 const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
@@ -189,6 +190,10 @@ describe('gemini-cli binary-surface guard (static / offline)', () => {
     return stripComments(readFileSync(join(PROVIDERS_ROOT, relPath), 'utf-8'));
   }
 
+  function readCliSource(relPath: string): string {
+    return stripComments(readFileSync(join(CLI_ROOT, relPath), 'utf-8'));
+  }
+
   it('agentic-wrapper resolves agy for gemini-cli, never the dead gemini binary', () => {
     const src = readSource(join('src', 'agentic-wrapper.ts'));
     // The gemini-cli binary resolution list must be ['agy'] (not ['gemini']).
@@ -202,8 +207,8 @@ describe('gemini-cli binary-surface guard (static / offline)', () => {
     expect(src).not.toMatch(/name:\s*'gemini-cli',\s*binary:\s*'gemini'/);
   });
 
-  it('provider status hook maps gemini-cli to agy, never gemini', () => {
-    const src = readSource(join('scripts', 'provider-status-hook.mjs'));
+  it('provider hook runtime maps gemini-cli to agy, never gemini', () => {
+    const src = readCliSource(join('src', 'commands', 'provider-hook-runtime.ts'));
     expect(src).toMatch(/name:\s*'gemini-cli',\s*binary:\s*'agy'/);
     expect(src).not.toMatch(/name:\s*'gemini-cli',\s*binary:\s*'gemini'/);
   });
@@ -218,14 +223,13 @@ describe('gemini-cli binary-surface guard (static / offline)', () => {
     // Belt-and-suspenders across every known binary-resolution surface. If a new
     // surface adds `gemini-cli -> gemini`, this fails so it cannot silently revert.
     const surfaces = [
-      join('src', 'agentic-wrapper.ts'),
-      join('scripts', 'setup-provider-agents.ts'),
-      join('scripts', 'provider-status-hook.mjs'),
+      { label: 'providers/src/agentic-wrapper.ts', src: readSource(join('src', 'agentic-wrapper.ts')) },
+      { label: 'providers/scripts/setup-provider-agents.ts', src: readSource(join('scripts', 'setup-provider-agents.ts')) },
+      { label: 'cli/src/commands/provider-hook-runtime.ts', src: readCliSource(join('src', 'commands', 'provider-hook-runtime.ts')) },
     ];
-    for (const rel of surfaces) {
-      const src = readSource(rel);
+    for (const { label, src } of surfaces) {
       // Forbid: a gemini-cli entry whose binary/resolution is the bare `gemini`.
-      expect(src, `${rel} must not map gemini-cli to the dead 'gemini' binary`).not.toMatch(
+      expect(src, `${label} must not map gemini-cli to the dead 'gemini' binary`).not.toMatch(
         /'gemini-cli':\s*\[\s*'gemini'|name:\s*'gemini-cli',\s*binary:\s*'gemini'/,
       );
     }
