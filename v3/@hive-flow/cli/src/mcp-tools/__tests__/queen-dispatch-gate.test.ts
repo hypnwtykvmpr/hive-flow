@@ -10,15 +10,14 @@ import type { HiveRecord } from '../hive-store.js';
 const mockAgentState = vi.hoisted(() => {
   const state: {
     store: AgentStore;
-    calls: Record<'spawn' | 'task' | 'asyncTask' | 'terminate' | 'taskResult', number>;
+    calls: Record<'spawn' | 'task' | 'terminate' | 'taskResult', number>;
     lastSpawnInput?: Record<string, unknown>;
     lastTaskInput?: Record<string, unknown>;
-    lastAsyncTaskInput?: Record<string, unknown>;
     lastTerminateInput?: Record<string, unknown>;
     retryContextSymbol: symbol;
   } = {
     store: { agents: {}, version: '3.0.0' },
-    calls: { spawn: 0, task: 0, asyncTask: 0, terminate: 0, taskResult: 0 },
+    calls: { spawn: 0, task: 0, terminate: 0, taskResult: 0 },
     retryContextSymbol: Symbol('hive-flow.agent-task.retry-context.mock'),
   };
   return state;
@@ -65,14 +64,6 @@ vi.mock('../agent-tools.js', () => {
           return { success: false, error: `Agent '${String(input.agentId)}' not found` };
         }
         return { success: true, taskId: `task-${mockAgentState.calls.task}`, agentId: input.agentId, status: 'running' };
-      },
-    },
-    {
-      name: 'agent_task_async',
-      handler: async (input: Record<string, unknown>) => {
-        mockAgentState.calls.asyncTask += 1;
-        mockAgentState.lastAsyncTaskInput = { ...input };
-        return { success: true, taskId: `async-task-${mockAgentState.calls.asyncTask}`, agentId: input.agentId, status: 'running' };
       },
     },
     {
@@ -168,10 +159,9 @@ function resetAgentMocks(): void {
       'worker-agent-1': makeAgent('worker-agent-1', 'worker'),
     },
   };
-  mockAgentState.calls = { spawn: 0, task: 0, asyncTask: 0, terminate: 0, taskResult: 0 };
+  mockAgentState.calls = { spawn: 0, task: 0, terminate: 0, taskResult: 0 };
   delete mockAgentState.lastSpawnInput;
   delete mockAgentState.lastTaskInput;
-  delete mockAgentState.lastAsyncTaskInput;
   delete mockAgentState.lastTerminateInput;
 }
 
@@ -319,7 +309,7 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(workers.every(w => String(w.error).includes('[MCP ENFORCEMENT]'))).toBe(true);
     expect(missionResult.workersErrored).toBe(5);
     expect(mockAgentState.calls.spawn).toBe(0);
-    expect(mockAgentState.calls.asyncTask).toBe(0);
+    expect(mockAgentState.calls.task).toBe(0);
   });
 
   it('RESTRICTED blocks dispatch and terminate, while WARNED still allows terminate', async () => {
@@ -970,7 +960,6 @@ describe('D-32: queen in-process dispatch gate', () => {
 
     expect(queenSource).toMatch(/function callAgentSpawn[\s\S]*assertDispatchAllowed\('agent_spawn'\)[\s\S]*spawnTool\.handler/);
     expect(queenSource).toMatch(/function callAgentTask[\s\S]*assertDispatchAllowed\('agent_task'\)[\s\S]*taskTool\.handler/);
-    expect(queenSource).toMatch(/function callAgentTaskAsync[\s\S]*assertDispatchAllowed\('agent_task'\)[\s\S]*asyncTool\.handler/);
     expect(queenSource).toMatch(/function callAgentTerminate[\s\S]*assertDispatchAllowed\('agent_terminate'\)[\s\S]*terminateTool\.handler/);
     expect(hiveMindSource).toMatch(/assertDispatchAllowed\('agent_task'\)[\s\S]*Promise\.allSettled/);
     expect(headlessWorkerSource).toMatch(/assertDispatchAllowed\('hooks_worker-dispatch'\)[\s\S]*spawn\('claude'/);

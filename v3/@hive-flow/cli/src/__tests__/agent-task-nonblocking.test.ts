@@ -18,7 +18,7 @@ vi.mock('node:fs', () => ({
   unlinkSync: vi.fn(),
 }));
 
-// Mock node:child_process — controls spawn (used for async bridge)
+// Mock node:child_process — controls spawn (used for bridge)
 vi.mock('node:child_process', () => ({
   execFile: vi.fn(),
   spawn: vi.fn(),
@@ -142,17 +142,17 @@ function setupStoreMocks(initialStore: ReturnType<typeof makeStore>) {
 }
 
 /** Find tool handlers */
-const asyncTool = agentTools.find((t) => t.name === 'agent_task_async')!;
+const taskTool = agentTools.find((t) => t.name === 'agent_task')!;
 const resultTool = agentTools.find((t) => t.name === 'agent_task_result')!;
 const terminateTool = agentTools.find((t) => t.name === 'agent_terminate')!;
 
-const asyncHandler = asyncTool.handler;
+const taskHandler = taskTool.handler;
 const resultHandler = resultTool.handler;
 const terminateHandler = terminateTool.handler;
 
 /**
  * Mock spawn to return a detached-style child with only pid and unref()
- * (agent_task_async uses detached: true, stdio: 'ignore' — no stdin/stdout/stderr).
+ * (agent_task uses detached: true, stdio: 'ignore' — no stdin/stdout/stderr).
  */
 function mockDetachedSpawn(pid: number = 12345) {
   (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({
@@ -180,13 +180,15 @@ function atomicWriteForDestination(predicate: (destination: string) => boolean) 
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
-describe('agent_task_async handler', () => {
+describe('agent_task handler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('exposes projectRoot and cwd in the async tool schema', () => {
-    expect(asyncTool.inputSchema.properties).toMatchObject({
+  it('exposes projectRoot and cwd in the task tool schema', () => {
+    expect(agentTools.filter((tool) => tool.name === 'agent_task')).toHaveLength(1);
+    expect(agentTools.filter((tool) => tool.name.startsWith('agent_task_')).map((tool) => tool.name)).toEqual(['agent_task_result']);
+    expect(taskTool.inputSchema.properties).toMatchObject({
       projectRoot: {
         type: 'string',
         description: 'Effective project root/current repo for task files, bridge cwd, and notifications',
@@ -206,7 +208,7 @@ describe('agent_task_async handler', () => {
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(12345);
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
 
     expect(result.success).toBe(true);
     expect(typeof result.taskId).toBe('string');
@@ -229,7 +231,7 @@ describe('agent_task_async handler', () => {
       return { pid: 12345, on: vi.fn(), unref: vi.fn() };
     });
 
-    await asyncHandler({ agentId: agent.agentId, task: 'background work' });
+    await taskHandler({ agentId: agent.agentId, task: 'background work' });
 
     expect(statusDuringSpawn).toBe('busy');
   });
@@ -241,11 +243,13 @@ describe('agent_task_async handler', () => {
     const agent = makeAgent({ status: 'busy' });
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'another task' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'another task' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     expect(result.agentId).toBe(agent.agentId);
     expect(result.error).toMatch(/cannot accept tasks in current state/i);
+    expect(result.code).toBe('invalid-agent-state');
+    expect(result.nextActions).toEqual(expect.arrayContaining([expect.stringMatching(/Poll the agent currentTaskId/i)]));
   });
 
   // ------------------------------------------------------------------
@@ -256,7 +260,7 @@ describe('agent_task_async handler', () => {
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(99);
 
-    await asyncHandler({ agentId: agent.agentId, task: 'the task text' });
+    await taskHandler({ agentId: agent.agentId, task: 'the task text' });
 
     const writeCalls = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls;
 
@@ -278,13 +282,13 @@ describe('agent_task_async handler', () => {
     expect(tracking.pid).toBe(99);
   });
 
-  it('honors projectRoot for async task files, tracking metadata, bridge cwd, and bridge env', async () => {
+  it('honors projectRoot for non-blocking task files, tracking metadata, bridge cwd, and bridge env', async () => {
     const agent = makeAgent();
     const projectRoot = '/tmp/vampyre-project';
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(101);
 
-    const result = await asyncHandler({
+    const result = await taskHandler({
       agentId: agent.agentId,
       task: 'cross-repo task',
       projectRoot,
@@ -314,7 +318,7 @@ describe('agent_task_async handler', () => {
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(12345);
 
-    await asyncHandler({ agentId: agent.agentId, task: 'do some work' });
+    await taskHandler({ agentId: agent.agentId, task: 'do some work' });
 
     const [, args] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
     const tokenArgIndex = args.indexOf('--agent-token');
@@ -334,7 +338,7 @@ describe('agent_task_async handler', () => {
     process.env.HIVE_FLOW_CLIENT_KIND = 'claude-code';
 
     try {
-      const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+      const result = await taskHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
 
       expect(result.success).toBe(true);
       const [, , options] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -360,7 +364,7 @@ describe('agent_task_async handler', () => {
     process.env.HIVE_FLOW_CLIENT_KIND = 'claude-code';
 
     try {
-      const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+      const result = await taskHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
 
       expect(result.success).toBe(true);
       const [, , options] = (spawn as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -382,7 +386,7 @@ describe('agent_task_async handler', () => {
     const agent = makeAgent({ ownerSessionId: undefined });
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
 
     expect(result).toMatchObject({
       success: false,
@@ -396,7 +400,7 @@ describe('agent_task_async handler', () => {
     const agent = makeAgent({ ownerClientKind: undefined });
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'do some work' }) as Record<string, unknown>;
 
     expect(result).toMatchObject({
       success: false,
@@ -412,11 +416,13 @@ describe('agent_task_async handler', () => {
   it('returns error when agent is not found', async () => {
     setupStoreMocks(makeStore({}));
 
-    const result = await asyncHandler({ agentId: 'nonexistent-agent', task: 'do work' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: 'nonexistent-agent', task: 'do work' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     expect(result.agentId).toBe('nonexistent-agent');
     expect(result.error).toBe('Agent not found');
+    expect(result.code).toBe('agent-not-found');
+    expect(result.nextActions).toEqual(expect.arrayContaining([expect.stringMatching(/agent_list|agent_status/i)]));
   });
 
   // ------------------------------------------------------------------
@@ -426,11 +432,13 @@ describe('agent_task_async handler', () => {
     const agent = makeAgent({ provider: undefined });
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'do work' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'do work' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     expect(result.agentId).toBe(agent.agentId);
     expect(result.error).toMatch(/no provider/i);
+    expect(result.code).toBe('agent-no-provider');
+    expect(result.nextActions).toEqual(expect.arrayContaining([expect.stringMatching(/Respawn the agent with a provider/i)]));
   });
 
   // ------------------------------------------------------------------
@@ -447,7 +455,7 @@ describe('agent_task_async handler', () => {
       unref: mockUnref,
     }));
 
-    await asyncHandler({ agentId: agent.agentId, task: 'detached task' });
+    await taskHandler({ agentId: agent.agentId, task: 'detached task' });
 
     const spawnCalls = (spawn as ReturnType<typeof vi.fn>).mock.calls;
     expect(spawnCalls.length).toBeGreaterThan(0);
@@ -472,7 +480,7 @@ describe('agent_task_async handler', () => {
     const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(12345);
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'haiku-banned' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'haiku-banned' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     expect(result.agentId).toBe(agent.agentId);
@@ -495,7 +503,7 @@ describe('agent_task_async handler', () => {
     const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(12345);
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'stale model policy' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'stale model policy' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     expect(result.agentId).toBe(agent.agentId);
@@ -513,7 +521,7 @@ describe('agent_task_async handler', () => {
       throw new Error('spawn failed');
     });
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'spawn failure' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'spawn failure' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/spawn failed/i);
@@ -530,7 +538,7 @@ describe('agent_task_async handler', () => {
     const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(54321);
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'track me' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'track me' }) as Record<string, unknown>;
 
     expect(result.success).toBe(true);
     const persisted = getPersistedStore().agents[agent.agentId];
@@ -546,7 +554,7 @@ describe('agent_task_async handler', () => {
     // Detached spawn with undefined pid (e.g. platform quirk).
     (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => ({ pid: undefined, on: vi.fn(), unref: vi.fn() }));
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'no pid' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'no pid' }) as Record<string, unknown>;
 
     expect(result.success).toBe(true);
     const persisted = getPersistedStore().agents[agent.agentId];
@@ -559,7 +567,7 @@ describe('agent_task_async handler', () => {
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(77);
 
-    await asyncHandler({ agentId: agent.agentId, task: 'deadline task', timeout: 120000 });
+    await taskHandler({ agentId: agent.agentId, task: 'deadline task', timeout: 120000 });
 
     const trackingWrite = atomicWriteForDestination((dest) =>
       dest.endsWith('.json') && !dest.endsWith('store.json'));
@@ -577,7 +585,7 @@ describe('agent_task_async handler', () => {
     setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     mockDetachedSpawn(88);
 
-    await asyncHandler({
+    await taskHandler({
       agentId: agent.agentId,
       task: 'retry replacement task',
       [AGENT_TASK_RETRY_CONTEXT]: {
@@ -601,7 +609,7 @@ describe('agent_task_async handler', () => {
     const { getPersistedStore } = setupStoreMocks(makeStore({ [agent.agentId]: agent }));
     (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => { throw new Error('spawn failed'); });
 
-    const result = await asyncHandler({ agentId: agent.agentId, task: 'spawn failure' }) as Record<string, unknown>;
+    const result = await taskHandler({ agentId: agent.agentId, task: 'spawn failure' }) as Record<string, unknown>;
 
     expect(result.success).toBe(false);
     const persisted = getPersistedStore().agents[agent.agentId];
@@ -817,6 +825,8 @@ describe('agent_task_result handler', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe(`Task not found: ${TASK_ID}`);
     expect(result.terminal).toBe(true);
+    expect(result.code).toBe('task-not-found');
+    expect(result.nextActions).toEqual(expect.arrayContaining([expect.stringMatching(/Stop polling this taskId/i)]));
   });
 
   it('first completed poll deletes tracking and second poll replays the terminal result', async () => {
@@ -910,6 +920,9 @@ describe('agent_task_result handler', () => {
     expect(result.taskId).toBe(TASK_ID);
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.error).toMatch(/Process exited without producing a result/i);
+    expect(result.code).toBe('process-exited-without-result');
+    expect(result.terminal).toBe(true);
+    expect(result.nextActions).toEqual(expect.arrayContaining([expect.stringMatching(/Stop polling this taskId/i)]));
 
     const directTrackingWrite = (writeFileSync as ReturnType<typeof vi.fn>).mock.calls.find(([p]: [string]) =>
       typeof p === 'string' && p.endsWith(`${TASK_ID}.json`) && !p.includes('.tmp.'));
@@ -1183,6 +1196,9 @@ describe('agent_task_result handler', () => {
     expect(result.success).toBe(false);
     expect(result.status).toBe('failed');
     expect(result.error).toMatch(/parse result file/i);
+    expect(result.code).toBe('result-parse-failed');
+    expect(result.terminal).toBe(true);
+    expect(result.nextActions).toEqual(expect.arrayContaining([expect.stringMatching(/preserve the result file|rawOutput/i)]));
     expect(typeof result.rawOutput).toBe('string');
     expect(result.rawOutput).toContain('Segmentation fault');
     // Truncation enforced
@@ -1285,7 +1301,7 @@ describe('parallel dispatch', () => {
     // Dispatch all 5 concurrently
     const results = await Promise.all(
       Object.keys(agents).map((agentId) =>
-        asyncHandler({ agentId, task: `task for ${agentId}` }) as Promise<Record<string, unknown>>,
+        taskHandler({ agentId, task: `task for ${agentId}` }) as Promise<Record<string, unknown>>,
       ),
     );
 
@@ -1651,6 +1667,8 @@ describe('agent_task_result: bridge result-file failure surfacing', () => {
     expect(result.taskId).toBe(TASK_ID);
     expect(result.agentId).toBe(AGENT_ID);
     expect(result.error).toMatch(/parse result file/i);
+    expect(result.code).toBe('result-parse-failed');
+    expect(result.terminal).toBe(true);
   });
 
   it('resets a busy agent to idle when surfacing a bridge failure result', async () => {

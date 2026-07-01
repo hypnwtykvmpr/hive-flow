@@ -27,6 +27,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('node:fs', () => ({
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
+  realpathSync: Object.assign(vi.fn((p: string) => p), { native: vi.fn((p: string) => p) }),
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
   renameSync: vi.fn(),
@@ -34,7 +35,7 @@ vi.mock('node:fs', () => ({
   rmdirSync: vi.fn(),
   openSync: vi.fn(() => 42),
   closeSync: vi.fn(),
-  statSync: vi.fn(() => ({ mtimeMs: Date.now() })),
+  statSync: vi.fn(() => ({ isDirectory: () => true, mtimeMs: Date.now() })),
   constants: { O_CREAT: 0x200, O_EXCL: 0x800, O_WRONLY: 0x1 },
 }));
 
@@ -426,7 +427,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
   describe('Dispatch-layer error handling', () => {
     // Note: tool-execution / provider-init / provider-auth / bridge-timeout /
     // malformed-result-file failure modes used to live here but are MIGRATED to
-    // `src/__tests__/agent-task-async.test.ts` under
+    // `src/__tests__/agent-task-nonblocking.test.ts` under
     // "agent_task_result: bridge result-file failure surfacing".
     // Those failures are observable via agent_task_result, not agent_task.
 
@@ -468,7 +469,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
     });
 
     // Note: "bridge timeout gracefully" is MIGRATED to
-    // `src/__tests__/agent-task-async.test.ts`:
+    // `src/__tests__/agent-task-nonblocking.test.ts`:
     //   "surfaces a bridge timeout gracefully when the bridge writes a
     //    timeout error to the result file"
     // The --timeout arg-passing aspect remains covered by agent-task.test.ts
@@ -617,7 +618,7 @@ describe('Bridge Tool Execution (async dispatch contract)', () => {
     });
 
     // Note: "bridge crash with non-JSON output" is MIGRATED to
-    // `src/__tests__/agent-task-async.test.ts`:
+    // `src/__tests__/agent-task-nonblocking.test.ts`:
     //   "returns status:failed with a parse error when the result file
     //    contains non-JSON output"
     // The result-file is where any bridge-side malformed output is now

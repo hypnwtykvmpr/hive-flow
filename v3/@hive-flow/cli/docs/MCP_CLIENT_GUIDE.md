@@ -66,7 +66,6 @@ Tool implementations live at `v3/@hive-flow/cli/src/mcp-tools/`.
 | `agent_status` | Get agent status | `agentId` (req) |
 | `agent_terminate` | Terminate an agent | `agentId` (req), `force?` |
 | `agent_task` | Dispatch a task (non-blocking). Returns `taskId`. Poll with `agent_task_result`. | `agentId` (req), `task` (req), `timeout?` |
-| `agent_task_async` | Alias for `agent_task` | `agentId` (req), `task` (req), `timeout?` |
 | `agent_task_result` | Poll for result of a dispatched task | `taskId` (req) |
 | `agent_pool` | Manage agent pool | `action` (req: `status`\|`scale`\|`drain`\|`fill`), `targetSize?`, `agentType?` |
 | `agent_health` | Check agent health | `agentId?`, `threshold?` |
@@ -85,9 +84,9 @@ Tool implementations live at `v3/@hive-flow/cli/src/mcp-tools/`.
 | `model` | string | no | Model alias (`opus`/`sonnet`/`mini`/`inherit`) or provider-native model string |
 | `task` | string | no | Task description for intelligent model routing (ADR-026) |
 
-#### `agent_task` / `agent_task_async` async contract
+#### `agent_task` Non-Blocking Contract
 
-Both tools are non-blocking. They spawn a detached provider bridge and return immediately with `{ taskId, agentId, status: 'running', pid }`. The `anthropic` provider is **not** supported — use `anthropic-cli` for Claude subprocess workers.
+`agent_task` is non-blocking. It spawns a detached provider bridge and returns immediately with `{ taskId, agentId, status: 'running', pid }`. The `anthropic` provider is **not** supported — use `anthropic-cli` for Claude subprocess workers.
 
 Poll with `agent_task_result`:
 - `status: 'running'` — bridge PID is alive, no result yet

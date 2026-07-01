@@ -366,16 +366,6 @@ async function callAgentTerminate(input: Record<string, unknown>): Promise<Recor
   return terminateTool.handler(input) as Promise<Record<string, unknown>>;
 }
 
-async function callAgentTaskAsync(input: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const { assertDispatchAllowed } = await import('./mcp-enforcement-gate.js');
-  const gate = assertDispatchAllowed('agent_task');
-  if (!gate.allowed) return { success: false, error: gate.reason };
-  const { agentTools } = await import('./agent-tools.js');
-  const asyncTool = agentTools.find(t => t.name === 'agent_task_async');
-  if (!asyncTool) throw new Error('agent_task_async tool not found');
-  return asyncTool.handler(input) as Promise<Record<string, unknown>>;
-}
-
 function readTaskPromptForRetry(tasksDir: string, taskId: string): string | null {
   const safeTaskId = sanitizePathId(taskId);
   if (!safeTaskId) return null;
@@ -800,7 +790,7 @@ const missionAssignTool: MCPTool = {
               }
             }, projectRoot);
 
-            const asyncResult = await callAgentTaskAsync({
+            const asyncResult = await callAgentTask({
               agentId,
               task: workerTask,
               projectRoot,

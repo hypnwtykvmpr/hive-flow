@@ -1086,6 +1086,8 @@ describe('agent_spawn canonical roster whitelist', () => {
     expect(result).toMatchObject({
       success: false,
       code: 'invalid-agent-type',
+      retryable: false,
+      nextActions: expect.arrayContaining([expect.stringMatching(/canonical agent types/i)]),
     });
     expect(String(result.error)).toContain('Valid agent types:');
     expect(String(result.error)).toContain('bug-hunter');
@@ -1106,6 +1108,7 @@ describe('agent_spawn canonical roster whitelist', () => {
           expect(result).toMatchObject({
             success: false,
             code: 'invalid-agent-type',
+            nextActions: expect.arrayContaining([expect.stringMatching(/agent_spawn/i)]),
           });
           expect(readSpawnedTypes(tmpRoot)).not.toContain(agentType);
         },

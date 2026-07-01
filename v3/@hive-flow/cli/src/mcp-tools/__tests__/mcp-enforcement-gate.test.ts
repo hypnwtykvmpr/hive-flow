@@ -292,43 +292,32 @@ describe('FIX-C3: queen_mission_assign classification', () => {
   });
 });
 
-describe('G2: agent_task_async dispatch gating', () => {
-  it('agent_task_async is classified CRITICAL', () => {
-    expect(classifyTool('agent_task_async')).toBe(ToolRisk.CRITICAL);
-  });
-
-  it('mcp__hive-flow__agent_task_async (prefixed) is CRITICAL', () => {
-    expect(classifyTool('mcp__hive-flow__agent_task_async')).toBe(ToolRisk.CRITICAL);
-  });
-
+describe('G2: agent_task dispatch gating', () => {
   it('permission guard write tools are CRITICAL risk', () => {
     expect(classifyTool('permission_guard_override')).toBe(ToolRisk.CRITICAL);
     expect(classifyTool('permission_guard_config')).toBe(ToolRisk.CRITICAL);
   });
 
-  it('agent_task_async has classification parity with agent_task', () => {
-    expect(classifyTool('agent_task_async')).toBe(classifyTool('agent_task'));
-    expect(classifyTool('mcp__hive-flow__agent_task_async')).toBe(classifyTool('mcp__hive-flow__agent_task'));
+  it('agent_task is classified CRITICAL', () => {
+    expect(classifyTool('agent_task')).toBe(ToolRisk.CRITICAL);
   });
 
-  it('agent_task_async is subject to model enforcement', () => {
-    const r = checkModelEnforcement('agent_task_async', { provider: 'codex-cli', model: 'gpt-4o' });
+  it('mcp__hive-flow__agent_task (prefixed) is CRITICAL', () => {
+    expect(classifyTool('mcp__hive-flow__agent_task')).toBe(ToolRisk.CRITICAL);
+  });
+
+  it('agent_task is subject to model enforcement', () => {
+    const r = checkModelEnforcement('agent_task', { provider: 'codex-cli', model: 'gpt-4o' });
     expect(r.allowed).toBe(false);
     expect(r.reason).toMatch(/gpt-5\.5/i);
   });
 
-  it('mcp__hive-flow__agent_task_async is subject to model enforcement', () => {
-    const r = checkModelEnforcement('mcp__hive-flow__agent_task_async', { provider: 'anthropic-cli', model: 'haiku' });
+  it('mcp__hive-flow__agent_task is subject to model enforcement', () => {
+    const r = checkModelEnforcement('mcp__hive-flow__agent_task', { provider: 'anthropic-cli', model: 'haiku' });
     expect(r.allowed).toBe(false);
     expect(r.reason).toMatch(/haiku/i);
   });
 
-  it('agent_task_async has model-enforcement parity with agent_task', () => {
-    const asyncResult = checkModelEnforcement('agent_task_async', { provider: 'deepseek' });
-    const syncResult = checkModelEnforcement('agent_task', { provider: 'deepseek' });
-    expect(asyncResult.allowed).toBe(syncResult.allowed);
-    expect(asyncResult.correctedInput?.model).toBe(syncResult.correctedInput?.model);
-  });
 });
 
 // =============================================================================

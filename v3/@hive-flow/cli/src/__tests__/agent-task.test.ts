@@ -396,10 +396,13 @@ describe('agent_task handler (non-blocking)', () => {
 
     const result = await handler({ agentId: 'nonexistent', task: 'do something' });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: false,
       agentId: 'nonexistent',
       error: 'Agent not found',
+      code: 'agent-not-found',
+      retryable: false,
+      nextActions: expect.arrayContaining([expect.stringMatching(/agent_list|agent_status/i)]),
     });
   });
 
@@ -416,6 +419,8 @@ describe('agent_task handler (non-blocking)', () => {
       success: false,
       agentId: agent.agentId,
       error: expect.stringContaining('no provider'),
+      code: 'agent-no-provider',
+      nextActions: expect.arrayContaining([expect.stringMatching(/Respawn the agent with a provider/i)]),
     });
   });
 
@@ -432,6 +437,8 @@ describe('agent_task handler (non-blocking)', () => {
       success: false,
       agentId: agent.agentId,
       error: expect.stringContaining('terminated'),
+      code: 'invalid-agent-state',
+      nextActions: expect.arrayContaining([expect.stringMatching(/agent_task_result/i)]),
     });
   });
 
@@ -456,6 +463,10 @@ describe('agent_task handler (non-blocking)', () => {
       success: false,
       agentId: agent.agentId,
       error: expect.stringContaining('Bridge script not found'),
+      code: 'bridge-missing',
+      retryable: false,
+      nextActions: expect.arrayContaining([expect.stringMatching(/Rebuild or reinstall Hive Flow/i)]),
+      artifactHints: expect.arrayContaining([EXPECTED_BRIDGE_PATH]),
     });
 
     const store = getPersistedStore();
@@ -609,6 +620,10 @@ describe('agent_task handler (non-blocking)', () => {
     expect(result.success).toBe(false);
     expect(result.agentId).toBe(agent.agentId);
     expect(result.error).toMatch(/cannot accept tasks in current state/i);
+    expect((result as Record<string, unknown>).code).toBe('invalid-agent-state');
+    expect((result as Record<string, unknown>).nextActions).toEqual(
+      expect.arrayContaining([expect.stringMatching(/Poll the agent currentTaskId/i)]),
+    );
   });
 
   it('does not invent a default cap for an unprobed API provider', async () => {
@@ -670,10 +685,12 @@ describe('agent_task handler (non-blocking)', () => {
       success: false,
       agentId: idle.agentId,
       code: 'provider-concurrency-limit',
+      retryable: true,
       provider: 'gemini-cli',
       active: 10,
       limit: 10,
       source: 'default-cli-provider',
+      nextActions: expect.arrayContaining([expect.stringMatching(/Poll existing tasks with agent_task_result/i)]),
     });
     expect(String(result.error)).toContain("Provider 'gemini-cli' is at its configured or probed concurrency limit");
     expect(spawn).not.toHaveBeenCalled();
@@ -727,10 +744,12 @@ describe('agent_task handler (non-blocking)', () => {
       success: false,
       agentId: idle.agentId,
       code: 'provider-concurrency-limit',
+      retryable: true,
       provider: 'deepseek',
       active: 1,
       limit: 1,
       source: '.hive-flow/provider-concurrency.json',
+      nextActions: expect.arrayContaining([expect.stringMatching(/provider slot opens/i)]),
     });
     expect(spawn).not.toHaveBeenCalled();
   });
@@ -766,9 +785,11 @@ describe('agent_task handler (non-blocking)', () => {
       success: false,
       agentId: idle.agentId,
       code: 'provider-concurrency-config-error',
+      retryable: true,
       provider: 'openrouter',
       active: 0,
       source: '.hive-flow/provider-concurrency.json',
+      nextActions: expect.arrayContaining([expect.stringMatching(/Fix the provider concurrency configuration/i)]),
     });
     expect(String(result.error)).toContain('not valid JSON');
     expect(spawn).not.toHaveBeenCalled();

@@ -475,7 +475,7 @@ describe('enforcement security property contracts', () => {
     expect(readScopedState('global', 'global')).toBeNull();
   });
 
-  it('blocks agent_task_async at RESTRICTED with agent_task parity', () => {
+  it('blocks agent_task at RESTRICTED', () => {
     resetModule();
     resetEnforcementStoresForTest();
     writeScopedState('global', 'global', {
@@ -489,14 +489,10 @@ describe('enforcement security property contracts', () => {
     const previousProjectDir = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = root;
     try {
-      const asyncResult = checkMCPEnforcement('mcp__hive-flow__agent_task_async');
       const syncResult = checkMCPEnforcement('mcp__hive-flow__agent_task');
 
-      expect(asyncResult.allowed).toBe(false);
       expect(syncResult.allowed).toBe(false);
-      expect(asyncResult.risk).toBe(McpToolRisk.CRITICAL);
       expect(syncResult.risk).toBe(McpToolRisk.CRITICAL);
-      expect(asyncResult.reason).toContain('CRITICAL risk');
       expect(syncResult.reason).toContain('CRITICAL risk');
     } finally {
       if (previousProjectDir === undefined) {

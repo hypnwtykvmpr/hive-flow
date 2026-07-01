@@ -733,6 +733,187 @@ function writeAtomicJsonFile(targetPath: string, value: unknown): void {
   writeAtomicUtf8File(targetPath, JSON.stringify(value, null, 2));
 }
 
+type AgentFailureGuidanceOptions = {
+  projectRoot?: string;
+  agentId?: string;
+  taskId?: string;
+  provider?: unknown;
+  source?: unknown;
+  retryable?: boolean;
+  terminal?: boolean;
+  nextActions?: string[];
+  artifactHints?: string[];
+};
+
+const AGENT_FAILURE_NEXT_ACTIONS: Record<string, string[]> = {
+  'invalid-project-root': [
+    'Retry with a valid projectRoot/cwd that points at the repo containing .hive-flow state.',
+  ],
+  'invalid-agent-type': [
+    `Choose one of the canonical agent types: ${canonicalAgentTypesDescription()}.`,
+    'Retry agent_spawn with a canonical agentType such as verifier, implementer, tester, auditor, or coordinator.',
+  ],
+  'invalid-agent-mode': [
+    'Retry agent_spawn with mode full, read-only, or read-only-with-artifacts.',
+    'If using read-only-with-artifacts, also provide a valid artifactDir inside the project.',
+  ],
+  'invalid-artifact-dir': [
+    'Create or choose a dedicated artifactDir inside the project root.',
+    'Retry agent_spawn with mode read-only-with-artifacts and the corrected artifactDir.',
+  ],
+  'invalid-task-id': [
+    'Use the exact taskId returned by agent_task; do not synthesize or edit task IDs.',
+    'If the taskId is unavailable, dispatch a fresh agent_task and poll the new taskId.',
+  ],
+  'bridge-missing': [
+    'Rebuild or reinstall Hive Flow so v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs is present.',
+    'After the bridge exists, retry agent_task with the same agentId and task prompt.',
+  ],
+  'agent-not-found': [
+    'Run agent_list or agent_status to confirm the agentId still exists in this projectRoot.',
+    'If the agent was reaped or belongs to another projectRoot, spawn a replacement agent and redispatch the task.',
+  ],
+  'agent-no-provider': [
+    'Respawn the agent with a provider such as codex-cli, gemini-cli, cursor-cli, deepseek, openrouter, or lm-studio.',
+    'Then redispatch the task to the provider-backed replacement agent.',
+  ],
+  'missing-owner-session': [
+    'Respawn the agent from a supported operator client that provides a real ownerSessionId.',
+    'Do not edit the persisted store by hand; ownership must be stamped at spawn time.',
+  ],
+  'missing-owner-client-kind': [
+    'Respawn the agent from a supported operator client so ownerClientKind is persisted.',
+    'Do not edit the persisted store by hand; completion routing depends on the owner stamp.',
+  ],
+  'unsupported-anthropic-provider': [
+    "Use provider 'anthropic-cli' for Claude subprocess workers, or use Claude Code native Task for native anthropic work.",
+    'Respawn the worker with a supported provider and redispatch the task.',
+  ],
+  'provider-auth-unavailable': [
+    'Configure the required provider credentials or credential holder for this provider.',
+    'Rerun provider preflight by retrying agent_task after credentials are available.',
+  ],
+  'model-policy-rejected': [
+    'Respawn the agent with a provider/model pair allowed by the current enforcement policy.',
+    'Do not bypass this by editing persisted agent state.',
+  ],
+  'provider-concurrency-limit': [
+    'Poll existing tasks with agent_task_result until a provider slot opens.',
+    'Alternatively redispatch this work to an idle agent on a different provider or split the work into a smaller task.',
+  ],
+  'provider-concurrency-config-error': [
+    'Fix the provider concurrency configuration file reported in source.',
+    'Retry agent_task after the config parses as a JSON object with positive integer limits.',
+  ],
+  'invalid-agent-state': [
+    'Poll the agent currentTaskId with agent_task_result if a task is in flight.',
+    'If the persisted state is stale, let the reaper reconcile it or terminate and respawn the agent before redispatching.',
+  ],
+  'bridge-spawn-failed': [
+    'Inspect .hive-flow/logs/bridge.log and the task result file for the spawn failure.',
+    'Correct the process/env issue, then retry agent_task or respawn the agent if its state stayed unhealthy.',
+  ],
+  'task-not-found': [
+    'Confirm the taskId and projectRoot match the original agent_task response.',
+    'Stop polling this taskId; if work is still needed, dispatch a fresh agent_task and poll the new taskId.',
+  ],
+  'tracking-read-failed': [
+    'Inspect the task tracking file for corruption or partial writes.',
+    'Stop polling this taskId until the tracking artifact is repaired or the work is redispatched.',
+  ],
+  'result-parse-failed': [
+    'Inspect and preserve the result file/rawOutput for debugging; do not keep polling the same corrupt result.',
+    'Redispatch the task after fixing the bridge/result-writer issue.',
+  ],
+  'process-exited-without-result': [
+    'Inspect .hive-flow/logs/bridge.log and the task journal for the child process failure.',
+    'Stop polling this taskId; redispatch the work with a smaller task or a different provider after correcting the cause.',
+  ],
+};
+
+const AGENT_FAILURE_RETRYABLE = new Set([
+  'provider-auth-unavailable',
+  'provider-concurrency-limit',
+  'provider-concurrency-config-error',
+  'invalid-agent-state',
+  'bridge-spawn-failed',
+  'process-exited-without-result',
+]);
+
+function uniqueStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    result.push(value);
+  }
+  return result;
+}
+
+function artifactHintsForAgentFailure(code: string, options: AgentFailureGuidanceOptions): string[] {
+  const hints: string[] = [];
+  const { projectRoot, taskId, source } = options;
+  if (projectRoot && taskId) {
+    hints.push(join(projectRoot, STORAGE_DIR, 'tasks', `${taskId}.json`));
+    hints.push(join(projectRoot, STORAGE_DIR, 'tasks', `${taskId}.result.json`));
+    hints.push(join(projectRoot, STORAGE_DIR, 'tasks', `${taskId}.journal.jsonl`));
+  }
+  if (projectRoot && [
+    'bridge-spawn-failed',
+    'process-exited-without-result',
+    'result-parse-failed',
+  ].includes(code)) {
+    hints.push(join(projectRoot, STORAGE_DIR, 'logs', 'bridge.log'));
+  }
+  if (typeof source === 'string' && source.length > 0 && source !== 'env' && !source.startsWith('default-')) {
+    hints.push(source);
+  }
+  return uniqueStrings([...hints, ...(options.artifactHints ?? [])]);
+}
+
+function withAgentFailureGuidance<T extends Record<string, unknown>>(
+  result: T,
+  code: string,
+  options: AgentFailureGuidanceOptions = {},
+): T & {
+  code: string;
+  retryable: boolean;
+  nextActions: string[];
+  artifactHints?: string[];
+  recovery: {
+    owner: 'agent' | 'queen' | 'operator';
+    retryable: boolean;
+    terminal: boolean;
+    action: string;
+  };
+} {
+  const retryable = options.retryable ?? AGENT_FAILURE_RETRYABLE.has(code);
+  const terminal = options.terminal ?? result.terminal === true;
+  const nextActions = uniqueStrings([
+    ...(AGENT_FAILURE_NEXT_ACTIONS[code] ?? ['Capture the returned error, preserve related artifacts, and route to the owning operator or queen for recovery.']),
+    ...(options.nextActions ?? []),
+  ]);
+  const artifactHints = artifactHintsForAgentFailure(code, options);
+  const recoveryOwner: 'agent' | 'queen' | 'operator' = retryable
+    ? 'agent'
+    : (code.startsWith('missing-owner') || code === 'invalid-project-root' ? 'operator' : 'queen');
+  return {
+    ...result,
+    code,
+    retryable,
+    ...(terminal ? { terminal: true } : {}),
+    nextActions,
+    ...(artifactHints.length > 0 ? { artifactHints } : {}),
+    recovery: {
+      owner: recoveryOwner,
+      retryable,
+      terminal,
+      action: nextActions[0],
+    },
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -1448,7 +1629,11 @@ export const agentTools: MCPTool[] = [
     handler: async (input, context) => {
       const projectRootResult = resolveProjectRootFromInput(input);
       if (!projectRootResult.ok) {
-        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+        return withAgentFailureGuidance(
+          { success: false, error: projectRootResult.error },
+          'invalid-project-root',
+          { retryable: false },
+        );
       }
       const projectRoot = projectRootResult.projectRoot;
       const agentId = (input.agentId as string) || `agent-${randomUUID()}`;
@@ -1460,22 +1645,31 @@ export const agentTools: MCPTool[] = [
       const ownerStamp = resolveOwnerStampForAgentCreation(input, context, 'agent_spawn', projectRoot);
 
       if (!isCanonicalAgentType(agentType)) {
-        return {
-          success: false,
-          code: 'invalid-agent-type',
-          error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
-        };
+        return withAgentFailureGuidance(
+          {
+            success: false,
+            error: `Invalid agentType '${String(input.agentType ?? '')}'. Valid agent types: ${canonicalAgentTypesDescription()}.`,
+          },
+          'invalid-agent-type',
+          { projectRoot, retryable: false },
+        );
       }
-      if (!ownerStamp.success) return ownerStamp;
+      if (!ownerStamp.success) {
+        return withAgentFailureGuidance(
+          { success: false, error: ownerStamp.error },
+          ownerStamp.code,
+          { projectRoot, retryable: false },
+        );
+      }
       const { ownerSessionId, ownerClientKind } = ownerStamp;
 
       const modeResult = resolveEffectiveAgentModeForSpawn(input, projectRoot);
       if (!modeResult.ok) {
-        return {
-          success: false,
-          code: modeResult.code,
-          error: modeResult.error,
-        };
+        return withAgentFailureGuidance(
+          { success: false, error: modeResult.error },
+          modeResult.code,
+          { projectRoot, retryable: false },
+        );
       }
       const mode = modeResult.mode;
       const artifactDir = modeResult.artifactDir;
@@ -1697,7 +1891,11 @@ export const agentTools: MCPTool[] = [
     handler: async (input) => {
       const projectRootResult = resolveProjectRootFromInput(input);
       if (!projectRootResult.ok) {
-        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+        return withAgentFailureGuidance(
+          { success: false, error: projectRootResult.error },
+          'invalid-project-root',
+          { retryable: false },
+        );
       }
       const projectRoot = projectRootResult.projectRoot;
       const agentId = input.agentId as string;
@@ -1726,14 +1924,21 @@ export const agentTools: MCPTool[] = [
           };
         }
 
-        return {
-          success: false,
-          agentId,
-          error: 'Agent not found',
-        };
+        return withAgentFailureGuidance(
+          {
+            success: false,
+            agentId,
+            error: 'Agent not found',
+          },
+          'agent-not-found',
+          { projectRoot, agentId, retryable: false },
+        );
       });
 
-      if (result.success && result.terminated) {
+      const terminationSucceeded = result.success === true && (result as Record<string, unknown>).terminated === true;
+      const alreadyTerminated = (result as Record<string, unknown>).alreadyTerminated === true;
+
+      if (terminationSucceeded) {
         const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');
 
         if (existsSync(tasksDir)) {
@@ -1814,7 +2019,7 @@ export const agentTools: MCPTool[] = [
       }
 
       // Clean up per-agent enforcement directory after successful termination
-      if (result.success && result.terminated && !result.alreadyTerminated) {
+      if (terminationSucceeded && !alreadyTerminated) {
         try {
           // A10: Use shared sanitizePathId utility
           const sanitized = sanitizePathId(agentId, 64);
@@ -2150,7 +2355,11 @@ export const agentTools: MCPTool[] = [
     handler: async (input) => {
       const projectRootResult = resolveProjectRootFromInput(input);
       if (!projectRootResult.ok) {
-        return { success: false, code: 'invalid-project-root', error: projectRootResult.error };
+        return withAgentFailureGuidance(
+          { success: false, error: projectRootResult.error },
+          'invalid-project-root',
+          { retryable: false },
+        );
       }
       const projectRoot = projectRootResult.projectRoot;
       const agentId = input.agentId as string;
@@ -2167,7 +2376,11 @@ export const agentTools: MCPTool[] = [
       const bridgePath = join(thisDir, '..', '..', '..', '..', 'providers', 'scripts', 'provider-agent-bridge.mjs');
 
       if (!existsSync(bridgePath)) {
-        return { success: false, agentId, error: `Bridge script not found at ${bridgePath}` };
+        return withAgentFailureGuidance(
+          { success: false, agentId, error: `Bridge script not found at ${bridgePath}` },
+          'bridge-missing',
+          { projectRoot, agentId, retryable: false, artifactHints: [bridgePath] },
+        );
       }
 
       // Create task directory and files
@@ -2182,10 +2395,10 @@ export const agentTools: MCPTool[] = [
         const store = loadAgentStore(projectRoot);
         const agent = store.agents[agentId];
         if (!agent) {
-          return { error: 'Agent not found' };
+          return { error: 'Agent not found', code: 'agent-not-found' };
         }
         if (!agent.provider) {
-          return { error: 'Agent has no provider — use agent_spawn with a provider first' };
+          return { error: 'Agent has no provider — use agent_spawn with a provider first', code: 'agent-no-provider' };
         }
         const ownerSessionId = persistedOwnerSessionId(agent);
         if (!ownerSessionId) {
@@ -2204,18 +2417,20 @@ export const agentTools: MCPTool[] = [
         if (agent.provider === 'anthropic') {
           return {
             error: "Use 'anthropic-cli' for Claude subprocess workers, not 'anthropic'. The agent_task bridge supports providers: anthropic-cli, gemini-cli, codex-cli, cursor-cli, deepseek, openrouter, lm-studio. Use Claude Code Task tool for native anthropic agents.",
+            code: 'unsupported-anthropic-provider',
+            provider: agent.provider,
           };
         }
         const keyPreflight = await providerKeyPreflight(agent.provider, process.env);
         if (!keyPreflight.ok) {
-          return { error: keyPreflight.reason };
+          return { error: keyPreflight.reason, code: 'provider-auth-unavailable', provider: agent.provider };
         }
         // Defense-in-depth: re-validate persisted agent.model against project policy.
         // The MCP enforcement gate only fires at spawn time; persisted legacy state
         // must be rejected at task dispatch to prevent gate bypass via storage.
         const modelCheck = validateAgentModelForTask(agent);
         if (!modelCheck.ok) {
-          return { error: modelCheck.error };
+          return { error: modelCheck.error, code: 'model-policy-rejected', provider: agent.provider, model: agent.model };
         }
         const providerConcurrency = checkProviderConcurrencyForDispatch(store, agent.provider as AgentProvider, projectRoot);
         if (!providerConcurrency.ok) {
@@ -2229,7 +2444,7 @@ export const agentTools: MCPTool[] = [
           };
         }
         if (!transitionAgent(agent, 'busy')) {
-          return { error: `Agent cannot accept tasks in current state: '${agent.status}'` };
+          return { error: `Agent cannot accept tasks in current state: '${agent.status}'`, code: 'invalid-agent-state', status: agent.status };
         }
         const agentToken = typeof agent.config?._spawnToken === 'string'
           ? agent.config._spawnToken
@@ -2315,13 +2530,28 @@ export const agentTools: MCPTool[] = [
           delete agent.currentTaskPid;
           delete agent.currentTaskId;
           saveAgentStore(store, projectRoot);
-          return { error: err instanceof Error ? err.message : String(err) };
+          return { error: err instanceof Error ? err.message : String(err), code: 'bridge-spawn-failed', provider: agent.provider };
         }
       }, projectRoot);
 
       if (dispatchResult.error) {
-        const { error, ...details } = dispatchResult as Record<string, unknown>;
-        return { success: false, agentId, error, ...details };
+        const { error, code, ...details } = dispatchResult as Record<string, unknown>;
+        const failureCode = typeof code === 'string' ? code : 'bridge-spawn-failed';
+        return withAgentFailureGuidance(
+          { success: false, agentId, error, ...details },
+          failureCode,
+          {
+            projectRoot,
+            agentId,
+            provider: details.provider,
+            source: details.source,
+            retryable: failureCode === 'provider-concurrency-limit'
+              || failureCode === 'provider-concurrency-config-error'
+              || failureCode === 'provider-auth-unavailable'
+              || failureCode === 'invalid-agent-state'
+              || failureCode === 'bridge-spawn-failed',
+          },
+        );
       }
 
       // Write tracking metadata. `provider` is persisted so agent_task_result
@@ -2370,35 +2600,13 @@ export const agentTools: MCPTool[] = [
     },
   },
   {
-    name: 'agent_task_async',
-    description: 'Alias for agent_task (non-blocking). Dispatch a task to a provider-backed agent. Returns immediately with taskId. Poll with agent_task_result.',
-    category: 'agent',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        agentId: { type: 'string', description: 'ID of the agent (must be spawned first via agent_spawn)' },
-        task: { type: 'string', description: 'Task prompt to send to the agent' },
-        timeout: { type: 'number', description: 'Timeout in ms (default: 300000)' },
-        projectRoot: { type: 'string', description: 'Effective project root/current repo for task files, bridge cwd, and notifications' },
-        cwd: { type: 'string', description: 'Alias for projectRoot' },
-      },
-      required: ['agentId', 'task'],
-    },
-    handler: async (input, context) => {
-      // Delegate to agent_task — both are now identical (non-blocking)
-      const agentTaskTool = agentTools.find(t => t.name === 'agent_task');
-      if (!agentTaskTool) throw new Error('agent_task tool not found');
-      return agentTaskTool.handler(input, context);
-    },
-  },
-  {
     name: 'agent_task_result',
-    description: 'Poll for the result of an async task dispatched via agent_task_async.',
+    description: 'Poll for the result of a non-blocking task dispatched via agent_task.',
     category: 'agent',
     inputSchema: {
       type: 'object',
       properties: {
-        taskId: { type: 'string', description: 'Task ID returned by agent_task_async' },
+        taskId: { type: 'string', description: 'Task ID returned by agent_task' },
         projectRoot: { type: 'string', description: 'Effective project root/current repo containing the task record' },
         cwd: { type: 'string', description: 'Alias for projectRoot' },
       },
@@ -2414,7 +2622,11 @@ export const agentTools: MCPTool[] = [
       // A3+A10: Sanitize taskId using shared utility to prevent directory traversal
       const taskId = sanitizePathId(rawTaskId, 128);
       if (!taskId) {
-        return { success: false, error: 'Invalid taskId' };
+        return withAgentFailureGuidance(
+          { success: false, error: 'Invalid taskId', terminal: true },
+          'invalid-task-id',
+          { retryable: false, terminal: true },
+        );
       }
       const tasksDir = join(projectRoot, STORAGE_DIR, 'tasks');
       const trackingPath = join(tasksDir, `${taskId}.json`);
@@ -2444,17 +2656,29 @@ export const agentTools: MCPTool[] = [
             return { success: true, taskId, status: 'completed', alreadyConsumed: true, result };
           } catch (err) {
             const errorDetail = err instanceof Error ? err.message : String(err);
-            return { success: false, taskId, status: 'failed', terminal: true, error: `Failed to parse result file: ${errorDetail}` };
+            return withAgentFailureGuidance(
+              { success: false, taskId, status: 'failed', terminal: true, error: `Failed to parse result file: ${errorDetail}` },
+              'result-parse-failed',
+              { projectRoot, taskId, retryable: true, terminal: true },
+            );
           }
         }
-        return { success: false, error: `Task not found: ${taskId}`, terminal: true };
+        return withAgentFailureGuidance(
+          { success: false, taskId, error: `Task not found: ${taskId}`, terminal: true },
+          'task-not-found',
+          { projectRoot, taskId, retryable: false, terminal: true },
+        );
       }
 
       let tracking: { status: string; taskId: string; agentId: string; startedAt: string; pid?: number; provider?: string };
       try {
         tracking = JSON.parse(readFileSync(trackingPath, 'utf-8'));
       } catch {
-        return { success: false, error: `Failed to read task tracking file for ${taskId}` };
+        return withAgentFailureGuidance(
+          { success: false, taskId, error: `Failed to read task tracking file for ${taskId}`, terminal: true },
+          'tracking-read-failed',
+          { projectRoot, taskId, retryable: false, terminal: true },
+        );
       }
 
       const resultFilePath = join(tasksDir, `${taskId}.result.json`);
@@ -2468,14 +2692,19 @@ export const agentTools: MCPTool[] = [
           result = JSON.parse(rawContents);
         } catch (err) {
           const errorDetail = err instanceof Error ? err.message : String(err);
-          return {
-            success: false,
-            taskId,
-            agentId: tracking.agentId,
-            status: 'failed',
-            error: `Failed to parse result file: ${errorDetail}`,
-            rawOutput: rawContents.slice(0, 2048),
-          };
+          return withAgentFailureGuidance(
+            {
+              success: false,
+              taskId,
+              agentId: tracking.agentId,
+              status: 'failed',
+              terminal: true,
+              error: `Failed to parse result file: ${errorDetail}`,
+              rawOutput: rawContents.slice(0, 2048),
+            },
+            'result-parse-failed',
+            { projectRoot, taskId, retryable: true, terminal: true },
+          );
         }
 
         // Update tracking status
@@ -2594,7 +2823,11 @@ export const agentTools: MCPTool[] = [
             provider: tracking.provider,
           });
 
-          return { success: false, taskId, agentId: tracking.agentId, status: 'failed', error: 'Process exited without producing a result' };
+          return withAgentFailureGuidance(
+            { success: false, taskId, agentId: tracking.agentId, status: 'failed', terminal: true, error: 'Process exited without producing a result' },
+            'process-exited-without-result',
+            { projectRoot, taskId, retryable: true, terminal: true },
+          );
         }
       }
 

@@ -538,7 +538,7 @@ describe('PH-B3 provider bridge gated-write milestone', () => {
   });
 
   describe('Dispatch gate: HALTED/WARNED blocks spawn surfaces', () => {
-    it('blocks agent_spawn, agent_task, and agent_task_async with post-G2 parity', () => {
+    it('blocks agent_spawn and agent_task with post-G2 parity', () => {
       const root = makeProjectRoot('phb3-dispatch-');
       const key = writeKey(root);
       try {
@@ -553,7 +553,7 @@ describe('PH-B3 provider bridge gated-write milestone', () => {
         process.env.HIVE_FLOW_SESSION_ID = '';
 
         writeEnvelope(root, key, 1);
-        for (const toolName of ['agent_spawn', 'agent_task', 'agent_task_async']) {
+        for (const toolName of ['agent_spawn', 'agent_task']) {
           const warned = checkMCPEnforcement(`mcp__hive-flow__${toolName}`);
           expect(warned.allowed, `${toolName} should be blocked at WARNED`).toBe(false);
           expect(warned.risk).toBe(ToolRisk.CRITICAL);
@@ -562,7 +562,7 @@ describe('PH-B3 provider bridge gated-write milestone', () => {
         }
 
         writeEnvelope(root, key, 3);
-        for (const toolName of ['agent_spawn', 'agent_task', 'agent_task_async']) {
+        for (const toolName of ['agent_spawn', 'agent_task']) {
           const halted = checkMCPEnforcement(`mcp__hive-flow__${toolName}`);
           expect(halted.allowed, `${toolName} should be blocked at HALTED`).toBe(false);
           expect(halted.reason).toContain('CRITICAL risk');
