@@ -787,7 +787,7 @@ export function generateIntelligenceStub(): string {
 /**
  * Generate a minimal auto-memory-hook.mjs fallback for fresh installs.
  * This ESM script handles import/sync/status commands gracefully when
- * @hive-flow/cli/memory is not installed. Gets overwritten when source copy succeeds.
+ * hive-flow/memory is not installed. Gets overwritten when source copy succeeds.
  */
 export function generateAutoMemoryHook(): string {
   return `#!/usr/bin/env node
@@ -819,9 +819,9 @@ const dim = (msg) => console.log(\`  \${DIM}\${msg}\${RESET}\`);
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
 async function doImport() {
-  // Try loading @hive-flow/cli/memory for full functionality
+  // Try loading hive-flow/memory for full functionality
   let memPkg = null;
-  try { memPkg = await import('@hive-flow/cli/memory'); } catch { /* optional package — not installed */ }
+  try { memPkg = await import('hive-flow/memory'); } catch { /* optional package — not installed */ }
 
   if (!memPkg || !memPkg.AutoMemoryBridge) {
     dim('Memory package not available — auto memory import skipped (non-critical)');
@@ -829,7 +829,7 @@ async function doImport() {
   }
 
   // Stub: full import logic is delivered by the upgraded helper installed via
-  // 'init --upgrade'. See AutoMemoryBridge.import() in @hive-flow/cli/memory for the
+  // 'init --upgrade'. See AutoMemoryBridge.import() in hive-flow/memory for the
   // production implementation. This fallback intentionally no-ops with a hint.
   dim('Auto memory import available — run init --upgrade for full support');
 }
@@ -841,7 +841,7 @@ async function doSync() {
   }
 
   let memPkg = null;
-  try { memPkg = await import('@hive-flow/cli/memory'); } catch { /* optional package — not installed */ }
+  try { memPkg = await import('hive-flow/memory'); } catch { /* optional package — not installed */ }
 
   if (!memPkg || !memPkg.AutoMemoryBridge) {
     dim('Memory package not available — sync skipped (non-critical)');
