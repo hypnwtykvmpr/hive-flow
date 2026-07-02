@@ -46,7 +46,11 @@ export interface HiveWorkerRecord {
   ownerClientKind?: string;
   role: string;
   provider: string;
-  status: 'spawning' | 'idle' | 'busy' | 'error' | 'terminated';
+  // P2-SH2 (hive-flow-4a28): permission-waiting / waiting-for-queen are first-class
+  // BLOCKED states — a worker in them is NOT settled/idle and must NOT let a hive be
+  // declared allComplete. Derived from pending permission requests at poll/settlement
+  // time (source of truth) and surfaced in worker status reports.
+  status: 'spawning' | 'idle' | 'busy' | 'error' | 'terminated' | 'permission-waiting' | 'waiting-for-queen';
   spawnedAt: string;
   /** ISO timestamp of when this worker was terminated (set by hive_terminate, hive-cleanup, queen-tools) */
   terminatedAt?: string;

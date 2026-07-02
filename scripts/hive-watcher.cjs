@@ -191,6 +191,48 @@ function loadHiveRecord(hivesDir, hiveId) {
  *
  * Returns { completedCount, runningCount, failedCount, idleCount, terminatedCount, allComplete }
  */
+/**
+ * P2-SH2 (hive-flow-4a28): worker IDs BLOCKED on an undecided permission request.
+ * A blocked worker must NOT let a hive be declared allComplete. Source of truth is
+ * BOTH the persisted hive.permissionRequests AND the append-only
+ * permission-requests.jsonl (fresh bridge requests not yet surfaced to the queen).
+ * A request blocks its worker unless it has a terminal decision recorded.
+ */
+function blockedPermissionWorkerIds(hivesDir, hiveId, hive) {
+  const blocked = new Set();
+  const agentToWorker = new Map();
+  for (const w of (hive.workers || [])) {
+    if (w && w.agentId && w.workerId) agentToWorker.set(w.agentId, w.workerId);
+  }
+  const decidedStatus = new Map();
+  for (const r of (hive.permissionRequests || [])) {
+    if (r && r.requestId) decidedStatus.set(r.requestId, r.status);
+    if (r && r.status === 'pending') {
+      const wid = r.workerId || agentToWorker.get(r.agentId);
+      if (wid) blocked.add(wid);
+    }
+  }
+  const logPath = path.join(hivesDir, hiveId, 'permission-requests.jsonl');
+  if (fs.existsSync(logPath)) {
+    try {
+      for (const line of fs.readFileSync(logPath, 'utf8').split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let req;
+        try { req = JSON.parse(trimmed); } catch { continue; }
+        if (!req || !req.requestId) continue;
+        const status = decidedStatus.get(req.requestId);
+        // Undecided if never persisted, or persisted but still pending.
+        if (status === undefined || status === 'pending') {
+          const wid = req.workerId || agentToWorker.get(req.agentId);
+          if (wid) blocked.add(wid);
+        }
+      }
+    } catch { /* log unreadable — persisted requests above still apply */ }
+  }
+  return blocked;
+}
+
 function pollWorkers(hivesDir, tasksDir, hiveId) {
   const hive = loadHiveRecord(hivesDir, hiveId);
   if (!hive || !Array.isArray(hive.workers)) {
@@ -281,8 +323,14 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
     return Number.isFinite(spawnedAt) && (nowMs - spawnedAt) < STARTUP_GRACE_MS;
   });
 
+  // P2-SH2 (hive-flow-4a28): a worker blocked on an undecided permission request must
+  // not let the hive settle — otherwise the sentinel would treat a blocked hive as done
+  // and suppress the operator wake.
+  const blockedWorkerIds = blockedPermissionWorkerIds(hivesDir, hiveId, hive);
+  const blockedCount = blockedWorkerIds.size;
+
   const taskedCount = completedCount + runningCount + failedCount;
-  const allComplete = runningCount === 0 && !startupWindowOpen;
+  const allComplete = runningCount === 0 && blockedCount === 0 && !startupWindowOpen;
 
   return {
     hiveStatus: hive.status,
@@ -292,6 +340,8 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
     failedCount,
     idleCount,
     terminatedCount,
+    blockedCount,
+    blockedWorkers: [...blockedWorkerIds],
     allComplete,
     workerCount: hive.workers.length,
     ownerSessionId: hive.ownerSessionId || null,

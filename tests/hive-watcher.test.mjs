@@ -419,7 +419,9 @@ describe('hive-watcher regressions', () => {
 
     assert.match(source, /const sorted = tasks\.slice\(\)\.sort\(/);
     assert.doesNotMatch(source, /tasks\.sort\(/);
-    assert.match(source, /const allComplete = runningCount === 0 && !startupWindowOpen;/);
+    // P2-SH2 (hive-flow-4a28): settlement now also gates on blockedCount (workers
+    // blocked on an undecided permission request must not let the hive settle).
+    assert.match(source, /const allComplete = runningCount === 0 && blockedCount === 0 && !startupWindowOpen;/);
     assert.doesNotMatch(source, /const allComplete = taskedCount > 0 && runningCount === 0 && idleCount === 0;/);
     assert.doesNotMatch(source, /if \(latest\.tracking\.pid\) \{/);
     assert.match(source, /function shouldNotifyStaleTransition/);

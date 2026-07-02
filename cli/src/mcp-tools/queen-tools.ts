@@ -1739,7 +1739,7 @@ const hivePollWorkersTool: MCPTool = {
       workerId: string;
       agentId: string;
       role: string;
-      status: 'completed' | 'running' | 'failed' | 'idle' | 'terminated';
+      status: 'completed' | 'running' | 'failed' | 'idle' | 'terminated' | 'permission-waiting' | 'waiting-for-queen';
       taskId?: string;
       result?: unknown;
     }> = [];
@@ -1959,9 +1959,33 @@ const hivePollWorkersTool: MCPTool = {
       return Number.isFinite(spawnedAt) && (now - spawnedAt) < STARTUP_GRACE_MS;
     });
 
+    // P2-SH2 (hive-flow-4a28): a worker with a PENDING (undecided) permission request
+    // is BLOCKED (permission-waiting) — it must NOT let the hive settle, or allComplete
+    // would declare success on a worker that is stuck awaiting a queen decision. Derive
+    // the blocked set from the merged permission-request log (source of truth); this is
+    // read-only (no persistence from the poll path). Reflect it in the reported statuses.
+    const { requests: mergedPermissionRequests } = mergeHivePermissionRequests(hive, projectRoot);
+    const blockedWorkerIds = new Set<string>();
+    for (const req of mergedPermissionRequests) {
+      if (req.status !== 'pending') continue; // only undecided requests block settlement
+      const blockedWorkerId = req.workerId
+        || hive.workers.find(w => w.agentId === req.agentId)?.workerId;
+      if (blockedWorkerId) blockedWorkerIds.add(blockedWorkerId);
+    }
+    if (blockedWorkerIds.size > 0) {
+      for (const ws of workerStatuses) {
+        // A blocked worker is awaiting a queen decision, not idle/running/failed. Do
+        // not relabel a genuinely completed or terminated worker.
+        if (blockedWorkerIds.has(ws.workerId) && ws.status !== 'terminated' && ws.status !== 'completed') {
+          ws.status = 'permission-waiting';
+        }
+      }
+    }
+    const blockedCount = blockedWorkerIds.size;
+
     const taskedCount = completedCount + runningCount + failedCount;
-    const allComplete = runningCount === 0 && !startupWindowOpen;
-    console.error(`[hive_poll_workers] hive=${hiveId} taskedCount=${taskedCount} startupWindowOpen=${startupWindowOpen} runningCount=${runningCount} completedCount=${completedCount} failedCount=${failedCount} allComplete=${allComplete}`);
+    const allComplete = runningCount === 0 && blockedCount === 0 && !startupWindowOpen;
+    console.error(`[hive_poll_workers] hive=${hiveId} taskedCount=${taskedCount} startupWindowOpen=${startupWindowOpen} runningCount=${runningCount} completedCount=${completedCount} failedCount=${failedCount} blockedCount=${blockedCount} allComplete=${allComplete}`);
 
     // Auto-collect results into hive audit when all complete
     if (allComplete) {
@@ -1990,6 +2014,8 @@ const hivePollWorkersTool: MCPTool = {
           failedCount,
           idleCount,
           terminatedCount,
+          blockedCount,
+          blockedWorkers: [...blockedWorkerIds],
         };
       }
 
@@ -2054,6 +2080,8 @@ const hivePollWorkersTool: MCPTool = {
       failedCount,
       idleCount,
       terminatedCount,
+      blockedCount,
+      blockedWorkers: [...blockedWorkerIds],
     };
   },
 };

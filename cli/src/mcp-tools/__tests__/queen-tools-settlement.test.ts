@@ -158,6 +158,48 @@ describe('queen hive settlement predicate', () => {
     expect(settled?.completedAt).toBeTruthy();
   });
 
+  // P2-SH2 (hive-flow-4a28): a worker blocked on an undecided permission request must
+  // NOT let the hive settle, even though it otherwise looks idle/settled.
+  it('does not settle while a worker is blocked on a pending permission request', async () => {
+    const worker = makeWorker();
+    const hive = await seedHive([worker]);
+    // Worker was tasked (so it is past the startup grace window) but is now idle,
+    // awaiting a queen decision on a permission request it raised.
+    await withHiveLock(hive.hiveId, () => {
+      const fresh = loadHive(hive.hiveId);
+      if (!fresh) throw new Error(`Missing hive ${hive.hiveId}`);
+      fresh.audit.push(taskedAudit(hive.hiveId, worker));
+      saveHive(hive.hiveId, fresh);
+    });
+    // Undecided permission request in the append-only log.
+    const hiveDir = join(tempDir, '.hive-flow', 'hives', hive.hiveId);
+    mkdirSync(hiveDir, { recursive: true });
+    writeFileSync(join(hiveDir, 'permission-requests.jsonl'), `${JSON.stringify({
+      kind: 'worker-permission-denial',
+      requestId: 'perm-blocked-1',
+      taskId: 'task-blocked',
+      ts: new Date(0).toISOString(),
+      agentId: worker.agentId,
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: 'blocked pending queen decision',
+      denyCode: 'read-only-command-denied',
+    })}\n`);
+
+    const result = await pollHive(hive.hiveId);
+    const settled = loadHive(hive.hiveId);
+
+    expect(result.success).toBe(true);
+    expect(result.blockedCount).toBe(1);
+    expect(result.blockedWorkers).toContain(worker.workerId);
+    expect(result.allComplete).toBe(false);        // blocked worker prevents settlement
+    expect(result.allWorkersSettled).toBe(false);
+    expect(settled?.status).toBe('active');         // NOT auto-transitioned
+    const ws = (result.workers as Array<Record<string, unknown>>).find(w => w.workerId === worker.workerId);
+    expect(ws?.status).toBe('permission-waiting');  // first-class blocked state in the report
+  });
+
   it('does not settle while any worker is still running', async () => {
     const running = makeWorker({ workerId: 'worker-running', agentId: 'agent-running' });
     const completed = makeWorker({ workerId: 'worker-completed', agentId: 'agent-completed' });
