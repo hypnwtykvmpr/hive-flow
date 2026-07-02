@@ -549,12 +549,13 @@ describe('workflow-enforcer', () => {
   // MCP Tools
   // ------------------------------------------------------------------
   describe('MCP Tools', () => {
-    it('exports three tools', () => {
-      expect(workflowEnforcerTools).toHaveLength(3);
+    it('exports four tools', () => {
+      expect(workflowEnforcerTools).toHaveLength(4);
       const names = workflowEnforcerTools.map(t => t.name);
       expect(names).toContain('workflow_enforcer_assess');
       expect(names).toContain('workflow_enforcer_override');
       expect(names).toContain('workflow_enforcer_status');
+      expect(names).toContain('enforcement_ladder_status');
     });
 
     it('workflow_enforcer_assess returns ComplexityAssessment', async () => {

@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { MCPTool } from './types.js';
 import type { AgentProvider } from './agent-tools.js';
+import { getEnforcementLevelBreakdown } from './mcp-enforcement-gate.js';
 
 // ---------------------------------------------------------------------------
 // Storage
@@ -687,8 +688,33 @@ const statusTool: MCPTool = {
   },
 };
 
+// F0-B (hive-flow-6f73): the escalation LADDER (Normal/Warned/Restricted/Halted)
+// is a DIFFERENT axis from the workflow COMPLEXITY state reported by
+// `workflow_enforcer_status`. The ladder is what actually gates provider-bridge
+// writes/exec/fetch (RESTRICTED+) and MCP tools — but nothing surfaced it, so
+// operators saw NORMAL from workflow_enforcer_status while API-provider writes
+// were denied at RESTRICTED+. This tool reports the effective ladder level with
+// per-scope contributions and what it blocks. Read-only; does not change gating.
+const ladderStatusTool: MCPTool = {
+  name: 'enforcement_ladder_status',
+  description:
+    'Report the effective escalation-ladder enforcement level (Normal/Warned/Restricted/Halted) with per-scope contributions (agent/hive/session/project/global) and what it blocks — including provider-bridge write/exec/fetch at RESTRICTED+. This is the axis that gates agent writes; it is SEPARATE from workflow_enforcer_status (which reports task-complexity workflow state).',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+  },
+  category: 'workflow',
+  tags: ['enforcement', 'status', 'ladder', 'escalation'],
+  handler: async () => {
+    const breakdown = getEnforcementLevelBreakdown();
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify(breakdown, null, 2) }],
+    };
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
-export const workflowEnforcerTools: MCPTool[] = [assessTool, overrideTool, statusTool];
+export const workflowEnforcerTools: MCPTool[] = [assessTool, overrideTool, statusTool, ladderStatusTool];

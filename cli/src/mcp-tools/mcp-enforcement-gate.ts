@@ -237,13 +237,83 @@ function readScopeLevel(stateFile: string, keyCandidates: string[]): number | nu
  * One enforcement scope: its primary state file at the canonical hiveHome path,
  * plus an optional legacy fallback path. enforcement.cjs `getScopedState()`
  * reads the primary file if present, else the legacy file (lines ~487-488).
+ *
+ * `scope`/`id` are carried for VISIBILITY reporting only (see
+ * `getEnforcementLevelBreakdown`) — they do not affect the gating decision.
  */
 interface ScopeSpec {
+  scope: EnforcementScopeName;
+  id?: string;
   stateFile: string;
   legacyStateFile?: string;
 }
 
-export function getEnforcementLevel(): number {
+export type EnforcementScopeName = 'agent' | 'hive' | 'session' | 'project' | 'global';
+
+export type EnforcementLevelName = 'NORMAL' | 'WARNED' | 'RESTRICTED' | 'HALTED';
+
+/** One present scope's contribution to the effective ladder level. */
+export interface EnforcementScopeContribution {
+  scope: EnforcementScopeName;
+  id?: string;
+  level: number;
+  levelName: EnforcementLevelName;
+  /** Which on-disk file supplied the level (canonical hiveHome vs legacy project-local). */
+  source: 'canonical' | 'legacy';
+}
+
+/**
+ * Full, human/queen-facing breakdown of the effective escalation-ladder level.
+ * This is the VISIBILITY surface F0-B (hive-flow-6f73) adds: the ladder level
+ * (Normal/Warned/Restricted/Halted) is distinct from the workflow COMPLEXITY
+ * axis reported by `workflow_enforcer_status`, and is what actually gates
+ * provider-bridge writes/exec/fetch (RESTRICTED+, level >= 2) and MCP tools.
+ */
+export interface EnforcementLevelBreakdown {
+  effectiveLevel: number;
+  effectiveLevelName: EnforcementLevelName;
+  /** Present, contributing scopes (empty when the system is clean at NORMAL). */
+  scopes: EnforcementScopeContribution[];
+  /** Human-readable descriptions of what this level blocks. */
+  blocks: string[];
+  /** True when the level was produced by the fail-closed error path. */
+  failClosed: boolean;
+}
+
+// The bridge blocks write/exec/fetch tool groups at this level and above
+// (`FAIL_CLOSED_ENFORCEMENT_LEVEL = 2`, RESTRICTED). Kept in sync with
+// provider-agent-bridge.mjs `bridgeWriteBlockReason`/ExecBlockReason/FetchBlockReason.
+const BRIDGE_RESTRICTED_WRITE_LEVEL = 2;
+
+export function levelName(level: number): EnforcementLevelName {
+  if (level <= 0) return 'NORMAL';
+  if (level === 1) return 'WARNED';
+  if (level === 2) return 'RESTRICTED';
+  return 'HALTED';
+}
+
+/** Describe what a given effective level blocks (MCP risk tiers + bridge groups). */
+function describeBlocks(level: number): string[] {
+  const blocks: string[] = [];
+  if (level >= 1) blocks.push('MCP CRITICAL-risk tools (e.g. agent_spawn, queen_mission_assign, system_reset)');
+  if (level >= BRIDGE_RESTRICTED_WRITE_LEVEL) {
+    blocks.push('MCP HIGH-risk tools (e.g. agent_terminate, config_set, terminal_execute)');
+    blocks.push('provider-bridge write + exec + fetch tool groups (RESTRICTED+): API-backed agents cannot write files, run commands, or fetch');
+  }
+  if (level >= 3) blocks.push('MCP MEDIUM-risk tools (e.g. memory_store) — HALTED blocks all non-LOW tools');
+  return blocks;
+}
+
+/**
+ * Shared scope-walk that BOTH `getEnforcementLevel()` and
+ * `getEnforcementLevelBreakdown()` use, so the reported breakdown can never
+ * silently diverge from the number the gate enforces. Preserves the exact prior
+ * semantics of `getEnforcementLevel()`: MAX over all PRESENT scopes, absent
+ * scope skipped, present-but-tampered/unverifiable scope contributes
+ * LEVEL_HALTED (fail-closed), no scope present => 0 (NORMAL clean default),
+ * any unexpected error => fail-closed HALTED.
+ */
+function computeEnforcementBreakdown(): EnforcementLevelBreakdown {
   try {
     const hiveHome = resolveHiveHomeDir();
     const projectDir = resolveProjectDir();
@@ -286,18 +356,24 @@ export function getEnforcementLevel(): number {
 
     if (agentId) {
       scopes.push({
+        scope: 'agent',
+        id: agentId,
         stateFile: join(enforcementDir, 'agents', agentId, 'state.json'),
         legacyStateFile: join(legacyEnforcementDir, 'agents', agentId, 'state.json'),
       });
     }
     if (hiveId) {
       scopes.push({
+        scope: 'hive',
+        id: hiveId,
         stateFile: join(enforcementDir, 'hives', hiveId, 'state.json'),
         legacyStateFile: join(legacyEnforcementDir, 'hives', hiveId, 'state.json'),
       });
     }
     if (sessionId) {
       scopes.push({
+        scope: 'session',
+        id: sessionId,
         stateFile: join(enforcementDir, 'sessions', sessionId, 'state.json'),
         legacyStateFile: join(legacyEnforcementDir, 'sessions', sessionId, 'state.json'),
       });
@@ -308,6 +384,8 @@ export function getEnforcementLevel(): number {
     // and which let a REAL project-scoped HALT slip through as 0). The legacy
     // project fallback is <projectDir>/.hive-flow/enforcement/projects/<id>/state.json.
     scopes.push({
+      scope: 'project',
+      id: projectId,
       stateFile: join(enforcementDir, 'projects', projectId, 'state.json'),
       legacyStateFile: join(legacyEnforcementDir, 'projects', projectId, 'state.json'),
     });
@@ -315,6 +393,7 @@ export function getEnforcementLevel(): number {
     // fallback is <projectDir>/.hive-flow/enforcement/state.json
     // (getLegacyScopedStateFile('global'), line ~248).
     scopes.push({
+      scope: 'global',
       stateFile: join(enforcementDir, 'global', 'state.json'),
       legacyStateFile: join(legacyEnforcementDir, 'state.json'),
     });
@@ -325,10 +404,12 @@ export function getEnforcementLevel(): number {
     // (NORMAL) — the system clean default. A present-but-tampered scope
     // contributes LEVEL_HALTED (fail-closed).
     let effective: number | null = null;
+    const contributions: EnforcementScopeContribution[] = [];
     for (const scope of scopes) {
       // Prefer the canonical hiveHome path; fall back to the legacy path only
       // when the canonical file is absent (enforcement.cjs getScopedState).
-      const present = existsSync(scope.stateFile)
+      const canonicalPresent = existsSync(scope.stateFile);
+      const present = canonicalPresent
         ? scope.stateFile
         : scope.legacyStateFile && existsSync(scope.legacyStateFile)
         ? scope.legacyStateFile
@@ -337,13 +418,48 @@ export function getEnforcementLevel(): number {
       const level = readScopeLevel(present, keyCandidates);
       if (level === null) continue;
       effective = effective === null ? level : Math.max(effective, level);
+      contributions.push({
+        scope: scope.scope,
+        id: scope.id,
+        level,
+        levelName: levelName(level),
+        source: canonicalPresent ? 'canonical' : 'legacy',
+      });
     }
 
-    return effective === null ? 0 : effective;
+    const effectiveLevel = effective === null ? 0 : effective;
+    return {
+      effectiveLevel,
+      effectiveLevelName: levelName(effectiveLevel),
+      scopes: contributions,
+      blocks: describeBlocks(effectiveLevel),
+      failClosed: false,
+    };
   } catch {
     // SEC-008: fail-CLOSED on any unexpected error in scope resolution
-    return LEVEL_HALTED;
+    return {
+      effectiveLevel: LEVEL_HALTED,
+      effectiveLevelName: levelName(LEVEL_HALTED),
+      scopes: [],
+      blocks: describeBlocks(LEVEL_HALTED),
+      failClosed: true,
+    };
   }
+}
+
+export function getEnforcementLevel(): number {
+  return computeEnforcementBreakdown().effectiveLevel;
+}
+
+/**
+ * VISIBILITY (F0-B / hive-flow-6f73): expose the effective escalation-ladder
+ * level with per-scope contributions and a description of what it blocks, so
+ * operators/queens can see WHY provider-bridge or MCP writes are denied. This
+ * is read-only and never weakens the gate — it reuses the exact same scope-walk
+ * as `getEnforcementLevel()`.
+ */
+export function getEnforcementLevelBreakdown(): EnforcementLevelBreakdown {
+  return computeEnforcementBreakdown();
 }
 
 /**
