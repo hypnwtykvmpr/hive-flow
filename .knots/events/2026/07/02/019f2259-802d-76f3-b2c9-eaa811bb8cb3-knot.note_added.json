@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2259-802d-76f3-b2c9-eaa811bb8cb3",
+  "occurred_at": "2026-07-02T10:21:58.701451Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS (Codex, 2026-07-02): final review of shipped remote_main passed. HEAD and origin/main are both 608cb1b2edeb25b9248325046bf7b3370dd13465; tagged commits cb20f024a, 98a13500d, 0ec695f12, and 608cb1b2e are ancestors of main. GitHub workflow config is path-filtered to credential-store/launcher files and gh returned no runs for this SHA, so there is no remote CI job applicable to this provider-only change. Focused shipped-tree gate rerun PASS: pnpm --dir cli/packages/providers exec vitest run src/__tests__/cli-providers.test.ts -> 154/154. Tracked tree remains clean; F0-A acceptance and follow-up knots d17e/bba8 remain as recorded.",
+    "datetime": "2026-07-02T10:21:58.701451Z",
+    "entry_id": "019f2259-802d-76f3-b2c9-ea9dc8bea135",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

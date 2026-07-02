@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2259-970a-7103-83e8-917c034de2c8",
+  "occurred_at": "2026-07-02T10:22:04.554637Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-9331",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "F0-A CLI provider modes must enforce read-only and artifact confinement",
+    "type": "work",
+    "updated_at": "2026-07-02T10:22:04.554637Z",
+    "workflow_id": "work_sdlc"
+  }
+}
