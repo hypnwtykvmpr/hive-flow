@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2106-3ba5-7fd3-8d97-a1a2dc4e505f",
+  "occurred_at": "2026-07-02T04:11:24.453637Z",
+  "knot_id": "hive-flow-2ee8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Recommended execution order as of 2026-07-02: (1) hive-flow-5e15 deferral ledger/completion discipline; (2) hive-flow-0bb4 provider-agent harness battle-test/auto-recovery; (3) hive-flow-fe13 post-migration docs truth/trash audit; (4) hive-flow-af96 final repo-wide security/QA capstone; (5) hive-flow-2ee8 inter-agent communication design. Rationale: final QA should run after docs/trash edits, and inter-agent communication remains design/future architecture unless it becomes implementation, in which case final QA must move after it.",
+    "datetime": "2026-07-02T04:11:24.453637Z",
+    "entry_id": "019f2106-3ba5-7fd3-8d97-a19bda33e9fd",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
