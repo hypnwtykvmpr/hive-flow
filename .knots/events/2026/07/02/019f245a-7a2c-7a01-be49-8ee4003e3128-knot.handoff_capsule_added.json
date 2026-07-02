@@ -1,0 +1,15 @@
+{
+  "event_id": "019f245a-7a2c-7a01-be49-8ee4003e3128",
+  "occurred_at": "2026-07-02T19:42:17.131823Z",
+  "knot_id": "hive-flow-df6e",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT: df6e is shipped to remote main at d14517497. Branch containment verified: main, origin/main, feature branch, and origin feature branch all contain the commit. Remote proof: origin main and origin/knots-df6e-agent-task-rewake both resolve to d145174977b5e1628309c613c9c4ee4f7313ec7c. Only workflow is .github/workflows/credential-backends.yml, path-filtered to v3 credential-store/launcher files and workflow file; df6e touched only .claude/helpers/agent-task-rewake.cjs and .claude/helpers/__tests__/agent-task-rewake.test.mjs, so no remote CI applies. Local shipment gates already green: node --check helper; rewake+cleanup 23/23; sentinel-rewake 28/28; tsc; git diff --check; private guard.",
+    "datetime": "2026-07-02T19:42:17.131823Z",
+    "entry_id": "019f245a-7a2c-7a01-be49-8ed4420619fb",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
