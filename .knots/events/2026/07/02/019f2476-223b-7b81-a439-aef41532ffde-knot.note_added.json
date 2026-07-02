@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2476-223b-7b81-a439-aef41532ffde",
+  "occurred_at": "2026-07-02T20:12:29.626759Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS: Claude VERIFY_CLEAN accepted and Codex independently checked the exact two-file slice. Landed main at a015f572aaac1bf74d409723647af7c825c73a1e. Gates on landed main: node --check .claude/helpers/sentinel-recovery.cjs; vitest sentinel-singleton 7/7; vitest sentinel-singleton+root-resolver-parity+de-tmux-runtime 16/16; pnpm --dir cli exec tsc --noEmit; git diff --check; .audit/private-guard.sh clean.",
+    "datetime": "2026-07-02T20:12:29.626759Z",
+    "entry_id": "019f2476-223b-7b81-a439-aeef60359554",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
