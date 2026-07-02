@@ -242,11 +242,46 @@ describe('GeminiCLIProvider', () => {
     // --sandbox is opt-in — not present by default
     const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
     expect(spawnArgs).not.toContain('--sandbox');
+    // full mode keeps agy's headless auto-approve
+    expect(spawnArgs).toContain('--dangerously-skip-permissions');
 
     // Clean up
     mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
     mockChild.emit('close', 0);
     await completePromise;
+  });
+
+  // F0-A (hive-flow-9331) Slice B: gemini restricted-mode mapping. NOTE: agy headless
+  // sign-in is blocked (F0-C), so these assert the arg mapping only — the live
+  // confinement canary is deferred until agy headless auth is restored.
+  const geminiCleanup = (mockChild: MockChildProcess, p: Promise<unknown>) => {
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
+    mockChild.emit('close', 0);
+    return p;
+  };
+
+  it('read-only mode drops --dangerously-skip-permissions and adds --sandbox', async () => {
+    mockBinaryFound('agy');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    const p = provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args).toContain('--sandbox');
+    expect(args).not.toContain('--dangerously-skip-permissions');
+    await geminiCleanup(mockChild, p);
+  });
+
+  it('read-only-with-artifacts also drops skip-permissions and adds --sandbox (fail-closed)', async () => {
+    mockBinaryFound('agy');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    const p = provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only-with-artifacts' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args).toContain('--sandbox');
+    expect(args).not.toContain('--dangerously-skip-permissions');
+    await geminiCleanup(mockChild, p);
   });
 
   it('passes --sandbox when sandbox=true in config', async () => {
@@ -957,6 +992,54 @@ describe('CursorCLIProvider', () => {
     // Clean up
     mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ result: 'ok' })));
     mockChild.emit('close', 0);
+  });
+
+  // F0-A (hive-flow-9331) Slice B: cursor mode mapping (fail-closed for artifacts).
+  const cursorCleanup = (mockChild: MockChildProcess) => {
+    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ result: 'ok' })));
+    mockChild.emit('close', 0);
+  };
+
+  it('full/undefined mode keeps --force and omits --mode (backward compatible)', async () => {
+    mockBinaryFound('cursor-agent');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'full' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args).toContain('--force');
+    expect(args).not.toContain('--mode');
+    cursorCleanup(mockChild);
+  });
+
+  it('read-only mode uses --mode plan and drops --force/--yolo', async () => {
+    mockBinaryFound('cursor-agent');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args[args.indexOf('--mode') + 1]).toBe('plan');
+    expect(args).not.toContain('--force');
+    expect(args).not.toContain('--yolo');
+    cursorCleanup(mockChild);
+  });
+
+  it('read-only-with-artifacts FAILS CLOSED to --mode plan, drops --force, and reports artifacts disabled', async () => {
+    mockBinaryFound('cursor-agent');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    const p = provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only-with-artifacts' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args[args.indexOf('--mode') + 1]).toBe('plan');
+    expect(args).not.toContain('--force');
+    expect(args).not.toContain('--yolo');
+    cursorCleanup(mockChild);
+    const res = await p;
+    // Honest capability note — never pretend artifacts were persisted.
+    const md = res.metadata as { cliSandbox?: { artifactWritesDisabled?: boolean } } | undefined;
+    expect(md?.cliSandbox?.artifactWritesDisabled).toBe(true);
   });
 
   it('passes API key via env var, not CLI args', async () => {

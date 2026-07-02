@@ -68,6 +68,12 @@ const FREE = { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' };
 /** Safety limit to prevent unbounded stdout accumulation */
 const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50 MB
 
+// F0-A (hive-flow-9331) Slice B: cursor has no proven OS write-confinement, so
+// read-only-with-artifacts fails closed to no-edit plan mode. This honest note is
+// surfaced (metadata / debug log) so callers never assume artifacts were persisted.
+export const CURSOR_ARTIFACT_DISABLED_REASON =
+  'cursor read-only-with-artifacts: artifact writes are DISABLED (fail-closed to plan mode). cursor has no proven sandbox write-confinement; use an API provider or codex for artifact-producing tasks. See hive-flow-9331.';
+
 // ============================================================================
 // slice 5 / cursor timeout-budget — PROMPT-SIZE-AWARE TIMEOUT
 //
@@ -306,7 +312,7 @@ export class CursorCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCursor(prompt, model, false, this.resolveExplicitTimeout(request.timeout));
+    const child = this.spawnCursor(prompt, model, false, this.resolveExplicitTimeout(request.timeout), request.cliSandbox);
 
     return new Promise<LLMResponse>((resolve, reject) => {
       let settled = false;
@@ -370,7 +376,16 @@ export class CursorCLIProvider extends BaseProvider {
           this.logger.warn('Cursor CLI exited with non-zero code but returned stdout; parsing response', { code, stderr: stderr.slice(-500) });
         }
         try {
-          resolve(this.parseJsonOutput(stdout, model));
+          const parsed = this.parseJsonOutput(stdout, model);
+          // F0-A: cursor artifact mode is fail-closed (plan/no-edit). Be HONEST that
+          // no artifacts were persisted — never imply write capability we disabled.
+          if (request.cliSandbox?.mode === 'read-only-with-artifacts') {
+            parsed.metadata = {
+              ...(parsed.metadata || {}),
+              cliSandbox: { mode: 'read-only-with-artifacts', artifactWritesDisabled: true, reason: CURSOR_ARTIFACT_DISABLED_REASON },
+            };
+          }
+          resolve(parsed);
         } catch (e) {
           reject(this.transformError(e instanceof Error ? e : new Error(String(e))));
         }
@@ -390,7 +405,10 @@ export class CursorCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCursor(prompt, model, true, this.resolveExplicitTimeout(request.timeout));
+    if (request.cliSandbox?.mode === 'read-only-with-artifacts') {
+      this.logger.debug(CURSOR_ARTIFACT_DISABLED_REASON);
+    }
+    const child = this.spawnCursor(prompt, model, true, this.resolveExplicitTimeout(request.timeout), request.cliSandbox);
     const rl = createInterface({ input: child.stdout! });
 
     const queue: string[] = [];
@@ -601,6 +619,7 @@ export class CursorCLIProvider extends BaseProvider {
     model: LLMModel,
     stream: boolean,
     explicitTimeout?: number,
+    cliSandbox?: LLMRequest['cliSandbox'],
   ): ChildProcess {
     const trimmed = prompt.trim();
     if (!trimmed) {
@@ -635,11 +654,21 @@ export class CursorCLIProvider extends BaseProvider {
     // resolution in findBinary() are load-bearing. Do not drop them, do not reorder the
     // binary preference, and do not add any `background-agent` / IDE-launch path.
     const isCursorIDE = this.binaryPath!.endsWith('/cursor') || this.binaryPath!.endsWith('\\cursor');
+    // F0-A (hive-flow-9331) Slice B: map the agent's bridge mode to cursor's native
+    // read-only mode. `--force`/`--yolo` (run-everything) is the Phase 0 write-escape
+    // and has NO OS write-confinement, so restricted modes DROP it and use `--mode
+    // plan` (analyze/propose, no edits). cursor has no proven cwd-confinement, so
+    // read-only-with-artifacts FAILS CLOSED to the same no-edit mode (artifact writes
+    // disabled — honest note at the call site) rather than temp+copy-back. full mode
+    // keeps `--force` (DO-NOT-REVERT: required for writes in --print). `--yolo` /
+    // bypass flags are never emitted in restricted modes.
+    const sandboxMode = cliSandbox?.mode || 'full';
+    const restricted = sandboxMode === 'read-only' || sandboxMode === 'read-only-with-artifacts';
     const args = [
       ...(isCursorIDE ? ['agent'] : []),
       '--print',  // DO-NOT-REVERT: headless/non-interactive mode (no TTY, prints to stdout)
       '--trust',  // Prevent workspace trust prompt blocking non-interactive mode
-      '--force',  // DO-NOT-REVERT: required for file writes/tool actions in --print mode
+      ...(restricted ? ['--mode', 'plan'] : ['--force']),  // F0-A: read-only plan mode vs full write
       '--output-format', stream ? 'stream-json' : 'json',
       '--model', String(model),
       ...(stream ? ['--stream-partial-output'] : []),

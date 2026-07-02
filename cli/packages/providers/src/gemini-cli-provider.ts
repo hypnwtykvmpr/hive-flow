@@ -140,7 +140,7 @@ export class GeminiCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
     const timeoutMs = request.timeout || this.config.timeout || 120000;
-    const { args, stdinPrompt } = this.buildCliArgs('json', model, prompt);
+    const { args, stdinPrompt } = this.buildCliArgs('json', model, prompt, request.cliSandbox);
 
     return new Promise<LLMResponse>((resolve, reject) => {
       let settled = false;
@@ -233,7 +233,7 @@ export class GeminiCLIProvider extends BaseProvider {
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
     const timeoutMs = (request.timeout || this.config.timeout || 120000) * 2;
-    const { args, stdinPrompt } = this.buildCliArgs('stream-json', model, prompt);
+    const { args, stdinPrompt } = this.buildCliArgs('stream-json', model, prompt, request.cliSandbox);
 
     const child = this.spawnCli(args);
     this.activeChildren.add(child);
@@ -505,7 +505,8 @@ export class GeminiCLIProvider extends BaseProvider {
   private buildCliArgs(
     _outputFormat: 'json' | 'stream-json',
     model: LLMModel,
-    prompt: string
+    prompt: string,
+    cliSandbox?: LLMRequest['cliSandbox'],
   ): { args: string[]; stdinPrompt?: string } {
     // DO-NOT-REVERT (2026-06): Build ANTIGRAVITY (`agy`) headless args, NOT the
     // dead `gemini` flags. `agy` does NOT support `--output-format` or
@@ -515,9 +516,26 @@ export class GeminiCLIProvider extends BaseProvider {
     // regression. Use `--print`/`--prompt`, `--model`, and
     // `--dangerously-skip-permissions` (agy's headless auto-approve). The
     // `_outputFormat` arg is retained for call-site compatibility but unused.
-    const args: string[] = ['--dangerously-skip-permissions'];
+    //
+    // F0-A (hive-flow-9331) Slice B: `--dangerously-skip-permissions` auto-approves
+    // ALL tool actions incl. writes — the Phase 0 write-escape surface. For restricted
+    // modes we DROP it (no blanket write auto-approval) and add agy's native
+    // `--sandbox` (terminal restrictions). agy has NO granular headless read-only
+    // mode, and its sandbox write-confinement is UNVERIFIED because agy headless
+    // sign-in is currently blocked (F0-C) — so the live canary is DEFERRED and
+    // read-only-with-artifacts is treated like read-only (no verified dir-confinement,
+    // artifact-write capability not claimed). NEVER emit skip-permissions in
+    // restricted modes.
+    const mode = cliSandbox?.mode || 'full';
+    const restricted = mode === 'read-only' || mode === 'read-only-with-artifacts';
+    const args: string[] = [];
+    if (restricted) {
+      args.push('--sandbox');
+    } else {
+      args.push('--dangerously-skip-permissions');
+      if (this.config.sandbox === true) args.push('--sandbox');
+    }
     if (model && model !== 'auto') args.push('--model', model);
-    if (this.config.sandbox === true) args.push('--sandbox');
 
     // Large prompts: pass empty --prompt and stream the body over stdin to
     // avoid OS argv length limits. Confirmed live: `echo "<prompt>" | agy -p ""`
