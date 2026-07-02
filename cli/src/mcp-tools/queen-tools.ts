@@ -2207,6 +2207,22 @@ const queenPermissionDecideTool: MCPTool = {
         ? hive.workers.find(item => item.workerId === request.workerId)
         : hive.workers.find(item => item.agentId === request.agentId);
 
+      // P2-SH7 idempotency (hive-flow-8119): a request already FINALLY decided must
+      // NOT re-dispatch (resume/redirect/terminate) or re-audit — duplicate decisions
+      // dedupe without spam. `redirect-failed` is deliberately excluded: it is
+      // retryable, so a follow-up decision (e.g. deny after a failed redirect) is
+      // still allowed. This runs BEFORE any side effect below.
+      const FINAL_DECIDED_STATUSES: HivePermissionRequestStatus[] = ['approved', 'denied', 'redirected', 'halted'];
+      if (request.decision && FINAL_DECIDED_STATUSES.includes(request.status)) {
+        if (added.length > 0) saveHive(hiveId, hive, projectRoot);
+        return {
+          success: true as const,
+          alreadyDecided: true as const,
+          request,
+          ...(worker ? { workerId: worker.workerId, agentId: worker.agentId } : {}),
+        };
+      }
+
       if ((decision === 'redirect' || decision === 'halt') && !worker) {
         return { success: false as const, error: `Request '${requestId}' is not linked to a live hive worker.` };
       }
@@ -2245,6 +2261,25 @@ const queenPermissionDecideTool: MCPTool = {
     }, projectRoot);
 
     if (!response.success) return response;
+
+    // Idempotent: the request was already finally decided — return the persisted
+    // outcome with NO new resume/redirect dispatch and NO new audit entry.
+    if ('alreadyDecided' in response && response.alreadyDecided) {
+      const persisted = response.request;
+      return {
+        success: true,
+        hiveId,
+        queenId,
+        requestId,
+        decision: persisted.decision?.decision ?? decision,
+        status: persisted.status,
+        request: persisted,
+        alreadyDecided: true,
+        ...(persisted.decision?.guidance
+          ? { guidance: persisted.decision.guidance, redirectionInstructions: persisted.decision.guidance }
+          : {}),
+      };
+    }
 
     let redirectDispatch: Record<string, unknown> | undefined;
     if (decision === 'redirect' && response.workerId) {

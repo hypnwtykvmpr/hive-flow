@@ -732,6 +732,58 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(persisted.workers[0].status).toBe('busy');
   });
 
+  // P2-SH7 idempotency: a duplicate deny for the same request must NOT re-dispatch a
+  // resume task or re-audit — decisions dedupe without spam.
+  it('is idempotent on a duplicate deny: no second resume dispatch, no audit spam', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
+    const requestLine = {
+      kind: 'worker-permission-denial',
+      requestId: 'permission-test-deny-idem',
+      taskId: 'task-permission-deny-idem',
+      ts: new Date(0).toISOString(),
+      agentId: 'worker-agent-1',
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: "git subcommand 'mv' is not in the read-only allowlist",
+      denyCode: 'read-only-command-denied',
+    };
+    writeFileSync(join(root, '.hive-flow', 'hives', hive.hiveId, 'permission-requests.jsonl'), `${JSON.stringify(requestLine)}\n`, 'utf8');
+
+    const denyInput = {
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-deny-idem',
+      decision: 'deny',
+      reason: 'That mv is unsafe here.',
+      guidance: 'Summarize the required rename; do not mutate files.',
+    };
+
+    const first = await getQueenTool('queen_permission_decide').handler({ ...denyInput }) as Record<string, unknown>;
+    expect(first.success).toBe(true);
+    expect(first.workerResumed).toBe(true);
+    const tasksAfterFirst = mockAgentState.calls.task;
+    expect(tasksAfterFirst).toBe(1);
+
+    // Second identical deny — must dedupe: no new dispatch, no new audit.
+    const second = await getQueenTool('queen_permission_decide').handler({ ...denyInput }) as Record<string, unknown>;
+    expect(second.success).toBe(true);
+    expect(second.status).toBe('denied');
+    expect(second.alreadyDecided).toBe(true);
+    expect(second.resumeDispatch).toBeUndefined();
+    expect(mockAgentState.calls.task).toBe(tasksAfterFirst); // no second resume dispatch
+
+    const persisted = loadHive(hive.hiveId)!;
+    // Exactly one permission-reviewed audit entry for this request (no spam).
+    const reviews = persisted.audit.filter(e => e.event === 'permission-reviewed' && e.detail.includes('permission-test-deny-idem'));
+    expect(reviews).toHaveLength(1);
+    expect(persisted.permissionRequests?.[0]).toMatchObject({
+      requestId: 'permission-test-deny-idem',
+      status: 'denied',
+      decision: { decision: 'deny', resumeDispatched: true },
+    });
+  });
+
   it('keeps a permission request retryable when queen redirect dispatch fails', async () => {
     const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
     const requestLine = {
