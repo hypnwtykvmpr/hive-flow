@@ -26,8 +26,9 @@
 //   - Fail-open: every error path exits 0 with no output (never blocks/breaks).
 //   - Idempotent: a `.hive-flow/data/task-<id>.notified` sentinel prevents
 //     double-notifying the same task.
-//   - Bounded: wakes Claude at MAX_WAIT_MS to check progress, then relies on
-//     agent_task_result PostToolUse to restart the monitor if still running.
+//   - Bounded: wakes Claude at MAX_WAIT_MS to check progress, except terminal
+//     or explicit waiting tasks where the persisted state is already decisive.
+//     Dead child PIDs wake immediately so recovery does not wait for the cap.
 //   - tmux-free: no tmux dependency anywhere in this path.
 
 'use strict';
@@ -214,7 +215,27 @@ function clearTimeoutCheck(dataDir, taskId) {
   }
 }
 
-const TERMINAL_TASK_STATUSES = new Set(['failed', 'completed', 'terminated']);
+const TERMINAL_TASK_STATUSES = new Set(['failed', 'completed', 'terminated', 'aborted', 'cancelled', 'canceled']);
+const WAITING_TASK_STATUSES = new Set(['permission-waiting', 'waiting-for-queen', 'permission_waiting', 'waiting_for_queen']);
+
+function taskTrackingPath(projectRoot, taskId) {
+  return path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.json`);
+}
+
+function readTaskTracking(projectRoot, taskId) {
+  try {
+    const trackingPath = taskTrackingPath(projectRoot, taskId);
+    if (!fs.existsSync(trackingPath)) return null;
+    const tracking = JSON.parse(fs.readFileSync(trackingPath, 'utf8'));
+    return tracking && typeof tracking === 'object' ? tracking : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizedTaskStatus(tracking) {
+  return typeof tracking?.status === 'string' ? tracking.status.trim().toLowerCase() : '';
+}
 
 // Result-less terminal tasks (e.g. process-exited-without-result) never get a
 // `<taskId>.result.json`, so the completion notifier can never fire. The
@@ -222,14 +243,84 @@ const TERMINAL_TASK_STATUSES = new Set(['failed', 'completed', 'terminated']);
 // status there means the outcome is already decided and the monitor must stop
 // instead of nagging forever.
 function persistedTerminalTaskStatus(projectRoot, taskId) {
+  const tracking = readTaskTracking(projectRoot, taskId);
+  const status = normalizedTaskStatus(tracking);
+  return TERMINAL_TASK_STATUSES.has(status) ? status : null;
+}
+
+function persistedWaitingTaskStatus(projectRoot, taskId) {
+  const tracking = readTaskTracking(projectRoot, taskId);
+  const status = normalizedTaskStatus(tracking);
+  return WAITING_TASK_STATUSES.has(status) ? status : null;
+}
+
+function pidLiveness(pid) {
+  const n = Number(pid);
+  if (!Number.isInteger(n) || n <= 0) return 'unknown';
   try {
-    const trackingPath = path.join(projectRoot, '.hive-flow', 'tasks', `${taskId}.json`);
-    if (!fs.existsSync(trackingPath)) return null;
-    const tracking = JSON.parse(fs.readFileSync(trackingPath, 'utf8'));
-    const status = typeof tracking.status === 'string' ? tracking.status : '';
-    return TERMINAL_TASK_STATUSES.has(status) ? status : null;
-  } catch {
-    return null;
+    process.kill(n, 0);
+    return 'alive';
+  } catch (err) {
+    if (err && err.code === 'ESRCH') return 'dead';
+    if (err && err.code === 'EPERM') return 'alive';
+    return 'unknown';
+  }
+}
+
+function persistedDeadTaskPid(projectRoot, taskId) {
+  const tracking = readTaskTracking(projectRoot, taskId);
+  const pid = tracking?.pid ?? tracking?.currentTaskPid ?? tracking?.currentPid;
+  return pidLiveness(pid) === 'dead' ? Number(pid) : null;
+}
+
+function classifyPendingTaskState(projectRoot, taskId) {
+  const terminalStatus = persistedTerminalTaskStatus(projectRoot, taskId);
+  if (terminalStatus) return { kind: 'terminal', status: terminalStatus };
+
+  const waitingStatus = persistedWaitingTaskStatus(projectRoot, taskId);
+  if (waitingStatus) return { kind: 'waiting', status: waitingStatus };
+
+  const deadPid = persistedDeadTaskPid(projectRoot, taskId);
+  if (deadPid !== null) return { kind: 'dead-pid', pid: deadPid };
+
+  return { kind: 'pending' };
+}
+
+function deadPidSummary(taskId, pid) {
+  return `[TASK CHECK DUE: ${taskId}] Background agent task process ${pid} is no longer alive and no result file exists. Call agent_task_result({taskId:"${taskId}"}) to confirm status; if still needed, reassign or restart the task.`;
+}
+
+async function stopForDecisivePendingState(projectRoot, taskId, dataDir, pendingState) {
+  if (pendingState.kind === 'terminal') {
+    clearTimeoutCheck(dataDir, taskId);
+    await appendRewakeJournalEvent(projectRoot, taskId, { reason: 'terminal-status', status: pendingState.status });
+    process.exit(0);
+  }
+
+  if (pendingState.kind === 'waiting') {
+    clearTimeoutCheck(dataDir, taskId);
+    await appendRewakeJournalEvent(projectRoot, taskId, { reason: 'waiting-status', status: pendingState.status });
+    process.exit(0);
+  }
+
+  if (pendingState.kind === 'dead-pid') {
+    const summary = deadPidSummary(taskId, pendingState.pid);
+    const won = appendTimeoutCheckOnce(
+      dataDir,
+      taskId,
+      JSON.stringify({
+        kind: 'task-check',
+        taskId,
+        ts: new Date().toISOString(),
+        summary,
+        reason: 'dead-pid',
+        pid: pendingState.pid,
+      }),
+    );
+    if (!won) process.exit(0);
+    await appendRewakeJournalEvent(projectRoot, taskId, { reason: 'dead-pid', pid: pendingState.pid });
+    process.stderr.write(summary + '\n');
+    process.exit(2);
   }
 }
 
@@ -429,22 +520,12 @@ async function main() {
     }
     if (result.reason === 'already-notified') process.exit(0);
     if (!fs.existsSync(resultFilePath)) {
-      const terminalStatus = persistedTerminalTaskStatus(dir, taskId);
-      if (terminalStatus) {
-        clearTimeoutCheck(dataDir, taskId);
-        await appendRewakeJournalEvent(dir, taskId, { reason: 'terminal-status', status: terminalStatus });
-        process.exit(0);
-      }
+      await stopForDecisivePendingState(dir, taskId, dataDir, classifyPendingTaskState(dir, taskId));
     }
     await new Promise((res) => setTimeout(res, POLL_MS));
   }
   if (!fs.existsSync(resultFilePath)) {
-    const terminalStatus = persistedTerminalTaskStatus(dir, taskId);
-    if (terminalStatus) {
-      clearTimeoutCheck(dataDir, taskId);
-      await appendRewakeJournalEvent(dir, taskId, { reason: 'terminal-status', status: terminalStatus });
-      process.exit(0);
-    }
+    await stopForDecisivePendingState(dir, taskId, dataDir, classifyPendingTaskState(dir, taskId));
   }
   const summary = timeoutSummary(taskId);
   const won = appendTimeoutCheckOnce(
@@ -473,7 +554,15 @@ module.exports = {
   timeoutSummary,
   timeoutCheckPath,
   clearTimeoutCheck,
+  taskTrackingPath,
+  readTaskTracking,
+  normalizedTaskStatus,
   persistedTerminalTaskStatus,
+  persistedWaitingTaskStatus,
+  pidLiveness,
+  persistedDeadTaskPid,
+  classifyPendingTaskState,
+  deadPidSummary,
   isAgentTaskResultPayload,
   appendTimeoutCheckOnce,
   claimNotifiedMarker,
