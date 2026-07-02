@@ -1,0 +1,15 @@
+{
+  "event_id": "019f227f-8154-7bd0-aaaf-0777c08b09a7",
+  "occurred_at": "2026-07-02T11:03:29.364269Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "IMPLEMENTED (Claude, 2026-07-02, lease hive-flow-418b). Branch knots-4a28-permission-waiting-states @ fe084eefb (5 files, 132+/6-). P2-SH2 fix: a worker blocked on an undecided permission request no longer collapses into idle/settled — allComplete is gated on it. Approach: derive BLOCKED set from source of truth (pending permission requests), NOT a fragile mutated status. queen-tools hive_poll_workers merges the permission-request log -> blockedWorkerIds (status pending) -> allComplete = runningCount===0 && blockedCount===0 && !startupWindowOpen; surfaces blockedCount/blockedWorkers; relabels blocked workers reported status to permission-waiting. scripts/hive-watcher.cjs (tracked sentinel) mirrors via blockedPermissionWorkerIds reading BOTH hive.permissionRequests AND permission-requests.jsonl (fresh bridge requests), gating its allComplete identically. hive-store worker enum gains permission-waiting/waiting-for-queen (first-class type). GATES: queen suites 31/31 (new settlement test: pending request -> allComplete=false, blockedCount=1, worker permission-waiting, hive stays active), watcher 12/12 (source-pin updated), cli tsc + build clean. Tracked only (hive-watcher.cjs is scripts/, not engine-anchored).",
+    "datetime": "2026-07-02T11:03:29.364269Z",
+    "entry_id": "019f227f-8154-7bd0-aaaf-076cdf246865",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

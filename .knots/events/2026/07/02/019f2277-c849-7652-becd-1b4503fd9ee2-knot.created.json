@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2277-c849-7652-becd-1b4503fd9ee2",
+  "occurred_at": "2026-07-02T10:55:03.241216Z",
+  "knot_id": "hive-flow-418b",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: claude-4a28-waiting-states",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}
