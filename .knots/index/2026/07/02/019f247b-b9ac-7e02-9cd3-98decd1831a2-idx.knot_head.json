@@ -1,0 +1,21 @@
+{
+  "event_id": "019f247b-b9ac-7e02-9cd3-98decd1831a2",
+  "occurred_at": "2026-07-02T20:18:36.076789Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-143f",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: claude-f904-shipreview",
+    "type": "lease",
+    "updated_at": "2026-07-02T20:18:36.076789Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f247b-b96c-76e1-8cf1-9856a521bb08",
+  "occurred_at": "2026-07-02T20:18:36.01178Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SHIPMENT_REVIEW VERIFY_CLEAN (Claude, 2026-07-02): at-SHA confirmed HEAD==origin/main==a015f572aaac1bf74d409723647af7c825c73a1e; linear main contains all 0bb4 children (4a28/8b69-slices/df6e/d060/f904). Gate on landed main: sentinel-singleton 7/7. Safety property (ESRCH-only-dead, EPERM/other alive, live pid preserved regardless of stale heartbeat) is correct + not reopened. The provider verifier's 3 must-fix labels (unused isStale, unreachable heartbeat-stale reason, no direct EPERM test) are cosmetic dead-code + test-hardening, NOT correctness defects — non-blocking for ship, tracked as a fast-follow. Advancing to shipped.",
+    "datetime": "2026-07-02T20:18:36.01178Z",
+    "entry_id": "019f247b-b96c-76e1-8cf1-984df3ab14de",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "event_id": "019f247b-b910-7fa1-b012-d4064d7306c3",
+  "occurred_at": "2026-07-02T20:18:35.920432Z",
+  "knot_id": "hive-flow-143f",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: claude-f904-shipreview",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}
