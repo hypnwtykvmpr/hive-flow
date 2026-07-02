@@ -1,0 +1,15 @@
+{
+  "event_id": "019f22aa-6542-7c22-94e5-ca218a2b09af",
+  "occurred_at": "2026-07-02T11:50:20.225819Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "DESIGN RULING attached by Claude on behalf of Codex (2026-07-02): Option B. Do NOT promote the untracked ~9.2k-line .hive-flow/data/tmux-router/flow-watchdog.cjs blob wholesale. Author a reviewed tracked canonical source OUTSIDE .hive-flow/data (mirror scripts/hive-watcher.cjs governance: reviewed source in repo, generated/runtime copy under the private live data dir) with an idempotent, project-root-aware install/generation path. Design reqs: wire classifyHiveFlowTaskLiveness into runOnce exactly once; cover P2-SH1 + P2-SH3 + P2-SL4 blindspots; keep .hive-flow/data/tmux-router/ as runtime output not canonical source; NO tracked private/runtime paths, usernames, machine paths, or repo-external absolute paths; privacy/private-path guard must pass before land; tests cover dead-PID/no-result recovery, no-spam loop, normal COMPLETE_NO_ACTION quiet behavior, and long-horizon / BLOCKED_TRUE_HUMAN_GATE nag paths. Option A rejected (asks reviewers to accept an untracked ~9k-line live blob as product source). Option C (remove from acceptance) is a human product-scope call only if B proves infeasible. Claude opens the design phase as a Hive Flow hive under lease hive-flow-7752.",
+    "datetime": "2026-07-02T11:50:20.225819Z",
+    "entry_id": "019f22aa-6542-7c22-94e5-ca17c9ccd3cc",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

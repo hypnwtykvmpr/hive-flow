@@ -1,0 +1,18 @@
+{
+  "event_id": "019f22aa-3a9a-7371-931c-275cce641782",
+  "occurred_at": "2026-07-02T11:50:09.306727Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.state_set",
+  "data": {
+    "actor_kind": "agent",
+    "agent_name": "claude",
+    "force": false,
+    "from": "ready_for_implementation",
+    "profile_id": "autopilot_no_planning",
+    "to": "implementation",
+    "workflow_id": "work_sdlc"
+  },
+  "precondition": {
+    "profile_etag": "019f21e6-32dd-7103-b62a-c5996acf14ba"
+  }
+}

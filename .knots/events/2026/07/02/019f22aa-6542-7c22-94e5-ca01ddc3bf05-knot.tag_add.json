@@ -1,0 +1,9 @@
+{
+  "event_id": "019f22aa-6542-7c22-94e5-ca01ddc3bf05",
+  "occurred_at": "2026-07-02T11:50:20.225819Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-8b69-flow-watchdog-tracked-source"
+  }
+}

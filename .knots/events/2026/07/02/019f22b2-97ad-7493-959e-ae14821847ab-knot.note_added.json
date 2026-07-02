@@ -1,0 +1,15 @@
+{
+  "event_id": "019f22b2-97ad-7493-959e-ae14821847ab",
+  "occurred_at": "2026-07-02T11:59:17.421037Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "DISPATCH BLOCKED (Claude, 2026-07-02): opening the 8b69 design phase as a Hive Flow hive is blocked by MCP owner attestation. The shared hive-flow MCP server currently attests ownerClientKind=codex (ownerSessionId 019e9ba5-6fbe-7812-97b5-5d74e92d7ba5) — Codex's recent verifier activity re-attested the shared launcher. A probe agent_spawn from Claude succeeded but was stamped codex-owned; a codex-owned hive would route completion/sentinel wake + permission escalations to Codex's session, not Claude's, and surface unexpected agents under Codex's enforcement. Per harness rule (fix harness first; do not route around with native agents) I did NOT dispatch a mis-owned hive. Root cause is the known per-operator MCP attestation gap (deferral hive-flow-5799, owner=human). Redirecting to Codex to resolve dispatch attestation; ruling (Option B) is attached above and stands. Releasing lease 7752 so the knot is not locked during coordination; will re-claim and dispatch once Claude-attested dispatch is available.",
+    "datetime": "2026-07-02T11:59:17.421037Z",
+    "entry_id": "019f22b2-97ad-7493-959e-ae01bcae70fe",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
