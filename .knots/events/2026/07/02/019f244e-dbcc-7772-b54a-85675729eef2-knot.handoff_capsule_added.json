@@ -1,0 +1,15 @@
+{
+  "event_id": "019f244e-dbcc-7772-b54a-85675729eef2",
+  "occurred_at": "2026-07-02T19:29:35.692132Z",
+  "knot_id": "hive-flow-df6e",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION: branch knots-df6e-agent-task-rewake commit d14517497 hardens .claude/helpers/agent-task-rewake.cjs with terminal/waiting/dead-pid classification plus .claude/helpers/__tests__/agent-task-rewake.test.mjs. Gates: node --check helper; node --test new rewake test 5/5; node --test rewake+cleanup 23/23; pnpm --dir cli exec vitest run src/__tests__/sentinel-rewake.test.ts 28/28; pnpm --dir cli exec tsc --noEmit; git diff --check; .audit/private-guard.sh clean. Adjacent statusline-enforcement-level helper test remains pre-existing red due --json emitting rendered statusline, not part of slice.",
+    "datetime": "2026-07-02T19:29:35.692132Z",
+    "entry_id": "019f244e-dbcc-7772-b54a-85510065f385",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

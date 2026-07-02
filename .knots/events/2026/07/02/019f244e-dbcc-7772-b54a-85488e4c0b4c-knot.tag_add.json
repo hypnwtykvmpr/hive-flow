@@ -1,0 +1,9 @@
+{
+  "event_id": "019f244e-dbcc-7772-b54a-85488e4c0b4c",
+  "occurred_at": "2026-07-02T19:29:35.692132Z",
+  "knot_id": "hive-flow-df6e",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-df6e-agent-task-rewake"
+  }
+}
