@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2467-29b5-7593-ae21-4b3f1a6dab6e",
+  "occurred_at": "2026-07-02T19:56:08.501158Z",
+  "knot_id": "hive-flow-d060",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Shipment complete: commit b3bd813f488057d7f8c4f398cf0bb418b2934afb is on local main and origin/main. Confirmed branch containment includes main and remotes/origin/main; git ls-remote origin refs/heads/main returns b3bd813f488057d7f8c4f398cf0bb418b2934afb. Worktree has no tracked changes; only pre-existing untracked scratch/private paths remain. Local landed gates were already green: reaper 21/21, rewake+reaper 26/26, node --check, private-guard.",
+    "datetime": "2026-07-02T19:56:08.501158Z",
+    "entry_id": "019f2467-29b5-7593-ae21-4b289f8db982",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
