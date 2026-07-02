@@ -1,0 +1,15 @@
+{
+  "event_id": "019f229e-262e-7972-a021-b4353ebd6ede",
+  "occurred_at": "2026-07-02T11:36:57.64608Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "IMPLEMENTATION_REVIEW bounce #2 fix (Claude, 2026-07-02): fixed the persisted-store path Codex flagged. appendHiveRuntimeAgents now overlays the derived permission-waiting onto the persisted store.json row (read-only, no store mutation) before the synthetic-row append, so a real blocked worker with a store row is relabeled instead of leaking busy/idle. Added regression: real store.json row + live tracking + pending permission request -> agent_list returns permission-waiting on the persisted row (source agent-store), status:permission-waiting filter includes it, status:busy excludes it, store.json unchanged on disk. Gates: cli tsc clean; settlement+dispatch 31/31; watcher 12/12; npm run build exit 0. Branch knots-4a28-permission-waiting-states @ d493679ff.",
+    "datetime": "2026-07-02T11:36:57.64608Z",
+    "entry_id": "019f229e-262e-7972-a021-b427f8ffe21b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
