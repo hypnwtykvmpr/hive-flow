@@ -1,0 +1,15 @@
+{
+  "event_id": "019f246f-9d65-7a83-b9fb-0475cb80a860",
+  "occurred_at": "2026-07-02T20:05:22.4058Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Implementation complete on branch knots-f904-sentinel-pid-aware at a015f572aaac1bf74d409723647af7c825c73a1e. Scope: .claude/helpers/sentinel-recovery.cjs and cli/src/__tests__/sentinel-singleton.test.ts. Behavior: sentinel recovery now classifies watcher PID liveness, preserves stale-heartbeat watchers with live/EPERM PIDs, still recovers ESRCH-dead watcher PIDs, and preserves no-PID legacy recovery plus manual notification text. Fixed stale test repoRoot depth so sentinel-singleton actually loads the protected helper. Gates: node --check .claude/helpers/sentinel-recovery.cjs; vitest sentinel-singleton 7/7; vitest sentinel-singleton+root-resolver-parity+de-tmux-runtime 16/16; pnpm --dir cli exec tsc --noEmit; git diff --check; .audit/private-guard.sh clean. Provider verifier task task-cf0bfea9-2e73-4dc3-8b38-57ffe53a13fd was launched read-only but was still running on first result check, so no provider verdict was used for this commit.",
+    "datetime": "2026-07-02T20:05:22.4058Z",
+    "entry_id": "019f246f-9d65-7a83-b9fb-0469a26c0289",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

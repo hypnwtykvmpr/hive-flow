@@ -1,0 +1,15 @@
+{
+  "event_id": "019f246f-b3e9-77e3-b0fc-a9a171586e09",
+  "occurred_at": "2026-07-02T20:05:28.169153Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Branch: knots-f904-sentinel-pid-aware; Commit: a015f572aaac1bf74d409723647af7c825c73a1e; Review focus: PID liveness classification in sentinel recovery, stale heartbeat with live PID preserved, ESRCH PID recovery, no-PID legacy recovery, sentinel-singleton test harness root depth.",
+    "datetime": "2026-07-02T20:05:28.169153Z",
+    "entry_id": "019f246f-b3e9-77e3-b0fc-a998d452e41d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

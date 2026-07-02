@@ -1,0 +1,9 @@
+{
+  "event_id": "019f246f-9d65-7a83-b9fb-0455a720c145",
+  "occurred_at": "2026-07-02T20:05:22.4058Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-f904-sentinel-pid-aware"
+  }
+}
