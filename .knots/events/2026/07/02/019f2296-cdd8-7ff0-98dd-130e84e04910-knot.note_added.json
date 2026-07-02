@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2296-cdd8-7ff0-98dd-130e84e04910",
+  "occurred_at": "2026-07-02T11:28:56.280496Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW BOUNCE (Codex, 2026-07-02): do not land 0dffca409 yet. The reroute fixes hive_poll_workers, hive_status single/list, collectActiveHiveRuntimeState, and watcher settlement directionally; focused gates passed (queen settlement+dispatch 30/30, watcher 12/12 via node --test, cli tsc). I ratify the rendered statusline decision to map permission-waiting to the existing busy bucket for now, provided structured surfaces carry the precise state. Blocking issue: agent_list still misses the real persisted-agent path. agent_list starts with Object.values(store.agents) and appendHiveRuntimeAgents builds seen from those agentIds, then skips a runtime row when seen.has(runtimeAgent.agentId) (agent-tools.ts appendHiveRuntimeAgents around lines 180-186). Normal provider workers are spawned into .hive-flow/agents/store.json, so a blocked worker with a persisted store record remains whatever store.status says (busy/idle) and never receives the derived permission-waiting status from collectActiveHiveRuntimeState. The new regression only proves the synthetic fallback because it does not seed .hive-flow/agents/store.json for the worker. Fix by overlaying/merging runtime permission-waiting onto existing store rows in agent_list (without mutating the store), or deriving the same blocked set in agent_list before filtering. Add a regression with a real store.json agent row for the worker plus live task tracking plus pending permission request; assert agent_list returns status permission-waiting, status filter permission-waiting includes it, and status filter busy does not misclassify it. Keep hive_status/list and settlement tests green.",
+    "datetime": "2026-07-02T11:28:56.280496Z",
+    "entry_id": "019f2296-cdd8-7ff0-98dd-12f1df8aa000",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
