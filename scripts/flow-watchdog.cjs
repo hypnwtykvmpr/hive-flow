@@ -2878,11 +2878,10 @@ function runOnce({
 
   pruneMissingStopHookTimers(state, observedStopHookKeys);
 
-  // hive-flow-8b69 Slice 4: task-liveness pass. Placed after the quiet / router-handoff /
-  // COMPLETE_NO_ACTION early returns above, and additionally suppressed under a
-  // BLOCKED_TRUE_HUMAN_GATE router blocker (not yet a global early return — Slice 5), so it
-  // never introduces a dispatch path under that marker. Runs before the generic deadlock
-  // nudge so a task recovery/review dispatch naturally de-noises the all-idle fallback.
+  // hive-flow-8b69 Slice 4/5: task-liveness pass. Placed after the quiet / router-handoff /
+  // COMPLETE_NO_ACTION / BLOCKED_TRUE_HUMAN_GATE early returns above, so it never introduces
+  // a dispatch path under those markers. Runs before the generic deadlock nudge so a task
+  // recovery/review dispatch naturally de-noises the all-idle fallback.
   if (!hasActiveRouterHumanBlocker(routerDir)) {
     runTaskLivenessPass({
       state,
