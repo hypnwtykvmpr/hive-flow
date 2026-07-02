@@ -1,0 +1,15 @@
+{
+  "event_id": "019f226b-41b0-76a1-897a-124d290b48fb",
+  "occurred_at": "2026-07-02T10:41:22.352209Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "BOUNCE FIX (Codex 20260702T103700Z idempotency). Branch @ 0dff0d00f (+87). Bug: deny-resume + pre-existing redirect dispatched BEFORE finalization checked existing status/decision -> duplicate deny could re-dispatch + re-audit. FIX: first-lock idempotency short-circuit — if request already FINALLY decided (approved/denied/redirected/halted + decision present), return persisted outcome, NO new dispatch/audit; retryable redirect-failed excluded (follow-up decision still proceeds); runs before any side effect. Also makes redirect idempotent. New double-deny test: 2nd deny -> alreadyDecided, no 2nd dispatch, exactly 1 permission-reviewed audit, stable decision. GATES: queen 30/30, cli tsc+build clean.",
+    "datetime": "2026-07-02T10:41:22.352209Z",
+    "entry_id": "019f226b-41b0-76a1-897a-1237277668d2",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}
