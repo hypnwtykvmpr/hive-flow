@@ -1,0 +1,15 @@
+{
+  "event_id": "019f22a3-fdc2-74b2-a675-5f7728fb6dec",
+  "occurred_at": "2026-07-02T11:43:20.514228Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS by Codex at d493679ff. Verified persisted store.json agent rows are overlaid read-only to permission-waiting before agent_list status filtering; source row remains agent-store and store.json is not mutated. Gates: queen settlement+dispatch 31/31, hive-watcher 12/12, pnpm --dir cli exec tsc --noEmit, npm run build, git diff --check. Dogfood verifier was started but remained running after local proof, then terminated cleanly to avoid an idle worker.",
+    "datetime": "2026-07-02T11:43:20.514228Z",
+    "entry_id": "019f22a3-fdc2-74b2-a675-5f6ef2c2ec17",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
