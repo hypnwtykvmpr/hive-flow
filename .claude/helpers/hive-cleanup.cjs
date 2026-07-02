@@ -327,9 +327,19 @@ function classifyStaleBusyAgent(agentId, agent, nowMs) {
       if (isPositivePid(pid) && isPositivePid(trackingPid) && pid !== trackingPid) {
         return { stale: false };
       }
+      if (isTerminalRecordStatus(tracking.status)) {
+        const terminalPid = isPositivePid(trackingPid) ? trackingPid : pid;
+        return { stale: true, reason: 'terminal-tracking', taskId, pid: terminalPid };
+      }
+      if (isPositivePid(trackingPid) && isPidDefinitelyDead(trackingPid)) {
+        return { stale: true, reason: 'dead-pid', taskId, pid: trackingPid };
+      }
       const deadlineAt = Date.parse(tracking.deadlineAt);
       if (Number.isFinite(deadlineAt) && nowMs > deadlineAt) {
         const livePid = isPositivePid(trackingPid) ? trackingPid : pid;
+        if (isPositivePid(livePid) && !isPidDefinitelyDead(livePid)) {
+          return { stale: false };
+        }
         return { stale: true, reason: 'past-deadline', taskId, pid: livePid };
       }
     }
@@ -875,7 +885,7 @@ function latestAgentTimestamp(agent) {
   return finite.length > 0 ? Math.max(...finite) : NaN;
 }
 
-const TERMINAL_RECORD_STATUSES = new Set(['cancelled', 'canceled', 'complete', 'completed', 'done', 'failed', 'terminated']);
+const TERMINAL_RECORD_STATUSES = new Set(['aborted', 'cancelled', 'canceled', 'complete', 'completed', 'done', 'failed', 'terminated']);
 
 function normalizeRecordStatus(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';

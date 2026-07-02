@@ -617,7 +617,57 @@ describe('hive-cleanup OS reaper', () => {
     assert.equal(hiveWorker.currentTaskId, undefined);
   });
 
-  it('reaps past-deadline busy records even when their recorded PID is still alive', async () => {
+  it('reaps terminal tracking records even when deadlineAt is in the future', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const taskId = 'task-terminal-future-deadline';
+    writeTracking(projectDir, `${taskId}.json`, {
+      status: 'failed',
+      taskId,
+      agentId: 'terminalAgent',
+      startedAt: isoMsAgo(10 * 60_000),
+      deadlineAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+      pid: process.pid,
+    });
+    writeAgentStore(projectDir, {
+      terminalAgent: {
+        agentId: 'terminalAgent',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskId: taskId,
+        currentTaskPid: process.pid,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    writeHive(projectDir, 'h-terminal-future', [
+      makeIdleWorker(1, {
+        agentId: 'terminalAgent',
+        workerId: 'w-terminal',
+        status: 'busy',
+        currentTaskId: taskId,
+        currentTaskPid: process.pid,
+      }),
+    ]);
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupStaleBusyAgents(Date.now() + 2000);
+
+    assert.equal(result.staleBusyFound, 1);
+    assert.equal(result.staleBusyReaped, 1);
+    assert.equal(result.hiveWorkersReaped, 1);
+    assert.equal(result.staleBusyAgents[0].reason, 'terminal-tracking');
+
+    const store = readAgentStore(projectDir);
+    assert.equal(store.agents.terminalAgent.status, 'idle');
+    assert.equal(store.agents.terminalAgent.currentTaskId, undefined);
+    assert.equal(store.agents.terminalAgent.currentTaskPid, undefined);
+    const hiveWorker = readHive(projectDir, 'h-terminal-future').workers[0];
+    assert.equal(hiveWorker.status, 'idle');
+    assert.equal(hiveWorker.currentTaskId, undefined);
+    assert.equal(hiveWorker.currentTaskPid, undefined);
+  });
+
+  it('preserves past-deadline busy records when their recorded PID is still alive', async () => {
     const projectDir = makeProjectDir();
     tempDirs.push(projectDir);
     const taskId = 'task-live-past-deadline';
@@ -652,19 +702,129 @@ describe('hive-cleanup OS reaper', () => {
     const mod = loadCleanupModule(projectDir);
     const result = await mod.cleanupStaleBusyAgents(Date.now() + 2000);
 
-    assert.equal(result.staleBusyFound, 1);
-    assert.equal(result.staleBusyReaped, 1);
-    assert.equal(result.hiveWorkersReaped, 1);
-    assert.equal(result.staleBusyAgents[0].reason, 'past-deadline');
+    assert.equal(result.staleBusyFound, 0);
+    assert.equal(result.staleBusyReaped, 0);
+    assert.equal(result.hiveWorkersReaped, 0);
 
     const store = readAgentStore(projectDir);
-    assert.equal(store.agents.deadlineAgent.status, 'idle');
-    assert.equal(store.agents.deadlineAgent.currentTaskId, undefined);
-    assert.equal(store.agents.deadlineAgent.currentTaskPid, undefined);
+    assert.equal(store.agents.deadlineAgent.status, 'busy');
+    assert.equal(store.agents.deadlineAgent.currentTaskId, taskId);
+    assert.equal(store.agents.deadlineAgent.currentTaskPid, process.pid);
     const hiveWorker = readHive(projectDir, 'h-deadline').workers[0];
-    assert.equal(hiveWorker.status, 'idle');
-    assert.equal(hiveWorker.currentTaskId, undefined);
-    assert.equal(hiveWorker.currentTaskPid, undefined);
+    assert.equal(hiveWorker.status, 'busy');
+    assert.equal(hiveWorker.currentTaskId, taskId);
+    assert.equal(hiveWorker.currentTaskPid, process.pid);
+  });
+
+  it('preserves within-deadline busy records with live tracking evidence', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const taskId = 'task-live-within-deadline';
+    writeTracking(projectDir, `${taskId}.json`, {
+      status: 'running',
+      taskId,
+      agentId: 'withinDeadlineAgent',
+      startedAt: isoMsAgo(10 * 60_000),
+      deadlineAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+      pid: process.pid,
+    });
+    writeAgentStore(projectDir, {
+      withinDeadlineAgent: {
+        agentId: 'withinDeadlineAgent',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskId: taskId,
+        currentTaskPid: process.pid,
+        createdAt: isoMsAgo(60 * 60_000),
+      },
+    });
+    writeHive(projectDir, 'h-within-deadline', [
+      makeIdleWorker(1, {
+        agentId: 'withinDeadlineAgent',
+        workerId: 'w-within-deadline',
+        status: 'busy',
+        currentTaskId: taskId,
+        currentTaskPid: process.pid,
+      }),
+    ]);
+
+    const mod = loadCleanupModule(projectDir);
+    const result = await mod.cleanupStaleBusyAgents(Date.now() + 2000);
+
+    assert.equal(result.staleBusyFound, 0);
+    assert.equal(result.staleBusyReaped, 0);
+    assert.equal(result.hiveWorkersReaped, 0);
+    const store = readAgentStore(projectDir);
+    assert.equal(store.agents.withinDeadlineAgent.status, 'busy');
+    assert.equal(store.agents.withinDeadlineAgent.currentTaskId, taskId);
+    const hiveWorker = readHive(projectDir, 'h-within-deadline').workers[0];
+    assert.equal(hiveWorker.status, 'busy');
+    assert.equal(hiveWorker.currentTaskId, taskId);
+  });
+
+  it('reaps past-deadline busy records when their recorded PID is ESRCH-dead', async () => {
+    const projectDir = makeProjectDir();
+    tempDirs.push(projectDir);
+    const taskId = 'task-dead-past-deadline';
+    const deadPid = 515151;
+    writeTracking(projectDir, `${taskId}.json`, {
+      status: 'running',
+      taskId,
+      agentId: 'deadDeadlineAgent',
+      startedAt: isoMsAgo(10 * 60_000),
+      deadlineAt: isoMsAgo(60_000),
+      pid: deadPid,
+    });
+    writeAgentStore(projectDir, {
+      deadDeadlineAgent: {
+        agentId: 'deadDeadlineAgent',
+        agentType: 'coder',
+        status: 'busy',
+        currentTaskId: taskId,
+        currentTaskPid: deadPid,
+        createdAt: new Date().toISOString(),
+      },
+    });
+    writeHive(projectDir, 'h-dead-deadline', [
+      makeIdleWorker(1, {
+        agentId: 'deadDeadlineAgent',
+        workerId: 'w-dead-deadline',
+        status: 'busy',
+        currentTaskId: taskId,
+        currentTaskPid: deadPid,
+      }),
+    ]);
+
+    const originalKill = process.kill;
+    process.kill = (pid, signal) => {
+      if (signal === 0 && pid === deadPid) {
+        const err = new Error('dead process');
+        err.code = 'ESRCH';
+        throw err;
+      }
+      return originalKill.call(process, pid, signal);
+    };
+
+    try {
+      const mod = loadCleanupModule(projectDir);
+      const result = await mod.cleanupStaleBusyAgents(Date.now() + 2000);
+
+      assert.equal(result.staleBusyFound, 1);
+      assert.equal(result.staleBusyReaped, 1);
+      assert.equal(result.hiveWorkersReaped, 1);
+      assert.equal(result.staleBusyAgents[0].reason, 'dead-pid');
+
+      const store = readAgentStore(projectDir);
+      assert.equal(store.agents.deadDeadlineAgent.status, 'idle');
+      assert.equal(store.agents.deadDeadlineAgent.currentTaskId, undefined);
+      assert.equal(store.agents.deadDeadlineAgent.currentTaskPid, undefined);
+      const hiveWorker = readHive(projectDir, 'h-dead-deadline').workers[0];
+      assert.equal(hiveWorker.status, 'idle');
+      assert.equal(hiveWorker.currentTaskId, undefined);
+      assert.equal(hiveWorker.currentTaskPid, undefined);
+    } finally {
+      process.kill = originalKill;
+    }
   });
 
   it('does not auto-fail an old active hive while a worker tracking PID is alive', async () => {
