@@ -13,7 +13,7 @@ vi.mock('child_process', () => {
 
 import { spawn, execFile } from 'child_process';
 // Real fs/os/path (only child_process is mocked) — used by the copy-back boundary tests.
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, symlinkSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, symlinkSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { GeminiCLIProvider } from '../gemini-cli-provider.js';
@@ -3207,5 +3207,33 @@ describe('copyCodexArtifactsBack (artifact copy-back boundary)', () => {
     writeFileSync(join(temp, 'a.md'), 'x');
     const res = copyCodexArtifactsBack(temp, join(root, 'does-not-exist'));
     expect(res.copied).toEqual([]);
+  });
+
+  it('does NOT write THROUGH a pre-planted TEMP-destination symlink (exclusive create)', () => {
+    // Regression for the v2 bounce: the intermediate temp path must use exclusive
+    // create so a pre-existing symlink there cannot be followed by copyFileSync.
+    const outside = join(root, 'temp-symlink-target.md');
+    const fixedTempName = '.hf-artifact-tmp-FIXED-report.md';
+    // Attacker pre-plants a symlink at the exact temp path pointing outside artifactDir.
+    symlinkSync(outside, join(artifactDir, fixedTempName));
+    writeFileSync(join(temp, 'report.md'), 'attacker-controlled');
+    // Force the temp name to collide with the planted symlink.
+    const res = copyCodexArtifactsBack(temp, artifactDir, () => fixedTempName);
+    // 1. Nothing was written THROUGH the symlink to the outside target.
+    expect(existsSync(outside)).toBe(false);
+    // 2. The file is not incorrectly reported copied; it is skipped with an honest reason.
+    expect(res.copied).not.toContain('report.md');
+    expect(res.skipped).toContainEqual({ name: 'report.md', reason: 'temp-dest-collision' });
+    // 3. The final destination was not created either.
+    expect(existsSync(join(artifactDir, 'report.md'))).toBe(false);
+  });
+
+  it('uses an unpredictable temp name by default (not process-pid-predictable)', () => {
+    writeFileSync(join(temp, 'ok.md'), 'x');
+    const res = copyCodexArtifactsBack(temp, artifactDir);
+    expect(res.copied).toEqual(['ok.md']);
+    // No predictable leftover temp file remains in artifactDir.
+    const leftovers = readdirSync(artifactDir).filter((n) => n.startsWith('.hf-artifact-tmp-'));
+    expect(leftovers).toEqual([]);
   });
 });

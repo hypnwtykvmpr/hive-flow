@@ -10,9 +10,10 @@
 
 import { spawn, ChildProcess, execFile } from 'child_process';
 import { createInterface } from 'readline';
-import { mkdtempSync, rmSync, readdirSync, lstatSync, statSync, copyFileSync, renameSync, realpathSync } from 'fs';
+import { mkdtempSync, rmSync, readdirSync, lstatSync, statSync, copyFileSync, renameSync, realpathSync, constants as fsConstants } from 'fs';
 import { tmpdir } from 'os';
 import { join, relative, isAbsolute, sep } from 'path';
+import { randomBytes } from 'crypto';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
@@ -126,7 +127,14 @@ export interface ArtifactCopyResult {
  * child cannot fill disk through this layer. Disallowed files are skipped with an
  * honest reason — never silently implied as persisted.
  */
-export function copyCodexArtifactsBack(tempDir: string, artifactDir: string): ArtifactCopyResult {
+export function copyCodexArtifactsBack(
+  tempDir: string,
+  artifactDir: string,
+  // Seam for tests to force a temp-path collision. Production default is an
+  // UNPREDICTABLE name; combined with exclusive create (below) it cannot be
+  // pre-planted or written through.
+  tempNameFor: (name: string) => string = (name) => `.hf-artifact-tmp-${randomBytes(12).toString('hex')}-${name}`,
+): ArtifactCopyResult {
   const copied: string[] = [];
   const skipped: Array<{ name: string; reason: string }> = [];
 
@@ -167,16 +175,24 @@ export function copyCodexArtifactsBack(tempDir: string, artifactDir: string): Ar
     // Never write THROUGH a destination symlink.
     try { if (lstatSync(destPath).isSymbolicLink()) { skipped.push({ name, reason: 'dest-symlink' }); continue; } } catch { /* absent is fine */ }
 
-    // Atomic: copy to a unique temp in the destination dir, then rename.
-    const tmpDest = join(realArtifactDir, `.hf-artifact-tmp-${process.pid}-${copied.length}-${name}`);
+    // Atomic write via a unique temp in the destination dir, then rename.
+    // EXCLUSIVE CREATE (COPYFILE_EXCL => O_CREAT|O_EXCL): fails with EEXIST if the
+    // temp path already exists as ANYTHING (including a pre-planted symlink), so we
+    // can never write THROUGH an attacker-controlled temp-destination symlink.
+    const tmpDest = join(realArtifactDir, tempNameFor(name));
+    let createdTmp = false;
     try {
-      copyFileSync(srcPath, tmpDest);
+      copyFileSync(srcPath, tmpDest, fsConstants.COPYFILE_EXCL);
+      createdTmp = true;
       renameSync(tmpDest, destPath);
       totalBytes += srcStat.size;
       copied.push(name);
-    } catch {
-      try { rmSync(tmpDest, { force: true }); } catch { /* best-effort */ }
-      skipped.push({ name, reason: 'copy-failed' });
+    } catch (err) {
+      // Only remove the temp file if WE created it — never unlink a pre-existing
+      // path we refused to write through.
+      if (createdTmp) { try { rmSync(tmpDest, { force: true }); } catch { /* best-effort */ } }
+      const code = (err as NodeJS.ErrnoException)?.code;
+      skipped.push({ name, reason: code === 'EEXIST' ? 'temp-dest-collision' : 'copy-failed' });
     }
   }
   return { copied, skipped };
