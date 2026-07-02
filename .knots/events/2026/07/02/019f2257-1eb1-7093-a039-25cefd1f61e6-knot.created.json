@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2257-1eb1-7093-a039-25cefd1f61e6",
+  "occurred_at": "2026-07-02T10:19:22.67383Z",
+  "knot_id": "hive-flow-7411",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: codex-9331-shipment",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}
