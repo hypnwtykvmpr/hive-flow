@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2255-10a2-7951-ad9b-d112910f7792",
+  "occurred_at": "2026-07-02T10:17:08.002171Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS (Codex, 2026-07-02): reviewed combined F0-A landed implementation against acceptance. Slice A codex @ 0ec695f12 provides read-only denial plus read-only-with-artifacts via private temp workspace and hardened .md/.json-only copy-back; root/sibling escape denied and live canary passed. Slice B cursor+gemini @ 608cb1b2e: cursor full unchanged, cursor read-only/artifact fail-closed to --mode plan without --force/--yolo and honest artifactWritesDisabled; gemini restricted modes drop --dangerously-skip-permissions and add --sandbox, full unchanged. Required tests and gates already run/recorded: cli-providers 154/154, providers typecheck, cli typecheck, providers build, diff-check. Non-blocking follow-ups hive-flow-d17e and hive-flow-bba8 are not acceptance blockers.",
+    "datetime": "2026-07-02T10:17:08.002171Z",
+    "entry_id": "019f2255-10a2-7951-ad9b-d10799c8bfed",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

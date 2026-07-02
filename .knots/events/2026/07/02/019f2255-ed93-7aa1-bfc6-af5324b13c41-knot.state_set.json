@@ -1,0 +1,13 @@
+{
+  "event_id": "019f2255-ed93-7aa1-bfc6-af5324b13c41",
+  "occurred_at": "2026-07-02T10:18:04.563255Z",
+  "knot_id": "hive-flow-c6ad",
+  "type": "knot.state_set",
+  "data": {
+    "force": true,
+    "from": "lease_active",
+    "profile_id": "lease",
+    "to": "lease_terminated",
+    "workflow_id": "lease_sdlc"
+  }
+}
