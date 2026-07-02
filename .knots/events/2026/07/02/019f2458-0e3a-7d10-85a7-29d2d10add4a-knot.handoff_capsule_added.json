@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2458-0e3a-7d10-85a7-29d2d10add4a",
+  "occurred_at": "2026-07-02T19:39:38.426145Z",
+  "knot_id": "hive-flow-df6e",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS: Claude VERIFY_CLEAN accepted and Codex landed protected helper slice to main. HEAD/origin main d14517497. Post-merge gates: node --check .claude/helpers/agent-task-rewake.cjs; node --test .claude/helpers/__tests__/agent-task-rewake.test.mjs .claude/helpers/__tests__/hive-cleanup-reaper.test.mjs 23/23; pnpm --dir cli exec vitest run src/__tests__/sentinel-rewake.test.ts 28/28; pnpm --dir cli exec tsc --noEmit; git diff --check; .audit/private-guard.sh clean.",
+    "datetime": "2026-07-02T19:39:38.426145Z",
+    "entry_id": "019f2458-0e3a-7d10-85a7-29c1ce031f84",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "event_id": "019f2458-1acf-7a83-ae98-dffea03c83b6",
+  "occurred_at": "2026-07-02T19:39:41.647016Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-df6e",
+    "next_step_metadata": {
+      "action_kind": "produce",
+      "action_state": "shipment",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_shipment",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "shipment",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "P2-SH4-SH5-SL1 harden agent-task rewake for terminal dead and waiting tasks",
+    "type": "work",
+    "updated_at": "2026-07-02T19:39:41.647016Z",
+    "workflow_id": "work_sdlc"
+  }
+}
