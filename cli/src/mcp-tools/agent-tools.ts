@@ -179,7 +179,20 @@ async function appendHiveRuntimeAgents(
 ): Promise<AgentListRecord[]> {
   const runtimeState = await collectActiveHiveRuntimeState(projectRoot).catch(() => undefined);
   if (runtimeState === undefined || runtimeState.activeAgents.length === 0) return agents;
-  const seen = new Set(agents.map(agent => agent.agentId));
+  // P2-SH2 (hive-flow-4a28): a real blocked worker normally ALSO has a persisted
+  // store.json row, so it never reaches the synthetic-row branch below. Overlay the
+  // derived permission-waiting from the runtime state onto the persisted row —
+  // read-only, never mutating store.json — so agent_list reflects the wait instead
+  // of the stale persisted busy/idle. Agents absent from the store are still
+  // appended as synthetic runtime rows.
+  const runtimeById = new Map(runtimeState.activeAgents.map(r => [r.agentId, r] as const));
+  const merged = agents.map(agent => {
+    const rt = runtimeById.get(agent.agentId);
+    return rt?.status === 'permission-waiting' && agent.status !== 'terminated'
+      ? { ...agent, status: 'permission-waiting' as const }
+      : agent;
+  });
+  const seen = new Set(merged.map(agent => agent.agentId));
   const runtimeAgents: AgentListRecord[] = [];
   for (const runtimeAgent of runtimeState.activeAgents) {
     if (seen.has(runtimeAgent.agentId)) continue;
@@ -205,7 +218,7 @@ async function appendHiveRuntimeAgents(
     };
     runtimeAgents.push(runtimeRecord);
   }
-  return [...agents, ...runtimeAgents];
+  return [...merged, ...runtimeAgents];
 }
 
 function clearTerminalTaskIfCurrent(agent: AgentRecord | undefined, taskId: string): boolean {

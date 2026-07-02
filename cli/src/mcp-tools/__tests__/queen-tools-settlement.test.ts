@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { queenTools } from '../queen-tools.js';
@@ -427,5 +427,78 @@ describe('statusboard / agent_list — permission-waiting visibility (hive-flow-
     const listed = listResult.agents.find(a => a.agentId === worker.agentId);
     expect(listed).toBeDefined();
     expect(listed?.status).toBe('permission-waiting');
+  });
+
+  // Bounce #2 (Codex, 2026-07-02): the real production path is a worker that ALSO
+  // has a persisted store.json row. appendHiveRuntimeAgents skipped such agents (they
+  // are already in `seen`), so the persisted busy/idle status leaked through. The
+  // overlay must relabel the persisted row to permission-waiting WITHOUT mutating the store.
+  it('overlays permission-waiting onto a persisted store row without mutating the store', async () => {
+    const worker = makeWorker({ taskId: 'task-blocked-persisted' });
+    const hive = await seedHive([worker]);
+    await withHiveLock(hive.hiveId, () => {
+      const fresh = loadHive(hive.hiveId);
+      if (!fresh) throw new Error(`Missing hive ${hive.hiveId}`);
+      fresh.ownerSessionId = 'sess-4a28-persisted';
+      fresh.audit.push(taskedAudit(hive.hiveId, worker));
+      saveHive(hive.hiveId, fresh);
+    });
+    // Real persisted store row for the worker — the production path.
+    const agentStoreDir = join(tempDir, '.hive-flow', 'agents');
+    mkdirSync(agentStoreDir, { recursive: true });
+    const storePath = join(agentStoreDir, 'store.json');
+    writeFileSync(storePath, JSON.stringify({
+      agents: {
+        [worker.agentId]: {
+          agentId: worker.agentId,
+          agentType: 'coder',
+          status: 'busy',
+          health: 1,
+          taskCount: 1,
+          config: {},
+          createdAt: isoMsAgo(10 * 60_000),
+          provider: 'codex-cli',
+        },
+      },
+    }, null, 2));
+    // Live task tracking so the worker is a live runtime row.
+    writeTracking('task-blocked-persisted', { agentId: worker.agentId, pid: process.pid, status: 'running' });
+    // Undecided permission request → blocked.
+    const hiveDir = join(tempDir, '.hive-flow', 'hives', hive.hiveId);
+    mkdirSync(hiveDir, { recursive: true });
+    writeFileSync(join(hiveDir, 'permission-requests.jsonl'), `${JSON.stringify({
+      kind: 'worker-permission-denial',
+      requestId: 'perm-persisted-1',
+      taskId: 'task-blocked-persisted',
+      ts: new Date(0).toISOString(),
+      agentId: worker.agentId,
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: 'blocked pending queen decision',
+      denyCode: 'read-only-command-denied',
+    })}\n`);
+
+    const { agentTools } = await import('../agent-tools.js');
+    const listTool = agentTools.find(t => t.name === 'agent_list');
+    if (!listTool) throw new Error('agent_list tool not found');
+
+    // Default list: the persisted busy row is overlaid to permission-waiting.
+    const all = await listTool.handler({}) as { agents: Array<Record<string, unknown>> };
+    const listed = all.agents.find(a => a.agentId === worker.agentId);
+    expect(listed).toBeDefined();
+    expect(listed?.source).toBe('agent-store');            // the REAL persisted row, not a synthetic runtime row
+    expect(listed?.status).toBe('permission-waiting');
+
+    // Status filters reflect the overlay.
+    const waiting = await listTool.handler({ status: 'permission-waiting' }) as { agents: Array<Record<string, unknown>> };
+    expect(waiting.agents.some(a => a.agentId === worker.agentId)).toBe(true);
+
+    const busy = await listTool.handler({ status: 'busy' }) as { agents: Array<Record<string, unknown>> };
+    expect(busy.agents.some(a => a.agentId === worker.agentId)).toBe(false);
+
+    // The store on disk is NOT mutated — the overlay is read-only.
+    const storeOnDisk = JSON.parse(readFileSync(storePath, 'utf-8')) as { agents: Record<string, { status: string }> };
+    expect(storeOnDisk.agents[worker.agentId].status).toBe('busy');
   });
 });
