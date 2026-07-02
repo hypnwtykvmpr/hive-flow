@@ -1574,18 +1574,27 @@ function activeRouterTerminalState(routerDir = ROUTER_DIR) {
   }
 }
 
-function hasActiveRouterHumanBlocker(routerDir = ROUTER_DIR) {
+// hive-flow-8b69 Slice 5 (P2-SL4): return the newest router note when it is a human-gate
+// blocker (so its mtime can floor router handoffs and gate a global early return), mirroring
+// activeRouterTerminalState. Only fires when the blocker is the NEWEST note — a newer
+// non-terminal handoff overrides it (newest-note semantics).
+function activeRouterHumanBlocker(routerDir = ROUTER_DIR) {
   const newest = newestRouterMarkdown(routerDir);
-  if (!newest) return false;
+  if (!newest) return null;
   try {
     const text = fs.readFileSync(newest.filePath, 'utf8');
-    if (/^Status:\s*BLOCKED_TRUE_HUMAN_GATE\b/im.test(text)) return true;
-    return /\bhuman authorization gate\b/i.test(text)
+    if (/^Status:\s*BLOCKED_TRUE_HUMAN_GATE\b/im.test(text)) return newest;
+    if (/\bhuman authorization gate\b/i.test(text)
       && /\b(?:merge|push|delete|prune|git refs?)\b/i.test(text)
-      && /\b(?:forbidden|without human go|authorization boundary)\b/i.test(text);
+      && /\b(?:forbidden|without human go|authorization boundary)\b/i.test(text)) return newest;
+    return null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+function hasActiveRouterHumanBlocker(routerDir = ROUTER_DIR) {
+  return activeRouterHumanBlocker(routerDir) !== null;
 }
 
 function hasActiveRouterTerminalState(routerDir = ROUTER_DIR) {
@@ -2669,8 +2678,13 @@ function runOnce({
   const compactRecoveryHeld = statuses.some((status) => status.compactRecovery);
   const quiet = quietStatus(state, now);
   const terminalState = activeRouterTerminalState(routerDir);
+  // hive-flow-8b69 Slice 5 (P2-SL4): a newest human-gate blocker floors router handoffs and
+  // globally suppresses the nag paths below, symmetric to COMPLETE_NO_ACTION. Because it only
+  // fires when the blocker is the NEWEST note, a newer non-terminal handoff overrides it.
+  const humanBlocker = activeRouterHumanBlocker(routerDir);
   const routerHandoffFloor = Math.max(
     terminalState ? Number(terminalState.mtimeMs || 0) : 0,
+    humanBlocker ? Number(humanBlocker.mtimeMs || 0) : 0,
     quiet.quiet ? Number(quiet.mutedAt || 0) : 0,
   );
   const deliverableRouterHandoffExists = !compactRecoveryHeld
@@ -2707,6 +2721,10 @@ function runOnce({
 
   if (quiet.quiet && !deliverableRouterHandoffExists) return processed;
   if (terminalState) return processed;
+  // hive-flow-8b69 Slice 5 (P2-SL4): global suppression under a newest human-gate blocker —
+  // no pane nudges, notifications, task-liveness, or deadlock nudges fire. Newer handoffs are
+  // already delivered above (they win the newest-note check, so humanBlocker is null then).
+  if (humanBlocker) return processed;
   if (!compactRecoveryHeld) {
     routePendingNotifications({
       pendingRoot: pendingNotificationsRoot,
@@ -3729,6 +3747,7 @@ module.exports = {
   activeKnotsLeases,
   hasPerformativeQuestion,
   hasDeclaredIntentToContinue,
+  activeRouterHumanBlocker,
   hasActiveRouterHumanBlocker,
   hasActiveRouterTerminalState,
   knotsLeasesNeedingRenewal,
