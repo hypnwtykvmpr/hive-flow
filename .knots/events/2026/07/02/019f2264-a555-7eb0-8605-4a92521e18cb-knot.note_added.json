@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2264-a555-7eb0-8605-4a92521e18cb",
+  "occurred_at": "2026-07-02T10:34:09.109657Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "IMPLEMENTED (Claude, 2026-07-02, lease hive-flow-5554). Branch knots-8119-queen-permission-resume @ edc6dc135 (3 files, 92+/2-). P2-SH7 fix: queen_permission_decide deny now dispatches a worker RESUME task (mirrors redirect dispatch) so a denied worker continues its ORIGINAL task without the denied action, carrying queen guidance+rationale. deny DECISION succeeds once guidance recorded; resume dispatch is best-effort (gone/terminated worker cannot be resumed) surfaced via result.workerResumed + persisted decision.resumeDispatched/resumeError. redirect keeps stricter dispatch-must-succeed; approve + terminate decision unchanged. hive-store decision record gained optional resumeDispatched/resumeError. GATES: queen suites 29/29 (new deny-resume test proves worker re-tasked/workerResumed=true/worker stays busy; reconciled lifecycle test [deny now dispatches 1 resume task] + redirect-fail retry-deny [deny after gone worker still succeeds best-effort]); permission/enforcement 184/184; cli tsc clean; npm run build clean. Tracked cli/src only.",
+    "datetime": "2026-07-02T10:34:09.109657Z",
+    "entry_id": "019f2264-a555-7eb0-8605-4a83e48f476c",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

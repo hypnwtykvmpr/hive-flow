@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2264-e2f9-7953-bbc0-f5201d409c73",
+  "occurred_at": "2026-07-02T10:34:24.889269Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-5554",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: claude-8119-queen-resume",
+    "type": "lease",
+    "updated_at": "2026-07-02T10:34:24.889269Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

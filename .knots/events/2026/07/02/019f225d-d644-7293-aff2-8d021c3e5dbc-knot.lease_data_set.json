@@ -1,0 +1,20 @@
+{
+  "event_id": "019f225d-d644-7293-aff2-8d021c3e5dbc",
+  "occurred_at": "2026-07-02T10:26:42.884347Z",
+  "knot_id": "hive-flow-5554",
+  "type": "knot.lease_data_set",
+  "data": {
+    "lease_data": {
+      "agent_info": {
+        "agent_name": "claude",
+        "agent_type": "cli",
+        "model": "fable",
+        "model_version": "5",
+        "provider": "Anthropic"
+      },
+      "lease_type": "agent",
+      "nickname": "claude-8119-queen-resume",
+      "timeout_seconds": 14400
+    }
+  }
+}
