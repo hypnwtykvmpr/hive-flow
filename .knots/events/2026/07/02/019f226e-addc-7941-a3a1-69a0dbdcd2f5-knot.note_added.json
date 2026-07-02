@@ -1,0 +1,15 @@
+{
+  "event_id": "019f226e-addc-7941-a3a1-69a0dbdcd2f5",
+  "occurred_at": "2026-07-02T10:45:06.651993Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS (Codex, 2026-07-02): re-reviewed 0dff0d00f plus base edc6dc135 against P2-SH7 acceptance. The idempotency bounce is fixed: first-lock short-circuit returns alreadyDecided for final statuses approved/denied/redirected/halted before resume/redirect/halt side effects; redirect-failed remains retryable. New duplicate-deny regression asserts no second task dispatch, no second permission-reviewed audit, and stable persisted decision. Source review found redirect strictness and deny best-effort semantics preserved. Landed to main and pushed origin/main at 0dff0d00f. Gates run on landed tree: queen-dispatch/settlement/dead-worker 30/30 PASS; mcp-enforcement-gate/scope/breakdown 116/116 PASS; pnpm --dir cli exec tsc --noEmit PASS; npm run build PASS; git diff --check PASS. Broad permission-guard glob pulled in hook-handler-protocol.test.ts, which fails 13/13 unchanged on main before this slice, so it is pre-existing and not attributable to 8119.",
+    "datetime": "2026-07-02T10:45:06.651993Z",
+    "entry_id": "019f226e-addc-7941-a3a1-699cc86abfbe",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

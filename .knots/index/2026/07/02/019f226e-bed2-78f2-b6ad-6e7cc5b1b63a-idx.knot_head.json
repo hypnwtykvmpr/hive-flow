@@ -1,0 +1,21 @@
+{
+  "event_id": "019f226e-bed2-78f2-b6ad-6e7cc5b1b63a",
+  "occurred_at": "2026-07-02T10:45:10.994044Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-b89d",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-8119-rereview",
+    "type": "lease",
+    "updated_at": "2026-07-02T10:45:10.994044Z",
+    "workflow_id": "lease_sdlc"
+  }
+}
