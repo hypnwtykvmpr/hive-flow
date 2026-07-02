@@ -44,6 +44,7 @@ import {
   isHiveStale,
   findStaleHives,
   recomputeDelegationMetrics,
+  pendingPermissionBlockedWorkerIds,
 } from './hive-store.js';
 import { getWorkflowHookDispatcher } from './workflow-executor.js';
 import { normalizeClientKind, resolveOwnerStampOrError, sanitizeSessionId, type OwnerStampError } from './session-id.js';
@@ -1416,12 +1417,22 @@ const hiveStatusTool: MCPTool = {
       if (!hive) {
         return { success: false, error: `Hive '${hiveId}' not found.` };
       }
+      // P2-SH2 (hive-flow-4a28): expose workers blocked on a pending permission request
+      // as permission-waiting so operators see the waiting state (shared source of truth).
+      const blocked = pendingPermissionBlockedWorkerIds(hive, projectRoot);
       return {
         success: true,
         hive: {
           ...hive,
+          workers: hive.workers.map(w =>
+            blocked.has(w.workerId) && w.status !== 'terminated'
+              ? { ...w, status: 'permission-waiting' as const }
+              : w,
+          ),
           stale: includeStale ? isHiveStale(hive) : undefined,
         },
+        blockedCount: blocked.size,
+        blockedWorkers: [...blocked],
         delegationMetrics: hive.delegationMetrics,
       };
     }
@@ -1434,20 +1445,25 @@ const hiveStatusTool: MCPTool = {
       success: true,
       total: hives.length,
       staleCount: staleHives.length,
-      hives: hives.map(h => ({
-        hiveId: h.hiveId,
-        queenId: h.queenId,
-        status: h.status,
-        error: h.error,
-        workerCount: h.workers.length,
-        liveWorkers: h.workers.filter(w => w.status !== 'terminated').length,
-        missionScope: h.mission?.scope,
-        createdAt: h.createdAt,
-        updatedAt: h.updatedAt,
-        completedAt: h.completedAt,
-        stale: includeStale ? isHiveStale(h) : undefined,
-        delegationMetrics: h.delegationMetrics,
-      })),
+      hives: hives.map(h => {
+        const blocked = pendingPermissionBlockedWorkerIds(h, projectRoot);
+        return {
+          hiveId: h.hiveId,
+          queenId: h.queenId,
+          status: h.status,
+          error: h.error,
+          workerCount: h.workers.length,
+          liveWorkers: h.workers.filter(w => w.status !== 'terminated').length,
+          blockedCount: blocked.size,
+          blockedWorkers: [...blocked],
+          missionScope: h.mission?.scope,
+          createdAt: h.createdAt,
+          updatedAt: h.updatedAt,
+          completedAt: h.completedAt,
+          stale: includeStale ? isHiveStale(h) : undefined,
+          delegationMetrics: h.delegationMetrics,
+        };
+      }),
     };
   },
 };
@@ -1964,14 +1980,7 @@ const hivePollWorkersTool: MCPTool = {
     // would declare success on a worker that is stuck awaiting a queen decision. Derive
     // the blocked set from the merged permission-request log (source of truth); this is
     // read-only (no persistence from the poll path). Reflect it in the reported statuses.
-    const { requests: mergedPermissionRequests } = mergeHivePermissionRequests(hive, projectRoot);
-    const blockedWorkerIds = new Set<string>();
-    for (const req of mergedPermissionRequests) {
-      if (req.status !== 'pending') continue; // only undecided requests block settlement
-      const blockedWorkerId = req.workerId
-        || hive.workers.find(w => w.agentId === req.agentId)?.workerId;
-      if (blockedWorkerId) blockedWorkerIds.add(blockedWorkerId);
-    }
+    const blockedWorkerIds = pendingPermissionBlockedWorkerIds(hive, projectRoot);
     if (blockedWorkerIds.size > 0) {
       for (const ws of workerStatuses) {
         // A blocked worker is awaiting a queen decision, not idle/running/failed. Do

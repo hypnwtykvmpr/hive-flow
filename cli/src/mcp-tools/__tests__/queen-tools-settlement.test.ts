@@ -329,3 +329,103 @@ describe('hive_terminate — store consistency on enforcement error (d3-002)', (
     expect(w2!.status).not.toBe('terminated');
   });
 });
+
+// P2-SH2 (hive-flow-4a28): hive_status must surface workers blocked on an undecided
+// permission request via blockedCount/blockedWorkers and a relabeled worker row, using
+// the SAME derived source of truth as settlement — never a persisted mutable status.
+describe('hive_status — permission-waiting visibility (hive-flow-4a28)', () => {
+  async function seedBlockedHive(requestId: string): Promise<{ hive: HiveRecord; worker: HiveWorkerRecord }> {
+    const worker = makeWorker();
+    const hive = await seedHive([worker]);
+    const hiveDir = join(tempDir, '.hive-flow', 'hives', hive.hiveId);
+    mkdirSync(hiveDir, { recursive: true });
+    writeFileSync(join(hiveDir, 'permission-requests.jsonl'), `${JSON.stringify({
+      kind: 'worker-permission-denial',
+      requestId,
+      taskId: 'task-blocked',
+      ts: new Date(0).toISOString(),
+      agentId: worker.agentId,
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: 'blocked pending queen decision',
+      denyCode: 'read-only-command-denied',
+    })}\n`);
+    return { hive, worker };
+  }
+
+  it('single-hive lookup exposes blockedCount/blockedWorkers and relabels the worker row', async () => {
+    const { hive, worker } = await seedBlockedHive('perm-status-single');
+    const tool = getQueenTool('hive_status');
+    const result = await tool.handler({ hiveId: hive.hiveId }) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    expect(result.blockedCount).toBe(1);
+    expect(result.blockedWorkers).toContain(worker.workerId);
+    const returnedHive = result.hive as { workers: Array<Record<string, unknown>> };
+    const ws = returnedHive.workers.find(w => w.workerId === worker.workerId);
+    expect(ws?.status).toBe('permission-waiting');
+  });
+
+  it('list view exposes per-hive blockedCount/blockedWorkers', async () => {
+    const { hive, worker } = await seedBlockedHive('perm-status-list');
+    const tool = getQueenTool('hive_status');
+    const result = await tool.handler({}) as Record<string, unknown>;
+
+    expect(result.success).toBe(true);
+    const summaries = result.hives as Array<Record<string, unknown>>;
+    const summary = summaries.find(h => h.hiveId === hive.hiveId);
+    expect(summary).toBeDefined();
+    expect(summary?.blockedCount).toBe(1);
+    expect(summary?.blockedWorkers).toContain(worker.workerId);
+  });
+});
+
+// P2-SH2 (hive-flow-4a28): the statusboard runtime rows (collectActiveHiveRuntimeState)
+// AND agent_list must surface a LIVE worker blocked on an undecided permission request as
+// permission-waiting instead of an indistinguishable busy — same derived source of truth.
+describe('statusboard / agent_list — permission-waiting visibility (hive-flow-4a28)', () => {
+  it('relabels a live blocked worker as permission-waiting in runtime state and agent_list', async () => {
+    const worker = makeWorker({ taskId: 'task-blocked' });
+    const hive = await seedHive([worker]);
+    // Runtime rows require an owner session; keep the hive active + past startup grace.
+    await withHiveLock(hive.hiveId, () => {
+      const fresh = loadHive(hive.hiveId);
+      if (!fresh) throw new Error(`Missing hive ${hive.hiveId}`);
+      fresh.ownerSessionId = 'sess-4a28-statusboard';
+      fresh.audit.push(taskedAudit(hive.hiveId, worker));
+      saveHive(hive.hiveId, fresh);
+    });
+    // Live task tracking (real, alive pid) so the worker counts as a live runtime row.
+    writeTracking('task-blocked', { agentId: worker.agentId, pid: process.pid, status: 'running' });
+    // Undecided permission request in the append-only log → worker is blocked.
+    const hiveDir = join(tempDir, '.hive-flow', 'hives', hive.hiveId);
+    mkdirSync(hiveDir, { recursive: true });
+    writeFileSync(join(hiveDir, 'permission-requests.jsonl'), `${JSON.stringify({
+      kind: 'worker-permission-denial',
+      requestId: 'perm-runtime-1',
+      taskId: 'task-blocked',
+      ts: new Date(0).toISOString(),
+      agentId: worker.agentId,
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: 'blocked pending queen decision',
+      denyCode: 'read-only-command-denied',
+    })}\n`);
+
+    const { collectActiveHiveRuntimeState } = await import('../../statusline/hive-ownership.js');
+    const runtime = await collectActiveHiveRuntimeState(tempDir);
+    const runtimeWorker = runtime?.activeAgents.find(a => a.agentId === worker.agentId);
+    expect(runtimeWorker).toBeDefined();
+    expect(runtimeWorker?.status).toBe('permission-waiting');
+
+    const { agentTools } = await import('../agent-tools.js');
+    const listTool = agentTools.find(t => t.name === 'agent_list');
+    if (!listTool) throw new Error('agent_list tool not found');
+    const listResult = await listTool.handler({}) as { agents: Array<Record<string, unknown>> };
+    const listed = listResult.agents.find(a => a.agentId === worker.agentId);
+    expect(listed).toBeDefined();
+    expect(listed?.status).toBe('permission-waiting');
+  });
+});

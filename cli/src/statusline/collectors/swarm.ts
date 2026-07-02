@@ -398,7 +398,11 @@ function buildRuntimeHiveRows(
       id: runtimeAgent.agentId,
       role: runtimeAgent.role,
       ownerSessionId: runtimeAgent.ownerSessionId,
-      status: runtimeAgent.status,
+      // P2-SH2 (hive-flow-4a28): the rendered statusline vocabulary has no
+      // permission-waiting glyph; a blocked-but-alive worker still counts as
+      // active (its prior hardcoded bucket). The precise permission-waiting
+      // state is carried by the structured runtime/agent_list surfaces.
+      status: runtimeAgent.status === 'permission-waiting' ? 'busy' : runtimeAgent.status,
     };
     if (runtimeAgent.provider !== undefined) {
       (row as { provider?: string }).provider = runtimeAgent.provider;

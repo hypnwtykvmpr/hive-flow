@@ -1,6 +1,7 @@
 import { lstat, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { pendingPermissionBlockedWorkerIds } from '../mcp-tools/hive-store.js';
 import { sanitizeSessionId } from '../mcp-tools/session-id.js';
 import { readJsonFile } from './storage.js';
 import type { ActiveHiveOwnershipSummary } from './types.js';
@@ -60,7 +61,7 @@ export interface ActiveHiveRuntimeAgent {
   ownerSessionId: string;
   role: 'queen' | 'worker';
   agentType?: string;
-  status: 'busy' | 'idle';
+  status: 'busy' | 'idle' | 'permission-waiting';
   hiveId: string;
   createdAt?: string;
   currentTaskPid?: number;
@@ -250,6 +251,13 @@ export async function collectActiveHiveRuntimeState(
     // `hiveAgentIds` for this record's workers/queen was already populated by
     // `registerHiveAgentIds` above; here we only gate the active-only sets.
     const workers = extractWorkers(record);
+    // P2-SH2 (hive-flow-4a28): shared source of truth for workers blocked on an
+    // undecided permission request, so the statusboard/agent_list runtime rows
+    // surface them as permission-waiting instead of an indistinguishable busy.
+    const blockedWorkerIds = pendingPermissionBlockedWorkerIds(
+      record as unknown as Parameters<typeof pendingPermissionBlockedWorkerIds>[0],
+      projectRoot,
+    );
     let hasLiveWorker = false;
     for (const worker of workers) {
       const agentId = workerAgentId(worker);
@@ -273,7 +281,12 @@ export async function collectActiveHiveRuntimeState(
           ownerSessionId,
           role: 'worker',
           ...(workerAgentType !== undefined ? { agentType: workerAgentType } : {}),
-          status: 'busy',
+          status: (() => {
+            const workerId = optionalString(worker.workerId);
+            return workerId !== undefined && blockedWorkerIds.has(workerId)
+              ? 'permission-waiting'
+              : 'busy';
+          })(),
           hiveId: typeof record.hiveId === 'string' && record.hiveId.trim()
             ? record.hiveId.trim()
             : entry.name,

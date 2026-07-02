@@ -201,6 +201,58 @@ function ensureHiveDir(hiveId: string, projectRoot = process.cwd()): void {
   }
 }
 
+/**
+ * P2-SH2 (hive-flow-4a28): the SINGLE shared source of truth for worker IDs BLOCKED
+ * on an UNDECIDED permission request. Used by hive_poll_workers settlement, hive_status,
+ * and the statusboard/agent_list runtime rows (the sentinel watcher mirrors this in
+ * .cjs). DERIVED — never a persisted mutable status — from BOTH the persisted
+ * hive.permissionRequests AND, when projectRoot is known, the append-only
+ * permission-requests.jsonl (fresh bridge requests not yet surfaced to the queen).
+ * A request blocks its worker unless a terminal decision is recorded (status !== 'pending').
+ */
+export function pendingPermissionBlockedWorkerIds(
+  hive: {
+    hiveId?: string;
+    workers?: Array<{ workerId?: string; agentId?: string }>;
+    permissionRequests?: HivePermissionRequest[];
+  },
+  projectRoot?: string,
+): Set<string> {
+  const blocked = new Set<string>();
+  const agentToWorker = new Map<string, string>();
+  for (const w of hive.workers ?? []) {
+    if (w?.agentId && w?.workerId) agentToWorker.set(w.agentId, w.workerId);
+  }
+  const decided = new Map<string, HivePermissionRequestStatus>();
+  for (const r of hive.permissionRequests ?? []) {
+    if (r?.requestId) decided.set(r.requestId, r.status);
+    if (r?.status === 'pending') {
+      const wid = r.workerId || (r.agentId ? agentToWorker.get(r.agentId) : undefined);
+      if (wid) blocked.add(wid);
+    }
+  }
+  if (projectRoot && hive.hiveId) {
+    try {
+      const logPath = join(getHiveDir(hive.hiveId, projectRoot), 'permission-requests.jsonl');
+      if (existsSync(logPath)) {
+        for (const line of readFileSync(logPath, 'utf-8').split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          let req: { requestId?: string; workerId?: string; agentId?: string };
+          try { req = JSON.parse(trimmed) as typeof req; } catch { continue; }
+          if (!req?.requestId) continue;
+          const status = decided.get(req.requestId);
+          if (status === undefined || status === 'pending') {
+            const wid = req.workerId || (req.agentId ? agentToWorker.get(req.agentId) : undefined);
+            if (wid) blocked.add(wid);
+          }
+        }
+      }
+    } catch { /* log unreadable — persisted requests above still apply */ }
+  }
+  return blocked;
+}
+
 // ---------------------------------------------------------------------------
 // Hive-scoped lock (Condition 3)
 //

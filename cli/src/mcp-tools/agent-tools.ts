@@ -99,7 +99,7 @@ type EffectiveAgentModeResult =
 export interface AgentRecord {
   agentId: string;
   agentType: string;
-  status: 'spawning' | 'idle' | 'busy' | 'terminated';
+  status: 'spawning' | 'idle' | 'busy' | 'terminated' | 'permission-waiting';
   health: number;
   taskCount: number;
   config: Record<string, unknown>;
