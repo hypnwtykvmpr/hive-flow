@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2272-2079-76d3-83ad-87082c7f9cf2",
+  "occurred_at": "2026-07-02T10:48:52.601041Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-8119",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "P2-SH7 queen permission decisions need a worker resume path",
+    "type": "work",
+    "updated_at": "2026-07-02T10:48:52.601041Z",
+    "workflow_id": "work_sdlc"
+  }
+}

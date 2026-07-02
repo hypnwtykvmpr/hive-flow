@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2272-141b-7340-ae24-a59fb8b5c145",
+  "occurred_at": "2026-07-02T10:48:49.435897Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS (Codex, 2026-07-02): final review of remote_main artifact passed. HEAD and origin/main both resolve to 0dff0d00f4a7d0a5672be2db7ef74eac07ef297e. Knot tags include commit:edc6dc135 and commit:0dff0d00f; both commits are ancestors of main and origin/main. gh run list for 0dff0d00f returned no workflow runs; the only tracked workflow is path-filtered to v3 credential-store/launcher paths and does not apply to this cli/src/mcp-tools slice. Landed-tree gates recorded for the shipped artifact remain queen 30/30, MCP enforcement 116/116, tsc, build, and diff-check. Tracked git tree remains clean except pre-existing untracked local artifacts. Shipment review accepted.",
+    "datetime": "2026-07-02T10:48:49.435897Z",
+    "entry_id": "019f2272-141b-7340-ae24-a58b8b7a2f23",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
