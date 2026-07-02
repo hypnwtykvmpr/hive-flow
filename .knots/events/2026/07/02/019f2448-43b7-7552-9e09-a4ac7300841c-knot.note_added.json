@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2448-43b7-7552-9e09-a4ac7300841c",
+  "occurred_at": "2026-07-02T19:22:23.543146Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS (Codex, 2026-07-02): HEAD and origin/main both 897d8b2d664a78c3351314bfa935766a7b863b13. Full shipped commit chain tagged on knot: d1aea450d, b657d7219, 25a14eba9, b4918c2eb, b940f46cc, 16ba3419e, 897d8b2d6. Shipped range d1aea450d^..HEAD is limited to the canonical watchdog, install path, shared liveness classifier, and tests; no .hive-flow/data runtime source is tracked. Gates re-run and pass: node --check scripts/flow-watchdog.cjs; node --check scripts/install-flow-watchdog.cjs; watchdog node --test 38/38; hive-watcher 12/12; pnpm --dir cli exec tsc --noEmit; progress vitest 20/20; git diff --check; .audit/private-guard.sh clean. GitHub workflow credential-backends.yml is path-filtered to credential-store/launcher files, so no remote CI run applies to this watchdog-only SHA. Operational install/restart of the live runtime copy is explicitly deferred as a separate runtime action; shipment covers reviewed source plus idempotent install/generation path.",
+    "datetime": "2026-07-02T19:22:23.543146Z",
+    "entry_id": "019f2448-43b7-7552-9e09-a49685d7bb35",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
