@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-1939-7010-b0ba-43f18b9545fd",
+  "occurred_at": "2026-07-02T03:09:00.08091Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-a540",
+    "profile_id": "autopilot",
+    "state": "abandoned",
+    "terminal": true,
+    "title": "Deferred: design inter-agent communication after harness proof",
+    "type": "work",
+    "updated_at": "2026-07-02T03:09:00.08091Z",
+    "workflow_id": "work_sdlc"
+  }
+}

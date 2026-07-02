@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-8334-7f91-bc33-1645157f0dee",
+  "occurred_at": "2026-06-30T22:17:07.105671Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "trash-cleanup"
+  }
+}

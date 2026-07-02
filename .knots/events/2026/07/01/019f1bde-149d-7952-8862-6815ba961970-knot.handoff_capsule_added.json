@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1bde-149d-7952-8862-6815ba961970",
+  "occurred_at": "2026-07-01T04:09:26.941754Z",
+  "knot_id": "hive-flow-1838",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "C3 planning complete; implementation child hive-flow-76bd created and linked. Plan is an isolated pre-structural pack-root harness that simulates future public hive-flow from current CLI source, rewrites workspace specs to concrete versions, bundles eager providers only, runs npm pack dry-run + real tarball install + hive-flow --version + import/bin probes + exclusion audit. Needs Claude adversarial plan review before implementation because C3 is a hard gate.",
+    "datetime": "2026-07-01T04:09:26.941754Z",
+    "entry_id": "019f1bde-149d-7952-8862-68088a39b3a8",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

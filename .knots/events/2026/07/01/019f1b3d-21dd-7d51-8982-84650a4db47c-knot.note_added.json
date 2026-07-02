@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b3d-21dd-7d51-8982-84650a4db47c",
+  "occurred_at": "2026-07-01T01:13:39.037371Z",
+  "knot_id": "hive-flow-3ca6",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex 1D consolidated sweep run after Claude 1C VERIFY_CLEAN. Added missing Bats coverage in v3/tests/bats/compact-now.bats so headless compact fails closed when context usage is unmeasurable and succeeds only when measured context is above the 50 percent floor. Green gates: compact-now node 12/12; context-persistence-hook 95/95 after rebuilding local better-sqlite3 binding; CLI focused vitest 326/326; providers focused vitest 33/33; CLI tsc --noEmit; providers build and typecheck; CLI build; focused Bats 31/31; private-guard --check clean; git diff --check clean. HEAD==origin/main ae24b43e8beb430f2e07eed1b7ef6b8780517428; only intended Phase 1D source delta is v3/tests/bats/compact-now.bats, with pre-existing CLAUDE.md/scratch dirt untouched. Routed to Claude for 1D verification before any commit/push.",
+    "datetime": "2026-07-01T01:13:39.037371Z",
+    "entry_id": "019f1b3d-21dd-7d51-8982-845145339763",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "event_id": "019f1b4a-595e-7843-9790-94a9f17b4707",
+  "occurred_at": "2026-07-01T01:28:05.187727Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Compare matrix against git ls-files outside v3/@hive-flow/cli and root find output; no unclassified tracked non-dot Hive Flow paths remain."
+    ]
+  }
+}

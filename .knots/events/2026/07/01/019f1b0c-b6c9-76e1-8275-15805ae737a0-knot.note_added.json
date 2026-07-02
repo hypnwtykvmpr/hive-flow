@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b0c-b6c9-76e1-8275-15805ae737a0",
+  "occurred_at": "2026-07-01T00:20:45.897224Z",
+  "knot_id": "hive-flow-4c59",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Phase 1B path-scoped commit/push complete after Claude VERIFY_CLEAN. Commit fe0f2aaa15e029e82763126c0dffa92f798349d1 on main/origin/main contains exactly 7 files: .claude/helpers/compact-now.cjs; .claude/helpers/context-persistence-hook.mjs; tests/compact-now.test.mjs; tests/context-persistence-hook.test.mjs; v3/@hive-flow/cli/src/__tests__/compact-now-inplace.test.ts; v3/@hive-flow/providers/__tests__/provider-bridge-microcompaction.test.mjs; v3/@hive-flow/providers/scripts/provider-agent-bridge.mjs. Verified git diff --cached --stat before commit showed 7 files, git diff-tree HEAD shows exactly those 7, and HEAD==origin/main==fe0f2aaa15e029e82763126c0dffa92f798349d1 after push. Remaining dirty files are Phase 1A/1C/human-linter scope and were not included.",
+    "datetime": "2026-07-01T00:20:45.897224Z",
+    "entry_id": "019f1b0c-b6c9-76e1-8275-157020330746",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

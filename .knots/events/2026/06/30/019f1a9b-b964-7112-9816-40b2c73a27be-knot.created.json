@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1a9b-b964-7112-9816-40b2c73a27be",
+  "occurred_at": "2026-06-30T22:17:20.996235Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.created",
+  "data": {
+    "body": "Phase 4 of the user assignment. After agent hardening, repo collapse, and docs truth cleanup are green and committed/pushed, perform final repo-wide security and QA audit, implement verified corrections, and run final pre-commit/security/private gates before commit/push.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot",
+    "state": "ready_for_planning",
+    "title": "Final repo-wide security and QA audit after hardening/collapse/docs",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

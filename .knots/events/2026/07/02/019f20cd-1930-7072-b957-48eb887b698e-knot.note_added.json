@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-1930-7072-b957-48eb887b698e",
+  "occurred_at": "2026-07-02T03:09:00.08091Z",
+  "knot_id": "hive-flow-a540",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: duplicate deferred record. Canonical open knot is hive-flow-2ee8; this duplicate is abandoned to keep the backlog unambiguous.",
+    "datetime": "2026-07-02T03:09:00.08091Z",
+    "entry_id": "019f20cd-1930-7072-b957-48deb8fe0678",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

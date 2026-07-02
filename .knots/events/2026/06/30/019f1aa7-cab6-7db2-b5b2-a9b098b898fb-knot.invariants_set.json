@@ -1,0 +1,26 @@
+{
+  "event_id": "019f1aa7-cab6-7db2-b5b2-a9b098b898fb",
+  "occurred_at": "2026-06-30T22:30:31.861841Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.invariants_set",
+  "data": {
+    "invariants": [
+      {
+        "condition": "Codex implements direct code/test changes; Claude verifies, especially broad Hive Flow agent live runs. Codex also runs conservative Codex-owned Hive Flow agent canaries to validate owner/tool behavior.",
+        "type": "Scope"
+      },
+      {
+        "condition": "Nontrivial design or logic changes require Codex and Claude investigation plus explicit concurrence before implementation; unresolved disagreement becomes a blocker/handoff, not a unilateral decision.",
+        "type": "Scope"
+      },
+      {
+        "condition": "If Codex and Claude disagree on design or logic, both must investigate further using available source docs, online references when current facts matter, comparable repos, and local evidence until the disagreement is remediated; handoff only if it remains unremediated.",
+        "type": "Scope"
+      },
+      {
+        "condition": "Standing greenlight: after Claude adversarial review/fact-check, if Codex and Claude agree, proceed autonomously through the approved tasks including implementation, verification, commit, and push; human intervention is required only for genuine blockers or unremediated disagreements.",
+        "type": "Scope"
+      }
+    ]
+  }
+}

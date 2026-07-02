@@ -1,0 +1,12 @@
+{
+  "event_id": "019f1a9b-4f01-74f3-a84a-704a36ae4900",
+  "occurred_at": "2026-06-30T22:16:53.750029Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run repo-wide search/audit for non-dot non-CLI source and duplicated code.",
+      "Run build, bats, fast-check/property, and install verification after rewiring."
+    ]
+  }
+}

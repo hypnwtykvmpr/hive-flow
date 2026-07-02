@@ -1,0 +1,60 @@
+{
+  "event_id": "019f1aa0-3937-7b23-9b76-486058792a55",
+  "occurred_at": "2026-06-30T22:22:15.863196Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [
+      {
+        "condition": "Codex implements direct code/test changes; Claude verifies, especially broad Hive Flow agent live runs. Codex also runs conservative Codex-owned Hive Flow agent canaries to validate owner/tool behavior.",
+        "type": "Scope"
+      },
+      {
+        "condition": "Nontrivial design or logic changes require Codex and Claude investigation plus explicit concurrence before implementation; unresolved disagreement becomes a blocker/handoff, not a unilateral decision.",
+        "type": "Scope"
+      },
+      {
+        "condition": "If Codex and Claude disagree on design or logic, both must investigate further using available source docs, online references when current facts matter, comparable repos, and local evidence until the disagreement is remediated; handoff only if it remains unremediated.",
+        "type": "Scope"
+      }
+    ],
+    "knot_id": "hive-flow-60d3",
+    "next_step_metadata": {
+      "action_kind": "gate",
+      "action_state": "plan_review",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "profile_id": "autopilot",
+    "state": "ready_for_plan_review",
+    "step_metadata": {
+      "action_kind": "gate",
+      "action_state": "plan_review",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Audit and harden Hive Flow agent recovery, compaction, and tool-error redirection",
+    "type": "work",
+    "updated_at": "2026-06-30T22:22:15.863196Z",
+    "workflow_id": "work_sdlc"
+  }
+}

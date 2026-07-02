@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c21-12ac-7ef1-b5c0-81ab128a992e",
+  "occurred_at": "2026-07-01T05:22:37.356322Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DP2B-1 preflight bounce resolved as two-step plan. DP2B-1a is automated prep only: dual-path live helpers/mcp/settings/harness with cli-first and v3 fallback, no directory relocation. DP2B-1b actual git mv v3/@hive-flow/cli -> cli plus fallback removal is recorded as a true live-cutover/human gate because current Claude MCP/statusline/permission hooks execute old paths in-session; exact human action is to schedule/restart the live Claude/Codex/MCP session at the cutover boundary or explicitly approve a demonstrated same-session compat symlink plan. Codex will route DP2B-1a for Claude verification before any relocation.",
+    "datetime": "2026-07-01T05:22:37.356322Z",
+    "entry_id": "019f1c21-12ac-7ef1-b5c0-8194c8b80ac5",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

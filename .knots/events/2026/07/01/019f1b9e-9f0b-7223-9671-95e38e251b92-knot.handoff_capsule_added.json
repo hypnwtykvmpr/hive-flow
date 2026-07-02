@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b9e-9f0b-7223-9671-95e38e251b92",
+  "occurred_at": "2026-07-01T03:00:08.075797Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "C2/C4 preflight slice landed and pushed at 40949808e3939f74b4344ebd46cb27e74e595875. Exact five files only; at-SHA confirmation routed to Claude: .hive-flow/data/tmux-router/20260701T025935Z-codex-PHASE2B-C2-C4-PREFLIGHT-LANDED-to-claude.md. C1/C3 and DP2B-1/2/3 remain open.",
+    "datetime": "2026-07-01T03:00:08.075797Z",
+    "entry_id": "019f1b9e-9f0b-7223-9671-95d7ccf6528d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

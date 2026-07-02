@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-133c-7480-a944-22963cc55533",
+  "occurred_at": "2026-07-02T03:08:58.548062Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-03a6",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Deferred: retire legacy provider hook scripts",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:58.548062Z",
+    "workflow_id": "work_sdlc"
+  }
+}

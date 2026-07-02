@@ -1,0 +1,13 @@
+{
+  "event_id": "019f20cd-1422-7ba2-9556-28e142587ada",
+  "occurred_at": "2026-07-02T03:08:58.786259Z",
+  "knot_id": "hive-flow-1838",
+  "type": "knot.state_set",
+  "data": {
+    "force": true,
+    "from": "ready_for_plan_review",
+    "profile_id": "autopilot",
+    "to": "shipped",
+    "workflow_id": "work_sdlc"
+  }
+}

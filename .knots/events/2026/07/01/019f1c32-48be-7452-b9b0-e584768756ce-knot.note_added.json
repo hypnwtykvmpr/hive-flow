@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c32-48be-7452-b9b0-e584768756ce",
+  "occurred_at": "2026-07-01T05:41:25.310038Z",
+  "knot_id": "hive-flow-03a6",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Legacy provider hook cleanup landed and pushed at cad249e34. Exact 5-file slice: retarget .claude/settings.json, update provider-status-hook root test, update gemini-antigravity guard, delete provider-route-hook.mjs/provider-status-hook.mjs. Await Claude at-SHA confirmation; DP2B-1b human gate untouched.",
+    "datetime": "2026-07-01T05:41:25.310038Z",
+    "entry_id": "019f1c32-48be-7452-b9b0-e57fe6fb9d49",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

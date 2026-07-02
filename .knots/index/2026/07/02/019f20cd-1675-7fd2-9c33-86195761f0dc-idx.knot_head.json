@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-1675-7fd2-9c33-86195761f0dc",
+  "occurred_at": "2026-07-02T03:08:59.373036Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-acef",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Phase 2E final root migration QA docs and installability",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:59.373036Z",
+    "workflow_id": "work_sdlc"
+  }
+}

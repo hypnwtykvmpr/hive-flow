@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b68-5b39-7633-9c6c-09b1a0b4e5d9",
+  "occurred_at": "2026-07-01T02:00:51.769444Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Phase 2A matrix REV1 completed after Claude VERIFY_BOUNCE and routed for re-review: .hive-flow/data/tmux-router/20260701T015741Z-codex-PHASE2A-INVENTORY-MATRIX-REV1-to-claude.md. Absorbs G1-G5: expanded provider/embeddings couplings, expanded depth-relative anchors, tracked dot/config assets split from ignored live state, missing root/v3 dot/doc/wrapper/githook classifications, and MF5 runtime-import vs doc/JSDoc consumer caveat. Scope remained inventory-only; no structural move started. Await Claude re-verification before any 2B work.",
+    "datetime": "2026-07-01T02:00:51.769444Z",
+    "entry_id": "019f1b68-5b39-7633-9c6c-09a1de7e4e78",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

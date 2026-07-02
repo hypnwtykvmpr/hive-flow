@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1bdd-4b9a-7042-8a34-6de53a12d382",
+  "occurred_at": "2026-07-01T04:08:35.482192Z",
+  "knot_id": "hive-flow-1838",
+  "type": "knot.created",
+  "data": {
+    "body": "Implement and prove the Phase 2B C3 hard gate before structural root moves. Add an isolated temporary pack-root harness for the future public hive-flow package, rewrite workspace:* runtime specs to concrete source versions, stage bundled eager runtime workspaces without mutating repo node_modules, run npm pack --dry-run --json and tarball install into a temp prefix, verify hive-flow --version, selected import probes, MCP server path availability, provider bridge/journal imports, and tarball exclusions for maps, __tests__, db files, .hive-flow, DELETE trash, checkpoints, and local runtime state. Route implementation to Claude before landing.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot",
+    "state": "ready_for_planning",
+    "title": "Phase 2B C3 isolated pack install smoke",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

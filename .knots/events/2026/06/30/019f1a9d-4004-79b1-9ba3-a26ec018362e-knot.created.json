@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1a9d-4004-79b1-9ba3-a26ec018362e",
+  "occurred_at": "2026-06-30T22:19:00.996746Z",
+  "knot_id": "hive-flow-3ca6",
+  "type": "knot.created",
+  "data": {
+    "body": "After Phase 1 implementation and verification are green, run focused and broad regression gates, private/security/pre-commit checks, then commit and push Phase 1 changes to local and origin main as authorized by the user.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "Phase 1D: regression gates, pre-commit, commit and push phase 1",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

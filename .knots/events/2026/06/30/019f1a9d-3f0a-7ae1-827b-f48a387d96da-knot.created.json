@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1a9d-3f0a-7ae1-827b-f48a387d96da",
+  "occurred_at": "2026-06-30T22:19:00.74646Z",
+  "knot_id": "hive-flow-30bc",
+  "type": "knot.created",
+  "data": {
+    "body": "Run live Hive Flow provider-agent audits for long-horizon recovery, tool usability, and block auto-recovery. Codex implements; Claude verifies using Hive Flow agents as the primary live-run path. Codex also performs conservative Codex-side canaries to prove owner/context/tooling works from Codex.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "Phase 1C: live self-audit and native tool usability validation",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

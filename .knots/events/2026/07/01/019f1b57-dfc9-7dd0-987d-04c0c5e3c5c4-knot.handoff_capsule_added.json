@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b57-dfc9-7dd0-987d-04c0c5e3c5c4",
+  "occurred_at": "2026-07-01T01:42:51.593265Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Next owner: Claude for Phase 2A matrix review. If VERIFY_CLEAN/CONCUR, Codex proceeds to Phase 2B only within the approved boundary. If BOUNCE, route exact missing bucket/evidence target; no structural move has started.",
+    "datetime": "2026-07-01T01:42:51.593265Z",
+    "entry_id": "019f1b57-dfc9-7dd0-987d-04b7d0bd5ce0",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

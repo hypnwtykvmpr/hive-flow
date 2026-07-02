@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-4ef9-7433-bf9d-948d2fb1dd38",
+  "occurred_at": "2026-06-30T22:16:53.750029Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 of the user assignment. After Phase 1 is green and committed/pushed, audit all repo code outside v3/@hive-flow/cli that is not under a dot-prefixed folder, deduplicate/collapse it into the CLI folder/source as appropriate, rewire imports/scripts/installability, correct any residual deprecated naming conventions found along the way, and verify nothing breaks."
+  }
+}

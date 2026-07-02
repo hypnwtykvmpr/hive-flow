@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-9026-7b13-a204-22e8f3de7288",
+  "occurred_at": "2026-07-01T01:28:19.230063Z",
+  "knot_id": "hive-flow-ac7b",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Provider agents, agent_task/task_result, microcompaction/context trimming, embeddings commands, and MCP provider tooling work from the promoted cli root without v3 sibling package resolution."
+  }
+}

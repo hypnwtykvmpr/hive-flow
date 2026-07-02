@@ -1,0 +1,20 @@
+{
+  "event_id": "019f1b0c-44f3-76a2-b9a9-1a1b685acd2e",
+  "occurred_at": "2026-07-01T00:20:16.755206Z",
+  "knot_id": "hive-flow-7e75",
+  "type": "knot.lease_data_set",
+  "data": {
+    "lease_data": {
+      "agent_info": {
+        "agent_name": "",
+        "agent_type": "",
+        "model": "",
+        "model_version": "",
+        "provider": ""
+      },
+      "lease_type": "agent",
+      "nickname": "codex-phase1b-land",
+      "timeout_seconds": 600
+    }
+  }
+}

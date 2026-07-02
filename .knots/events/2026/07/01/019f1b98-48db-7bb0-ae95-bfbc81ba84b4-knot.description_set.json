@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b98-48db-7bb0-ae95-bfbc81ba84b4",
+  "occurred_at": "2026-07-01T02:53:12.79174Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Create a durable system for recording every deferred item and driving each deferral to either completion, explicit cancellation, or replacement by a newer tracked task. Requirements: no deferred work may exist only in chat/router prose; deferrals need owner, reason, dependency/unblock condition, priority, source reference, and next review trigger. Integrate with Knots workflow and router handoffs so deferred work remains discoverable after compaction/session changes."
+  }
+}

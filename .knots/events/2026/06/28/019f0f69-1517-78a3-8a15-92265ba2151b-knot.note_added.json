@@ -1,0 +1,15 @@
+{
+  "event_id": "019f0f69-1517-78a3-8a15-92265ba2151b",
+  "occurred_at": "2026-06-28T18:06:12.759464Z",
+  "knot_id": "hive-flow-951e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "LEARNED: A1 Beads->Knots verified via anti-regression guards, not just presence checks: classifier test (:275) and fixture no-beads-command rule both FAIL on any bd/beads command pattern. All 8 residual bd/BEAD_ID hits are confined to legacy v3/plugins/gastown-bridge (excluded category). Zero absolute /Users CLI paths in tracked docs/scripts. Verdict: A3 CLEAN, A1 CLEAN, no MUST-FIX.",
+    "datetime": "2026-06-28T18:06:12.759464Z",
+    "entry_id": "019f0f69-1517-78a3-8a15-921b0ca670c2",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f0f69-14da-7d33-9ca2-eaeb3bd39cc0",
+  "occurred_at": "2026-06-28T18:06:12.698878Z",
+  "knot_id": "hive-flow-951e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "INVESTIGATION: A3 provider-concurrency TOCTOU-safety hinges on withBridgeLock(agentId,fn) delegating to a SINGLE global .store.lock (agent-tools.ts:713; agentId/scope is error-message-only, comment :704). check(:1910)+increment(transitionAgent busy :1921)+save(:1944) serialize across ALL agents/providers before bridge spawn (:1945). Per-agent lock granularity would have broken the cap; the global lock is what makes it sound.",
+    "datetime": "2026-06-28T18:06:12.698878Z",
+    "entry_id": "019f0f69-14da-7d33-9ca2-ead7f48bbd27",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

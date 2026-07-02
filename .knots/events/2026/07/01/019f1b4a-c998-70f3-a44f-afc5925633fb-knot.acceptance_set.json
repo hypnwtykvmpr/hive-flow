@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-c998-70f3-a44f-afc5925633fb",
+  "occurred_at": "2026-07-01T01:28:33.930476Z",
+  "knot_id": "hive-flow-acef",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Docs match verified behavior with no fabricated claims, trash/deprecated material is classified, security/QA corrections are implemented, pre-commit and agreed gates are green, and install/MCP/provider-agent smoke tests pass from the new root."
+  }
+}

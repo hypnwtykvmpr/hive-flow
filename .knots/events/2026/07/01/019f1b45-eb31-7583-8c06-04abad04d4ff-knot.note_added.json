@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b45-eb31-7583-8c06-04abad04d4ff",
+  "occurred_at": "2026-07-01T01:23:14.865643Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Phase 1 bilaterally closed after Claude at-SHA confirmation. Closed rollup: 1A ae24b43e8 structured redirection landed and live-audited; 1B fe0f2aaa1 compaction/provider policy landed and at-SHA confirmed; 1C broad live provider-agent audit VERIFY_CLEAN; 1D ca134ba8fb6cb10cd78a2076b75fae942efbe985 Bats fail-closed contract landed with exactly v3/tests/bats/compact-now.bats. HEAD==origin/main==ca134ba8fb6cb10cd78a2076b75fae942efbe985. No remaining Phase 1 action; next owner is Codex for Phase 2 root-migration plan/design handoff to Claude.",
+    "datetime": "2026-07-01T01:23:14.865643Z",
+    "entry_id": "019f1b45-eb31-7583-8c06-04962158236b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

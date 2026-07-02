@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-0de0-7983-a0de-4736d5d7f882",
+  "occurred_at": "2026-06-30T22:16:37.06883Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "agent-recovery"
+  }
+}

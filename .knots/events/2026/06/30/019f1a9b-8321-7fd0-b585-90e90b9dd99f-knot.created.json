@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1a9b-8321-7fd0-b585-90e90b9dd99f",
+  "occurred_at": "2026-06-30T22:17:07.105671Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.created",
+  "data": {
+    "body": "Phase 3 of the user assignment. After code collapse is green and committed/pushed, audit all documentation for accuracy and verification, remove fabricated/fictitious claims, update docs to match live behavior, and move DELETE-prefixed or otherwise trash material to an appropriate trash folder.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot",
+    "state": "ready_for_planning",
+    "title": "Audit and update documentation truth, remove trash from active docs",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

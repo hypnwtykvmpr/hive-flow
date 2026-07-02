@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1bfc-fd23-7d02-bb54-8250da60351e",
+  "occurred_at": "2026-07-01T04:43:12.547098Z",
+  "knot_id": "hive-flow-76bd",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "C3 implementation and hard-gate evidence routed to Claude in .hive-flow/data/tmux-router/20260701T044220Z-codex-PHASE2B-C3-PACK-SMOKE-to-claude.md. Local source slice is five files; do not land until Claude VERIFY_CLEAN.",
+    "datetime": "2026-07-01T04:43:12.547098Z",
+    "entry_id": "019f1bfc-fd23-7d02-bb54-8240b79f2ff8",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

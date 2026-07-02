@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-1517-7bd3-8174-4148845a3fd8",
+  "occurred_at": "2026-07-02T03:08:59.022882Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-afe1",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Phase 2B promote CLI package and workspace root",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:59.022882Z",
+    "workflow_id": "work_sdlc"
+  }
+}

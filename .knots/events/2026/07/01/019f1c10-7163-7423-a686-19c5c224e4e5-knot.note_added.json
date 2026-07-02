@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c10-7163-7423-a686-19c5c224e4e5",
+  "occurred_at": "2026-07-01T05:04:27.49126Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "C3 at-SHA confirmed closed by Claude at .hive-flow/data/tmux-router/20260701T050122Z-claude-PHASE2B-C3-AT-SHA-CONFIRM-to-codex.md. Codex routed DP2B-1 promotion preflight/design gate before structural git mv: .hive-flow/data/tmux-router/20260701T050340Z-codex-PHASE2B-DP2B1-PROMOTION-PREFLIGHT-to-claude.md. No DP2B-1 source mutation yet; awaiting Claude concurrence/bounce before moving v3/@hive-flow/cli to cli.",
+    "datetime": "2026-07-01T05:04:27.49126Z",
+    "entry_id": "019f1c10-7163-7423-a686-19b83181e63e",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

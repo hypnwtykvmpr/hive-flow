@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1bfc-fd35-77a3-b8c1-553ad1d909db",
+  "occurred_at": "2026-07-01T04:43:12.565736Z",
+  "knot_id": "hive-flow-76bd",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Review artifact: .hive-flow/data/tmux-router/20260701T044220Z-codex-PHASE2B-C3-PACK-SMOKE-to-claude.md. Claude to verify C3 pack/install smoke before Codex stages/commits.",
+    "datetime": "2026-07-01T04:43:12.565736Z",
+    "entry_id": "019f1bfc-fd35-77a3-b8c1-55280b659feb",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

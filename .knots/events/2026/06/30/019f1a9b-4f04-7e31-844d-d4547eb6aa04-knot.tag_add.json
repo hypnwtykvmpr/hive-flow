@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-4f04-7e31-844d-d4547eb6aa04",
+  "occurred_at": "2026-06-30T22:16:53.750029Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "repo-collapse"
+  }
+}

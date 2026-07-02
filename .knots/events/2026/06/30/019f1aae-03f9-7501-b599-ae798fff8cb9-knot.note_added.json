@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1aae-03f9-7501-b599-ae798fff8cb9",
+  "occurred_at": "2026-06-30T22:37:19.737362Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Plan review approved with conditions from Claude handoff 20260630T223404Z: A reconcile unmeasurable direct /compact and compact-now policy, B direct /compact fail-closed is human-confirmed policy with explicit helper escape required for unmeasured compaction, C fold the pre-existing 2-file dirty change into Phase 1B WIP under review. Proceeding to child hive-flow-4c59 for implementation.",
+    "datetime": "2026-06-30T22:37:19.737362Z",
+    "entry_id": "019f1aae-03f9-7501-b599-ae6409de044d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

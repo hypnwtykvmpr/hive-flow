@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-0dd1-7a40-86a2-7e62d162e4b8",
+  "occurred_at": "2026-06-30T22:16:37.06883Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 1 of the user assignment. Ensure Hive Flow provider agents support pre-scripted redirection on failures/errors/blocks, microcompaction parity with Claude Code CLI behavior, full autocompaction parity with Codex CLI behavior, native effortless tools, useful tool-error feedback, and auto-recovery from blocks. Use Hive Flow agents for live self-audit, conservative native sub-agent review where needed, and add bats/fast-check/regression coverage before commit/push."
+  }
+}

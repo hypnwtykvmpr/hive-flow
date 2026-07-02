@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1b4a-b081-7ec3-88d7-7497e7e1c69b",
+  "occurred_at": "2026-07-01T01:28:27.521789Z",
+  "knot_id": "hive-flow-a285",
+  "type": "knot.created",
+  "data": {
+    "body": "Move or collapse root tests, v3 tests, scripts, plugin assets, and plugin packages into the promoted cli root. Rewrite path assumptions, Bats helpers, fast-check/property tests, package tests, protected-path tests, and plugin discovery so they run from the new root.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "Phase 2D relocate root tests scripts and plugins",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

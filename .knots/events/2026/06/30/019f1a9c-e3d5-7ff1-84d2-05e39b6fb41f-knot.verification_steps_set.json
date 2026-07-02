@@ -1,0 +1,12 @@
+{
+  "event_id": "019f1a9c-e3d5-7ff1-84d2-05e39b6fb41f",
+  "occurred_at": "2026-06-30T22:18:37.384963Z",
+  "knot_id": "hive-flow-4c59",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run tests/context-persistence-hook.test.mjs and tests/compaction-recovery.test.mjs.",
+      "Run focused CLI compact-now and permission-guard compaction tests."
+    ]
+  }
+}

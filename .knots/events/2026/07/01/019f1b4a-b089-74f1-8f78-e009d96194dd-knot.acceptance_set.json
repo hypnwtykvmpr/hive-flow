@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-b089-74f1-8f78-e009d96194dd",
+  "occurred_at": "2026-07-01T01:28:27.521789Z",
+  "knot_id": "hive-flow-a285",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "No maintained test/script/plugin path depends on v3/@hive-flow/cli; migrated tests preserve behavior and root-level leftovers are either intentionally external, trash, or human-cutover documented."
+  }
+}

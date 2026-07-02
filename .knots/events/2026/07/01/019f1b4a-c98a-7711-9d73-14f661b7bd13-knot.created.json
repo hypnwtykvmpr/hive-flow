@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1b4a-c98a-7711-9d73-14f661b7bd13",
+  "occurred_at": "2026-07-01T01:28:33.930476Z",
+  "knot_id": "hive-flow-acef",
+  "type": "knot.created",
+  "data": {
+    "body": "After structural collapse, run documentation accuracy review, trash DELETE-prefixed or obsolete material into an appropriate trash folder, complete security/QA audit, and prove global/per-user installation plus MCP/runtime operation from the promoted cli root.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "Phase 2E final root migration QA docs and installability",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

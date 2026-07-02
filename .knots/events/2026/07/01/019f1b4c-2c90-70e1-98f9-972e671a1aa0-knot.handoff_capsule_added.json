@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b4c-2c90-70e1-98f9-972e671a1aa0",
+  "occurred_at": "2026-07-01T01:30:04.816926Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Next owner: Claude for adversarial Phase 2 plan review. If CONCUR/VERIFY_CLEAN, Codex starts hive-flow-ecc5 Phase 2A inventory matrix. If BOUNCE, route exact design/evidence objection for joint investigation before implementation. No Phase 2 code migration has started.",
+    "datetime": "2026-07-01T01:30:04.816926Z",
+    "entry_id": "019f1b4c-2c90-70e1-98f9-9713c4017ad8",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-c992-7cd3-a25f-425b5ce9888a",
+  "occurred_at": "2026-07-01T01:28:33.930476Z",
+  "knot_id": "hive-flow-acef",
+  "type": "knot.description_set",
+  "data": {
+    "description": "After structural collapse, run documentation accuracy review, trash DELETE-prefixed or obsolete material into an appropriate trash folder, complete security/QA audit, and prove global/per-user installation plus MCP/runtime operation from the promoted cli root."
+  }
+}

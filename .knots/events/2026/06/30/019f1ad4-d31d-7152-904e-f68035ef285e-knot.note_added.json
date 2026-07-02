@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1ad4-d31d-7152-904e-f68035ef285e",
+  "occurred_at": "2026-06-30T23:19:43.133913Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Follow-up from Phase 1C live canary: invalid agent_spawn agentType returned prose-only failure. Codex fixed agent_spawn invalid project/type/owner/mode/artifact failures and agent_terminate not-found to use the structured recovery guidance helper. Added spawn-whitelist assertions for invalid-agent-type nextActions. Verification: pnpm exec vitest run src/mcp-tools/__tests__/spawn-whitelist.test.ts src/__tests__/agent-task.test.ts src/__tests__/agent-task-nonblocking.test.ts passed 119 tests; pnpm exec tsc --noEmit passed; pnpm build passed.",
+    "datetime": "2026-06-30T23:19:43.133913Z",
+    "entry_id": "019f1ad4-d31d-7152-904e-f6747a45e598",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

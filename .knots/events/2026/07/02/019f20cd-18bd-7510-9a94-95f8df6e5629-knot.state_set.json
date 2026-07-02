@@ -1,0 +1,13 @@
+{
+  "event_id": "019f20cd-18bd-7510-9a94-95f8df6e5629",
+  "occurred_at": "2026-07-02T03:08:59.965858Z",
+  "knot_id": "hive-flow-baff",
+  "type": "knot.state_set",
+  "data": {
+    "force": true,
+    "from": "planning",
+    "profile_id": "autopilot",
+    "to": "abandoned",
+    "workflow_id": "work_sdlc"
+  }
+}

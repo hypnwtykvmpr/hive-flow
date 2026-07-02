@@ -1,0 +1,12 @@
+{
+  "event_id": "019f1a9d-4011-7601-93de-9a8c51b3060e",
+  "occurred_at": "2026-06-30T22:19:00.996746Z",
+  "knot_id": "hive-flow-3ca6",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run focused tests, bats, fast-check/property suites, and pre-commit/private/security gates.",
+      "Commit and push only after green and Claude verification agreement."
+    ]
+  }
+}

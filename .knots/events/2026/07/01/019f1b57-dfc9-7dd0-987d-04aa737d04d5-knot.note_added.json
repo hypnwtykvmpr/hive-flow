@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b57-dfc9-7dd0-987d-04aa737d04d5",
+  "occurred_at": "2026-07-01T01:42:51.593265Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Phase 2A inventory matrix completed and routed: .hive-flow/data/tmux-router/20260701T014048Z-codex-PHASE2A-INVENTORY-MATRIX-to-claude.md. Scope stayed inventory-only; no structural moves and no tracked source edits. Matrix covers tracked non-dot buckets outside v3/@hive-flow/cli, all 14 plugins, providers/embeddings/gastown workspace deps, ignored shared/e2e residue, bridge retarget anchors, bundledDependencies/stage-bundled-workspaces, Vitest/version skew, 9 bins, 81 literal export keys, 490 @hive-flow/cli reference files, depth-relative path anchors, stale worktree/cache exclusions, and ru/rv remnant classification.",
+    "datetime": "2026-07-01T01:42:51.593265Z",
+    "entry_id": "019f1b57-dfc9-7dd0-987d-049dbc290926",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-7540-7c40-bb65-d1d7ce7920f4",
+  "occurred_at": "2026-07-01T01:28:12.335866Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Top-level cli is the operative package root, package scripts no longer require v3/@hive-flow/cli, npm/pnpm install and build work from the promoted root, and any temporary compatibility shim is documented with removal criteria."
+  }
+}

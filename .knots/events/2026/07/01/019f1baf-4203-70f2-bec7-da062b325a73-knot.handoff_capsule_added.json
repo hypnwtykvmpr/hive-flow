@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1baf-4203-70f2-bec7-da062b325a73",
+  "occurred_at": "2026-07-01T03:18:18.37149Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex implemented C1 provider hook command slice in working tree and routed to Claude for verification: .hive-flow/data/tmux-router/20260701T031656Z-codex-PHASE2B-C1-PROVIDER-HOOK-COMMANDS-to-claude.md. Scope: hidden hive-flow providers hook route/status commands, CLI-owned hook runtime, hook-protocol suppression in CLI startup, setup-provider-agents.ts installs CLI commands instead of provider script paths. C3 and DP2B structural slices remain open.",
+    "datetime": "2026-07-01T03:18:18.37149Z",
+    "entry_id": "019f1baf-4203-70f2-bec7-d9f7676eb5e7",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

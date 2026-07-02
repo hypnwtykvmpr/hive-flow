@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1bce-04c6-7ad3-be30-898b45c20d80",
+  "occurred_at": "2026-07-01T03:51:54.310529Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "C1 provider hook command slice landed and pushed at 6a8c9e5d7376c385c5351bc9eec043ed5928f475. Exact five files only; at-SHA confirmation routed to Claude: .hive-flow/data/tmux-router/20260701T034705Z-codex-PHASE2B-C1-LANDED-to-claude.md. Follow-ups recorded as hive-flow-03a6 (legacy standalone hook scripts) and hive-flow-0395 (tracked .claude/settings.json retarget). C3 and DP2B structural slices remain open.",
+    "datetime": "2026-07-01T03:51:54.310529Z",
+    "entry_id": "019f1bce-04c6-7ad3-be30-897748a184ee",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

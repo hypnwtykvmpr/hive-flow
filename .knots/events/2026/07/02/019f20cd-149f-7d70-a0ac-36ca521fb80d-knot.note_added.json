@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-149f-7d70-a0ac-36ca521fb80d",
+  "occurred_at": "2026-07-02T03:08:58.911305Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: Phase 2A inventory/cutover matrix was consumed by the executed Phase 2 root migration. Router notes later closed Phase 2 migration at ba191fdae and follow-up confirmations.",
+    "datetime": "2026-07-02T03:08:58.911305Z",
+    "entry_id": "019f20cd-149f-7d70-a0ac-36b8ad36055f",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

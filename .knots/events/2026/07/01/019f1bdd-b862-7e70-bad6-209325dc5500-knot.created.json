@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1bdd-b862-7e70-bad6-209325dc5500",
+  "occurred_at": "2026-07-01T04:09:03.330059Z",
+  "knot_id": "hive-flow-76bd",
+  "type": "knot.created",
+  "data": {
+    "body": "Implementation child for hive-flow-1838. Build a scoped isolated pack-root harness and tests for Phase 2B C3: prepare a temp future hive-flow package root from the current CLI source, rewrite workspace:* specs to concrete source versions, bundle eager providers runtime without mutating repo node_modules, run dry-run and real npm pack, install the tarball into a temp prefix, probe hive-flow --version, provider bridge/journal imports, MCP server path availability, selected CLI exports, and exclusion rules. Route to Claude before landing.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "Implement Phase 2B C3 pack smoke harness",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

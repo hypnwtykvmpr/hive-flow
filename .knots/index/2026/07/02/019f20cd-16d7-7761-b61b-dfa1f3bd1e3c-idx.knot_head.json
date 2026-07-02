@@ -1,0 +1,34 @@
+{
+  "event_id": "019f20cd-16d7-7761-b61b-dfa1f3bd1e3c",
+  "occurred_at": "2026-07-02T03:08:59.47946Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-14e5",
+    "profile_id": "lease",
+    "state": "lease_active",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Lease: codex-reconcile-hive-flow-270a-1782961739426",
+    "type": "lease",
+    "updated_at": "2026-07-02T03:08:59.47946Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

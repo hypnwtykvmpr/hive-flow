@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1bdd-f64f-7902-8405-ff7b241fac76",
+  "occurred_at": "2026-07-01T04:09:19.183616Z",
+  "knot_id": "hive-flow-1838",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PLAN: Implement C3 as a pre-structural pack-proof harness, not a repo move. Files likely: v3/@hive-flow/cli/scripts/prepare-pack-runtime.mjs or pack-install-smoke.mjs plus focused CLI packaging tests. Approach: create an isolated temp pack root from current v3/@hive-flow/cli, rewrite the generated manifest to future public name hive-flow while preserving version 3.1.0-alpha.52, convert workspace:* specs to concrete source versions, bundle only eager @hive-flow/providers under node_modules/@hive-flow/providers, and avoid mutating repo node_modules. The smoke command must run npm pack --dry-run --json, real npm pack, install tarball into a temp prefix, run hive-flow --version, probe imports for @hive-flow/providers, @hive-flow/providers/scripts/agent-task-journal.mjs, provider bridge, MCP server path/bin availability, and selected CLI exports such as hive-flow/memory. Tarball audit must reject maps, __tests__, db/db-shm/db-wal/db-journal, .hive-flow, DELETE_* trash, checkpoints, and local runtime state. Risks: current source package is still named @hive-flow/cli, so the harness simulates the future public package root; optional embeddings/gastown workspace deps must either be concrete optional specs or intentionally omitted from the eager install proof. Child implementation knot: hive-flow-76bd. Route the plan to Claude before implementation because this is a hard gate and a design-sensitive packaging slice.",
+    "datetime": "2026-07-01T04:09:19.183616Z",
+    "entry_id": "019f1bdd-f64f-7902-8405-ff6d52e693c6",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

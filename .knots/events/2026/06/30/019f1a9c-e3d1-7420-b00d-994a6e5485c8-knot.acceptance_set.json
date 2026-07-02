@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9c-e3d1-7420-b00d-994a6e5485c8",
+  "occurred_at": "2026-06-30T22:18:37.384963Z",
+  "knot_id": "hive-flow-4c59",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Microcompaction and autocompaction contracts are explicit, implemented, and tested; recovery flags/handoffs/acks are accurate; direct /compact floor behavior is deterministic; existing pre-dirty context-persistence changes are preserved or deliberately incorporated."
+  }
+}

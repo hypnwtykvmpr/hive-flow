@@ -1,0 +1,15 @@
+{
+  "event_id": "019f0f69-14f0-71b3-aeb9-688ab35aa346",
+  "occurred_at": "2026-06-28T18:06:12.720376Z",
+  "knot_id": "hive-flow-951e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "FACT: The only '150' in agent-tools.ts is a comment (:1229). The real global cap is DEFAULT_MAX_AGENTS+DEFAULT_QUEUE_DEPTH on TOTAL spawn count in agent_spawn (:1249, returns busy:queue-full), NOT a provider-dispatch gate. Provider dispatch concurrency is governed solely by per-provider caps (deepseek/openrouter=20). Do not conflate the spawn hard-cap with the dispatch cap.",
+    "datetime": "2026-06-28T18:06:12.720376Z",
+    "entry_id": "019f0f69-14f0-71b3-aeb9-687a1a56c436",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

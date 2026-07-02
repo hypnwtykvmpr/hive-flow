@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9c-c43c-7871-abe3-2424d3d08084",
+  "occurred_at": "2026-06-30T22:18:29.303865Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Audit Hive Flow provider-agent failure paths and tool-call errors for actionable, pre-scripted redirection. Fix missing guidance so agents receive useful next steps instead of dead blocks."
+  }
+}

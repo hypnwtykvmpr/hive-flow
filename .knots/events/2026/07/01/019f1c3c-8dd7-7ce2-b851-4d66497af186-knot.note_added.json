@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c3c-8dd7-7ce2-b851-4d66497af186",
+  "occurred_at": "2026-07-01T05:52:38.359044Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Human selected DP2B-1b Option A and clarified the post-cutover project/session root remains the existing repo root (/Users/jonathandirks/Development/Tools/hive-flow); cli/ becomes a top-level package under that root, not the session cwd. Proceeding with root-level cutover semantics: root config/scripts delegate into cli/, launcher/resolvers prefer root/cli, and post-cutover verification runs from repo root plus npm --prefix cli.",
+    "datetime": "2026-07-01T05:52:38.359044Z",
+    "entry_id": "019f1c3c-8dd7-7ce2-b851-4d569abbb320",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

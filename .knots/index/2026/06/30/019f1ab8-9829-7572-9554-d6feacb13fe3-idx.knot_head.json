@@ -1,0 +1,21 @@
+{
+  "event_id": "019f1ab8-9829-7572-9554-d6feacb13fe3",
+  "occurred_at": "2026-06-30T22:48:53.033812Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-fba8",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-phase1b-compaction",
+    "type": "lease",
+    "updated_at": "2026-06-30T22:48:53.033812Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1b4a-752f-7a80-ab83-d41f6668d6e6",
+  "occurred_at": "2026-07-01T01:28:12.335866Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.created",
+  "data": {
+    "body": "Promote the former v3/@hive-flow/cli tree to top-level cli, consolidate root/package metadata into the promoted package, remove v3 from required runtime/install paths, and keep compatibility only where explicitly needed during cutover.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "Phase 2B promote CLI package and workspace root",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

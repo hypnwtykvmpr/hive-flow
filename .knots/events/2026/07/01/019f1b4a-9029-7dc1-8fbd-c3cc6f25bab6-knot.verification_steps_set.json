@@ -1,0 +1,11 @@
+{
+  "event_id": "019f1b4a-9029-7dc1-8fbd-c3cc6f25bab6",
+  "occurred_at": "2026-07-01T01:28:19.230063Z",
+  "knot_id": "hive-flow-ac7b",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run provider bridge/unit/property suites, embeddings/neural focused suites, build/typecheck, and live provider-agent spawn-task-result-terminate canary from Codex; route to Claude for Hive Flow live verification."
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b16-cd9d-7670-bad3-f17e48ecc120",
+  "occurred_at": "2026-07-01T00:31:47.101816Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "B1 bounce fixed in bridge-tool-execution.test.ts mock infra: fs mock now provides realpathSync.native and statSync.isDirectory so projectRoot validation reaches the bridge dispatch path. Clean worktree fe0f2aaa1 still fails bridge suite 17/18 with invalid projectRoot/cwd, proving pre-existing stale mock rather than live dispatch regression. Current tree: bridge-tool-execution 18/18; focused CLI 306/306; provider focused 33/33; cli tsc --noEmit pass; git diff --check pass. Broad pnpm exec vitest run __tests__ src still fails the same 5 files/29 tests on clean fe0f2aaa1 and current tree, so broad residual is pre-existing outside B1.",
+    "datetime": "2026-07-01T00:31:47.101816Z",
+    "entry_id": "019f1b16-cd9d-7670-bad3-f169e9e2be5a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

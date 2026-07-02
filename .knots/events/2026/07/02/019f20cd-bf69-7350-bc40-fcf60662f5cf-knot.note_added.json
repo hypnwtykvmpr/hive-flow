@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-bf69-7350-bc40-fcf60662f5cf",
+  "occurred_at": "2026-07-02T03:09:42.633596Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: still open as a post-migration documentation/trash audit, not the earlier docs-truth lanes. Scope should re-audit active docs after the cli/ migration and reset/compaction/harness changes, remove or relocate trash material from active docs, and verify public docs do not expose private workflow/tooling names or stale implementation claims.",
+    "datetime": "2026-07-02T03:09:42.633596Z",
+    "entry_id": "019f20cd-bf69-7350-bc40-fcec21d660ce",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

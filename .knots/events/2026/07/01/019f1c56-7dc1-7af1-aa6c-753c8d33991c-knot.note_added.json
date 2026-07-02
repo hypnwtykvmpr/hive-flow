@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c56-7dc1-7af1-aa6c-753c8d33991c",
+  "occurred_at": "2026-07-01T06:20:58.177568Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DP2B-1b Option A implemented under repo-root semantics: moved tracked v3/@hive-flow/cli -> cli, moved runtime dist/node_modules with it, root package now private workspace delegate, cli package promoted to hive-flow. Live root helpers resolve cli/ only and statusline exits 0 from repo root. Gates passed: npm --prefix cli run build; node --test tests/provider-status-hook.test.mjs 4/4; node --test tests/hook-handler.test.mjs 35/35; npm --prefix cli exec -- vitest run focused permission-guard set 366/366; npm --prefix cli run pack:install-smoke passed on real promoted tree with memory/providers/undici/bridge/MCP probes. Awaiting Claude VERIFY_CLEAN before staging edits/commit.",
+    "datetime": "2026-07-01T06:20:58.177568Z",
+    "entry_id": "019f1c56-7dc1-7af1-aa6c-7523bfec568c",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1aab-fae2-76f1-85c2-4e9b16de78f5",
+  "occurred_at": "2026-06-30T22:35:06.338619Z",
+  "knot_id": "hive-flow-4c59",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Human clarified: the external-agent change making .claude/helpers/context-persistence-hook.mjs fail closed for direct /compact when context usage cannot be measured was explicitly requested. Treat this hook behavior as settled requirement; verify and preserve it. Remaining compaction audit should decide whether compact-now/headless/autocompaction entrypoints need matching fail-closed behavior or an explicit documented distinction.",
+    "datetime": "2026-06-30T22:35:06.338619Z",
+    "entry_id": "019f1aab-fae2-76f1-85c2-4e8cea41a7c4",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

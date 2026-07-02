@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9d-3f10-7380-a0e2-671674b92384",
+  "occurred_at": "2026-06-30T22:19:00.74646Z",
+  "knot_id": "hive-flow-30bc",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Run live Hive Flow provider-agent audits for long-horizon recovery, tool usability, and block auto-recovery. Codex implements; Claude verifies using Hive Flow agents as the primary live-run path. Codex also performs conservative Codex-side canaries to prove owner/context/tooling works from Codex."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20ca-7f5f-7472-bb2a-9e9040c44fa3",
+  "occurred_at": "2026-07-02T03:06:09.621224Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-951e",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "HA verify A3 caps + A1 Beads->Knots (verification log)",
+    "type": "work",
+    "updated_at": "2026-07-02T03:06:09.621224Z",
+    "workflow_id": "work_sdlc"
+  }
+}

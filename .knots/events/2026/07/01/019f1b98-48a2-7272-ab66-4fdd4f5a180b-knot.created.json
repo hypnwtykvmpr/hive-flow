@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1b98-48a2-7272-ab66-4fdd4f5a180b",
+  "occurred_at": "2026-07-01T02:53:12.738352Z",
+  "knot_id": "hive-flow-65e3",
+  "type": "knot.created",
+  "data": {
+    "body": "Create a durable system for recording every deferred item and driving each deferral to either completion, explicit cancellation, or replacement by a newer tracked task. Requirements: no deferred work may exist only in chat/router prose; deferrals need owner, reason, dependency/unblock condition, priority, source reference, and next review trigger. Integrate with Knots workflow and router handoffs so deferred work remains discoverable after compaction/session changes.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot",
+    "state": "ready_for_planning",
+    "title": "Deferred: deferral ledger and completion discipline",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

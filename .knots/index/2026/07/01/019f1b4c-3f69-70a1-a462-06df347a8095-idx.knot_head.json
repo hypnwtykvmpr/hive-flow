@@ -1,0 +1,21 @@
+{
+  "event_id": "019f1b4c-3f69-70a1-a462-06df347a8095",
+  "occurred_at": "2026-07-01T01:30:09.64115Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-5069",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-root-collapse-clarification",
+    "type": "lease",
+    "updated_at": "2026-07-01T01:30:09.64115Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

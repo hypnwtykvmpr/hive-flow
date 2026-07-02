@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-141d-7042-b2f3-a42953466de8",
+  "occurred_at": "2026-07-02T03:08:58.773197Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-76bd",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Implement Phase 2B C3 pack smoke harness",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:58.773197Z",
+    "workflow_id": "work_sdlc"
+  }
+}

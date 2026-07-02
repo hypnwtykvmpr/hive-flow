@@ -1,0 +1,37 @@
+{
+  "event_id": "019f20cc-7136-7813-80d4-501f18d64004",
+  "occurred_at": "2026-07-02T03:08:17.078307Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-3ca6",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipment_review",
+    "step_metadata": {
+      "action_kind": "gate",
+      "action_state": "shipment_review",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Phase 1D: regression gates, pre-commit, commit and push phase 1",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:17.078307Z",
+    "workflow_id": "work_sdlc"
+  },
+  "precondition": {
+    "profile_etag": "019f1b43-16c8-7ad0-a5fc-a3a862c0ea9e"
+  }
+}

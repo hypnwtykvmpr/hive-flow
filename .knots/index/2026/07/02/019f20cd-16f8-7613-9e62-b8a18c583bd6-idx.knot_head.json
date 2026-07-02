@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-16f8-7613-9e62-b8a18c583bd6",
+  "occurred_at": "2026-07-02T03:08:59.504186Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-270a",
+    "profile_id": "autopilot",
+    "state": "abandoned",
+    "terminal": true,
+    "title": "Deferred: battle-test provider agent harness and auto-recovery",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:59.504186Z",
+    "workflow_id": "work_sdlc"
+  }
+}

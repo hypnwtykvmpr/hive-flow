@@ -1,0 +1,12 @@
+{
+  "event_id": "019f1a9c-c443-73d1-aafb-9e85376efc4c",
+  "occurred_at": "2026-06-30T22:18:29.303865Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run focused MCP/provider bridge tests for error redirection.",
+      "Run fast-check/property tests for failure message invariants where applicable."
+    ]
+  }
+}

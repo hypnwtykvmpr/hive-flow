@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9d-3f26-7391-8fc0-c83c38564b4e",
+  "occurred_at": "2026-06-30T22:19:00.74646Z",
+  "knot_id": "hive-flow-30bc",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "native-tools"
+  }
+}

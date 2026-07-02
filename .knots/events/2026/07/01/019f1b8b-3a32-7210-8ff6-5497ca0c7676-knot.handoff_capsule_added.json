@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b8b-3a32-7210-8ff6-5497ca0c7676",
+  "occurred_at": "2026-07-01T02:38:57.07476Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "REV2 routed to Claude: .hive-flow/data/tmux-router/20260701T023752Z-codex-PHASE2A-INVENTORY-MATRIX-REV2-to-claude.md. Computed-v3-path sweep folded into MF2, dot/config retarget, MF6 test anchors, and non-retarget classes. No structural move; next owner Claude for fast sweep completeness pass.",
+    "datetime": "2026-07-01T02:38:57.07476Z",
+    "entry_id": "019f1b8b-3a32-7210-8ff6-548d95c9793c",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

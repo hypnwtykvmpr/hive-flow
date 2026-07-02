@@ -1,0 +1,15 @@
+{
+  "event_id": "019f0f69-1504-7642-baa4-a0b17ed63184",
+  "occurred_at": "2026-06-28T18:06:12.740149Z",
+  "knot_id": "hive-flow-951e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PATTERN: Config-error must short-circuit BEFORE the default fallback to avoid silent fallback. resolveProviderConcurrencyLimit returns {source,error} on malformed config (:573); checkProviderConcurrencyForDispatch returns provider-concurrency-config-error (:615-624) before reaching DEFAULT_API_PROVIDER_CONCURRENCY_LIMITS. Tests assert spawn NOT called on both the limit and config-error paths.",
+    "datetime": "2026-06-28T18:06:12.740149Z",
+    "entry_id": "019f0f69-1504-7642-baa4-a0a837608dbb",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

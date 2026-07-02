@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-5954-7002-a7dc-b563d87ede9b",
+  "occurred_at": "2026-07-01T01:28:05.187727Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Audit all non-dot Hive Flow code, docs, scripts, tests, package/install surfaces, plugins, generated/trash candidates, and live-session-sensitive paths outside the promoted CLI root. Produce a source-of-truth move/keep/trash/human-cutover matrix before code movement."
+  }
+}

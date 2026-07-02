@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-b086-7bd0-98c5-c77422a712de",
+  "occurred_at": "2026-07-01T01:28:27.521789Z",
+  "knot_id": "hive-flow-a285",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Move or collapse root tests, v3 tests, scripts, plugin assets, and plugin packages into the promoted cli root. Rewrite path assumptions, Bats helpers, fast-check/property tests, package tests, protected-path tests, and plugin discovery so they run from the new root."
+  }
+}

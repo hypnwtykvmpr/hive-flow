@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c34-44ac-73d2-b957-a896c1da67a3",
+  "occurred_at": "2026-07-01T05:43:35.340191Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "All non-blocked Phase 2B agent lanes closed as of cad249e34. DP2B-1b is now the sole remaining next action and is Status: BLOCKED_TRUE_HUMAN_GATE. Human must choose Option A scheduled cutover (recommended: tracked git mv, rebuild/reinstall cli dist/node_modules, workspace globs, remove v3 fallbacks, restart Claude/Codex/MCP from cli, then route post-cutover diff + D pack smoke) or Option B demonstrated same-session symlink. No agent should relocate v3/@hive-flow/cli until human authorizes.",
+    "datetime": "2026-07-01T05:43:35.340191Z",
+    "entry_id": "019f1c34-44ac-73d2-b957-a88f54468a87",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

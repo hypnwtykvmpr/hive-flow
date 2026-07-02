@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-1422-7ba2-9556-28f8734a6299",
+  "occurred_at": "2026-07-02T03:08:58.786259Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-1838",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Phase 2B C3 isolated pack install smoke",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:58.786259Z",
+    "workflow_id": "work_sdlc"
+  }
+}

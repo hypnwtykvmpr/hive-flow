@@ -1,0 +1,9 @@
+{
+  "event_id": "019f20cd-18ae-7363-981f-64fd4dfbeb5a",
+  "occurred_at": "2026-07-02T03:08:59.95017Z",
+  "knot_id": "hive-flow-baff",
+  "type": "knot.lease_id_set",
+  "data": {
+    "lease_id": "hive-flow-3db2"
+  }
+}

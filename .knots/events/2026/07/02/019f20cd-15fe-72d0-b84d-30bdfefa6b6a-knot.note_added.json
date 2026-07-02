@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-15fe-72d0-b84d-30bdfefa6b6a",
+  "occurred_at": "2026-07-02T03:08:59.262442Z",
+  "knot_id": "hive-flow-a285",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: Phase 2D root tests/scripts/plugin relocation was completed during the Phase 2 migration chain and verified by the closing gate/canary notes. No implementation remains.",
+    "datetime": "2026-07-02T03:08:59.262442Z",
+    "entry_id": "019f20cd-15fe-72d0-b84d-30a82b656bca",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

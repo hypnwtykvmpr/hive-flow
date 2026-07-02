@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9d-400d-7b83-b880-e2100fdc9c46",
+  "occurred_at": "2026-06-30T22:19:00.996746Z",
+  "knot_id": "hive-flow-3ca6",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Focused tests for redirection/compaction/tool errors pass; relevant bats and fast-check/property tests pass; pre-commit/private/security gates pass; dirty tree is reviewed; commit and push to origin main succeed after Codex and Claude agree green."
+  }
+}

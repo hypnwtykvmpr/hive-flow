@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b43-5c67-7532-8f04-15c9a1a98c6e",
+  "occurred_at": "2026-07-01T01:20:27.239799Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Human clarified Phase 2 target on 2026-07-01: collapse means v3/@hive-flow/cli becomes the new operative root, promoted to top-level cli in the directory layout, not merely deduplicating code while keeping v3 as the root. Everything Hive Flow-related outside that target root, including code, docs/dox/private operational material, scripts, tests, package/install surfaces, and trash/delete classifications, must be audited and collapsed or explicitly placed in a trash/human-cutover bucket. Some moves cannot happen while the current Codex/Claude/router/MCP session is live; those must be compartmentalized as human-required cutover steps rather than forced mid-session.",
+    "datetime": "2026-07-01T01:20:27.239799Z",
+    "entry_id": "019f1b43-5c67-7532-8f04-15b88910506e",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

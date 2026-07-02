@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9d-3f14-7b12-b220-e03e321205ba",
+  "occurred_at": "2026-06-30T22:19:00.74646Z",
+  "knot_id": "hive-flow-30bc",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Claude verification uses Hive Flow agents for broad live runs; Codex performs conservative parallel canaries from Codex; agent outputs are durable; any live-run failure produces redirection or a follow-up fix; native tools are effortless and error messages provide next actions."
+  }
+}

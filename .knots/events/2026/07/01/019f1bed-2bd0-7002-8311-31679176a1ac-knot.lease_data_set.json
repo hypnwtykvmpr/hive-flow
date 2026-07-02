@@ -1,0 +1,20 @@
+{
+  "event_id": "019f1bed-2bd0-7002-8311-31679176a1ac",
+  "occurred_at": "2026-07-01T04:25:55.920191Z",
+  "knot_id": "hive-flow-7ff2",
+  "type": "knot.lease_data_set",
+  "data": {
+    "lease_data": {
+      "agent_info": {
+        "agent_name": "",
+        "agent_type": "",
+        "model": "",
+        "model_version": "",
+        "provider": ""
+      },
+      "lease_type": "agent",
+      "nickname": "codex-phase2b-c3-pack-smoke-impl",
+      "timeout_seconds": 600
+    }
+  }
+}

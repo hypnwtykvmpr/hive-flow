@@ -1,0 +1,17 @@
+{
+  "event_id": "019f1b98-48d8-7b43-ae17-2c125c5c3c4b",
+  "occurred_at": "2026-07-01T02:53:12.792347Z",
+  "knot_id": "hive-flow-37cc",
+  "type": "knot.created",
+  "data": {
+    "body": "Deferred until the current Phase 2/root-migration assignments are complete. Scope: prove Hive Flow agents are reliable under real workloads before inter-agent communication is prioritized. Requirements: battle-test CLI/API/local LM Studio providers, verify sign-in/session parity for CLI agents such as agy vs a normal terminal, run max-agent/concurrency pilots up to provider limits, ensure stalled agents are automatically nudged or escalated to queen only when appropriate, ensure blockers get structured redirection/help, and require agents to produce stamped completion/results. Include watchdog blindspot analysis to avoid spam loops when agents are genuinely blocked or waiting for queen intervention.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot",
+    "state": "ready_for_planning",
+    "title": "Deferred: battle-test provider agent harness and auto-recovery",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

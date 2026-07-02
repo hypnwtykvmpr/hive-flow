@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cc-708a-7ba0-9210-c74875445242",
+  "occurred_at": "2026-07-02T03:08:16.898506Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-4c59",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Phase 1B: audit and fix microcompaction and autocompaction parity",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:16.898506Z",
+    "workflow_id": "work_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1aa0-27a2-7871-bf8f-ed5c53ead28b",
+  "occurred_at": "2026-06-30T22:22:11.362354Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Planning complete for Phase 1. Child knots: hive-flow-3d64 redirection, hive-flow-4c59 compaction parity, hive-flow-30bc live self-audit/native tools, hive-flow-3ca6 gates/commit/push. Key invariants: Codex implements; Claude verifies; Claude owns broad Hive Flow agent live runs; Codex runs conservative Codex-owned canaries; nontrivial design/logic disagreement requires joint investigation with local evidence, source docs, online references when current facts matter, and comparable repos until remediated; only unresolved disagreements become handoff/blockers. Preserve pre-existing dirty .claude/helpers/context-persistence-hook.mjs and tests/context-persistence-hook.test.mjs until reviewed. Next action is plan_review for hive-flow-60d3, then execute child lanes in order without starting Phase 2 until Phase 1 is green and committed/pushed with Codex+Claude agreement.",
+    "datetime": "2026-06-30T22:22:11.362354Z",
+    "entry_id": "019f1aa0-27a2-7871-bf8f-ed4b7c227a61",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

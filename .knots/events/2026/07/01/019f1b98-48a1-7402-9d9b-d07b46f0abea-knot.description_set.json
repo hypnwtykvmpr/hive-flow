@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b98-48a1-7402-9d9b-d07b46f0abea",
+  "occurred_at": "2026-07-01T02:53:12.73264Z",
+  "knot_id": "hive-flow-2ee8",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Deferred until the agent harness is proven and battle-tested. Scope: design and implement inter-agent communication similar to Codex/Claude router handoffs, but only after reliable individual agents are established. Must consider queen-mediated help, durable task/result stamps, agent-to-agent message routing, anti-spam controls, genuine blocker detection, and compatibility with API/local LM Studio/CLI providers."
+  }
+}

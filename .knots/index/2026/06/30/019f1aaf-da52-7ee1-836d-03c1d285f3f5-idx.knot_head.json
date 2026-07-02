@@ -1,0 +1,21 @@
+{
+  "event_id": "019f1aaf-da52-7ee1-836d-03c1d285f3f5",
+  "occurred_at": "2026-06-30T22:39:20.146876Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-d651",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-claude-phase1-greenlight",
+    "type": "lease",
+    "updated_at": "2026-06-30T22:39:20.146876Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

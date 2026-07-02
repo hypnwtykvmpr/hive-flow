@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1ab5-5ca1-76b3-b049-c75adfc4a555",
+  "occurred_at": "2026-06-30T22:45:21.185813Z",
+  "knot_id": "hive-flow-4c59",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Claude-specific compaction correction completed after human clarification: direct /compact and compact-now.cjs now fail closed when context usage cannot be measured, with no allow-unmeasured escape. Guidance says request human intervention because measurement layer must be repaired. Focused gates passed: node --test tests/compact-now.test.mjs; node --test --test-name-pattern context window detection|compact advisory signal tests/context-persistence-hook.test.mjs; pnpm exec vitest run src/__tests__/compact-now-inplace.test.ts from v3/@hive-flow/cli. Next implementation focus returns to Hive Flow provider-agent context compaction, where human clarified fail-open is acceptable and Claude 50 percent floor is not required.",
+    "datetime": "2026-06-30T22:45:21.185813Z",
+    "entry_id": "019f1ab5-5ca1-76b3-b049-c74680bfaadd",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

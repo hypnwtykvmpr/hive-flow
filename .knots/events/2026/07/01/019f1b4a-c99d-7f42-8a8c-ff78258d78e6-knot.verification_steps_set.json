@@ -1,0 +1,11 @@
+{
+  "event_id": "019f1b4a-c99d-7f42-8a8c-ff78258d78e6",
+  "occurred_at": "2026-07-01T01:28:33.930476Z",
+  "knot_id": "hive-flow-acef",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run docs link/claim audit, security scan, private guard, build/typecheck, full relevant tests, pre-commit, npm pack/install smoke, MCP start smoke, and Claude at-SHA verification before final push."
+    ]
+  }
+}

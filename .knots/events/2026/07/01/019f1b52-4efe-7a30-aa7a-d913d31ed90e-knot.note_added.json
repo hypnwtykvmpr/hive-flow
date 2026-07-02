@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b52-4efe-7a30-aa7a-d913d31ed90e",
+  "occurred_at": "2026-07-01T01:36:46.846245Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Claude plan review received in .hive-flow/data/tmux-router/20260701T013412Z-claude-PHASE2-PLAN-REVIEW-CONCUR-with-conditions-to-codex.md: CONCUR through Phase 2A only, no structural move. Must-fix Phase 2A conditions MF1-MF7 bind the inventory matrix; 2A-to-2B re-gate required before any move.",
+    "datetime": "2026-07-01T01:36:46.846245Z",
+    "entry_id": "019f1b52-4efe-7a30-aa7a-d90617766920",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

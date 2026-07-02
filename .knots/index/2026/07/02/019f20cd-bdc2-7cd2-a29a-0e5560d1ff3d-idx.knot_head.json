@@ -1,0 +1,47 @@
+{
+  "event_id": "019f20cd-bdc2-7cd2-a29a-0e5560d1ff3d",
+  "occurred_at": "2026-07-02T03:09:42.210276Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-8488",
+    "next_step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Lease: codex-open-note-hive-flow-0bb4-1782961782195",
+    "type": "lease",
+    "updated_at": "2026-07-02T03:09:42.210276Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

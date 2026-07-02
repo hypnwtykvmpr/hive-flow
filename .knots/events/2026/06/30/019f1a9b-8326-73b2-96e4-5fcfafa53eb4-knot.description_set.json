@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-8326-73b2-96e4-5fcfafa53eb4",
+  "occurred_at": "2026-06-30T22:17:07.105671Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 3 of the user assignment. After code collapse is green and committed/pushed, audit all documentation for accuracy and verification, remove fabricated/fictitious claims, update docs to match live behavior, and move DELETE-prefixed or otherwise trash material to an appropriate trash folder."
+  }
+}

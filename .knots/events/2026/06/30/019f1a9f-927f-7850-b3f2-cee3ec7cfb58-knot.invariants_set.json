@@ -1,0 +1,14 @@
+{
+  "event_id": "019f1a9f-927f-7850-b3f2-cee3ec7cfb58",
+  "occurred_at": "2026-06-30T22:21:33.183324Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.invariants_set",
+  "data": {
+    "invariants": [
+      {
+        "condition": "Codex implements direct code/test changes; Claude verifies, especially broad Hive Flow agent live runs. Codex also runs conservative Codex-owned Hive Flow agent canaries to validate owner/tool behavior.",
+        "type": "Scope"
+      }
+    ]
+  }
+}

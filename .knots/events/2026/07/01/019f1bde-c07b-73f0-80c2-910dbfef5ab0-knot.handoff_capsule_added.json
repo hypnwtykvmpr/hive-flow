@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1bde-c07b-73f0-80c2-910dbfef5ab0",
+  "occurred_at": "2026-07-01T04:10:10.939566Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "C1 at-SHA confirmed closed by Claude. C3 planning knot hive-flow-1838 created and advanced to ready_for_plan_review; implementation child hive-flow-76bd created with no-planning profile. Router plan review handoff to Claude: .hive-flow/data/tmux-router/20260701T040936Z-codex-PHASE2B-C3-PACK-SMOKE-PLAN-to-claude.md. No source mutations for C3 yet; Codex waits for plan concurrence before claiming implementation child.",
+    "datetime": "2026-07-01T04:10:10.939566Z",
+    "entry_id": "019f1bde-c07b-73f0-80c2-90fb4f296269",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

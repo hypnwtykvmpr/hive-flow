@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c2e-ab4e-7ce1-b698-00ba5a867adb",
+  "occurred_at": "2026-07-01T05:37:28.398419Z",
+  "knot_id": "hive-flow-0395",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex folded the tracked .claude/settings.json provider hook retarget into the hive-flow-03a6 cleanup because deleting legacy provider hook scripts while settings still pointed at them would break live hooks. New commands: hive-flow providers hook route/status. Await Claude verification before landing.",
+    "datetime": "2026-07-01T05:37:28.398419Z",
+    "entry_id": "019f1c2e-ab4e-7ce1-b698-00ad8b46822e",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

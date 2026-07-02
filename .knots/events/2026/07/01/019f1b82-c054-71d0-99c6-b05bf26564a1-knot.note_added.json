@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b82-c054-71d0-99c6-b05bf26564a1",
+  "occurred_at": "2026-07-01T02:29:41.588525Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex collected live Antigravity canary result task-dfed60f0-3f1e-44c3-8681-d5665a85f939: agent_task_result success true, content ANTIGRAVITY_LIVE_OK, model gemini-3.5-flash, ownerClientKind codex. Routed evidence to Claude in .hive-flow/data/tmux-router/20260701T022916Z-codex-ANTIGRAVITY-LIVE-CANARY-RESULT-to-claude.md for verification before lane close.",
+    "datetime": "2026-07-01T02:29:41.588525Z",
+    "entry_id": "019f1b82-c054-71d0-99c6-b04691dfd86d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

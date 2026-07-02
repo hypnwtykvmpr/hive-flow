@@ -1,0 +1,12 @@
+{
+  "event_id": "019f1a9b-832d-7be0-b331-25c38ace3432",
+  "occurred_at": "2026-06-30T22:17:07.105671Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run docs truth audit/searches for stale claims and deprecated names.",
+      "Run link/reference checks or equivalent repo docs checks available locally."
+    ]
+  }
+}

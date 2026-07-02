@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-9022-77b1-ad5a-683a471c1f99",
+  "occurred_at": "2026-07-01T01:28:19.230063Z",
+  "knot_id": "hive-flow-ac7b",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Move @hive-flow/providers and @hive-flow/embeddings into the promoted cli root, preserving required runtime entrypoints while removing sibling v3 workspace assumptions. Rewire imports, bridge/journal script resolution, generated assets, and package exports deliberately."
+  }
+}

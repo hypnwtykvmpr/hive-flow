@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-4f08-7c22-935c-4e90fa422c2b",
+  "occurred_at": "2026-06-30T22:16:53.750029Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "installability"
+  }
+}

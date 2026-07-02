@@ -1,0 +1,21 @@
+{
+  "event_id": "019f1aa0-3943-76d3-917f-8ae9c6d06a64",
+  "occurred_at": "2026-06-30T22:22:15.875957Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-196d",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: claim-hive-flow-60d3",
+    "type": "lease",
+    "updated_at": "2026-06-30T22:22:15.875957Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

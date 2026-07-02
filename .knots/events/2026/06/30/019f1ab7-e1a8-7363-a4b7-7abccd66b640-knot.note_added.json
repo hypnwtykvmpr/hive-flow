@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1ab7-e1a8-7363-a4b7-7abccd66b640",
+  "occurred_at": "2026-06-30T22:48:06.312185Z",
+  "knot_id": "hive-flow-4c59",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Hive Flow provider-agent compaction policy implemented per human clarification: missing or malformed agent context limits now fail open in provider-agent-bridge trimMessages by returning normalized provider-legal history without budget trimming. prepareForProvider still performs nonblocking old-tool-result microcompaction. Added provider bridge microcompaction regressions. Gate passed: pnpm exec vitest run __tests__/provider-bridge-microcompaction.test.mjs __tests__/provider-bridge-context.test.mjs from v3/@hive-flow/providers (27 pass).",
+    "datetime": "2026-06-30T22:48:06.312185Z",
+    "entry_id": "019f1ab7-e1a8-7363-a4b7-7aa684a2a8d6",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

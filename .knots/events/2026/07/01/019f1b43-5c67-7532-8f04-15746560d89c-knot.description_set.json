@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b43-5c67-7532-8f04-15746560d89c",
+  "occurred_at": "2026-07-01T01:20:27.239799Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 of the user assignment. After Phase 1 is green and committed/pushed, treat the collapse as a repo-root migration: the former v3/@hive-flow/cli tree is to become the operative Hive Flow project root, promoted to top-level cli per the clarified directory target. Audit all Hive Flow code, docs, dox/private operational material, scripts, tests, package/install surfaces, and generated/trash classifications outside that target root when they are not under dot-prefixed folders. Deduplicate/collapse into the CLI root/source as appropriate; rewire imports, package scripts, tests, docs links, global/per-user install paths, and runtime assumptions. Identify live-session-sensitive moves that cannot safely happen while Codex/Claude/router/MCP are active, and write a human-required cutover checklist for those instead of forcing them mid-session."
+  }
+}

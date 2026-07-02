@@ -1,0 +1,10 @@
+{
+  "event_id": "019f1b4b-0cb2-7b33-9711-ed14abc099a0",
+  "occurred_at": "2026-07-01T01:28:51.122076Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.edge_add",
+  "data": {
+    "dst": "hive-flow-acef",
+    "kind": "parent_of"
+  }
+}

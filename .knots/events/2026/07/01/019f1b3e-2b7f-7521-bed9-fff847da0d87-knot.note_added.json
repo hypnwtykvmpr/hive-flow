@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b3e-2b7f-7521-bed9-fff847da0d87",
+  "occurred_at": "2026-07-01T01:14:47.039836Z",
+  "knot_id": "hive-flow-3ca6",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Additional 1D security evidence: pnpm exec vitest run __tests__/provider-bridge-security.test.mjs in v3/@hive-flow/providers passed 7/7. Root npm test:security was not used because package.json points to missing v3/__tests__/security; maintained focused security coverage in this slice is provider-bridge-security plus CLI enforcement-security-property from the 326-test CLI matrix.",
+    "datetime": "2026-07-01T01:14:47.039836Z",
+    "entry_id": "019f1b3e-2b7f-7521-bed9-ffea32225b46",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

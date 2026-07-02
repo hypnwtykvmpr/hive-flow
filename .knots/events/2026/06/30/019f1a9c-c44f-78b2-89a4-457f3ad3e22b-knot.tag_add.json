@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9c-c44f-78b2-89a4-457f3ad3e22b",
+  "occurred_at": "2026-06-30T22:18:29.303865Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "provider-agents"
+  }
+}

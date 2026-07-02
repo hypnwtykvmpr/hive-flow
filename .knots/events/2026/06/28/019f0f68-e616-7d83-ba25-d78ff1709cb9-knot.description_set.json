@@ -1,0 +1,9 @@
+{
+  "event_id": "019f0f68-e616-7d83-ba25-d78ff1709cb9",
+  "occurred_at": "2026-06-28T18:06:00.720907Z",
+  "knot_id": "hive-flow-951e",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Adversarial verification of Codex diff at 531430bf9: A3 per-provider concurrency caps + A1 Beads->Knots conversion. Knot created solely to satisfy SubagentStop logging hook; verification was not knot-driven."
+  }
+}

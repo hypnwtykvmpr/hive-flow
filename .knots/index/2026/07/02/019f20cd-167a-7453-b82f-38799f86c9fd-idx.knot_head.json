@@ -1,0 +1,26 @@
+{
+  "event_id": "019f20cd-167a-7453-b82f-38799f86c9fd",
+  "occurred_at": "2026-07-02T03:08:59.386216Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [
+      {
+        "condition": "Phase 2 is a root migration, not just deduplication. The destination is the former v3/@hive-flow/cli promoted to top-level cli/new operative project root, with v3 removed from the required runtime/install path after cutover.",
+        "type": "Scope"
+      }
+    ],
+    "knot_id": "hive-flow-8727",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Root migration: promote CLI and collapse Hive Flow repo code",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:59.386216Z",
+    "workflow_id": "work_sdlc"
+  }
+}

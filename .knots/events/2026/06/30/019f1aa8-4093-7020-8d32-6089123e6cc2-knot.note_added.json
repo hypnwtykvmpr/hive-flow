@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1aa8-4093-7020-8d32-6089123e6cc2",
+  "occurred_at": "2026-06-30T22:31:02.034851Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Forwarded Phase 1 plan to Claude for adversarial review/fact-check via .hive-flow/data/tmux-router/20260630T223006Z-codex-PHASE1-PLAN-REVIEW-to-claude.md. Standing rule recorded: if Codex+Claude agree, proceed autonomously through approved tasks including commit/push; disagreements require further joint research before any blocker handoff.",
+    "datetime": "2026-06-30T22:31:02.034851Z",
+    "entry_id": "019f1aa8-4093-7020-8d32-6071e730e849",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

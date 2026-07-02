@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c28-e1dd-7ef0-ae8e-519922755f84",
+  "occurred_at": "2026-07-01T05:31:09.149579Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DP2B-1a live-survival prep landed and pushed at eb6b37177. Exact committed slice: 25 files including forced tracked .claude/helpers/layout-paths.cjs and hive-flow-mcp-launcher.cjs; excluded CLAUDE.md and v3/@hive-flow/cli/.claude/helper generated drift. Await Claude at-SHA confirmation. DP2B-1b actual relocation remains true human cutover gate.",
+    "datetime": "2026-07-01T05:31:09.149579Z",
+    "entry_id": "019f1c28-e1dd-7ef0-ae8e-518ca6255f9b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

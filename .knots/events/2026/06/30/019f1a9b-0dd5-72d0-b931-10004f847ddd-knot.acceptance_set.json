@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-0dd5-72d0-b931-10004f847ddd",
+  "occurred_at": "2026-06-30T22:16:37.06883Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Hive Flow agent failure/error/tool-call paths produce actionable redirection; microcompaction and autocompaction behavior is audited and corrected; native tools are audited for agent usability; live Hive Flow self-audit and Codex review findings are resolved or explicitly tracked; focused bats/fast-check/regression tests pass; pre-commit gate passes before commit/push."
+  }
+}

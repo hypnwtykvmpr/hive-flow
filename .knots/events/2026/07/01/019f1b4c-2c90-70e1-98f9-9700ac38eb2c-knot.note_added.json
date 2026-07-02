@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b4c-2c90-70e1-98f9-9700ac38eb2c",
+  "occurred_at": "2026-07-01T01:30:04.816926Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Phase 2 planning artifact routed for Claude review: .hive-flow/data/tmux-router/20260701T012857Z-codex-PHASE2-ROOT-MIGRATION-PLAN-to-claude.md. Plan slices: 2A inventory/cutover matrix, 2B promote former v3/@hive-flow/cli to top-level cli and consolidate install package identity, 2C collapse providers/embeddings under cli while preserving provider-agent bridge/journal/microcompaction contracts, 2D relocate tests/scripts/plugins and rewrite stale v3 paths, 2E docs/trash/security/QA/installability. Design points requiring concurrence before implementation: public package identity for promoted cli, staged provider/embeddings collapse vs immediate src internalization, and live-session human cutover boundary for active router/MCP/dot-dir state. Child knots linked: hive-flow-ecc5, hive-flow-afe1, hive-flow-ac7b, hive-flow-a285, hive-flow-acef.",
+    "datetime": "2026-07-01T01:30:04.816926Z",
+    "entry_id": "019f1b4c-2c90-70e1-98f9-96ff25367535",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

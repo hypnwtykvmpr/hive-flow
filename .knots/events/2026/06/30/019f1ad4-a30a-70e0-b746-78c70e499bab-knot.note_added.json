@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1ad4-a30a-70e0-b746-78c70e499bab",
+  "occurred_at": "2026-06-30T23:19:30.826551Z",
+  "knot_id": "hive-flow-30bc",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex Phase 1C canary complete. First attempted invalid agentType reviewer and found a usability gap: agent_spawn invalid-agent-type returned prose only. Fixed agent_spawn invalid project/type/owner/mode/artifact failures plus agent_terminate not-found to use structured recovery guidance. Verification after fix: spawn whitelist + agent task/nonblocking tests passed 119 tests; pnpm exec tsc --noEmit passed; pnpm build passed. Live Codex-owned provider canary then passed in temp projectRoot: agent_spawn provider=codex-cli agentType=verifier mode=read-only persisted ownerSessionId=019f1885-... ownerClientKind=codex; agent_task returned task-6951488f... pid 26013; agent_task_result completed with content PHASE1C_CANARY_OK, targetAgent=codex, ownerClientKind=codex; agent_terminate succeeded. Runtime built tool list exposes only agent_task and agent_task_result; rg found no agent_task_async string; git diff --check passed.",
+    "datetime": "2026-06-30T23:19:30.826551Z",
+    "entry_id": "019f1ad4-a30a-70e0-b746-78b75b62541a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

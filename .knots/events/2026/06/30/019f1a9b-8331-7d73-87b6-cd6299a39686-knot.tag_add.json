@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-8331-7d73-87b6-cd6299a39686",
+  "occurred_at": "2026-06-30T22:17:07.105671Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "docs-truth"
+  }
+}

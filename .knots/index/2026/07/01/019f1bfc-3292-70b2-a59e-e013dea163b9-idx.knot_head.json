@@ -1,0 +1,21 @@
+{
+  "event_id": "019f1bfc-3292-70b2-a59e-e013dea163b9",
+  "occurred_at": "2026-07-01T04:42:20.690741Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-7ff2",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-phase2b-c3-pack-smoke-impl",
+    "type": "lease",
+    "updated_at": "2026-07-01T04:42:20.690741Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

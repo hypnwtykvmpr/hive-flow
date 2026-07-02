@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cc-7164-7201-b4b6-d929f32172b0",
+  "occurred_at": "2026-07-02T03:08:17.116219Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-3ca6",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Phase 1D: regression gates, pre-commit, commit and push phase 1",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:17.116219Z",
+    "workflow_id": "work_sdlc"
+  }
+}

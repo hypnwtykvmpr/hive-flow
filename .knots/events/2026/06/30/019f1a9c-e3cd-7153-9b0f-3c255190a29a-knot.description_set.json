@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9c-e3cd-7153-9b0f-3c255190a29a",
+  "occurred_at": "2026-06-30T22:18:37.384963Z",
+  "knot_id": "hive-flow-4c59",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Audit and correct Hive Flow agent microcompaction and full autocompaction behavior. Microcompaction should behave accurately at parity with Claude Code CLI expectations; full autocompaction should behave accurately at parity with Codex CLI expectations, including post-compact recovery."
+  }
+}

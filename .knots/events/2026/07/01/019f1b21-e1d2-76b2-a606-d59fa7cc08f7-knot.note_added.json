@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b21-e1d2-76b2-a606-d59fa7cc08f7",
+  "occurred_at": "2026-07-01T00:43:53.170726Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Phase 1A landed and runtime refreshed. Commit ae24b43e8beb430f2e07eed1b7ef6b8780517428 pushed to origin/main with path-scoped 12-file slice: agent failure guidance, agent_task_async alias removal/rename, tests/docs/provider gated-write assertion update. Pre-land gates: CLI focused 324/324, provider focused 33/33, tsc --noEmit pass, git diff --check pass. Post-land: HEAD == origin/main == ae24b43e8; corepack pnpm -C v3/@hive-flow/cli build pass; dist contains withAgentFailureGuidance and no agent_task_async tool; stale Claude MCP child PID 72136 killed; Claude /mcp reconnect reported Reconnected to hive-flow; fresh Claude child PID 17875 under pane PID 70951. Routed to Claude for deferred 1C broad live provider-agent audit.",
+    "datetime": "2026-07-01T00:43:53.170726Z",
+    "entry_id": "019f1b21-e1d2-76b2-a606-d588de655c95",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

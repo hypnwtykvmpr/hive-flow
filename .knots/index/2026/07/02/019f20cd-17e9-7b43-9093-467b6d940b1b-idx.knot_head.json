@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-17e9-7b43-9093-467b6d940b1b",
+  "occurred_at": "2026-07-02T03:08:59.753155Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-a455",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-reconcile-hive-flow-37cc-1782961739659",
+    "type": "lease",
+    "updated_at": "2026-07-02T03:08:59.753155Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

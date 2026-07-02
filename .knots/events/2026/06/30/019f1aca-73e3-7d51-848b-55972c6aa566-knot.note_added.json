@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1aca-73e3-7d51-848b-55972c6aa566",
+  "occurred_at": "2026-06-30T23:08:23.395336Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex implementation complete for Phase 1A provider-agent failure redirection. Added structured recovery payloads to agent_task/agent_task_result failures (code, retryable, nextActions, artifactHints, recovery), terminal stop-polling guidance for dead/missing/corrupt task results, removed exposed agent_task_async alias and rewired queen/enforcement/docs/tests to canonical agent_task only. Verification: CLI vitest agent-task/agent-task-nonblocking/mcp-enforcement/queen-dispatch/enforcement-security passed 267 tests; providers vitest microcompaction/context/gated-write passed 33 tests; compact-now/context-hook/compact-now-inplace passed; pnpm build and pnpm exec tsc --noEmit passed; built MCP canary exposed only agent_task+agent_task_result and nonexistent-agent dispatch returned nextActions.",
+    "datetime": "2026-06-30T23:08:23.395336Z",
+    "entry_id": "019f1aca-73e3-7d51-848b-558495235b82",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "event_id": "019f20cd-1855-7392-a025-0d58353c986b",
+  "occurred_at": "2026-07-02T03:08:59.853859Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-65e3",
+    "profile_id": "autopilot",
+    "state": "abandoned",
+    "terminal": true,
+    "title": "Deferred: deferral ledger and completion discipline",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:59.853859Z",
+    "workflow_id": "work_sdlc"
+  }
+}

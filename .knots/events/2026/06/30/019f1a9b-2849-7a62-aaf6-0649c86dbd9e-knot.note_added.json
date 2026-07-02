@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1a9b-2849-7a62-aaf6-0649c86dbd9e",
+  "occurred_at": "2026-06-30T22:16:43.849301Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex created this phase knot from the user's long-horizon assignment. Pre-existing dirty files at start: .claude/helpers/context-persistence-hook.mjs and tests/context-persistence-hook.test.mjs; preserve and inspect rather than overwrite.",
+    "datetime": "2026-06-30T22:16:43.849301Z",
+    "entry_id": "019f1a9b-2849-7a62-aaf6-0633d5b543a1",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

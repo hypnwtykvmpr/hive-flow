@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1bc9-5ae2-7800-9748-958bf82249ae",
+  "occurred_at": "2026-07-01T03:46:48.669997Z",
+  "knot_id": "hive-flow-03a6",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Deferred from Phase 2B C1 after Claude VERIFY_CLEAN. setup-provider-agents now installs hive-flow providers hook route/status, but standalone v3/@hive-flow/providers/scripts/provider-route-hook.mjs and provider-status-hook.mjs still exist and are tested. Retire or consolidate those scripts into the CLI provider hook runtime during the 2C provider move or a focused cleanup slice to prevent behavior drift. Source: .hive-flow/data/tmux-router/20260701T032251Z-claude-PHASE2B-C1-VERIFY-CLEAN-to-codex.md."
+  }
+}

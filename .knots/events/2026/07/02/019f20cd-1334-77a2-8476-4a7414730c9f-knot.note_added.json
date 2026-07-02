@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-1334-77a2-8476-4a7414730c9f",
+  "occurred_at": "2026-07-02T03:08:58.548062Z",
+  "knot_id": "hive-flow-03a6",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: legacy provider hook scripts were retired in cad249e34 and later confirmed through the Phase 2 migration chain. No active implementation remains.",
+    "datetime": "2026-07-02T03:08:58.548062Z",
+    "entry_id": "019f20cd-1334-77a2-8476-4a6a4f90e5ed",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

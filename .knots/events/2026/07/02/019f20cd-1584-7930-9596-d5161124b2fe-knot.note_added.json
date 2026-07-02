@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-1584-7930-9596-d5161124b2fe",
+  "occurred_at": "2026-07-02T03:08:59.140238Z",
+  "knot_id": "hive-flow-ac7b",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: Phase 2C provider/embedding collapse completed in the migration chain, including 6d33e8fbe and successor cleanup commits. No implementation remains.",
+    "datetime": "2026-07-02T03:08:59.140238Z",
+    "entry_id": "019f20cd-1584-7930-9596-d50323f5766b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

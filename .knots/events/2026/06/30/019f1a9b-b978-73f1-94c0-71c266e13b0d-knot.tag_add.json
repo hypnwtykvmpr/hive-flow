@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-b978-73f1-94c0-71c266e13b0d",
+  "occurred_at": "2026-06-30T22:17:20.996235Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "qa"
+  }
+}

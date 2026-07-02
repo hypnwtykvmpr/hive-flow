@@ -1,0 +1,46 @@
+{
+  "event_id": "019f20cc-7168-7f52-8e30-8da2e57843ff",
+  "occurred_at": "2026-07-02T03:08:17.128987Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [
+      {
+        "condition": "Codex implements direct code/test changes; Claude verifies, especially broad Hive Flow agent live runs. Codex also runs conservative Codex-owned Hive Flow agent canaries to validate owner/tool behavior.",
+        "type": "Scope"
+      },
+      {
+        "condition": "Nontrivial design or logic changes require Codex and Claude investigation plus explicit concurrence before implementation; unresolved disagreement becomes a blocker/handoff, not a unilateral decision.",
+        "type": "Scope"
+      },
+      {
+        "condition": "If Codex and Claude disagree on design or logic, both must investigate further using available source docs, online references when current facts matter, comparable repos, and local evidence until the disagreement is remediated; handoff only if it remains unremediated.",
+        "type": "Scope"
+      },
+      {
+        "condition": "Standing greenlight: after Claude adversarial review/fact-check, if Codex and Claude agree, proceed autonomously through the approved tasks including implementation, verification, commit, and push; human intervention is required only for genuine blockers or unremediated disagreements.",
+        "type": "Scope"
+      },
+      {
+        "condition": "If tmux router/watchdog/daemon coordination fails, Codex and Claude must record shared evidence and remediation requests in a durable artifact under .hive-flow/data/tmux-router/ for the tmux-router developer.",
+        "type": "Scope"
+      },
+      {
+        "condition": "Direct /compact handling in .claude/helpers/context-persistence-hook.mjs must fail closed when context usage cannot be measured; this is an explicit human requirement, not an open design question.",
+        "type": "State"
+      }
+    ],
+    "knot_id": "hive-flow-60d3",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Audit and harden Hive Flow agent recovery, compaction, and tool-error redirection",
+    "type": "work",
+    "updated_at": "2026-07-02T03:08:17.128987Z",
+    "workflow_id": "work_sdlc"
+  }
+}

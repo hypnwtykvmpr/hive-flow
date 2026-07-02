@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9d-401d-77e0-89c4-571e3ba022bf",
+  "occurred_at": "2026-06-30T22:19:00.996746Z",
+  "knot_id": "hive-flow-3ca6",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "commit-push"
+  }
+}

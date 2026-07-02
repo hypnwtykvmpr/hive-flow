@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-be17-7b50-b581-a379d2a8a431",
+  "occurred_at": "2026-07-02T03:09:42.295864Z",
+  "knot_id": "hive-flow-0bb4",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: this is the canonical open knot for future provider-agent harness battle-testing and auto-recovery. Duplicate records hive-flow-270a, hive-flow-687c, and hive-flow-37cc were abandoned. Scope should include live provider dogfooding, long-horizon stalls, permission denial redirect loops, cross-repo CWD/projectRoot handling, statusboard/runtime visibility, compaction recovery, and error-catalog coverage.",
+    "datetime": "2026-07-02T03:09:42.295864Z",
+    "entry_id": "019f20cd-be17-7b50-b581-a362fa72bd50",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

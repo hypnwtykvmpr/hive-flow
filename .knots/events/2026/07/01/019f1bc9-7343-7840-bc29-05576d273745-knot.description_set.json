@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1bc9-7343-7840-bc29-05576d273745",
+  "occurred_at": "2026-07-01T03:46:54.912032Z",
+  "knot_id": "hive-flow-0395",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Deferred from Phase 2B C1 after Claude VERIFY_CLEAN. Tracked .claude/settings.json still invokes v3 provider hook script paths at the reported route/status hook entries, while fresh setup now emits hive-flow providers hook route/status. Retarget those tracked dot-config entries in the DP2B-8 dot-config slice and verify settings/install behavior. Source: .hive-flow/data/tmux-router/20260701T032251Z-claude-PHASE2B-C1-VERIFY-CLEAN-to-codex.md."
+  }
+}

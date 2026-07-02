@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-4efd-72b3-82cd-64d561f204e4",
+  "occurred_at": "2026-06-30T22:16:53.750029Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Non-dot non-CLI repo code is audited; duplicated or misplaced code is collapsed into v3/@hive-flow/cli especially source; references/tests/scripts/package files are rewired; deprecated naming remnants are corrected if found; global/per-user install path works; full relevant gates pass before commit/push."
+  }
+}

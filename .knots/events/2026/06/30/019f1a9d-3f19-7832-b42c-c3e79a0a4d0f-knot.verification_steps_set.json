@@ -1,0 +1,12 @@
+{
+  "event_id": "019f1a9d-3f19-7832-b42c-c3e79a0a4d0f",
+  "occurred_at": "2026-06-30T22:19:00.74646Z",
+  "knot_id": "hive-flow-30bc",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Record Claude-routed live Hive Flow agent verification handoffs/results.",
+      "Run bounded Codex-side Hive Flow agent canaries with projectRoot and verify persisted ownership/context."
+    ]
+  }
+}

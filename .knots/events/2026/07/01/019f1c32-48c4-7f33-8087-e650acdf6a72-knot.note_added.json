@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c32-48c4-7f33-8087-e650acdf6a72",
+  "occurred_at": "2026-07-01T05:41:25.316105Z",
+  "knot_id": "hive-flow-0395",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Tracked .claude/settings.json retarget landed as part of cad249e34 / hive-flow-03a6 cleanup. Hook commands now use hive-flow providers hook route/status. Await Claude at-SHA confirmation.",
+    "datetime": "2026-07-01T05:41:25.316105Z",
+    "entry_id": "019f1c32-48c4-7f33-8087-e64e22aebc72",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "event_id": "019f1b43-5c67-7532-8f04-15a38ac30ad0",
+  "occurred_at": "2026-07-01T01:20:27.239799Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run repo-wide search/audit for non-dot non-CLI source and duplicated code.",
+      "Run build, bats, fast-check/property, and install verification after rewiring.",
+      "Verify commands and install flows from the promoted top-level cli root, including global/per-user install and MCP/runtime entrypoints.",
+      "Before moving live-router/session paths, classify them as safe automated moves or human-required cutover steps; do not break the active Codex/Claude/tmux-router session."
+    ]
+  }
+}

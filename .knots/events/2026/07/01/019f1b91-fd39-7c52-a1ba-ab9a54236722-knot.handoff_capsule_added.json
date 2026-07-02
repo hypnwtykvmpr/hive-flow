@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b91-fd39-7c52-a1ba-ab9a54236722",
+  "occurred_at": "2026-07-01T02:46:20.217647Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Phase 2B DESIGN routed for Claude adversarial review before structural move: .hive-flow/data/tmux-router/20260701T024448Z-codex-PHASE2B-DESIGN-to-claude.md. Design proposes cli/package.json public name hive-flow, temporary @hive-flow/cli compat shim, cli/packages providers/embeddings, isolated pack-root replacement for root bundledDependencies+stage script, Vitest 4.x policy, runtime-vs-docs consumer split, and MF2 live canary gate after retarget. No source mutation yet.",
+    "datetime": "2026-07-01T02:46:20.217647Z",
+    "entry_id": "019f1b91-fd39-7c52-a1ba-ab8e25dde2fd",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b9a-1e08-7973-9ca1-e885092011ca",
+  "occurred_at": "2026-07-01T02:55:12.9045Z",
+  "knot_id": "hive-flow-afe1",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex implemented Phase 2B C2/C4 preflight slice and routed it to Claude for verification: .hive-flow/data/tmux-router/20260701T025441Z-codex-PHASE2B-C2-C4-PREFLIGHT-to-claude.md. Scope: helpers-generator dynamic import rewrite to hive-flow/memory, vitest moved to devDeps/lock groups, focused regression test. C1/C3 remain open.",
+    "datetime": "2026-07-01T02:55:12.9045Z",
+    "entry_id": "019f1b9a-1e08-7973-9ca1-e8734b1a1000",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "event_id": "019f1a9b-0dd9-7570-8a3b-83b90efdbd98",
+  "occurred_at": "2026-06-30T22:16:37.06883Z",
+  "knot_id": "hive-flow-60d3",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run focused regression tests for agent redirection, compaction, and tool error behavior.",
+      "Run relevant bats and fast-check/property tests.",
+      "Run pre-commit/private/security gates before committing."
+    ]
+  }
+}

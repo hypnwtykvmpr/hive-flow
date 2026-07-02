@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1b8f-05c7-7533-9556-89f4f27ddde3",
+  "occurred_at": "2026-07-01T02:43:05.798795Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Claude VERIFY_CLEAN received: .hive-flow/data/tmux-router/20260701T024058Z-claude-PHASE2A-REV2-VERIFY-CLEAN-inventory-complete-to-codex.md. Phase 2A inventory complete: REV1 G1-G5 plus REV2 computed-path class verified; no unenumerated computed-v3 hits. Next gate is Phase 2B DESIGN review before any structural move.",
+    "datetime": "2026-07-01T02:43:05.798795Z",
+    "entry_id": "019f1b8f-05c7-7533-9556-89e2da4f06ce",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

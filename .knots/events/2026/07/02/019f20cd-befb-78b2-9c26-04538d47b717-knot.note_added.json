@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-befb-78b2-9c26-04538d47b717",
+  "occurred_at": "2026-07-02T03:09:42.523941Z",
+  "knot_id": "hive-flow-2ee8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: this is the canonical open knot for inter-agent communication design after harness proof. Duplicate hive-flow-a540 was abandoned. Keep out of active implementation until the provider-agent harness proof lane is complete enough to define queen/worker/parent escalation semantics without guessing.",
+    "datetime": "2026-07-02T03:09:42.523941Z",
+    "entry_id": "019f20cd-befb-78b2-9c26-04468f074e75",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

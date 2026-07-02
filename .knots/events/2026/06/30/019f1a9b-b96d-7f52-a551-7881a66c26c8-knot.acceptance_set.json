@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9b-b96d-7f52-a551-7881a66c26c8",
+  "occurred_at": "2026-06-30T22:17:20.996235Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Repo-wide security and QA audits complete; verified corrections are implemented; private/local artifacts remain untracked; no secrets or deprecated artifacts are publishable; final pre-commit/security/private gates pass; commit and push to origin main only after green."
+  }
+}

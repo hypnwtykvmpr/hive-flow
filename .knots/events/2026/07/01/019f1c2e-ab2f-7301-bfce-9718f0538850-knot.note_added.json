@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c2e-ab2f-7301-bfce-9718f0538850",
+  "occurred_at": "2026-07-01T05:37:28.366794Z",
+  "knot_id": "hive-flow-03a6",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex implemented focused legacy provider hook cleanup in working tree and will route to Claude for verification before landing. Scope: delete provider-route-hook.mjs/provider-status-hook.mjs, move source guards to CLI provider-hook-runtime.ts, and retarget tracked .claude/settings.json to hive-flow providers hook route/status so live hooks no longer depend on deleted scripts. No root relocation.",
+    "datetime": "2026-07-01T05:37:28.366794Z",
+    "entry_id": "019f1c2e-ab2f-7301-bfce-970e2c24be41",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "event_id": "019f1b4a-b08d-7bb0-8ca3-7d6fb6e15156",
+  "occurred_at": "2026-07-01T01:28:27.521789Z",
+  "knot_id": "hive-flow-a285",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run migrated unit, Bats, fast-check/property, packaging, permission-guard, and plugin discovery gates; run rg audit for stale v3/@hive-flow/cli and ru/rv naming remnants."
+    ]
+  }
+}

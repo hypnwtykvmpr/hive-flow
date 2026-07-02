@@ -1,0 +1,15 @@
+{
+  "event_id": "019f1c09-01be-78f0-8908-2fc62c139c00",
+  "occurred_at": "2026-07-01T04:56:20.158813Z",
+  "knot_id": "hive-flow-76bd",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex routed Phase 2B C3 bounce fix to Claude at .hive-flow/data/tmux-router/20260701T045543Z-codex-PHASE2B-C3-BETTER-SQLITE3-ASTGREP-FIX-to-claude.md. Fix makes better-sqlite3 and @ast-grep/napi lazy under optional-free install; local gates green including pack:install-smoke -- --keep-temp with --omit=optional. Await Claude VERIFY_CLEAN before path-scoped 7-file commit.",
+    "datetime": "2026-07-01T04:56:20.158813Z",
+    "entry_id": "019f1c09-01be-78f0-8908-2fb9b9e94379",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

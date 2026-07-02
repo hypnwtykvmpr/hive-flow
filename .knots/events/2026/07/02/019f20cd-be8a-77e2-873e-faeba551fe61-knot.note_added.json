@@ -1,0 +1,15 @@
+{
+  "event_id": "019f20cd-be8a-77e2-873e-faeba551fe61",
+  "occurred_at": "2026-07-02T03:09:42.410596Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Reconciled 2026-07-02 by Codex: this is the canonical open knot for deferral ledger and completion discipline. Duplicate records hive-flow-65e3 and hive-flow-baff were abandoned. Scope should keep Knots/router state aligned with shipped SHAs, terminal status markers, and explicit handoff ownership so idle panes do not mask unfinished work.",
+    "datetime": "2026-07-02T03:09:42.410596Z",
+    "entry_id": "019f20cd-be8a-77e2-873e-fadfcdf4e75b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

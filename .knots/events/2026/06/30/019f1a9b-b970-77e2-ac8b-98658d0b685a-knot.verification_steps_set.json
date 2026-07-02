@@ -1,0 +1,12 @@
+{
+  "event_id": "019f1a9b-b970-77e2-ac8b-98658d0b685a",
+  "occurred_at": "2026-06-30T22:17:20.996235Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.verification_steps_set",
+  "data": {
+    "verification_steps": [
+      "Run security scan/private guard/pre-commit gates.",
+      "Run final build/test/bats/property suite appropriate for touched areas."
+    ]
+  }
+}

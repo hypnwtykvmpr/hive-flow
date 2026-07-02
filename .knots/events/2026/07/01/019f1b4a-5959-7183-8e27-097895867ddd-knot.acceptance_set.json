@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-5959-7183-8e27-097895867ddd",
+  "occurred_at": "2026-07-01T01:28:05.187727Z",
+  "knot_id": "hive-flow-ecc5",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Matrix covers tracked non-dot paths outside the target CLI root, identifies safe automated moves versus human-required cutover steps, and names verification gates for each class."
+  }
+}

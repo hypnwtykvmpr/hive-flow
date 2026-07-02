@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b4a-c9a8-7b51-8966-08beeb3d6380",
+  "occurred_at": "2026-07-01T01:28:33.930476Z",
+  "knot_id": "hive-flow-acef",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "qa-docs-install"
+  }
+}

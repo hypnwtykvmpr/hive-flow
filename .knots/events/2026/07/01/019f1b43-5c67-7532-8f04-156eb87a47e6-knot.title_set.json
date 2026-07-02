@@ -1,0 +1,10 @@
+{
+  "event_id": "019f1b43-5c67-7532-8f04-156eb87a47e6",
+  "occurred_at": "2026-07-01T01:20:27.239799Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.title_set",
+  "data": {
+    "from": "Collapse non-dot non-CLI repo code into v3/@hive-flow/cli",
+    "to": "Root migration: promote CLI and collapse Hive Flow repo code"
+  }
+}

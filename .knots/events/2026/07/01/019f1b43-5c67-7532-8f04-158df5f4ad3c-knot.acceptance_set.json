@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1b43-5c67-7532-8f04-158df5f4ad3c",
+  "occurred_at": "2026-07-01T01:20:27.239799Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Former v3/@hive-flow/cli is promoted to top-level cli/new operative project root; non-dot Hive Flow code/docs/scripts/tests/private-or-dox operational material outside that target root is audited and either collapsed, rewired, moved to an appropriate trash/human-cutover bucket, or explicitly justified; deprecated naming remnants found along the way are corrected; global/per-user install works from the new root; live-session-required moves are compartmentalized with a human cutover checklist; full relevant gates pass before commit/push."
+  }
+}

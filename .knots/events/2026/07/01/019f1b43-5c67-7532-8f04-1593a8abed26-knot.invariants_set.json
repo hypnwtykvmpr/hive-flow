@@ -1,0 +1,14 @@
+{
+  "event_id": "019f1b43-5c67-7532-8f04-1593a8abed26",
+  "occurred_at": "2026-07-01T01:20:27.239799Z",
+  "knot_id": "hive-flow-8727",
+  "type": "knot.invariants_set",
+  "data": {
+    "invariants": [
+      {
+        "condition": "Phase 2 is a root migration, not just deduplication. The destination is the former v3/@hive-flow/cli promoted to top-level cli/new operative project root, with v3 removed from the required runtime/install path after cutover.",
+        "type": "Scope"
+      }
+    ]
+  }
+}

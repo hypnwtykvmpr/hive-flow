@@ -1,0 +1,9 @@
+{
+  "event_id": "019f1a9c-c440-73f3-bf41-9fe190eedd6e",
+  "occurred_at": "2026-06-30T22:18:29.303865Z",
+  "knot_id": "hive-flow-3d64",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "agent_task, agent_task_result, queen permission decisions, MCP enforcement/tool errors, provider bridge failures, and blocked states provide concrete redirection or recovery guidance; tests cover representative failures and prevent silent dead ends."
+  }
+}
