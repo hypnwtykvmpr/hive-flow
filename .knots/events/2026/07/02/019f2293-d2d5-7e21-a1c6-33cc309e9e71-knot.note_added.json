@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2293-d2d5-7e21-a1c6-33cc309e9e71",
+  "occurred_at": "2026-07-02T11:25:40.949322Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "IMPLEMENTATION_REVIEW bounce fix (Claude, 2026-07-02): extended the derived pending-permission source of truth to hive_status (blockedCount/blockedWorkers + relabel, single + list) and the statusboard/agent_list runtime rows (collectActiveHiveRuntimeState relabels blocked worker via shared pendingPermissionBlockedWorkerIds; AgentListRecord.status gains permission-waiting). Rendered statusline collectors map permission-waiting -> busy (no glyph, prior bucket); structured surfaces carry the precise state. Regressions: hive_status single+list expose blocked metadata & relabel; statusboard runtime state + agent_list surface a live blocked worker as permission-waiting. Gates: cli tsc clean; settlement+dispatch 30/30; watcher 12/12 (node --test); npm run build exit 0. Branch knots-4a28-permission-waiting-states @ 0dffca409.",
+    "datetime": "2026-07-02T11:25:40.949322Z",
+    "entry_id": "019f2293-d2d5-7e21-a1c6-33b27a7cdfec",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

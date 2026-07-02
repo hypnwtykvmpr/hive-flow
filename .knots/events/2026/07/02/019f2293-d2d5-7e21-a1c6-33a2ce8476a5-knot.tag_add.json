@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2293-d2d5-7e21-a1c6-33a2ce8476a5",
+  "occurred_at": "2026-07-02T11:25:40.949322Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "commit:0dffca409"
+  }
+}
