@@ -1,0 +1,9 @@
+{
+  "event_id": "019f213f-1c6c-75e2-aee5-601ed160c4db",
+  "occurred_at": "2026-07-02T05:13:32.007073Z",
+  "knot_id": "hive-flow-5799",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "deferral"
+  }
+}

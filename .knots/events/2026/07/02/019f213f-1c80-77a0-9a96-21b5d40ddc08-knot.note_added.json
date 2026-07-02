@@ -1,0 +1,15 @@
+{
+  "event_id": "019f213f-1c80-77a0-9a96-21b5d40ddc08",
+  "occurred_at": "2026-07-02T05:13:32.032408Z",
+  "knot_id": "hive-flow-5799",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: human (harness design decision)\nReason: Claude Code injects its session id into Bash/hook children but not its MCP server child, so in-session unattributed spawns fail closed per anti-forgery; making them attestable needs harness env injection or a launcher-level session handshake\nUnblock: human chooses harness env injection or launcher-level session handshake\nPriority: 3\nSource: router note 20260702T000650Z residual item 2\nReview: when harness/session plumbing is next touched by the human",
+    "datetime": "2026-07-02T05:13:32.032408Z",
+    "entry_id": "019f213f-1c80-77a0-9a96-21a2e73a7177",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

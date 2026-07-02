@@ -1,0 +1,21 @@
+{
+  "event_id": "019f213f-1c34-74f1-9756-db1c00d7927e",
+  "occurred_at": "2026-07-02T05:13:31.942127Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": "ready_for_implementation",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-2fb8",
+    "profile_id": "autopilot_no_planning",
+    "state": "deferred",
+    "terminal": false,
+    "title": "Delete untracked leftover dirs at old v3 embeddings/gastown paths",
+    "type": "work",
+    "updated_at": "2026-07-02T05:13:31.942127Z",
+    "workflow_id": "work_sdlc"
+  }
+}

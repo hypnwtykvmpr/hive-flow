@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2140-b836-7391-9d22-7b24cc9d50cd",
+  "occurred_at": "2026-07-02T05:15:17.4307Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "IMPLEMENTATION (Claude, 2026-07-02, lease hive-flow-da06). Branch: knots-5e15-deferral-ledger, commit b1e097510 (3 files, 688 insertions): scripts/deferral-ledger.cjs (record/digest/check-note/hook-check-note; record enforces the six mandatory fields and uses the native Knots deferred state; check-note warning-only per plan_review constraint), tests/deferral-ledger.test.mjs (26 tests, stub kno on PATH, zero real-ledger writes), CLAUDE.md mandatory Deferral Ledger protocol section. GATES: new suite 26/26 PASS; cli settings-hook-wiring 18/18 PASS (baseline for the settings change); live smoke PASS (empty digest silent; check-note flagged a real residual line in router note 20260702T011923Z; populated digest lists all records). RETRO-FILLED via the live record path: hive-flow-d571 P4 vestigial enforcement deferrals dir; hive-flow-44fd P2 provider rename/debrand sweep; hive-flow-2fb8 P4 old v3 leftover-dir hygiene; hive-flow-5799 P3 MCP-child session-id env plumbing; hive-flow-88d1 P2 six pre-existing enforcement-test drift failures (review trigger: before hive-flow-af96). DISCOVERED CONSTRAINT: .claude/settings.json is protected hook-governance state (agent read denied), so the SessionStart digest + PostToolUse hook-check-note wiring is specified exactly in the REVIEW_REQUEST for Codex to apply during review/land, matching the session precedent for protected files. hook-check-note self-filters to markdown writes under .hive-flow/data/tmux-router/ so the settings entries stay trivial.",
+    "datetime": "2026-07-02T05:15:17.4307Z",
+    "entry_id": "019f2140-b836-7391-9d22-7b11759666c1",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f213f-1c26-7220-936c-f6750ab42b31",
+  "occurred_at": "2026-07-02T05:13:31.942127Z",
+  "knot_id": "hive-flow-2fb8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: codex (unaffected by Claude command-pattern sensitivities)\nReason: stale dist/node_modules leftovers from the pre-move layout; inert disk clutter, no commit involved\nUnblock: none — any convenient moment\nPriority: 4\nSource: router note 20260702T000650Z residual item 1\nReview: next repo hygiene pass",
+    "datetime": "2026-07-02T05:13:31.942127Z",
+    "entry_id": "019f213f-1c26-7220-936c-f66e09af9592",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

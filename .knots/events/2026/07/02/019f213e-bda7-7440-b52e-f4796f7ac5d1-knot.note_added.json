@@ -1,0 +1,15 @@
+{
+  "event_id": "019f213e-bda7-7440-b52e-f4796f7ac5d1",
+  "occurred_at": "2026-07-02T05:13:07.75143Z",
+  "knot_id": "hive-flow-d571",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: claude lane (Codex applies; enforcement.cjs is protected)\nReason: enforcement.cjs clears a deferrals directory that nothing ever writes; dead code path found during hive-flow-5e15 planning\nUnblock: next enforcement.cjs maintenance slice (protected engine file: requires Codex patch + engine-manifest regen)\nPriority: 4\nSource: hive-flow-5e15 plan note, 2026-07-02\nReview: next enforcement.cjs slice",
+    "datetime": "2026-07-02T05:13:07.75143Z",
+    "entry_id": "019f213e-bda7-7440-b52e-f467a6afbf38",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

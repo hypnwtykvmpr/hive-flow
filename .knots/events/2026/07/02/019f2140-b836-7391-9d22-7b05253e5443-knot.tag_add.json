@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2140-b836-7391-9d22-7b05253e5443",
+  "occurred_at": "2026-07-02T05:15:17.4307Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-5e15-deferral-ledger"
+  }
+}

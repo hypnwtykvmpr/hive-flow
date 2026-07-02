@@ -1,0 +1,17 @@
+{
+  "event_id": "019f213f-1c67-7360-a36a-7ca5a44ec8cd",
+  "occurred_at": "2026-07-02T05:13:32.007073Z",
+  "knot_id": "hive-flow-5799",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "MCP-child session-id env plumbing (harness-level design)",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

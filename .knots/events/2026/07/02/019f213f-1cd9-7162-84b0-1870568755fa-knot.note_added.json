@@ -1,0 +1,15 @@
+{
+  "event_id": "019f213f-1cd9-7162-84b0-1870568755fa",
+  "occurred_at": "2026-07-02T05:13:32.121585Z",
+  "knot_id": "hive-flow-88d1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: claude implements, codex reviews (dual-operator lane)\nReason: pre-existing enforcement-test drift outside the reset-rename slice scope; reduced from 45 to 6 failures by that slice, remainder documented as existing drift\nUnblock: schedulable now; must land before hive-flow-af96 final repo-wide QA capstone\nPriority: 2\nSource: router notes 20260702T004851Z + 20260702T004636Z\nReview: before starting hive-flow-af96",
+    "datetime": "2026-07-02T05:13:32.121585Z",
+    "entry_id": "019f213f-1cd9-7162-84b0-1867fd7b6762",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

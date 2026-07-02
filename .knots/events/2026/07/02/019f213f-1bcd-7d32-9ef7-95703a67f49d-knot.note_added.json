@@ -1,0 +1,15 @@
+{
+  "event_id": "019f213f-1bcd-7d32-9ef7-95703a67f49d",
+  "occurred_at": "2026-07-02T05:13:31.853417Z",
+  "knot_id": "hive-flow-44fd",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: human standing deferral; Claude/Codex lane executes when lifted\nReason: human explicitly deferred the provider rename/debrand work during the Phase 2 migration sessions\nUnblock: human lifts the standing deferral\nPriority: 2\nSource: router notes 20260702T011923Z + 20260702T000650Z residual ledgers\nReview: ask human when adjacent branding/provider-naming work is next in scope",
+    "datetime": "2026-07-02T05:13:31.853417Z",
+    "entry_id": "019f213f-1bcd-7d32-9ef7-95670fabe497",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

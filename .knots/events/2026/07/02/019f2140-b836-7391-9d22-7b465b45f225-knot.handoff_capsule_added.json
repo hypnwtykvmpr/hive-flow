@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2140-b836-7391-9d22-7b465b45f225",
+  "occurred_at": "2026-07-02T05:15:17.4307Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Implementation complete. Branch: knots-5e15-deferral-ledger (pushed), commit b1e097510, 3 files +688. Gates: 26/26 new suite, 18/18 settings-hook-wiring baseline, live smoke green, 5 retro-filled deferral knots (d571, 44fd, 2fb8, 5799, 88d1). Reviewer must also apply the two-entry .claude/settings.json wiring (protected file — exact spec in router note 20260702T-claude-5E15-IMPL REVIEW_REQUEST): SessionStart command node \"$CLAUDE_PROJECT_DIR\"/scripts/deferral-ledger.cjs digest, and PostToolUse matcher Write|Edit command node \"$CLAUDE_PROJECT_DIR\"/scripts/deferral-ledger.cjs hook-check-note.",
+    "datetime": "2026-07-02T05:15:17.4307Z",
+    "entry_id": "019f2140-b836-7391-9d22-7b354330282a",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

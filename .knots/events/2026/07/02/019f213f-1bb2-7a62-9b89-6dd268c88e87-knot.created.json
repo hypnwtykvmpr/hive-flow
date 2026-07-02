@@ -1,0 +1,17 @@
+{
+  "event_id": "019f213f-1bb2-7a62-9b89-6dd268c88e87",
+  "occurred_at": "2026-07-02T05:13:31.826211Z",
+  "knot_id": "hive-flow-44fd",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "Provider rename/debrand sweep",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}
