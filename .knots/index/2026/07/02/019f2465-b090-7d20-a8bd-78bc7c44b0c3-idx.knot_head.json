@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2465-b090-7d20-a8bd-78bc7c44b0c3",
+  "occurred_at": "2026-07-02T19:54:31.952293Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-1cd2",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-d060-review-land",
+    "type": "lease",
+    "updated_at": "2026-07-02T19:54:31.952293Z",
+    "workflow_id": "lease_sdlc"
+  }
+}
