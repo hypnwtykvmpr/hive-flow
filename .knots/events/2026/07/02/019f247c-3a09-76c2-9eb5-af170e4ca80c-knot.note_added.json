@@ -1,0 +1,15 @@
+{
+  "event_id": "019f247c-3a09-76c2-9eb5-af170e4ca80c",
+  "occurred_at": "2026-07-02T20:19:08.937125Z",
+  "knot_id": "hive-flow-110b",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: codex applies the protected-file cleanup in .claude/helpers/sentinel-recovery.cjs; the EPERM regression test lives in non-protected cli/src/__tests__/sentinel-singleton.test.ts (either operator)\nReason: f904 provider verifier flagged 3 items must-fix; adjudicated at impl+shipment review as cosmetic dead-code + a safety-path test-hardening gap (behavior is correct + shipped), so non-blocking for ship but must not be dropped\nUnblock: schedulable now — small cleanup + one test on the already-shipped f904 surface; no dependency\nPriority: 3\nSource: f904 shipment review 20260702T201537Z + verifier task-cf0bfea9-2e73-4dc3-8b38-57ffe53a13fd\nReview: next protected-helper touch or 0bb4 wrap-up",
+    "datetime": "2026-07-02T20:19:08.937125Z",
+    "entry_id": "019f247c-3a09-76c2-9eb5-af0d9582669d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

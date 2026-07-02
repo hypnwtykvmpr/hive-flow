@@ -1,0 +1,21 @@
+{
+  "event_id": "019f247c-3a18-7790-a93b-0c0b1bdcf373",
+  "occurred_at": "2026-07-02T20:19:08.937125Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": "ready_for_implementation",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-110b",
+    "profile_id": "autopilot_no_planning",
+    "state": "deferred",
+    "terminal": false,
+    "title": "f904 sentinel-recovery fast-follow: drop dead isStale + unreachable heartbeat-stale reason; add direct EPERM-alive regression test",
+    "type": "work",
+    "updated_at": "2026-07-02T20:19:08.937125Z",
+    "workflow_id": "work_sdlc"
+  }
+}
