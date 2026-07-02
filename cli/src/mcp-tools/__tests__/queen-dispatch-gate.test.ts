@@ -687,6 +687,51 @@ describe('D-32: queen in-process dispatch gate', () => {
     expect(existsSync(join(hiveHome, 'wake'))).toBe(false);
   });
 
+  // P2-SH7 (hive-flow-8119): deny must dispatch a resume/continue instruction to the
+  // worker (previously deny only recorded guidance and the worker was left stuck).
+  it('dispatches a worker resume instruction when the queen denies a permission request', async () => {
+    const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
+    const requestLine = {
+      kind: 'worker-permission-denial',
+      requestId: 'permission-test-deny-resume',
+      taskId: 'task-permission-deny-resume',
+      ts: new Date(0).toISOString(),
+      agentId: 'worker-agent-1',
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      tool: 'run_command',
+      denyReason: "git subcommand 'mv' is not in the read-only allowlist",
+      denyCode: 'read-only-command-denied',
+    };
+    writeFileSync(join(root, '.hive-flow', 'hives', hive.hiveId, 'permission-requests.jsonl'), `${JSON.stringify(requestLine)}\n`, 'utf8');
+
+    const tasksBefore = mockAgentState.calls.task;
+    const denyResult = await getQueenTool('queen_permission_decide').handler({
+      hiveId: hive.hiveId,
+      queenId: hive.queenId,
+      requestId: 'permission-test-deny-resume',
+      decision: 'deny',
+      reason: 'That mv is unsafe here.',
+      guidance: 'Summarize the required rename in your report; do not mutate files.',
+    }) as Record<string, unknown>;
+
+    expect(denyResult.success).toBe(true);
+    expect(denyResult.status).toBe('denied');
+    // The worker was actually re-tasked (resumed), not just recorded.
+    expect((denyResult.resumeDispatch as Record<string, unknown>).success).toBe(true);
+    expect(denyResult.workerResumed).toBe(true);
+    expect(mockAgentState.calls.task).toBe(tasksBefore + 1);
+
+    const persisted = loadHive(hive.hiveId)!;
+    expect(persisted.permissionRequests?.[0]).toMatchObject({
+      requestId: 'permission-test-deny-resume',
+      status: 'denied',
+      decision: { decision: 'deny', resumeDispatched: true },
+    });
+    // worker stays live (resumed), not terminated.
+    expect(persisted.workers[0].status).toBe('busy');
+  });
+
   it('keeps a permission request retryable when queen redirect dispatch fails', async () => {
     const hive = createActiveHive({ ownerSessionId: 'claude-permission-session', ownerClientKind: 'claude' });
     const requestLine = {
@@ -888,6 +933,8 @@ describe('D-32: queen in-process dispatch gate', () => {
       status: 'denied',
       guidance: 'Continue with read_file/list_directory and report the blocked command as a limitation instead of retrying run_shell.',
       redirectionInstructions: 'Continue with read_file/list_directory and report the blocked command as a limitation instead of retrying run_shell.',
+      // P2-SH7 (hive-flow-8119): deny now RESUMES the live worker (continue without the action).
+      workerResumed: true,
     });
 
     const halt = await getQueenTool('queen_permission_decide').handler({
@@ -898,7 +945,8 @@ describe('D-32: queen in-process dispatch gate', () => {
       reason: 'Repeated unsafe execution attempt.',
     }) as Record<string, unknown>;
     expect(halt).toMatchObject({ success: true, status: 'halted' });
-    expect(mockAgentState.calls.task).toBe(0);
+    // deny dispatched exactly one worker-resume task; approve/halt dispatch none.
+    expect(mockAgentState.calls.task).toBe(1);
     expect(mockAgentState.calls.terminate).toBe(1);
 
     const persisted = loadHive(hive.hiveId)!;

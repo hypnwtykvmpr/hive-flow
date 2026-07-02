@@ -100,6 +100,9 @@ export interface HivePermissionRequest {
     guidance?: string;
     redirectTask?: string;
     redirectError?: string;
+    /** P2-SH7 (hive-flow-8119): a denied worker got a resume/continue instruction. */
+    resumeDispatched?: boolean;
+    resumeError?: string;
   };
 }
 

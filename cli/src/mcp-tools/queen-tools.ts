@@ -2132,7 +2132,7 @@ const queenPermissionRequestsTool: MCPTool = {
 
 const queenPermissionDecideTool: MCPTool = {
   name: 'queen_permission_decide',
-  description: 'Queen decides a worker permission request. Denials require safer redirection guidance; redirect dispatches a safer task; halt terminates only that worker.',
+  description: 'Queen decides a worker permission request. deny requires guidance and dispatches a resume/continue instruction so the worker completes its original task WITHOUT the denied action; redirect dispatches a safer replacement task; halt terminates only that worker; approve is recorded (does not bypass sandbox/source/control-plane gates).',
   category: 'queen',
   tags: ['hive', 'queen', 'permissions', 'decision'],
   inputSchema: {
@@ -2256,6 +2256,26 @@ const queenPermissionDecideTool: MCPTool = {
       }) as Record<string, unknown>;
     }
 
+    // P2-SH7 (hive-flow-8119): a DENIED worker must receive a structured resume
+    // instruction so it can continue its ORIGINAL task WITHOUT the denied action.
+    // Previously deny only recorded `guidance` and the worker was left stuck — only
+    // redirect re-dispatched. Mirror the redirect dispatch so deny has a real
+    // worker-resume path.
+    let resumeDispatch: Record<string, unknown> | undefined;
+    if (decision === 'deny' && response.workerId) {
+      const deniedTool = response.request?.tool || 'the requested action';
+      const resumeTask =
+        `Your permission request for '${deniedTool}' was DENIED by the queen; do NOT attempt that action again. ` +
+        `Continue and complete your ORIGINAL task without it, following this guidance: ${guidance}` +
+        (reason ? ` (queen rationale: ${reason})` : '');
+      resumeDispatch = await taskWorkerTool.handler({
+        hiveId,
+        workerId: response.workerId,
+        task: resumeTask,
+        projectRoot,
+      }) as Record<string, unknown>;
+    }
+
     const finalized = await withHiveLock(hiveId, () => {
       const hive = loadHive(hiveId, projectRoot);
       if (!hive) {
@@ -2287,6 +2307,14 @@ const queenPermissionDecideTool: MCPTool = {
           || stringValue((redirectDispatch?.result as Record<string, unknown> | undefined)?.error)
           || 'redirect dispatch failed'
         : '';
+      // P2-SH7: track the deny-resume dispatch outcome alongside redirect.
+      const resumeAttempted = Boolean(decision === 'deny' && resumeDispatch);
+      const resumeFailed = Boolean(resumeAttempted && resumeDispatch!.success === false);
+      const resumeError = resumeFailed
+        ? stringValue(resumeDispatch?.error)
+          || stringValue((resumeDispatch?.result as Record<string, unknown> | undefined)?.error)
+          || 'resume dispatch failed'
+        : '';
       const decidedAt = new Date().toISOString();
       request.status = redirectFailed ? 'redirect-failed' : permissionStatusForDecision(decision);
       request.updatedAt = decidedAt;
@@ -2298,12 +2326,18 @@ const queenPermissionDecideTool: MCPTool = {
         ...(guidance ? { guidance } : {}),
         ...(redirectTask ? { redirectTask } : {}),
         ...(redirectFailed ? { redirectError } : {}),
+        ...(resumeAttempted ? { resumeDispatched: !resumeFailed } : {}),
+        ...(resumeFailed ? { resumeError } : {}),
       };
 
       appendHiveAudit(hive, {
         event: 'permission-reviewed',
         detail: redirectFailed
           ? `Queen '${queenId}' redirect for permission request '${requestId}' failed: ${request.decision.redirectError}`
+          : resumeAttempted
+          ? (resumeFailed
+              ? `Queen denied permission request '${requestId}' but the worker resume dispatch FAILED: ${resumeError}`
+              : `Queen denied permission request '${requestId}' and dispatched a resume/continue instruction to worker '${request.workerId}': ${reason}`)
           : `Queen '${queenId}' ${decision}ed permission request '${requestId}': ${reason}`,
         agentId: request.agentId,
         workerId: request.workerId,
@@ -2325,6 +2359,10 @@ const queenPermissionDecideTool: MCPTool = {
       saveHive(hiveId, hive, projectRoot);
 
       return {
+        // A deny decision SUCCEEDS once guidance is recorded — the resume dispatch
+        // is best-effort (a gone/dead worker can't be resumed, but the decision
+        // still stands). `workerResumed`/`resumeError` surface dispatch outcome.
+        // Redirect keeps its stricter contract (dispatch failure => not success).
         success: !redirectFailed as boolean,
         hiveId,
         queenId,
@@ -2356,6 +2394,7 @@ const queenPermissionDecideTool: MCPTool = {
       ...(!finalized.success ? { error: finalized.error || 'permission decision failed' } : {}),
       ...(decision === 'deny' ? { guidance, redirectionInstructions: guidance } : {}),
       ...(redirectDispatch ? { redirectDispatch } : {}),
+      ...(resumeDispatch ? { resumeDispatch, workerResumed: resumeDispatch.success !== false } : {}),
       ...(decision === 'approve' && finalized.success ? { approvalEffect: 'recorded; does not bypass sandbox, source, or control-plane gates' } : {}),
     };
   },
