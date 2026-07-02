@@ -20,15 +20,15 @@
  *   - exporting cleanupStaleBusyAgents (IIFE only runs as `node hive-cleanup.cjs`).
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 // Canonical reaper lives at repo-root /.claude/helpers/hive-cleanup.cjs.
-// This test file is at v3/@hive-flow/cli/src/__tests__/ → up 5 to repo root.
-const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..', '..', '..');
+// This test file is at cli/src/__tests__/ → up 3 to repo root.
+const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 const CLEANUP_CJS = join(REPO_ROOT, '.claude', 'helpers', 'hive-cleanup.cjs');
 
 let tmpRoot;
@@ -346,5 +346,59 @@ describe('hive cleanup lifecycle age sources — M4', () => {
 
     expect(summary.agentsPruned).toBe(1);
     expect(readStore().agents.legacyTerminated).toBeUndefined();
+  });
+});
+
+describe('hive cleanup task-family diagnostics', () => {
+  beforeEach(() => {
+    tmpRoot = mkdtempSync(join(tmpdir(), 'hf-reaper-task-artifacts-'));
+    agentsDir = join(tmpRoot, '.hive-flow', 'agents');
+    tasksDir = join(tmpRoot, '.hive-flow', 'tasks');
+    mkdirSync(agentsDir, { recursive: true });
+    mkdirSync(tasksDir, { recursive: true });
+    storePath = join(agentsDir, 'store.json');
+    process.env.HIVE_FLOW_CLEANUP_PROJECT_DIR = tmpRoot;
+  });
+
+  afterEach(() => {
+    delete process.env.HIVE_FLOW_CLEANUP_PROJECT_DIR;
+    try { rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* ignore */ }
+  });
+
+  function makeStale(filePath: string): void {
+    const old = new Date(Date.now() - 2 * 60 * 60_000);
+    utimesSync(filePath, old, old);
+  }
+
+  it('removes a stale stderr log alongside stale task tracking artifacts', () => {
+    const taskId = 'task-a0b1c2d3-e4f5-6789-abcd-ef0123456789';
+    const jsonPath = join(tasksDir, `${taskId}.json`);
+    const taskPath = join(tasksDir, `${taskId}.task`);
+    const stderrPath = join(tasksDir, `${taskId}.stderr.log`);
+    writeFileSync(jsonPath, JSON.stringify({ taskId, status: 'running' }), 'utf-8');
+    writeFileSync(taskPath, 'work', 'utf-8');
+    writeFileSync(stderrPath, 'bridge startup failed', 'utf-8');
+    makeStale(jsonPath);
+
+    const { cleanupOrphanedTasks } = loadReaper();
+    const summary = cleanupOrphanedTasks();
+
+    expect(summary.tasksCleaned).toBe(1);
+    expect(existsSync(jsonPath)).toBe(false);
+    expect(existsSync(taskPath)).toBe(false);
+    expect(existsSync(stderrPath)).toBe(false);
+  });
+
+  it('removes a stale lone stderr log for an orphaned task id', () => {
+    const taskId = 'task-b0b1c2d3-e4f5-6789-abcd-ef0123456789';
+    const stderrPath = join(tasksDir, `${taskId}.stderr.log`);
+    writeFileSync(stderrPath, 'bridge startup failed before tracking existed', 'utf-8');
+    makeStale(stderrPath);
+
+    const { cleanupOrphanedTasks } = loadReaper();
+    const summary = cleanupOrphanedTasks();
+
+    expect(summary.tasksCleaned).toBe(1);
+    expect(existsSync(stderrPath)).toBe(false);
   });
 });

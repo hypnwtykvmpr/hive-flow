@@ -992,6 +992,7 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
     const jsonPath = path.join(tasksDir, `${taskId}.json`);
     const resultPath = path.join(tasksDir, `${taskId}.result.json`);
     const taskFilePath = path.join(tasksDir, `${taskId}.task`);
+    const stderrLogPath = path.join(tasksDir, `${taskId}.stderr.log`);
     // Skip if result exists (completed task)
     if (fs.existsSync(resultPath)) {
       try {
@@ -1005,6 +1006,7 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
         try { fs.unlinkSync(jsonPath); } catch { /* ignore */ }
         try { fs.unlinkSync(resultPath); } catch { /* ignore */ }
         try { fs.unlinkSync(taskFilePath); } catch { /* ignore */ }
+        try { fs.unlinkSync(stderrLogPath); } catch { /* ignore */ }
         summary.completedResultsCleaned++;
         summary.cleaned.push(taskId);
       } catch (err) {
@@ -1019,6 +1021,7 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
       // Stale task — no result after TTL. Clean up.
       try { fs.unlinkSync(jsonPath); } catch { /* ignore */ }
       try { fs.unlinkSync(taskFilePath); } catch { /* ignore */ }
+      try { fs.unlinkSync(stderrLogPath); } catch { /* ignore */ }
       summary.tasksCleaned++;
       summary.cleaned.push(taskId);
     } catch {
@@ -1027,9 +1030,21 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
         const stat = fs.statSync(taskFilePath);
         if (now - stat.mtimeMs < TASK_TTL_MS) continue;
         try { fs.unlinkSync(taskFilePath); } catch { /* ignore */ }
+        try { fs.unlinkSync(stderrLogPath); } catch { /* ignore */ }
         summary.tasksCleaned++;
         summary.cleaned.push(taskId);
-      } catch { /* neither file exists, skip */ }
+      } catch {
+        // No tracking or .task file — a failed-open/aborted dispatch can still
+        // leave the diagnostic stderr log by itself. Treat it as the same task
+        // family and prune it after the task TTL.
+        try {
+          const stat = fs.statSync(stderrLogPath);
+          if (now - stat.mtimeMs < TASK_TTL_MS) continue;
+          try { fs.unlinkSync(stderrLogPath); } catch { /* ignore */ }
+          summary.tasksCleaned++;
+          summary.cleaned.push(taskId);
+        } catch { /* no task-family file exists, skip */ }
+      }
     }
   }
   return summary;

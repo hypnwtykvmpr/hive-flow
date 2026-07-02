@@ -16,6 +16,8 @@ vi.mock('node:fs', () => ({
   renameSync: vi.fn(),
   statSync: vi.fn(() => ({ isDirectory: () => true })),
   unlinkSync: vi.fn(),
+  openSync: vi.fn(),
+  closeSync: vi.fn(),
 }));
 
 // Mock node:child_process — controls spawn (used for bridge)
@@ -39,7 +41,7 @@ vi.mock('../hivector/enhanced-model-router.js', () => ({
   }),
 }));
 
-import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, rmSync, renameSync, unlinkSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, rmSync, renameSync, unlinkSync, openSync, closeSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { AGENT_TASK_RETRY_CONTEXT, agentTools } from '../mcp-tools/agent-tools.js';
 
@@ -197,6 +199,55 @@ describe('agent_task handler', () => {
         description: 'Alias for projectRoot',
       },
     });
+  });
+
+  it('captures bridge child stderr to a per-task log and closes the parent fd', async () => {
+    const store = makeStore({ 'test-agent-1': makeAgent() });
+    setupStoreMocks(store);
+    mockDetachedSpawn(4242);
+    (openSync as ReturnType<typeof vi.fn>).mockReturnValue(77);
+
+    const result = await taskHandler({ agentId: 'test-agent-1', task: 'do the thing' }) as Record<string, unknown>;
+    expect(result.success).toBe(true);
+
+    const openCall = (openSync as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([p]: [string]) => typeof p === 'string' && p.endsWith('.stderr.log'),
+    );
+    expect(openCall).toBeDefined();
+    expect(String(openCall![0])).toContain(String(result.taskId));
+    expect(openCall![1]).toBe('w');
+
+    const spawnOptions = (spawn as ReturnType<typeof vi.fn>).mock.calls[0][2] as Record<string, unknown>;
+    expect(spawnOptions.stdio).toEqual(['ignore', 'ignore', 77]);
+    expect(closeSync as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(77);
+  });
+
+  it('falls back to ignored stderr when the per-task log cannot be opened', async () => {
+    const store = makeStore({ 'test-agent-1': makeAgent() });
+    setupStoreMocks(store);
+    mockDetachedSpawn(4243);
+    (openSync as ReturnType<typeof vi.fn>).mockImplementation(() => { throw new Error('EACCES'); });
+
+    const result = await taskHandler({ agentId: 'test-agent-1', task: 'do the thing' }) as Record<string, unknown>;
+    expect(result.success).toBe(true);
+
+    const spawnOptions = (spawn as ReturnType<typeof vi.fn>).mock.calls[0][2] as Record<string, unknown>;
+    expect(spawnOptions.stdio).toEqual(['ignore', 'ignore', 'ignore']);
+    expect(closeSync as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+  });
+
+  it('lists the per-task stderr log in bridge failure artifact hints', async () => {
+    const store = makeStore({ 'test-agent-1': makeAgent() });
+    setupStoreMocks(store);
+    (openSync as ReturnType<typeof vi.fn>).mockReturnValue(78);
+    (spawn as ReturnType<typeof vi.fn>).mockImplementation(() => { throw new Error('spawn EACCES'); });
+
+    const result = await taskHandler({ agentId: 'test-agent-1', task: 'do the thing' }) as Record<string, unknown>;
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('bridge-spawn-failed');
+    const hints = (result.artifactHints ?? []) as string[];
+    expect(hints.some((hint) => hint.endsWith('.stderr.log'))).toBe(true);
+    expect(closeSync as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(78);
   });
 
   // ------------------------------------------------------------------

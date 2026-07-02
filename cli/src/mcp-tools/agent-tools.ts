@@ -6,7 +6,7 @@
  */
 
 import { randomUUID, createHmac, timingSafeEqual, createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync, readdirSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, rmdirSync, rmSync, unlinkSync, statSync, readdirSync, realpathSync, openSync, closeSync } from 'node:fs';
 import { join, isAbsolute, resolve, relative } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import type { MCPTool } from './types.js';
@@ -870,6 +870,9 @@ function artifactHintsForAgentFailure(code: string, options: AgentFailureGuidanc
     'process-exited-without-result',
     'result-parse-failed',
   ].includes(code)) {
+    if (taskId) {
+      hints.push(join(projectRoot, STORAGE_DIR, 'tasks', `${taskId}.stderr.log`));
+    }
     hints.push(join(projectRoot, STORAGE_DIR, 'logs', 'bridge.log'));
   }
   if (typeof source === 'string' && source.length > 0 && source !== 'env' && !source.startsWith('default-')) {
@@ -2528,10 +2531,18 @@ export const agentTools: MCPTool[] = [
           projectRoot,
         );
 
+        // Capture the bridge child's stderr to a per-task log so silent startup
+        // crashes (the process-exited-without-result class) leave a diagnosable
+        // trace. stdout stays ignored — results flow through the result file.
+        // Fail-open: dispatch must never depend on log-file setup.
+        let stderrLogFd: number | null = null;
         try {
           // Persist busy before spawning so observers and the bridge never see a
           // just-dispatched task as idle during the small spawn/save window.
           saveAgentStore(store, projectRoot);
+          try {
+            stderrLogFd = openSync(join(tasksDir, `${taskId}.stderr.log`), 'w', 0o600);
+          } catch { /* fail-open: spawn with stderr ignored */ }
           const child = spawn('node', [
             bridgePath,
             '--agent-id', agentId,
@@ -2542,7 +2553,7 @@ export const agentTools: MCPTool[] = [
             '--timeout', String(timeout),
           ], {
             detached: true,
-            stdio: 'ignore',
+            stdio: ['ignore', 'ignore', stderrLogFd ?? 'ignore'],
             env: childEnv,
             cwd: projectRoot,
           });
@@ -2595,6 +2606,11 @@ export const agentTools: MCPTool[] = [
           delete agent.currentTaskId;
           saveAgentStore(store, projectRoot);
           return { error: err instanceof Error ? err.message : String(err), code: 'bridge-spawn-failed', provider: agent.provider };
+        } finally {
+          if (stderrLogFd !== null) {
+            // The spawned child holds its own duplicate of the descriptor.
+            try { closeSync(stderrLogFd); } catch { /* already closed */ }
+          }
         }
       }, projectRoot);
 
@@ -2607,6 +2623,7 @@ export const agentTools: MCPTool[] = [
           {
             projectRoot,
             agentId,
+            taskId,
             provider: details.provider,
             source: details.source,
             retryable: failureCode === 'provider-concurrency-limit'
