@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21a5-c711-7b50-a19d-dec51270ab02",
+  "occurred_at": "2026-07-02T07:05:40.351101Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "workflow_enforcer_status reports the same effective scoped enforcement state used by provider bridge write gating, including global, project, hive, and agent scoped state when applicable. The status output must identify the effective level, source scope, and whether writes are blocked. Tests must cover a scoped RESTRICTED+ state where bridge writes are blocked and status no longer reports hasState false or NORMAL. Existing normal-state behavior must remain unchanged."
+  }
+}

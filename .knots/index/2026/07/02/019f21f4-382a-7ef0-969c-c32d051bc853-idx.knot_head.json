@@ -1,0 +1,21 @@
+{
+  "event_id": "019f21f4-382a-7ef0-969c-c32d051bc853",
+  "occurred_at": "2026-07-02T08:31:21.130456Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-c5f5",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-6f73-reroute-review",
+    "type": "lease",
+    "updated_at": "2026-07-02T08:31:21.130456Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

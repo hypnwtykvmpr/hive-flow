@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21a5-a793-7760-8318-727b5a4066fc",
+  "occurred_at": "2026-07-02T07:05:32.284722Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "runtime-audit"
+  }
+}

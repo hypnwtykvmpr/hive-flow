@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21a5-c70b-7370-ab78-714747845275",
+  "occurred_at": "2026-07-02T07:05:40.351101Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 0 confirmed the provider bridge correctly blocks writes at RESTRICTED+ enforcement, including mode-allowed artifact writes, but workflow_enforcer_status reported hasState false and NORMAL. The code defect is visibility and diagnosability: operators and queens cannot see the effective scoped enforcement level that the bridge enforces, so API-provider write failures look like harness or provider hangs. Do not weaken the RESTRICTED+ write block."
+  }
+}

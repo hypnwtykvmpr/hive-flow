@@ -1,0 +1,9 @@
+{
+  "event_id": "019f224f-e65a-7ac0-b9e1-619c1aeb165c",
+  "occurred_at": "2026-07-02T10:11:29.48886Z",
+  "knot_id": "hive-flow-d17e",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Follow-up from hive-flow-9331 Slice B. Cursor read-only-with-artifacts currently fails closed to plan/no-edit mode because cursor has no proven OS write-confinement equivalent to codex workspace-write. Before any cursor temp+copy-back support is allowed, empirically prove cursor --sandbox prevents absolute-path writes from escaping a private temp workspace. Include filesystem-checked inside/outside/root/sibling results and update cursor provider mapping only if confinement is proven."
+  }
+}

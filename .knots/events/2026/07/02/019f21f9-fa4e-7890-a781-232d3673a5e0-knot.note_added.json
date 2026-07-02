@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21f9-fa4e-7890-a781-232d3673a5e0",
+  "occurred_at": "2026-07-02T08:37:38.510193Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "SHIPMENT_REVIEW PASS by Codex 2026-07-02. Verified shipped remote_main at ce9a56665a1dc31796d3794c97462ee749334828: HEAD==origin/main; commit ce9a56665 is tagged on the knot; source scope matches reviewed 5-file slice; tracked source clean aside from pre-existing untracked local artifacts; implementation-review gates already green for this exact SHA (targeted vitest 222/222 + enforcement-security-property 87/87 + typecheck + build). No invariants or regressions found in shipped code.",
+    "datetime": "2026-07-02T08:37:38.510193Z",
+    "entry_id": "019f21f9-fa4e-7890-a781-2312284e254d",
+    "model": "gpt-5",
+    "username": "openai",
+    "version": "unknown"
+  }
+}

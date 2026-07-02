@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21f8-797c-7882-a4c6-8cc6b38fac38",
+  "occurred_at": "2026-07-02T08:35:59.996472Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "DESIGN + FEASIBILITY (Claude, 2026-07-02, investigation). ROOT CAUSE (verified in source): CLI providers ignore agent mode entirely. codex-cli-provider.ts spawnCodex(prompt,model) hardcodes `--sandbox workspace-write` (line ~404; comment \"bridge enforces its own security\" is FALSE — the bridge tool-gate only sees API-provider tool calls, never codex native file tools). cursor-cli-provider.ts spawnCursor hardcodes `--force`/--yolo (line ~642). NEITHER spawn fn receives mode or artifactDir; the bridge mode/artifactDir (checkAgentModeToolPolicy / bridgeResolveArtifactDir ~2332-2405) gate ONLY bridge-executed tools and are never threaded to CLI spawn. So read-only / read-only-with-artifacts are no-ops for codex/cursor/gemini. CONFIRMED CLI CAPABILITIES (via --help): codex exec: `-s/--sandbox <read-only|workspace-write|danger-full-access>` + `-C/--cd <DIR>` (additional writable dir). cursor-agent: `--sandbox <mode>` (explicit enable/disable) + permission modes plan/ask (read-only, no writes) + --force/--yolo (run everything). gemini (types.ts:159) sandbox?:boolean = --sandbox (Docker, opt-in). => BOTH codex+cursor natively confinable; NO external wrapper or deny-decision needed. MAPPING (mode -> flags): full -> current (codex workspace-write / cursor --force); read-only -> codex `--sandbox read-only`, cursor read-only permission mode (plan/ask) or --sandbox on + omit --force; read-only-with-artifacts -> codex `--sandbox read-only --cd <artifactDir>` (reads everywhere, writes ONLY in artifactDir — read-only leaves --cd as the sole writable root) [VERIFY exact combo via canary], cursor `--sandbox` scoped to artifactDir [VERIFY]. PLUMBING: extend LLMRequest (types.ts ~178) with optional sandbox intent {mode, artifactDir}; bridge sets it from the persisted agent record when building requestToSend (~5953) reusing checkAgentModeToolPolicy; spawnCodex/spawnCursor/gemini consume it -> sandbox args. GATES PLAN: unit tests per provider (arg-mapping) + a LIVE confinement canary (spawn codex read-only-with-artifacts, attempt write inside+outside artifactDir, assert only-inside succeeds; same for cursor) — the canary is REQUIRED because the exact flag combos are security-critical and not verifiable by unit test alone. SLICE PLAN: A) plumbing + codex mapping + codex canary; B) cursor + gemini mapping + canaries. RISK: exact codex --cd/read-only writable-root semantics + cursor --sandbox scoping need empirical confirmation; danger-full-access / --dangerously-bypass must NEVER be emitted. Full F0-A closes only when both codex AND cursor confined (partial = knot stays open).",
+    "datetime": "2026-07-02T08:35:59.996472Z",
+    "entry_id": "019f21f8-797c-7882-a4c6-8cb591e6ff3b",
+    "model": "gpt-5",
+    "username": "openai",
+    "version": "unknown"
+  }
+}

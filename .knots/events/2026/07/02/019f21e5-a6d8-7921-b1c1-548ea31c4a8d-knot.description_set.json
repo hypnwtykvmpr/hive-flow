@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-a6d8-7921-b1c1-548ea31c4a8d",
+  "occurred_at": "2026-07-02T08:15:26.420063Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 analysts converged that permission-waiting and waiting-for-queen are not first-class runtime states. allComplete can declare success on blocked workers because blocked/waiting workers collapse into idle or settled categories. This is a 0bb4 acceptance blocker even though the broader communication design remains in hive-flow-2ee8."
+  }
+}

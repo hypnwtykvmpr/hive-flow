@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-8935-7112-9bf2-f7c211791b55",
+  "occurred_at": "2026-07-02T08:15:18.828121Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "A tracked canonical source for the flow-watchdog behavior exists outside .hive-flow/data, with a documented install/generation path for the live runtime copy. runOnce invokes the dead-PID/no-result liveness classifier and takes the intended recovery or routing action exactly once. Long-horizon busy-not-progressing and BLOCKED_TRUE_HUMAN_GATE nag paths are either corrected or explicitly documented as by-design in tests. Privacy/private-path guard passes before any tracked source is committed. Tests cover the classifier-called path, no spam loop, and normal COMPLETE_NO_ACTION quiet behavior."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21ee-af5b-7db2-b8f4-5fd7a5fb6956",
+  "occurred_at": "2026-07-02T08:25:18.427531Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "BOUNCE FIX (Claude, 2026-07-02, lease hive-flow-5890). Addresses both Codex bounce blockers on c031ea3f6 -> new commit ce9a56665 (3 files, 36+/4-). (1) enforcement-wiring.test.ts:18 was a SECOND stale \"3 tools\" assertion I missed -> updated to 4 + added an enforcement_ladder_status export assertion. (2) F0-B core: workflow_enforcer_status was still misleading (generic description + only hasState/state from the complexity axis). Its handler now ALSO returns enforcementLadder = getEnforcementLevelBreakdown() alongside the preserved hasState/state; description rewritten to say hasState:false does NOT mean writes are unblocked (check enforcementLadder.effectiveLevel). Added an end-to-end test: workflow_enforcer_status in a RESTRICTED sandbox now returns enforcementLadder.effectiveLevel=2 / RESTRICTED with the provider-bridge-write block string, existing fields preserved. enforcement_ladder_status remains the focused detailed surface. GATES: enforcement-wiring + breakdown + gate + scope + workflow-enforcer + queen-dispatch + enforcement-security-property = 309/309 PASS; tsc clean; build clean; repo-wide sweep found no other stale 3-tools/old-description references. Branch knots-6f73-enforcement-ladder-visibility now at ce9a56665.",
+    "datetime": "2026-07-02T08:25:18.427531Z",
+    "entry_id": "019f21ee-af5b-7db2-b8f4-5fca67e0def5",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-faa5-7bf1-bd78-5ac4b088e957",
+  "occurred_at": "2026-07-02T08:15:47.871236Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 found sentinel-recovery.cjs treats stale updatedAt as a dead watcher regardless of PID liveness, which can respawn duplicate watchers for a live but slow/updating process. This is a protected helper surface and should be fixed with a narrow PID-aware stale classification."
+  }
+}

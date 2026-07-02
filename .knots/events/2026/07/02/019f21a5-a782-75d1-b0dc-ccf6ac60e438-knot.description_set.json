@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21a5-a782-75d1-b0dc-ccf6ac60e438",
+  "occurred_at": "2026-07-02T07:05:32.284722Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 0 confirmed CLI-backed providers bypass Hive Flow mode and write gates. codex-cli in read-only-with-artifacts wrote repo-root phase0-codex-cli-should-be-denied.txt via native Codex apply_patch. cursor-cli wrote repo-root phase0-cursor-cli-should-be-denied.txt via native Cursor Write. API bridge providers did not show this path. Fix must make CLI providers honor persisted agent mode and artifactDir constraints or execute them in an equivalent sandbox so native CLI file tools cannot write outside the allowed artifact area."
+  }
+}

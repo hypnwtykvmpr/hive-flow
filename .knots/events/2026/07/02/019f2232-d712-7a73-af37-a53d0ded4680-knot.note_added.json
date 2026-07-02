@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2232-d712-7a73-af37-a53d0ded4680",
+  "occurred_at": "2026-07-02T09:39:45.041947Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SLICE A v2 TEMP-SYMLINK FIX (Codex 2nd bounce 20260702T093315Z+093449Z, 2026-07-02). Branch @ 0ec695f12. Bug: atomic temp-write used predictable name + plain copyFileSync -> a pre-planted symlink at artifactDir/.hf-artifact-tmp-<pid>-... was written THROUGH before rename (final dest was symlink-checked, temp path was not). FIX: copyFileSync now uses COPYFILE_EXCL (O_CREAT|O_EXCL) -> EEXIST if temp path exists as anything incl symlink, never followed; temp name unpredictable (randomBytes); only rm temp we created; EEXIST -> honest temp-dest-collision skip. Regression test (injectable temp-name seam, secure random default) pre-plants a symlink at the exact temp path and proves outside NOT written, file NOT reported copied, final dest NOT created; + unpredictable-name leftover test. GATES: cli-providers 149/149; providers+cli tsc clean; build clean; v2 live canary re-run PASS on fresh dir (report.md persisted, scratch.txt not promoted, escape denied, 0 temp leaks). Knot stays open for Slice B.",
+    "datetime": "2026-07-02T09:39:45.041947Z",
+    "entry_id": "019f2232-d712-7a73-af37-a52ba6b25883",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

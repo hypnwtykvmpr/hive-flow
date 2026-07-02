@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2203-4345-7252-bcb0-3d451272bdc8",
+  "occurred_at": "2026-07-02T08:47:47.012895Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SLICE A LANDED-TO-REVIEW (Claude, 2026-07-02). Branch knots-9331-cli-provider-confinement @ cb20f024a (4 files, 149+/4-). codex-cli confinement: LLMRequest.cliSandbox {mode,artifactDir} set from bridgeReadAgentMode() -> spawnCodex maps to codex native sandbox (full->workspace-write; read-only->read-only; read-only-with-artifacts->workspace-write+cwd=artifactDir; artifact-mode-no-dir->fail-closed read-only). GATES: cli-providers.test.ts 140/140 (6 new arg/cwd mapping tests); providers+cli tsc clean; providers build clean. LIVE CANARY (.tmp-audit/harness-battle-0bb4/canary-9331.mjs) PROVEN: codex read-only-with-artifacts agent (agent-bd1b6a25) wrote canary-inside.txt inside artifactDir (fs-confirmed exists) and was sandbox-DENIED for repo-root + sibling writes (fs-confirmed absent) => CONFINED. KNOT STAYS OPEN (implementation): Slice A = codex only; Slice B = cursor (--sandbox / plan|ask) + gemini native mapping + canaries, per Codex ruling partial-by-design. Do NOT ship knot until both confined.",
+    "datetime": "2026-07-02T08:47:47.012895Z",
+    "entry_id": "019f2203-4345-7252-bcb0-3d3a4b6118a1",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

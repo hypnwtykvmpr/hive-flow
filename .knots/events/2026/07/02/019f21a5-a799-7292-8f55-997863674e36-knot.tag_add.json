@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21a5-a799-7292-8f55-997863674e36",
+  "occurred_at": "2026-07-02T07:05:32.284722Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "provider-harness"
+  }
+}

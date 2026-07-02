@@ -1,0 +1,17 @@
+{
+  "event_id": "019f21ef-ad88-75a2-bdad-991b3c05dc03",
+  "occurred_at": "2026-07-02T08:26:23.496429Z",
+  "knot_id": "hive-flow-32ff",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: claude-6f73-bounce-fix",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}

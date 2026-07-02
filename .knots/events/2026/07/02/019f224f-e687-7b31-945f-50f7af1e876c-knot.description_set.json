@@ -1,0 +1,9 @@
+{
+  "event_id": "019f224f-e687-7b31-945f-50f7af1e876c",
+  "occurred_at": "2026-07-02T10:11:29.534295Z",
+  "knot_id": "hive-flow-f3aa",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Follow-up from hive-flow-9331 Slice B. Gemini/agy restricted modes now drop --dangerously-skip-permissions and add --sandbox, but the live canary was deferred because agy headless Google sign-in is currently unavailable from detached workers. Once auth is restored, run a live read-only/read-only-with-artifacts confinement canary with filesystem checks for root, sibling, artifact, and no-bypass behavior; route any regression as a fix slice."
+  }
+}

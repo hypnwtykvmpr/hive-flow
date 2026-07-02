@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-e70a-7882-86eb-b7ef4848247b",
+  "occurred_at": "2026-07-02T08:15:42.853294Z",
+  "knot_id": "hive-flow-d060",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 found cleanup/reaper blindspots in .claude/helpers/hive-cleanup.cjs: a worker with tracking.status terminal but future deadline can remain stuck busy, while legitimate long jobs past deadlineAt may be reclaimed even when the PID is alive. Fix must preserve existing ESRCH/dead and past-deadline cleanup wins without over-reaping live work."
+  }
+}

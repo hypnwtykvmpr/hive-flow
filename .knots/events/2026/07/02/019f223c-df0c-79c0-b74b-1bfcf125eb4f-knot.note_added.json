@@ -1,0 +1,15 @@
+{
+  "event_id": "019f223c-df0c-79c0-b74b-1bfcf125eb4f",
+  "occurred_at": "2026-07-02T09:50:42.444071Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SLICE A v2 LANDED+CONFIRMED at 0ec695f12 (HEAD==origin/main; Codex VERIFY_CLEAN + provider-verifier task-4a89ce3f PASS). codex half of F0-A CLOSED. Knot stays open for SLICE B (cursor + gemini). SLICE B DESIGN (Claude, 2026-07-02): reuse the landed plumbing (LLMRequest.cliSandbox from bridgeReadAgentMode) + generalize copyCodexArtifactsBack into a shared artifact-copy-back module both codex+cursor use. Per-provider mapping: CURSOR (flags confirmed via --help: --mode plan|ask = read-only/no-edits; -f/--force|--yolo = run-everything [current default, unconfined - the F0-A escape]; --sandbox <mode> = enable/disable, confinement scope UNVERIFIED): full->--force (unchanged); read-only->--mode plan, OMIT --force (clean native read-only); read-only-with-artifacts->OPEN FORK requiring an empirical cursor --sandbox confinement probe: IF cursor --sandbox provides OS-level write-confinement-to-cwd (like codex workspace-write) THEN temp+copy-back (same shared boundary as codex); ELSE FAIL-CLOSED to read-only (cursor cannot safely produce confined artifacts because --force has no OS confinement and an absolute-path write would escape temp BEFORE copy-back) — this is the Codex-pre-approved \"fail closed if native sandbox cannot express the policy\" fallback, justified by cursor lacking codexs OS workspace-write. NOTE the DO-NOT-REVERT cursor invariant: --force is required for file writes in --print mode, so read-only/artifact modes drop --force. GEMINI (agy): types.ts sandbox?:boolean = --sandbox (Docker, opt-in). Map read-only/artifact to gemini native sandbox; BUT live canary BLOCKED — agy headless sign-in fails from detached workers (F0-C, human action to restore), so gemini gets arg-mapping unit tests only + a documented no-live-canary gap until agy headless works. NEXT CONCRETE STEP: empirical cursor --sandbox confinement probe (direct cursor-agent invocation with --sandbox + inside/outside write task, fs-checked) to resolve the cursor fork, then implement Slice B (shared copy-back extract + cursor + gemini) with per-provider canaries where possible. FULL F0-A closes only when cursor confinement is resolved (copy-back or fail-closed) + gemini mapped.",
+    "datetime": "2026-07-02T09:50:42.444071Z",
+    "entry_id": "019f223c-df0c-79c0-b74b-1be6dfe1bfa6",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

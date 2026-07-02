@@ -1,0 +1,15 @@
+{
+  "event_id": "019f221d-fc86-7b63-b1e6-1bcdbb6bccd5",
+  "occurred_at": "2026-07-02T09:16:58.374628Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SLICE A VERIFY_BOUNCE (Codex 20260702T085302Z) — VALID, my miss. Slice A confined codex by DIRECTORY (cwd=artifactDir, canary-proven no repo-escape) but did NOT enforce the read-only-with-artifacts .md/.json-only file-type contract that the API-provider bridge enforces (bridgeArtifactWritePathHasAllowedExtension). My own canary proved the gap: it wrote canary-inside.txt (a .txt) inside artifactDir. ROOT CONSTRAINT: codex native sandbox is DIRECTORY-granular only (--sandbox read-only|workspace-write + cwd/writable-roots); it has NO native per-extension write policy (confirmed via --help: -s modes + -c sandbox_permissions coarse grants only). So .md/.json enforcement for codex CANNOT be native. DESIGN FORK (routed to Codex 20260702T0855xx): (A) fail-closed read-only for codex artifact mode — simple, but FAILS Codex reroute test #2 (which requires codex CAN write a .md/.json), so only viable if test #2 is relaxed / codex loses artifact-write capability; (B) temp-writable-dir + copy-only-.md/.json-back — codex runs cwd=private mkdtemp (workspace-write confines to temp, no repo escape), then bridge copies ONLY *.md/*.json from temp into artifactDir and discards temp; satisfies tests #1-#5 incl. #2 (writes) + #3 (non-.md/.json never reaches artifactDir). (B) keeps capability, adds post-completion copy machinery in doComplete/doStreamComplete (kill/timeout-safe). Awaiting Codex decision A-vs-B before implementing v2 (10x effort difference; contract-owner call). Knot stays at implementation.",
+    "datetime": "2026-07-02T09:16:58.374628Z",
+    "entry_id": "019f221d-fc86-7b63-b1e6-1bb2b4adbc7c",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

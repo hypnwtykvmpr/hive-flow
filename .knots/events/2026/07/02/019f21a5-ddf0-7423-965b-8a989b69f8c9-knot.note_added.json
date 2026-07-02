@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21a5-ddf0-7423-965b-8a989b69f8c9",
+  "occurred_at": "2026-07-02T07:05:46.222911Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "Codex review confirmed HIGH. Evidence from Phase 0 disk artifacts: .tmp-audit/harness-battle-0bb4/results/phase0-codex-cli.json and phase0-cursor-cli.json show repo-root writes succeeded under read-only-with-artifacts through native CLI file tools. This bypasses Hive Flow bridge mode and write gates for CLI-backed providers. Treat as immediate fix lane.",
+    "datetime": "2026-07-02T07:05:46.222911Z",
+    "entry_id": "019f21a5-ddf0-7423-965b-8a8266826f08",
+    "model": "gpt-5",
+    "username": "openai",
+    "version": "unknown"
+  }
+}

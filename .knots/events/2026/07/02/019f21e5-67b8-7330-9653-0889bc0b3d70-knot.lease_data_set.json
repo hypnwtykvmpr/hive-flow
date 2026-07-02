@@ -1,0 +1,20 @@
+{
+  "event_id": "019f21e5-67b8-7330-9653-0889bc0b3d70",
+  "occurred_at": "2026-07-02T08:15:10.264519Z",
+  "knot_id": "hive-flow-209c",
+  "type": "knot.lease_data_set",
+  "data": {
+    "lease_data": {
+      "agent_info": {
+        "agent_name": "codex",
+        "agent_type": "cli",
+        "model": "gpt-5",
+        "model_version": "",
+        "provider": "openai"
+      },
+      "lease_type": "agent",
+      "nickname": "codex-0bb4-phase2-triage",
+      "timeout_seconds": 3600
+    }
+  }
+}

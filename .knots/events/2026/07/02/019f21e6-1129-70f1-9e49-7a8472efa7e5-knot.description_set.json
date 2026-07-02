@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e6-1129-70f1-9e49-7a8472efa7e5",
+  "occurred_at": "2026-07-02T08:15:53.635928Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 found queen permission approve/deny has redirect and halt paths but no explicit worker-resume path. A queen can decide that work may continue without granting the originally requested action, but there is no structured resume/continue instruction path for the worker. This is tracked source in queen-tools.ts and is Claude-implementable."
+  }
+}

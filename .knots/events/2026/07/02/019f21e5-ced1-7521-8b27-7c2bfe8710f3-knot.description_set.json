@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-ced1-7521-8b27-7c2bfe8710f3",
+  "occurred_at": "2026-07-02T08:15:36.652534Z",
+  "knot_id": "hive-flow-df6e",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 found agent-task-rewake blindspots: terminal task with missing/deleted tracking can still nag, dead-PID mid-task waits until the 30min timeout, and legitimately slow or permission/queen-waiting tasks trigger TASK CHECK DUE spam. This is in protected .claude/helpers/agent-task-rewake.cjs, so Claude may route protected patches to Codex if needed."
+  }
+}

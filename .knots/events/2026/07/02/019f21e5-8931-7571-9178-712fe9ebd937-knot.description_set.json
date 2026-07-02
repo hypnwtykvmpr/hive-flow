@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-8931-7571-9178-712fe9ebd937",
+  "occurred_at": "2026-07-02T08:15:18.828121Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Phase 2 found the flow-watchdog dead-PID/no-result classifier exists in .hive-flow/data/tmux-router/flow-watchdog.cjs but runOnce never calls it. The file is untracked and has no tracked source, so the recovery mechanism is unshipped/unreviewed while 0bb4 acceptance depends on it. Governance ruling: do not commit the live data-dir blob as-is; promote or replace it with reviewed tracked source plus an install/generation path, or explicitly remove it from the product acceptance surface. Also cover related untracked flow-watchdog blindspots P2-SH3 and P2-SL4 while touching this surface."
+  }
+}

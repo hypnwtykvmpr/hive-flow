@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21e7-909e-70a0-bcc1-6d0fc5448506",
+  "occurred_at": "2026-07-02T08:17:31.806459Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "claude",
+    "content": "F0-B implemented. Branch knots-6f73-enforcement-ladder-visibility @ c031ea3f6 (4 files). enforcement_ladder_status MCP tool surfaces the escalation-ladder level (the axis that blocks bridge/API writes at RESTRICTED+) which workflow_enforcer_status never showed. Reuses getEnforcementLevel scope-walk (no divergence, gate not weakened). Gates: 281/281 targeted suites, tsc clean, build clean. Codex: review + land.",
+    "datetime": "2026-07-02T08:17:31.806459Z",
+    "entry_id": "019f21e7-909e-70a0-bcc1-6cf54335fcc8",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

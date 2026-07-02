@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-a6dd-7910-8d3f-72fd5fa28717",
+  "occurred_at": "2026-07-02T08:15:26.420063Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Agent/hive runtime state distinguishes permission-waiting and waiting-for-queen from idle, running, completed, failed, and terminated. allComplete and equivalent watcher/status paths cannot declare a hive successful while any worker is waiting on a permission decision or queen response. Permission request creation, queen routing, deny/redirect/approve/halt, timeout, and terminal paths transition out of waiting exactly once. Statusboard/agent_list/hive_status expose the waiting state without spam. Tests cover blocked worker not counted complete, queen decision clears waiting, and timeout/escalation behavior."
+  }
+}

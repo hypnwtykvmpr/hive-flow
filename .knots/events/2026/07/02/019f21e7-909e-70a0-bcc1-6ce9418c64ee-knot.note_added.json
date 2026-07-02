@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21e7-909e-70a0-bcc1-6ce9418c64ee",
+  "occurred_at": "2026-07-02T08:17:31.806459Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "IMPLEMENTED (Claude, 2026-07-02, lease hive-flow-5890). Branch knots-6f73-enforcement-ladder-visibility, commit c031ea3f6 (4 files, 382+/7-). Added getEnforcementLevelBreakdown() to cli/src/mcp-tools/mcp-enforcement-gate.ts — extracted the exact getEnforcementLevel() scope-walk into a shared computeEnforcementBreakdown() so the reported ladder level can NEVER diverge from the gated number (getEnforcementLevel now returns breakdown.effectiveLevel; behavior byte-identical: MAX-over-present-scopes, absent-skip, tamper/unverifiable->HALTED fail-closed, no-scope->0, error->HALTED). New enforcement_ladder_status MCP tool in workflow-enforcer.ts reports effectiveLevel + name + per-scope contributions (agent/hive/session/project/global, canonical vs legacy source) + block descriptions incl. provider-bridge write/exec/fetch at RESTRICTED+ (level>=2, synced to bridge FAIL_CLOSED_ENFORCEMENT_LEVEL). Read-only; gate NOT weakened. GATES: new breakdown suite + mcp-enforcement-gate + scope + workflow-enforcer + queen-dispatch-gate + enforcement-security-property = 281/281 PASS; tsc --noEmit clean; npm run build clean. Updated the pre-existing \"exports three tools\" assertion to four (+enforcement_ladder_status). No engine/protected files touched; git shows exactly the 4 intended files.",
+    "datetime": "2026-07-02T08:17:31.806459Z",
+    "entry_id": "019f21e7-909e-70a0-bcc1-6cd4e0982800",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

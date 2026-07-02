@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e6-112e-7fd3-b1d7-7837018fa29a",
+  "occurred_at": "2026-07-02T08:15:53.635928Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Queen permission lifecycle supports an explicit resume/continue decision distinct from approve, deny-redirect, and halt. Resume wakes or records worker continuation instructions exactly once, preserves owner/session/queen scoping, cannot bypass bridge permission gates, and cannot be forged cross-queen. Tests cover approve unchanged, deny redirect unchanged, halt unchanged, resume wakes/continues a waiting worker, and duplicate decisions dedupe without spam."
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "event_id": "019f21f9-5c4b-7343-b097-315af87ff63f",
+  "occurred_at": "2026-07-02T08:36:58.05962Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-d136",
+    "profile_id": "lease",
+    "state": "lease_active",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Lease: codex-6f73-shipment-close",
+    "type": "lease",
+    "updated_at": "2026-07-02T08:36:58.05962Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

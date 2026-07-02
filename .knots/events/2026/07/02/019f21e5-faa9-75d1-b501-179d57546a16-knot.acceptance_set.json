@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-faa9-75d1-b501-179d57546a16",
+  "occurred_at": "2026-07-02T08:15:47.871236Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "sentinel recovery checks PID liveness before treating stale updatedAt as dead when a PID is available, preserves genuine dead/stale recovery, and avoids duplicate watcher respawn for live watchers. Tests cover stale updatedAt with live PID preserved, stale updatedAt with ESRCH respawned, no-PID legacy behavior, and no regression to normal recovery notifications."
+  }
+}

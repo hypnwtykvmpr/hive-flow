@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2253-f43c-7a10-a4c6-cb339f5afa7b",
+  "occurred_at": "2026-07-02T10:15:55.19689Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-cf05",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: claude-0bb4-impl-phase0",
+    "type": "lease",
+    "updated_at": "2026-07-02T10:15:55.19689Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

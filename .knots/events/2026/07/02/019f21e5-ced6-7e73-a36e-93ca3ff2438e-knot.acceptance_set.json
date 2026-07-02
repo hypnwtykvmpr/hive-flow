@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-ced6-7e73-a36e-93ca3ff2438e",
+  "occurred_at": "2026-07-02T08:15:36.652534Z",
+  "knot_id": "hive-flow-df6e",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "agent-task-rewake treats terminal persisted task status as done even if tracking JSON is missing, probes PID liveness where authoritative enough to avoid waiting the full timeout for dead children, and suppresses or changes timeout nags for explicit waiting states. It must not suppress genuine stuck-task recovery. Tests cover terminal-with-missing-tracking, dead PID mid-task, slow within-deadline task, permission/queen waiting task, and no duplicate nag loop."
+  }
+}

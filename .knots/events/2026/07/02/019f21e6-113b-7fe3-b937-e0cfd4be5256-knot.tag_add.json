@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e6-113b-7fe3-b937-e0cfd4be5256",
+  "occurred_at": "2026-07-02T08:15:53.635928Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "queen-permissions"
+  }
+}

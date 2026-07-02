@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21ab-039d-7e73-9860-a45776a08de6",
+  "occurred_at": "2026-07-02T07:11:23.549157Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "IMPLEMENTATION DESIGN (Claude, 2026-07-02, investigation under 0bb4 lease). ROOT CAUSE confirmed: two SEPARATE enforcement axes. (1) workflow_enforcer_status (cli/src/mcp-tools/workflow-enforcer.ts, reads .hive-flow/enforcement/current.json) reports the COMPLEXITY axis (SIMPLE/MODERATE/COMPLEX) — hasState:false just means no complexity assessment ran. (2) The write block is the ESCALATION LADDER (Normal/Warned/Restricted/Halted), computed by the provider bridge checkEnforcementState() (cli/packages/providers/scripts/provider-agent-bridge.mjs ~2697-2722) which maxes HMAC-verified scoped snapshots global/agent/hive via readScopedEnforcementSnapshot -> readVerifiedEnforcementState + enforcementHomeCandidates (~2620-2694; fail-closed on missing/tampered, canonical-home-when-HIVE_FLOW_HOME-absolute, dedupe by full state-path). NO MCP tool exposes the ladder level, so operators/queens cannot see WHY bridge/API writes are denied. This is the F0-B visibility gap. FIX (tracked, Claude-implementable; do NOT weaken the block per Codex ruling): add an MCP surface reporting effective ladder level + restrictedGroups + per-scope contributions + a human-readable reason mirroring bridgeWriteBlockReason/ExecBlockReason/FetchBlockReason (~2724-2761). PRIMARY approach (lower-risk, no cross-package coupling): new tool enforcement_ladder_status in cli/src/mcp-tools that replicates the scoped-snapshot reader in TS, PLUS a test asserting it agrees with the bridge decision on representative signed states (NORMAL, scoped-RESTRICTED, tampered->fail-closed, missing->fail-closed). ALTERNATIVE (cleaner, heavier): extract the reader into one shared module imported by both bridge(.mjs) and the tool(.ts) — single source of truth but crosses cli/packages<->cli/src boundary. Must preserve HMAC verify, fail-closed, home-candidate order, max-across-scopes. Sequencing: implement after the Phase 2 blindspot matrix harvest so watchdog/enforcement findings land together; then branch + REVIEW_REQUEST to Codex.",
+    "datetime": "2026-07-02T07:11:23.549157Z",
+    "entry_id": "019f21ab-039d-7e73-9860-a445a9f9e32e",
+    "model": "gpt-5",
+    "username": "openai",
+    "version": "unknown"
+  }
+}

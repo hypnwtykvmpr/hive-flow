@@ -1,0 +1,15 @@
+{
+  "event_id": "019f222a-d6f5-7103-9029-4a37ff9c48c4",
+  "occurred_at": "2026-07-02T09:31:00.724765Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SLICE A v2 LANDED-TO-REVIEW (Codex Option B, 2026-07-02). Branch knots-9331-cli-provider-confinement @ 98a13500d (+ v1 cb20f024a). codex read-only-with-artifacts now runs in a PRIVATE temp workspace (cwd=mkdtemp, --sandbox workspace-write); copyCodexArtifactsBack() promotes ONLY .md/.json into resolved artifactDir. Copy-back security boundary: FLAT-only, regular-files-only, lowercase .md/.json allowlist, no symlink-src follow, no write-through dest symlink, separator-aware direct-child containment, atomic temp+rename, bounded count(200)/bytes(50MB), disallowed skipped w/ honest reason. Temp cleaned on success/failure/timeout/abort/stream-done; copy-back only on genuine success. read-only + full unchanged. ALL 6 REROUTE CRITERIA PROVEN: (1) RO canary agent-df9433a2 writes DENIED, 0 files (live+fs); (2) v2 canary agent-80e1ddb0 report.md persisted (live+fs); (3) scratch.txt written to temp but NOT promoted, artifactDir=[report.md] only (live+fs); (4) repo-root escape denied + copy-back symlink/containment unit tests; (5) full backward-compat unit test; (6) 3 live canaries via fs checks + 0 temp leaks. GATES: cli-providers 147/147 (8 new copy-back + updated mapping); providers+cli tsc clean; providers build clean. KNOT STAYS OPEN — Slice B = cursor+gemini next.",
+    "datetime": "2026-07-02T09:31:00.724765Z",
+    "entry_id": "019f222a-d6f5-7103-9029-4a2ec5628525",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

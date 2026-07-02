@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2248-6dcc-7ab2-bac6-e6081527672c",
+  "occurred_at": "2026-07-02T10:03:19.884398Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-9331-sliceb-cursor-gemini"
+  }
+}

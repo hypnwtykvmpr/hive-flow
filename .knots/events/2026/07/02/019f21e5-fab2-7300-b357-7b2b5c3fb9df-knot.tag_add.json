@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-fab2-7300-b357-7b2b5c3fb9df",
+  "occurred_at": "2026-07-02T08:15:47.871236Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "phase2"
+  }
+}

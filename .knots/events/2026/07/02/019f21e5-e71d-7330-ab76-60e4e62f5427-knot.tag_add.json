@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-e71d-7330-ab76-60e4e62f5427",
+  "occurred_at": "2026-07-02T08:15:42.853294Z",
+  "knot_id": "hive-flow-d060",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "reaper"
+  }
+}

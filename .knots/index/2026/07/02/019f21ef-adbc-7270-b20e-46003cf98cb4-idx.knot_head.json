@@ -1,0 +1,34 @@
+{
+  "event_id": "019f21ef-adbc-7270-b20e-46003cf98cb4",
+  "occurred_at": "2026-07-02T08:26:23.548085Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-32ff",
+    "profile_id": "lease",
+    "state": "lease_active",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Lease: claude-6f73-bounce-fix",
+    "type": "lease",
+    "updated_at": "2026-07-02T08:26:23.548085Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

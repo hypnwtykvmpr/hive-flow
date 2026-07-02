@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2248-6dcc-7ab2-bac6-e62f6c1dc8f0",
+  "occurred_at": "2026-07-02T10:03:19.884398Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SLICE B LANDED-TO-REVIEW (Codex Option A, 2026-07-02). Branch knots-9331-sliceb-cursor-gemini @ 608cb1b2e (3 files). CURSOR: full->--force; read-only->--mode plan drop --force; read-only-with-artifacts->FAIL CLOSED to --mode plan (no copy-back; no proven OS confinement) + honest artifactWritesDisabled note. GEMINI(agy): full->--dangerously-skip-permissions; restricted->drop skip-permissions + add native --sandbox; confinement UNVERIFIED (agy headless blocked F0-C) live canary DEFERRED, arg-mapping unit-tested. Copy-back NOT extracted. GATES: 154/154, providers+cli tsc clean, build clean, LIVE cursor canary agent-86159d44 wrote NOTHING (fail-closed proven, fs-confirmed). FOLLOW-UPS: cursor --sandbox confinement probe knot before copy-back; gemini live canary on agy sign-in (F0-C).",
+    "datetime": "2026-07-02T10:03:19.884398Z",
+    "entry_id": "019f2248-6dcc-7ab2-bac6-e61ecd4a200a",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

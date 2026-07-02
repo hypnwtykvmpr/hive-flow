@@ -1,0 +1,9 @@
+{
+  "event_id": "019f224f-e69b-7e62-8349-c6df155f11dd",
+  "occurred_at": "2026-07-02T10:11:29.534295Z",
+  "knot_id": "hive-flow-f3aa",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "gemini"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e7-909e-70a0-bcc1-6cc71fb60618",
+  "occurred_at": "2026-07-02T08:17:31.806459Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-6f73-enforcement-ladder-visibility"
+  }
+}

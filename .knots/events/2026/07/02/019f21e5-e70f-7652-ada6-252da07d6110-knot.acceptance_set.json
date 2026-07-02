@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21e5-e70f-7652-ada6-252da07d6110",
+  "occurred_at": "2026-07-02T08:15:42.853294Z",
+  "knot_id": "hive-flow-d060",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "hive-cleanup treats terminal tracking statuses as terminal even when deadlineAt is in the future, and does not reclaim live-PID work solely because deadlineAt passed unless the configured stale/busy policy explicitly requires it with evidence. Tests cover terminal tracking plus future deadline, live PID past deadline preserved or classified non-destructively, ESRCH dead still reaped, within-deadline busy preserved, and no regression to H4/H5/H7 prior fixes."
+  }
+}

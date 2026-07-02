@@ -1,0 +1,15 @@
+{
+  "event_id": "019f21a5-ef49-7320-86c1-9b42c1445538",
+  "occurred_at": "2026-07-02T07:05:50.665897Z",
+  "knot_id": "hive-flow-6f73",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "Codex review confirmed HIGH for visibility. The bridge/API provider block itself is expected at RESTRICTED+ and must not be weakened. The defect is that workflow_enforcer_status reported hasState:false/NORMAL while the bridge enforced scoped RESTRICTED+ and denied artifact writes, leaving queens/operators without truthful runtime state.",
+    "datetime": "2026-07-02T07:05:50.665897Z",
+    "entry_id": "019f21a5-ef49-7320-86c1-9b3b2ed346a6",
+    "model": "gpt-5",
+    "username": "openai",
+    "version": "unknown"
+  }
+}

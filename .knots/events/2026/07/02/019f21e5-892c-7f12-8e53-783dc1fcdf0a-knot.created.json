@@ -1,0 +1,17 @@
+{
+  "event_id": "019f21e5-892c-7f12-8e53-783dc1fcdf0a",
+  "occurred_at": "2026-07-02T08:15:18.828121Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.created",
+  "data": {
+    "body": "Phase 2 found the flow-watchdog dead-PID/no-result classifier exists in .hive-flow/data/tmux-router/flow-watchdog.cjs but runOnce never calls it. The file is untracked and has no tracked source, so the recovery mechanism is unshipped/unreviewed while 0bb4 acceptance depends on it. Governance ruling: do not commit the live data-dir blob as-is; promote or replace it with reviewed tracked source plus an install/generation path, or explicitly remove it from the product acceptance surface. Also cover related untracked flow-watchdog blindspots P2-SH3 and P2-SL4 while touching this surface.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "P2-SH1 promote flow-watchdog to tracked source and wire liveness classifier",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

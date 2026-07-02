@@ -1,0 +1,9 @@
+{
+  "event_id": "019f21a5-a788-78e0-ab9f-363a5aa8a875",
+  "occurred_at": "2026-07-02T07:05:32.284722Z",
+  "knot_id": "hive-flow-9331",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "CLI-backed provider tasks in read-only mode cannot write files. CLI-backed provider tasks in read-only-with-artifacts can write only .md or .json inside the resolved artifactDir and cannot write repo root, tracked source, control plane files, symlink escapes, or sibling-prefix paths. The fix must preserve full-mode behavior, include regression tests, and include at least one live or harness canary for codex-cli or cursor-cli proving a root write is denied and a permitted artifact write still works."
+  }
+}
