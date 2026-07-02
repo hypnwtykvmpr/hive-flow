@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2156-a6dd-7d33-a73f-63821f8e3f05",
+  "occurred_at": "2026-07-02T05:39:14.781492Z",
+  "knot_id": "hive-flow-0bb4",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "A current-HEAD provider-by-capability matrix exists with evidence for every live provider; every previously-known harness finding is re-baselined as FIXED or STILL-OPEN with proof; concurrency pilots reach documented provider caps without orphaned or mis-stamped agents; every induced stall/blocker scenario ends in exactly one of automatic nudge, structured redirect, appropriate queen escalation, or documented watchdog fix — never a spam loop or silent hang; all agent results carry owner/session stamps and durable task results; every verified defect is either fixed via a child knot with regression tests or recorded in the deferral ledger with a knot id; a final campaign report with the findings ledger and recovery-path proof is attached to this knot."
+  }
+}

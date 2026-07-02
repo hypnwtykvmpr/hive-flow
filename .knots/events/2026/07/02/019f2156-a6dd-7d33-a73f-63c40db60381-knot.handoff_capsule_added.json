@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2156-a6dd-7d33-a73f-63c40db60381",
+  "occurred_at": "2026-07-02T05:39:14.781492Z",
+  "knot_id": "hive-flow-0bb4",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Plan drafted (2026-07-02, Claude). Empirical multi-phase battle-test: Phase 0 re-baseline canary matrix across live providers (agy parity + lmstudio exposure check), Phase 1 concurrency/caps/long-horizon, Phase 2 induced stall/blocker auto-recovery battery + watchdog blindspot matrix, Phase 3 error-catalog re-probes, Phase 4 triage with fix-slice child knots (Claude implements, Codex lands) and deferral-ledger records for parked items. Evidence self-persists under .tmp-audit/harness-battle-0bb4/. Acceptance on the knot. Next: plan_review gate.",
+    "datetime": "2026-07-02T05:39:14.781492Z",
+    "entry_id": "019f2156-a6dd-7d33-a73f-63b9999448b5",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}
