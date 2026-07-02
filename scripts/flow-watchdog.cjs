@@ -1253,6 +1253,8 @@ function createWatchState(seed = {}) {
     idleSince: new Map(Object.entries(seed.idleSince || {})),
     muted: new Map(Object.entries(seed.muted || {})),
     eventCounts: new Map(Object.entries(seed.eventCounts || {})),
+    // hive-flow-8b69 Slice 4: per-taskId classifier prior + emitted-action markers.
+    taskLiveness: new Map(Object.entries(seed.taskLiveness || {})),
     control: { ...(seed.control || {}) },
   };
 }
@@ -1263,6 +1265,7 @@ function serializeWatchState(state) {
     idleSince: Object.fromEntries(state.idleSince.entries()),
     muted: Object.fromEntries(state.muted.entries()),
     eventCounts: Object.fromEntries(state.eventCounts.entries()),
+    taskLiveness: Object.fromEntries(state.taskLiveness.entries()),
     control: state.control || {},
   };
 }
@@ -1339,6 +1342,14 @@ function mergeWatchState(target, incoming, { now = Date.now(), dropMutedKeys = [
     const currentLast = Number(current.lastAt || 0);
     const nextLast = Number(value?.lastAt || 0);
     if (nextLast > currentLast) target.eventCounts.set(key, value);
+  }
+
+  // hive-flow-8b69 Slice 4: keep the newest per-taskId liveness prior by observedAtMs.
+  for (const [key, value] of incoming.taskLiveness.entries()) {
+    const current = target.taskLiveness.get(key);
+    const currentTs = Number(current?.observedAtMs || 0);
+    const incomingTs = Number(value?.observedAtMs || 0);
+    if (!currentTs || incomingTs >= currentTs) target.taskLiveness.set(key, value);
   }
 
   return target;
@@ -1714,6 +1725,179 @@ function resolveSharedLivenessModule() {
   return path.join(__dirname, '..', rel);
 }
 const { classifyHiveFlowTaskLiveness } = require(resolveSharedLivenessModule());
+
+// hive-flow-8b69 Slice 4: task-liveness pass — classify active Hive Flow tasks with the
+// shared source of truth and emit at most one deduped recovery/review nudge per stable
+// actionable event, routed to the task owner (or the deadlock target if unresolved).
+const TASK_LIVENESS_MAX_TASKS = 200;
+const TASK_LIVENESS_MAX_TASK_BYTES = 64 * 1024;
+
+// PID is a WEAK signal (per the classifier contract): a task is only "dead" when a finite
+// positive PID is proven ESRCH. EPERM means the process exists but is not ours (alive). A
+// missing/invalid PID or any other error is unknown — return null so elapsed time alone
+// never orphans a task.
+function taskPidLivenessSnapshot(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  try {
+    process.kill(pid, 0);
+    return { alive: true };
+  } catch (err) {
+    const code = err && typeof err === 'object' ? err.code : undefined;
+    if (code === 'ESRCH') return { alive: false };
+    if (code === 'EPERM') return { alive: true };
+    return null;
+  }
+}
+
+function taskTrackingPid(tracking) {
+  for (const candidate of [tracking?.pid, tracking?.currentTaskPid, tracking?.currentPid]) {
+    const pid = Number(candidate);
+    if (Number.isInteger(pid) && pid > 0) return pid;
+  }
+  return null;
+}
+
+function isActiveTaskTracking(tracking) {
+  const status = String(tracking?.status || '').toLowerCase();
+  return status === 'running' || status === 'dispatched' || status === 'active' || status === 'in_progress';
+}
+
+function readBoundedTaskJson(file) {
+  try {
+    const st = fs.statSync(file);
+    if (!st.isFile() || st.size > TASK_LIVENESS_MAX_TASK_BYTES) return null;
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function enumerateActiveTasks(tasksDir) {
+  let names;
+  try {
+    names = fs.readdirSync(tasksDir);
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const name of names) {
+    if (out.length >= TASK_LIVENESS_MAX_TASKS) break;
+    if (!name.endsWith('.json') || name.endsWith('.result.json')) continue;
+    const taskId = name.slice(0, -'.json'.length);
+    if (!taskId) continue;
+    if (fs.existsSync(path.join(tasksDir, `${taskId}.result.json`))) continue;
+    const tracking = readBoundedTaskJson(path.join(tasksDir, name));
+    if (!tracking || typeof tracking !== 'object' || Array.isArray(tracking)) continue;
+    if (!isActiveTaskTracking(tracking)) continue;
+    out.push({ taskId, tracking });
+  }
+  return out;
+}
+
+// Signature that changes when a task makes progress (event log grows / advances) but is
+// stable across pure no-progress observations — so a stable stall dispatches once while a
+// later genuine stall after progress re-arms.
+function taskLivenessSignature(nextPrior) {
+  return crypto.createHash('sha256')
+    .update(`${Number(nextPrior?.eventSize || 0)}:${String(nextPrior?.lastEventTs || '')}`)
+    .digest('hex')
+    .slice(0, 16);
+}
+
+function buildTaskLivenessNudge(taskId, verdict, ownerUnresolved) {
+  const action = verdict.status === 'orphaned'
+    ? 'appears orphaned (process not alive, no result file). Reconcile/re-dispatch it or clean up its tracking files.'
+    : 'appears stalled with no progress past the review threshold. Review and adjudicate: continue, redirect, or terminate it.';
+  const lines = [
+    `Hive Flow task ${taskId} ${action}`,
+    `Verdict: ${verdict.status} — ${verdict.reason}`,
+  ];
+  if (ownerUnresolved) {
+    lines.push('Task owner could not be resolved from task/result/agent records; routed to you as the current deadlock target.');
+  }
+  lines.push(`Inspect: .hive-flow/tasks/${taskId}.json + ${taskId}.events.jsonl (result: ${taskId}.result.json).`);
+  return lines.join('\n');
+}
+
+// Classify each active task and emit at most one deduped nudge per stable actionable event.
+// `dispatch(paneSpec, event, text, targetAgent)` MUST route through the caller's
+// dispatchEvent so delivery, dedupe, cooldown, mute, and logging behavior are inherited;
+// it returns a truthy record when actually delivered, null when suppressed.
+function runTaskLivenessPass({
+  state,
+  now,
+  root = ROOT,
+  tasksDir = path.join(root, '.hive-flow', 'tasks'),
+  paneSpecs = [],
+  statuses = [],
+  idleStallMs = DEFAULT_IDLE_STALL_MS,
+  dispatch,
+}) {
+  if (!state.taskLiveness) state.taskLiveness = new Map();
+  const active = enumerateActiveTasks(tasksDir);
+  const activeIds = new Set(active.map((task) => task.taskId));
+
+  // Prune priors for tasks that completed, vanished, produced a result, or went inactive.
+  for (const key of [...state.taskLiveness.keys()]) {
+    if (!activeIds.has(key)) state.taskLiveness.delete(key);
+  }
+  // Cap the store so a broken tasks directory cannot grow the state file without bound.
+  if (state.taskLiveness.size > TASK_LIVENESS_MAX_TASKS) {
+    const oldestFirst = [...state.taskLiveness.entries()]
+      .sort((a, b) => Number(a[1]?.observedAtMs || 0) - Number(b[1]?.observedAtMs || 0));
+    for (const [key] of oldestFirst.slice(0, state.taskLiveness.size - TASK_LIVENESS_MAX_TASKS)) {
+      state.taskLiveness.delete(key);
+    }
+  }
+
+  for (const { taskId, tracking } of active) {
+    const prior = state.taskLiveness.get(taskId) || null;
+    const verdict = classifyHiveFlowTaskLiveness({
+      tasksDir,
+      taskId,
+      processSnapshot: taskPidLivenessSnapshot(taskTrackingPid(tracking)),
+      prior,
+      nowMs: now,
+      idleStallMs,
+    });
+    const stored = { ...verdict.nextPrior, emitted: { ...(prior?.emitted || {}) } };
+
+    if (verdict.status === 'orphaned' || verdict.status === 'stalled_review') {
+      const signature = taskLivenessSignature(verdict.nextPrior);
+      if (stored.emitted[verdict.status] !== signature) {
+        const owner = notificationTaskOwner({ taskId }, root);
+        const ownerAgent = owner?.targetAgent || targetAgentFromKind(owner?.ownerClientKind);
+        let paneSpec = ownerAgent ? paneSpecs.find((spec) => spec.name === ownerAgent) : null;
+        let targetAgent = ownerAgent;
+        let ownerUnresolved = false;
+        if (!paneSpec) {
+          const target = chooseDeadlockTarget(statuses);
+          if (target) {
+            targetAgent = target.agent;
+            paneSpec = paneSpecs.find((spec) => spec.name === target.agent)
+              || { name: target.agent, pane: target.pane };
+            ownerUnresolved = true;
+          }
+        }
+        if (paneSpec && targetAgent && typeof dispatch === 'function') {
+          const staleKey = `taskLiveness:${taskId}:${verdict.status}:${signature}`;
+          const event = {
+            agent: targetAgent,
+            kind: verdict.status === 'orphaned' ? 'task_orphaned_recovery' : 'task_stalled_review',
+            reason: ownerUnresolved ? `owner-unresolved; ${verdict.reason}` : verdict.reason,
+            staleKey,
+            suppressKey: staleKey,
+            taskId,
+          };
+          const record = dispatch(paneSpec, event, buildTaskLivenessNudge(taskId, verdict, ownerUnresolved), targetAgent);
+          if (record) stored.emitted[verdict.status] = signature;
+        }
+      }
+    }
+
+    state.taskLiveness.set(taskId, stored);
+  }
+}
 
 function pruneMissingStopHookTimers(state, observedKeys) {
   for (const key of state.idleSince.keys()) {
@@ -2375,6 +2559,7 @@ function runOnce({
   logPath = null,
   routerDir = null,
   pendingNotificationsRoot = defaultPendingNotificationsRoot(),
+  tasksDir = path.join(ROOT, '.hive-flow', 'tasks'),
   idleStallMs = DEFAULT_IDLE_STALL_MS,
   stopHookStallMs = DEFAULT_STOP_HOOK_STALL_MS,
   stopHookFollowUpMs = DEFAULT_STOP_HOOK_FOLLOW_UP_MS,
@@ -2635,6 +2820,24 @@ function runOnce({
   }
 
   pruneMissingStopHookTimers(state, observedStopHookKeys);
+
+  // hive-flow-8b69 Slice 4: task-liveness pass. Placed after the quiet / router-handoff /
+  // COMPLETE_NO_ACTION early returns above, and additionally suppressed under a
+  // BLOCKED_TRUE_HUMAN_GATE router blocker (not yet a global early return — Slice 5), so it
+  // never introduces a dispatch path under that marker. Runs before the generic deadlock
+  // nudge so a task recovery/review dispatch naturally de-noises the all-idle fallback.
+  if (!hasActiveRouterHumanBlocker(routerDir)) {
+    runTaskLivenessPass({
+      state,
+      now,
+      root: ROOT,
+      tasksDir,
+      paneSpecs,
+      statuses,
+      idleStallMs,
+      dispatch: (paneSpec, event, text, targetAgent) => dispatchEvent({ paneSpec, event, text, targetAgent }),
+    });
+  }
 
   if (processed.length === 0 && statuses.length > 1 && !automationDispatchHeld) {
     const allIdle = statuses.every((status) => status.idle);
@@ -3473,6 +3676,9 @@ async function main(argv = process.argv.slice(2)) {
 }
 
 module.exports = {
+  runTaskLivenessPass,
+  enumerateActiveTasks,
+  taskPidLivenessSnapshot,
   DEFAULTS,
   buildNudge,
   classifyHiveFlowTaskLiveness,
