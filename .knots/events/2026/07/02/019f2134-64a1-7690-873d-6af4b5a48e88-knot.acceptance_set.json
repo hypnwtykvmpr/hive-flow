@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2134-64a1-7690-873d-6af4b5a48e88",
+  "occurred_at": "2026-07-02T05:01:49.601509Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "A deferral recorded via the ledger tooling always carries owner, reason, unblock condition, priority, source reference, and review trigger; deferred knots are surfaced automatically at session start; router notes containing deferral prose without a knot reference produce a visible warning; the four known prose-only deferrals are retro-filled as knots; new unit tests cover record validation, digest output, and note checking; no protected engine files are modified."
+  }
+}

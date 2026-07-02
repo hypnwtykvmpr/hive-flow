@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2134-64a1-7690-873d-6b3e2f535eff",
+  "occurred_at": "2026-07-02T05:01:49.601509Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Plan drafted and attached as note (2026-07-02, Claude implementer). Ledger design: reuse Knots native deferred state as the durable store; add tracked glue only — scripts/deferral-ledger.cjs (record/digest/check-note), SessionStart digest + tmux-router PostToolUse check-note wiring in .claude/settings.json, mandatory protocol section in CLAUDE.md, tests/deferral-ledger.test.mjs, retro-fill of four known prose-only deferrals. No protected engine files. Complexity low-moderate, single slice. Next: plan_review gate, then implementation by Claude with Codex review/land.",
+    "datetime": "2026-07-02T05:01:49.601509Z",
+    "entry_id": "019f2134-64a1-7690-873d-6b26e22fe6c4",
+    "model": "fable",
+    "username": "Anthropic",
+    "version": "5"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2130-97e7-77f2-b5e5-97343734738d",
+  "occurred_at": "2026-07-02T04:57:40.583072Z",
+  "knot_id": "hive-flow-abe0",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: claude-5e15-deferral-ledger",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}
