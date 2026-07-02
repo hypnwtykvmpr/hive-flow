@@ -12,8 +12,12 @@ vi.mock('child_process', () => {
 });
 
 import { spawn, execFile } from 'child_process';
+// Real fs/os/path (only child_process is mocked) — used by the copy-back boundary tests.
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, symlinkSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { GeminiCLIProvider } from '../gemini-cli-provider.js';
-import { CodexCLIProvider } from '../codex-cli-provider.js';
+import { CodexCLIProvider, copyCodexArtifactsBack } from '../codex-cli-provider.js';
 import { CursorCLIProvider, computeCursorTimeout, CURSOR_BASE_TIMEOUT_MS, CURSOR_LARGE_PROMPT_THRESHOLD, CURSOR_MAX_TIMEOUT_MS } from '../cursor-cli-provider.js';
 import type { LLMModel, LLMStreamEvent } from '../types.js';
 
@@ -632,7 +636,7 @@ describe('CodexCLIProvider', () => {
     codexCleanup(mockChild);
   });
 
-  it('read-only-with-artifacts + artifactDir -> workspace-write confined via cwd=artifactDir', async () => {
+  it('read-only-with-artifacts -> workspace-write in a PRIVATE TEMP workspace (not artifactDir)', async () => {
     mockBinaryFound('codex');
     await provider.initialize();
     const mockChild = createMockChild();
@@ -644,7 +648,11 @@ describe('CodexCLIProvider', () => {
     const args = mockSpawn.mock.calls[0][1] as string[];
     const opts = mockSpawn.mock.calls[0][2];
     expect(args[args.indexOf('--sandbox') + 1]).toBe('workspace-write');
-    expect(opts.cwd).toBe('/tmp/hf-artifacts-xyz');
+    // codex writes into a throwaway temp workspace, NOT directly into artifactDir;
+    // copyCodexArtifactsBack() promotes only .md/.json out of it.
+    expect(typeof opts.cwd).toBe('string');
+    expect(opts.cwd as string).toContain('hf-codex-artifacts-');
+    expect(opts.cwd).not.toBe('/tmp/hf-artifacts-xyz');
     codexCleanup(mockChild);
   });
 
@@ -1801,7 +1809,7 @@ describe('CodexCLIProvider — error handling', () => {
     mockSpawn.mockReturnValue(mockChild);
     // Should not throw — size validation is delegated to the Codex binary
     expect(() => {
-      (provider as PrivateAccess).spawnCodex(bigPrompt, 'gpt-5.3-codex');
+      (provider as PrivateAccess).spawnCodex(bigPrompt, 'gpt-5.3-codex', { sandboxMode: 'workspace-write' });
     }).not.toThrow();
   });
 });
@@ -3120,5 +3128,84 @@ describe('CodexCLIProvider.validateConfig enforces temperature without requiring
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(() => (provider as any).validateConfig()).not.toThrow();
+  });
+});
+
+// F0-A (hive-flow-9331) copy-back SECURITY BOUNDARY — direct tests over real fs.
+describe('copyCodexArtifactsBack (artifact copy-back boundary)', () => {
+  let root: string;
+  let temp: string;
+  let artifactDir: string;
+  const roots: string[] = [];
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'hf-copyback-test-'));
+    roots.push(root);
+    temp = join(root, 'temp-workspace');
+    artifactDir = join(root, 'artifacts');
+    mkdirSync(temp, { recursive: true });
+    mkdirSync(artifactDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    while (roots.length) { try { rmSync(roots.pop()!, { recursive: true, force: true }); } catch { /* best-effort */ } }
+  });
+
+  it('promotes allowed .md and .json regular files into artifactDir', () => {
+    writeFileSync(join(temp, 'report.md'), '# ok');
+    writeFileSync(join(temp, 'data.json'), '{"ok":true}');
+    const res = copyCodexArtifactsBack(temp, artifactDir);
+    expect(res.copied.sort()).toEqual(['data.json', 'report.md']);
+    expect(existsSync(join(artifactDir, 'report.md'))).toBe(true);
+    expect(readFileSync(join(artifactDir, 'data.json'), 'utf8')).toBe('{"ok":true}');
+  });
+
+  it('normalizes extension case (.MD/.JSON allowed)', () => {
+    writeFileSync(join(temp, 'NOTES.MD'), 'x');
+    const res = copyCodexArtifactsBack(temp, artifactDir);
+    expect(res.copied).toContain('NOTES.MD');
+    expect(existsSync(join(artifactDir, 'NOTES.MD'))).toBe(true);
+  });
+
+  it('SKIPS disallowed extensions (.txt) — never persisted to artifactDir', () => {
+    writeFileSync(join(temp, 'escape.txt'), 'nope');
+    writeFileSync(join(temp, 'ok.md'), 'yes');
+    const res = copyCodexArtifactsBack(temp, artifactDir);
+    expect(res.copied).toEqual(['ok.md']);
+    expect(res.skipped).toContainEqual({ name: 'escape.txt', reason: 'disallowed-extension' });
+    expect(existsSync(join(artifactDir, 'escape.txt'))).toBe(false);
+  });
+
+  it('SKIPS a symlink source (no symlink following)', () => {
+    const outside = join(root, 'secret.md');
+    writeFileSync(outside, 'secret');
+    symlinkSync(outside, join(temp, 'link.md'));
+    const res = copyCodexArtifactsBack(temp, artifactDir);
+    expect(res.copied).not.toContain('link.md');
+    expect(res.skipped).toContainEqual({ name: 'link.md', reason: 'src-symlink' });
+    expect(existsSync(join(artifactDir, 'link.md'))).toBe(false);
+  });
+
+  it('SKIPS non-regular files (a directory named like an artifact)', () => {
+    mkdirSync(join(temp, 'sub.md'));
+    const res = copyCodexArtifactsBack(temp, artifactDir);
+    expect(res.copied).not.toContain('sub.md');
+    expect(res.skipped).toContainEqual({ name: 'sub.md', reason: 'not-regular-file' });
+  });
+
+  it('does NOT write THROUGH a destination symlink', () => {
+    const outside = join(root, 'outside-target.md');
+    // Pre-existing dest symlink pointing outside artifactDir.
+    symlinkSync(outside, join(artifactDir, 'pwn.md'));
+    writeFileSync(join(temp, 'pwn.md'), 'attacker');
+    const res = copyCodexArtifactsBack(temp, artifactDir);
+    expect(res.skipped).toContainEqual({ name: 'pwn.md', reason: 'dest-symlink' });
+    expect(existsSync(outside)).toBe(false); // symlink target was NOT written through
+  });
+
+  it('no-ops safely when artifactDir does not exist', () => {
+    writeFileSync(join(temp, 'a.md'), 'x');
+    const res = copyCodexArtifactsBack(temp, join(root, 'does-not-exist'));
+    expect(res.copied).toEqual([]);
   });
 });

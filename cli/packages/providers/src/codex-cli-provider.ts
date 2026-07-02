@@ -10,6 +10,9 @@
 
 import { spawn, ChildProcess, execFile } from 'child_process';
 import { createInterface } from 'readline';
+import { mkdtempSync, rmSync, readdirSync, lstatSync, statSync, copyFileSync, renameSync, realpathSync } from 'fs';
+import { tmpdir } from 'os';
+import { join, relative, isAbsolute, sep } from 'path';
 import { BaseProvider, BaseProviderOptions } from './base-provider.js';
 import {
   LLMProvider, LLMModel, LLMRequest, LLMResponse, LLMStreamEvent,
@@ -87,6 +90,98 @@ function calcCost(prompt: number, completion: number, pricing: { promptCostPer1k
   return { promptCost: p, completionCost: c, totalCost: p + c, currency: 'USD' };
 }
 
+// ===== F0-A (hive-flow-9331) artifact copy-back =====
+
+const ARTIFACT_ALLOWED_EXT = new Set(['.md', '.json']);
+const ARTIFACT_COPY_MAX_FILES = 200;
+const ARTIFACT_COPY_MAX_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Resolved codex sandbox plan for one spawn. For read-only-with-artifacts, codex
+ * runs in a throwaway `tempDir` (its writable workspace) and conforming outputs
+ * are promoted to the trusted `artifactDir` by copyCodexArtifactsBack().
+ */
+export interface CodexSandboxPlan {
+  sandboxMode: 'read-only' | 'workspace-write';
+  cwd?: string;
+  tempDir?: string;
+  artifactDir?: string;
+}
+
+export interface ArtifactCopyResult {
+  copied: string[];
+  skipped: Array<{ name: string; reason: string }>;
+}
+
+/**
+ * SECURITY BOUNDARY (F0-A / hive-flow-9331). codex's native OS sandbox is
+ * directory-granular and cannot enforce the read-only-with-artifacts ".md/.json
+ * only" contract, so codex writes freely inside a throwaway temp workspace and we
+ * promote ONLY conforming files into the trusted, resolved artifactDir here.
+ *
+ * FLAT-only (Codex ruling): only top-level regular files are considered, each
+ * re-validated — extension allowlist (lowercased .md/.json), no symlink source,
+ * no write THROUGH a destination symlink, separator-aware containment as a direct
+ * child of artifactDir, atomic temp+rename, and bounded file-count/bytes so a CLI
+ * child cannot fill disk through this layer. Disallowed files are skipped with an
+ * honest reason — never silently implied as persisted.
+ */
+export function copyCodexArtifactsBack(tempDir: string, artifactDir: string): ArtifactCopyResult {
+  const copied: string[] = [];
+  const skipped: Array<{ name: string; reason: string }> = [];
+
+  // Resolve a real, trusted destination directory once.
+  let realArtifactDir: string;
+  try {
+    realArtifactDir = realpathSync(artifactDir);
+    if (!statSync(realArtifactDir).isDirectory()) return { copied, skipped };
+  } catch {
+    return { copied, skipped };
+  }
+
+  let entries: string[];
+  try { entries = readdirSync(tempDir); } catch { return { copied, skipped }; }
+
+  let totalBytes = 0;
+  for (const name of entries) {
+    if (copied.length >= ARTIFACT_COPY_MAX_FILES) { skipped.push({ name, reason: 'max-file-count' }); continue; }
+    // FLAT: reject anything that is not a bare filename.
+    if (name === '.' || name === '..' || name.includes('/') || name.includes('\\')) { skipped.push({ name, reason: 'non-flat-name' }); continue; }
+    const dot = name.lastIndexOf('.');
+    const ext = dot > 0 ? name.slice(dot).toLowerCase() : '';
+    if (!ARTIFACT_ALLOWED_EXT.has(ext)) { skipped.push({ name, reason: 'disallowed-extension' }); continue; }
+
+    const srcPath = join(tempDir, name);
+    let srcStat;
+    try { srcStat = lstatSync(srcPath); } catch { skipped.push({ name, reason: 'src-stat-failed' }); continue; }
+    if (srcStat.isSymbolicLink()) { skipped.push({ name, reason: 'src-symlink' }); continue; }
+    if (!srcStat.isFile()) { skipped.push({ name, reason: 'not-regular-file' }); continue; }
+    if (totalBytes + srcStat.size > ARTIFACT_COPY_MAX_BYTES) { skipped.push({ name, reason: 'max-bytes' }); continue; }
+
+    // Separator-aware containment: dest MUST be a direct child of artifactDir.
+    const destPath = join(realArtifactDir, name);
+    const rel = relative(realArtifactDir, destPath);
+    if (rel !== name || rel === '' || rel.startsWith('..') || isAbsolute(rel) || rel.includes(sep)) {
+      skipped.push({ name, reason: 'containment-failed' }); continue;
+    }
+    // Never write THROUGH a destination symlink.
+    try { if (lstatSync(destPath).isSymbolicLink()) { skipped.push({ name, reason: 'dest-symlink' }); continue; } } catch { /* absent is fine */ }
+
+    // Atomic: copy to a unique temp in the destination dir, then rename.
+    const tmpDest = join(realArtifactDir, `.hf-artifact-tmp-${process.pid}-${copied.length}-${name}`);
+    try {
+      copyFileSync(srcPath, tmpDest);
+      renameSync(tmpDest, destPath);
+      totalBytes += srcStat.size;
+      copied.push(name);
+    } catch {
+      try { rmSync(tmpDest, { force: true }); } catch { /* best-effort */ }
+      skipped.push({ name, reason: 'copy-failed' });
+    }
+  }
+  return { copied, skipped };
+}
+
 export class CodexCLIProvider extends BaseProvider {
   readonly name: LLMProvider = 'codex-cli';
   readonly capabilities: ProviderCapabilities = {
@@ -143,10 +238,12 @@ export class CodexCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCodex(prompt, model, request.cliSandbox);
+    const plan = this.resolveCodexSandbox(request.cliSandbox);
+    const child = this.spawnCodex(prompt, model, plan);
     const rl = createInterface({ input: child.stdout! });
 
-    return new Promise<LLMResponse>((resolve, reject) => {
+    try {
+      const response = await new Promise<LLMResponse>((resolve, reject) => {
       let responseText = '';
       let usage = { input: 0, output: 0 };
       let errorMsg = '';
@@ -239,16 +336,28 @@ export class CodexCLIProvider extends BaseProvider {
         settled = true;
         reject(this.transformError(err));
       });
-    });
+      });
+      // F0-A: on SUCCESS only, promote allowed artifacts from the temp workspace.
+      if (plan.tempDir && plan.artifactDir) {
+        const copy = copyCodexArtifactsBack(plan.tempDir, plan.artifactDir);
+        response.metadata = { ...(response.metadata || {}), artifactCopyBack: copy };
+      }
+      return response;
+    } finally {
+      // Clean up the private temp workspace on every path (success/failure/timeout/abort).
+      if (plan.tempDir) { try { rmSync(plan.tempDir, { recursive: true, force: true }); } catch { /* best-effort */ } }
+    }
   }
 
   protected async *doStreamComplete(request: LLMRequest): AsyncIterable<LLMStreamEvent> {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCodex(prompt, model, request.cliSandbox);
+    const plan = this.resolveCodexSandbox(request.cliSandbox);
+    const child = this.spawnCodex(prompt, model, plan);
     const rl = createInterface({ input: child.stdout! });
 
+    let sawTurnCompleted = false; // F0-A: copy back only after a genuine turn.completed
     const queue: string[] = [];
     let done = false;
     let notify: (() => void) | null = null;
@@ -291,6 +400,7 @@ export class CodexCLIProvider extends BaseProvider {
           }
         } else if (ev.type === 'turn.completed') {
           const e = ev as CodexTurnCompleted;
+          sawTurnCompleted = true;
           if (contentBuffer.length > 0) {
             yield { type: 'content', delta: { content: contentBuffer } };
             contentBuffer = '';
@@ -321,6 +431,15 @@ export class CodexCLIProvider extends BaseProvider {
       clearTimeout(timer);
       rl.close();
       if (!done) { this.terminateChild(child); this.activeProcesses.delete(child); }
+      // F0-A: promote allowed artifacts ONLY on a genuine turn.completed; always
+      // clean up the private temp workspace (success/failure/timeout/abort).
+      if (plan.tempDir) {
+        if (sawTurnCompleted && plan.artifactDir) {
+          const copy = copyCodexArtifactsBack(plan.tempDir, plan.artifactDir);
+          if (copy.skipped.length) this.logger.debug('codex artifact copy-back skipped files', { skipped: copy.skipped });
+        }
+        try { rmSync(plan.tempDir, { recursive: true, force: true }); } catch { /* best-effort */ }
+      }
     }
   }
 
@@ -392,34 +511,34 @@ export class CodexCLIProvider extends BaseProvider {
     }
   }
 
-  private spawnCodex(prompt: string, model: LLMModel, cliSandbox?: LLMRequest['cliSandbox']): ChildProcess {
-    // F0-A (hive-flow-9331): map the agent's bridge mode to codex's NATIVE OS
-    // sandbox. Previously this hardcoded `--sandbox workspace-write` on the false
-    // assumption that "the bridge enforces its own security" — but codex executes
-    // its own file tools, which the bridge tool-gate never sees, so a read-only /
-    // read-only-with-artifacts agent could write anywhere in the repo.
-    //   full/undefined            -> workspace-write (writes in the project workspace)
-    //   read-only                 -> read-only       (reads anywhere, NO writes)
-    //   read-only-with-artifacts  -> workspace-write with cwd=artifactDir, so the
-    //                                writable workspace is the artifact dir only
-    //                                (reads remain broad). Confinement is proven by
-    //                                a live canary; see the knot.
-    // `danger-full-access` / `--dangerously-bypass-*` are NEVER emitted.
+  /**
+   * F0-A (hive-flow-9331): map the agent's bridge mode to codex's NATIVE OS sandbox.
+   *   full/undefined            -> workspace-write (writes in the project workspace)
+   *   read-only                 -> read-only       (reads anywhere, NO writes)
+   *   read-only-with-artifacts  -> workspace-write in a PRIVATE TEMP workspace
+   *        (cwd=tempDir), then copyCodexArtifactsBack() promotes only .md/.json
+   *        to the trusted artifactDir. codex's sandbox is directory-granular and
+   *        cannot enforce the .md/.json contract natively, hence temp + copy-back.
+   *   read-only-with-artifacts w/o a usable dir -> fail closed to read-only.
+   */
+  private resolveCodexSandbox(cliSandbox?: LLMRequest['cliSandbox']): CodexSandboxPlan {
     const mode = cliSandbox?.mode || 'full';
-    const artifactDir = cliSandbox?.artifactDir;
-    let sandboxMode: 'read-only' | 'workspace-write' = 'workspace-write';
-    let spawnCwd: string | undefined;
-    if (mode === 'read-only') {
-      sandboxMode = 'read-only';
-    } else if (mode === 'read-only-with-artifacts') {
-      if (artifactDir) {
-        sandboxMode = 'workspace-write';
-        spawnCwd = artifactDir;
-      } else {
-        // Artifact mode without a usable dir must fail closed to no writes.
-        sandboxMode = 'read-only';
-      }
+    if (mode === 'read-only') return { sandboxMode: 'read-only' };
+    if (mode === 'read-only-with-artifacts') {
+      const artifactDir = cliSandbox?.artifactDir;
+      if (!artifactDir) return { sandboxMode: 'read-only' }; // fail closed: no writes
+      const tempDir = mkdtempSync(join(tmpdir(), 'hf-codex-artifacts-'));
+      return { sandboxMode: 'workspace-write', cwd: tempDir, tempDir, artifactDir };
     }
+    return { sandboxMode: 'workspace-write' };
+  }
+
+  private spawnCodex(prompt: string, model: LLMModel, plan: CodexSandboxPlan): ChildProcess {
+    // F0-A (hive-flow-9331): the previous hardcoded `--sandbox workspace-write`
+    // let read-only / read-only-with-artifacts codex agents write anywhere in the
+    // repo, because codex executes its own file tools which the bridge tool-gate
+    // never sees. The sandbox mode + cwd now come from resolveCodexSandbox().
+    // `danger-full-access` / `--dangerously-bypass-*` are NEVER emitted.
     // Pass prompt via stdin (not CLI arg) to avoid:
     //  1. OS ARG_MAX limits for large prompts
     //  2. Prompt text leaking into process listings (ps aux)
@@ -428,7 +547,7 @@ export class CodexCLIProvider extends BaseProvider {
       '--skip-git-repo-check',
       '--ignore-user-config',              // Don't read ~/.codex/config.toml — bridge uses isolated config
       '--ignore-rules',                    // Don't read CLAUDE.md/AGENTS.md — prevents hive-flow circularity
-      '--sandbox', sandboxMode,            // F0-A: derived from the agent's bridge mode (above)
+      '--sandbox', plan.sandboxMode,       // F0-A: derived from the agent's bridge mode
     ];
     // Only include --model if explicitly set (not 'auto' or undefined)
     // Omitting --model lets Codex use config.toml default (typically gpt-5.5)
@@ -471,9 +590,9 @@ export class CodexCLIProvider extends BaseProvider {
       stdio: ['pipe', 'pipe', 'pipe'],
       env,
       detached: process.platform !== 'win32',
-      // F0-A: for read-only-with-artifacts, the writable workspace IS the cwd, so
-      // running codex from artifactDir confines workspace-write to it.
-      ...(spawnCwd ? { cwd: spawnCwd } : {}),
+      // F0-A: for read-only-with-artifacts, the writable workspace IS the private
+      // temp dir (plan.cwd); copyCodexArtifactsBack() promotes only .md/.json out.
+      ...(plan.cwd ? { cwd: plan.cwd } : {}),
     });
     this.activeProcesses.add(child);
     child.stdin.on('error', (err) => {
