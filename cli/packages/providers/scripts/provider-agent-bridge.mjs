@@ -5794,6 +5794,11 @@ async function main() {
 
   let result;
   try {
+    // F0-A (hive-flow-9331): thread the agent's persisted bridge mode + artifactDir
+    // so CLI providers confine themselves via their native sandbox flags. Reuses
+    // the vetted reader (legacy => full, invalid artifactDir => read-only fail-closed).
+    // API/HTTP providers ignore cliSandbox — their tools are already bridge-gated.
+    const agentModeInfo = bridgeReadAgentMode();
     const request = {
       messages: messages.map((m) => ({
         role: m.role,
@@ -5805,6 +5810,10 @@ async function main() {
       })),
       model: agent.resolvedModel || defaults[providerName],
       timeout: parsedTimeout || undefined,
+      cliSandbox: {
+        mode: agentModeInfo.mode,
+        ...(agentModeInfo.artifactDir ? { artifactDir: agentModeInfo.artifactDir } : {}),
+      },
     };
 
     // Phase 2 re-trim: correct context limits for OpenRouter dynamic models

@@ -583,6 +583,102 @@ describe('CodexCLIProvider', () => {
     mockChild.emit('close', 0);
   });
 
+  // F0-A (hive-flow-9331): CLI providers must map the agent's bridge mode to
+  // codex's native OS sandbox instead of always running --sandbox workspace-write.
+  const codexCleanup = (mockChild: MockChildProcess) => {
+    mockChild.stdout.emit('data', Buffer.from(
+      JSON.stringify({ type: 'item.completed', item: { type: 'agent_message', text: 'ok' } }) + '\n',
+    ));
+    mockChild.stdout.emit('data', Buffer.from(
+      JSON.stringify({ type: 'turn.completed', usage: { input_tokens: 1, output_tokens: 1 } }) + '\n',
+    ));
+    mockChild.emit('close', 0);
+  };
+
+  it('full mode -> --sandbox workspace-write, no cwd override', async () => {
+    mockBinaryFound('codex');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'full' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    const opts = mockSpawn.mock.calls[0][2];
+    expect(args[args.indexOf('--sandbox') + 1]).toBe('workspace-write');
+    expect(opts.cwd).toBeUndefined();
+    codexCleanup(mockChild);
+  });
+
+  it('undefined cliSandbox -> defaults to workspace-write (back-compat)', async () => {
+    mockBinaryFound('codex');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    provider.complete({ messages: [{ role: 'user', content: 'test' }] });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    expect(args[args.indexOf('--sandbox') + 1]).toBe('workspace-write');
+    codexCleanup(mockChild);
+  });
+
+  it('read-only mode -> --sandbox read-only, no cwd override', async () => {
+    mockBinaryFound('codex');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    const opts = mockSpawn.mock.calls[0][2];
+    expect(args[args.indexOf('--sandbox') + 1]).toBe('read-only');
+    expect(opts.cwd).toBeUndefined();
+    codexCleanup(mockChild);
+  });
+
+  it('read-only-with-artifacts + artifactDir -> workspace-write confined via cwd=artifactDir', async () => {
+    mockBinaryFound('codex');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    provider.complete({
+      messages: [{ role: 'user', content: 'test' }],
+      cliSandbox: { mode: 'read-only-with-artifacts', artifactDir: '/tmp/hf-artifacts-xyz' },
+    });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    const opts = mockSpawn.mock.calls[0][2];
+    expect(args[args.indexOf('--sandbox') + 1]).toBe('workspace-write');
+    expect(opts.cwd).toBe('/tmp/hf-artifacts-xyz');
+    codexCleanup(mockChild);
+  });
+
+  it('read-only-with-artifacts WITHOUT artifactDir -> fail-closed to read-only, no cwd', async () => {
+    mockBinaryFound('codex');
+    await provider.initialize();
+    const mockChild = createMockChild();
+    mockSpawn.mockReturnValue(mockChild);
+    provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only-with-artifacts' } });
+    const args = mockSpawn.mock.calls[0][1] as string[];
+    const opts = mockSpawn.mock.calls[0][2];
+    expect(args[args.indexOf('--sandbox') + 1]).toBe('read-only');
+    expect(opts.cwd).toBeUndefined();
+    codexCleanup(mockChild);
+  });
+
+  it('NEVER emits danger-full-access or a bypass flag in any mode', async () => {
+    mockBinaryFound('codex');
+    await provider.initialize();
+    for (const cliSandbox of [
+      { mode: 'full' as const },
+      { mode: 'read-only' as const },
+      { mode: 'read-only-with-artifacts' as const, artifactDir: '/tmp/hf-a' },
+    ]) {
+      const mockChild = createMockChild();
+      mockSpawn.mockReturnValue(mockChild);
+      provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox });
+      const args = mockSpawn.mock.calls[mockSpawn.mock.calls.length - 1][1] as string[];
+      expect(args).not.toContain('danger-full-access');
+      expect(args.some((a) => /dangerously-bypass/.test(a))).toBe(false);
+      codexCleanup(mockChild);
+    }
+  });
+
   it('includes --model flag when model is explicitly set', async () => {
     mockBinaryFound('codex');
     provider = new CodexCLIProvider({

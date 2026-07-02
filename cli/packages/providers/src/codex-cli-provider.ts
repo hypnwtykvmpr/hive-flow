@@ -143,7 +143,7 @@ export class CodexCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCodex(prompt, model);
+    const child = this.spawnCodex(prompt, model, request.cliSandbox);
     const rl = createInterface({ input: child.stdout! });
 
     return new Promise<LLMResponse>((resolve, reject) => {
@@ -246,7 +246,7 @@ export class CodexCLIProvider extends BaseProvider {
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
-    const child = this.spawnCodex(prompt, model);
+    const child = this.spawnCodex(prompt, model, request.cliSandbox);
     const rl = createInterface({ input: child.stdout! });
 
     const queue: string[] = [];
@@ -392,7 +392,34 @@ export class CodexCLIProvider extends BaseProvider {
     }
   }
 
-  private spawnCodex(prompt: string, model: LLMModel): ChildProcess {
+  private spawnCodex(prompt: string, model: LLMModel, cliSandbox?: LLMRequest['cliSandbox']): ChildProcess {
+    // F0-A (hive-flow-9331): map the agent's bridge mode to codex's NATIVE OS
+    // sandbox. Previously this hardcoded `--sandbox workspace-write` on the false
+    // assumption that "the bridge enforces its own security" — but codex executes
+    // its own file tools, which the bridge tool-gate never sees, so a read-only /
+    // read-only-with-artifacts agent could write anywhere in the repo.
+    //   full/undefined            -> workspace-write (writes in the project workspace)
+    //   read-only                 -> read-only       (reads anywhere, NO writes)
+    //   read-only-with-artifacts  -> workspace-write with cwd=artifactDir, so the
+    //                                writable workspace is the artifact dir only
+    //                                (reads remain broad). Confinement is proven by
+    //                                a live canary; see the knot.
+    // `danger-full-access` / `--dangerously-bypass-*` are NEVER emitted.
+    const mode = cliSandbox?.mode || 'full';
+    const artifactDir = cliSandbox?.artifactDir;
+    let sandboxMode: 'read-only' | 'workspace-write' = 'workspace-write';
+    let spawnCwd: string | undefined;
+    if (mode === 'read-only') {
+      sandboxMode = 'read-only';
+    } else if (mode === 'read-only-with-artifacts') {
+      if (artifactDir) {
+        sandboxMode = 'workspace-write';
+        spawnCwd = artifactDir;
+      } else {
+        // Artifact mode without a usable dir must fail closed to no writes.
+        sandboxMode = 'read-only';
+      }
+    }
     // Pass prompt via stdin (not CLI arg) to avoid:
     //  1. OS ARG_MAX limits for large prompts
     //  2. Prompt text leaking into process listings (ps aux)
@@ -401,7 +428,7 @@ export class CodexCLIProvider extends BaseProvider {
       '--skip-git-repo-check',
       '--ignore-user-config',              // Don't read ~/.codex/config.toml — bridge uses isolated config
       '--ignore-rules',                    // Don't read CLAUDE.md/AGENTS.md — prevents hive-flow circularity
-      '--sandbox', 'workspace-write',      // Allow writes within project dir — bridge enforces its own security
+      '--sandbox', sandboxMode,            // F0-A: derived from the agent's bridge mode (above)
     ];
     // Only include --model if explicitly set (not 'auto' or undefined)
     // Omitting --model lets Codex use config.toml default (typically gpt-5.5)
@@ -444,6 +471,9 @@ export class CodexCLIProvider extends BaseProvider {
       stdio: ['pipe', 'pipe', 'pipe'],
       env,
       detached: process.platform !== 'win32',
+      // F0-A: for read-only-with-artifacts, the writable workspace IS the cwd, so
+      // running codex from artifactDir confines workspace-write to it.
+      ...(spawnCwd ? { cwd: spawnCwd } : {}),
     });
     this.activeProcesses.add(child);
     child.stdin.on('error', (err) => {

@@ -206,6 +206,16 @@ export interface LLMRequest {
   // Request metadata
   requestId?: string;
   metadata?: Record<string, unknown>;
+
+  // CLI-provider sandbox confinement (F0-A / hive-flow-9331): the agent's bridge
+  // mode + artifactDir, threaded so CLI providers (codex/cursor/gemini) map it to
+  // their NATIVE sandbox flags instead of running unconfined. Ignored by
+  // API/HTTP providers, whose tool calls are already gated by the bridge.
+  cliSandbox?: {
+    mode: 'full' | 'read-only' | 'read-only-with-artifacts';
+    /** Absolute writable dir; present only for read-only-with-artifacts. */
+    artifactDir?: string;
+  };
 }
 
 export interface LLMResponse {
