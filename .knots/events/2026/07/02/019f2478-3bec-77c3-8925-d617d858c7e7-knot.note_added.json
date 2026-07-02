@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2478-3bec-77c3-8925-d617d858c7e7",
+  "occurred_at": "2026-07-02T20:14:47.276505Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT CHECK: remote main already contains tagged commit a015f572aaac1bf74d409723647af7c825c73a1e and local main equals origin/main. Rechecked branch containment, node --check .claude/helpers/sentinel-recovery.cjs, and .audit/private-guard.sh. Late provider verifier task-cf0bfea9-2e73-4dc3-8b38-57ffe53a13fd completed after implementation review; Codex reviewed it and its 'must-fix' items are non-blocking cleanup/test-hardening already covered by Claude's non-blocking notes: unused isStale, unreachable heartbeat-stale reason, and direct EPERM regression coverage. They do not reopen the safety property: ESRCH-only-dead, EPERM/other alive, live PID preserved regardless of stale heartbeat.",
+    "datetime": "2026-07-02T20:14:47.276505Z",
+    "entry_id": "019f2478-3bec-77c3-8925-d6054ffc8036",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

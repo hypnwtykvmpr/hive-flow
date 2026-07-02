@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2478-8df1-77b1-b41c-7618742b11d0",
+  "occurred_at": "2026-07-02T20:15:08.273235Z",
+  "knot_id": "hive-flow-f904",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "REMOTE CI SIGNAL: gh run list found no Actions runs for shipped SHA a015f572aaac1bf74d409723647af7c825c73a1e. Existing listed failures are older main SHAs and not f904. Shipment is based on remote main equality plus the landed local gates already recorded.",
+    "datetime": "2026-07-02T20:15:08.273235Z",
+    "entry_id": "019f2478-8df1-77b1-b41c-760fe17dc1fe",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
