@@ -14,8 +14,13 @@ const ENFORCEMENT_DIR = join(TEST_DIR, 'enforcement');
 describe('Enforcement Wiring (H3.1)', () => {
   // --- MCP Tool Registration ---
   describe('MCP tool registration', () => {
-    it('workflowEnforcerTools exports 3 tools', () => {
-      expect(workflowEnforcerTools).toHaveLength(3);
+    it('workflowEnforcerTools exports 4 tools', () => {
+      expect(workflowEnforcerTools).toHaveLength(4);
+    });
+
+    it('exports enforcement_ladder_status tool', () => {
+      const tool = workflowEnforcerTools.find(t => t.name === 'enforcement_ladder_status');
+      expect(tool).toBeDefined();
     });
 
     it('exports workflow_enforcer_assess tool', () => {

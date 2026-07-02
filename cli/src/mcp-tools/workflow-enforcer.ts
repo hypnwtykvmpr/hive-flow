@@ -658,7 +658,8 @@ const overrideTool: MCPTool = {
 
 const statusTool: MCPTool = {
   name: 'workflow_enforcer_status',
-  description: 'Return current enforcement state and optional recent audit entries',
+  description:
+    'Return current enforcement state: the workflow task-COMPLEXITY assessment (hasState/state) AND the effective escalation-LADDER level (enforcementLadder) that actually gates provider-bridge writes/exec/fetch at RESTRICTED+ and MCP tools. hasState:false means only that no complexity assessment ran — it does NOT mean writes are unblocked; always check enforcementLadder.effectiveLevel. Optionally includes recent audit entries.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -667,15 +668,20 @@ const statusTool: MCPTool = {
     },
   },
   category: 'workflow',
-  tags: ['enforcement', 'status'],
+  tags: ['enforcement', 'status', 'ladder'],
   handler: async (input) => {
     const includeAudit = input.includeAudit as boolean | undefined;
     const auditLimit = (input.auditLimit as number) || 10;
 
     const state = loadEnforcementState();
+    // F0-B (hive-flow-6f73): always surface the escalation-ladder breakdown here
+    // too, so a caller that treats workflow_enforcer_status as "the" enforcement
+    // state can no longer be misled by hasState:false while the bridge blocks
+    // writes at RESTRICTED+. `enforcement_ladder_status` remains the focused tool.
     const result: Record<string, unknown> = {
       hasState: !!state,
       state: state || null,
+      enforcementLadder: getEnforcementLevelBreakdown(),
     };
 
     if (includeAudit) {

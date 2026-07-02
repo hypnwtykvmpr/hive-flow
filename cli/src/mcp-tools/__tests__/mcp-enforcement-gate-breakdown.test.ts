@@ -23,6 +23,7 @@ import { join } from 'path';
 
 import { getEnforcementLevel, getEnforcementLevelBreakdown, levelName } from '../mcp-enforcement-gate.js';
 import { operatorSessionEnvKeys } from '../session-id.js';
+import { workflowEnforcerTools } from '../workflow-enforcer.js';
 
 function signEnvelope(state: Record<string, unknown>, key: string): string {
   return JSON.stringify({
@@ -207,6 +208,26 @@ describe('getEnforcementLevelBreakdown — the F0-B scenario (RESTRICTED+ visibi
     expect(bySccope.session).toBe(3);
     // WARNED + RESTRICTED + HALTED descriptions all present at level 3.
     expect(b.blocks.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('workflow_enforcer_status surfaces the ladder (F0-B end-to-end)', () => {
+  it('includes enforcementLadder reflecting a RESTRICTED global scope, preserving existing fields', async () => {
+    const sb = makeSandbox();
+    writeGlobalState(sb, 2);
+    const tool = workflowEnforcerTools.find((t) => t.name === 'workflow_enforcer_status')!;
+    expect(tool).toBeDefined();
+    const res = (await tool.handler({})) as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(res.content[0].text) as Record<string, unknown>;
+    // The formerly-misleading surface now reveals the write-blocking level.
+    expect(parsed).toHaveProperty('enforcementLadder');
+    const ladder = parsed.enforcementLadder as { effectiveLevel: number; effectiveLevelName: string; blocks: string[] };
+    expect(ladder.effectiveLevel).toBe(2);
+    expect(ladder.effectiveLevelName).toBe('RESTRICTED');
+    expect(ladder.blocks.some((x) => /provider-bridge write/i.test(x))).toBe(true);
+    // Existing complexity-axis fields preserved (back-compat).
+    expect(parsed).toHaveProperty('hasState');
+    expect(parsed).toHaveProperty('state');
   });
 });
 
