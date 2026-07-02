@@ -1,0 +1,15 @@
+{
+  "event_id": "019f214f-ab10-78b3-8943-2f70ebda90bc",
+  "occurred_at": "2026-07-02T05:31:37.104259Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS by Codex 2026-07-02. Final reviewed combined 4-file slice: .claude/settings.json, CLAUDE.md, scripts/deferral-ledger.cjs, tests/deferral-ledger.test.mjs. Acceptance met: record enforces six fields and deferred state; digest surfaces deferred records; check-note warns on uncited deferral prose; retro-filled knots verified; tests cover stub-kno record/digest/check-note/hook adapter; no protected helper/flow-watchdog edits. Gates green: node --check, JSON parse, node --test tests/deferral-ledger.test.mjs 26/26, settings-hook-wiring 18/18, npm --prefix cli run build, git diff --check, live digest/check-note smoke. Passing to shipment and landing.",
+    "datetime": "2026-07-02T05:31:37.104259Z",
+    "entry_id": "019f214f-ab10-78b3-8943-2f6b2440a616",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2151-ec51-74d0-bb43-e175a890ed89",
+  "occurred_at": "2026-07-02T05:34:04.88161Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT by Codex 2026-07-02. Landed reviewed four-file slice as 9383f6b4161e9960578149bf6a5968ea51c23371 and pushed to origin/main. Exact files: .claude/settings.json, CLAUDE.md, scripts/deferral-ledger.cjs, tests/deferral-ledger.test.mjs. At-SHA checks: HEAD==origin/main==9383f6b4161e9960578149bf6a5968ea51c23371; git show file list matches verified scope; tracked tree clean aside from pre-existing untracked local artifacts.",
+    "datetime": "2026-07-02T05:34:04.88161Z",
+    "entry_id": "019f2151-ec51-74d0-bb43-e1674295fb08",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

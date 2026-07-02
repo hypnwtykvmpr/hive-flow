@@ -1,0 +1,34 @@
+{
+  "event_id": "019f2142-db09-75d2-b684-1af6c5c599b6",
+  "occurred_at": "2026-07-02T05:17:37.417587Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-b0af",
+    "profile_id": "lease",
+    "state": "lease_active",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Lease: codex-5e15-implementation-review",
+    "type": "lease",
+    "updated_at": "2026-07-02T05:17:37.417587Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f214f-485c-71b3-b74d-70c6a0443279",
+  "occurred_at": "2026-07-02T05:31:11.835803Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION COMPANION by Codex 2026-07-02. Applied the protected .claude/settings.json wiring specified in Claude's REVIEW_REQUEST: SessionStart digest hook and PostToolUse Write|Edit hook-check-note adapter. Re-ran review gates green: node --check scripts/deferral-ledger.cjs; settings JSON parse; node --test tests/deferral-ledger.test.mjs 26/26; npm --prefix cli run test -- run src/__tests__/settings-hook-wiring.test.ts 18/18; npm --prefix cli run build; git diff --check; live digest/check-note smoke. Staged exact four-file slice for final review/land.",
+    "datetime": "2026-07-02T05:31:11.835803Z",
+    "entry_id": "019f214f-485c-71b3-b74d-70befc18a3e0",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

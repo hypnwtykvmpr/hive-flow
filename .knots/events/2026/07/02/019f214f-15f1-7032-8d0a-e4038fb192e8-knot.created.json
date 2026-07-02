@@ -1,0 +1,17 @@
+{
+  "event_id": "019f214f-15f1-7032-8d0a-e4038fb192e8",
+  "occurred_at": "2026-07-02T05:30:58.929517Z",
+  "knot_id": "hive-flow-d8ce",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: codex-5e15-protected-settings-companion",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}

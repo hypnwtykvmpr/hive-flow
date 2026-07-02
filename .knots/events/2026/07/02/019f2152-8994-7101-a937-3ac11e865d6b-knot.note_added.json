@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2152-8994-7101-a937-3ac11e865d6b",
+  "occurred_at": "2026-07-02T05:34:45.140037Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS by Codex 2026-07-02. Verified shipped remote_main at 9383f6b4161e9960578149bf6a5968ea51c23371: HEAD==origin/main; commit is tagged on knot; git show scope is exactly .claude/settings.json, CLAUDE.md, scripts/deferral-ledger.cjs, tests/deferral-ledger.test.mjs; tracked tree clean aside from pre-existing untracked local artifacts; earlier gates remain green for this exact slice.",
+    "datetime": "2026-07-02T05:34:45.140037Z",
+    "entry_id": "019f2152-8994-7101-a937-3abce46eb36b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

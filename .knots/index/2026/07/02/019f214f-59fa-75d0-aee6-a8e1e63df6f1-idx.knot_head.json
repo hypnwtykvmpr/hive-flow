@@ -1,0 +1,21 @@
+{
+  "event_id": "019f214f-59fa-75d0-aee6-a8e1e63df6f1",
+  "occurred_at": "2026-07-02T05:31:16.346086Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-d8ce",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-5e15-protected-settings-companion",
+    "type": "lease",
+    "updated_at": "2026-07-02T05:31:16.346086Z",
+    "workflow_id": "lease_sdlc"
+  }
+}
