@@ -124,6 +124,16 @@
         ]
       },
       {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/deferral-ledger.cjs hook-check-note",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
         "matcher": "mcp__filesystem__write_file|mcp__filesystem__edit_file|mcp__filesystem__move_file|mcp__filesystem__rename_file|mcp__filesystem__copy_file|mcp__filesystem__create_directory|mcp__filesystem__delete_file",
         "hooks": [
           {
@@ -407,6 +417,15 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/cli/bin/cli.js providers hook status",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/deferral-ledger.cjs digest",
             "timeout": 5000
           }
         ]
