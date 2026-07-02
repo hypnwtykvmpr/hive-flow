@@ -29,3 +29,21 @@ if (!existsSync(sourceDir)) {
 
 rmSync(targetDir, { recursive: true, force: true });
 copyRecursive(sourceDir, targetDir);
+
+// hive-flow-8b69 Slice 3: non-.ts source files that tsc does not emit but that the
+// compiled dist must contain at runtime. The shared CommonJS liveness source of truth
+// backs the ESM re-export in `progress-authority-classifier.js`
+// (`export { ... } from './hiveflow-task-liveness.cjs'`), so it must sit next to the
+// compiled classifier under `dist/src/progress/`.
+const extraFileCopies = [
+  ['src/progress/hiveflow-task-liveness.cjs', 'dist/src/progress/hiveflow-task-liveness.cjs'],
+];
+for (const [sourceRel, targetRel] of extraFileCopies) {
+  const source = join(packageRoot, sourceRel);
+  const target = join(packageRoot, targetRel);
+  if (!existsSync(source)) {
+    throw new Error(`extra build source not found: ${source}`);
+  }
+  mkdirSync(dirname(target), { recursive: true });
+  copyFileSync(source, target);
+}

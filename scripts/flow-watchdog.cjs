@@ -1696,158 +1696,24 @@ function staleIdleEventReady(state, event, now, idleStallMs) {
   return now - prior >= idleStallMs;
 }
 
-function parseEventLine(line) {
-  try {
-    const parsed = JSON.parse(line);
-    return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch {
-    return null;
-  }
+// hive-flow-8b69 Slice 3: the task-liveness classifier is no longer implemented here.
+// It is consolidated onto the shared source of truth
+// `cli/src/progress/hiveflow-task-liveness.cjs` (also re-exported by
+// progress-authority-classifier.ts for MCP/CLI consumers). Require the tracked SOURCE
+// `.cjs` directly — synchronous, no build dependency. Slice 4 wires this into `runOnce`
+// with persisted prior observations, passing `idleStallMs: DEFAULT_IDLE_STALL_MS`
+// explicitly at the call site to preserve the watchdog's effective 8-minute threshold.
+function resolveSharedLivenessModule() {
+  // This file runs from exactly one of two locations: its tracked home (`scripts/`,
+  // where `scripts/..` is the repo root) or the installed runtime copy
+  // (`.hive-flow/data/tmux-router/`, where `ROOT` is the repo root). Prefer the
+  // installed-runtime path so behavior is unchanged when installed.
+  const rel = path.join('cli', 'src', 'progress', 'hiveflow-task-liveness.cjs');
+  const runtimePath = path.join(ROOT, rel);
+  if (fs.existsSync(runtimePath)) return runtimePath;
+  return path.join(__dirname, '..', rel);
 }
-
-function readTaskEvents(eventsFile) {
-  try {
-    const raw = fs.readFileSync(eventsFile, 'utf8');
-    return raw.split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map(parseEventLine)
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-function taskEventTimestampMs(event) {
-  const parsed = Date.parse(String(event?.ts || ''));
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function taskEventIteration(event) {
-  const value = Number(event?.meta?.iteration);
-  return Number.isFinite(value) ? value : null;
-}
-
-function hasProviderRequestInFlight(events) {
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (!event || (event.event !== 'provider_request_start'
-      && event.event !== 'provider_request_end'
-      && event.event !== 'provider_error')) {
-      continue;
-    }
-    if (event.event === 'provider_request_start') return true;
-    return false;
-  }
-  return false;
-}
-
-function classifyHiveFlowTaskLiveness({
-  tasksDir,
-  taskId,
-  nowMs = Date.now(),
-  processSnapshot = null,
-  prior = null,
-  idleStallMs = DEFAULT_IDLE_STALL_MS,
-  minStableObservations = 3,
-} = {}) {
-  const normalizedTaskId = String(taskId || '').trim();
-  const root = String(tasksDir || path.join(ROOT, '.hive-flow', 'tasks'));
-  const resultFile = path.join(root, `${normalizedTaskId}.result.json`);
-  const eventsFile = path.join(root, `${normalizedTaskId}.events.jsonl`);
-  const resultPresent = normalizedTaskId ? fs.existsSync(resultFile) : false;
-  let eventSize = 0;
-  let eventMtimeMs = 0;
-  try {
-    const stat = fs.statSync(eventsFile);
-    eventSize = stat.size;
-    eventMtimeMs = stat.mtimeMs;
-  } catch {
-    // Missing event logs are a lack of evidence, not hung evidence.
-  }
-
-  const events = normalizedTaskId ? readTaskEvents(eventsFile) : [];
-  const lastEvent = events.length ? events[events.length - 1] : null;
-  const lastEventTs = lastEvent && typeof lastEvent.ts === 'string' ? lastEvent.ts : '';
-  const lastEventMs = lastEvent ? taskEventTimestampMs(lastEvent) : 0;
-  const providerRequestInFlight = hasProviderRequestInFlight(events);
-
-  const priorEventSize = Number(prior?.eventSize || 0);
-  const priorEventTs = String(prior?.lastEventTs || '');
-  const eventAdvanced = Boolean(prior)
-    && (eventSize > priorEventSize || (lastEventTs && lastEventTs !== priorEventTs && lastEventMs > Date.parse(priorEventTs || '')));
-  const processAlive = processSnapshot?.alive === true;
-  const processDead = processSnapshot?.alive === false;
-  const currentCpu = Number(processSnapshot?.cpuTimeMs);
-  const priorCpu = Number(prior?.processSnapshot?.cpuTimeMs);
-  const processCpuAdvanced = Boolean(prior)
-    && Number.isFinite(currentCpu)
-    && Number.isFinite(priorCpu)
-    && currentCpu > priorCpu;
-  const lastProgressMs = lastEventMs || eventMtimeMs || 0;
-  const silentForMs = lastProgressMs > 0 ? Math.max(0, nowMs - lastProgressMs) : null;
-  const noProgressThisObservation = Boolean(prior) && !eventAdvanced && !processCpuAdvanced && !resultPresent;
-  const stableObservationCount = noProgressThisObservation
-    ? Number(prior?.stableObservationCount || 0) + 1
-    : 0;
-
-  const signals = {
-    resultPresent,
-    eventFilePresent: eventSize > 0,
-    eventAdvanced,
-    providerRequestInFlight,
-    processAlive,
-    processDead,
-    processCpuAdvanced,
-    silentForMs,
-    stableObservationCount,
-  };
-
-  const nextPrior = {
-    observedAtMs: nowMs,
-    eventSize,
-    lastEventTs,
-    processSnapshot,
-    stableObservationCount,
-  };
-
-  function verdict(status, reason) {
-    return {
-      status,
-      reason,
-      hung: false,
-      shouldTerminate: false,
-      taskId: normalizedTaskId,
-      signals,
-      nextPrior,
-    };
-  }
-
-  if (!normalizedTaskId) {
-    return verdict('unknown', 'No task id was supplied; liveness cannot be classified.');
-  }
-  if (resultPresent) {
-    return verdict('completed', 'Result file is present; task completed.');
-  }
-  if (eventAdvanced || processCpuAdvanced) {
-    return verdict('progressing', 'Event log or process CPU advanced since the previous observation.');
-  }
-  if (providerRequestInFlight) {
-    return verdict('in_flight', 'A provider request is in flight; elapsed time alone is not hung evidence.');
-  }
-  if (processDead) {
-    return verdict('orphaned', 'Process is not alive and no result file exists; recovery/reconciliation is needed.');
-  }
-  if (!prior) {
-    return verdict('observing', 'First observation only; repeated no-progress evidence is required.');
-  }
-  if (stableObservationCount >= minStableObservations
-    && typeof silentForMs === 'number'
-    && silentForMs >= idleStallMs) {
-    return verdict('stalled_review', 'Repeated no-progress observations with no result file require manual review, not elapsed-time termination.');
-  }
-  return verdict('observing', 'No conclusive stall evidence yet; keep observing.');
-}
+const { classifyHiveFlowTaskLiveness } = require(resolveSharedLivenessModule());
 
 function pruneMissingStopHookTimers(state, observedKeys) {
   for (const key of state.idleSince.keys()) {
