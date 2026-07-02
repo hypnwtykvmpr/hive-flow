@@ -79,14 +79,20 @@ function isHiveActive(hiveId) {
 /**
  * Check if a PID is alive via process.kill(pid, 0).
  */
-function isPidAlive(pid) {
-  if (!pid || typeof pid !== 'number' || pid <= 0) return false;
+function pidLiveness(pid) {
+  const normalized = Number(pid);
+  if (!Number.isInteger(normalized) || normalized <= 1) return 'missing';
   try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
+    process.kill(normalized, 0);
+    return 'alive';
+  } catch (err) {
+    if (err && err.code === 'ESRCH') return 'dead';
+    return 'alive';
   }
+}
+
+function isPidAlive(pid) {
+  return pidLiveness(pid) === 'alive';
 }
 
 function sanitizeHiveId(hiveId) {
@@ -184,15 +190,10 @@ function spawnDetachedWatcher(hiveId, _legacyTmuxPane = null, ownerSessionId = n
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
-function main() {
+function recoverSentinelWatchers() {
   const watcherFiles = findWatcherFiles();
   if (watcherFiles.length === 0) {
-    process.stdout.write(JSON.stringify({}));
-    return;
+    return {};
   }
 
   const now = Date.now();
@@ -209,9 +210,10 @@ function main() {
     const isStale = !Number.isFinite(updatedAtMs) || (now - updatedAtMs) > HEARTBEAT_STALE_MS;
 
     // Check PID liveness
-    const pidAlive = isPidAlive(data.watcherPid);
+    const pidState = pidLiveness(data.watcherPid);
+    const pidAlive = pidState === 'alive';
 
-    if (!isStale && pidAlive) {
+    if (pidAlive) {
       aliveWatchers.push({ hiveId });
       continue;
     }
@@ -228,7 +230,7 @@ function main() {
     // Dead watcher + active hive — needs recovery
     const entry = {
       hiveId,
-      reason: !pidAlive ? 'pid-dead' : 'heartbeat-stale',
+      reason: pidState === 'dead' || pidState === 'missing' ? 'pid-dead' : 'heartbeat-stale',
       heartbeatAgeMs: heartbeatAge,
       oldPid: data.watcherPid || null,
       respawned: false,
@@ -247,8 +249,7 @@ function main() {
   }
 
   if (deadWatchers.length === 0) {
-    process.stdout.write(JSON.stringify({}));
-    return;
+    return {};
   }
 
   // Build context message for the advocate
@@ -273,15 +274,26 @@ function main() {
     context += `\nManual respawn needed for: ${ids}. Use hive_poll_workers to check status, or spawn new watchers.`;
   }
 
-  process.stdout.write(JSON.stringify({
+  return {
     hookSpecificOutput: {
       hookEventName: 'SessionStart',
       additionalContext: context,
     },
-  }));
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+function main() {
+  process.stdout.write(JSON.stringify(recoverSentinelWatchers()));
 }
 
 module.exports = {
+  isPidAlive,
+  pidLiveness,
+  recoverSentinelWatchers,
   spawnDetachedWatcher,
 };
 
