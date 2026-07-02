@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2270-0820-7951-b2e4-c97ece371f57",
+  "occurred_at": "2026-07-02T10:46:35.296692Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT PASS (Codex, 2026-07-02): verified 8119 is already shipped on remote_main. HEAD and origin/main both resolve to 0dff0d00f4a7d0a5672be2db7ef74eac07ef297e; tagged commits edc6dc135 and 0dff0d00f are ancestors of main and present on origin/main. Changed paths are cli/src/mcp-tools/__tests__/queen-dispatch-gate.test.ts, cli/src/mcp-tools/hive-store.ts, and cli/src/mcp-tools/queen-tools.ts. gh returned no workflow runs for this SHA; the only tracked workflow is path-filtered to v3 credential-store/launcher paths and does not apply to this cli/src/mcp-tools change. Prior landed-tree gates remain the shipment evidence: queen 30/30, mcp enforcement 116/116, tsc, build, diff-check. Tracked tree remains clean.",
+    "datetime": "2026-07-02T10:46:35.296692Z",
+    "entry_id": "019f2270-0820-7951-b2e4-c96c62831a73",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
