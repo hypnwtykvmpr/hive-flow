@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2460-0ecd-7a20-83bc-a00656bfe1ad",
+  "occurred_at": "2026-07-02T19:48:22.861275Z",
+  "knot_id": "hive-flow-d060",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Branch: knots-d060-hive-cleanup-terminal-livepid; Commit: b3bd813f488057d7f8c4f398cf0bb418b2934afb; Review focus: terminal tracking precedence, live PID past-deadline preservation, ESRCH dead-PID cleanup, H4/H5/H7 regression safety.",
+    "datetime": "2026-07-02T19:48:22.861275Z",
+    "entry_id": "019f2460-0ecd-7a20-83bc-9ff61d084055",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

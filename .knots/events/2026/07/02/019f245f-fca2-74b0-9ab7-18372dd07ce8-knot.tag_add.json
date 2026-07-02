@@ -1,0 +1,9 @@
+{
+  "event_id": "019f245f-fca2-74b0-9ab7-18372dd07ce8",
+  "occurred_at": "2026-07-02T19:48:18.210283Z",
+  "knot_id": "hive-flow-d060",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-d060-hive-cleanup-terminal-livepid"
+  }
+}
