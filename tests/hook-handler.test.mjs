@@ -670,7 +670,7 @@ describe('hook-handler.cjs', () => {
   // 19. enforcement-reset-check — emits empty JSON when prompt has no token
   // =========================================================================
   describe('enforcement-reset-check', () => {
-    it('exits 0 and emits empty JSON when no /enforcement-reset token in prompt', () => {
+    it('exits 0 and emits empty JSON when no /reset-enforcement token in prompt', () => {
       const res = runHandler('enforcement-reset-check', {
         cwd: tmpDir,
         stdinData: JSON.stringify({ user_prompt: 'just a normal message' }),

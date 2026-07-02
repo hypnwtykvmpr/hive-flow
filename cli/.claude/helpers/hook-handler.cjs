@@ -582,7 +582,7 @@ const handlers = {
 
     // Auto-reset enforcement on new session start — only WARNED/RESTRICTED.
     // HALTED (level 3) is PRESERVED across compaction/session restarts.
-    // Only a human /enforcement-reset can clear HALTED.
+    // Only a human /reset-enforcement can clear HALTED.
     // Reset only the effective project/global scope reported by enforcement.cjs;
     // child agent/hive/session scopes and roles must survive session restore.
     try {
@@ -598,7 +598,7 @@ const handlers = {
           : 'global';
         console.log(`[ENFORCEMENT] Auto-reset from level ${status.level} to NORMAL (${scopeLabel} WARNED/RESTRICTED cleared, child scopes preserved, HALTED preserved)`);
       } else if (status && status.level >= 3) {
-        console.log(`[ENFORCEMENT] Level ${status.level} (HALTED) preserved across session restore — human /enforcement-reset required`);
+        console.log(`[ENFORCEMENT] Level ${status.level} (HALTED) preserved across session restore — human /reset-enforcement required`);
       }
     } catch { /* non-fatal — enforcement.cjs may not be available */ }
 
@@ -1222,7 +1222,7 @@ const handlers = {
 
   'enforcement-reset-check': () => {
     // HMAC-signed IPC: reads UserPromptSubmit input from stdin, checks for
-    // /enforcement-reset, signs the request with the shared HMAC key, then
+    // /reset-enforcement, signs the request with the shared HMAC key, then
     // forwards to enforcement.cjs --reset-check. Unsigned direct invocations
     // of enforcement.cjs --reset-check are rejected by enforcement.cjs.
     const crypto = require('crypto');

@@ -17,7 +17,7 @@ You are the human's advocate. Your loyalty is exclusively to the human user. You
 
 ## Hive Flow Agent Dogfooding (Human-Required)
 
-- Hive Flow provider agents are the default for delegated work. Use `agent_spawn`, `agent_task`, `agent_task_async`, `queen_mission_assign`, and related Hive Flow MCP tools whenever the task can be completed by a Hive Flow agent.
+- Hive Flow provider agents are the default for delegated work. Use `agent_spawn`, `agent_task`, `queen_mission_assign`, and related Hive Flow MCP tools whenever the task can be completed by a Hive Flow agent.
 - Claude native Task agents are FORBIDDEN when a Hive Flow agent could complete the same task. This includes audits, verification, bug-hunting, source reads, test review, documentation review, planning, and implementation slices that the provider tools can handle.
 - Native Task agents are allowed only after a real Hive Flow blocker is confirmed: missing required tool capability, permission overblock, provider outage, credential-holder outage, model/tool limitation, or a human-explicit instruction to use native agents.
 - If a Hive Flow agent is blocked by an over-restrictive permission/tool policy, stop the lane and fix the Hive Flow harness first. Do not route around the defect by burning native agents unless the task is an urgent verifier for that harness fix.
@@ -91,7 +91,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 - **Pipeline commit gate**: Stage-gated commits (implement -> verify -> test -> debug -> verify_test -> audit -> verify_audit). Blocks commit until all stages complete.
 - **HMAC-SHA256 state integrity**: All state files are signed; tampered state escalates to WARNED minimum
 - **Hang detection**: 5 consecutive denials triggers a stuck-agent warning
-- **Human-only reset**: `/enforcement-reset` (HMAC-signed IPC), `/terminate-agent`
+- **Human-only reset**: `/reset-enforcement` (HMAC-signed IPC), `/terminate-agent`
 - **Fail-closed**: Internal errors deny (never silently allow)
 - **Hook**: `enforcement.cjs` (PreToolUse on Bash/Write/Edit/MultiEdit/NotebookEdit/WebFetch/MCP filesystem tools; SubagentStart)
 
@@ -861,7 +861,7 @@ node v3/@hive-flow/cli/bin/cli.js doctor --fix
 - Memory management
 - Neural features
 - Performance tracking
-- Hive Flow provider agent execution via `agent_spawn`, `agent_task`, `agent_task_async`, queen tools, and hive-mind tools
+- Hive Flow provider agent execution via `agent_spawn`, `agent_task`, queen tools, and hive-mind tools
 
 - Keep native Task usage exceptional. If Hive Flow agents can do the work, they must do it.
 

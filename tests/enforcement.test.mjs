@@ -30,16 +30,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
 const SCRIPT = join(REPO_ROOT, '.claude/helpers/enforcement.cjs');
 const require = createRequire(import.meta.url);
+process.env.HIVE_FLOW_HOME = join(REPO_ROOT, '.hive-flow');
 const { isProtectedPath } = require(SCRIPT);
 const ENF_DIR = join(REPO_ROOT, '.hive-flow', 'enforcement');
-const GLOBAL_STATE_FILE = join(ENF_DIR, 'state.json');
+const GLOBAL_STATE_FILE = join(ENF_DIR, 'global', 'state.json');
 const PROJECT_SCOPE_ID = `project-${createHash('sha256')
   .update(REPO_ROOT)
   .digest('hex')
   .slice(0, 16)}`;
 const STATE_FILE = join(ENF_DIR, 'projects', PROJECT_SCOPE_ID, 'state.json');
 const HMAC_KEY_FILE = join(ENF_DIR, '.hmac-key');
-const VIOLATIONS_FILE = join(ENF_DIR, 'violations.jsonl');
+const VIOLATIONS_FILE = join(ENF_DIR, 'global', 'violations.jsonl');
 const GATE_FILE = join(ENF_DIR, 'verification-gate.json');
 const SWARM_DIR = join(REPO_ROOT, '.hive-flow', 'swarm');
 
@@ -166,10 +167,16 @@ function backupState() {
 }
 
 function restoreState() {
-  for (const name of ['state.json', 'violations.jsonl', 'verification-gate.json', '.hmac-key']) {
+  const rootFiles = [
+    ['state.json', GLOBAL_STATE_FILE],
+    ['violations.jsonl', VIOLATIONS_FILE],
+    ['verification-gate.json', GATE_FILE],
+    ['.hmac-key', HMAC_KEY_FILE],
+  ];
+  for (const [name, target] of rootFiles) {
     const backup = join(BACKUP_DIR, name);
-    const target = name === 'state.json' ? GLOBAL_STATE_FILE : join(ENF_DIR, name);
     if (existsSync(backup)) {
+      mkdirSync(dirname(target), { recursive: true });
       copyFileSync(backup, target);
     } else if (existsSync(target)) {
       unlinkSync(target);
@@ -1287,9 +1294,9 @@ describe('enforcement system', () => {
 
   describe('reset functionality', () => {
 
-    it('resets state via signed --reset-check with /enforcement-reset', () => {
+    it('resets state via signed --reset-check with /reset-enforcement', () => {
       setState(freshState({ level: 3, violations: 10, restrictedGroups: ['exec', 'write', 'fetch'] }));
-      const r = runResetCheck({ user_prompt: '/enforcement-reset' });
+      const r = runResetCheck({ user_prompt: '/reset-enforcement' });
       assert.ok(r.json.hookSpecificOutput?.additionalContext, 'should have additionalContext inside hookSpecificOutput');
       assert.match(r.json.hookSpecificOutput.additionalContext, /Reset complete/);
       assert.doesNotMatch(r.json.hookSpecificOutput.additionalContext, /state\.json/);
@@ -1301,7 +1308,7 @@ describe('enforcement system', () => {
       assert.deepStrictEqual(s.restrictedGroups, []);
     });
 
-    it('no-ops --reset-check without /enforcement-reset', () => {
+    it('no-ops --reset-check without /reset-enforcement', () => {
       setState(freshState({ level: 2, violations: 3 }));
       const r = runResetCheck({ user_prompt: 'please help me fix a bug' });
       assert.deepStrictEqual(r.json, {});
@@ -1311,9 +1318,9 @@ describe('enforcement system', () => {
       assert.equal(s.level, 2);
     });
 
-    it('denies unsigned --reset-check with /enforcement-reset', () => {
+    it('denies unsigned --reset-check with /reset-enforcement', () => {
       setState(freshState({ level: 3, violations: 5, restrictedGroups: ['exec', 'write', 'fetch'] }));
-      const r = runResetCheck({ user_prompt: '/enforcement-reset' }, { sign: false });
+      const r = runResetCheck({ user_prompt: '/reset-enforcement' }, { sign: false });
       assert.ok(isDeny(r.json), 'unsigned reset should be denied');
       assert.match(denyReason(r.json), /unsigned/i);
 
@@ -1325,7 +1332,7 @@ describe('enforcement system', () => {
     it('denies reset with invalid HMAC signature', () => {
       setState(freshState({ level: 3, violations: 5 }));
       const r = runResetCheck({
-        user_prompt: '/enforcement-reset',
+        user_prompt: '/reset-enforcement',
         _hmac_signature: 'a'.repeat(64),
         _hmac_timestamp: String(Date.now()),
       }, { sign: false });
@@ -1342,7 +1349,7 @@ describe('enforcement system', () => {
 
       setState(freshState({ level: 3, violations: 5 }));
       const r = runResetCheck({
-        user_prompt: '/enforcement-reset',
+        user_prompt: '/reset-enforcement',
         _hmac_signature: signature,
         _hmac_timestamp: oldTimestamp,
       }, { sign: false });
@@ -1355,7 +1362,7 @@ describe('enforcement system', () => {
         level: 3, violations: 5,
         restrictedGroups: ['exec', 'write', 'fetch'],
       }));
-      runResetCheck({ user_prompt: '/enforcement-reset' });
+      runResetCheck({ user_prompt: '/reset-enforcement' });
       const s = readState();
       assert.deepStrictEqual(s.restrictedGroups, []);
       assert.ok(s.resetAt, 'should record resetAt timestamp');
@@ -1363,7 +1370,7 @@ describe('enforcement system', () => {
 
     it('logs reset to violations file', () => {
       setState(freshState({ level: 2, violations: 3 }));
-      runResetCheck({ user_prompt: '/enforcement-reset' });
+      runResetCheck({ user_prompt: '/reset-enforcement' });
       const violations = readViolations();
       const resetEntry = violations.find(v => v.type === 'reset');
       assert.ok(resetEntry, 'should log reset violation');
@@ -1371,7 +1378,7 @@ describe('enforcement system', () => {
 
     it('logs unsigned reset attempt to violations file', () => {
       setState(freshState({ level: 2, violations: 3 }));
-      runResetCheck({ user_prompt: '/enforcement-reset' }, { sign: false });
+      runResetCheck({ user_prompt: '/reset-enforcement' }, { sign: false });
       const violations = readViolations();
       const unsignedEntry = violations.find(v => v.type === 'unsigned-reset-attempt');
       assert.ok(unsignedEntry, 'should log unsigned-reset-attempt violation');

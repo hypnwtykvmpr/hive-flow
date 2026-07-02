@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-07-01T23:28:00.515Z",
+  "syncedAt": "2026-07-02T00:08:34.130Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -12,7 +12,7 @@
     },
     {
       "name": "enforcement.cjs",
-      "sha256": "1cc5d9a650cacf7aa384f40a620a6a7e07480068e5cb88fddd51b8e2ec12b365"
+      "sha256": "61cc8dc21e89aa038964b340f0cdc857ab401c262b7f7347f7251ada7800bcf7"
     },
     {
       "name": "role-enforcement.cjs",
@@ -24,7 +24,7 @@
     },
     {
       "name": "hook-handler.cjs",
-      "sha256": "1644ce657e75e3309679fe4dc703f52222234e1fdf89bc6dbd664487d3e38198"
+      "sha256": "0451bff2a8fcf3cf97b1d97f141e29329f8c12dc7be6908a7dfdde0ddb9e483c"
     },
     {
       "name": "settings-reconciler.cjs",

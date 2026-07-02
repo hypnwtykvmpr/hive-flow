@@ -9,7 +9,7 @@
  * - Verification gate enforcement (blocks commits without verification in swarm mode)
  * - Hang detection (5 consecutive denials)
  * - HMAC-SHA256 state integrity
- * - Human-only reset (/enforcement-reset, /terminate-agent)
+ * - Human-only reset (/reset-enforcement, /terminate-agent)
  *
  * Runs as a PreToolUse hook. No LLM required — purely deterministic.
  * All state is file-based for persistence across compaction.
@@ -2826,7 +2826,7 @@ function detectCircumvention(toolName, toolInput, state) {
     if (isResetInvocationAttempt(command)) {
       return {
         circumvention: true,
-        reason: `CIRCUMVENTION: Attempted enforcement reset via Bash — resets are human-only via /enforcement-reset`,
+        reason: `CIRCUMVENTION: Attempted enforcement reset via Bash — resets are human-only via /reset-enforcement`,
         severity: 'critical',
         substrateAttack: true,
         protectedEnforcementAttack: true,
@@ -3077,7 +3077,7 @@ function checkToolRestriction(toolName, state, scope = null, toolInput = {}) {
   if (state.level >= LEVELS.HALTED) {
     return {
       allowed: false,
-      reason: `[ENFORCEMENT HALT${scopeSuffix}] All tools blocked. ${state.violations} violation(s). Contact the human operator — use /enforcement-reset or /terminate-agent to restore access.`,
+      reason: `[ENFORCEMENT HALT${scopeSuffix}] All tools blocked. ${state.violations} violation(s). Contact the human operator — use /reset-enforcement or /terminate-agent to restore access.`,
     };
   }
 
@@ -3625,7 +3625,7 @@ function clearAgentRole(agentId) {
 
 /**
  * Process --reset-check flag (UserPromptSubmit hook).
- * Checks if the user's prompt contains /enforcement-reset.
+ * Checks if the user's prompt contains /reset-enforcement.
  */
 function processResetCheck(input) {
   const prompt = input?.user_prompt || input?.prompt || '';

@@ -153,7 +153,7 @@ function processPreToolUse(input) {
 
   // Fail-closed: corrupt or unreadable state
   if (error) {
-    return makeDeny(`[PHASE ENFORCEMENT] Workflow state is ${error}. Tool blocked for safety. Use /enforcement-reset to clear.`);
+    return makeDeny(`[PHASE ENFORCEMENT] Workflow state is ${error}. Tool blocked for safety. Use /reset-enforcement to clear.`);
   }
 
   // Null phase = fail-closed (shouldn't happen with valid state)
