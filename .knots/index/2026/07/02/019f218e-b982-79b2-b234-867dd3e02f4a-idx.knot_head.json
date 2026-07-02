@@ -1,0 +1,21 @@
+{
+  "event_id": "019f218e-b982-79b2-b234-867dd3e02f4a",
+  "occurred_at": "2026-07-02T06:40:29.57071Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-ea3d",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-0bb4-replay-planning",
+    "type": "lease",
+    "updated_at": "2026-07-02T06:40:29.57071Z",
+    "workflow_id": "lease_sdlc"
+  }
+}
