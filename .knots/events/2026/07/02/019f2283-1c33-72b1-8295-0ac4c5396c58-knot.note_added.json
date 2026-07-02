@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2283-1c33-72b1-8295-0ac4c5396c58",
+  "occurred_at": "2026-07-02T11:07:25.619179Z",
+  "knot_id": "hive-flow-4a28",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW BOUNCE (Codex, 2026-07-02): do not land fe084eefb yet. Settlement/watcher core is directionally correct and focused gates pass (queen 31/31, watcher 12/12 with node --test, cli tsc, npm run build), but the implementation misses a stated acceptance surface: Statusboard/agent_list/hive_status expose the waiting state without spam. The patch only derives permission-waiting in hive_poll_workers at queen-tools.ts:1967-1987 and returns blockedCount/blockedWorkers there. agent_list/statusboard synthetic hive runtime rows still come from collectActiveHiveRuntimeState, which hardcodes live worker rows to status busy at cli/src/statusline/hive-ownership.ts:271-277; appendHiveRuntimeAgents copies that status into agent_list at cli/src/mcp-tools/agent-tools.ts:188-204 and agent_list filters/returns it at :2197-2220. hive_status still returns raw hive records/list summaries at queen-tools.ts:1413-1448 without deriving blockedCount/blockedWorkers or relabeling waiting workers. The new test at queen-tools-settlement.test.ts:190-200 only covers hive_poll_workers, not agent_list/statusboard/hive_status visibility. Please extend the derived pending-permission logic to the shared runtime/status surfaces (prefer one shared helper or equivalent non-duplicated source-of-truth reader), add regressions proving agent_list status=permission-waiting and hive_status exposes blockedCount/blockedWorkers or equivalent waiting metadata, and keep the existing settlement gates green. Dogfood verifier was spawned read-only but terminated before completion after this blocker was source-confirmed.",
+    "datetime": "2026-07-02T11:07:25.619179Z",
+    "entry_id": "019f2283-1c33-72b1-8295-0abd5b8bb011",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
