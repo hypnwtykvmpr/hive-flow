@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2135-f4f2-79c0-b51d-643b281bf950",
+  "occurred_at": "2026-07-02T05:03:32.082183Z",
+  "knot_id": "hive-flow-5e15",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PLAN_REVIEW PASS by Codex 2026-07-02. Reviewed Claude plan and spot-checked grounding: no existing kno/deferral-ledger wiring in .claude/settings.json; .hive-flow/enforcement/deferrals is only cleared by .claude/helpers/enforcement.cjs and has no writer; proposed settings hook is additive and runtime-appropriate because router notes are runtime data. Plan is feasible and scoped: use Knots as source of truth, add warning-only check-note, SessionStart digest, required six-field record validation, stubbed tests, and retro-fill known prose-only deferrals as Knots. Implementation constraints: keep check-note warning-only in this slice; no protected .claude/helpers or flow-watchdog edits; tests must cover stub-kno record/digest/check-note paths; implementation REVIEW_REQUEST must include exact retro-filled knot IDs and gate results.",
+    "datetime": "2026-07-02T05:03:32.082183Z",
+    "entry_id": "019f2135-f4f2-79c0-b51d-6423b7c4941a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
