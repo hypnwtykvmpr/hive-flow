@@ -1247,6 +1247,20 @@ function shouldEscapeBeforeOperationalNudge(event, targetAgent, paneSpec) {
   return targetAgent === subjectAgent && paneSpec?.name === subjectAgent;
 }
 
+// hive-flow-8b69 Slice 4: bounds for the persisted per-taskId liveness store.
+const TASK_LIVENESS_MAX_TASKS = 200;
+const TASK_LIVENESS_MAX_TASK_BYTES = 64 * 1024;
+
+// Trim the taskLiveness map to the cap, dropping the oldest entries by observedAtMs, so a
+// broken tasks directory (or a merged old state file) can never grow the state file
+// without bound.
+function trimTaskLivenessMap(map, max = TASK_LIVENESS_MAX_TASKS) {
+  if (!map || map.size <= max) return;
+  const oldestFirst = [...map.entries()]
+    .sort((a, b) => Number(a[1]?.observedAtMs || 0) - Number(b[1]?.observedAtMs || 0));
+  for (const [key] of oldestFirst.slice(0, map.size - max)) map.delete(key);
+}
+
 function createWatchState(seed = {}) {
   return {
     seen: new Map(Object.entries(seed.seen || {})),
@@ -1344,13 +1358,20 @@ function mergeWatchState(target, incoming, { now = Date.now(), dropMutedKeys = [
     if (nextLast > currentLast) target.eventCounts.set(key, value);
   }
 
-  // hive-flow-8b69 Slice 4: keep the newest per-taskId liveness prior by observedAtMs.
+  // hive-flow-8b69 Slice 4 (bounce B2): merge-aware deletion. `target` already reflects the
+  // current pass's authoritative active set (pruned against the live tasks dir), so a key
+  // ABSENT from target was intentionally removed (task completed/vanished/resulted) and must
+  // NOT resurrect from the older on-disk file. Only update keys that still exist in target,
+  // keeping the newest observation so concurrent instances still win. New keys are re-derived
+  // by the next pass rather than merged back.
   for (const [key, value] of incoming.taskLiveness.entries()) {
-    const current = target.taskLiveness.get(key);
-    const currentTs = Number(current?.observedAtMs || 0);
+    if (!target.taskLiveness.has(key)) continue;
+    const currentTs = Number(target.taskLiveness.get(key)?.observedAtMs || 0);
     const incomingTs = Number(value?.observedAtMs || 0);
-    if (!currentTs || incomingTs >= currentTs) target.taskLiveness.set(key, value);
+    if (incomingTs > currentTs) target.taskLiveness.set(key, value);
   }
+  // Keep the cap effective even through mergeExisting.
+  trimTaskLivenessMap(target.taskLiveness);
 
   return target;
 }
@@ -1358,6 +1379,8 @@ function mergeWatchState(target, incoming, { now = Date.now(), dropMutedKeys = [
 function saveWatchState(state, filePath = STATE_PATH, { mergeExisting = false, now = Date.now(), dropMutedKeys = [] } = {}) {
   if (mergeExisting) mergeWatchState(state, loadWatchState(filePath), { now, dropMutedKeys });
   scrubStaleControlMutes(state);
+  // hive-flow-8b69 Slice 4: bound the persisted taskLiveness store on every save path.
+  if (state.taskLiveness) trimTaskLivenessMap(state.taskLiveness);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(serializeWatchState(state), null, 2)}\n`);
 }
@@ -1728,9 +1751,16 @@ const { classifyHiveFlowTaskLiveness } = require(resolveSharedLivenessModule());
 
 // hive-flow-8b69 Slice 4: task-liveness pass — classify active Hive Flow tasks with the
 // shared source of truth and emit at most one deduped recovery/review nudge per stable
-// actionable event, routed to the task owner (or the deadlock target if unresolved).
-const TASK_LIVENESS_MAX_TASKS = 200;
-const TASK_LIVENESS_MAX_TASK_BYTES = 64 * 1024;
+// actionable event, routed to the task owner (or a safe deadlock target if unresolved).
+// TASK_LIVENESS_MAX_TASKS / _MAX_TASK_BYTES + trimTaskLivenessMap are defined with the state
+// model above so the mergeExisting save path can reuse them.
+
+// A pane is only a SAFE delivery target when it is idle: not actively working, not awaiting
+// pending input, and not compact-recovery held. Mirrors the existing notification/handoff
+// delivery contract so a task nudge never interrupts a busy operator (bounce B1).
+function isSafeDeliveryStatus(status) {
+  return Boolean(status) && !status.active && !status.pendingInput && !status.compactRecovery;
+}
 
 // PID is a WEAK signal (per the classifier contract): a task is only "dead" when a finite
 // positive PID is proven ESRCH. EPERM means the process exists but is not ours (alive). A
@@ -1842,13 +1872,7 @@ function runTaskLivenessPass({
     if (!activeIds.has(key)) state.taskLiveness.delete(key);
   }
   // Cap the store so a broken tasks directory cannot grow the state file without bound.
-  if (state.taskLiveness.size > TASK_LIVENESS_MAX_TASKS) {
-    const oldestFirst = [...state.taskLiveness.entries()]
-      .sort((a, b) => Number(a[1]?.observedAtMs || 0) - Number(b[1]?.observedAtMs || 0));
-    for (const [key] of oldestFirst.slice(0, state.taskLiveness.size - TASK_LIVENESS_MAX_TASKS)) {
-      state.taskLiveness.delete(key);
-    }
-  }
+  trimTaskLivenessMap(state.taskLiveness);
 
   for (const { taskId, tracking } of active) {
     const prior = state.taskLiveness.get(taskId) || null;
@@ -1867,18 +1891,33 @@ function runTaskLivenessPass({
       if (stored.emitted[verdict.status] !== signature) {
         const owner = notificationTaskOwner({ taskId }, root);
         const ownerAgent = owner?.targetAgent || targetAgentFromKind(owner?.ownerClientKind);
-        let paneSpec = ownerAgent ? paneSpecs.find((spec) => spec.name === ownerAgent) : null;
-        let targetAgent = ownerAgent;
+        const ownerPaneSpec = ownerAgent ? paneSpecs.find((spec) => spec.name === ownerAgent) : null;
+
+        let targetAgent = null;
+        let paneSpec = null;
         let ownerUnresolved = false;
-        if (!paneSpec) {
-          const target = chooseDeadlockTarget(statuses);
-          if (target) {
-            targetAgent = target.agent;
-            paneSpec = paneSpecs.find((spec) => spec.name === target.agent)
-              || { name: target.agent, pane: target.pane };
+
+        if (ownerPaneSpec) {
+          // Owner resolved: deliver ONLY when the owner pane is idle/safe. If the owner is
+          // busy (active / pending input / compact-recovery held), stay quiet and keep the
+          // prior (no emitted marker) so a later idle run delivers — never redirect to
+          // another operator's pane (bounce B1).
+          if (isSafeDeliveryStatus(statuses.find((s) => s.agent === ownerAgent))) {
+            targetAgent = ownerAgent;
+            paneSpec = ownerPaneSpec;
+          }
+        } else {
+          // Owner unresolved: fall back only to a SAFE idle/non-pending watched target
+          // (preferring codex). If none is safe, stay quiet and keep observing (bounce B1).
+          const safe = statuses.find((s) => s.agent === 'codex' && isSafeDeliveryStatus(s) && paneSpecs.some((p) => p.name === s.agent))
+            || statuses.find((s) => s.agent && isSafeDeliveryStatus(s) && paneSpecs.some((p) => p.name === s.agent));
+          if (safe) {
+            targetAgent = safe.agent;
+            paneSpec = paneSpecs.find((spec) => spec.name === safe.agent);
             ownerUnresolved = true;
           }
         }
+
         if (paneSpec && targetAgent && typeof dispatch === 'function') {
           const staleKey = `taskLiveness:${taskId}:${verdict.status}:${signature}`;
           const event = {
