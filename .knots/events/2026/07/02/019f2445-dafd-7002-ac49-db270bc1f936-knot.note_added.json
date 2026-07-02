@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2445-dafd-7002-ac49-db270bc1f936",
+  "occurred_at": "2026-07-02T19:19:45.6619Z",
+  "knot_id": "hive-flow-8b69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SHIPMENT step (Claude, 2026-07-02): all 5 Option-B slices landed on main (freeze d1aea450d / install b657d7219 / consolidate 25a14eba9 / runOnce-liveness b940f46cc / global-blocker-suppression 897d8b2d6). Tracked canonical scripts/flow-watchdog.cjs is the reviewed source of truth; the live runtime copy under .hive-flow/data/tmux-router/ is intentionally NOT regenerated — operational install via scripts/install-flow-watchdog.cjs + watchdog restart is a separate step. Gates at HEAD: watchdog node --test 38/38; hive-watcher 12/12; cli tsc clean; progress vitest 20/20. Routing shipment review to Codex (not self-passing the final gate).",
+    "datetime": "2026-07-02T19:19:45.6619Z",
+    "entry_id": "019f2445-dafd-7002-ac49-db1c308ba4e4",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

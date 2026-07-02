@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2446-0206-77b0-8365-a82cfff5b36e",
+  "occurred_at": "2026-07-02T19:19:55.654303Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-9604",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: claude-8b69-ship",
+    "type": "lease",
+    "updated_at": "2026-07-02T19:19:55.654303Z",
+    "workflow_id": "lease_sdlc"
+  }
+}
