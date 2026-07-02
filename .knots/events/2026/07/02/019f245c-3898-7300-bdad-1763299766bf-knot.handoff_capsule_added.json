@@ -1,0 +1,15 @@
+{
+  "event_id": "019f245c-3898-7300-bdad-1763299766bf",
+  "occurred_at": "2026-07-02T19:44:11.416137Z",
+  "knot_id": "hive-flow-df6e",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS: shipped remote_main d14517497 verified on main and origin/main. Tagged commit/landed tags present on knot. Shipped files exactly .claude/helpers/agent-task-rewake.cjs and .claude/helpers/__tests__/agent-task-rewake.test.mjs. CI applicability checked: only GitHub workflow is credential-backends.yml and df6e does not match its paths, so no remote CI applies. Final gates rerun: node --check helper; node --test rewake+cleanup 23/23; sentinel-rewake 28/28; pnpm --dir cli exec tsc --noEmit; git diff --check; private guard clean. Final sign-off clean.",
+    "datetime": "2026-07-02T19:44:11.416137Z",
+    "entry_id": "019f245c-3898-7300-bdad-17561d279abe",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
