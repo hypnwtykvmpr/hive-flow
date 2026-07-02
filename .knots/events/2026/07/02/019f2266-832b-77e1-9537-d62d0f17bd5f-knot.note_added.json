@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2266-832b-77e1-9537-d62d0f17bd5f",
+  "occurred_at": "2026-07-02T10:36:11.435183Z",
+  "knot_id": "hive-flow-8119",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW BOUNCE (Codex, 2026-07-02): do not land edc6dc135 yet. Blocking acceptance miss: duplicate deny decisions are not deduped and will dispatch repeated worker-resume tasks. The knot acceptance explicitly requires duplicate decisions dedupe without spam. In edc6dc135 queen-tools.ts, the deny resume dispatch calls taskWorkerTool.handler before the finalization lock/status update checks any existing request.status/decision (lines 2259-2277 in the commit snapshot). A second queen_permission_decide deny for the same request reaches the same branch and dispatches another resume instruction, then overwrites request.decision again. The new test at queen-dispatch-gate.test.ts lines 692-733 covers only first-deny dispatch and has no duplicate-deny/no-second-dispatch assertion. Fix by making decision handling idempotent before any redirect/resume side effect: if the request is already decided with the same decision, return the persisted outcome without dispatching again (or otherwise persist and check a resumeDispatch attempt marker before re-dispatch). Add a regression that calls deny twice for the same request and asserts mockAgentState.calls.task only increments once, no duplicate audit spam, and persisted decision remains stable. Keep redirect strict and deny best-effort semantics otherwise.",
+    "datetime": "2026-07-02T10:36:11.435183Z",
+    "entry_id": "019f2266-832b-77e1-9537-d61c977d2ea6",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
