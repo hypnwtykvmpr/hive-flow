@@ -157,6 +157,26 @@ Automated watcher system that monitors hive worker progress without polling.
 - Microcompaction is normal background behavior and does not require recovery.
 - After manual/auto/reactive compaction, recover before mutation: run `node .claude/helpers/compaction-recovery.cjs status`, inspect durable handoff/state plus live git status/diff, then clear with the helper's `ack` command.
 
+## Deferral Ledger (Knots-Backed, Mandatory)
+
+Deferred work may never exist only in chat or router-note prose. The durable store is Knots (`kno`); `scripts/deferral-ledger.cjs` is the required interface.
+
+- **Record at the moment of deferral.** Any time work is deferred, postponed, left as residual, or parked for "later", create the record FIRST:
+  ```bash
+  node scripts/deferral-ledger.cjs record \
+    --title "<what is deferred>" \
+    --owner "<who drives it>" \
+    --reason "<why it is deferred>" \
+    --unblock "<dependency or condition that unblocks it>" \
+    --priority <0-4> \
+    --source "<router note / commit / knot that deferred it>" \
+    [--review "<next review trigger>"]
+  ```
+  The command refuses incomplete records: owner, reason, unblock condition, priority, and source reference are all required. It creates a knot, transitions it to the native Knots `deferred` state, tags it `deferral`, and attaches the structured DEFERRAL RECORD note.
+- **Cite the knot id in prose.** Router notes mentioning deferred/residual work must reference the `hive-flow-xxxx` id on the same line. A PostToolUse hook runs `check-note` on router-note writes and warns about deferral language without a knot reference (warning-only in this slice).
+- **Review every session.** A SessionStart hook runs `node scripts/deferral-ledger.cjs digest`, which lists every open deferral (state `deferred` plus `deferral`-tagged open knots) with owner/unblock/review fields — this is the post-compaction discoverability guarantee. Manual queries: `kno ls --state deferred`, `node scripts/deferral-ledger.cjs digest --json`.
+- **Drive to terminal.** Every deferral ends in exactly one of: completion (knot advanced through its workflow), explicit cancellation (`abandoned` with a note), or replacement by a newer tracked knot (note the successor id before abandoning).
+
 ## Project Architecture
 
 - Follow Domain-Driven Design with bounded contexts
