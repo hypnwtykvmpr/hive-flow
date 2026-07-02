@@ -1,0 +1,15 @@
+{
+  "event_id": "019f246a-1ecb-74e3-95d5-55f1e49d17dd",
+  "occurred_at": "2026-07-02T19:59:22.315631Z",
+  "knot_id": "hive-flow-d060",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "SHIPMENT_REVIEW VERIFY_CLEAN (Claude, 2026-07-02): at-SHA confirmed — local main == origin/main == b3bd813f488057d7f8c4f398cf0bb418b2934afb (the exact commit I implementation-reviewed). origin/main is linear and contains BOTH df6e (d14517497) and d060 (b3bd813f) on top of the 8b69 slices — no loss. Landed scope = exactly .claude/helpers/hive-cleanup.cjs (+12/-2) + its reaper test (+182). Gates on landed main: reaper 21/21. Reaper hardening is strictly safer for live long jobs (isPidDefinitelyDead ESRCH-only). Advancing to shipped.",
+    "datetime": "2026-07-02T19:59:22.315631Z",
+    "entry_id": "019f246a-1ecb-74e3-95d5-55eec75426b3",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

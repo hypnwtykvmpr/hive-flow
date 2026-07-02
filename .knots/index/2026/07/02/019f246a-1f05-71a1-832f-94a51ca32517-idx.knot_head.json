@@ -1,0 +1,21 @@
+{
+  "event_id": "019f246a-1f05-71a1-832f-94a51ca32517",
+  "occurred_at": "2026-07-02T19:59:22.373328Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-62da",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: claude-d060-shipreview",
+    "type": "lease",
+    "updated_at": "2026-07-02T19:59:22.373328Z",
+    "workflow_id": "lease_sdlc"
+  }
+}
