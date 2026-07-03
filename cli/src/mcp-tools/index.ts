@@ -9,6 +9,7 @@ import type { HookEvent } from '../hooks/types.js';
 export type { MCPTool, MCPToolInputSchema, MCPToolResult } from './types.js';
 export { agentTools } from './agent-tools.js';
 export { agentMessageTools } from './agent-message-tools.js';
+export { agentMessageRouterTools } from './agent-message-router.js';
 export { swarmTools } from './swarm-tools.js';
 export { memoryTools } from './memory-tools.js';
 export { configTools } from './config-tools.js';

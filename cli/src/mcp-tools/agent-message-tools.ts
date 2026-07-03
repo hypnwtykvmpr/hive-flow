@@ -262,7 +262,7 @@ function wakeSessionKey(ownerClientKind: string, ownerSessionId: string): string
  * additionalContext. At-most-once per messageId per directory via an O_EXCL marker
  * (same pattern as the bridge's appendTaskNotificationOnce). Best-effort.
  */
-function writeMessageWakeNotice(message: AgentMessage, projectRoot: string): boolean {
+export function writeMessageWakeNotice(message: AgentMessage, projectRoot: string): boolean {
   // The ack instruction must carry the SAME addressing as the inbox instruction:
   // an agent-addressed message acked without agentId resolves the caller's
   // session-level inbox and never acks (Codex bounce 20260703T223229Z).
