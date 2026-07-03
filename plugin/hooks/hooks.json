@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks pre-edit --file \"$TOOL_INPUT_file_path\"",
+            "command": "node cli/bin/cli.js hooks pre-edit --file \"$TOOL_INPUT_file_path\"",
             "timeout": 5000,
             "continueOnError": true
           }
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks pre-command --command \"$TOOL_INPUT_command\"",
+            "command": "node cli/bin/cli.js hooks pre-command --command \"$TOOL_INPUT_command\"",
             "timeout": 3000,
             "continueOnError": true
           }
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks pre-task --description \"$(echo \"$TOOL_INPUT_description\" | head -c 200)\"",
+            "command": "node cli/bin/cli.js hooks pre-task --description \"$(echo \"$TOOL_INPUT_description\" | head -c 200)\"",
             "timeout": 5000,
             "continueOnError": true
           }
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks pre-search --query \"$TOOL_INPUT_pattern\"",
+            "command": "node cli/bin/cli.js hooks pre-search --query \"$TOOL_INPUT_pattern\"",
             "timeout": 2000,
             "continueOnError": true
           }
@@ -57,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks mcp-pre --tool \"$TOOL_NAME\"",
+            "command": "node cli/bin/cli.js hooks mcp-pre --tool \"$TOOL_NAME\"",
             "timeout": 3000,
             "continueOnError": true
           }
@@ -71,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks post-edit --file \"$TOOL_INPUT_file_path\" --success \"$TOOL_SUCCESS\" --train-patterns",
+            "command": "node cli/bin/cli.js hooks post-edit --file \"$TOOL_INPUT_file_path\" --success \"$TOOL_SUCCESS\" --train-patterns",
             "timeout": 5000,
             "continueOnError": true
           }
@@ -83,7 +83,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks post-command --command \"$TOOL_INPUT_command\" --success \"$TOOL_SUCCESS\" --exit-code \"$TOOL_EXIT_CODE\"",
+            "command": "node cli/bin/cli.js hooks post-command --command \"$TOOL_INPUT_command\" --success \"$TOOL_SUCCESS\" --exit-code \"$TOOL_EXIT_CODE\"",
             "timeout": 3000,
             "continueOnError": true
           }
@@ -95,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id \"$TOOL_RESULT_agent_id\" --success \"$TOOL_SUCCESS\" --analyze-performance",
+            "command": "node cli/bin/cli.js hooks post-task --task-id \"$TOOL_RESULT_agent_id\" --success \"$TOOL_SUCCESS\" --analyze-performance",
             "timeout": 5000,
             "continueOnError": true
           }
@@ -107,7 +107,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks post-search --query \"$TOOL_INPUT_pattern\" --cache-results",
+            "command": "node cli/bin/cli.js hooks post-search --query \"$TOOL_INPUT_pattern\" --cache-results",
             "timeout": 2000,
             "continueOnError": true
           }
@@ -119,7 +119,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks mcp-post --tool \"$TOOL_NAME\" --success \"$TOOL_SUCCESS\"",
+            "command": "node cli/bin/cli.js hooks mcp-post --tool \"$TOOL_NAME\" --success \"$TOOL_SUCCESS\"",
             "timeout": 3000,
             "continueOnError": true
           }
@@ -132,7 +132,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks route --task \"$PROMPT\" --include-explanation",
+            "command": "node cli/bin/cli.js hooks route --task \"$PROMPT\"",
             "timeout": 5000,
             "continueOnError": true
           }
@@ -145,7 +145,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id \"$SESSION_ID\" --load-context",
+            "command": "node cli/bin/cli.js hooks session-start --session-id \"$SESSION_ID\" --load-context",
             "timeout": 10000,
             "continueOnError": true
           }
@@ -180,7 +180,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node v3/@hive-flow/cli/bin/cli.js hooks notify --message \"$NOTIFICATION_MESSAGE\" --swarm-status",
+            "command": "node cli/bin/cli.js hooks notify --message \"$NOTIFICATION_MESSAGE\" --swarm-status",
             "timeout": 3000,
             "continueOnError": true
           }

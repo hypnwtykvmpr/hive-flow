@@ -5,7 +5,7 @@ setup() {
 }
 
 @test "engine sync script lives under the canonical CLI package path" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/scripts/sync-engine-anchor.mjs" ]
+  [ -f "$REPO_ROOT/cli/scripts/sync-engine-anchor.mjs" ]
   [ ! -e "$REPO_ROOT/scripts/sync-engine-anchor.mjs" ]
 }
 
@@ -21,11 +21,11 @@ setup() {
       console.error(pkg.scripts?.["sync:engine"]);
       process.exit(1);
     }
-  ' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  ' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
 @test "canonical engine sync script is syntactically valid from its nested location" {
-  run node --check "$REPO_ROOT/v3/@hive-flow/cli/scripts/sync-engine-anchor.mjs"
+  run node --check "$REPO_ROOT/cli/scripts/sync-engine-anchor.mjs"
   [ "$status" -eq 0 ]
 }

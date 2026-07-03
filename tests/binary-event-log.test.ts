@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 
 // Use dynamic import — tsx handles TS source directly.
 const { BinaryEventLog } = await import(
-  '../v3/@hive-flow/cli/src/shared/events/binary-event-log.ts'
+  '../cli/src/shared/events/binary-event-log.ts'
 );
 
 // ---------------------------------------------------------------------------

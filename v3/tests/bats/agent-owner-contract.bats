@@ -44,7 +44,7 @@ const ownerKeys = [
 for (const key of ownerKeys) delete process.env[key];
 process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/agent-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/agent-tools.js')).href);
 const spawn = mod.agentTools.find((tool) => tool.name === 'agent_spawn');
 if (!spawn) throw new Error('agent_spawn tool missing');
 
@@ -116,7 +116,7 @@ const ownerKeys = [
 ];
 for (const key of ownerKeys) delete process.env[key];
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/agent-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/agent-tools.js')).href);
 const spawn = mod.agentTools.find((tool) => tool.name === 'agent_spawn');
 if (!spawn) throw new Error('agent_spawn tool missing');
 
@@ -185,7 +185,7 @@ const ownerKeys = [
 ];
 for (const key of ownerKeys) delete process.env[key];
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/agent-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/agent-tools.js')).href);
 const spawn = mod.agentTools.find((tool) => tool.name === 'agent_spawn');
 if (!spawn) throw new Error('agent_spawn tool missing');
 
@@ -283,7 +283,7 @@ writeFileSync(join(agentDir, 'store.json'), JSON.stringify({
   },
 }, null, 2));
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/queen-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/queen-tools.js')).href);
 const assign = mod.queenTools.find((tool) => tool.name === 'queen_mission_assign');
 if (!assign) throw new Error('queen_mission_assign tool missing');
 
@@ -378,7 +378,7 @@ writeFileSync(join(agentDir, 'store.json'), JSON.stringify({
   },
 }, null, 2));
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/queen-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/queen-tools.js')).href);
 const assign = mod.queenTools.find((tool) => tool.name === 'queen_mission_assign');
 if (!assign) throw new Error('queen_mission_assign tool missing');
 
@@ -466,7 +466,7 @@ writeFileSync(join(hiveMindDir, 'state.json'), JSON.stringify({
   updatedAt: new Date(0).toISOString(),
 }, null, 2));
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/hive-mind-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/hive-mind-tools.js')).href);
 const spawn = mod.hiveMindTools.find((tool) => tool.name === 'hive-mind_spawn');
 if (!spawn) throw new Error('hive-mind_spawn tool missing');
 
@@ -541,7 +541,7 @@ const ownerKeys = [
 for (const key of ownerKeys) delete process.env[key];
 process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/agent-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/agent-tools.js')).href);
 const pool = mod.agentTools.find((tool) => tool.name === 'agent_pool');
 if (!pool) throw new Error('agent_pool tool missing');
 
@@ -582,7 +582,7 @@ import { pathToFileURL } from 'node:url';
 const [root, project] = process.argv.slice(2);
 process.chdir(project);
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/agent-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/agent-tools.js')).href);
 const pool = mod.agentTools.find((tool) => tool.name === 'agent_pool');
 if (!pool) throw new Error('agent_pool tool missing');
 
@@ -627,7 +627,7 @@ const [root, project] = process.argv.slice(2);
 process.chdir(project);
 process.env.HIVE_FLOW_CLIENT_KIND = 'codex';
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/daa-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/daa-tools.js')).href);
 const create = mod.daaTools.find((tool) => tool.name === 'daa_agent_create');
 if (!create) throw new Error('daa_agent_create tool missing');
 
@@ -679,7 +679,7 @@ writeFileSync(join(hiveMindDir, 'state.json'), JSON.stringify({
   updatedAt: new Date(0).toISOString(),
 }, null, 2));
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/hive-mind-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/hive-mind-tools.js')).href);
 const joinTool = mod.hiveMindTools.find((tool) => tool.name === 'hive-mind_join');
 if (!joinTool) throw new Error('hive-mind_join tool missing');
 
@@ -725,7 +725,7 @@ writeFileSync(join(hiveMindDir, 'state.json'), JSON.stringify({
   updatedAt: new Date(0).toISOString(),
 }, null, 2));
 
-const agentMod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/agent-tools.js')).href);
+const agentMod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/agent-tools.js')).href);
 const spawn = agentMod.agentTools.find((tool) => tool.name === 'agent_spawn');
 if (!spawn) throw new Error('agent_spawn tool missing');
 const spawnResult = await spawn.handler({
@@ -735,7 +735,7 @@ const spawnResult = await spawn.handler({
 }, { sessionId: 'join-opencode-parent', clientKind: 'opencode' });
 if (spawnResult.success !== true) throw new Error(`spawn failed ${JSON.stringify(spawnResult)}`);
 
-const hiveMod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/hive-mind-tools.js')).href);
+const hiveMod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/hive-mind-tools.js')).href);
 const joinTool = hiveMod.hiveMindTools.find((tool) => tool.name === 'hive-mind_join');
 if (!joinTool) throw new Error('hive-mind_join tool missing');
 
@@ -769,7 +769,7 @@ import { pathToFileURL } from 'node:url';
 const [root, project] = process.argv.slice(2);
 process.chdir(project);
 
-const agentMod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/agent-tools.js')).href);
+const agentMod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/agent-tools.js')).href);
 const spawn = agentMod.agentTools.find((tool) => tool.name === 'agent_spawn');
 if (!spawn) throw new Error('agent_spawn tool missing');
 const context = { sessionId: 'queen-opencode-parent', clientKind: 'opencode' };
@@ -780,7 +780,7 @@ const queenSpawn = await spawn.handler({
 }, context);
 if (queenSpawn.success !== true) throw new Error(`queen spawn failed ${JSON.stringify(queenSpawn)}`);
 
-const mod = await import(pathToFileURL(join(root, 'v3/@hive-flow/cli/dist/src/mcp-tools/queen-tools.js')).href);
+const mod = await import(pathToFileURL(join(root, 'cli/dist/src/mcp-tools/queen-tools.js')).href);
 const mission = mod.queenTools.find((tool) => tool.name === 'queen_mission_assign');
 const spawnWorker = mod.queenTools.find((tool) => tool.name === 'queen_spawn_worker');
 if (!mission || !spawnWorker) throw new Error('queen tools missing');

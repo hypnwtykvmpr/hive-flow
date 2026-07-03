@@ -5,7 +5,7 @@ setup() {
 }
 
 @test "appliance verification script lives under the canonical CLI package path" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/scripts/verify-appliance.sh" ]
+  [ -f "$REPO_ROOT/cli/scripts/verify-appliance.sh" ]
   [ ! -e "$REPO_ROOT/scripts/verify-appliance.sh" ]
 }
 
@@ -17,7 +17,7 @@ setup() {
       console.error(JSON.stringify(pkg.files, null, 2));
       process.exit(1);
     }
-  ' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  ' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
@@ -27,11 +27,11 @@ setup() {
     const src = readFileSync(process.argv[1], "utf8");
     if (src.includes("../../../../scripts/verify-appliance.sh")) process.exit(1);
     if (!src.includes("resolveVerifyApplianceScript")) process.exit(1);
-  ' "$REPO_ROOT/v3/@hive-flow/cli/src/appliance/appliance-builder.ts"
+  ' "$REPO_ROOT/cli/src/appliance/appliance-builder.ts"
   [ "$status" -eq 0 ]
 }
 
 @test "canonical appliance verification script is syntactically valid" {
-  run sh -n "$REPO_ROOT/v3/@hive-flow/cli/scripts/verify-appliance.sh"
+  run sh -n "$REPO_ROOT/cli/scripts/verify-appliance.sh"
   [ "$status" -eq 0 ]
 }

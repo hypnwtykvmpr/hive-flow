@@ -9,10 +9,10 @@ import { join } from 'node:path';
 const {
   createDatabase,
   getAvailableProviders,
-} = await import('../v3/@hive-flow/cli/src/memory/database-provider.js');
+} = await import('../cli/src/memory/database-provider.js');
 
-type MemoryEntry = import('../v3/@hive-flow/cli/src/memory/types.js').MemoryEntry;
-type IMemoryBackend = import('../v3/@hive-flow/cli/src/memory/types.js').IMemoryBackend;
+type MemoryEntry = import('../cli/src/memory/types.js').MemoryEntry;
+type IMemoryBackend = import('../cli/src/memory/types.js').IMemoryBackend;
 
 // ---------------------------------------------------------------------------
 // Helpers

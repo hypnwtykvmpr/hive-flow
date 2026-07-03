@@ -11,7 +11,7 @@ async function loadFastCheck() {
     return (await import('fast-check')).default;
   } catch (err) {
     try {
-      return (await import('../v3/@hive-flow/cli/node_modules/fast-check/lib/fast-check.js')).default;
+      return (await import('../cli/node_modules/fast-check/lib/fast-check.js')).default;
     } catch {
       throw err;
     }

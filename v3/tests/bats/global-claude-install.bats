@@ -6,14 +6,14 @@ setup() {
   HOME_DIR="$WORK_DIR/home"
   PROJECT_ROOT="$WORK_DIR/project"
   SETTINGS_PATH="$HOME_DIR/.claude/settings.json"
-  mkdir -p "$HOME_DIR/.claude" "$PROJECT_ROOT/.claude/helpers" "$PROJECT_ROOT/v3/@hive-flow/cli/src/permission-guard" "$PROJECT_ROOT/v3/@hive-flow/cli/bin"
+  mkdir -p "$HOME_DIR/.claude" "$PROJECT_ROOT/.claude/helpers" "$PROJECT_ROOT/cli/src/permission-guard" "$PROJECT_ROOT/cli/bin"
   printf '{"statusLine":{"type":"command","command":"printf CUSTOM","padding":1}}\n' > "$SETTINGS_PATH"
-  printf '#!/usr/bin/env node\nprocess.stdout.write("HF_BOARD\\\\n");\n' > "$PROJECT_ROOT/v3/@hive-flow/cli/bin/statusline.js"
+  printf '#!/usr/bin/env node\nprocess.stdout.write("HF_BOARD\\\\n");\n' > "$PROJECT_ROOT/cli/bin/statusline.js"
   for helper in hive-composition-gate role-enforcement enforcement hook-handler settings-reconciler provider-tracker session-id; do
     printf 'console.log("%s")\n' "$helper" > "$PROJECT_ROOT/.claude/helpers/$helper.cjs"
   done
-  printf 'module.exports = {};\n' > "$PROJECT_ROOT/v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs"
-  printf '{}\n' > "$PROJECT_ROOT/v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json"
+  printf 'module.exports = {};\n' > "$PROJECT_ROOT/cli/src/permission-guard/protected-paths.cjs"
+  printf '{}\n' > "$PROJECT_ROOT/cli/src/permission-guard/protected-paths.policy.json"
 }
 
 teardown() {
@@ -29,7 +29,7 @@ managed_tree() {
 }
 
 @test "init --global --claude-code installs the managed global statusline/enforcement tree idempotently" {
-  run node "$REPO_ROOT/v3/@hive-flow/cli/bin/cli.js" init --global --claude-code --yes --home "$HOME_DIR" --user-settings "$SETTINGS_PATH" --project-root "$PROJECT_ROOT" --format json
+  run node "$REPO_ROOT/cli/bin/cli.js" init --global --claude-code --yes --home "$HOME_DIR" --user-settings "$SETTINGS_PATH" --project-root "$PROJECT_ROOT" --format json
   [ "$status" -eq 0 ]
   [[ "$output" == *"Installed global statusline launcher"* ]]
 
@@ -47,7 +47,7 @@ managed_tree() {
   [[ "$output" == *"HF_BOARD"* ]]
   [[ "$output" == *"CUSTOM"* ]]
 
-  run node "$REPO_ROOT/v3/@hive-flow/cli/bin/cli.js" init --global --claude-code --yes --home "$HOME_DIR" --user-settings "$SETTINGS_PATH" --project-root "$PROJECT_ROOT" --format json
+  run node "$REPO_ROOT/cli/bin/cli.js" init --global --claude-code --yes --home "$HOME_DIR" --user-settings "$SETTINGS_PATH" --project-root "$PROJECT_ROOT" --format json
   [ "$status" -eq 0 ]
 
   run "$HOME_DIR/.hive-flow/bin/claude-code-statusline"

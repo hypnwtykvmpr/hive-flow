@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../..');
-const sourcePath = join(repoRoot, 'v3/@hive-flow/cli/src/progress/progress-authority-classifier.ts');
-const testPath = join(repoRoot, 'v3/@hive-flow/cli/src/progress/__tests__/progress-authority-classifier.test.ts');
+const sourcePath = join(repoRoot, 'cli/src/progress/progress-authority-classifier.ts');
+const testPath = join(repoRoot, 'cli/src/progress/__tests__/progress-authority-classifier.test.ts');
 
 const source = readFileSync(sourcePath, 'utf8');
 const test = readFileSync(testPath, 'utf8');

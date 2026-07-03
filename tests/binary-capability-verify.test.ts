@@ -23,13 +23,13 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 // --- Module Imports ---
-import { BinaryBackend } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
-import type { BinaryBackendConfig } from '../v3/@hive-flow/cli/src/memory/binary-backend.js';
-import { HnswLite, cosineSimilarity } from '../v3/@hive-flow/cli/src/memory/hnsw-lite.js';
-import { BinaryEventLog } from '../v3/@hive-flow/cli/src/shared/events/binary-event-log.js';
+import { BinaryBackend } from '../cli/src/memory/binary-backend.js';
+import type { BinaryBackendConfig } from '../cli/src/memory/binary-backend.js';
+import { HnswLite, cosineSimilarity } from '../cli/src/memory/hnsw-lite.js';
+import { BinaryEventLog } from '../cli/src/shared/events/binary-event-log.js';
 import { BinaryEmbeddingCache } from '../cli/packages/embeddings/src/binary-embedding-cache.js';
 import { LocalEmbeddingService } from '../cli/packages/embeddings/src/local-embedding-service.js';
-import { BinaryMigrator } from '../v3/@hive-flow/cli/src/memory/binary-migration.js';
+import { BinaryMigrator } from '../cli/src/memory/binary-migration.js';
 
 // --- Helpers ---
 let tmpDir: string;
@@ -664,7 +664,7 @@ describe('9. DatabaseProvider Integration', () => {
   afterEach(() => { rmSync(tmpDir, { recursive: true, force: true }); });
 
   it('auto-selects Binary when available', async () => {
-    const { createDatabase, getAvailableProviders } = await import('../v3/@hive-flow/cli/src/memory/database-provider.js');
+    const { createDatabase, getAvailableProviders } = await import('../cli/src/memory/database-provider.js');
     const providers = await getAvailableProviders();
     assert.equal(providers.binary, true);
 
@@ -678,7 +678,7 @@ describe('9. DatabaseProvider Integration', () => {
   });
 
   it('converts .db extension to .hfdb', async () => {
-    const { createDatabase } = await import('../v3/@hive-flow/cli/src/memory/database-provider.js');
+    const { createDatabase } = await import('../cli/src/memory/database-provider.js');
     const db = await createDatabase(tmp('convert.db'), { provider: 'binary' });
     await db.store(makeEntry('cv1'));
     await db.shutdown();

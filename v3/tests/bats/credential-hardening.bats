@@ -5,8 +5,8 @@ setup() {
 }
 
 @test "credential helper sources require biometric/consent hardening hooks" {
-  mac_helper="$REPO_ROOT/v3/@hive-flow/cli/src/credential-store/helpers/macos-keychain.swift"
-  win_helper="$REPO_ROOT/v3/@hive-flow/cli/src/credential-store/helpers/windows-credential-helper/Program.cs"
+  mac_helper="$REPO_ROOT/cli/src/credential-store/helpers/macos-keychain.swift"
+  win_helper="$REPO_ROOT/cli/src/credential-store/helpers/windows-credential-helper/Program.cs"
 
   run grep -E "LocalAuthentication|canEvaluatePolicy\\(\\.deviceOwnerAuthentication|evaluatePolicy\\(\\.deviceOwnerAuthentication|kSecAttrAccessibleWhenUnlockedThisDeviceOnly" "$mac_helper"
   [ "$status" -eq 0 ]

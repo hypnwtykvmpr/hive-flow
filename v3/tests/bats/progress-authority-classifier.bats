@@ -15,7 +15,7 @@ setup() {
 }
 
 @test "progress authority classifier focused vitest suite passes against source" {
-  run npm --prefix "$REPO_ROOT/v3/@hive-flow/cli" exec vitest run src/progress/__tests__/progress-authority-classifier.test.ts
+  run npm --prefix "$REPO_ROOT/cli" exec vitest run src/progress/__tests__/progress-authority-classifier.test.ts
 
   [ "$status" -eq 0 ]
   [[ "$output" == *'progress-authority-classifier.test.ts'* ]]

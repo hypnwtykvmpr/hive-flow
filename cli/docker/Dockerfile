@@ -2,7 +2,7 @@
 # Multi-stage Alpine build with --omit=optional for <100MB image
 #
 # Build:
-#   docker build -t hive-flow:lite -f v3/@hive-flow/cli/docker/Dockerfile .
+#   docker build -t hive-flow:lite -f cli/docker/Dockerfile .
 #
 # Run:
 #   docker run --rm hive-flow:lite hive-flow --version

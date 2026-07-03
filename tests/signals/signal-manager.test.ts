@@ -7,8 +7,8 @@ import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vite
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { SignalManager, SignalEvents } from '../../v3/@hive-flow/cli/src/shared/signals/manager.js';
-import type { IEventBus } from '../../v3/@hive-flow/cli/src/shared/core/interfaces/event.interface.js';
+import { SignalManager, SignalEvents } from '../../cli/src/shared/signals/manager.js';
+import type { IEventBus } from '../../cli/src/shared/core/interfaces/event.interface.js';
 
 function createMockEventBus(): IEventBus & { emit: Mock } {
   return {

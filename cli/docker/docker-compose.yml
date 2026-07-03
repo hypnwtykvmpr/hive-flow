@@ -6,9 +6,9 @@
 #   workers  — Scalable worker pool (extends docker-compose.workers.yml)
 #
 # Usage:
-#   docker compose -f v3/@hive-flow/cli/docker/docker-compose.yml --profile lite up
-#   docker compose -f v3/@hive-flow/cli/docker/docker-compose.yml --profile full up -d
-#   docker compose -f v3/@hive-flow/cli/docker/docker-compose.yml --profile workers up -d --scale worker=5
+#   docker compose -f cli/docker/docker-compose.yml --profile lite up
+#   docker compose -f cli/docker/docker-compose.yml --profile full up -d
+#   docker compose -f cli/docker/docker-compose.yml --profile workers up -d --scale worker=5
 #
 # Environment (required for full/workers):
 #   ANTHROPIC_API_KEY — Your Anthropic API key
@@ -19,7 +19,7 @@ services:
     profiles: ["lite"]
     build:
       context: ../../../..
-      dockerfile: v3/@hive-flow/cli/docker/Dockerfile
+      dockerfile: cli/docker/Dockerfile
     image: hive-flow:lite
     stdin_open: true
     environment:
@@ -45,7 +45,7 @@ services:
     profiles: ["full"]
     build:
       context: ../../../..
-      dockerfile: v3/@hive-flow/cli/docker/Dockerfile.full
+      dockerfile: cli/docker/Dockerfile.full
     image: hive-flow:full
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
@@ -78,7 +78,7 @@ services:
     profiles: ["workers"]
     build:
       context: ../../../..
-      dockerfile: v3/@hive-flow/cli/docker/Dockerfile
+      dockerfile: cli/docker/Dockerfile
     image: hive-flow:lite
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}

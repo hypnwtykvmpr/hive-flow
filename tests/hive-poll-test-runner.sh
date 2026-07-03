@@ -72,7 +72,7 @@ test_1_1_shellcheck() {
 test_1_2_typescript() {
   log_info "1.2 Checking TypeScript compilation..."
   
-  local cd_dir="v3/@hive-flow/cli"
+  local cd_dir="cli"
   if [ ! -d "$cd_dir" ]; then
     log_warn "CLI directory not found, skipping TypeScript check"
     return 0
@@ -103,7 +103,7 @@ test_1_3_imports() {
   if command -v node &> /dev/null; then
     local result
     if result=$(node --input-type=module << 'EOF'
-      import('./v3/@hive-flow/cli/src/mcp-tools/hive-store.js')
+      import('./cli/src/mcp-tools/hive-store.js')
         .then(() => ({ store: 'OK' }))
         .catch(e => ({ store: 'FAIL: ' + e.message }));
     EOF

@@ -4,13 +4,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Span, getNoopSpan } from '../../v3/@hive-flow/cli/src/shared/observability/span.js';
-import { Tracer } from '../../v3/@hive-flow/cli/src/shared/observability/tracer.js';
-import { SpanBuffer } from '../../v3/@hive-flow/cli/src/shared/observability/span-buffer.js';
-import { MetricsCollector } from '../../v3/@hive-flow/cli/src/shared/observability/metrics-collector.js';
-import { ObservabilityManager } from '../../v3/@hive-flow/cli/src/shared/observability/manager.js';
-import { Subsystems, ObservabilityEvents } from '../../v3/@hive-flow/cli/src/shared/observability/types.js';
-import type { IEventBus } from '../../v3/@hive-flow/cli/src/shared/core/interfaces/event.interface.js';
+import { Span, getNoopSpan } from '../../cli/src/shared/observability/span.js';
+import { Tracer } from '../../cli/src/shared/observability/tracer.js';
+import { SpanBuffer } from '../../cli/src/shared/observability/span-buffer.js';
+import { MetricsCollector } from '../../cli/src/shared/observability/metrics-collector.js';
+import { ObservabilityManager } from '../../cli/src/shared/observability/manager.js';
+import { Subsystems, ObservabilityEvents } from '../../cli/src/shared/observability/types.js';
+import type { IEventBus } from '../../cli/src/shared/core/interfaces/event.interface.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────
 

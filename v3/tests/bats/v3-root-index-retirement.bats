@@ -14,6 +14,6 @@ setup() {
 }
 
 @test "shipped-surface scanner does not include retired v3/index.ts" {
-  run rg -n "'v3/index\\.ts'" "$REPO_ROOT/v3/@hive-flow/cli/src/init/__tests__/debrand-static-scope.ts"
+  run rg -n "'v3/index\\.ts'" "$REPO_ROOT/cli/src/init/__tests__/debrand-static-scope.ts"
   [ "$status" -eq 1 ]
 }

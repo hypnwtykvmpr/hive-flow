@@ -30,7 +30,7 @@ const REPO_ROOT = join(__dirname, '..');
 
 const GATE_MODULE = join(
   REPO_ROOT,
-  'v3/@hive-flow/cli/dist/src/mcp-tools/mcp-enforcement-gate.js',
+  'cli/dist/src/mcp-tools/mcp-enforcement-gate.js',
 );
 
 let checkMCPEnforcement;

@@ -99,6 +99,6 @@ setup() {
 }
 
 @test "memory tsconfig still excludes DELETE_ TS from build" {
-  run grep -F 'src/**/DELETE_*' "$REPO_ROOT/v3/@hive-flow/cli/tsconfig.json"
+  run grep -F 'src/**/DELETE_*' "$REPO_ROOT/cli/tsconfig.json"
   [ "$status" -eq 0 ]
 }
