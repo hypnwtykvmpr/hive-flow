@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26dc-6478-7272-ba5e-73cc39a3f3a5",
+  "occurred_at": "2026-07-03T07:23:25.688649Z",
+  "knot_id": "hive-flow-110b",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS: verified shipped code on main. HEAD == origin/main == 1d90da8f1; tagged commits 4deda6a76 and 1d90da8f1 are contained by main/origin/main. Gates on shipped main: node --check sentinel-recovery, sentinel-singleton 8/8, sibling sentinel/root/de-tmux 17/17, pnpm --dir cli exec tsc --noEmit. No tracked drift beyond existing untracked scratch/private paths.",
+    "datetime": "2026-07-03T07:23:25.688649Z",
+    "entry_id": "019f26dc-6478-7272-ba5e-73b9561f8070",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
