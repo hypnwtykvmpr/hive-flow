@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 
 // Import MCP tool handlers from local package
 import { agentTools } from './mcp-tools/agent-tools.js';
+import { agentMessageTools } from './mcp-tools/agent-message-tools.js';
 import { swarmTools } from './mcp-tools/swarm-tools.js';
 import { memoryTools } from './mcp-tools/memory-tools.js';
 import { configTools } from './mcp-tools/config-tools.js';
@@ -73,6 +74,7 @@ function registerTools(tools: MCPTool[]): void {
 // Initialize registry with all available tools
 registerTools([
   ...agentTools,
+  ...agentMessageTools,
   ...swarmTools,
   ...memoryTools,
   ...configTools,
