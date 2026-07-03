@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/integration-marker.ts
+// cli/src/integrations/integration-marker.ts
 //
 // Wave 11A — Per-CLI integration marker (read/write/remove).
 //

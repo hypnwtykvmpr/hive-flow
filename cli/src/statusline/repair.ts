@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/repair.ts
+// cli/src/statusline/repair.ts
 //
 // Wave 6/7 of the canonical statusline rewrite (Codex merged runbook 2026-05-20,
 // post 2026-05-21 patches). Rebuilds materialized `*.current.json` snapshots

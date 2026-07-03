@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/stdin-workspace-launcher.test.ts
+// cli/src/statusline/__tests__/stdin-workspace-launcher.test.ts
 //
 // Claude Code can invoke the statusline process from a cwd that is not the
 // project checkout. The renderer must honor Claude's stdin workspace before

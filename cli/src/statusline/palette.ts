@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/palette.ts
+// cli/src/statusline/palette.ts
 //
 // Wave 8 of the statusline rewrite. Implements the locked 256-color palette
 // (and a strict 16-color fallback) for the Claude Code statusline renderer

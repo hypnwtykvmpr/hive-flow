@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/__tests__/scoreboard.test.ts
+// cli/src/statusline/collectors/__tests__/scoreboard.test.ts
 //
 // Regression tests for the Wave-3 scoreboard collector. All fixtures are
 // hand-authored JSONL strings written to a tmp project root — the recorder

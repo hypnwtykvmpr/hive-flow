@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/stale-task-not-live-proof.test.ts
+// cli/src/statusline/__tests__/stale-task-not-live-proof.test.ts
 //
 // PROOF 3 — STATUSLINE STALE-TASK-NOT-LIVE: the Swarm row is driven by the
 // agent store (.hive-flow/agents/store.json), NOT by stale task-metadata files

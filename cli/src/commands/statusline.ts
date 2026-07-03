@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/commands/statusline.ts
+// cli/src/commands/statusline.ts
 //
 // Top-level `hive-flow statusline` command. Delegates to the canonical
 // Claude Code statusline renderer in src/statusline/claude-code-renderer.ts.

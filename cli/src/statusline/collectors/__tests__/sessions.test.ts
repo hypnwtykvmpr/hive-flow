@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/__tests__/sessions.test.ts
+// cli/src/statusline/collectors/__tests__/sessions.test.ts
 //
 // Wave 5 regression tests for `collectSessions`. These tests run independently
 // of the recorder: each scenario writes its own canonical JSONL into the

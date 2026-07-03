@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/provider-metrics-migration.ts
+// cli/src/statusline/provider-metrics-migration.ts
 //
 // Phase 11 — Provider metrics migration.
 //

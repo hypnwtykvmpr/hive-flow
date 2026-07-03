@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/ledger-compact.test.ts
+// cli/src/statusline/__tests__/ledger-compact.test.ts
 //
 // Phase 13.3 regression tests for `ledger-compact.ts`. Covers:
 //   - keep last N of M (M > N) -- truncates to the most recent N

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapter.ts
+// cli/src/integrations/adapter.ts
 /**
  * Canonical contract every integration adapter (Claude Code, Codex, ForgeCode,
  * OpenCode, Cursor CLI, Qwen, Gemini) implements. Used by the factory layer in

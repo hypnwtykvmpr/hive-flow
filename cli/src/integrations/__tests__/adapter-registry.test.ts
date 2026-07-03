@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/adapter-registry.test.ts
+// cli/src/integrations/__tests__/adapter-registry.test.ts
 //
 // Wave 11A — Adapter registry foundation tests.
 //

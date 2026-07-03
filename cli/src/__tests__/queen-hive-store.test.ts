@@ -60,8 +60,8 @@ function makeWorkerRecord(overrides: Partial<HiveWorkerRecord> = {}): HiveWorker
 // This is the pattern that MUST be identical in:
 //   .claude/helpers/enforcement.cjs    (getStateFile)
 //   .claude/helpers/role-enforcement.cjs (sanitizeId)
-//   v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts (mission_assign role file)
-//   v3/@hive-flow/cli/src/mcp-tools/agent-tools.ts (propagateEnforcementToSubAgent)
+//   cli/src/mcp-tools/queen-tools.ts (mission_assign role file)
+//   cli/src/mcp-tools/agent-tools.ts (propagateEnforcementToSubAgent)
 function canonicalSanitize(id: string): string {
   return id.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 64);
 }

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapters/factories.ts
+// cli/src/integrations/adapters/factories.ts
 import { spawnSync } from 'node:child_process';
 import { parse, modify, applyEdits, type JSONPath } from 'jsonc-parser';
 import { upsertJsonPath, readTextIfExists, atomicWrite, copyBackupOnce } from '../atomic-merge.js';

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/e2e-statusline.test.ts
+// cli/src/statusline/__tests__/e2e-statusline.test.ts
 //
 // Phase 13 E2E smoke: real recorders -> refresher/cache -> pure renderer.
 // This intentionally asserts structural user-visible behavior instead of

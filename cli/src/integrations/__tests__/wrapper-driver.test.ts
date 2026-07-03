@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/wrapper-driver.test.ts
+// cli/src/integrations/__tests__/wrapper-driver.test.ts
 //
 // Wave 11 wrapper-driver tests. Covers:
 //   - POSIX template structure (no `set -e`, trap on EXIT/INT/TERM, validated

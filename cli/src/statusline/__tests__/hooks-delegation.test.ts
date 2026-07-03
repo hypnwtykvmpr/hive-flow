@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/hooks-delegation.test.ts
+// cli/src/statusline/__tests__/hooks-delegation.test.ts
 //
 // §12.4 Hook-command delegation, warm-cache latency, and launcher regression.
 //

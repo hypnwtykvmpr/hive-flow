@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/types-config.test.ts
+// cli/src/statusline/__tests__/types-config.test.ts
 //
 // Wave 1 regression tests. Covers the typed contracts in `types.ts` and the
 // bounded config parser in `config.ts`. These tests are part of the

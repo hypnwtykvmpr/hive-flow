@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/junit-import.test.ts
+// cli/src/statusline/__tests__/junit-import.test.ts
 //
 // Behavioural tests for the JUnit XML importer. Covers:
 //

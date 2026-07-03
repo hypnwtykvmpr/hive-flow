@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapters/wrapper-mode.ts
+// cli/src/integrations/adapters/wrapper-mode.ts
 //
 // Wave 11B + 11B.5 — Shared factory for wrapper-mode connector adapters.
 

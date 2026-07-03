@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/toml-block.ts
+// cli/src/integrations/toml-block.ts
 import { readTextIfExists, copyBackupOnce, atomicWrite } from './atomic-merge.js';
 import { createHash } from 'node:crypto';
 

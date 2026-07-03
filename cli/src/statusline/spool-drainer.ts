@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/spool-drainer.ts
+// cli/src/statusline/spool-drainer.ts
 //
 // Phase 5.7 of the canonical statusline runbook (Codex merged, 2026-05-21 patched).
 //

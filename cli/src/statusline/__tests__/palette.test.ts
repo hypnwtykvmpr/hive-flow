@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/palette.test.ts
+// cli/src/statusline/__tests__/palette.test.ts
 //
 // Wave 8 tests for the statusline palette. Asserts:
 //   - 256-color palette uses the locked visual-design codes byte-exactly

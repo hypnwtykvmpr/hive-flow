@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/shell-prompt-adapter.test.ts
+// cli/src/integrations/__tests__/shell-prompt-adapter.test.ts
 //
 // Shell-prompt suppression adapter tests. Asserts:
 //   - apply installs a CLAUDECODE-gated managed block; verify confirms it.

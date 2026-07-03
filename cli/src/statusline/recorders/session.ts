@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/session.ts
+// cli/src/statusline/recorders/session.ts
 //
 // Wave 4 of the statusline rewrite. Session recorder for host CLI lifecycle
 // (session-start / session-heartbeat / session-end). Appends V1 events to the

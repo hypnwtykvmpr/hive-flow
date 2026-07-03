@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/inline-collectors.test.ts
+// cli/src/statusline/__tests__/inline-collectors.test.ts
 //
 // Wave 8 regression suite for the inline-collector renderer mode.
 //

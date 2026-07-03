@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/sessions.ts
+// cli/src/statusline/collectors/sessions.ts
 //
 // Sessions collector. Consumes the canonical session JSONL ledger written by
 // the Wave 4 session recorder and folds it into a per-host

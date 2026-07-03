@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/commands/tests.ts
+// cli/src/commands/tests.ts
 //
 // Phase 9 of the statusline rewrite. Top-level `hive-flow tests` command.
 //

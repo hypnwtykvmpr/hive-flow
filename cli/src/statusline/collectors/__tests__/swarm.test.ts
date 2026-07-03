@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/__tests__/swarm.test.ts
+// cli/src/statusline/collectors/__tests__/swarm.test.ts
 //
 // C1 BLOCKER regression suite for the canonical swarm collector.
 //

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/external-repo-isolation-proof.test.ts
+// cli/src/statusline/__tests__/external-repo-isolation-proof.test.ts
 //
 // PROOF 2 — EXTERNAL-TEMP-REPO ISOLATION: agents from repo A must NOT appear
 // in repo B's statusline Swarm row.

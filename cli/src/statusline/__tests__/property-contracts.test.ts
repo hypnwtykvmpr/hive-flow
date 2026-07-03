@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/property-contracts.test.ts
+// cli/src/statusline/__tests__/property-contracts.test.ts
 //
 // Property-based tests for pure statusline contracts. Keep this file focused
 // on deterministic, side-effect-free invariants; filesystem and process probes

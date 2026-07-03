@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/config.ts
+// cli/src/statusline/config.ts
 //
 // Wave 1 of the statusline rewrite. Defines `StatuslineConfig`, the canonical
 // `DEFAULT_STATUSLINE_CONFIG`, a defensive normalizer, and a bounded parser

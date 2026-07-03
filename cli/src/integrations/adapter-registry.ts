@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapter-registry.ts
+// cli/src/integrations/adapter-registry.ts
 //
 // Wave 11A — Connector adapter registry (foundation).
 //

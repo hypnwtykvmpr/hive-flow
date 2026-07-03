@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/diagnose.test.ts
+// cli/src/integrations/__tests__/diagnose.test.ts
 //
 // Tests for the connector diagnose engine.
 //

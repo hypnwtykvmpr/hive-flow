@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/__tests__/tests-recorder.test.ts
+// cli/src/statusline/recorders/__tests__/tests-recorder.test.ts
 //
 // Phase 4 regression tests for the tests subsystem recorder
 // (`recorders/tests.ts`).

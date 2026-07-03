@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/__tests__/attention.test.ts
+// cli/src/statusline/recorders/__tests__/attention.test.ts
 //
 // Phase 8 / Attention recorder — covers all four mandatory Phase 5 C3
 // redactions plus the recorder->redactor->writer order contract.

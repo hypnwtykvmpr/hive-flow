@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/claude-code-renderer.test.ts
+// cli/src/statusline/__tests__/claude-code-renderer.test.ts
 //
 // Phase 12 — Renderer replacement regression suite.
 //

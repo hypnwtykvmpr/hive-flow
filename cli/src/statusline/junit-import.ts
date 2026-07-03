@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/junit-import.ts
+// cli/src/statusline/junit-import.ts
 //
 // Wave-13 of the statusline rewrite (Phase 13.2 / Phase 15 import path).
 // Ingests JUnit XML test reports and converts them to `TestRunEventV1`

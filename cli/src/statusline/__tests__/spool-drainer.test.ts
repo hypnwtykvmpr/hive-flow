@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/spool-drainer.test.ts
+// cli/src/statusline/__tests__/spool-drainer.test.ts
 //
 // Tests the Phase 5.7 spool drainer against the canonical runbook contract:
 //   - empty spool -> empty report

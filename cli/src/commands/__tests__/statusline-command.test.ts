@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/commands/__tests__/statusline-command.test.ts
+// cli/src/commands/__tests__/statusline-command.test.ts
 //
 // Phase 13 command-surface tests for `hive-flow statusline`. Wrapper-host
 // lifecycle tests live in statusline-wrapper-host.test.ts; this file covers

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/project-scope.ts
+// cli/src/statusline/project-scope.ts
 //
 // Wave 3 — Project Scope helper.
 //

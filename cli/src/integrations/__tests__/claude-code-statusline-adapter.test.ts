@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/claude-code-statusline-adapter.test.ts
+// cli/src/integrations/__tests__/claude-code-statusline-adapter.test.ts
 //
 // Wave 5 / §12.2 — Claude Code statusline adapter tests.
 // Asserts:

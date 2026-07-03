@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/__tests__/session.test.ts
+// cli/src/statusline/recorders/__tests__/session.test.ts
 //
 // Wave 4 regression tests for the session recorder. Covers the runbook §4.1
 // behaviors plus the prompt-level scope:

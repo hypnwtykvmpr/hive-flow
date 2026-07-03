@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/commands/__tests__/statusline-wrapper-host.test.ts
+// cli/src/commands/__tests__/statusline-wrapper-host.test.ts
 //
 // Behavioural tests for `hive-flow statusline wrapper-host` (Wave 11A.2).
 // Covers:

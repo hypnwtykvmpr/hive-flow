@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapters/types.ts
+// cli/src/integrations/adapters/types.ts
 //
 // Wave 11A — Connector adapter foundation: base types only.
 //

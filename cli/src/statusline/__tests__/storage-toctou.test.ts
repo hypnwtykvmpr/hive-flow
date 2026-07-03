@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/storage-toctou.test.ts
+// cli/src/statusline/__tests__/storage-toctou.test.ts
 //
 // Statusboard audit Slice A — TOCTOU bounded-read regression suite.
 //

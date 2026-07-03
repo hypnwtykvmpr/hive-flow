@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/scoreboard.ts
+// cli/src/statusline/collectors/scoreboard.ts
 //
 // Wave-3 scoreboard collector for the statusline rewrite. Pure async; never
 // mutates ledgers. Reads the canonical presence + calls JSONL ledgers (Wave 2

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/tests.ts
+// cli/src/statusline/recorders/tests.ts
 //
 // Phase 4 of the statusline rewrite. Tests subsystem recorder.
 //

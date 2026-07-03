@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/provider-metrics-migration.test.ts
+// cli/src/statusline/__tests__/provider-metrics-migration.test.ts
 //
 // Phase 11 acceptance-matrix coverage for the provider metrics migration:
 // legacy flat + nested shapes, corrupt JSON, missing file, idempotent replay,

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapters/shell-prompt.ts
+// cli/src/integrations/adapters/shell-prompt.ts
 /**
  * Shell-prompt suppression adapter (canonical, hand-written like
  * claude-code-statusline.ts).

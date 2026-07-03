@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/last-render.test.ts
+// cli/src/statusline/__tests__/last-render.test.ts
 //
 // Wave 8 — Codex Phase 7 Finding 1 + Finding 2 regression suite.
 //

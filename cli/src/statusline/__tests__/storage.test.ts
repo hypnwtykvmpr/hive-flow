@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/storage.test.ts
+// cli/src/statusline/__tests__/storage.test.ts
 //
 // Wave 2 regression tests for the bounded, atomic, symlink-safe storage
 // primitives. Mirrors the Phase 5 patch test plan in the canonical runbook

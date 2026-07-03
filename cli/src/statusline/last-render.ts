@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/last-render.ts
+// cli/src/statusline/last-render.ts
 //
 // Phase 12 of the statusline rewrite — Wave 8 refactor (Codex Phase 7
 // Finding 1 + Finding 2).

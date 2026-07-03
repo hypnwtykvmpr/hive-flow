@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/variant-detection.ts
+// cli/src/integrations/variant-detection.ts
 import { parse, parseTree, findNodeAtLocation } from 'jsonc-parser';
 import { readTextIfExists } from './atomic-merge.js';
 

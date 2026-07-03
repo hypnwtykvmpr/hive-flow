@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/storage.ts
+// cli/src/statusline/storage.ts
 //
 // Wave 2 of the statusline rewrite. Bounded, atomic, symlink-safe storage
 // primitives for the statusline ledgers, materialized snapshots, and spool.

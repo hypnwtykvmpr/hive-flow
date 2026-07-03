@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/layout-enforcement.test.ts
+// cli/src/statusline/__tests__/layout-enforcement.test.ts
 //
 // LAYOUT ENFORCEMENT SUITE — locks the documented multi-row statusline box so
 // it can NEVER silently regress. The layout was once collapsed to a single

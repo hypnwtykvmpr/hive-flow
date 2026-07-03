@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/launcher.ts
+// cli/src/integrations/launcher.ts
 import { existsSync } from 'node:fs';
 import { mkdir, chmod, readFile } from 'node:fs/promises';
 import { atomicWrite } from './atomic-merge.js';

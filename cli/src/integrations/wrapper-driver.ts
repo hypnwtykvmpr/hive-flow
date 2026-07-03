@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/wrapper-driver.ts
+// cli/src/integrations/wrapper-driver.ts
 //
 // Wave 11 wrapper-driver. Shared POSIX + Windows wrapper-script renderer used
 // by every wrapper-mode connector adapter (Codex, Gemini, ForgeCode, OpenCode,

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/project-scope.test.ts
+// cli/src/statusline/__tests__/project-scope.test.ts
 //
 // Wave 3 regression tests for `resolveProjectScope`.
 //

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/test-fingerprint.ts
+// cli/src/statusline/test-fingerprint.ts
 //
 // Content-aware test-source fingerprinting for the statusline rewrite
 // (Phase 4.5 / 5.x of the canonical runbook, plus Codex's Phase 2 round-3

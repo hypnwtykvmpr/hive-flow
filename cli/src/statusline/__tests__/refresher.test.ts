@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/refresher.test.ts
+// cli/src/statusline/__tests__/refresher.test.ts
 //
 // Wave 7 regression tests for `refreshStatuslineSnapshot`. These tests use
 // canned ledger fixtures so the refresher exercise is independent of the

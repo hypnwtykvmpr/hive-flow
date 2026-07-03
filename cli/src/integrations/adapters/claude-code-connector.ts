@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapters/claude-code-connector.ts
+// cli/src/integrations/adapters/claude-code-connector.ts
 //
 // Wave 11B — Claude Code connector adapter.
 //

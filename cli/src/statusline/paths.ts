@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/paths.ts
+// cli/src/statusline/paths.ts
 //
 // Wave 2 of the statusline rewrite. Pure path-resolution helpers. No I/O.
 //

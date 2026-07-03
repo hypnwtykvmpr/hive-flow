@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/commands/__tests__/tests-command.test.ts
+// cli/src/commands/__tests__/tests-command.test.ts
 //
 // Behavioural tests for the `hive-flow tests` command (Phase 9 of the
 // statusline rewrite). Covers:

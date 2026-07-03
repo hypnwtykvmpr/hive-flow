@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/commands/__tests__/statusline-launcher-idle-proof.test.ts
+// cli/src/commands/__tests__/statusline-launcher-idle-proof.test.ts
 //
 // PROOF 1 — GLOBAL-INSTALL / LAUNCHER: idle-only workers render "○", not "◉".
 //

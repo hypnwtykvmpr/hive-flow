@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/atomic-merge.ts
+// cli/src/integrations/atomic-merge.ts
 import { existsSync } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import { mkdir, readFile, rename, copyFile, open, realpath } from 'node:fs/promises';

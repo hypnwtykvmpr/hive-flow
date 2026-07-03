@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/attention.ts
+// cli/src/statusline/recorders/attention.ts
 //
 // Phase 8 / Attention Subsystem — emit + resolve recorder with the four
 // mandatory redactions from Phase 5 constraint C3:

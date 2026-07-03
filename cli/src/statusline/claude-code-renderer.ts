@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/claude-code-renderer.ts
+// cli/src/statusline/claude-code-renderer.ts
 //
 // Phase 12 — Renderer replacement. Composes prior waves (palette, inline-
 // collectors, last-render, refresher, types, config, project-scope) into the

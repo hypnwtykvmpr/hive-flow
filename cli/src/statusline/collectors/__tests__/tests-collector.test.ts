@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/__tests__/tests-collector.test.ts
+// cli/src/statusline/collectors/__tests__/tests-collector.test.ts
 //
 // Tests subsystem collector regression tests. These tests are intentionally
 // independent of the Wave 2 recorder: every fixture is a canned JSONL ledger

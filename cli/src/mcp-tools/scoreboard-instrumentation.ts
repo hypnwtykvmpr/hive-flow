@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/mcp-tools/scoreboard-instrumentation.ts
+// cli/src/mcp-tools/scoreboard-instrumentation.ts
 //
 // Phase 11.1 — MCP scoreboard instrumentation.
 //

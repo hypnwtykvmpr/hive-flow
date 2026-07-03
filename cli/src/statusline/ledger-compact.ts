@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/ledger-compact.ts
+// cli/src/statusline/ledger-compact.ts
 //
 // Phase 13.3 of the statusline rewrite. Truncate a JSONL ledger to the most
 // recent N valid events under an exclusive lock, preserving the newest state

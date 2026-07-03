@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/__tests__/scoreboard.test.ts
+// cli/src/statusline/recorders/__tests__/scoreboard.test.ts
 //
 // Phase 6 regression tests for the scoreboard recorder.
 //

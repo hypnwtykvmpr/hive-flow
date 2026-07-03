@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/types.ts
+// cli/src/statusline/types.ts
 //
 // Wave 1 of the statusline rewrite. Typed contracts shared across recorders,
 // collectors, the refresher, the renderer, command surfaces, and connectors.

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/recorders/scoreboard.ts
+// cli/src/statusline/recorders/scoreboard.ts
 //
 // Phase 6 of the statusline rewrite. The scoreboard subsystem persists two
 // append-only JSONL ledgers — `scoreboard/presence.jsonl` and

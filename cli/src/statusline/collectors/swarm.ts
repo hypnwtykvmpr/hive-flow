@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/swarm.ts
+// cli/src/statusline/collectors/swarm.ts
 //
 // Wave 5 / C1 BLOCKER FIX — canonical swarm collector for the statusline.
 //

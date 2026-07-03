@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/test-fingerprint.test.ts
+// cli/src/statusline/__tests__/test-fingerprint.test.ts
 //
 // Behavioural tests for the content-aware test-source fingerprint. These
 // tests follow the Phase 4.5 spec in the canonical merged runbook

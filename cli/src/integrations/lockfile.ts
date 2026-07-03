@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/lockfile.ts
+// cli/src/integrations/lockfile.ts
 import { open } from 'node:fs/promises';
 import { mkdir, unlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';

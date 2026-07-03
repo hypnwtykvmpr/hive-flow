@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/attention.ts
+// cli/src/statusline/collectors/attention.ts
 //
 // Attention subsystem collector. Reads the canonical attention JSONL ledger
 // and folds emit / resolve events into a compact summary the renderer can

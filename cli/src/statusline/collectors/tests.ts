@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/tests.ts
+// cli/src/statusline/collectors/tests.ts
 //
 // Tests subsystem collector. Reads the canonical tests JSONL ledger
 // (`.hive-flow/tests/last-run.jsonl`) and folds suite / partial events into

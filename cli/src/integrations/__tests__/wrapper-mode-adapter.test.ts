@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/wrapper-mode-adapter.test.ts
+// cli/src/integrations/__tests__/wrapper-mode-adapter.test.ts
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/inline-collectors.ts
+// cli/src/statusline/inline-collectors.ts
 //
 // Wave 8 — Inline-fallback collector. The third statusline renderer mode:
 // fired when no fresh `.hive-flow/state/cache.json` exists but `.hive-flow/`

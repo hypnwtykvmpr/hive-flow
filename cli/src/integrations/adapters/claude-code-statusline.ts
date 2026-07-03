@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapters/claude-code-statusline.ts
+// cli/src/integrations/adapters/claude-code-statusline.ts
 /**
  * Claude Code Statusline Adapter (canonical).
  *

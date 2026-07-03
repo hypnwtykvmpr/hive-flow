@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/adapters/index.ts
+// cli/src/integrations/adapters/index.ts
 import { join } from 'node:path';
 import { readTextIfExists } from '../atomic-merge.js';
 import { makeJsonAdapter, makeTomlAdapter, makeManualCommandAdapter } from './factories.js';

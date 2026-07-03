@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/collectors/__tests__/attention-collector.test.ts
+// cli/src/statusline/collectors/__tests__/attention-collector.test.ts
 //
 // Phase 8 attention collector regression tests. These tests are intentionally
 // independent of the recorder: every fixture is a canned JSONL ledger written

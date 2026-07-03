@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/__tests__/repair.test.ts
+// cli/src/statusline/__tests__/repair.test.ts
 //
 // Wave 6/7 regression tests for `repairLedger` and `repairAllLedgers`. These
 // tests are deliberately decoupled from the recorders: each scenario writes

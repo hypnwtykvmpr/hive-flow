@@ -993,7 +993,7 @@ export const workflowTools: MCPTool[] = [
 // ============================================================================
 
 // Derive project root from this module's location (Finding 2: HMAC key path mismatch).
-// workflow-tools.ts lives at: <root>/v3/@hive-flow/cli/src/mcp-tools/workflow-tools.ts
+// workflow-tools.ts lives at: <root>/cli/src/mcp-tools/workflow-tools.ts
 // Traversing up 5 levels:       mcp-tools -> src -> cli -> @hive-flow -> v3 -> <root>
 const __wfFilename = fileURLToPath(import.meta.url);
 const __wfDirname = dirname(__wfFilename);

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/integration-marker.test.ts
+// cli/src/integrations/__tests__/integration-marker.test.ts
 //
 // Wave 11A — Integration marker foundation tests.
 //

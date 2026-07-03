@@ -4,7 +4,7 @@
  * Demonstrates how to use the Event Sourcing system in V3 Hive Flow.
  *
  * Usage:
- *   tsx v3/@hive-flow/cli/src/shared/events/example-usage.ts
+ *   tsx cli/src/shared/events/example-usage.ts
  */
 
 import { EventStore } from './event-store.js';

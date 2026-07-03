@@ -3,7 +3,7 @@
  * Quick Integration Test
  *
  * Verifies the local attention integration is working correctly.
- * Run with: tsx v3/@hive-flow/cli/src/performance/examples/quick-test.ts
+ * Run with: tsx cli/src/performance/examples/quick-test.ts
  */
 
 import {

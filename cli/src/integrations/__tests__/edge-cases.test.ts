@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/integrations/__tests__/edge-cases.test.ts
+// cli/src/integrations/__tests__/edge-cases.test.ts
 //
 // §12.3 Edge cases — paste-ready integration tests.
 // §12.4 Demoted scaffolds at the bottom (it.skip).

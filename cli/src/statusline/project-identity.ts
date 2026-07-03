@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/project-identity.ts
+// cli/src/statusline/project-identity.ts
 import { readFile, access } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';

@@ -1,4 +1,4 @@
-// v3/@hive-flow/cli/src/statusline/refresher.ts
+// cli/src/statusline/refresher.ts
 //
 // Wave 7 of the canonical statusline rewrite (Codex merged runbook 2026-05-20,
 // post 2026-05-21 patches). Orchestrates the snapshot composition path:
