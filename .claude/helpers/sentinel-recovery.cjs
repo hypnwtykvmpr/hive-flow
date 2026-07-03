@@ -207,7 +207,6 @@ function recoverSentinelWatchers() {
     // Check heartbeat freshness
     const updatedAtMs = data.updatedAt ? new Date(data.updatedAt).getTime() : NaN;
     const heartbeatAge = Number.isFinite(updatedAtMs) ? now - updatedAtMs : NaN;
-    const isStale = !Number.isFinite(updatedAtMs) || (now - updatedAtMs) > HEARTBEAT_STALE_MS;
 
     // Check PID liveness
     const pidState = pidLiveness(data.watcherPid);
@@ -230,7 +229,7 @@ function recoverSentinelWatchers() {
     // Dead watcher + active hive — needs recovery
     const entry = {
       hiveId,
-      reason: pidState === 'dead' || pidState === 'missing' ? 'pid-dead' : 'heartbeat-stale',
+      reason: 'pid-dead',
       heartbeatAgeMs: heartbeatAge,
       oldPid: data.watcherPid || null,
       respawned: false,
