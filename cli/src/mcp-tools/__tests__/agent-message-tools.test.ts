@@ -180,6 +180,31 @@ describe('agent_message_send — wake notice', () => {
     expect(again.message.messageId).toBe(res.message.messageId);
     expect(readFileSync(dataFile, 'utf-8').trim().split('\n')).toHaveLength(1);
   });
+
+  it('wake summary ack instruction round-trips against the real ack path', async () => {
+    // Regression (Codex bounce 20260703T223229Z): an agent-targeted notice MUST
+    // include agentId in the ack instruction; without it agent_message_ack
+    // resolves the caller's session-level inbox and the message never acks.
+    const res = await tool('agent_message_send').handler(sendInput()) as { message: { messageId: string } };
+    const dataFile = join(root, '.hive-flow', 'data', 'pending-notifications.jsonl');
+    const notice = JSON.parse(readFileSync(dataFile, 'utf-8').trim().split('\n')[0]);
+
+    const ackInstruction = String(notice.summary).match(/agent_message_ack\(([^)]*)\)/);
+    expect(ackInstruction).not.toBeNull();
+    const argsText = ackInstruction![1];
+    const messageId = argsText.match(/messageId:"([^"]+)"/)?.[1];
+    const agentId = argsText.match(/agentId:"([^"]+)"/)?.[1];
+    expect(messageId).toBe(res.message.messageId);
+    expect(agentId).toBe(RECIPIENT.agentId);
+
+    // Execute EXACTLY the arguments the notice suggests -- they must ack for real.
+    const acked = await tool('agent_message_ack').handler({
+      ...(messageId ? { messageId } : {}),
+      ...(agentId ? { agentId } : {}),
+      projectRoot: root,
+    }) as { success: boolean; acked: boolean; alreadyAcked: boolean };
+    expect(acked).toMatchObject({ success: true, acked: true, alreadyAcked: false });
+  });
 });
 
 // ---------------------------------------------------------------------------

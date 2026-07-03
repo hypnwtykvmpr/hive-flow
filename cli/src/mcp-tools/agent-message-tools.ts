@@ -208,11 +208,17 @@ function wakeSessionKey(ownerClientKind: string, ownerSessionId: string): string
  * (same pattern as the bridge's appendTaskNotificationOnce). Best-effort.
  */
 function writeMessageWakeNotice(message: AgentMessage, projectRoot: string): boolean {
+  // The ack instruction must carry the SAME addressing as the inbox instruction:
+  // an agent-addressed message acked without agentId resolves the caller's
+  // session-level inbox and never acks (Codex bounce 20260703T223229Z).
+  const inboxArgs = message.to.agentId ? `{agentId:"${message.to.agentId}"}` : '{}';
+  const ackArgs = message.to.agentId
+    ? `{messageId:"${message.messageId}", agentId:"${message.to.agentId}"}`
+    : `{messageId:"${message.messageId}"}`;
   const summary =
     `[AGENT MESSAGE: ${message.messageId}] from=${message.from.agentId} verb=${message.verb} ` +
-    `priority=${message.priority}. Read with agent_message_inbox(` +
-    `${message.to.agentId ? `{agentId:"${message.to.agentId}"}` : '{}'}); ` +
-    `ack with agent_message_ack({messageId:"${message.messageId}"}).`;
+    `priority=${message.priority}. Read with agent_message_inbox(${inboxArgs}); ` +
+    `ack with agent_message_ack(${ackArgs}).`;
   const line = JSON.stringify({
     kind: 'agent-message',
     messageId: message.messageId,
