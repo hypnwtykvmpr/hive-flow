@@ -66,9 +66,9 @@ const storeCommand: Command = {
     }
   ],
   examples: [
-    { command: 'hive-flow memory store -k "api/auth" -v "JWT implementation"', description: 'Store text' },
+    { command: 'hive-flow memory store -k "api/auth" --value "JWT implementation"', description: 'Store text' },
     { command: 'hive-flow memory store -k "pattern/singleton" --vector', description: 'Store vector' },
-    { command: 'hive-flow memory store -k "pattern" -v "updated" --upsert', description: 'Update existing' }
+    { command: 'hive-flow memory store -k "pattern" --value "updated" --upsert', description: 'Update existing' }
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const key = ctx.flags.key as string;
@@ -1439,7 +1439,7 @@ export const memoryCommand: Command = {
   subcommands: [initMemoryCommand, storeCommand, retrieveCommand, searchCommand, listCommand, deleteCommand, statsCommand, configureCommand, cleanupCommand, compressCommand, exportCommand, importCommand],
   options: [],
   examples: [
-    { command: 'hive-flow memory store -k "key" -v "value"', description: 'Store data' },
+    { command: 'hive-flow memory store -k "key" --value "value"', description: 'Store data' },
     { command: 'hive-flow memory search -q "auth patterns"', description: 'Search memory' },
     { command: 'hive-flow memory stats', description: 'Show statistics' }
   ],

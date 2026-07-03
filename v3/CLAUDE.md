@@ -12,7 +12,7 @@ This directory contains the V3 monorepo packages. Root CLAUDE.md rules apply her
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `@hive-flow/cli` | `@hive-flow/cli/` | CLI entry point (37 commands, 268 subcommands) |
+| `@hive-flow/cli` | `@hive-flow/cli/` | CLI entry point (37 commands, 269 subcommands) |
 | `@hive-flow/cli/guidance` | `@hive-flow/cli/src/guidance/` | Governance control plane (compile, enforce, prove, evolve) |
 | `@hive-flow/cli/hooks` | `@hive-flow/cli/src/hooks/` | 35 CLI hook subcommands, 36 MCP hook tools, 10 configured workers |
 | `@hive-flow/cli/memory` | `@hive-flow/cli/src/memory/` | HiveMemory + HNSW vector search |

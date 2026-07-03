@@ -70,11 +70,11 @@ HIVE_FLOW_MCP_TRANSPORT=stdio
 
 ## Plugin Registry Maintenance (IPFS/Pinata)
 
-Registry CID stored in: `v3/@hive-flow/cli/src/plugins/store/discovery.ts`
+Registry CID stored in: `cli/src/plugins/store/discovery.ts`
 Gateway: `https://gateway.pinata.cloud/ipfs/{CID}`
 
 Steps to add a plugin:
-1. Fetch current registry: `curl -s "https://gateway.pinata.cloud/ipfs/$(grep LIVE_REGISTRY_CID v3/@hive-flow/cli/src/plugins/store/discovery.ts | cut -d"'" -f2)" > /tmp/registry.json`
+1. Fetch current registry: `curl -s "https://gateway.pinata.cloud/ipfs/$(grep LIVE_REGISTRY_CID cli/src/plugins/store/discovery.ts | cut -d"'" -f2)" > /tmp/registry.json`
 2. Add plugin entry to `plugins` array, increment `totalPlugins`, update category counts
 3. Upload: `curl -X POST "https://api.pinata.cloud/pinning/pinJSONToIPFS" -H "Authorization: Bearer $PINATA_JWT" -H "Content-Type: application/json" -d @/tmp/registry.json`
 4. Update `LIVE_REGISTRY_CID` in discovery.ts and the `demoPluginRegistry` fallback
@@ -83,16 +83,16 @@ Security: NEVER hardcode API keys. Source from .env at runtime. NEVER commit .en
 
 ## Doctor Health Checks
 
-`node v3/@hive-flow/cli/bin/cli.js doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
+`node cli/bin/cli.js doctor` checks: Node 20+, npm 9+, git, config, daemon, memory DB, API keys, MCP servers, disk space, TypeScript.
 
 ## Hooks Quick Reference
 
 ```bash
-node v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task]"
-node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "[id]" --success true
-node v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "[id]"
-node v3/@hive-flow/cli/bin/cli.js hooks route --task "[task]"
-node v3/@hive-flow/cli/bin/cli.js hooks worker list
+node cli/bin/cli.js hooks pre-task --description "[task]"
+node cli/bin/cli.js hooks post-task --task-id "[id]" --success true
+node cli/bin/cli.js hooks session-start --session-id "[id]"
+node cli/bin/cli.js hooks route --task "[task]"
+node cli/bin/cli.js hooks worker list
 ```
 
 ## Pattern Utilities (Neural Package)

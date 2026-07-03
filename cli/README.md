@@ -643,10 +643,10 @@ hive-flow init
 hive-flow mcp start
 
 # Run a task with agents
-hive-flow --agent implementer --task "Implement user authentication"
+hive-flow agent spawn -t implementer --task "Implement user authentication"
 
 # List available agents
-hive-flow --list
+hive-flow agent list
 ```
 
 ### Upgrading
@@ -1774,7 +1774,7 @@ hive-flow hooks worker status
 **Provider concurrency caps:** API-backed provider limits are unknown until measured for the configured account. Run the built-in probe to launch real Hive Flow agents against each configured provider, cool down, narrow the failing range, and write an evidence-backed safe cap to `.hive-flow/provider-concurrency.json`:
 
 ```bash
-cd v3/@hive-flow/cli
+cd cli
 npm run build
 npm run probe:provider-concurrency -- --providers deepseek,openrouter
 ```
@@ -1857,7 +1857,7 @@ Unprobed API providers are not assigned arbitrary built-in caps; the global agen
 </details>
 
 <details>
-<summary>💻 <strong>CLI Commands</strong> — 37 commands with 268 subcommands</summary>
+<summary>💻 <strong>CLI Commands</strong> — 37 commands with 269 subcommands</summary>
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
@@ -2377,7 +2377,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 </details>
 
 <details>
-<summary>⌨️ <strong>V3 CLI Commands</strong> — 37 commands with 268 subcommands</summary>
+<summary>⌨️ <strong>V3 CLI Commands</strong> — 37 commands with 269 subcommands</summary>
 
 Complete command-line interface for all Hive Flow operations.
 
@@ -2539,18 +2539,18 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow --agent verifier --task "Review PR #123"` |
-| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `hive-flow --agent tester --task "Write tests for auth module"` |
-| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow --agent implementer --task "Refactor user service to use repository pattern"` |
-| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow --agent implementer --task "Fix race condition in checkout flow"` |
+| **Code Review** | Get thorough reviews with security, performance, and style checks | `hive-flow agent spawn -t verifier --task "Review PR #123"` |
+| **Test Generation** | Auto-generate unit, integration, and e2e tests for existing code | `hive-flow agent spawn -t tester --task "Write tests for auth module"` |
+| **Refactoring** | Safely restructure code while maintaining behavior | `hive-flow agent spawn -t implementer --task "Refactor user service to use repository pattern"` |
+| **Bug Fixing** | Diagnose and fix bugs with full context analysis | `hive-flow agent spawn -t implementer --task "Fix race condition in checkout flow"` |
 
 ### 🔒 Security & Compliance
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Security Audit** | Find vulnerabilities before attackers do | `hive-flow --agent security-architect --task "Audit for OWASP Top 10"` |
+| **Security Audit** | Find vulnerabilities before attackers do | `hive-flow agent spawn -t security-architect --task "Audit for OWASP Top 10"` |
 | **Dependency Scan** | Identify vulnerable packages and suggest upgrades | `hive-flow security scan --depth full` |
-| **Compliance Check** | Ensure code meets security standards | `hive-flow --agent security-architect --task "Check PCI-DSS compliance"` |
+| **Compliance Check** | Ensure code meets security standards | `hive-flow agent spawn -t security-architect --task "Check PCI-DSS compliance"` |
 
 ### 🐝 Multi-Agent Swarms
 
@@ -2564,24 +2564,24 @@ Real-world scenarios and pre-built workflows for common tasks.
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow --agent performance-engineer --task "Profile API endpoints"` |
+| **Performance Profiling** | Find and fix bottlenecks in your application | `hive-flow agent spawn -t performance-engineer --task "Profile API endpoints"` |
 | **Query Optimization** | Speed up slow database queries | `hive-flow hooks route "Optimize database queries"` |
-| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow --agent performance-engineer --task "Analyze memory usage patterns"` |
+| **Memory Analysis** | Reduce memory usage and fix leaks | `hive-flow agent spawn -t performance-engineer --task "Analyze memory usage patterns"` |
 
 ### 🔄 GitHub & DevOps
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **PR Management** | Review, approve, and merge PRs efficiently | `hive-flow --agent pr-manager --task "Review open PRs"` |
-| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow --agent issue-tracker --task "Triage new issues"` |
-| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow --agent release-manager --task "Prepare v2.0 release"` |
-| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow --agent cicd-engineer --task "Optimize GitHub Actions workflow"` |
+| **PR Management** | Review, approve, and merge PRs efficiently | `hive-flow agent spawn -t pr-manager --task "Review open PRs"` |
+| **Issue Triage** | Categorize, prioritize, and assign issues automatically | `hive-flow agent spawn -t issue-tracker --task "Triage new issues"` |
+| **Release Management** | Coordinate releases with changelogs and versioning | `hive-flow agent spawn -t release-manager --task "Prepare v2.0 release"` |
+| **CI/CD Optimization** | Speed up pipelines and reduce flaky tests | `hive-flow agent spawn -t cicd-engineer --task "Optimize GitHub Actions workflow"` |
 
 ### 📋 Spec-Driven Development
 
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
-| **Generate Specs** | Create complete specifications before coding | `hive-flow --agent architect --task "Create ADR for authentication system"` |
+| **Generate Specs** | Create complete specifications before coding | `hive-flow agent spawn -t architect --task "Create ADR for authentication system"` |
 | **Validate Implementation** | Ensure code matches specifications | `hive-flow hooks progress --detailed` |
 | **Track Compliance** | Monitor spec adherence across the team | `hive-flow progress sync` |
 
@@ -2590,7 +2590,7 @@ Real-world scenarios and pre-built workflows for common tasks.
 | Scenario | What It Solves | How To Do It |
 |----------|----------------|--------------|
 | **Bootstrap Intelligence** | Train the system on your codebase patterns | `hive-flow hooks pretrain --depth deep` |
-| **Optimize Routing** | Improve task-to-agent matching over time | `hive-flow hooks route "<task>" --include-explanation` |
+| **Optimize Routing** | Improve task-to-agent matching over time | `hive-flow hooks route "<task>"` |
 | **Transfer Learning** | Apply patterns learned from other projects | `hive-flow hooks transfer <sourceProject>` |
 
 </details>
@@ -2898,7 +2898,7 @@ hive-flow hooks post-edit ./src/auth.ts --success true --train-patterns
 
 ```bash
 # Route a task with explanation
-hive-flow hooks route "refactor authentication to use JWT" --include-explanation
+hive-flow hooks route "refactor authentication to use JWT"
 
 # Bootstrap intelligence from your codebase
 hive-flow hooks pretrain --depth deep --model-type moe
@@ -3016,7 +3016,7 @@ hive-flow hooks model-route --task "design distributed consensus system"
 # ══════════════════════════════════════════════════════════════════
 
 # Route task to best agent (with intelligence context injection)
-hive-flow hooks route "<task>" --include-explanation
+hive-flow hooks route "<task>"
 
 # Start/end session with learning
 hive-flow hooks session-start --start-daemon
@@ -3235,7 +3235,7 @@ Import shared learning patterns for common tasks. 40 patterns across 8 categorie
 hive-flow neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc --category security
 
 # Use patterns in routing
-hive-flow hooks route --task "review authentication code" --use-patterns
+hive-flow hooks route --task "review authentication code"
 ```
 
 #### Benefits vs Fresh Install
@@ -3812,7 +3812,7 @@ The Route system uses **Q-Learning** to automatically assign tasks to the best a
 | Command | What It Does | Example |
 |---------|--------------|---------|
 | `route task` | Get agent recommendation | `hive-flow route task "implement OAuth2"` |
-| `route explain` | Understand routing decision | `hive-flow route explain "task"` |
+| `hooks explain` | Understand routing decision | `hive-flow hooks explain "task"` |
 | `route coverage` | Route based on test coverage | `hive-flow route coverage` |
 
 ### Example: Route a Task
@@ -3857,7 +3857,7 @@ hive-flow route coverage
 
 ```bash
 # Route via hooks (preferred)
-hive-flow hooks route "implement caching layer" --include-explanation
+hive-flow hooks route "implement caching layer"
 
 # Record outcome for learning
 hive-flow hooks post-task --task-id "task-123" --success true --agent implementer
@@ -4711,7 +4711,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | 6 topologies, Byzantine consensus, auto-scaling |
 | `@hive-flow/cli/plugin-sdk` | Plugin SDK | Builders, registries, workers, hooks, providers |
-| `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
+| `@hive-flow/cli` | Command interface | 37 commands, 269 subcommands, shell completions |
 | `@hive-flow/cli/neural` | Local learning helpers | ReasoningBank, PatternLearner, deterministic helper APIs |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |

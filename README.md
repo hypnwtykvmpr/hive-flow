@@ -379,8 +379,8 @@ pnpm run build:ts
 # Run from the clone
 node cli/bin/cli.js --help
 
-# Link this checkout globally after building
-npm link
+# Link this checkout globally after building (the cli/ package holds the bin)
+(cd cli && npm link)
 hive-flow --help
 
 # Initialize in the current project
@@ -1903,7 +1903,7 @@ Unprobed API providers are not assigned arbitrary built-in caps; the global agen
 </details>
 
 <details>
-<summary>💻 <strong>CLI Commands</strong> — 37 commands with 268 subcommands</summary>
+<summary>💻 <strong>CLI Commands</strong> — 37 commands with 269 subcommands</summary>
 
 | Command | Subcommands | Description |
 |---------|-------------|-------------|
@@ -2427,7 +2427,7 @@ Shell-based daemons for monitoring (Linux/macOS only):
 </details>
 
 <details>
-<summary>⌨️ <strong>V3 CLI Commands</strong> — 37 commands with 268 subcommands</summary>
+<summary>⌨️ <strong>V3 CLI Commands</strong> — 37 commands with 269 subcommands</summary>
 
 Complete command-line interface for all Hive Flow operations.
 
@@ -3418,7 +3418,7 @@ Import shared learning patterns for common tasks. 40 patterns across 8 categorie
 hive-flow neural import --cid QmNr1yYMKi7YBaL8JSztQyuB5ZUaTdRMLxJC1pBpGbjsTc --category security
 
 # Use patterns in routing
-hive-flow hooks route --task "review authentication code" --use-patterns
+hive-flow hooks route --task "review authentication code"
 ```
 
 #### Benefits vs Fresh Install
@@ -3992,7 +3992,7 @@ The Route system uses **Q-Learning** to automatically assign tasks to the best a
 | Command | What It Does | Example |
 |---------|--------------|---------|
 | `route task` | Get agent recommendation | `hive-flow route task "implement OAuth2"` |
-| `route explain` | Understand routing decision | `hive-flow route explain "task"` |
+| `hooks explain` | Understand routing decision | `hive-flow hooks explain "task"` |
 | `route coverage` | Route based on test coverage | `hive-flow route coverage` |
 
 ### Example: Route a Task
@@ -5026,7 +5026,7 @@ Domain-Driven Design with bounded contexts, clean architecture, and measured per
 | `@hive-flow/cli/security` | CVE remediation | Input validation, path security, AIDefence |
 | `@hive-flow/cli/swarm` | Multi-agent coordination | Source-backed topologies, consensus settings, agent caps |
 | `@hive-flow/cli/plugin-sdk` | Plugin SDK | Builders, registries, workers, hooks, providers |
-| `@hive-flow/cli` | Command interface | 37 commands, 268 subcommands, shell completions |
+| `@hive-flow/cli` | Command interface | 37 commands, 269 subcommands, shell completions |
 | `@hive-flow/cli/neural` | Local learning helpers | NeuralLearningSystem, ReasoningBank, PatternLearner, algorithm helper APIs |
 | `@hive-flow/cli/testing` | Quality assurance | London School TDD, Vitest, fixtures, mocks |
 | `@hive-flow/cli/deployment` | CLI release helpers | Versioning, changelogs, npm publishing support |
