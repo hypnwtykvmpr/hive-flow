@@ -30,9 +30,11 @@ import {
 import { loadAgentStore, resolveProjectRootFromInput } from './agent-tools.js';
 import { resolveOwnerStampOrError } from './session-id.js';
 
-const MESSAGE_VERBS: MessageVerb[] = ['ask', 'inform', 'handoff', 'blocked', 'reply', 'ack', 'resume', 'redirect'];
-const MESSAGE_PRIORITIES: MessagePriority[] = ['urgent', 'high', 'normal', 'low'];
-const BLOCKER_CLASSES: BlockerClass[] = ['self-redirectable', 'needs-mediation', 'terminal'];
+// P5 (hive-flow-29a5): exported as the closed runtime vocabulary alongside the
+// closed router-note Status grammar (cli/src/progress/router-status.ts).
+export const MESSAGE_VERBS: readonly MessageVerb[] = ['ask', 'inform', 'handoff', 'blocked', 'reply', 'ack', 'resume', 'redirect'];
+export const MESSAGE_PRIORITIES: readonly MessagePriority[] = ['urgent', 'high', 'normal', 'low'];
+export const BLOCKER_CLASSES: readonly BlockerClass[] = ['self-redirectable', 'needs-mediation', 'terminal'];
 
 // NUL separator built via fromCharCode so the source stays pure ASCII (a literal
 // NUL byte makes git classify the file as binary). Matches the wake-path scheme

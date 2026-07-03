@@ -73,6 +73,8 @@ export type MessageVerb =
   | 'redirect'; // mediator decision: do a safe replacement instead
 
 export type DeliveryState = 'pending' | 'delivered' | 'acked' | 'dead-letter' | 'expired';
+/** P5 (hive-flow-29a5): closed runtime vocabulary matching the type above. */
+export const DELIVERY_STATES: readonly DeliveryState[] = ['pending', 'delivered', 'acked', 'dead-letter', 'expired'];
 export type BlockerClass = 'self-redirectable' | 'needs-mediation' | 'terminal';
 export type MessagePriority = 'urgent' | 'high' | 'normal' | 'low';
 

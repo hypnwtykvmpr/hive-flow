@@ -4,6 +4,7 @@ import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { collectSwarm } from '../statusline/collectors/swarm.js';
 import { resolveProjectScope } from '../statusline/project-scope.js';
+import { parseRouterStatus } from './router-status.js';
 
 export type ProgressAuthorityClassification =
   | 'progressing'
@@ -25,6 +26,10 @@ export interface RouterEvidence {
   pushHeld: boolean;
   continuationAfterGate: boolean;
   excerpt?: string;
+  /** P5 (hive-flow-29a5): the latest note's Status header as written. */
+  latestStatus?: string;
+  /** True when latestStatus is in the closed ROUTER_STATUSES set. */
+  latestStatusRecognized?: boolean;
 }
 
 export interface GitEvidence {
@@ -265,6 +270,8 @@ function collectRouterEvidence(projectRoot: string, agent: string | undefined, n
   let latestMtimeMs: number | undefined;
   let latestExcerpt: string | undefined;
   let addressedAgent: string | undefined;
+  let latestStatus: string | undefined;
+  let latestStatusRecognized: boolean | undefined;
   let concreteAction = false;
   let concreteActionMtimeMs: number | undefined;
   let humanGate = false;
@@ -275,19 +282,56 @@ function collectRouterEvidence(projectRoot: string, agent: string | undefined, n
   for (const note of notes) {
     const text = readBoundedText(note.path, MAX_NOTE_BYTES);
     if (text === undefined) continue;
+    const parsed = parseRouterStatus(text);
     if (latestPath === undefined) {
       latestPath = note.path;
       latestMtimeMs = note.mtimeMs;
       latestExcerpt = redactClassifierString(text.replace(/\s+/g, ' ').trim());
       addressedAgent = addressedAgentFromName(note.path);
+      if (parsed.raw !== null) {
+        latestStatus = redactClassifierString(parsed.raw);
+        latestStatusRecognized = parsed.recognized;
+      }
     }
+    // pushHeld is an orthogonal operator flag, not part of the closed grammar:
+    // always text-mined.
+    if (hasPushHeld(text)) pushHeld = true;
+
+    // P5 (hive-flow-29a5): a recognized closed-set Status header is
+    // AUTHORITATIVE for this note's gate/continuation signals; body mining
+    // applies only to legacy headerless/unknown notes.
+    if (parsed.status !== null) {
+      const noteAddressee = addressedAgentFromName(note.path);
+      const addressedToAgent = !agent || noteAddressee === agent.toLowerCase();
+      if (parsed.status === 'BLOCKED_TRUE_HUMAN_GATE' || parsed.status === 'COMPLETE_NO_ACTION') {
+        // COMPLETE_NO_ACTION maps to the human gate exactly like the legacy
+        // "no further action|queue complete" mining: the lane idles awaiting
+        // new human direction, which is waiting-for-human, not stalled.
+        humanGate = true;
+        gateMtimeMs = gateMtimeMs === undefined ? note.mtimeMs : Math.max(gateMtimeMs, note.mtimeMs);
+      } else {
+        if (
+          addressedToAgent
+          && (parsed.status === 'ACTIVE_HANDOFF' || parsed.status === 'REVIEW_REQUEST' || parsed.status === 'VERIFY_BOUNCE')
+        ) {
+          concreteAction = true;
+          concreteActionMtimeMs = concreteActionMtimeMs === undefined
+            ? note.mtimeMs
+            : Math.max(concreteActionMtimeMs, note.mtimeMs);
+        }
+        continuationMtimeMs = continuationMtimeMs === undefined
+          ? note.mtimeMs
+          : Math.max(continuationMtimeMs, note.mtimeMs);
+      }
+      continue;
+    }
+
     if (hasConcreteAction(text, agent)) {
       concreteAction = true;
       concreteActionMtimeMs = concreteActionMtimeMs === undefined
         ? note.mtimeMs
         : Math.max(concreteActionMtimeMs, note.mtimeMs);
     }
-    if (hasPushHeld(text)) pushHeld = true;
     if (hasHumanGate(text)) {
       humanGate = true;
       gateMtimeMs = gateMtimeMs === undefined ? note.mtimeMs : Math.max(gateMtimeMs, note.mtimeMs);
@@ -316,6 +360,7 @@ function collectRouterEvidence(projectRoot: string, agent: string | undefined, n
       && continuationMtimeMs !== undefined
       && continuationMtimeMs > gateMtimeMs,
     excerpt: latestExcerpt,
+    ...(latestStatus !== undefined ? { latestStatus, latestStatusRecognized } : {}),
   };
 }
 
