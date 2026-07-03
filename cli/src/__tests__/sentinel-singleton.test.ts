@@ -201,6 +201,34 @@ describe('sentinel watcher singleton spawn guard', () => {
     expect(output.hookSpecificOutput.additionalContext).toContain('watcher died (pid-dead), auto-respawned (pid=44444)');
   });
 
+  // hive-flow-110b: EPERM (process exists but is not ours to signal) must be treated as
+  // ALIVE — a live-but-unsignalable watcher must NOT be respawned into a duplicate, even
+  // with a stale heartbeat. This directly asserts the ESRCH-only-dead safety property.
+  it('does not respawn a stale-heartbeat watcher when its PID reports EPERM (alive but unsignalable)', () => {
+    const projectRoot = makeTempProject();
+    const epermPid = 34_343;
+    writeWatcherScript(projectRoot);
+    writeActiveHive(projectRoot, 'hive-eperm');
+    const watcherPath = writeWatcher(projectRoot, 'hive-eperm', {
+      watcherPid: epermPid,
+      updatedAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+    });
+    vi.spyOn(process, 'kill').mockImplementation(((pid: any, signal?: any) => {
+      if (Number(pid) === epermPid && signal === 0) {
+        const err = new Error('operation not permitted') as NodeJS.ErrnoException;
+        err.code = 'EPERM';
+        throw err;
+      }
+      return true;
+    }) as any);
+    const sentinel = useProjectRoot(projectRoot);
+    const { spawn } = mockSpawn(77_777);
+
+    expect(sentinel.recoverSentinelWatchers()).toEqual({});
+    expect(spawn).not.toHaveBeenCalled();
+    expect(fs.existsSync(watcherPath)).toBe(true);
+  });
+
   it('preserves no-PID legacy recovery behavior for stale watcher records', () => {
     const projectRoot = makeTempProject();
     writeWatcherScript(projectRoot);
