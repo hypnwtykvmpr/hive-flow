@@ -1,0 +1,15 @@
+{
+  "event_id": "019f290b-3a19-7170-af80-916a38dc53f3",
+  "occurred_at": "2026-07-03T17:33:49.465631Z",
+  "knot_id": "hive-flow-c882",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Classified JUSTIFIED-clean: all 82 security-scan findings are non-exploitable — test fixtures (secret-detection inputs in __tests__), detection-pattern literals (analyzer must-not-contain rules, detect-secrets examples, scanner/permission-guard/security-regression own regexes self-matching), fake example keys (manifest-validator, gates.rs), doc examples, and one interactive read -p password prompt (secure, false positive). ZERO real secrets/vulns. Source-grounded via git grep -P over whole tracked tree. Result routed to Codex for independent verification (note 20260703T173113Z). Scanner self-flags its own detection patterns -> FP-reduction follow-up hive-flow-dc69. Drive to terminal on Codex concurrence.",
+    "datetime": "2026-07-03T17:33:49.465631Z",
+    "entry_id": "019f290b-3a19-7170-af80-915c99e19f6d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

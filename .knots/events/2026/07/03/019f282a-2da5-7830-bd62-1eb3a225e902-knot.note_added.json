@@ -1,0 +1,15 @@
+{
+  "event_id": "019f282a-2da5-7830-bd62-1eb3a225e902",
+  "occurred_at": "2026-07-03T13:28:00.676923Z",
+  "knot_id": "hive-flow-29af",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: claude/codex lane\nReason: af96 Slice A surfaced that cli/src/mcp-tools/progress-tools.ts computes PROJECT_ROOT by climbing four parent levels from __dirname, still accounting for the removed v3/@hive-flow nesting, so it over-climbs two levels post-collapse. Shipped MCP runtime logic, beyond af96 mechanical v3-ref-retarget scope.\nUnblock: dedicated fix+verify slice: recompute CLI_ROOT and PROJECT_ROOT for the promoted cli location and add a resolution assertion\nPriority: 2\nSource: af96 Slice A review note 20260703T132550Z / branch d632fdd6e\nReview: next session-start digest",
+    "datetime": "2026-07-03T13:28:00.676923Z",
+    "entry_id": "019f282a-2da5-7830-bd62-1ea83a41c757",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

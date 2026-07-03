@@ -1,0 +1,15 @@
+{
+  "event_id": "019f284f-b3b0-7303-8c03-05d5212a58cc",
+  "occurred_at": "2026-07-03T14:08:59.824008Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Slice D shipped-for-review (resolves 29af): progress-tools.ts re-anchored to cli/ + cli/packages (was scanning above repo). resolveCliRoot walks to nearest package.json; PROJECT_ROOT=repo root. Proven: build GREEN, 4 real packages found (was 0), progress --sync persisted to repo-root .hive-flow/metrics fresh mtime. HEAD bc86aabae, note 20260703T140806Z. Metrics-model recalibration split to new deferral 3379. af96 shipped: A 9a84099ad, B 0af90367a, C 4e43d759d; D in review.",
+    "datetime": "2026-07-03T14:08:59.824008Z",
+    "entry_id": "019f284f-b3b0-7303-8c03-05c070310d04",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

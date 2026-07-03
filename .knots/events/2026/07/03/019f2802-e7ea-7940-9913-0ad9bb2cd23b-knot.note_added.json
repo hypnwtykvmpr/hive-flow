@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2802-e7ea-7940-9913-0ad9bb2cd23b",
+  "occurred_at": "2026-07-03T12:45:06.921878Z",
+  "knot_id": "hive-flow-6c50",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: codex applies harness fix; human for session-ownership design (5799-adjacent)\nReason: codex-cli read-only-with-artifacts workers execute in /private/var/.../hf-codex-artifacts-* instead of projectRoot, so they cannot read the repo (empty/audit_blocked outputs); and agents spawned from Claude's pane get ownerClientKind=codex, so task results route to Codex's harvest rather than the repo artifact dir. Together this breaks repo-grounded provider audits/verification launched by Claude.\nUnblock: harness: honor projectRoot as codex-cli worker cwd + resolve Claude-session agent ownership so results land in-repo\nPriority: 2\nSource: af96 audit hive-9c921029 invalid-worker quarantine (router 20260703T124013Z); recurred from fe13 v1/v2 codex-cli temp-cwd\nReview: next provider-harness / session-plumbing slice",
+    "datetime": "2026-07-03T12:45:06.921878Z",
+    "entry_id": "019f2802-e7ea-7940-9913-0ac4c227ed28",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

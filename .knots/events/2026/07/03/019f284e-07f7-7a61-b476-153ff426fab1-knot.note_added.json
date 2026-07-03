@@ -1,0 +1,15 @@
+{
+  "event_id": "019f284e-07f7-7a61-b476-153ff426fab1",
+  "occurred_at": "2026-07-03T14:07:10.327783Z",
+  "knot_id": "hive-flow-3379",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: claude/codex lane\nReason: 29af Slice D re-anchored progress-tools paths to cli/ + cli/packages (path bug fixed, verified). But the metrics MODEL is still calibrated for the old 17-package v3 monorepo: TARGETS.PACKAGES=17 while cli/packages now has 4 (packages reports 24%), and the DDD/weights/UTILITY_PACKAGES set reflect the old module layout. Reported percentages are misleading though no longer scanning above the repo.\nUnblock: recalibrate TARGETS/WEIGHTS/UTILITY_PACKAGES + define what a post-collapse package/module is (cli/packages/* vs cli/src subpackages) — a metrics-design decision\nPriority: 3\nSource: af96 Slice D (29af) / progress-tools re-anchor\nReview: next session-start digest",
+    "datetime": "2026-07-03T14:07:10.327783Z",
+    "entry_id": "019f284e-07f7-7a61-b476-152d2da6c805",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

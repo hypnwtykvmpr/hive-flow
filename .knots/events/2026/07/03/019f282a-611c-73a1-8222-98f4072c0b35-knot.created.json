@@ -1,0 +1,17 @@
+{
+  "event_id": "019f282a-611c-73a1-8222-98f4072c0b35",
+  "occurred_at": "2026-07-03T13:28:13.852682Z",
+  "knot_id": "hive-flow-704f",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "af96-unmasked pre-existing test failures (out of v3-ref scope)",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

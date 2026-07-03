@@ -1,0 +1,15 @@
+{
+  "event_id": "019f282a-a3c6-7c80-9ce4-4109617858f2",
+  "occurred_at": "2026-07-03T13:28:30.918127Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Slice A (functional v3/@hive-flow/cli -> cli retarget) implemented + committed d632fdd6e on branch knots-af96-slice-a-functional (pushed); routed to Codex review/land via router note 20260703T132550Z. 30 files, gates: build GREEN, private-guard clean, security-scan baseline-clean; all imports resolve, zero regressions (reds are pre-existing/unmasked/environmental). Residuals flagged to Codex: 95 cosmetic headers (Slice B); 4 protected .claude/helpers .sh; enforcement-coupled bats (protected enforcement.cjs L115-116); packaging-model tests (packaging-proof + stage-bundled/helper-assets bats, umbrella model removed); progress-tools depth bug [[hive-flow-29af]]; unmasked pre-existing failures [[hive-flow-704f]]; ca4 honesty coverage; .gitignore negation (2fb8); vitest.config .knots exclusion gap. KEEP (source-grounded): scripts/community_crate_map.py (graphify-out artifact tool) + 20 collapse-location/compat-shim + detector gates.",
+    "datetime": "2026-07-03T13:28:30.918127Z",
+    "entry_id": "019f282a-a3c6-7c80-9ce4-40fd80932965",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

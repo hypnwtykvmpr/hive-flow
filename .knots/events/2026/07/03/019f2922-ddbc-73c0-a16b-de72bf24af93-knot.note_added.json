@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2922-ddbc-73c0-a16b-de72bf24af93",
+  "occurred_at": "2026-07-03T17:59:38.684244Z",
+  "knot_id": "hive-flow-3379",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Addressed by af96 Slice F d64034b8f (branch knots-af96-slice-f-3379-progress-metrics, in Codex review). Recalibrated the stale metric model to post-collapse topology: TARGETS.PACKAGES 17->4 (cli/packages count); UTILITY_PACKAGES -> actual cli/packages set (cli-compat, embeddings, plugin-gastown-bridge, providers). Only packages/DDD dim was broken; CLI/MCP/hooks already reported 100%. Verified: build GREEN, progress packages 100% (was 24%), truthful ~100% (V3 migration complete). Flagged retire-vs-keep as a product decision for Codex. Drive to terminal on Codex land.",
+    "datetime": "2026-07-03T17:59:38.684244Z",
+    "entry_id": "019f2922-ddbc-73c0-a16b-de6a08e5d3dd",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

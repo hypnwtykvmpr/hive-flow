@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2835-b7cc-7673-b131-2dcaa9854590",
+  "occurred_at": "2026-07-03T13:40:36.940001Z",
+  "knot_id": "hive-flow-c882",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: claude/codex lane (af96 capstone)\nReason: node cli/bin/cli.js security scan exits 1 with 82 findings (53 high / 29 medium) in untouched areas (cli/src/browser/__tests__, cli/src/codex/__tests__, cli/src/guidance/**). Prior assessment is these are test fixtures + detection-pattern literals, but af96 (repo-wide security/QA audit) requires formal per-finding classification before final closure. Correcting my Slice A v2 wording: the scan is NOT baseline-clean on this checkout.\nUnblock: classify each of the 82 findings as fixture/detection-literal (KEEP) vs real secret (fix); green-or-justified security scan is the af96 final-closure gate\nPriority: 2\nSource: af96 Slice A LANDED note 20260703T133915Z (Codex caveat) / main 9a84099ad\nReview: next session-start digest",
+    "datetime": "2026-07-03T13:40:36.940001Z",
+    "entry_id": "019f2835-b7cc-7673-b131-2db717bc76b5",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

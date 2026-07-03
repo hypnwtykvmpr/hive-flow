@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2908-d809-7460-a17c-5a6da19c1630",
+  "occurred_at": "2026-07-03T17:31:13.289148Z",
+  "knot_id": "hive-flow-dc69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: claude/codex lane\nReason: c882 classification found ALL security-scan findings are non-exploitable, but the scanner (cli/src/commands/security.ts) naively pattern-matches all source including: its OWN regex definitions (security.ts, analyzer.ts must-not-contain rules, deep-inspect.ts, security-regression.ts, hooks/workers detection patterns self-match), test fixtures in __tests__ (secret-detection test inputs), doc examples, and an interactive read -p password prompt. So the scan can never go green despite zero real issues.\nUnblock: scanner enhancement: skip __tests__/*.test.* + the scanner's own detection-source files, or add a persistent allowlist/inline-suppress; keep real detection intact\nPriority: 4\nSource: af96 c882 security classification\nReview: next session-start digest",
+    "datetime": "2026-07-03T17:31:13.289148Z",
+    "entry_id": "019f2908-d809-7460-a17c-5a52af5e004a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

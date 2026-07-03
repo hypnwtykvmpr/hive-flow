@@ -1,0 +1,15 @@
+{
+  "event_id": "019f282a-613f-7c43-a722-d320fcc64da4",
+  "occurred_at": "2026-07-03T13:28:13.887518Z",
+  "knot_id": "hive-flow-704f",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "DEFERRAL RECORD\nOwner: claude/codex lane\nReason: af96 Slice A import-path fixes made previously-unloadable test files loadable, unmasking pre-existing failures that module-not-found hid on main: provider-registry expects 5 built-ins but code registers 7; mcp-enforcement-gate node:test asserts CRITICAL-tool-blocked-when-state-absent (enforcement deny-first drift); credential-cli-surfaces line 29 uses the old pnpm --dir v3 --filter @hive-flow/cli layout; progress-authority-classifier bats line 21 checks a stale vitest output-format string. None are path-retarget work.\nUnblock: triage each: decide 5-vs-7 provider count, reconcile mcp-enforcement-gate with deny-first model, retarget credential-cli pnpm workspace invocation, update stale vitest-output assertion\nPriority: 3\nSource: af96 Slice A review note 20260703T132550Z / branch d632fdd6e\nReview: next session-start digest",
+    "datetime": "2026-07-03T13:28:13.887518Z",
+    "entry_id": "019f282a-613f-7c43-a722-d312ef1fc891",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

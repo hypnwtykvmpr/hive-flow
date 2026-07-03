@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2924-c7d8-76c0-a99c-d9425b8cebcb",
+  "occurred_at": "2026-07-03T18:01:44.152199Z",
+  "knot_id": "hive-flow-3379",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "LANDED: af96 Slice F d64034b8f is on main/origin. Recalibrated progress metrics to post-collapse topology: packages target 4 and UTILITY_PACKAGES matches cli/packages/* (cli-compat, embeddings, plugin-gastown-bridge, providers). Verified build, hooks progress detailed output packages 100% (4/4), private guard clean. Product call: keep progress tracker recalibrated for now; retire/deprecate only in a deliberate follow-up.",
+    "datetime": "2026-07-03T18:01:44.152199Z",
+    "entry_id": "019f2924-c7d8-76c0-a99c-d93e582f43ee",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

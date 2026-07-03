@@ -1,0 +1,15 @@
+{
+  "event_id": "019f284f-b3ed-77e3-ba90-55d4007e81e8",
+  "occurred_at": "2026-07-03T14:08:59.885277Z",
+  "knot_id": "hive-flow-29af",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Addressed by af96 Slice D bc86aabae (branch knots-af96-slice-d-progress-tools-depth, in Codex review). resolveCliRoot + PROJECT_ROOT=dirname(CLI_ROOT); paths re-anchored to cli/packages + cli/src; verified build GREEN + runtime resolves to repo root (progress --sync wrote repo-root .hive-flow/metrics). Drive to completion on Codex land. Metrics-model calibration spun off to hive-flow-3379.",
+    "datetime": "2026-07-03T14:08:59.885277Z",
+    "entry_id": "019f284f-b3ed-77e3-ba90-55cd311475c8",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

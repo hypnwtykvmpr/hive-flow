@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2922-dddd-70b2-a5b8-a048c6c4ba0c",
+  "occurred_at": "2026-07-03T17:59:38.717537Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Slice F / 3379 committed+pushed (d64034b8f), in Codex review — progress metrics recalibrated to post-collapse topology (truthful ~100%). af96 mine-actionable work COMPLETE: shipped A/B/C/D/E + guard-lock fix; c882 VERIFY_CLEAN; F in review. Remaining: dc69 (P4 scanner FP, mine or Codex); FLAG items (packaging-model, enforcement-coupled bats, ca4, gitignore/2fb8, vitest .knots, protected .sh) mostly Codex-domain. Retire-vs-keep progress tool flagged to Codex.",
+    "datetime": "2026-07-03T17:59:38.717537Z",
+    "entry_id": "019f2922-dddd-70b2-a5b8-a0340696fdd9",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

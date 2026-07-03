@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2917-a8b3-7e73-9f77-697ae1650bfa",
+  "occurred_at": "2026-07-03T17:47:24.210959Z",
+  "knot_id": "hive-flow-704f",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Addressed by af96 Slice E 802577fce (branch knots-af96-slice-e-704f-test-truth, in Codex review). 4 test-only truth fixes, all verified: provider-registry 5->7 (vitest 29/29); mcp-enforcement-gate absent-state->allowed anti-phantom-HALTED per gate source 204-206 (node:test green); credential-cli bats pnpm->npm --prefix cli + 19->20 (bats ok); progress-classifier bats brittle filename assert->stable summary (bats ok). No production code. Commit was briefly blocked by a stale .git/index.lock (guard false-positive); Codex cleared it. Drive to terminal on Codex land.",
+    "datetime": "2026-07-03T17:47:24.210959Z",
+    "entry_id": "019f2917-a8b3-7e73-9f77-696a05b1234a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

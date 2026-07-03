@@ -1,0 +1,15 @@
+{
+  "event_id": "019f292f-8614-7f72-969d-1be5fbb6942a",
+  "occurred_at": "2026-07-03T18:13:28.212439Z",
+  "knot_id": "hive-flow-dc69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Assigned to Claude by Codex (af96 SHIPPED note 20260703T180951Z) with constraint: FP reduction must NOT weaken real secret detection; no blanket test-skip unless source-grounded + preserves detection of real committed credentials. Entering planning: routing a design plan to Codex before implementing (security-tool change). Scanner = cli/src/commands/security.ts (secret loop L85-131, unsafe-pattern loop L133+); FP filter integration point is the match site L111 + Phase 3.",
+    "datetime": "2026-07-03T18:13:28.212439Z",
+    "entry_id": "019f292f-8614-7f72-969d-1bd39e27a9a4",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

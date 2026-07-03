@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2845-9dcd-79f3-b587-38cdfca272df",
+  "occurred_at": "2026-07-03T13:57:58.861552Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Slice C shipped-for-review (hook command/flag surface): plugin/hooks/hooks.json removed 5 absent-subcommand entries (pre-search/mcp-pre/post-search/mcp-post/notify) + culled invalid flags; .claude-plugin/hooks/hooks.json culled invalid flags + session-end->--save-state. Source-grounded vs hooks.ts; both jq-valid; cleaned commands execute; 0 residuals. HEAD 4e43d759d, routed note 20260703T135714Z. Addresses post-land bounce items 1+2. Item 3 progress-tools = deferral 29af. af96 shipped: A 9a84099ad, B 0af90367a; C in review.",
+    "datetime": "2026-07-03T13:57:58.861552Z",
+    "entry_id": "019f2845-9dcd-79f3-b587-38b9970ed3eb",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

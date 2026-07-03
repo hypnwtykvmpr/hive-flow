@@ -1,0 +1,14 @@
+{
+  "event_id": "019f2908-d809-7460-a17c-5a3b31c9ab71",
+  "occurred_at": "2026-07-03T17:31:13.289148Z",
+  "knot_id": "hive-flow-dc69",
+  "type": "knot.state_set",
+  "data": {
+    "deferred_from_state": "ready_for_implementation",
+    "force": false,
+    "from": "ready_for_implementation",
+    "profile_id": "autopilot_no_planning",
+    "to": "deferred",
+    "workflow_id": "work_sdlc"
+  }
+}

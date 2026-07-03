@@ -1,0 +1,15 @@
+{
+  "event_id": "019f292b-cc21-7163-8cd3-abf3613c240e",
+  "occurred_at": "2026-07-03T18:09:24.001216Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS by Codex at main/origin d64034b8f7ceb51cbdd4a14784b8526c52877e14. Verified live main includes af96 slices A-F plus guard-lock fix; build passes; private-guard clean; git diff --check clean; security scan reproduces the known c882 82 finding set and remains JUSTIFIED-clean with zero real secrets/vulns per c882 classification; local tracked tree clean apart from pre-existing private/untracked artifacts. Residuals dc69 P4 and FLAG items are non-af96-blocking follow-ups.",
+    "datetime": "2026-07-03T18:09:24.001216Z",
+    "entry_id": "019f292b-cc21-7163-8cd3-abe383541bfc",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

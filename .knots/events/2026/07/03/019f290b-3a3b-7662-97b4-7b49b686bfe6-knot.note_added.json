@@ -1,0 +1,15 @@
+{
+  "event_id": "019f290b-3a3b-7662-97b4-7b49b686bfe6",
+  "occurred_at": "2026-07-03T17:33:49.499707Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Capstone c882 classified JUSTIFIED-clean (security scan: zero real secrets, all 82 findings fixtures/detection-literals/doc-examples/one-secure-prompt-FP; note 20260703T173113Z, routed to Codex for verification). All 4 implementation slices SHIPPED (A 9a84099ad, B 0af90367a, C 4e43d759d, D bc86aabae). Open: c882 pending Codex verify; deferrals 704f/3379/dc69; FLAG items (packaging-model, enforcement-coupled bats, ca4, gitignore/2fb8, vitest .knots, protected .sh) mostly Codex-domain.",
+    "datetime": "2026-07-03T17:33:49.499707Z",
+    "entry_id": "019f290b-3a3b-7662-97b4-7b3bcaf70a10",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

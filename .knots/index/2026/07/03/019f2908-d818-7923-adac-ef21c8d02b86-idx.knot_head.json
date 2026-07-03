@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2908-d818-7923-adac-ef21c8d02b86",
+  "occurred_at": "2026-07-03T17:31:13.289148Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": "ready_for_implementation",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-dc69",
+    "profile_id": "autopilot_no_planning",
+    "state": "deferred",
+    "terminal": false,
+    "title": "security scan self-flags detection patterns + test fixtures (FP reduction)",
+    "type": "work",
+    "updated_at": "2026-07-03T17:31:13.289148Z",
+    "workflow_id": "work_sdlc"
+  }
+}

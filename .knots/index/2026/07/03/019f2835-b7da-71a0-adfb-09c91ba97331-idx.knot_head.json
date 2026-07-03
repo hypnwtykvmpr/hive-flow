@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2835-b7da-71a0-adfb-09c91ba97331",
+  "occurred_at": "2026-07-03T13:40:36.940001Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": "ready_for_implementation",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-c882",
+    "profile_id": "autopilot_no_planning",
+    "state": "deferred",
+    "terminal": false,
+    "title": "af96 capstone: security scan not green (82 baseline findings need classification)",
+    "type": "work",
+    "updated_at": "2026-07-03T13:40:36.940001Z",
+    "workflow_id": "work_sdlc"
+  }
+}

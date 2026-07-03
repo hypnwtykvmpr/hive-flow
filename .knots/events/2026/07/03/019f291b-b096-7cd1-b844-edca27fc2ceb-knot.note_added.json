@@ -1,0 +1,15 @@
+{
+  "event_id": "019f291b-b096-7cd1-b844-edca27fc2ceb",
+  "occurred_at": "2026-07-03T17:51:48.373972Z",
+  "knot_id": "hive-flow-704f",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "RESOLVED — af96 Slice E landed 802577fce (main). Codex verified: provider-registry 29/29, mcp-enforcement-gate 33/33 (clean HIVE_FLOW_HOME), both bats 2/2, private-guard clean, gate-source agrees with the anti-phantom-HALTED assertion. All 4 stale test-truth failures fixed.",
+    "datetime": "2026-07-03T17:51:48.373972Z",
+    "entry_id": "019f291b-b096-7cd1-b844-edbb6b342c52",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

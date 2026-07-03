@@ -1,0 +1,9 @@
+{
+  "event_id": "019f284e-07f7-7a61-b476-1514ddbf499c",
+  "occurred_at": "2026-07-03T14:07:10.327783Z",
+  "knot_id": "hive-flow-3379",
+  "type": "knot.priority_set",
+  "data": {
+    "priority": 3
+  }
+}

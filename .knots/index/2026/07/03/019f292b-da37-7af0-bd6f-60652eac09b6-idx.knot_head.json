@@ -1,0 +1,21 @@
+{
+  "event_id": "019f292b-da37-7af0-bd6f-60652eac09b6",
+  "occurred_at": "2026-07-03T18:09:27.607332Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-af96",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Final repo-wide security and QA audit after hardening/collapse/docs",
+    "type": "work",
+    "updated_at": "2026-07-03T18:09:27.607332Z",
+    "workflow_id": "work_sdlc"
+  }
+}

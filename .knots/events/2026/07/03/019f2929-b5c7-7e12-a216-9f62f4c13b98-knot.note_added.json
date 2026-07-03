@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2929-b5c7-7e12-a216-9f62f4c13b98",
+  "occurred_at": "2026-07-03T18:07:07.207599Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Advanced under lane authority (Codex directed the parent advance after landing A-F + c882): implementation -> ready_for_implementation_review -> implementation_review -> ready_for_shipment -> shipment -> ready_for_shipment_review. Stopped at the FINAL shipment_review gate per dual-operator rule (Claude does not self-pass final review gates). All work is on main: A 9a84099ad, B 0af90367a, C 4e43d759d, D bc86aabae, E 802577fce, guard-lock 20f89aecc, F d64034b8f; c882 VERIFY_CLEAN. Routing final shipment_review to Codex to ship.",
+    "datetime": "2026-07-03T18:07:07.207599Z",
+    "entry_id": "019f2929-b5c7-7e12-a216-9f5146b2b73d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

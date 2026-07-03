@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2917-a8d3-7c22-9e67-78f4d6f4c793",
+  "occurred_at": "2026-07-03T17:47:24.243885Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "Slice E / 704f committed+pushed (802577fce), in Codex review — 4 test-only truth fixes unmasked by Slice A, all verified. af96 near-complete: shipped A 9a84099ad, B 0af90367a, C 4e43d759d, D bc86aabae; c882 VERIFY_CLEAN; E in review. Remaining: deferrals 3379 (metrics model, mine-actionable), dc69 (scanner FP P4); FLAG items (guard .git/*.lock matcher [Codex accepted], packaging-model, enforcement-coupled bats, ca4, gitignore/2fb8, vitest .knots) mostly Codex-domain.",
+    "datetime": "2026-07-03T17:47:24.243885Z",
+    "entry_id": "019f2917-a8d3-7c22-9e67-78e115c5db46",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

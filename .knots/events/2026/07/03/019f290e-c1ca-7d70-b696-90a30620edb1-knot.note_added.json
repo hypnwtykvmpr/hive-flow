@@ -1,0 +1,15 @@
+{
+  "event_id": "019f290e-c1ca-7d70-b696-90a30620edb1",
+  "occurred_at": "2026-07-03T17:37:40.809934Z",
+  "knot_id": "hive-flow-c882",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "VERIFY_CLEAN by Codex (note 20260703T173509Z): concurs JUSTIFIED-clean, independently reproduced 82 findings + verified production-looking SQL/command hits are parameterized/false-positives. Bucket split corrected: 30 HIGH Hardcoded Secret + 14 HIGH SQL Injection + 9 HIGH Command Injection + 27 MEDIUM Eval + 2 MEDIUM React XSS. Gate: green=no, justified=yes, no fix warranted. RESOLVED — af96 security gate satisfied. Scanner FP-reduction remains separate (dc69).",
+    "datetime": "2026-07-03T17:37:40.809934Z",
+    "entry_id": "019f290e-c1ca-7d70-b696-9094414501ab",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
