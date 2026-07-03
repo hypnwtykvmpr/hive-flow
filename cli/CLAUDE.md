@@ -18,10 +18,10 @@ Use these defaults when initializing swarms from CLI:
 
 ```bash
 # 6-8 agents
-node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical --max-agents 8 --strategy specialized
+node cli/bin/cli.js swarm init --topology hierarchical --max-agents 8 --strategy specialized
 
 # 10-15 agents
-node v3/@hive-flow/cli/bin/cli.js swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
+node cli/bin/cli.js swarm init --topology hierarchical-mesh --max-agents 15 --strategy specialized
 ```
 
 Common topologies:
@@ -29,7 +29,7 @@ Common topologies:
 - `hierarchical-mesh` (hybrid queen + peer)
 - `mesh`, `ring`, `star`, `hybrid`
 
-## V3 CLI Commands (37 Commands, 268 Subcommands)
+## V3 CLI Commands (37 Commands, 269 Subcommands)
 
 ### Core Commands
 
@@ -68,11 +68,11 @@ Common topologies:
 ## Quick CLI Examples
 
 ```bash
-node v3/@hive-flow/cli/bin/cli.js init wizard
-node v3/@hive-flow/cli/bin/cli.js daemon start
-node v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
-node v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns"
-node v3/@hive-flow/cli/bin/cli.js doctor --fix
+node cli/bin/cli.js init wizard
+node cli/bin/cli.js daemon start
+node cli/bin/cli.js swarm init --v3-mode
+node cli/bin/cli.js memory search --query "authentication patterns"
+node cli/bin/cli.js doctor --fix
 ```
 
 ## Hooks System (35 CLI Hook Subcommands + 10 Configured Workers)
@@ -88,7 +88,7 @@ node v3/@hive-flow/cli/bin/cli.js doctor --fix
 | Agent and model prep | `pretrain`, `build-agents`, `transfer` |
 | Utilities | `list`, `worker`, `statusline`, `coverage-route`, `coverage-suggest`, `coverage-gaps` |
 
-Use `node v3/@hive-flow/cli/bin/cli.js hooks list --format table` for full hook detail.
+Use `node cli/bin/cli.js hooks list --format table` for full hook detail.
 
 ### Worker Shortcuts
 `ultralearn`, `optimize`, `consolidate`, `predict`, `audit`, `map`, `preload`, `deepdive`, `document`, `refactor`, `benchmark`, `testgaps`
@@ -99,70 +99,70 @@ The hooks runtime has 10 configured worker entries; the CLI exposes these 12 use
 
 ```bash
 # Core lifecycle
-node v3/@hive-flow/cli/bin/cli.js hooks pre-task --description "[task]"
-node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "[id]" --success true
-node v3/@hive-flow/cli/bin/cli.js hooks post-edit --file "[file]" --train-neural true
+node cli/bin/cli.js hooks pre-task --description "[task]"
+node cli/bin/cli.js hooks post-task --task-id "[id]" --success true
+node cli/bin/cli.js hooks post-edit --file "[file]" --train-neural true
 
 # Session
-node v3/@hive-flow/cli/bin/cli.js hooks session-start --session-id "[id]"
-node v3/@hive-flow/cli/bin/cli.js hooks session-end --export-metrics true
-node v3/@hive-flow/cli/bin/cli.js hooks session-restore --session-id "[id]"
+node cli/bin/cli.js hooks session-start --session-id "[id]"
+node cli/bin/cli.js hooks session-end --export-metrics true
+node cli/bin/cli.js hooks session-restore --session-id "[id]"
 
 # Routing/intelligence
-node v3/@hive-flow/cli/bin/cli.js hooks route --task "[task]"
-node v3/@hive-flow/cli/bin/cli.js hooks explain --topic "[topic]"
-node v3/@hive-flow/cli/bin/cli.js hooks pretrain --model-type moe --epochs 10
+node cli/bin/cli.js hooks route --task "[task]"
+node cli/bin/cli.js hooks explain --topic "[topic]"
+node cli/bin/cli.js hooks pretrain --model-type moe --epochs 10
 
 # Worker and coverage operations
-node v3/@hive-flow/cli/bin/cli.js hooks worker list
-node v3/@hive-flow/cli/bin/cli.js hooks worker dispatch --trigger audit
-node v3/@hive-flow/cli/bin/cli.js hooks coverage-gaps --format table
-node v3/@hive-flow/cli/bin/cli.js hooks coverage-route --task "[task]"
+node cli/bin/cli.js hooks worker list
+node cli/bin/cli.js hooks worker dispatch --trigger audit
+node cli/bin/cli.js hooks coverage-gaps --format table
+node cli/bin/cli.js hooks coverage-route --task "[task]"
 
 # Statusline
-node v3/@hive-flow/cli/bin/cli.js hooks statusline
-node v3/@hive-flow/cli/bin/cli.js hooks statusline --json
+node cli/bin/cli.js hooks statusline
+node cli/bin/cli.js hooks statusline --json
 ```
 
 ## Migration (V2 to V3)
 
 ```bash
-node v3/@hive-flow/cli/bin/cli.js migrate status
-node v3/@hive-flow/cli/bin/cli.js migrate run --backup
-node v3/@hive-flow/cli/bin/cli.js migrate rollback
-node v3/@hive-flow/cli/bin/cli.js migrate validate
+node cli/bin/cli.js migrate status
+node cli/bin/cli.js migrate run --backup
+node cli/bin/cli.js migrate rollback
+node cli/bin/cli.js migrate validate
 ```
 
 ## Quick Setup
 
 ```bash
 # Add MCP servers (stdin-piped mode auto-detected)
-claude mcp add hive-flow -- node v3/@hive-flow/cli/bin/mcp-server.js
+claude mcp add hive-flow -- node cli/bin/mcp-server.js
 claude mcp add hive-flow -- hive-flow mcp start
 claude mcp add flow-nexus -- flow-nexus mcp start
 
 # Start services and verify
-node v3/@hive-flow/cli/bin/cli.js daemon start
-node v3/@hive-flow/cli/bin/cli.js doctor --fix
+node cli/bin/cli.js daemon start
+node cli/bin/cli.js doctor --fix
 ```
 
 ## Memory Commands Reference
 
 ```bash
 # Store (required: --key, --value; optional: --namespace, --ttl, --tags)
-node v3/@hive-flow/cli/bin/cli.js memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
+node cli/bin/cli.js memory store --key "pattern-auth" --value "JWT with refresh tokens" --namespace patterns
 
 # Search (required: --query; optional: --namespace, --limit, --threshold)
-node v3/@hive-flow/cli/bin/cli.js memory search --query "authentication patterns" --namespace patterns --limit 5
+node cli/bin/cli.js memory search --query "authentication patterns" --namespace patterns --limit 5
 
 # List (optional: --namespace, --limit)
-node v3/@hive-flow/cli/bin/cli.js memory list --namespace patterns --limit 10
+node cli/bin/cli.js memory list --namespace patterns --limit 10
 
 # Retrieve (required: --key; optional: --namespace)
-node v3/@hive-flow/cli/bin/cli.js memory retrieve --key "pattern-auth" --namespace patterns
+node cli/bin/cli.js memory retrieve --key "pattern-auth" --namespace patterns
 
 # Initialize
-node v3/@hive-flow/cli/bin/cli.js memory init --force --verbose
+node cli/bin/cli.js memory init --force --verbose
 ```
 
 ## Environment Variables
@@ -188,7 +188,7 @@ HIVE_FLOW_MEMORY_PATH=./data/memory
 ```
 
 ## Doctor Health Checks
-Run `node v3/@hive-flow/cli/bin/cli.js doctor` to validate:
+Run `node cli/bin/cli.js doctor` to validate:
 - Node.js and npm versions
 - Git and TypeScript availability
 - Config validity

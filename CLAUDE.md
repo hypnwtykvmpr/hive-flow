@@ -115,13 +115,13 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 - **Haiku prohibited**: Always blocked for agent tasks (`agent_spawn`, `queen_spawn_worker`)
 - **Top-tier enforcement**: gemini-cli requires `gemini-3.1-pro-preview`, codex-cli requires `gpt-5.5`
 - **Auto-default**: Claude provider without explicit model defaults to `sonnet`
-- **Location**: `v3/@hive-flow/cli/src/mcp-tools/mcp-enforcement-gate.ts` (`checkModelEnforcement`)
+- **Location**: `cli/src/mcp-tools/mcp-enforcement-gate.ts` (`checkModelEnforcement`)
 
 ### Queen Report Composition Check
 
 - **`queen_report`**: Blocks if fewer than 5 live workers (`[COMPOSITION_ERROR]`). Also blocks if verified delegation rate from hive metrics is **below 0.5** (`[DELEGATION_ERROR]`) after syncing `directWorkCount` from the queen's signed `role.json`.
 - **`queen_collect_results`**: Verifies queen ownership of hive before returning worker results
-- **Location**: `v3/@hive-flow/cli/src/mcp-tools/queen-tools.ts`
+- **Location**: `cli/src/mcp-tools/queen-tools.ts`
 
 ### Idle Worker Cleanup (hive-cleanup.cjs)
 
@@ -189,12 +189,12 @@ Deferred work may never exist only in chat or router-note prose. The durable sto
 
 | Package | Path | Purpose |
 |---------|------|---------|
-| `@hive-flow/cli` | `v3/@hive-flow/cli/` | CLI entry point (37 commands) |
-| `@hive-flow/cli/codex` | `v3/@hive-flow/cli/src/codex/` | Configurable dual-mode scaffold; defaults to the Claude CLI unless `codexCommand` is set |
-| `@hive-flow/cli/guidance` | `v3/@hive-flow/cli/src/guidance/` | Governance control plane |
-| `@hive-flow/cli/hooks` | `v3/@hive-flow/cli/src/hooks/` | 35 CLI hook subcommands, 36 MCP hook tools, 10 configured workers |
-| `@hive-flow/cli/memory` | `v3/@hive-flow/cli/src/memory/` | HiveMemory + HNSW search |
-| `@hive-flow/cli/security` | `v3/@hive-flow/cli/src/security/` | Input validation, CVE remediation |
+| `@hive-flow/cli` | `cli/` | CLI entry point (37 commands) |
+| `@hive-flow/cli/codex` | `cli/src/codex/` | Configurable dual-mode scaffold; defaults to the Claude CLI unless `codexCommand` is set |
+| `@hive-flow/cli/guidance` | `cli/src/guidance/` | Governance control plane |
+| `@hive-flow/cli/hooks` | `cli/src/hooks/` | 35 CLI hook subcommands, 36 MCP hook tools, 10 configured workers |
+| `@hive-flow/cli/memory` | `cli/src/memory/` | HiveMemory + HNSW search |
+| `@hive-flow/cli/security` | `cli/src/security/` | Input validation, CVE remediation |
 
 ## Concurrency: 1 MESSAGE = ALL RELATED OPERATIONS
 
@@ -348,11 +348,11 @@ Task("Reviewer", "Review code quality and security. Store findings in 'collabora
 
 // 🟢 Codex-labeled workers (implementation, optimization)
 // These are only a distinct Codex runtime when codexCommand points at a real Codex-compatible CLI.
-Bash("node v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
-Bash("node v3/@hive-flow/cli/bin/cli.js dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
+Bash("node cli/bin/cli.js dual run --worker 'codex:coder:Implement the solution based on architect design' --namespace collaboration")
+Bash("node cli/bin/cli.js dual run --worker 'codex:optimizer:Optimize performance based on implementation' --namespace collaboration")
 
 // STEP 3: Coordinate via shared memory
-Bash("node v3/@hive-flow/cli/bin/cli.js memory store --namespace collaboration --key 'task-context' --value '[task description]'")
+Bash("node cli/bin/cli.js memory store --namespace collaboration --key 'task-context' --value '[task description]'")
 ```
 
 ### Collaboration Templates (Pre-Built Pipelines)
@@ -368,12 +368,12 @@ Bash("node v3/@hive-flow/cli/bin/cli.js memory store --namespace collaboration -
 
 ```bash
 # Run a collaboration template
-node v3/@hive-flow/cli/bin/cli.js dual run feature --task "Add user authentication with OAuth"
-node v3/@hive-flow/cli/bin/cli.js dual run security --target "./src"
-node v3/@hive-flow/cli/bin/cli.js dual run refactor --target "./src/legacy"
+node cli/bin/cli.js dual run feature --task "Add user authentication with OAuth"
+node cli/bin/cli.js dual run security --target "./src"
+node cli/bin/cli.js dual run refactor --target "./src/legacy"
 
 # Custom multi-platform swarm
-node v3/@hive-flow/cli/bin/cli.js dual run \
+node cli/bin/cli.js dual run \
   --worker "claude:architect:Design the API structure" \
   --worker "codex:coder:Implement REST endpoints" \
   --worker "claude:tester:Write integration tests" \
@@ -381,10 +381,10 @@ node v3/@hive-flow/cli/bin/cli.js dual run \
   --namespace "api-feature"
 
 # Check collaboration status
-node v3/@hive-flow/cli/bin/cli.js dual status
+node cli/bin/cli.js dual status
 
 # List available templates
-node v3/@hive-flow/cli/bin/cli.js dual templates
+node cli/bin/cli.js dual templates
 ```
 
 ### Shared Memory Coordination
@@ -393,13 +393,13 @@ All workers share state via the `collaboration` namespace:
 
 ```bash
 # Store context for cross-platform sharing
-node v3/@hive-flow/cli/bin/cli.js memory store --namespace collaboration --key "design-decisions" --value "..."
+node cli/bin/cli.js memory store --namespace collaboration --key "design-decisions" --value "..."
 
 # Search for patterns across all workers
-node v3/@hive-flow/cli/bin/cli.js memory search --namespace collaboration --query "authentication patterns"
+node cli/bin/cli.js memory search --namespace collaboration --query "authentication patterns"
 
 # Retrieve specific findings
-node v3/@hive-flow/cli/bin/cli.js memory retrieve --namespace collaboration --key "security-findings"
+node cli/bin/cli.js memory retrieve --namespace collaboration --key "security-findings"
 ```
 
 ### Cross-Lane Learning
@@ -408,13 +408,13 @@ When the lanes are backed by distinct commands, both platforms can learn from ea
 
 ```bash
 # After successful collaboration, train patterns
-node v3/@hive-flow/cli/bin/cli.js hooks post-task --task-id "dual-[id]" --success true --train-neural true
+node cli/bin/cli.js hooks post-task --task-id "dual-[id]" --success true --train-neural true
 
 # Store successful collaboration patterns
-node v3/@hive-flow/cli/bin/cli.js memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
+node cli/bin/cli.js memory store --namespace patterns --key "dual-mode-[pattern]" --value "[what worked]"
 
 # Transfer learnings to both platforms
-node v3/@hive-flow/cli/bin/cli.js hooks transfer store --pattern "dual-collab-success"
+node cli/bin/cli.js hooks transfer store --pattern "dual-collab-success"
 ```
 
 ### Worker Dependency Levels
@@ -545,7 +545,7 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 - **HNSW Indexing**: Available for HiveMemory/vector memory search where built
 - **Neural Learning**: Deterministic local pattern utilities; SONA/MoE/LoRA runtime training is not available in this build
 
-## V3 CLI Commands (37 Commands, 268 Subcommands)
+## V3 CLI Commands (37 Commands, 269 Subcommands)
 
 ### Core Commands
 
@@ -569,28 +569,28 @@ This project is configured with Hive Flow (Anti-Drift Defaults):
 
 ```bash
 # Initialize project
-node v3/@hive-flow/cli/bin/cli.js init wizard
+node cli/bin/cli.js init wizard
 
 # Start daemon with background workers
-node v3/@hive-flow/cli/bin/cli.js daemon start
+node cli/bin/cli.js daemon start
 
 # Spawn an agent
-node v3/@hive-flow/cli/bin/cli.js agent spawn -t coder --name my-coder
+node cli/bin/cli.js agent spawn -t coder --name my-coder
 
 # Initialize swarm
-node v3/@hive-flow/cli/bin/cli.js swarm init --v3-mode
+node cli/bin/cli.js swarm init --v3-mode
 
 # Search memory (HNSW-indexed)
-node v3/@hive-flow/cli/bin/cli.js memory search -q "authentication patterns"
+node cli/bin/cli.js memory search -q "authentication patterns"
 
 # System diagnostics
-node v3/@hive-flow/cli/bin/cli.js doctor --fix
+node cli/bin/cli.js doctor --fix
 
 # Security scan
-node v3/@hive-flow/cli/bin/cli.js security scan --depth full
+node cli/bin/cli.js security scan --depth full
 
 # Performance benchmark
-node v3/@hive-flow/cli/bin/cli.js performance benchmark --suite all
+node cli/bin/cli.js performance benchmark --suite all
 ```
 
 ## Headless Background Instances (claude -p)
@@ -637,7 +637,7 @@ claude -p --dangerously-skip-permissions "Fix all lint errors in src/"
 | `--permission-mode <mode>` | acceptEdits, bypassPermissions, plan, etc. |
 | `--mcp-config <json>` | Load MCP servers from JSON |
 
-## Available Agents (60+ Types)
+## Available Agents (18 canonical base types; 60+ across the plugin ecosystem)
 
 ### Core Development
 `coder`, `reviewer`, `tester`, `planner`, `researcher`
@@ -702,7 +702,7 @@ Claude Code's experimental Agent Teams feature is fully integrated with Hive Flo
 
 ### Enabling Agent Teams
 
-Agent Teams is automatically enabled when you run `node v3/@hive-flow/cli/bin/cli.js init`. The following is added to `.claude/settings.json`:
+Agent Teams is automatically enabled when you run `node cli/bin/cli.js init`. The following is added to `.claude/settings.json`:
 
 ```json
 {
@@ -772,10 +772,10 @@ Task({
 
 ```bash
 # Handle idle teammate (auto-assigns available tasks)
-node v3/@hive-flow/cli/bin/cli.js hooks teammate-idle --auto-assign true
+node cli/bin/cli.js hooks teammate-idle --auto-assign true
 
 # Handle task completion (trains patterns, notifies lead)
-node v3/@hive-flow/cli/bin/cli.js hooks task-completed -i task-123 --train-patterns true
+node cli/bin/cli.js hooks task-completed -i task-123 --train-patterns true
 
 # Check on team progress
 TaskList
@@ -853,15 +853,15 @@ SONA, MoE, LoRA, EWC++, and Flash Attention runtime training are not available i
 
 ```bash
 # Add MCP servers
-claude mcp add hive-flow -- node v3/@hive-flow/cli/bin/mcp-server.js
+claude mcp add hive-flow -- node cli/bin/mcp-server.js
 claude mcp add hive-flow -- hive-flow mcp start  # Optional
 claude mcp add flow-nexus -- flow-nexus mcp start  # Optional
 
 # Start daemon
-node v3/@hive-flow/cli/bin/cli.js daemon start
+node cli/bin/cli.js daemon start
 
 # Run doctor
-node v3/@hive-flow/cli/bin/cli.js doctor --fix
+node cli/bin/cli.js doctor --fix
 ```
 
 ## Claude Code vs Hive Flow MCP Tools
@@ -891,14 +891,14 @@ Plugins are distributed via IPFS and can be installed with the CLI. Browse and i
 
 ```bash
 # List all available plugins
-node v3/@hive-flow/cli/bin/cli.js plugins list
+node cli/bin/cli.js plugins list
 
 # Install a plugin
-node v3/@hive-flow/cli/bin/cli.js plugins install -n @hive-flow/plugin-name
+node cli/bin/cli.js plugins install -n @hive-flow/plugin-name
 
 # Enable/disable
-node v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --enable
-node v3/@hive-flow/cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --disable
+node cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --enable
+node cli/bin/cli.js plugins toggle -n @hive-flow/plugin-name --disable
 ```
 
 ### Core Plugins
