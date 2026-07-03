@@ -286,7 +286,14 @@ function recoverSentinelWatchers() {
 // ---------------------------------------------------------------------------
 
 function main() {
-  process.stdout.write(JSON.stringify(recoverSentinelWatchers()));
+  let result = recoverSentinelWatchers();
+  try {
+    // P2b (hive-flow-d790): merge the inter-agent message inbox re-scan.
+    // Optional require, fail-open: module absent/error => today's exact output.
+    const rescan = require(path.join(PROJECT_DIR, 'scripts', 'agent-message-rescan.cjs'));
+    result = rescan.mergeSessionStartOutput(result, PROJECT_DIR);
+  } catch { /* watcher-only output */ }
+  process.stdout.write(JSON.stringify(result));
 }
 
 module.exports = {
