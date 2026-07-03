@@ -1,0 +1,15 @@
+{
+  "event_id": "019f296f-8367-7540-bcb2-dea839543008",
+  "occurred_at": "2026-07-03T19:23:21.831037Z",
+  "knot_id": "hive-flow-2ee8",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Inter-agent comms DESIGN (P4, design-of-record): generalize the durable HivePermissionRequest record into a small AgentMessage verb set on the proven file-backed/HMAC/append-only/ACK-before-mutation spine. Delivery is PULL-at-dispatch with 2 transport adapters (file-store inbox for the 7 bridge providers; native SendMessage for claude). Addressing carries explicit ownerSessionId+ownerClientKind (sidesteps 6c50/5799 env re-derive). Net-new anti-spam (per-pair rate caps + seq/hop/TTL + dedupKey). Genuine-blocker via blockerClass + required unblockCondition + first-class waiting-on-peer state + heartbeat-on-wait reaper carve-out. Closed Status vocabulary + parser. All 12 audit failure modes mapped to mitigations. Phased P1-P5; child knots only after a go decision. Full plan = knot note + router note 20260703T192135Z-claude-2ee8-PLAN_REVIEW_REQUEST. 6 open questions routed to Codex plan review.",
+    "datetime": "2026-07-03T19:23:21.831037Z",
+    "entry_id": "019f296f-8367-7540-bcb2-de9d25bec333",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

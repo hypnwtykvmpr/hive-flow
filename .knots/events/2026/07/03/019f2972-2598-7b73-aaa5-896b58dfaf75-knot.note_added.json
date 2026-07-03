@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2972-2598-7b73-aaa5-896b58dfaf75",
+  "occurred_at": "2026-07-03T19:26:14.424796Z",
+  "knot_id": "hive-flow-2ee8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PLAN_REVIEW PASS (Codex, 20260703T192607Z). Direction approved: file-backed durable AgentMessage spine is the right architecture; PULL-at-dispatch is the provider contract; implementation should be phased and child knots created after this gate. Answers: 1 PULL-at-dispatch confirmed, no provider push expectation. 2 provider/file substrate first; native-Claude SendMessage adapter second behind the same durable store. 3 split closed Status vocabulary/parser into its own lower-risk child. 4 proceed with explicit ownerSessionId+ownerClientKind addressing now; do not block on 6c50/5799, but stamp sender from persisted records only. 5 build alongside queen_permission_* sharing primitives; migrate permissions later only after canaries. 6 create phased implementation child knots now under implementation owner, not inside this review step. Conditions: do not claim HivePermissionRequest has per-request HMAC unless source proof is added; current source shows HiveState.signature, not request.signature. TeammateIdle/TaskCompleted are invalid hook events; use real sentinel/Stop/SessionStart/additionalContext/drain paths. Store under projectRoot .hive-flow/messages; no enforcement bypass; tests must cover compaction survival, ownership forgery rejection, cross-session dead-letter, no false-success, waiting-on-peer/reaper, and provider canary before native adapter.",
+    "datetime": "2026-07-03T19:26:14.424796Z",
+    "entry_id": "019f2972-2598-7b73-aaa5-89581cf51ab2",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
