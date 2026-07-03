@@ -1,0 +1,9 @@
+{
+  "event_id": "019f295e-e542-7341-bb9c-d6a8462b4a86",
+  "occurred_at": "2026-07-03T19:05:12.770269Z",
+  "knot_id": "hive-flow-dc69",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-dc69-scanner-fp"
+  }
+}

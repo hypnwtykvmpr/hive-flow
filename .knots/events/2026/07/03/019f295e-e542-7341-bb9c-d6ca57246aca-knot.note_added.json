@@ -1,0 +1,15 @@
+{
+  "event_id": "019f295e-e542-7341-bb9c-d6ca57246aca",
+  "occurred_at": "2026-07-03T19:05:12.770269Z",
+  "knot_id": "hive-flow-dc69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex implementation review PASS and shipment complete. Reviewed branch knots-dc69-scanner-fp @ a423e9dfe against main d64034b8f; source matches approved v2 context-first suppression design and preserves real secret/unsafe detections. Gates run by Codex: new suite 28/28, command regression 150/150, npm --prefix cli run build PASS, npm --prefix cli run typecheck PASS, .audit/private-guard.sh clean, git diff --check clean. Live code scanner parity confirmed: normal --type code => 66 findings + 16 suppressed; --strict => 82 raw. Fast-forward merged to main and pushed; HEAD==origin/main==a423e9dfe. Knot was in deferred with no valid next state, so this forced shipped close records the completed deferral.",
+    "datetime": "2026-07-03T19:05:12.770269Z",
+    "entry_id": "019f295e-e542-7341-bb9c-d6bfa316961a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
