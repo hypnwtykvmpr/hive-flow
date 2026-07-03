@@ -18,7 +18,7 @@ services:
   mcp:
     profiles: ["lite"]
     build:
-      context: ../../../..
+      context: ../..
       dockerfile: cli/docker/Dockerfile
     image: hive-flow:lite
     stdin_open: true
@@ -44,7 +44,7 @@ services:
   hive-flow-full:
     profiles: ["full"]
     build:
-      context: ../../../..
+      context: ../..
       dockerfile: cli/docker/Dockerfile.full
     image: hive-flow:full
     environment:
@@ -77,7 +77,7 @@ services:
   worker:
     profiles: ["workers"]
     build:
-      context: ../../../..
+      context: ../..
       dockerfile: cli/docker/Dockerfile
     image: hive-flow:lite
     environment:
