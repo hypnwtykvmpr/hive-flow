@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26d8-d3c4-7bd0-81aa-1329d125c213",
+  "occurred_at": "2026-07-03T07:19:32.036811Z",
+  "knot_id": "hive-flow-88d1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Implemented on branch knots-88d1-enforcement-test-drift @ 8edfbeff8 (pushed). CORRECTED diagnosis: NOT uniformly v3->cli path drift. Two causes, both stale-test drift (enforcement.cjs engine unchanged): (1) 4 escalation/group tests asserted the pre-d827 'protected write = critical => immediate RESTRICTED' model; human-authored commit d827a6092 made a first protected write deny-only (escalate only on cross-channel repeat) — retargeted to deny-first reality. (2) 2 compiled-path tests used pre-promotion v3/@hive-flow/cli/dist paths — retargeted to cli/dist/src/{permission-guard,mcp-tools}. tests/enforcement.test.mjs now 119/119 (was 113/119); enforcement-security-property.test.ts 87/87. Routed to Codex for review/land.",
+    "datetime": "2026-07-03T07:19:32.036811Z",
+    "entry_id": "019f26d8-d3c4-7bd0-81aa-1314fbb8fe28",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
