@@ -43,6 +43,14 @@ const DEADLETTER_DIR = 'deadletter';
 const OUTBOX_FILE = 'outbox.jsonl';
 const KEY_FILE = '.hmac-key';
 const LOCK_FILE = '.lock';
+const RATE_STATE_FILE = 'rate-state.json';
+
+// Anti-spam caps (P4, Knot hive-flow-5de8; DoR FM-10). Reuses the denial-ledger
+// actor-keyed windowed pattern. ponytail: generous constants; make them
+// config/env-tunable when real traffic data shows these are wrong.
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const RATE_MAX_PER_PAIR = 20;
+const RATE_MAX_PER_SENDER = 60;
 
 // NUL delimiter for hash inputs (collision-safe: cannot appear in the fields;
 // matches the codebase sha256(clientKind\0sessionId) wake-path scheme). Built via
@@ -313,6 +321,49 @@ function computeDedupKey(from: MessageParty, to: MessageParty, verb: MessageVerb
     .digest('hex');
 }
 
+// ---------------------------------------------------------------------------
+// Anti-spam rate state (P4 -- per-pair + per-sender windowed caps)
+// ---------------------------------------------------------------------------
+
+interface RateState {
+  pairs: Record<string, { sent: number[]; lastBodyDigest?: string }>;
+  senders: Record<string, number[]>;
+}
+
+function getRateStatePath(projectRoot: string): string {
+  return join(getMessagesDir(projectRoot), RATE_STATE_FILE);
+}
+
+/** Read the windowed send ledger. Corrupt/absent state resets empty -- the caps
+ *  are an abuse guard, not an integrity boundary. Callers hold the store lock. */
+function readRateState(projectRoot: string): RateState {
+  try {
+    const raw = readFileSync(getRateStatePath(projectRoot), 'utf-8');
+    const parsed = JSON.parse(raw) as Partial<RateState>;
+    return {
+      pairs: parsed.pairs && typeof parsed.pairs === 'object' ? parsed.pairs : {},
+      senders: parsed.senders && typeof parsed.senders === 'object' ? parsed.senders : {},
+    };
+  } catch {
+    return { pairs: {}, senders: {} };
+  }
+}
+
+function writeRateState(state: RateState, projectRoot: string): void {
+  ensureDir(getMessagesDir(projectRoot));
+  const target = getRateStatePath(projectRoot);
+  const tmp = target + '.tmp.' + process.pid;
+  writeFileSync(tmp, JSON.stringify(state), 'utf-8');
+  renameSync(tmp, target);
+}
+
+/** Drop timestamps that fell out of the window (in place). */
+function pruneWindow(sent: number[], nowMs: number): void {
+  let keepFrom = 0;
+  while (keepFrom < sent.length && nowMs - sent[keepFrom] > RATE_WINDOW_MS) keepFrom++;
+  if (keepFrom > 0) sent.splice(0, keepFrom);
+}
+
 /** Store-level invariants (defense in depth; the P3 router enforces the same). */
 function validateSendInput(input: SendMessageInput): void {
   if (!input.fromAgentId) throw new Error('sender-required');
@@ -430,7 +481,17 @@ export function listInbox(
       quarantineCorruptRecord(dir, name, raw, res.reason, projectRoot, res.messageId);
       continue;
     }
-    const m = res.message;
+    let m = res.message;
+    // P4 TTL expiry at read: an overdue non-terminal record transitions durably
+    // to 'expired' and drops out of the active listing. deliveryState is outside
+    // the signing view, so the transition never invalidates the signature.
+    if (m.ttlMs !== undefined && (m.deliveryState === 'pending' || m.deliveryState === 'delivered')) {
+      const expiresAt = Date.parse(m.createdAt) + m.ttlMs;
+      if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
+        m = { ...m, deliveryState: 'expired', updatedAt: new Date().toISOString() };
+        try { writeInboxRecord(m, projectRoot); } catch { /* best-effort; re-expires next read */ }
+      }
+    }
     if (!opts.includeTerminal && (m.deliveryState === 'acked' || m.deliveryState === 'dead-letter' || m.deliveryState === 'expired')) continue;
     messages.push(m);
   }
@@ -484,11 +545,41 @@ export async function sendMessage(input: SendMessageInput, projectRoot = process
   const conversationId = input.conversationId ?? `conv-${randomUUID()}`;
   const dedupKey = computeDedupKey(from, to, input.verb, conversationId, input.body);
 
+  const bodyDigest = createHash('sha256').update(input.body).digest('hex');
+  const pairKey = createHash('sha256').update([input.fromAgentId, recipientKey(to)].join(SEP)).digest('hex');
+
   return withMessagesLock(async () => {
     // dedup fold-in: return an existing non-terminal record with the same dedupKey.
+    // Runs BEFORE the anti-spam guards -- an idempotent resend is not spam.
     const existing = listInbox(to, projectRoot, { includeTerminal: false }).messages
       .find(m => m.dedupKey === dedupKey);
     if (existing) return existing;
+
+    // ---- P4 anti-spam guards (Knot hive-flow-5de8; DoR FM-10) ----
+    const rateState = readRateState(projectRoot);
+    const pairEntry = rateState.pairs[pairKey] ?? { sent: [] };
+    const senderSent = rateState.senders[input.fromAgentId] ?? [];
+    const nowMs = Date.now();
+    pruneWindow(pairEntry.sent, nowMs);
+    pruneWindow(senderSent, nowMs);
+
+    // Consecutive-frame de-dup: identical body to the same pair as the
+    // immediately previous frame. dedupKey cannot catch these when the sender
+    // varies conversationId/verb. Not a throttle -- applies to urgent too.
+    if (pairEntry.lastBodyDigest === bodyDigest) {
+      throw new Error('duplicate-frame: identical consecutive message to the same recipient (vary the body, or resend within the same conversation for dedup fold-in)');
+    }
+
+    // Windowed rate caps; urgent bypasses the throttle (never the de-dup).
+    const effectivePriority = input.priority ?? 'normal';
+    if (effectivePriority !== 'urgent') {
+      if (pairEntry.sent.length >= RATE_MAX_PER_PAIR) {
+        throw new Error(`rate-capped: pair limit ${RATE_MAX_PER_PAIR} per ${RATE_WINDOW_MS / 60000}min reached for '${input.fromAgentId}' to this recipient (priority=urgent bypasses)`);
+      }
+      if (senderSent.length >= RATE_MAX_PER_SENDER) {
+        throw new Error(`rate-capped: sender limit ${RATE_MAX_PER_SENDER} per ${RATE_WINDOW_MS / 60000}min reached for '${input.fromAgentId}' (priority=urgent bypasses)`);
+      }
+    }
 
     const now = new Date().toISOString();
     const message: AgentMessage = {
@@ -514,8 +605,27 @@ export async function sendMessage(input: SendMessageInput, projectRoot = process
     };
     message.signature = signMessage(message, projectRoot);
 
-    // Append-only audit log first, then the durable inbox record.
+    // Record the send attempt in the rate ledger. Hop-overflow dead-letters
+    // count too -- a loop storm must not evade the caps by dying at the bound.
+    pairEntry.sent.push(nowMs);
+    pairEntry.lastBodyDigest = bodyDigest;
+    senderSent.push(nowMs);
+    rateState.pairs[pairKey] = pairEntry;
+    rateState.senders[input.fromAgentId] = senderSent;
+    writeRateState(rateState, projectRoot);
+
     ensureDir(getMessagesDir(projectRoot));
+
+    // Loop bound (FM-10): hop >= maxHops drops DURABLY to dead-letter -- audit
+    // trail in the outbox, evidence in deadletter/, never an inbox delivery,
+    // never a silent drop. The returned record carries deliveryState
+    // 'dead-letter' so the caller sees the real outcome.
+    if (message.hop >= message.maxHops) {
+      appendFileSync(getOutboxPath(projectRoot), JSON.stringify(message) + '\n', 'utf-8');
+      return deadLetterMessageUnsafe(message, `max-hops-exceeded: hop ${message.hop} >= maxHops ${message.maxHops}`, projectRoot);
+    }
+
+    // Append-only audit log first, then the durable inbox record.
     appendFileSync(getOutboxPath(projectRoot), JSON.stringify(message) + '\n', 'utf-8');
     writeInboxRecord(message, projectRoot);
     return message;
@@ -596,6 +706,25 @@ export async function ackMessage(
   }, projectRoot);
 }
 
+/** Lock-free dead-letter core; callers must hold the messages lock (or accept
+ *  the atomic-write-only guarantee). Returns the terminal record. */
+function deadLetterMessageUnsafe(message: AgentMessage, reason: string, projectRoot: string): AgentMessage {
+  ensureDir(getDeadLetterDir(projectRoot));
+  const updated: AgentMessage = { ...message, deliveryState: 'dead-letter', deadLetterReason: reason, updatedAt: new Date().toISOString() };
+  const safeId = sanitizePathId(updated.messageId, 128) || `msg-${randomUUID()}`;
+  const target = join(getDeadLetterDir(projectRoot), safeId + '.json');
+  const tmp = target + '.tmp.' + process.pid;
+  writeFileSync(tmp, JSON.stringify(updated, null, 2), 'utf-8');
+  renameSync(tmp, target);
+  // Reflect terminal state in the inbox record if present.
+  try {
+    const key = recipientKey(updated.to);
+    const inboxPath = getInboxRecordPath(key, updated.messageId, projectRoot);
+    if (existsSync(inboxPath)) writeInboxRecord(updated, projectRoot);
+  } catch { /* inbox record absent -- dead-letter copy is authoritative */ }
+  return updated;
+}
+
 /** Move a message to the dead-letter store with a reason (no silent drops). */
 export async function deadLetterMessage(
   message: AgentMessage,
@@ -603,18 +732,6 @@ export async function deadLetterMessage(
   projectRoot = process.cwd(),
 ): Promise<void> {
   await withMessagesLock(async () => {
-    ensureDir(getDeadLetterDir(projectRoot));
-    const updated: AgentMessage = { ...message, deliveryState: 'dead-letter', deadLetterReason: reason, updatedAt: new Date().toISOString() };
-    const safeId = sanitizePathId(updated.messageId, 128) || `msg-${randomUUID()}`;
-    const target = join(getDeadLetterDir(projectRoot), safeId + '.json');
-    const tmp = target + '.tmp.' + process.pid;
-    writeFileSync(tmp, JSON.stringify(updated, null, 2), 'utf-8');
-    renameSync(tmp, target);
-    // Reflect terminal state in the inbox record if present.
-    try {
-      const key = recipientKey(updated.to);
-      const inboxPath = getInboxRecordPath(key, updated.messageId, projectRoot);
-      if (existsSync(inboxPath)) writeInboxRecord(updated, projectRoot);
-    } catch { /* inbox record absent -- dead-letter copy is authoritative */ }
+    deadLetterMessageUnsafe(message, reason, projectRoot);
   }, projectRoot);
 }

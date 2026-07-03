@@ -35,7 +35,7 @@ import {
 } from './agent-message-store.js';
 import { resolveDeliveryPlan, writeMessageWakeNotice, type DeliveryPlan } from './agent-message-tools.js';
 import { loadAgentStore, resolveProjectRootFromInput } from './agent-tools.js';
-import { loadHive } from './hive-store.js';
+import { loadHive, saveHive, withHiveLock } from './hive-store.js';
 
 const ESCALATION_VERBS = ['blocked', 'ask'] as const;
 const MEDIATION_VERBS = ['resume', 'redirect'] as const;
@@ -137,6 +137,50 @@ export function resolveMediator(fromAgentId: string, projectRoot: string): Media
 }
 
 // ---------------------------------------------------------------------------
+// waiting-on-peer lifecycle (P4, Knot hive-flow-5de8)
+//
+// Mirrors permission-waiting: a hive worker with an outstanding escalation is
+// NON-SETTLED (watcher allComplete excludes it) and NON-IDLE (the idle reaper's
+// selection predicate is `status === 'idle'`, so a waiting worker is
+// structurally never reclaimed -- the reaper carve-out is data-driven, no
+// reaper change needed). Best-effort lifecycle truth: failures never fail the
+// messaging operation itself.
+// ---------------------------------------------------------------------------
+
+async function setHiveWorkerWaitingState(
+  agentId: string,
+  waiting: boolean,
+  projectRoot: string,
+): Promise<boolean> {
+  try {
+    const rec = lookupPersistedAgent(agentId, projectRoot);
+    if (!rec?.hiveId) return false;
+    const hiveId = rec.hiveId;
+    return await withHiveLock(hiveId, async () => {
+      const hive = loadHive(hiveId, projectRoot);
+      if (!hive) return false;
+      const worker = (hive.workers || []).find(w => w.agentId === agentId);
+      if (!worker) return false;
+      if (waiting) {
+        if (worker.status === 'waiting-on-peer') return true;
+        if (worker.status === 'terminated') return false;
+        worker.status = 'waiting-on-peer';
+      } else {
+        if (worker.status !== 'waiting-on-peer') return false;
+        worker.status = 'idle';
+        // Fresh idle clock: the reaper measures idleness from idleSince, and a
+        // just-unblocked worker has not been idling since before it waited.
+        (worker as { idleSince?: string }).idleSince = new Date().toISOString();
+      }
+      saveHive(hiveId, hive, projectRoot);
+      return true;
+    }, projectRoot);
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Escalation (blocked/ask -> mediator)
 // ---------------------------------------------------------------------------
 
@@ -154,7 +198,7 @@ export async function escalateBlockedMessage(
   input: EscalateInput,
   projectRoot: string,
 ): Promise<
-  | { success: true; message: AgentMessage; mediator: MediatorResolution; delivery: DeliveryPlan; wakeNotified: boolean }
+  | { success: true; message: AgentMessage; mediator: MediatorResolution; delivery: DeliveryPlan; wakeNotified: boolean; senderMarkedWaiting: boolean }
   | { success: false; error: string }
 > {
   const verb: EscalationVerb = input.verb ?? 'blocked';
@@ -191,7 +235,10 @@ export async function escalateBlockedMessage(
     }, projectRoot);
     const wakeNotified = writeMessageWakeNotice(message, projectRoot);
     const delivery = resolveDeliveryPlan(message.to, projectRoot);
-    return { success: true, message, mediator, delivery, wakeNotified };
+    // P4: the escalation is durable -- mark the sender's hive worker
+    // waiting-on-peer (non-settled for the watcher, non-idle for the reaper).
+    const senderMarkedWaiting = await setHiveWorkerWaitingState(input.fromAgentId, true, projectRoot);
+    return { success: true, message, mediator, delivery, wakeNotified, senderMarkedWaiting };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
@@ -213,7 +260,7 @@ export async function mediateMessage(
   input: MediateInput,
   projectRoot: string,
 ): Promise<
-  | { success: true; reply: AgentMessage; originalAcked: boolean; advisory: true; delivery: DeliveryPlan; wakeNotified: boolean }
+  | { success: true; reply: AgentMessage; originalAcked: boolean; advisory: true; delivery: DeliveryPlan; wakeNotified: boolean; senderWaitingCleared: boolean }
   | { success: false; error: string }
 > {
   const decision = input.decision;
@@ -291,15 +338,28 @@ export async function mediateMessage(
       conversationId: originalMessage.conversationId,
       replyTo: originalMessage.messageId,
       seq: (originalMessage.seq ?? 0) + 1,
+      // P4 loop bound: replies inherit the conversation's hop budget. A
+      // mediation ping-pong chain increments hop each round and dead-letters
+      // at maxHops instead of looping forever (FM-10).
+      hop: (originalMessage.hop ?? 0) + 1,
+      maxHops: originalMessage.maxHops,
       priority: originalMessage.priority,
     }, projectRoot);
+    if (reply.deliveryState === 'dead-letter') {
+      // The reply died at the loop bound: the escalation stays un-acked and
+      // the worker stays waiting -- no false mediation success.
+      return { success: false, error: `reply-dead-lettered: ${reply.deadLetterReason ?? 'dead-letter'}` };
+    }
     const wakeNotified = writeMessageWakeNotice(reply, projectRoot);
     const delivery = resolveDeliveryPlan(reply.to, projectRoot);
     // Mediation consumes the escalation: ack it at the ADDRESS IT WAS FOUND AT
     // (agent inbox for queen-path, session-level inbox for owning-parent-path;
     // at-most-once -- a duplicate mediation attempt surfaces alreadyAcked).
     const ackResult = await ackMessage(inboxAddress, originalMessage.messageId, projectRoot);
-    return { success: true, reply, originalAcked: ackResult.acked, advisory: true, delivery, wakeNotified };
+    // P4: the wait is answered -- restore the sender's hive worker to idle
+    // with a fresh idle clock.
+    const senderWaitingCleared = await setHiveWorkerWaitingState(originalMessage.from.agentId, false, projectRoot);
+    return { success: true, reply, originalAcked: ackResult.acked, advisory: true, delivery, wakeNotified, senderWaitingCleared };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }

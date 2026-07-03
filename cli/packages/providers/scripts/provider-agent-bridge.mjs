@@ -427,6 +427,12 @@ export function bridgeListPendingMessages(projectRoot, party) {
       continue;
     }
     if (m.deliveryState !== 'pending') continue;
+    // P4 TTL coherence with the store: never fold an overdue message. The
+    // durable 'expired' transition belongs to the store read paths.
+    if (m.ttlMs !== undefined) {
+      const expiresAt = Date.parse(m.createdAt) + m.ttlMs;
+      if (Number.isFinite(expiresAt) && Date.now() > expiresAt) continue;
+    }
     pending.push(m);
   }
   const rank = { urgent: 0, high: 1, normal: 2, low: 3 };

@@ -233,6 +233,47 @@ function blockedPermissionWorkerIds(hivesDir, hiveId, hive) {
   return blocked;
 }
 
+/**
+ * P4 (hive-flow-5de8): worker IDs WAITING on an un-answered inter-agent
+ * escalation (verb blocked/ask, requiresAck, still pending/delivered in the
+ * durable message store -- cli/src/mcp-tools/agent-message-store.ts). Mirrors
+ * blockedPermissionWorkerIds: a waiting worker must NOT let the hive be
+ * declared allComplete, or the sentinel would settle a hive whose worker is
+ * mid-conversation. Content-matched (from.agentId) across all inbox dirs so
+ * the scan cannot drift from the store's recipient-key derivation. Read-only.
+ */
+function waitingOnPeerWorkerIds(hivesDir, hive) {
+  const waiting = new Set();
+  const agentToWorker = new Map();
+  for (const w of (hive.workers || [])) {
+    if (w && w.agentId && w.workerId && w.status !== 'terminated') agentToWorker.set(w.agentId, w.workerId);
+  }
+  if (agentToWorker.size === 0) return waiting;
+  const projectRoot = path.dirname(path.dirname(hivesDir));
+  const inboxRoot = path.join(projectRoot, '.hive-flow', 'messages', 'inbox');
+  if (!fs.existsSync(inboxRoot)) return waiting;
+  let recipientDirs;
+  try { recipientDirs = fs.readdirSync(inboxRoot); } catch { return waiting; }
+  for (const dirName of recipientDirs) {
+    const dirPath = path.join(inboxRoot, dirName);
+    let entries;
+    try { entries = fs.readdirSync(dirPath); } catch { continue; }
+    for (const entry of entries) {
+      if (!entry.endsWith('.json')) continue;
+      let record;
+      try { record = JSON.parse(fs.readFileSync(path.join(dirPath, entry), 'utf8')); } catch { continue; }
+      if (!record || !record.from || !record.from.agentId) continue;
+      const workerId = agentToWorker.get(record.from.agentId);
+      if (!workerId) continue;
+      if (record.verb !== 'blocked' && record.verb !== 'ask') continue;
+      if (!record.requiresAck) continue;
+      if (record.deliveryState !== 'pending' && record.deliveryState !== 'delivered') continue;
+      waiting.add(workerId);
+    }
+  }
+  return waiting;
+}
+
 function pollWorkers(hivesDir, tasksDir, hiveId) {
   const hive = loadHiveRecord(hivesDir, hiveId);
   if (!hive || !Array.isArray(hive.workers)) {
@@ -329,8 +370,13 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
   const blockedWorkerIds = blockedPermissionWorkerIds(hivesDir, hiveId, hive);
   const blockedCount = blockedWorkerIds.size;
 
+  // P4 (hive-flow-5de8): a worker awaiting a mediation reply is non-settled --
+  // same discipline as permission-blocked workers.
+  const waitingOnPeerIds = waitingOnPeerWorkerIds(hivesDir, hive);
+  const waitingOnPeerCount = waitingOnPeerIds.size;
+
   const taskedCount = completedCount + runningCount + failedCount;
-  const allComplete = runningCount === 0 && blockedCount === 0 && !startupWindowOpen;
+  const allComplete = runningCount === 0 && blockedCount === 0 && waitingOnPeerCount === 0 && !startupWindowOpen;
 
   return {
     hiveStatus: hive.status,
@@ -342,6 +388,8 @@ function pollWorkers(hivesDir, tasksDir, hiveId) {
     terminatedCount,
     blockedCount,
     blockedWorkers: [...blockedWorkerIds],
+    waitingOnPeerCount,
+    waitingOnPeerWorkers: [...waitingOnPeerIds],
     allComplete,
     workerCount: hive.workers.length,
     ownerSessionId: hive.ownerSessionId || null,
@@ -705,7 +753,17 @@ async function main() {
 // Entry point
 // ---------------------------------------------------------------------------
 
-main().catch(err => {
-  process.stderr.write('hive-watcher: fatal error: ' + (err?.message || String(err)) + '\n');
-  process.exit(1);
-});
+// Exported for tests and reuse; the daemon runs only when invoked directly
+// (a bare require must never start the watch loop).
+module.exports = {
+  pollWorkers,
+  blockedPermissionWorkerIds,
+  waitingOnPeerWorkerIds,
+};
+
+if (require.main === module) {
+  main().catch(err => {
+    process.stderr.write('hive-watcher: fatal error: ' + (err?.message || String(err)) + '\n');
+    process.exit(1);
+  });
+}

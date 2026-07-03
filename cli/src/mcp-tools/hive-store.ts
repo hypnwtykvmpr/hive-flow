@@ -50,7 +50,10 @@ export interface HiveWorkerRecord {
   // BLOCKED states — a worker in them is NOT settled/idle and must NOT let a hive be
   // declared allComplete. Derived from pending permission requests at poll/settlement
   // time (source of truth) and surfaced in worker status reports.
-  status: 'spawning' | 'idle' | 'busy' | 'error' | 'terminated' | 'permission-waiting' | 'waiting-for-queen';
+  // P4 (hive-flow-5de8): waiting-on-peer is the same shape for inter-agent
+  // escalations — a worker awaiting a mediation reply is non-settled AND non-idle,
+  // so the watcher never declares its hive done and the idle reaper never selects it.
+  status: 'spawning' | 'idle' | 'busy' | 'error' | 'terminated' | 'permission-waiting' | 'waiting-for-queen' | 'waiting-on-peer';
   spawnedAt: string;
   /** ISO timestamp of when this worker was terminated (set by hive_terminate, hive-cleanup, queen-tools) */
   terminatedAt?: string;

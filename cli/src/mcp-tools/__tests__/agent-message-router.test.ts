@@ -82,7 +82,11 @@ function seedFixtures(): void {
     status: 'active',
     ownerSessionId: 'sess-hive-owner',
     ownerClientKind: 'claude-code',
-    workers: [],
+    workers: [
+      // P4: the escalating worker is a hive member so the waiting-on-peer
+      // lifecycle (escalate -> waiting, mediate -> idle) is observable.
+      { workerId: 'w-1', agentId: WORKER.agentId, role: 'coder', provider: 'deepseek', status: 'idle', spawnedAt: new Date().toISOString() },
+    ],
     budget: {},
     audit: [],
     createdAt: new Date().toISOString(),
@@ -221,16 +225,24 @@ describe('escalate -> mediate round-trip, advisory-only', () => {
     expect(queenInbox.messages[0].requiresAck).toBe(true);
     expect(queenInbox.messages[0].priority).toBe('high');
     expect(queenInbox.messages[0].unblockCondition).toContain('alternate grounding source');
+
+    // P4: the durable escalation marks the sender's hive worker waiting-on-peer
+    // (non-settled for the watcher, non-idle for the reaper).
+    expect(res.senderMarkedWaiting).toBe(true);
+    const hive = JSON.parse(readFileSync(hiveRecordPath(), 'utf-8'));
+    expect(hive.workers.find((w: { agentId: string }) => w.agentId === WORKER.agentId)?.status).toBe('waiting-on-peer');
   });
 
-  it('mediates with redirect: advisory reply, original acked, zero authoritative-state mutation', async () => {
+  it('mediates with redirect: advisory reply, original acked, only message + waiting-lifecycle state changes', async () => {
     const escalated = await escalate();
     expect(escalated.success).toBe(true);
     if (!escalated.success) return;
 
-    // Snapshot every authoritative record the mediation must NOT touch.
+    // Snapshot AFTER escalation (which legitimately set waiting-on-peer):
+    // mediation may change ONLY the worker's waiting-lifecycle fields.
     const agentStoreBefore = readFileSync(agentStorePath(), 'utf-8');
-    const hiveBefore = readFileSync(hiveRecordPath(), 'utf-8');
+    const hiveAfterEscalate = JSON.parse(readFileSync(hiveRecordPath(), 'utf-8'));
+    expect(hiveAfterEscalate.workers[0].status).toBe('waiting-on-peer');
 
     const res = await mediateMessage({
       mediatorAgentId: QUEEN_B.agentId,
@@ -248,15 +260,28 @@ describe('escalate -> mediate round-trip, advisory-only', () => {
     expect(res.reply.replyTo).toBe(escalated.message.messageId);
     expect(res.reply.conversationId).toBe(escalated.message.conversationId);
     expect(res.reply.seq).toBe(escalated.message.seq + 1);
+    // P4 loop bound: replies inherit the conversation hop budget.
+    expect(res.reply.hop).toBe(escalated.message.hop + 1);
+    expect(res.reply.maxHops).toBe(escalated.message.maxHops);
     expect(res.reply.verb).toBe('redirect');
     expect(res.reply.body).toContain('[ADVISORY]');
     expect(res.reply.body).toContain('no execution authority');
     const workerInbox = listInbox(WORKER, root);
     expect(workerInbox.messages.map(m => m.messageId)).toEqual([res.reply.messageId]);
 
-    // ENFORCEMENT-BYPASS GUARDS: mediation wrote ONLY message records.
+    // ENFORCEMENT-BYPASS GUARDS: mediation wrote ONLY message records plus the
+    // sender's waiting-lifecycle fields (waiting-on-peer -> idle, fresh
+    // idleSince). Everything enforcement-relevant stays untouched.
     expect(readFileSync(agentStorePath(), 'utf-8')).toBe(agentStoreBefore);
-    expect(readFileSync(hiveRecordPath(), 'utf-8')).toBe(hiveBefore);
+    expect(res.senderWaitingCleared).toBe(true);
+    const hiveAfterMediate = JSON.parse(readFileSync(hiveRecordPath(), 'utf-8'));
+    expect(hiveAfterMediate.workers[0].status).toBe('idle');
+    expect(hiveAfterMediate.workers[0].idleSince).toBeTruthy();
+    expect(hiveAfterMediate.queenId).toBe(hiveAfterEscalate.queenId);
+    expect(hiveAfterMediate.status).toBe(hiveAfterEscalate.status);
+    expect(hiveAfterMediate.audit).toEqual(hiveAfterEscalate.audit);
+    expect(hiveAfterMediate.budget).toEqual(hiveAfterEscalate.budget);
+    expect(hiveAfterMediate.permissionRequests).toEqual(hiveAfterEscalate.permissionRequests);
     expect(existsSync(join(root, '.hive-flow', 'tasks'))).toBe(false);
     expect(existsSync(join(root, '.hive-flow', 'enforcement'))).toBe(false);
 
@@ -324,6 +349,8 @@ describe('owning-parent mediation (session-level inbox)', () => {
     expect(res.success).toBe(true);
     if (!res.success) throw new Error('escalation failed');
     expect(res.mediator.kind).toBe('owning-parent');
+    // P4: hiveless senders have no hive worker row to mark.
+    expect(res.senderMarkedWaiting).toBe(false);
     return res;
   }
 
