@@ -1,0 +1,21 @@
+{
+  "event_id": "019f26cf-f300-7771-9cc2-ab20099466db",
+  "occurred_at": "2026-07-03T07:09:50.208099Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-791c",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-110b-land",
+    "type": "lease",
+    "updated_at": "2026-07-03T07:09:50.208099Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

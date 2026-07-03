@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26cf-e14d-74a1-9c18-0e59e0707759",
+  "occurred_at": "2026-07-03T07:09:45.676726Z",
+  "knot_id": "hive-flow-110b",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS: landed branch knots-110b-sentinel-eperm-test to main at 1d90da8f1; scope exactly .claude/helpers/sentinel-recovery.cjs and cli/src/__tests__/sentinel-singleton.test.ts. Gates passed on landed main: node --check sentinel-recovery; sentinel-singleton 8/8; sibling sentinel/root/de-tmux 17/17; pnpm --dir cli exec tsc --noEmit; git diff --check; private-guard clean; stale identifier grep returned no matches.",
+    "datetime": "2026-07-03T07:09:45.676726Z",
+    "entry_id": "019f26cf-e14d-74a1-9c18-0e4e79978dd8",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
