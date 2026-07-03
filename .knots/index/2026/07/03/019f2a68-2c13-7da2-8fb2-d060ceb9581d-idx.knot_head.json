@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a68-2c13-7da2-8fb2-d060ceb9581d",
+  "occurred_at": "2026-07-03T23:54:57.939618Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-29a5",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "IAC P5: closed Status vocabulary + router-note parser (standalone hardening)",
+    "type": "work",
+    "updated_at": "2026-07-03T23:54:57.939618Z",
+    "workflow_id": "work_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a51-a108-7f63-9c57-d158cfc81178",
+  "occurred_at": "2026-07-03T23:30:20.552377Z",
+  "knot_id": "hive-flow-5de8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P4 IMPLEMENTED at 0b121d3f7 (branch knots-iac-p4-antispam-liveness off main cbe88a313, pushed). (1) ANTI-SPAM at the store choke point (sendMessage — no tool path can bypass): per-pair 20/10min + per-sender 60/10min windowed caps (denial-ledger actor-keyed pattern; rate-state.json under the store lock), urgent bypasses THROTTLE only; consecutive-frame de-dup (same pair+body across conversations — dedupKey cannot catch); hop>=maxHops drops DURABLY to dead-letter (outbox audit + deadletter evidence, never inbox, still counted vs caps so storms cannot evade); TTL expiry-at-read -> durable 'expired' (signature-safe: deliveryState outside signing view); dedup fold-in remains FIRST (idempotent resend is not spam). (2) waiting-on-peer first-class non-settled state (mirrors permission-waiting): escalate marks the sender's hive worker (withHiveLock; hiveless -> senderMarkedWaiting:false), mediate restores idle + fresh idleSince; replies inherit hop budget (hop+1/maxHops) and a reply that dies at the bound returns success:false reply-dead-lettered (escalation stays un-acked, worker stays waiting — no false mediation success). (3) Watcher scripts/hive-watcher.cjs: waitingOnPeerWorkerIds content-matched vs the message store; allComplete now requires waitingOnPeerCount===0; added require.main guard + module.exports (bare require no longer starts the daemon). (4) REAPER CARVE-OUT IS DATA-DRIVEN: protected hive-cleanup.cjs selects status==='idle' only; waiting workers structurally spared — PROVEN against the real protected reaper as a subprocess (oldest-clock waiting worker survives; exactly the oldest stale-idle worker reclaimed under the MIN_WORKERS floor). ZERO protected-file changes this slice. (5) Bridge: never folds a TTL-expired message. Gates: tsc clean, build pass, mcp-tools 531/531 (31 files; 521+10... new antispam 7 + liveness 3, router reworked in place), providers 975/975 post-build (initial 21 fails were the known clean:dist race — rerun clean), private-guard clean, diff-check clean, files text. Routing implementation review to Codex.",
+    "datetime": "2026-07-03T23:30:20.552377Z",
+    "entry_id": "019f2a51-a108-7f63-9c57-d14a86aaba2b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a18-4746-7771-865a-5bc69a967495",
+  "occurred_at": "2026-07-03T22:27:42.022763Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P2a IMPLEMENTED at 6ad1847bf (branch knots-iac-p2a-delivery off main b18df844, pushed). (1) MCP tools agent_message_send/_inbox/_ack in cli/src/mcp-tools/agent-message-tools.ts; registered in mcp-tools/index.ts + mcp-client.ts registerTools. Sender anti-forgery stays in the store; recipient addressing persisted-record-first, explicit pair fallback, no env guessing for send targets; wake notice = at-most-once JSON line (kind agent-message) to project .hive-flow/data/pending-notifications.jsonl + owner ~/.hive-flow/wake/sessions/s_<sha256(kind NUL session)[0..32]>/ (drain-notifications.cjs additionalContext path; NOT TeammateIdle/TaskCompleted). (2) Bridge pull-at-dispatch fold-in, flag HIVE_FLOW_AGENT_MESSAGING default OFF: mirrored read-side in provider-agent-bridge.mjs (recipientKey/signingView/guarded pending->delivered kept in lockstep with the store; bridge deliberately has no CLI-dist import); fold block between history and task; delivery marked ONLY after successful provider call AND trim-survival snapshot taken before first provider call; corrupt records durably quarantined (evidence + .corrupt rename); empty inbox / flag-off = byte-identical no-op (test-pinned). (3) Gates: tsc clean, cli build pass, new suites 22/22, mcp-tools regression 494/494 (=472 baseline +22, 27 files), providers bridge suite 975/975 (49 files), private-guard clean, git diff --check clean, all files verified text. Routing implementation review to Codex.",
+    "datetime": "2026-07-03T22:27:42.022763Z",
+    "entry_id": "019f2a18-4746-7771-865a-5bb37343f7a7",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

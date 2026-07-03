@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2976-f6f9-79c1-9a8e-1f0e15f4fc55",
+  "occurred_at": "2026-07-03T19:31:30.169202Z",
+  "knot_id": "hive-flow-29a5",
+  "type": "knot.created",
+  "data": {
+    "body": "Slice 6/6 (design-of-record: hive-flow-2ee8 knot note + router 20260703T192135Z; Codex PLAN_REVIEW_PASS 20260703T192607Z). SPLIT to its own lower-risk knot per Codex Q3. Closed MessageVerb + DeliveryState + router-note Status enum with a real parseRouterStatus validated against a closed set, wired into progress-authority-classifier so Status becomes authoritative (today it is free text ignored by the classifier). Docs.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "IAC P5: closed Status vocabulary + router-note parser (standalone hardening)",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

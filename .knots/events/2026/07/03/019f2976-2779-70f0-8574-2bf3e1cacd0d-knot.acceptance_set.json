@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-2779-70f0-8574-2bf3e1cacd0d",
+  "occurred_at": "2026-07-03T19:30:37.039969Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Tests: at least one provider file-substrate canary; no-false-success on failed delivery; cross-session dead-letter. tsc+build+existing suites clean. Route to Codex."
+  }
+}

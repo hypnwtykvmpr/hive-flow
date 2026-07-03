@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-2741-7ad0-b409-4916d7bf7a1b",
+  "occurred_at": "2026-07-03T19:30:36.989517Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Slice 1/6 of inter-agent comms (design-of-record: hive-flow-2ee8 knot note + router 20260703T192135Z; Codex PLAN_REVIEW_PASS 20260703T192607Z). Implement AgentMessage record (messageId minted once + echoed verbatim, never re-derived; dedupKey stable content hash; from/to carry explicit ownerSessionId+ownerClientKind; verb/replyTo/conversationId/seq/hop/ttl; blockerClass+unblockCondition; deliveryState DERIVED not constant; NEW per-message HMAC signature — NOTE hive-store has HiveState.signature only, this is net-new; dead-letter fields) and the file store under projectRoot/.hive-flow/messages (outbox.jsonl append-only; inbox per-recipientKey json via atomic tmp+rename+mkdir-lock; per-id acked O_EXCL). Sender identity stamped from the sender authoritative persisted record ONLY. Build alongside queen_permission_ sharing primitives where safe; do NOT migrate the permission path. Keep the messages path private/runtime-owned."
+  }
+}

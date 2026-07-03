@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2991-f518-74c1-902c-1997dabd104d",
+  "occurred_at": "2026-07-03T20:00:59.160253Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P1 bounce fixes committed b18df8445 (branch knots-iac-p1-envelope-store, pushed). All 3 Codex must-fixes addressed: (1) ackMessage verify-first, never false-ACKs missing/corrupt; corrupt is durably dead-lettered; O_EXCL marker only for valid message; (2) durable dead-letter via quarantineCorruptRecord -> deadletter/corrupt-<hash>.json evidence + .corrupt move, invoked by listInbox+ackMessage (readInboxMessage stays pure); (3) removed broad setDeliveryState, added guarded markDelivered (pending->delivered only, refuses skip/reopen). Tests 14->18. Gates: tsc+build pass, 18/18 new + 472/472 mcp-tools regression, private-guard clean, files verified text. Re-review router note 20260703T200016Z-claude-2ee8-P1-IMPLEMENTATION_REVIEW_REQUEST-v2-to-codex.md. Awaiting Codex re-review.",
+    "datetime": "2026-07-03T20:00:59.160253Z",
+    "entry_id": "019f2991-f518-74c1-902c-1981968111cc",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2978-3430-7db2-84d4-bb3402b37d19",
+  "occurred_at": "2026-07-03T19:32:51.376736Z",
+  "knot_id": "hive-flow-2ee8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex PLAN_REVIEW_PASS (20260703T192607Z): advanced to ready_for_implementation; Knots sync 3d0984d2. Answers applied: (1) pull-at-dispatch confirmed for v1; (2) provider/file substrate FIRST, native adapter SECOND; (3) Status vocab split to its own knot (P5); (4) explicit ownerSessionId+ownerClientKind now, stamp from PERSISTED records only, do not block on 6c50/5799; (5) build ALONGSIDE queen_permission_ (no in-place migration until canaries pass); (6) create phased child knots now. Corrections baked into child specs: per-message HMAC is NET-NEW (source has HiveState.signature only, NOT HivePermissionRequest.signature); do NOT rely on TeammateIdle/TaskCompleted (not valid Claude Code hook events) - use real sentinel + Stop/SessionStart + additionalContext drain. Claimed implementation (lease hive-flow-19ba). Child knots created+linked: P1=hive-flow-2901 envelope+store; P2a=hive-flow-abc9 provider file-substrate delivery + MCP tools; P2b=hive-flow-d790 native adapter; P3=hive-flow-ef30 mediation router; P4=hive-flow-5de8 anti-spam+waiting-on-peer; P5=hive-flow-29a5 Status vocab. Next: implement P1 (2901), route each slice to Codex.",
+    "datetime": "2026-07-03T19:32:51.376736Z",
+    "entry_id": "019f2978-3430-7db2-84d4-bb23ad05b09f",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

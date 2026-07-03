@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2997-3f5b-7221-9e32-ed2def51ec34",
+  "occurred_at": "2026-07-03T20:06:45.851221Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Shipment: P1 code landed at b18df844 == origin/main (Codex fast-forward-merged after implementation-review PASS 20260703T200442Z). Full-suite regression 673/673 + 18/18 slice tests + build/tsc/private-guard clean. No deploy artifact beyond the merged source. Ready for shipment review.",
+    "datetime": "2026-07-03T20:06:45.851221Z",
+    "entry_id": "019f2997-3f5b-7221-9e32-ed12a8b2ab55",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

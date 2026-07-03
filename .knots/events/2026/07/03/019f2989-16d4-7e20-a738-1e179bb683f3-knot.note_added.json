@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2989-16d4-7e20-a738-1e179bb683f3",
+  "occurred_at": "2026-07-03T19:51:17.972826Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "LATE HIVE-FLOW VERIFIER ADDENDUM (task-cc5a64e5-dd4b-4abe-956b-8f56dded5e88): independent codex-cli verifier also returned BOUNCE. Additional must-review/fix items: (2) malformed/tampered read paths report deadLetter=true/deadLetters[] but never durably copy/move the bad record into .hive-flow/messages/deadletter, despite the store contract exposing a deadletter directory and deadLetterMessage helper; add durable dead-letter persistence or a deliberately named API boundary with tests. (3) exported setDeliveryState accepts any DeliveryState and writes it directly after a successful read; this is too easy to misuse and weakens the derived-state invariant. Restrict/rename/internalize it or require transition-specific evidence, with tests. Primary must-fix remains ackMessage false-success on absent/corrupt records.",
+    "datetime": "2026-07-03T19:51:17.972826Z",
+    "entry_id": "019f2989-16d4-7e20-a738-1e0489178568",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

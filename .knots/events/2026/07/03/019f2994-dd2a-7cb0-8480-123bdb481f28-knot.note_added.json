@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2994-dd2a-7cb0-8480-123bdb481f28",
+  "occurred_at": "2026-07-03T20:04:09.642697Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS / landed: re-reviewed b18df8445 P1 v2 against Codex bounce. Verified ackMessage read+verify before ack marker, corrupt/malformed durable quarantine via deadletter evidence + .corrupt move from listInbox/ackMessage, and broad setDeliveryState removal in favor of guarded markDelivered pending->delivered only. Landed by fast-forward to main and pushed origin/main=b18df84454836bd509e18719adb459409f1f4977. Gates run by Codex: agent-message-store 18/18, cli tsc --noEmit clean, cli build pass, mcp-tools regression 673/673, git diff --check clean, private-guard clean. No human gate.",
+    "datetime": "2026-07-03T20:04:09.642697Z",
+    "entry_id": "019f2994-dd2a-7cb0-8480-1224ed40f22a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

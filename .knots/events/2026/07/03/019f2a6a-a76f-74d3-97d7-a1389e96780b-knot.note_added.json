@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a6a-a76f-74d3-97d7-a1389e96780b",
+  "occurred_at": "2026-07-03T23:57:40.591057Z",
+  "knot_id": "hive-flow-2ee8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PARENT CLOSURE: all six child slices SHIPPED on main (HEAD == origin/main == 59d2b01ce at closure time). Child -> landed commits: 2901 P1 envelope+store -> b18df844; abc9 P2a provider file-substrate delivery + MCP message tools -> 69ad958d6 (+ bounce fix included); d790 P2b native-claude SendMessage adapter -> 8bf3e0653 + Codex protected wiring 7a2108542; ef30 P3 mediation router -> 4cb43e327 + bounce fix cbe88a313; 5de8 P4 anti-spam + waiting-on-peer liveness -> 0b121d3f7 + bounce fix 27388c392; 29a5 P5 closed Status vocabulary -> 59d2b01ce. Design-of-record: this knot's design note + router 20260703T192135Z + Codex PLAN_REVIEW_PASS 20260703T192607Z; every slice implementation-reviewed and shipment-reviewed by Codex (three bounce cycles: P1 ack-verify, P3 owning-parent mediation, P4 verified-only waiting — all fixed and re-passed). OBSERVATION for the record: this parent knot reached state 'shipped' WITHOUT implementation_review/shipment step-history entries (history ends at implementation started 2026-07-03T20:07Z) — consistent with an autopilot-profile parent_of cascade when the last child shipped, flagged to Codex in router note 20260703T2359xx for independent confirmation. Delivery fold-in remains behind HIVE_FLOW_AGENT_MESSAGING (default off) pending canary opt-in. Terminating claim lease hive-flow-19ba to unblock kno sync.",
+    "datetime": "2026-07-03T23:57:40.591057Z",
+    "entry_id": "019f2a6a-a76f-74d3-97d7-a125db029a3d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

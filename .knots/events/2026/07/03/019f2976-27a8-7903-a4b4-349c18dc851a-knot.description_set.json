@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-27a8-7903-a4b4-349c18dc851a",
+  "occurred_at": "2026-07-03T19:30:37.090756Z",
+  "knot_id": "hive-flow-d790",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Slice 3/6 (design-of-record: hive-flow-2ee8 knot note + router 20260703T192135Z; Codex PLAN_REVIEW_PASS 20260703T192607Z). SECOND per Codex Q2, behind the SAME durable store + tests. Adapter B: deliver to native-claude teammates via SendMessage to name; durable record still written; SessionStart inbox re-scan. Transport-agnostic deliver() dispatches adapter A vs B by recipient kind."
+  }
+}

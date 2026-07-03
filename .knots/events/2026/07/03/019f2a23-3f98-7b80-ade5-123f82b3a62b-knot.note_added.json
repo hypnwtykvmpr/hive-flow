@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a23-3f98-7b80-ade5-123f82b3a62b",
+  "occurred_at": "2026-07-03T22:39:40.952342Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT: P2a deliverable is live on remote main. HEAD == origin/main == 69ad958d60af066839f44e73c6fcbc199f7d6df0 (fast-forward from b18df8445 by Codex after implementation-review PASS v2, note 20260703T223838Z). Slice content: agent_message_send/_inbox/_ack MCP tools + flag-gated (HIVE_FLOW_AGENT_MESSAGING, default off) bridge pull-at-dispatch delivery + wake notices; 6-file implementation + 2-file bounce fix. Gates green at land per Codex: build, mcp-tools suite (30 files/696 tests in reviewer checkout; 27/495 in mine — invocation-context delta, both green), private-guard, diff-check. Flag defaults OFF so shipping is zero-behavior-change until canary opt-in. No deploy artifact beyond merged source. Routing shipment review to Codex.",
+    "datetime": "2026-07-03T22:39:40.952342Z",
+    "entry_id": "019f2a23-3f98-7b80-ade5-1222112fdb6d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

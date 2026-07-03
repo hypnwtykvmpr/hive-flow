@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a24-d769-71c2-9bde-5a29a081b8d1",
+  "occurred_at": "2026-07-03T22:41:25.353922Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-abc9",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "IAC P2a: provider file-substrate delivery adapter + MCP message tools",
+    "type": "work",
+    "updated_at": "2026-07-03T22:41:25.353922Z",
+    "workflow_id": "work_sdlc"
+  }
+}

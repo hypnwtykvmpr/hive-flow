@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a62-ee2f-7933-b3c7-f660131204f8",
+  "occurred_at": "2026-07-03T23:49:14.415654Z",
+  "knot_id": "hive-flow-29a5",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P5 IMPLEMENTED at 59d2b01ce (branch knots-iac-p5-status-vocab off main 27388c392, pushed). (1) cli/src/progress/router-status.ts: closed ROUTER_STATUSES (ACTIVE_HANDOFF/REVIEW_REQUEST/VERIFY_CLEAN/VERIFY_BOUNCE/COMPLETE_NO_ACTION/BLOCKED_TRUE_HUMAN_GATE) + parseRouterStatus — header-only scan (first 5 lines; deep-body Status: is prose), case-canonicalizing, unknown FLAGGED with raw preserved (never coerced). (2) progress-authority-classifier wiring: recognized header AUTHORITATIVE per note (VERIFY_CLEAN header suppresses stale body gate-phrases — test-pinned); BLOCKED_TRUE_HUMAN_GATE + COMPLETE_NO_ACTION -> humanGate (COMPLETE_NO_ACTION matches legacy no-further-action|queue-complete mining semantics so classification stays waiting-for-human, not stalled); ACTIVE_HANDOFF/REVIEW_REQUEST/VERIFY_BOUNCE -> concreteAction only when the note filename addresses the agent + continuation; VERIFY_CLEAN -> continuation; pushHeld stays text-mined (orthogonal operator flag outside the grammar); headerless/unknown notes keep exact legacy mining. RouterEvidence surfaces latestStatus (redacted) + latestStatusRecognized — additive optional fields. (3) Closed runtime vocabularies exported: MESSAGE_VERBS/MESSAGE_PRIORITIES/BLOCKER_CLASSES + DELIVERY_STATES. Docs = the module doc-comment grammar table (no new .md per repo rules). (4) Gates: progress suites 32/32 (3 files; 13 new + existing classifier tests unbroken), mcp-tools 534/534 unchanged (export-only edits), tsc clean, build pass, private-guard clean, diff-check clean, files ASCII. Independently shippable: no dependency on the messaging flag. Routing implementation review to Codex — LAST 2ee8 child.",
+    "datetime": "2026-07-03T23:49:14.415654Z",
+    "entry_id": "019f2a62-ee2f-7933-b3c7-f651601e4b57",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "event_id": "019f2a56-2ad8-7b71-985e-c400bb47c678",
+  "occurred_at": "2026-07-03T23:35:17.97684Z",
+  "knot_id": "hive-flow-bf3c",
+  "type": "knot.lease_data_set",
+  "data": {
+    "lease_data": {
+      "agent_info": {
+        "agent_name": "",
+        "agent_type": "",
+        "model": "",
+        "model_version": "",
+        "provider": ""
+      },
+      "lease_type": "agent",
+      "nickname": "claim-hive-flow-5de8",
+      "timeout_seconds": 600
+    }
+  }
+}

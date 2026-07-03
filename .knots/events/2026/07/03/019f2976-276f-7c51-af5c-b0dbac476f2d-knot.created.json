@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2976-276f-7c51-af5c-b0dbac476f2d",
+  "occurred_at": "2026-07-03T19:30:37.039969Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.created",
+  "data": {
+    "body": "Slice 2/6 (design-of-record: hive-flow-2ee8 knot note + router 20260703T192135Z; Codex PLAN_REVIEW_PASS 20260703T192607Z). Adapter A provider/file substrate (BUILD FIRST per Codex Q2): pull-at-dispatch fold pending inbox into the bridge buildMessages; wake an idle recipient via the REAL sentinel + Stop/SessionStart + additionalContext drain — do NOT rely on TeammateIdle/TaskCompleted (not valid Claude Code hook events); ack path. Add MCP tools agent_message_send, agent_message_inbox, agent_message_ack. deliveryState derived from real dispatch result.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "IAC P2a: provider file-substrate delivery adapter + MCP message tools",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

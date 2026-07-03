@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a41-d3e4-74c1-b901-b2443e079677",
+  "occurred_at": "2026-07-03T23:13:04.996465Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-ef30",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "IAC P3: mediation router (blocked/ask verbs) alongside permission channel",
+    "type": "work",
+    "updated_at": "2026-07-03T23:13:04.996465Z",
+    "workflow_id": "work_sdlc"
+  }
+}

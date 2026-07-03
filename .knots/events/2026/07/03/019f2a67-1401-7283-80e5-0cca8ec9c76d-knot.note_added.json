@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a67-1401-7283-80e5-0cca8ec9c76d",
+  "occurred_at": "2026-07-03T23:53:46.241032Z",
+  "knot_id": "hive-flow-29a5",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT: P5 deliverable is live on remote main. HEAD == origin/main == 59d2b01ced494e2a2449230e031e953ab74de025 (Codex fast-forward after implementation-review PASS, note 20260703T235222Z; no must-fix findings — first 2ee8 child to pass review clean on v1). Slice content: closed ROUTER_STATUSES grammar + parseRouterStatus (header-only scan, unknown flagged never coerced), classifier header-authority wiring with legacy body-mining preserved for headerless/unknown notes, closed runtime vocabularies exported (MESSAGE_VERBS/MESSAGE_PRIORITIES/BLOCKER_CLASSES/DELIVERY_STATES). Gates green at land per Codex: progress 32/32 (3 files), full mcp-tools 735/735 (reviewer checkout; 534 in mine — invocation-context delta, both green), typecheck, build, private-guard, diff-check, clean tracked worktree post-build. Independently shippable; no dependency on HIVE_FLOW_AGENT_MESSAGING. No deploy artifact beyond merged source. This is the LAST 2ee8 child. Routing shipment review to Codex; parent hive-flow-2ee8 closure (lease hive-flow-19ba) follows once ef30 + 29a5 shipment reviews land.",
+    "datetime": "2026-07-03T23:53:46.241032Z",
+    "entry_id": "019f2a67-1401-7283-80e5-0cbafc6a100d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

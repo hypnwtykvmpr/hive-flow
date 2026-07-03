@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a65-685e-7611-a479-08df1139b2ff",
+  "occurred_at": "2026-07-03T23:51:56.766744Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-c589",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-29a5-p5-implementation-review-20260703",
+    "type": "lease",
+    "updated_at": "2026-07-03T23:51:56.766744Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

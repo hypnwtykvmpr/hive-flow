@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a36-d7f6-7dc2-a445-eeed790d9879",
+  "occurred_at": "2026-07-03T23:01:05.142209Z",
+  "knot_id": "hive-flow-ef30",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P3 IMPLEMENTED at 4cb43e327 (branch knots-iac-p3-mediation-router off main 7a2108542, pushed). New cli/src/mcp-tools/agent-message-router.ts + tools agent_message_escalate / agent_message_mediate (registered index.ts + mcp-client.ts; writeMessageWakeNotice exported for reuse). (1) Escalation: resolveMediator reads ONLY persisted agent store + hive record (loadHive queenId authoritative — FM-12/C4; test proves the terminated-looking record-queen wins over an active-looking non-queen); hiveless/hive-missing -> owning-parent session; unaddressable -> refuse, never guess. Refusal gate: blocked/terminal without unblockCondition refused BEFORE any store write (test asserts messages dir never created). (2) Mediation: resume/redirect with MANDATORY guidance + redirectTask-on-redirect (mirrors queen_permission_decide discipline); ADVISORY ONLY — linked reply (replyTo/conversationId/seq+1) + at-most-once ack of the escalation; test proves agent store + hive record byte-identical, no tasks/ or enforcement/ dirs created. Built ALONGSIDE queen_permission_* per Codex Q5 (zero changes to queen-tools). (3) Gates: tsc clean, build pass, new suite 13/13, mcp-tools regression 518/518 (=505+13, 29 files), private-guard clean, diff-check clean, files ASCII. Bridge + store untouched. Known scope note: session-level mediators (owning-parent) reply via a persisted agent they own — true session-sender support would loosen P1's persisted-record-only anti-forgery contract; flagged for Codex adjudication, not silently dropped. Routing implementation review to Codex.",
+    "datetime": "2026-07-03T23:01:05.142209Z",
+    "entry_id": "019f2a36-d7f6-7dc2-a445-eed0a8360949",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

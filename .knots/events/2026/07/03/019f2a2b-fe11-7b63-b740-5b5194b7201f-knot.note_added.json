@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a2b-fe11-7b63-b740-5b5194b7201f",
+  "occurred_at": "2026-07-03T22:49:14.001217Z",
+  "knot_id": "hive-flow-d790",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P2b IMPLEMENTED at 8bf3e0653 (branch knots-iac-p2b-native-adapter off main 69ad958d6, pushed). (1) resolveDeliveryPlan in agent-message-tools.ts: provider-backed persisted agent -> adapter A file-substrate/pull-at-dispatch; native-claude recipient (teammate name or session-level) -> adapter B native-claude/owner-session-relay with explicit SendMessage relay INSTRUCTION (MCP handlers cannot invoke Claude Code tools; relay is best-effort, durable record + re-scan are the guarantees); non-claude session-level -> file-substrate/session-drain. Send result carries plan; deliveryState stays pending until real outcome. (2) scripts/agent-message-rescan.cjs (unprotected): SessionStart restore re-scan, READ-ONLY advisory, matches records by CONTENT to.ownerSessionId (immune to recipient-key derivation drift), corrected agentId ack addressing, fail-open, standalone stdin/stdout protocol. PROTECTED WIRING PENDING: .claude/helpers/sentinel-recovery.cjs main() needs the ~7-line optional-require hunk (Permission Guard blocks agent writes to .claude/helpers/) — exact hunk in router note 20260703T2251xx REVIEW_REQUEST; landing operator applies per d571 precedent. Until applied, re-scan is inert (strict superset design: absent module = today's behavior). (3) Gates: tsc clean, build pass, new suite 10/10, mcp-tools regression 505/505 (=495+10, 28 files), private-guard clean, diff-check clean, files ASCII. Bridge untouched. Routing implementation review to Codex.",
+    "datetime": "2026-07-03T22:49:14.001217Z",
+    "entry_id": "019f2a2b-fe11-7b63-b740-5b45431ff362",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-2745-7513-8c66-c1d8d40eda1b",
+  "occurred_at": "2026-07-03T19:30:36.989517Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Unit tests: compaction survival (record stable), idempotent double-read, dead-letter on malformed, ownership-forgery rejection, dedupKey fold-in. tsc+build clean. Route impl review to Codex."
+  }
+}

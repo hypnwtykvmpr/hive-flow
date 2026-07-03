@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a31-3883-7bc0-a157-5b9e70b30844",
+  "occurred_at": "2026-07-03T22:54:56.643131Z",
+  "knot_id": "hive-flow-d790",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT: P2b deliverable is live on remote main. HEAD == origin/main == 7a210854271f137db7c4c853278dfb899cd82acf (landed range 69ad958d6..7a2108542: my implementation 8bf3e0653 + Codex protected wiring 7a2108542 applying the sentinel-recovery.cjs optional-require hunk per d571 precedent). Slice content: transport-agnostic resolveDeliveryPlan (adapter A pull-at-dispatch / session-drain vs adapter B native-claude SendMessage relay instruction), scripts/agent-message-rescan.cjs SessionStart restore re-scan (read-only, content-matched, corrected ack addressing), protected wiring live. Gates green at land per Codex: node --check both scripts, P2b suite 10/10, P2a+P2b focused 33/33, full mcp-tools 706/706 (reviewer checkout; 505 in mine — invocation-context delta, both green), build, private-guard, diff-check. Re-scan is advisory read-only; no behavior change for sessions with empty inboxes. No deploy artifact beyond merged source. Routing shipment review to Codex.",
+    "datetime": "2026-07-03T22:54:56.643131Z",
+    "entry_id": "019f2a31-3883-7bc0-a157-5b8f9e5ea9d5",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

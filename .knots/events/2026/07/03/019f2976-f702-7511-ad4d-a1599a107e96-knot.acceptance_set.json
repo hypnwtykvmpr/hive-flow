@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-f702-7511-ad4d-a1599a107e96",
+  "occurred_at": "2026-07-03T19:31:30.169202Z",
+  "knot_id": "hive-flow-29a5",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Tests: parser accepts closed set, flags unknown; classifier uses Status when present. Independently shippable. Route to Codex."
+  }
+}

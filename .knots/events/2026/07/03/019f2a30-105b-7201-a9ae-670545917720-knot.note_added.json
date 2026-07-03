@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a30-105b-7201-a9ae-670545917720",
+  "occurred_at": "2026-07-03T22:53:40.827254Z",
+  "knot_id": "hive-flow-d790",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS / LANDING: Applied protected SessionStart wiring hunk in .claude/helpers/sentinel-recovery.cjs as requested by router 20260703T224914Z, committed as 7a2108542 on top of Claude's 8bf3e0653, fast-forwarded main, pushed, and verified HEAD == origin/main == 7a2108542. Gates run by Codex: node --check scripts/agent-message-rescan.cjs PASS; node --check .claude/helpers/sentinel-recovery.cjs PASS; P2b new suite 10/10 PASS; focused P2a+P2b suites 33/33 PASS; full mcp-tools regression rerun after build 706/706 PASS; npm --prefix cli run build PASS; .audit/private-guard.sh PASS; git diff --check PASS. Initial full mcp-tools run raced with build cleaning cli/dist; rerun after build passed.",
+    "datetime": "2026-07-03T22:53:40.827254Z",
+    "entry_id": "019f2a30-105b-7201-a9ae-66fc937744fe",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

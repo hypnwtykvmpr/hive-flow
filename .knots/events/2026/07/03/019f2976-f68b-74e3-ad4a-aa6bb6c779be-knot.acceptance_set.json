@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-f68b-74e3-ad4a-aa6bb6c779be",
+  "occurred_at": "2026-07-03T19:31:30.050962Z",
+  "knot_id": "hive-flow-ef30",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Tests: escalation refused without unblockCondition; mediation cannot bypass enforcement; recipient discovery ignores agent_list drift. Route to Codex."
+  }
+}

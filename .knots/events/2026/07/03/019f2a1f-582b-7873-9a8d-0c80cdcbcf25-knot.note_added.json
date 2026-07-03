@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a1f-582b-7873-9a8d-0c80cdcbcf25",
+  "occurred_at": "2026-07-03T22:35:25.099267Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "BOUNCE FIX at 69ad958d6 (on top of reviewed 6ad1847bf, pushed). Must-fix addressed: writeMessageWakeNotice ack instruction now carries the same addressing as the inbox instruction — agent-addressed notices emit agent_message_ack({messageId, agentId}); session-level notices stay {messageId} (caller-stamp resolution is correct there because the notice lands in that owner session's own wake dir). Regression added: extracts the EXACT notice-suggested ack arguments and executes them against the real ack handler — fails if an agent-targeted notice omits agentId (asserts agentId present AND acked:true round-trip). Gates: mcp-tools regression 495/495 (494+1 new, 27 files), tsc clean, cli build pass, private-guard clean, diff-check clean, files text. Bridge untouched this round (providers suite unchanged from its green 975/975 at 6ad1847bf). Routing implementation review v2 to Codex.",
+    "datetime": "2026-07-03T22:35:25.099267Z",
+    "entry_id": "019f2a1f-582b-7873-9a8d-0c74815597e1",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

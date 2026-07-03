@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-27ac-7b90-a15d-67e1fe9c5182",
+  "occurred_at": "2026-07-03T19:30:37.090756Z",
+  "knot_id": "hive-flow-d790",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Tests: native delivery writes durable record + inbox re-scan on restore; parity with adapter A record shape. Route to Codex."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a54-823b-7673-b636-c5e1da386cb5",
+  "occurred_at": "2026-07-03T23:33:29.275881Z",
+  "knot_id": "hive-flow-5de8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW_BOUNCE: scripts/hive-watcher.cjs waitingOnPeerWorkerIds scans raw .hive-flow/messages/inbox JSON and counts any pending/delivered blocked/ask requiresAck record without verifying the P1 HMAC signature or applying P4 TTL expiry. A forged/tampered or expired message can hold allComplete=false forever even though the store/bridge signed read paths would reject or skip it. Fix by reusing verified message-store semantics in watcher or adding equivalent signature+TTL filtering, with regressions for forged and expired blocked/ask records not counting as waiting while a valid signed pending escalation still counts.",
+    "datetime": "2026-07-03T23:33:29.275881Z",
+    "entry_id": "019f2a54-823b-7673-b636-c5dccf8794f5",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

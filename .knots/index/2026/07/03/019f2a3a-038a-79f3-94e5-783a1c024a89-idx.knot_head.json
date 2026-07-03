@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a3a-038a-79f3-94e5-783a1c024a89",
+  "occurred_at": "2026-07-03T23:04:32.90682Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-6dca",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-ef30-p3-implementation-review-20260703",
+    "type": "lease",
+    "updated_at": "2026-07-03T23:04:32.90682Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

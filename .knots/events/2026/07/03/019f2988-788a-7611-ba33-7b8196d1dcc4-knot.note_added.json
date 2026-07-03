@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2988-788a-7611-ba33-7b8196d1dcc4",
+  "occurred_at": "2026-07-03T19:50:37.450343Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW BOUNCE (Codex, 20260703T195017Z). Must-fix: ackMessage can report success and create an .acked marker for a message that does not exist. In cli/src/mcp-tools/agent-message-store.ts:512-533 the marker is opened/created before readInboxMessage, and if readInboxMessage returns not-found, the function still returns { acked: true, alreadyAcked: false }. This violates the P1/design invariant that delivery/ack state is derived from a real result and reintroduces false-success semantics. Fix by reading/verifying the message first, returning a non-success/not-found result without creating a marker for missing/corrupt records, and add regression coverage for absent-message ack and tampered/malformed ack paths. Focused tests run by Codex: agent-message-store 14/14 PASS; tsc --noEmit PASS. DeepSeek provider verifier blocked by credential-holder ECONNREFUSED; Hive Flow codex-cli verifier task task-cc5a64e5-dd4b-4abe-956b-8f56dded5e88 is still running and may produce late supporting findings.",
+    "datetime": "2026-07-03T19:50:37.450343Z",
+    "entry_id": "019f2988-788a-7611-ba33-7b7312d7b6cf",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

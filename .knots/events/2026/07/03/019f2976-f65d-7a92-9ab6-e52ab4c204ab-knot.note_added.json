@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2976-f65d-7a92-9ab6-e52ab4c204ab",
+  "occurred_at": "2026-07-03T19:31:30.013112Z",
+  "knot_id": "hive-flow-e825",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "stray probe from kno-new id-format check; abandon",
+    "datetime": "2026-07-03T19:31:30.013112Z",
+    "entry_id": "019f2976-f65d-7a92-9ab6-e51f69cfa9a7",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

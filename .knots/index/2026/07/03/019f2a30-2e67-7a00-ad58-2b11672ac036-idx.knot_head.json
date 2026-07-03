@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a30-2e67-7a00-ad58-2b11672ac036",
+  "occurred_at": "2026-07-03T22:53:48.519169Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-f717",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-d790-p2b-review-20260703",
+    "type": "lease",
+    "updated_at": "2026-07-03T22:53:48.519169Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

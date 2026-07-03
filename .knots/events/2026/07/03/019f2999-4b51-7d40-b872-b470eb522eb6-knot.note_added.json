@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2999-4b51-7d40-b872-b470eb522eb6",
+  "occurred_at": "2026-07-03T20:08:59.985388Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P2a scope + integration points (investigated). (1) MCP tools agent_message_send/_inbox/_ack: model on agent-tools.ts tool def {name, description, inputSchema, handler: async(input, context)}; resolve caller owner via resolveOwnerStampForAgentCreation/resolveOwnerStampOrError(input, context) for ownerSessionId+ownerClientKind; wrap P1 store fns sendMessage/listInbox/ackMessage; register via cli/src/mcp-tools/index.ts. (2) Bridge delivery pull-at-dispatch: fold recipient agent pending inbox (listInbox) into buildMessages(agent,newTask) at cli/packages/providers/scripts/provider-agent-bridge.mjs:1337 (called :5715) so pending messages deliver as conversationHistory on the next task; then markDelivered + wake. MUST be additive + feature-flagged (inbox-empty => zero behavior change; high blast radius: every task). (3) Wake: reuse sentinel .done + Stop/SessionStart + additionalContext drain (NOT TeammateIdle); bridge already drops a wake notice (~254-284). Tests: >=1 provider file-substrate canary (message delivered next task), no-false-success on failed delivery, cross-session dead-letter. Build alongside queen_permission_. Order: MCP tools first (self-contained, lower risk), then feature-flagged bridge fold-in. Lease hive-flow-7ec4.",
+    "datetime": "2026-07-03T20:08:59.985388Z",
+    "entry_id": "019f2999-4b51-7d40-b872-b46ddd22d0ef",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

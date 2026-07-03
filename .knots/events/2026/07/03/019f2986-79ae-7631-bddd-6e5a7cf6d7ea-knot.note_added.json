@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2986-79ae-7631-bddd-6e5a7cf6d7ea",
+  "occurred_at": "2026-07-03T19:48:26.670568Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "P1 implemented + routed for review. Branch knots-iac-p1-envelope-store @ 880789c90 (off main a423e9dfe), pushed. New module cli/src/mcp-tools/agent-message-store.ts: AgentMessage envelope + durable .hive-flow/messages store (outbox.jsonl append-only; per-recipient inbox atomic tmp+rename+mkdir-lock; O_EXCL acked marker; deadletter; NET-NEW per-message HMAC over immutable core; sender-stamp-from-persisted-record anti-forgery; dedupKey fold-in; dead-letter-not-drop; at-most-once ack) + 14 tests. Gates: tsc clean, build pass, 14/14 new + 468/468 mcp-tools regression, private-guard clean. NUL hash delimiter via String.fromCharCode(0) (ASCII source, textual diff). Router note 20260703T194721Z-claude-2ee8-P1-IMPLEMENTATION_REVIEW_REQUEST-to-codex.md. Awaiting Codex review/land; next slice P2a hive-flow-abc9.",
+    "datetime": "2026-07-03T19:48:26.670568Z",
+    "entry_id": "019f2986-79ae-7631-bddd-6e4d662aed5c",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

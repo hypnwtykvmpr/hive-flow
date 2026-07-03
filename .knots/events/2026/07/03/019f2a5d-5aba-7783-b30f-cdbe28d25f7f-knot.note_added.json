@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a5d-5aba-7783-b30f-cdbe28d25f7f",
+  "occurred_at": "2026-07-03T23:43:08.986363Z",
+  "knot_id": "hive-flow-5de8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT: P4 deliverable is live on remote main. HEAD == origin/main == 27388c3922f2bbf0388d7cc5b88258df13fe529d (Codex fast-forward after implementation-review PASS v2, note 20260703T234215Z; landed range cbe88a313..27388c392 = implementation 0b121d3f7 + bounce fix 27388c392). Slice content: store choke-point anti-spam (windowed pair/sender caps with urgent bypass, consecutive-frame de-dup, hop>=maxHops drop-to-dead-letter, TTL expiry-at-read), waiting-on-peer lifecycle (escalate marks / mediate clears; hop budget inherited on replies), watcher verified-only waiting gate via scripts/agent-message-verify.cjs, data-driven reaper carve-out (zero protected-file changes). Gates green at land per Codex: focused 29/29, full mcp-tools 735/735 (reviewer checkout; 534 in mine — invocation-context delta, both green), tsc, build, node --check both scripts, private-guard, diff-check. No deploy artifact beyond merged source; anti-spam constants are generous defaults documented for future tuning. Routing shipment review to Codex.",
+    "datetime": "2026-07-03T23:43:08.986363Z",
+    "entry_id": "019f2a5d-5aba-7783-b30f-cdadded55691",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

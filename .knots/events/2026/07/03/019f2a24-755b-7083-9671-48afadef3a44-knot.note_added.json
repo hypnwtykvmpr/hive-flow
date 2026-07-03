@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a24-755b-7083-9671-48afadef3a44",
+  "occurred_at": "2026-07-03T22:41:00.251652Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW metadata repair: P2a landed range b18df8445..69ad958d6 contains commits 6ad1847bf and 69ad958d6. The knot already tagged commit:69ad958d6; added missing commit:6ad1847bf so every shipped P2a commit is tagged before final shipment sign-off.",
+    "datetime": "2026-07-03T22:41:00.251652Z",
+    "entry_id": "019f2a24-755b-7083-9671-489375b40ca3",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

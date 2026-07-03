@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2a62-ee2f-7933-b3c7-f64abdc70f8c",
+  "occurred_at": "2026-07-03T23:49:14.415654Z",
+  "knot_id": "hive-flow-29a5",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-iac-p5-status-vocab"
+  }
+}

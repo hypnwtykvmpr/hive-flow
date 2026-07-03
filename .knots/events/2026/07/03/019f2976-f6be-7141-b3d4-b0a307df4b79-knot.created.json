@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2976-f6be-7141-b3d4-b0a307df4b79",
+  "occurred_at": "2026-07-03T19:31:30.110108Z",
+  "knot_id": "hive-flow-5de8",
+  "type": "knot.created",
+  "data": {
+    "body": "Slice 5/6 (design-of-record: hive-flow-2ee8 knot note + router 20260703T192135Z; Codex PLAN_REVIEW_PASS 20260703T192607Z). Per-pair + per-sender windowed rate caps (reuse denial-ledger actor-keyed pattern); dedupKey de-dup; monotonic seq + maxHops/TTL + consecutive-frame de-dup + loop detection (urgent bypass). First-class waiting-on-peer non-settled state (mirror permission-waiting; watcher allComplete excludes it). heartbeat-on-wait refreshes deadlineAt so the reaper does not reclaim a legit long wait.",
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "ready_for_implementation",
+    "title": "IAC P4: anti-spam controls + waiting-on-peer liveness",
+    "type": "work",
+    "workflow_id": "work_sdlc"
+  }
+}

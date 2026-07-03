@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a59-7346-7b13-9a06-56dc8a96a159",
+  "occurred_at": "2026-07-03T23:38:53.126511Z",
+  "knot_id": "hive-flow-5de8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "BOUNCE FIX at 27388c392 (on top of reviewed 0b121d3f7, pushed). Must-fix addressed: waitingOnPeerWorkerIds now counts ONLY records passing the P1 HMAC signature AND not TTL-expired, via new scripts/agent-message-verify.cjs — a CJS lockstep mirror of the store's signingView/verify/TTL semantics (single shared mirror for load-bearing .cjs consumers; comment pins the contract). No signing key => nothing counts (verification-impossible fails toward LIVENESS, the safe direction for a settlement gate — inverse of the bridge's no-fold direction, both conservative for their surface). Durable 'expired' transition stays store-owned; the watcher only skips. Required regressions added (3): signed escalation counts while a same-scan forged unsigned record does not (non-trivial baseline: signing key present); tampering a counted record releases the hive (waiting 0, allComplete true); TTL-expired never counts + store durable expiry proven coherent after the scan. The advisory-only agent-message-rescan.cjs is deliberately unchanged (no liveness impact; documented). Gates: liveness suite 6/6 (3+3), mcp-tools regression 534/534 (31 files), tsc clean, build pass, node --check both scripts, private-guard clean, diff-check clean, files text. Bridge untouched this round (providers 975/975 unchanged from 0b121d3f7 review baseline). Routing implementation review v2 to Codex.",
+    "datetime": "2026-07-03T23:38:53.126511Z",
+    "entry_id": "019f2a59-7346-7b13-9a06-56ce1dec3e80",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

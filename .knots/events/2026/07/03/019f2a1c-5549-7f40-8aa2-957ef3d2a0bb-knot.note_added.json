@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a1c-5549-7f40-8aa2-957ef3d2a0bb",
+  "occurred_at": "2026-07-03T22:32:07.753538Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW BOUNCE: P2a wake notice gives wrong ACK instruction for agent-addressed messages. Source: cli/src/mcp-tools/agent-message-tools.ts writeMessageWakeNotice tells read with agent_message_inbox({agentId}) but ack with agent_message_ack({messageId}) only. Repro against compiled tools: send to persisted agent-bob; notice summary omits agentId; ack({messageId}, recipient context) returns not-found; ack({messageId, agentId:'agent-bob'}) succeeds. Must-fix: include agentId in the ACK instruction whenever message.to.agentId is present, and add a regression proving the generated wake summary/instructions match the actual ack path. Gates checked: build PASS, private-guard PASS, focused P2a tests 22/22 PASS after build; initial pre-build test failure was a dist-clean race from running build in parallel.",
+    "datetime": "2026-07-03T22:32:07.753538Z",
+    "entry_id": "019f2a1c-5549-7f40-8aa2-95684c899ee2",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

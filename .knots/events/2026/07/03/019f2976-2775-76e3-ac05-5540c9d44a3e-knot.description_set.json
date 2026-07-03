@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-2775-76e3-ac05-5540c9d44a3e",
+  "occurred_at": "2026-07-03T19:30:37.039969Z",
+  "knot_id": "hive-flow-abc9",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Slice 2/6 (design-of-record: hive-flow-2ee8 knot note + router 20260703T192135Z; Codex PLAN_REVIEW_PASS 20260703T192607Z). Adapter A provider/file substrate (BUILD FIRST per Codex Q2): pull-at-dispatch fold pending inbox into the bridge buildMessages; wake an idle recipient via the REAL sentinel + Stop/SessionStart + additionalContext drain — do NOT rely on TeammateIdle/TaskCompleted (not valid Claude Code hook events); ack path. Add MCP tools agent_message_send, agent_message_inbox, agent_message_ack. deliveryState derived from real dispatch result."
+  }
+}

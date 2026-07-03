@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2998-e11a-7482-a8a0-33f08483ab88",
+  "occurred_at": "2026-07-03T20:08:32.794851Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-36d8",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-2901-p1-shipment-review-20260703",
+    "type": "lease",
+    "updated_at": "2026-07-03T20:08:32.794851Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

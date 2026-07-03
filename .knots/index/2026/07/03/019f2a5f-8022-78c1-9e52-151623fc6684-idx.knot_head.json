@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a5f-8022-78c1-9e52-151623fc6684",
+  "occurred_at": "2026-07-03T23:45:29.634203Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-5de8",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "IAC P4: anti-spam controls + waiting-on-peer liveness",
+    "type": "work",
+    "updated_at": "2026-07-03T23:45:29.634203Z",
+    "workflow_id": "work_sdlc"
+  }
+}

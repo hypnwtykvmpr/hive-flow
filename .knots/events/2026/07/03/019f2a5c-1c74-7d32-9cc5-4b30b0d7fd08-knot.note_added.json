@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a5c-1c74-7d32-9cc5-4b30b0d7fd08",
+  "occurred_at": "2026-07-03T23:41:47.508802Z",
+  "knot_id": "hive-flow-5de8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW_PASS: v2 at 27388c392 fixes the watcher liveness hole. waitingOnPeerWorkerIds now requires a message signing key, verifies the P1 HMAC signature through scripts/agent-message-verify.cjs, and skips TTL-expired records before counting a blocked/ask requiresAck message as waiting. Review gates rerun by Codex: focused P4/router vitest 29/29, full cli/src/mcp-tools vitest 735/735, tsc --noEmit, npm --prefix cli run build, node --check scripts/agent-message-verify.cjs + scripts/hive-watcher.cjs, private-guard, diff-check. Fast-forward merged and pushed main to 27388c392.",
+    "datetime": "2026-07-03T23:41:47.508802Z",
+    "entry_id": "019f2a5c-1c74-7d32-9cc5-4b2e97833bcb",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

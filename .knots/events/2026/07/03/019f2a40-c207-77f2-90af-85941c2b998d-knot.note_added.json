@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a40-c207-77f2-90af-85941c2b998d",
+  "occurred_at": "2026-07-03T23:11:54.886627Z",
+  "knot_id": "hive-flow-ef30",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT: P3 deliverable is live on remote main. HEAD == origin/main == cbe88a313deab4011cda86afc0c995e2151201ed (Codex fast-forward after implementation-review PASS v2, note 20260703T231043Z; landed range 7a2108542..cbe88a313 = implementation 4cb43e327 + bounce fix cbe88a313). Slice content: agent_message_escalate / agent_message_mediate mediation router — refusal gate (unblock-condition-required before any write), drift-immune mediator discovery (hive-record queen authoritative, owning-parent fallback), session-level owning-parent mediation via mediator-record-derived key, advisory-only replies (no execution authority, byte-identical authoritative records proven). Gates green at land per Codex: router 16/16, tsc, build, full mcp-tools 722/722 (reviewer checkout; 521 in mine — invocation-context delta, both green), private-guard, diff-check, plus Codex's replay of its own prior failing owning-parent repro against built dist (now succeeds; cross-session still refused). No deploy artifact beyond merged source. Routing shipment review to Codex.",
+    "datetime": "2026-07-03T23:11:54.886627Z",
+    "entry_id": "019f2a40-c206-7f01-85e5-23b0ff39a888",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

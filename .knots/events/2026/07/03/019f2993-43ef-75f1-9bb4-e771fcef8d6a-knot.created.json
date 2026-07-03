@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2993-43ef-75f1-9bb4-e771fcef8d6a",
+  "occurred_at": "2026-07-03T20:02:24.879272Z",
+  "knot_id": "hive-flow-45dc",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: codex-2901-p1-v2-review-20260703",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}

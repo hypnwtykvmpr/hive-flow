@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2976-f6c6-79b1-9e13-7904cef8c738",
+  "occurred_at": "2026-07-03T19:31:30.110108Z",
+  "knot_id": "hive-flow-5de8",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Tests: waiting-on-peer reaper safety; loop-storm to dead-letter cap; rate-cap throttles but urgent bypasses. Route to Codex."
+  }
+}

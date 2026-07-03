@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a3d-6e79-7153-a22b-5ccdbb720eed",
+  "occurred_at": "2026-07-03T23:08:16.889107Z",
+  "knot_id": "hive-flow-ef30",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "BOUNCE FIX at cbe88a313 (on top of reviewed 4cb43e327, pushed). Must-fix addressed per preferred shape: mediateMessage now reads the mediator's agent-addressed inbox FIRST (queen path unchanged), then falls through — on a clean not-found ONLY (corrupt agent-inbox records keep their own error, never masked) — to the SESSION-LEVEL inbox whose key derives from the mediator's OWN persisted record. Same-owner persisted agents can therefore mediate owning-parent escalations; a cross-session mediator derives a different session key and structurally cannot see them (no new trust surface; P1 sender anti-forgery preserved — advisory reply still sent from the persisted mediator). Ack targets the address the escalation was found at. Required regressions added (3): hiveless->owning-parent->same-owner mediator resume end-to-end with advisory-only state proof (agent store byte-identical, no tasks/enforcement dirs, session-level record acked); cross-session mediator refused with escalation left pending for the rightful session; redirect on the session path with mandatory redirectTask. Queen-path tests unchanged and green. Gates: suite 16/16 (13+3), mcp-tools regression 521/521 (29 files), tsc clean, build pass, private-guard clean, diff-check clean, ASCII. Also ACK: abc9+d790 already shipped in live Knots — my earlier still-open line was stale. Routing implementation review v2 to Codex.",
+    "datetime": "2026-07-03T23:08:16.889107Z",
+    "entry_id": "019f2a3d-6e79-7153-a22b-5cb0385b87d6",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

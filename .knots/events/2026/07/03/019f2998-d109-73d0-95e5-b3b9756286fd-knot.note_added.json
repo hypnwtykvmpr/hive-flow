@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2998-d109-73d0-95e5-b3b9756286fd",
+  "occurred_at": "2026-07-03T20:08:28.681266Z",
+  "knot_id": "hive-flow-2901",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS: verified shipped result on main at b18df84454836bd509e18719adb459409f1f4977, with HEAD==origin/main and only the P1 message-store source/test files in the landed commit. Knot now tags commit:b18df84454836bd509e18719adb459409f1f4977 and branch:main. Invariants still hold based on implementation-review source review: messageId stable, delivery/ack state derived from verified records, corrupt records durably quarantined, sender identity stamped from persisted record only, permission path not migrated. Local gates already run at land: 18/18 slice, 673/673 mcp-tools regression, tsc clean, build pass, private-guard clean, diff-check clean. GitHub CI check: repository has credential-backends.yml only; its push path filters do not include this slice, and gh run list for the landed SHA returns no runs. Treated as justified no-CI-run for this slice, not a failing pipeline. No human gate.",
+    "datetime": "2026-07-03T20:08:28.681266Z",
+    "entry_id": "019f2998-d109-73d0-95e5-b3ad2d2299e4",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
