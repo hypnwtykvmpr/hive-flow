@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26df-55f4-7901-b04b-560b1e7f5c67",
+  "occurred_at": "2026-07-03T07:26:38.580087Z",
+  "knot_id": "hive-flow-88d1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT PASS: fast-forwarded main to knots-88d1-enforcement-test-drift and pushed origin/main at 8edfbeff8. Scope remains tests/enforcement.test.mjs only; enforcement.cjs untouched. Gates rerun on landed main: node --test tests/enforcement.test.mjs 119/119, vitest cli/src/__tests__/enforcement-security-property.test.ts 87/87, git diff --check clean.",
+    "datetime": "2026-07-03T07:26:38.580087Z",
+    "entry_id": "019f26df-55f4-7901-b04b-55fc795d93b4",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

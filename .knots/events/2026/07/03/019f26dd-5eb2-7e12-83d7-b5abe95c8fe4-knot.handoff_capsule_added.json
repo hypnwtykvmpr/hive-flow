@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26dd-5eb2-7e12-83d7-b5abe95c8fe4",
+  "occurred_at": "2026-07-03T07:24:29.746221Z",
+  "knot_id": "hive-flow-88d1",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Branch: knots-88d1-enforcement-test-drift; commit: 8edfbeff8dcda6b0da717fa2f710bba0a3a858bb; scope: tests/enforcement.test.mjs only; reported gates: node --test tests/enforcement.test.mjs 119/119, vitest cli/src/__tests__/enforcement-security-property.test.ts 87/87, git diff --check clean.",
+    "datetime": "2026-07-03T07:24:29.746221Z",
+    "entry_id": "019f26dd-5eb2-7e12-83d7-b59c67de9156",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

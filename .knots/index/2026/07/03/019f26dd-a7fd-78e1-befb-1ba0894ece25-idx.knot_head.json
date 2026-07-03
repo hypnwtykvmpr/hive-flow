@@ -1,0 +1,34 @@
+{
+  "event_id": "019f26dd-a7fd-78e1-befb-1ba0894ece25",
+  "occurred_at": "2026-07-03T07:24:48.509778Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-3dea",
+    "profile_id": "lease",
+    "state": "lease_active",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Lease: codex-88d1-review",
+    "type": "lease",
+    "updated_at": "2026-07-03T07:24:48.509778Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

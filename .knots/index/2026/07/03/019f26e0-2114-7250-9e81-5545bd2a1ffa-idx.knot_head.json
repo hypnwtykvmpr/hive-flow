@@ -1,0 +1,21 @@
+{
+  "event_id": "019f26e0-2114-7250-9e81-5545bd2a1ffa",
+  "occurred_at": "2026-07-03T07:27:30.580691Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-88d1",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Fix 6 pre-existing tests/enforcement.test.mjs drift failures",
+    "type": "work",
+    "updated_at": "2026-07-03T07:27:30.580691Z",
+    "workflow_id": "work_sdlc"
+  }
+}

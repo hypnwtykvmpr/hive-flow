@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26df-f445-7083-9d98-da99de5fb3ff",
+  "occurred_at": "2026-07-03T07:27:19.109964Z",
+  "knot_id": "hive-flow-88d1",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS: verified shipped result on main. HEAD == origin/main == 8edfbeff8, commit tag commit:8edfbeff8 is present, branch tag branch:knots-88d1-enforcement-test-drift is present, and the commit is contained by main/origin/main. Landed-main gates already passed in shipment: enforcement.test.mjs 119/119, enforcement-security-property 87/87, git diff --check clean. Worktree has no tracked drift; remaining entries are pre-existing untracked scratch/private paths.",
+    "datetime": "2026-07-03T07:27:19.109964Z",
+    "entry_id": "019f26df-f445-7083-9d98-da874bda2b37",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
