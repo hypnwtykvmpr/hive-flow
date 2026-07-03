@@ -43,6 +43,7 @@ interface PersistedAgentLike {
   ownerSessionId?: string;
   ownerClientKind?: string;
   hiveId?: string;
+  provider?: string;
 }
 
 interface RecipientAddress {
@@ -166,6 +167,60 @@ function resolveInboxAddress(
   const stamp = resolveOwnerStampOrError(input, process.env, context, surface);
   if (!stamp.success) return { ok: false, error: stamp.error };
   return { ok: true, to: { ownerSessionId: stamp.ownerSessionId, ownerClientKind: stamp.ownerClientKind } };
+}
+
+// ---------------------------------------------------------------------------
+// Transport-agnostic delivery plan (P2b, Knot hive-flow-d790)
+//
+// One deliver() decision, two adapters (design-of-record section 4):
+//   A file-substrate  -- provider-backed persisted agents deliver pull-at-dispatch
+//                        (bridge fold-in, flag-gated); session-level non-claude
+//                        inboxes deliver via the wake-notice drain.
+//   B native-claude   -- the one row with a live addressable identity. MCP
+//                        handlers cannot invoke Claude Code tools, so the plan
+//                        returns an explicit SendMessage relay INSTRUCTION for
+//                        the owning Claude session. The durable record (written
+//                        before any relay) + the SessionStart inbox re-scan
+//                        (sentinel-recovery.cjs) are the delivery guarantees;
+//                        the relay is best-effort. deliveryState stays pending
+//                        until a real outcome (bridge fold or recipient ack) --
+//                        never optimistic.
+// ---------------------------------------------------------------------------
+
+export interface DeliveryPlan {
+  adapter: 'file-substrate' | 'native-claude';
+  mode: 'pull-at-dispatch' | 'session-drain' | 'owner-session-relay';
+  relay?: { tool: 'SendMessage'; recipient: string | null };
+  detail: string;
+}
+
+export function resolveDeliveryPlan(
+  to: { agentId?: string; ownerSessionId: string; ownerClientKind: string },
+  projectRoot: string,
+): DeliveryPlan {
+  if (to.agentId) {
+    const rec = lookupPersistedAgent(to.agentId, projectRoot);
+    if (rec?.provider) {
+      return {
+        adapter: 'file-substrate',
+        mode: 'pull-at-dispatch',
+        detail: `provider-backed agent (${rec.provider}): pending inbox folds into the next agent_task dispatch when HIVE_FLOW_AGENT_MESSAGING is enabled`,
+      };
+    }
+  }
+  if (wakeClientKind(to.ownerClientKind) === 'claude-code') {
+    return {
+      adapter: 'native-claude',
+      mode: 'owner-session-relay',
+      relay: { tool: 'SendMessage', recipient: to.agentId || null },
+      detail: 'native-claude recipient: durable record written; relay via SendMessage from the owning Claude session (teammate name in relay.recipient); SessionStart re-scan surfaces undrained messages',
+    };
+  }
+  return {
+    adapter: 'file-substrate',
+    mode: 'session-drain',
+    detail: 'session-level inbox: delivered via the wake-notice drain (pending-notifications) and agent_message_inbox',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -314,7 +369,8 @@ export const agentMessageTools: MCPTool[] = [
           ...(typeof input.ttlMs === 'number' && Number.isFinite(input.ttlMs) ? { ttlMs: input.ttlMs } : {}),
         }, projectRoot);
         const wakeNotified = writeMessageWakeNotice(message, projectRoot);
-        return { success: true, message, wakeNotified };
+        const delivery = resolveDeliveryPlan(message.to, projectRoot);
+        return { success: true, message, wakeNotified, delivery };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
