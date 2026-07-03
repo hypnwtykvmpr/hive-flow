@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26ca-84dc-7f42-9dc0-7053f095cbd9",
+  "occurred_at": "2026-07-03T07:03:54.332246Z",
+  "knot_id": "hive-flow-110b",
+  "type": "knot.handoff_capsule_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Branch: knots-110b-sentinel-eperm-test; Commits: 4deda6a76 EPERM-alive regression test, 1d90da8f1 protected sentinel-recovery cleanup. Scope: cli/src/__tests__/sentinel-singleton.test.ts + .claude/helpers/sentinel-recovery.cjs. Gates: node --check .claude/helpers/sentinel-recovery.cjs; sentinel-singleton 8/8; sentinel-singleton+root-resolver-parity+de-tmux-runtime 17/17; pnpm --dir cli exec tsc --noEmit; git diff --check; .audit/private-guard.sh clean; rg isStale/heartbeat-stale no matches.",
+    "datetime": "2026-07-03T07:03:54.332246Z",
+    "entry_id": "019f26ca-84dc-7f42-9dc0-7040f9fe3890",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "event_id": "019f26c6-c066-77c1-9d22-b4ff44ab4116",
+  "occurred_at": "2026-07-03T06:59:47.430358Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-f3aa",
+    "profile_id": "autopilot",
+    "state": "abandoned",
+    "terminal": true,
+    "title": "Run gemini/agy live confinement canary after headless auth is restored",
+    "type": "work",
+    "updated_at": "2026-07-03T06:59:47.430358Z",
+    "workflow_id": "work_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26c6-c045-71b0-ab26-650f666631df",
+  "occurred_at": "2026-07-03T06:59:47.397022Z",
+  "knot_id": "hive-flow-f3aa",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Duplicate of hive-flow-bba8 (identical gemini/agy live confinement canary, created within ~45ms during triage). Successor: hive-flow-bba8. Abandoning this dup.",
+    "datetime": "2026-07-03T06:59:47.397022Z",
+    "entry_id": "019f26c6-c045-71b0-ab26-64f2c99440f8",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

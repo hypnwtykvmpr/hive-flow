@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26c6-c000-7522-b27c-6cf08b18bd8a",
+  "occurred_at": "2026-07-03T06:59:47.328521Z",
+  "knot_id": "hive-flow-1cb7",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Duplicate of hive-flow-d17e (identical cursor sandbox confinement probe, created within ~30ms during triage). Successor: hive-flow-d17e. Abandoning this dup.",
+    "datetime": "2026-07-03T06:59:47.328521Z",
+    "entry_id": "019f26c6-c000-7522-b27c-6cec9a8082dd",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

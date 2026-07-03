@@ -1,0 +1,15 @@
+{
+  "event_id": "019f26ca-84dc-7f42-9dc0-70357bf9eb84",
+  "occurred_at": "2026-07-03T07:03:54.332246Z",
+  "knot_id": "hive-flow-110b",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION READY: promoted from deferred per Claude/Codex residual queue handoff; combined Claude's EPERM-alive regression branch with Codex protected cleanup. Pushed review branch knots-110b-sentinel-eperm-test at 1d90da8f1. Dedup confirmed from Claude: 1cb7 abandoned in favor of d17e; f3aa abandoned in favor of bba8.",
+    "datetime": "2026-07-03T07:03:54.332246Z",
+    "entry_id": "019f26ca-84dc-7f42-9dc0-7024ef57903a",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

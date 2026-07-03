@@ -1,0 +1,50 @@
+{
+  "event_id": "019f26c9-3577-7611-b6ba-4f9c152885f8",
+  "occurred_at": "2026-07-03T07:02:28.470995Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-110b",
+    "next_step_metadata": {
+      "action_kind": "gate",
+      "action_state": "implementation_review",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "profile_id": "autopilot_no_planning",
+    "state": "implementation",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "implementation",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "f904 sentinel-recovery fast-follow: drop dead isStale + unreachable heartbeat-stale reason; add direct EPERM-alive regression test",
+    "type": "work",
+    "updated_at": "2026-07-03T07:02:28.470995Z",
+    "workflow_id": "work_sdlc"
+  },
+  "precondition": {
+    "profile_etag": "019f26c9-2162-7093-a0c4-328d893bea40"
+  }
+}
