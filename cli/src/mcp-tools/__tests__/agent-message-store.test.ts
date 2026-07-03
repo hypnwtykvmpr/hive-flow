@@ -6,7 +6,7 @@
 // stamped from the persisted record only), and dedupKey fold-in.
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -15,6 +15,7 @@ import {
   listInbox,
   readInboxMessage,
   ackMessage,
+  markDelivered,
   deadLetterMessage,
   verifyMessageSignature,
   recipientKey,
@@ -178,13 +179,19 @@ describe('sendMessage — dedupKey fold-in', () => {
 // ---------------------------------------------------------------------------
 
 describe('read — dead-letter on malformed or tampered records', () => {
-  it('reports malformed JSON as a dead-letter, not a silent drop', async () => {
+  it('reports malformed JSON as a dead-letter and durably quarantines it', async () => {
     await sendMessage(baseInput(), root); // creates the recipient inbox dir
     const inboxDir = join(root, '.hive-flow', 'messages', 'inbox', recipientKey(RECIPIENT));
     writeFileSync(join(inboxDir, 'garbage.json'), '{ this is not valid json ', 'utf-8');
     const { messages, deadLetters } = listInbox(RECIPIENT, root);
     expect(messages).toHaveLength(1); // the valid one
     expect(deadLetters.some(d => d.reason === 'malformed-json')).toBe(true);
+    // Durable evidence written + bad file moved out of the active listing.
+    const dlDir = join(root, '.hive-flow', 'messages', 'deadletter');
+    expect(readdirSync(dlDir).some(n => n.startsWith('corrupt-'))).toBe(true);
+    expect(existsSync(join(inboxDir, 'garbage.json.corrupt'))).toBe(true);
+    // A second scan no longer re-reports the (now quarantined) record.
+    expect(listInbox(RECIPIENT, root).deadLetters.some(d => d.reason === 'malformed-json')).toBe(false);
   });
 
   it('detects a tampered body via signature mismatch', async () => {
@@ -204,6 +211,10 @@ describe('read — dead-letter on malformed or tampered records', () => {
     }
     const listed = listInbox(RECIPIENT, root);
     expect(listed.deadLetters.some(d => d.reason === 'signature-mismatch')).toBe(true);
+    // listInbox durably quarantines the tampered record.
+    const dlDir = join(root, '.hive-flow', 'messages', 'deadletter');
+    expect(readdirSync(dlDir).some(n => n.startsWith('corrupt-'))).toBe(true);
+    expect(existsSync(path + '.corrupt')).toBe(true);
   });
 
   it('a missing record is a benign not-found, not a dead-letter', () => {
@@ -236,6 +247,49 @@ describe('ackMessage — at-most-once', () => {
     // acked message is excluded from the default (non-terminal) inbox listing.
     expect(listInbox(RECIPIENT, root).messages).toHaveLength(0);
     expect(listInbox(RECIPIENT, root, { includeTerminal: true }).messages).toHaveLength(1);
+  });
+
+  it('refuses to ack an absent message and creates no marker', async () => {
+    const res = await ackMessage(RECIPIENT, 'msg-does-not-exist', root);
+    expect(res.acked).toBe(false);
+    expect(res.reason).toBe('not-found');
+    const key = recipientKey(RECIPIENT);
+    const marker = join(root, '.hive-flow', 'messages', 'inbox', key, 'msg-does-not-exist.acked');
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it('refuses to ack a tampered message, creates no marker, and durably dead-letters it', async () => {
+    const sent = await sendMessage(baseInput(), root);
+    const key = recipientKey(RECIPIENT);
+    const path = join(root, '.hive-flow', 'messages', 'inbox', key, sent.messageId + '.json');
+    const rec = JSON.parse(readFileSync(path, 'utf-8'));
+    rec.body = 'tampered before ack';
+    writeFileSync(path, JSON.stringify(rec, null, 2), 'utf-8');
+
+    const res = await ackMessage(RECIPIENT, sent.messageId, root);
+    expect(res.acked).toBe(false);
+    expect(res.reason).toBe('signature-mismatch');
+    expect(existsSync(join(root, '.hive-flow', 'messages', 'inbox', key, sent.messageId + '.acked'))).toBe(false);
+    const dlDir = join(root, '.hive-flow', 'messages', 'deadletter');
+    expect(readdirSync(dlDir).some(n => n.startsWith('corrupt-'))).toBe(true);
+  });
+});
+
+describe('markDelivered -- guarded forward transition', () => {
+  it('advances pending -> delivered once, then refuses (not a free setter)', async () => {
+    const sent = await sendMessage(baseInput(), root);
+    const first = await markDelivered(RECIPIENT, sent.messageId, root);
+    expect(first.ok).toBe(true);
+    expect(first.message?.deliveryState).toBe('delivered');
+    const again = await markDelivered(RECIPIENT, sent.messageId, root);
+    expect(again.ok).toBe(false);
+    expect(again.reason).toMatch(/not-pending/);
+  });
+
+  it('refuses to deliver an absent message', async () => {
+    const res = await markDelivered(RECIPIENT, 'msg-absent', root);
+    expect(res.ok).toBe(false);
+    expect(res.reason).toBe('not-found');
   });
 });
 

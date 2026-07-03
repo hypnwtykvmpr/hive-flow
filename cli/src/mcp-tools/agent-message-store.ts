@@ -350,7 +350,46 @@ function parseInboxRecord(raw: string, projectRoot: string): InboxReadResult {
   return { ok: true, message: m as AgentMessage };
 }
 
-/** Read a single inbox record by id. Idempotent; safe to call repeatedly. */
+/**
+ * Durably quarantine a corrupt/tampered inbox record: write raw evidence + reason
+ * under `deadletter/corrupt-<hash>.json` (idempotent by content hash) and move the
+ * bad file out of the active `.json` listing (`.corrupt`). Best-effort and never
+ * throws: corruption becomes durable evidence, never a silent in-memory-only report.
+ */
+function quarantineCorruptRecord(
+  inboxDir: string,
+  fileName: string | null,
+  raw: string,
+  reason: string,
+  projectRoot: string,
+  messageId?: string,
+): void {
+  try {
+    ensureDir(getDeadLetterDir(projectRoot));
+    const hash = createHash('sha256').update((raw || '') + '|' + (messageId ?? '') + '|' + reason).digest('hex').slice(0, 32);
+    const target = join(getDeadLetterDir(projectRoot), `corrupt-${hash}.json`);
+    if (!existsSync(target)) {
+      const evidence = {
+        quarantinedAt: new Date().toISOString(),
+        reason,
+        messageId: messageId ?? null,
+        sourceFile: fileName,
+        rawEvidence: raw,
+      };
+      const tmp = target + '.tmp.' + process.pid;
+      writeFileSync(tmp, JSON.stringify(evidence, null, 2), 'utf-8');
+      renameSync(tmp, target);
+    }
+    if (fileName) {
+      const src = join(inboxDir, fileName);
+      try { if (existsSync(src)) renameSync(src, src + '.corrupt'); } catch { /* rename race -- evidence already durable */ }
+    }
+  } catch { /* best-effort: never throw from a read/quarantine path */ }
+}
+
+/** Read a single inbox record by id. Idempotent; safe to call repeatedly.
+ *  Pure read (no side effects) -- durable dead-lettering of corruption happens at
+ *  the `listInbox` / `ackMessage` boundary, which owns the quarantine. */
 export function readInboxMessage(key: string, messageId: string, projectRoot = process.cwd()): InboxReadResult {
   const path = getInboxRecordPath(key, messageId, projectRoot);
   if (!existsSync(path)) return { ok: false, deadLetter: false, reason: 'not-found', messageId };
@@ -385,7 +424,12 @@ export function listInbox(
     let raw: string;
     try { raw = readFileSync(join(dir, name), 'utf-8'); } catch { deadLetters.push({ reason: 'unreadable' }); continue; }
     const res = parseInboxRecord(raw, projectRoot);
-    if (!res.ok) { deadLetters.push({ messageId: res.messageId, reason: res.reason }); continue; }
+    if (!res.ok) {
+      deadLetters.push({ messageId: res.messageId, reason: res.reason });
+      // Durably dead-letter the corruption (evidence + move out of active listing).
+      quarantineCorruptRecord(dir, name, raw, res.reason, projectRoot, res.messageId);
+      continue;
+    }
     const m = res.message;
     if (!opts.includeTerminal && (m.deliveryState === 'acked' || m.deliveryState === 'dead-letter' || m.deliveryState === 'expired')) continue;
     messages.push(m);
@@ -478,38 +522,59 @@ export async function sendMessage(input: SendMessageInput, projectRoot = process
   }, projectRoot);
 }
 
-/** Transition a stored inbox message to a new delivery state. The signature is
- *  unaffected (it covers immutable fields only). Returns the updated record. */
-export async function setDeliveryState(
+/**
+ * Advance a PENDING message to DELIVERED -- the ONLY forward transition a delivery
+ * adapter may perform. It refuses to skip states or reopen a terminal record, so
+ * `deliveryState` stays derived from a real delivery outcome rather than a free
+ * setter. Terminal transitions have their own evidence-bearing helpers:
+ * `ackMessage` (-> acked) and `deadLetterMessage` (-> dead-letter).
+ */
+export async function markDelivered(
   to: { agentId?: string; ownerSessionId: string; ownerClientKind: string },
   messageId: string,
-  next: DeliveryState,
   projectRoot = process.cwd(),
-): Promise<AgentMessage | null> {
+): Promise<{ ok: boolean; message?: AgentMessage; reason?: string }> {
   const key = recipientKey(to);
   return withMessagesLock(async () => {
     const res = readInboxMessage(key, messageId, projectRoot);
-    if (!res.ok) return null;
+    if (!res.ok) return { ok: false, reason: res.reason };
     const m = res.message;
-    m.deliveryState = next;
-    m.updatedAt = new Date().toISOString();
-    if (next === 'delivered' && !m.deliveredAt) m.deliveredAt = m.updatedAt;
+    if (m.deliveryState !== 'pending') return { ok: false, reason: `not-pending: ${m.deliveryState}` };
+    m.deliveryState = 'delivered';
+    m.deliveredAt = new Date().toISOString();
+    m.updatedAt = m.deliveredAt;
     writeInboxRecord(m, projectRoot);
-    return m;
+    return { ok: true, message: m };
   }, projectRoot);
 }
 
 /**
- * Acknowledge a message at-most-once via an O_EXCL marker. A second ack is a
- * no-op (`alreadyAcked: true`), so a duplicate ack is safe under compaction.
+ * Acknowledge a message at-most-once. Reads + verifies FIRST -- a missing or
+ * corrupt/tampered record is NEVER ACKed: it returns `{ acked: false, reason }`
+ * and, for a corrupt record, is durably dead-lettered. Only a valid message gets
+ * the O_EXCL `.acked` marker; a second ack is a no-op (`alreadyAcked: true`), so a
+ * duplicate ack is safe under compaction.
  */
 export async function ackMessage(
   to: { agentId?: string; ownerSessionId: string; ownerClientKind: string },
   messageId: string,
   projectRoot = process.cwd(),
-): Promise<{ acked: boolean; alreadyAcked: boolean }> {
+): Promise<{ acked: boolean; alreadyAcked: boolean; reason?: string }> {
   const key = recipientKey(to);
   return withMessagesLock(async () => {
+    // Never ACK a message we cannot read + verify.
+    const res = readInboxMessage(key, messageId, projectRoot);
+    if (!res.ok) {
+      if (res.deadLetter) {
+        const dir = getRecipientInboxDir(key, projectRoot);
+        const fileName = (sanitizePathId(messageId, 128) ?? messageId) + '.json';
+        let raw = '';
+        try { raw = readFileSync(join(dir, fileName), 'utf-8'); } catch { /* already moved */ }
+        quarantineCorruptRecord(dir, fileName, raw, res.reason, projectRoot, messageId);
+      }
+      return { acked: false, alreadyAcked: false, reason: res.reason };
+    }
+    // Valid message -- at-most-once O_EXCL marker.
     const markerPath = getAckMarkerPath(key, messageId, projectRoot);
     ensureDir(getRecipientInboxDir(key, projectRoot));
     let firstAck = false;
@@ -521,14 +586,11 @@ export async function ackMessage(
       firstAck = false; // marker already exists -> already acked
     }
     if (firstAck) {
-      const res = readInboxMessage(key, messageId, projectRoot);
-      if (res.ok) {
-        const m = res.message;
-        m.deliveryState = 'acked';
-        m.ackedAt = new Date().toISOString();
-        m.updatedAt = m.ackedAt;
-        writeInboxRecord(m, projectRoot);
-      }
+      const m = res.message;
+      m.deliveryState = 'acked';
+      m.ackedAt = new Date().toISOString();
+      m.updatedAt = m.ackedAt;
+      writeInboxRecord(m, projectRoot);
     }
     return { acked: true, alreadyAcked: !firstAck };
   }, projectRoot);
