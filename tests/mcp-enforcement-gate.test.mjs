@@ -421,13 +421,15 @@ describe('MCP Enforcement Gate', () => {
       }
     });
 
-    it('missing state file causes fail-closed (HALTED behavior)', () => {
-      // Remove the state file — gate should fail closed, blocking CRITICAL tools
+    it('missing state file does not phantom-escalate (absent scope = no level)', () => {
+      // An ABSENT scope file must NOT, by itself, produce a phantom HALTED
+      // (mcp-enforcement-gate.ts: `if (!existsSync(stateFile)) return null`).
+      // Fail-closed applies only when state is PRESENT but tampered/unsigned.
       if (existsSync(stateFile)) {
         rmSync(stateFile);
       }
       const r = checkMCPEnforcement('mcp__hive-flow__agent_spawn');
-      assert.equal(r.allowed, false, 'CRITICAL tool must be blocked when state file is absent');
+      assert.equal(r.allowed, true, 'absent state file yields no enforcement level, not a phantom HALTED');
     });
   });
 

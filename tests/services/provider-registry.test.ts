@@ -309,7 +309,9 @@ describe('ProviderRegistry', () => {
       expect(freshRegistry.has('google')).toBe(true);
       expect(freshRegistry.has('mistral')).toBe(true);
       expect(freshRegistry.has('ollama')).toBe(true);
-      expect(freshRegistry.size).toBe(5);
+      expect(freshRegistry.has('deepseek')).toBe(true);
+      expect(freshRegistry.has('openrouter')).toBe(true);
+      expect(freshRegistry.size).toBe(7);
     });
 
     it('should be idempotent', async () => {
@@ -319,7 +321,7 @@ describe('ProviderRegistry', () => {
       await freshRegistry.initialize(false);
       await freshRegistry.initialize(false);
 
-      expect(freshRegistry.size).toBe(5);
+      expect(freshRegistry.size).toBe(7);
     });
 
     it('should have anthropic as default (priority 1)', async () => {

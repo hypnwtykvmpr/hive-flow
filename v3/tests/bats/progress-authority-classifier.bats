@@ -18,5 +18,5 @@ setup() {
   run npm --prefix "$REPO_ROOT/cli" exec vitest run src/progress/__tests__/progress-authority-classifier.test.ts
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *'progress-authority-classifier.test.ts'* ]]
+  [[ "$output" == *"Test Files  1 passed"* ]]
 }
