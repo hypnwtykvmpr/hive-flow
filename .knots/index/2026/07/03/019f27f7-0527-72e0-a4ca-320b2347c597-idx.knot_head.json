@@ -1,0 +1,21 @@
+{
+  "event_id": "019f27f7-0527-72e0-a4ca-320b2347c597",
+  "occurred_at": "2026-07-03T12:32:07.975146Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-05bf",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: af96-plan",
+    "type": "lease",
+    "updated_at": "2026-07-03T12:32:07.975146Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f27f9-bd51-7ed3-a33a-8d02df3b78ba",
+  "occurred_at": "2026-07-03T12:35:06.193523Z",
+  "knot_id": "hive-flow-af96",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PLAN_REVIEW PASS with scope clarifications. Rulings: (1) approve Slice B cosmetic header cleanup as a separate mechanical slice because af96 is the final no-deprecated-artifacts capstone; (2) treat v3/tests/** as live post-collapse test surface; (3) A/B/C slice breakdown approved, but Slice A must include all functional code/config/test breakages found by audit, not only the baseline five files; local review already confirmed stale functional refs in root tests/**, tests/hive-poll-test-runner.sh, tests/mcp-enforcement-gate.test.mjs, tests/packaging-proof.test.mjs, v3/tests/bats/**, and the listed CI/docker/npm-bin/plugin/fixture files; (4) sweep all tracked non-md path-like v3/@hive-flow refs, including bare v3/@hive-flow where they are code/config/test paths. Do not treat @hive-flow/cli package-name specifiers or intentionally retained collapse-location assertions as stale without source-grounded classification. Private/local untracked leftovers remain out of scope. Provider verifier task task-9576944a-bd3e-4a2f-bf0c-a7fbc308f721 was dispatched read-only and was still running at review time; local evidence was sufficient to pass the plan gate.",
+    "datetime": "2026-07-03T12:35:06.193523Z",
+    "entry_id": "019f27f9-bd51-7ed3-a33a-8cfe58a4a760",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
