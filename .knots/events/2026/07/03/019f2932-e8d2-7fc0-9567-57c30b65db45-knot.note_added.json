@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2932-e8d2-7fc0-9567-57c30b65db45",
+  "occurred_at": "2026-07-03T18:17:10.098273Z",
+  "knot_id": "hive-flow-dc69",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex PLAN_REVIEW_BOUNCE (20260703T181450Z): direction OK but tighten — context-first not value-marker-first. Must-fix: (1) no suppress on test/fake/example marker substrings (sk_test_ can be real Stripe secret); (2) detection-source path is only a corroborating signal WITH demonstrable detector-def line context, never file-wide bypass; (3) weak passwords (admin123/secure_password) still flag in prod code, suppress only with fixture/example line context. Store suppression reason for test assertions; add detection-preservation tests for real sk_live_/sk_test_/ghp_/AWS in BOTH test+prod files + weak prod password + allowlisted-file real secret + --strict raw reproduction. Revising to context-first, routing v2.",
+    "datetime": "2026-07-03T18:17:10.098273Z",
+    "entry_id": "019f2932-e8d2-7fc0-9567-57b4678acc78",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
