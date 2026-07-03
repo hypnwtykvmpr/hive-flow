@@ -13,15 +13,27 @@ import { fileURLToPath } from 'url';
 import { DEFAULT_MAX_AGENTS } from '../shared/index.js';
 import { classifyCurrentProgressAuthority } from '../progress/progress-authority-classifier.js';
 
-// Get project root - handles both src and dist paths
+// Resolve the CLI package root robustly for both src/ and dist/ layouts.
+// Post-collapse the CLI package lives at <repo>/cli; the nearest ancestor
+// containing package.json is that root (cli/dist/src/mcp-tools and
+// cli/src/mcp-tools both resolve up to <repo>/cli). A fixed ../../.. climb
+// would over-shoot above the repo after the v3/@hive-flow collapse.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// From dist/src/mcp-tools or src/mcp-tools, navigate to v3 directory
-// CLI is at v3/@hive-flow/cli, so go up 2 levels from cli to get to v3
-const CLI_ROOT = join(__dirname, '../../..');
-const HIVE_FLOW_DIR = join(CLI_ROOT, '..'); // @hive-flow directory
-const V3_DIR = join(HIVE_FLOW_DIR, '..'); // v3 directory
-const PROJECT_ROOT = join(V3_DIR, '..');
+
+function resolveCliRoot(startDir: string): string {
+  let dir = startDir;
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return startDir; // degraded: existsSync guards below tolerate an unresolved root
+}
+
+const CLI_ROOT = resolveCliRoot(__dirname);
+const PROJECT_ROOT = dirname(CLI_ROOT); // repo root (parent of the cli package)
 
 // Utility/service packages follow DDD differently - their services ARE the application layer
 const UTILITY_PACKAGES = new Set([
@@ -112,8 +124,8 @@ function calculateModuleProgress(moduleDir: string): number {
 async function calculateProgress(): Promise<V3ProgressMetrics> {
   const now = new Date().toISOString();
 
-  // Count V3 modules
-  const modulesDir = join(V3_DIR, '@hive-flow');
+  // Count workspace packages (promoted to cli/packages/* post-collapse)
+  const modulesDir = join(CLI_ROOT, 'packages');
   const modules: { name: string; files: number; lines: number; progress: number }[] = [];
   let totalProgress = 0;
   let explicitDDD = 0;
@@ -140,11 +152,11 @@ async function calculateProgress(): Promise<V3ProgressMetrics> {
   }
 
   const avgProgress = modules.length > 0 ? Math.round(totalProgress / modules.length) : 0;
-  const totalStats = countFilesAndLines(V3_DIR);
+  const totalStats = countFilesAndLines(join(CLI_ROOT, 'src'));
 
   // Count CLI commands (from commands/index.ts)
   let cliCommands = 28; // Default to known count
-  const commandsIndexPath = join(V3_DIR, '@hive-flow/cli/src/commands/index.ts');
+  const commandsIndexPath = join(CLI_ROOT, 'src/commands/index.ts');
   if (existsSync(commandsIndexPath)) {
     try {
       const content = readFileSync(commandsIndexPath, 'utf-8');
@@ -157,7 +169,7 @@ async function calculateProgress(): Promise<V3ProgressMetrics> {
 
   // Count MCP tools
   let mcpTools = 100; // Approximate
-  const toolsIndexPath = join(V3_DIR, '@hive-flow/cli/src/mcp-tools/index.ts');
+  const toolsIndexPath = join(CLI_ROOT, 'src/mcp-tools/index.ts');
   if (existsSync(toolsIndexPath)) {
     try {
       const content = readFileSync(toolsIndexPath, 'utf-8');
@@ -167,7 +179,7 @@ async function calculateProgress(): Promise<V3ProgressMetrics> {
 
   // Count hooks subcommands (count const *Command definitions)
   let hooksSubcommands = 35; // Default to documented CLI hook subcommand count
-  const hooksPath = join(V3_DIR, '@hive-flow/cli/src/commands/hooks.ts');
+  const hooksPath = join(CLI_ROOT, 'src/commands/hooks.ts');
   if (existsSync(hooksPath)) {
     try {
       const content = readFileSync(hooksPath, 'utf-8');
