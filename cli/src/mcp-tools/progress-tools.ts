@@ -35,10 +35,12 @@ function resolveCliRoot(startDir: string): string {
 const CLI_ROOT = resolveCliRoot(__dirname);
 const PROJECT_ROOT = dirname(CLI_ROOT); // repo root (parent of the cli package)
 
-// Utility/service packages follow DDD differently - their services ARE the application layer
+// Utility/service packages follow DDD differently - their services ARE the application layer.
+// Post-collapse the workspace packages live under cli/packages/* (scanned as modulesDir);
+// most former V3 module names (hooks, mcp, shared, testing, …) are now internal cli/src
+// subdirs, not standalone packages, so they no longer appear here.
 const UTILITY_PACKAGES = new Set([
-  'cli', 'hooks', 'mcp', 'shared', 'testing', 'agents', 'integration',
-  'embeddings', 'deployment', 'performance', 'plugins', 'providers'
+  'cli-compat', 'embeddings', 'plugin-gastown-bridge', 'providers'
 ]);
 
 // Target metrics for 100% completion
@@ -46,7 +48,7 @@ const TARGETS = {
   CLI_COMMANDS: 28,
   MCP_TOOLS: 100,
   HOOKS_SUBCOMMANDS: 35, // CLI hooks subcommands documented in CLAUDE.md
-  PACKAGES: 17,
+  PACKAGES: 4, // cli/packages/* workspace packages post-collapse (was 17 V3 monorepo packages)
 };
 
 // Weight distribution for overall progress
