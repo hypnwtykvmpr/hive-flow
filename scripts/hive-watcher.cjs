@@ -30,6 +30,7 @@ const os = require('os');
 const { appendPendingWithAck } = require('../.claude/helpers/dedup-marker.cjs');
 const { resolveSessionId } = require('../.claude/helpers/session-id.cjs');
 const { wakeSessionPaths } = require('../.claude/helpers/wake-paths.cjs');
+const messageVerify = require('./agent-message-verify.cjs');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -241,6 +242,14 @@ function blockedPermissionWorkerIds(hivesDir, hiveId, hive) {
  * declared allComplete, or the sentinel would settle a hive whose worker is
  * mid-conversation. Content-matched (from.agentId) across all inbox dirs so
  * the scan cannot drift from the store's recipient-key derivation. Read-only.
+ *
+ * VERIFIED-ONLY counting (Codex bounce 20260703T233445Z): this gate is
+ * load-bearing -- an unverified raw record could hold allComplete=false
+ * forever. Only records that pass the P1 HMAC signature AND are not
+ * TTL-expired count as waiting (scripts/agent-message-verify.cjs, lockstep
+ * with the store). Verification-impossible (no signing key) fails toward
+ * LIVENESS: nothing counts. The durable 'expired' transition stays
+ * store-owned; this scan only skips.
  */
 function waitingOnPeerWorkerIds(hivesDir, hive) {
   const waiting = new Set();
@@ -250,10 +259,13 @@ function waitingOnPeerWorkerIds(hivesDir, hive) {
   }
   if (agentToWorker.size === 0) return waiting;
   const projectRoot = path.dirname(path.dirname(hivesDir));
+  const signingKey = messageVerify.readMessageSigningKey(projectRoot);
+  if (!signingKey) return waiting;
   const inboxRoot = path.join(projectRoot, '.hive-flow', 'messages', 'inbox');
   if (!fs.existsSync(inboxRoot)) return waiting;
   let recipientDirs;
   try { recipientDirs = fs.readdirSync(inboxRoot); } catch { return waiting; }
+  const nowMs = Date.now();
   for (const dirName of recipientDirs) {
     const dirPath = path.join(inboxRoot, dirName);
     let entries;
@@ -268,6 +280,8 @@ function waitingOnPeerWorkerIds(hivesDir, hive) {
       if (record.verb !== 'blocked' && record.verb !== 'ask') continue;
       if (!record.requiresAck) continue;
       if (record.deliveryState !== 'pending' && record.deliveryState !== 'delivered') continue;
+      if (!messageVerify.verifyMessageSignature(record, signingKey)) continue;
+      if (messageVerify.isTtlExpired(record, nowMs)) continue;
       waiting.add(workerId);
     }
   }

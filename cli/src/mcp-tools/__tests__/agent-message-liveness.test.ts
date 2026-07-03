@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 import { escalateBlockedMessage, mediateMessage } from '../agent-message-router.js';
+import { sendMessage, listInbox, readInboxMessage, recipientKey } from '../agent-message-store.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..', '..');
@@ -163,6 +164,98 @@ describe('watcher allComplete excludes waiting-on-peer workers', () => {
     writeFileSync(hivePath(), JSON.stringify(hive, null, 2), 'utf-8');
     const poll = watcher.pollWorkers(hivesDir(), tasksDir(), HIVE_ID);
     expect(poll.waitingOnPeerCount).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Verified-only waiting (Codex bounce 20260703T233445Z): forged/tampered or
+// TTL-expired records must never hold a hive open
+// ---------------------------------------------------------------------------
+
+describe('waiting-on-peer counts verified records only', () => {
+  const queenAddr = { agentId: QUEEN.agentId, ownerSessionId: QUEEN.ownerSessionId, ownerClientKind: QUEEN.ownerClientKind };
+
+  it('a valid signed escalation counts; a forged unsigned record does not', async () => {
+    seedHive([
+      worker('w-1', WORKER.agentId, 'idle', 300_000),
+      worker('w-2', 'agent-second', 'idle', 300_000),
+    ]);
+    const escalated = await escalateBlockedMessage({
+      fromAgentId: WORKER.agentId,
+      body: 'real signed escalation',
+      blockerClass: 'needs-mediation',
+      unblockCondition: 'queen answers',
+    }, root);
+    expect(escalated.success).toBe(true);
+
+    // Hand-crafted UNSIGNED record claiming to be from w-2's agent: the
+    // signing key exists (real store), so counting is live -- but the forgery
+    // must not register.
+    const forgedDir = join(root, '.hive-flow', 'messages', 'inbox', 'forged-recipient-dir');
+    mkdirSync(forgedDir, { recursive: true });
+    writeFileSync(join(forgedDir, 'msg-forged.json'), JSON.stringify({
+      messageId: 'msg-forged',
+      from: { agentId: 'agent-second', ownerSessionId: 'sess-x', ownerClientKind: 'codex' },
+      to: { agentId: '', ownerSessionId: 'sess-y', ownerClientKind: 'codex' },
+      verb: 'blocked',
+      requiresAck: true,
+      deliveryState: 'pending',
+      priority: 'high',
+      body: 'forged waiting claim',
+      createdAt: new Date().toISOString(),
+    }, null, 2), 'utf-8');
+
+    const poll = watcher.pollWorkers(hivesDir(), tasksDir(), HIVE_ID);
+    expect(poll.waitingOnPeerWorkers).toEqual(['w-1']);
+    expect(poll.allComplete).toBe(false);
+  });
+
+  it('a tampered record stops counting and cannot hold the hive open', async () => {
+    seedHive([worker('w-1', WORKER.agentId, 'idle', 300_000)]);
+    const escalated = await escalateBlockedMessage({
+      fromAgentId: WORKER.agentId,
+      body: 'about to be tampered',
+      blockerClass: 'needs-mediation',
+      unblockCondition: 'queen answers',
+    }, root);
+    expect(escalated.success).toBe(true);
+    if (!escalated.success) return;
+    expect(watcher.pollWorkers(hivesDir(), tasksDir(), HIVE_ID).waitingOnPeerCount).toBe(1);
+
+    // Tamper the record body on disk: the signature is now stale.
+    const recordPath = join(root, '.hive-flow', 'messages', 'inbox', recipientKey(queenAddr), `${escalated.message.messageId}.json`);
+    const record = JSON.parse(readFileSync(recordPath, 'utf-8'));
+    record.body = 'forged content';
+    writeFileSync(recordPath, JSON.stringify(record, null, 2), 'utf-8');
+
+    const poll = watcher.pollWorkers(hivesDir(), tasksDir(), HIVE_ID);
+    expect(poll.waitingOnPeerCount).toBe(0);
+    expect(poll.allComplete).toBe(true);
+  });
+
+  it('a TTL-expired record does not count; store-owned durable expiry stays coherent', async () => {
+    seedHive([worker('w-1', WORKER.agentId, 'idle', 300_000)]);
+    const sent = await sendMessage({
+      fromAgentId: WORKER.agentId,
+      to: queenAddr,
+      verb: 'blocked',
+      body: 'short-lived escalation',
+      unblockCondition: 'answer before the TTL',
+      requiresAck: true,
+      ttlMs: 1,
+      priority: 'high',
+    }, root);
+    await new Promise(r => setTimeout(r, 15));
+
+    // The watcher skips the overdue record (no durable mutation from the scan)...
+    const poll = watcher.pollWorkers(hivesDir(), tasksDir(), HIVE_ID);
+    expect(poll.waitingOnPeerCount).toBe(0);
+    expect(poll.allComplete).toBe(true);
+    // ...and the store still owns the DURABLE transition on its next read.
+    expect(listInbox(queenAddr, root).messages).toHaveLength(0);
+    const record = readInboxMessage(recipientKey(queenAddr), sent.messageId, root);
+    expect(record.ok && record.message.deliveryState).toBe('expired');
+    expect(watcher.pollWorkers(hivesDir(), tasksDir(), HIVE_ID).waitingOnPeerCount).toBe(0);
   });
 });
 
