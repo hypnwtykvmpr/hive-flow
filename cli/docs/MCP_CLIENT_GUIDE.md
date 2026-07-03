@@ -55,7 +55,7 @@ try {
 
 ## Available MCP Tools
 
-Tool implementations live at `v3/@hive-flow/cli/src/mcp-tools/`.
+Tool implementations live at `cli/src/mcp-tools/`.
 
 ### Agent Tools
 
@@ -667,7 +667,7 @@ const result = await callMCPTool('agent_spawn', {
 **Solutions:**
 1. Check tool name spelling — all names use underscores, not slashes (e.g. `agent_spawn` not `agent/spawn`)
 2. Verify tool is registered in `mcp-client.ts`
-3. Import tool from the correct file under `v3/@hive-flow/cli/src/mcp-tools/`
+3. Import tool from the correct file under `cli/src/mcp-tools/`
 
 ### Type Errors
 

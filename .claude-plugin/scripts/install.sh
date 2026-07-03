@@ -25,7 +25,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 # ---------------------------------------------------------------------------
 # Workspace CLI — pre-pnpm-link path (runbook §18 step 7 requirement 2)
 # ---------------------------------------------------------------------------
-CLI_BIN="${REPO_ROOT}/v3/@hive-flow/cli/bin/cli.js"
+CLI_BIN="${REPO_ROOT}/cli/bin/cli.js"
 
 # ---------------------------------------------------------------------------
 # Colors for output

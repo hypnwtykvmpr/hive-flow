@@ -5,7 +5,7 @@ Fast reference guide for using the Event Store system.
 ## Installation
 
 ```bash
-cd v3/@hive-flow/cli/shared
+cd cli/src/shared
 ```
 
 ## Quick Start

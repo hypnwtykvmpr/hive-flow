@@ -257,7 +257,7 @@ npm test -- event-store.test.ts -t "Event Appending"
 See `example-usage.ts` for a complete demonstration:
 
 ```bash
-tsx v3/@hive-flow/cli/src/shared/events/example-usage.ts
+tsx cli/src/shared/events/example-usage.ts
 ```
 
 Output includes:

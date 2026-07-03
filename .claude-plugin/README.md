@@ -505,7 +505,7 @@ Hive Flow integrates with 3 MCP servers providing 110+ tools:
   "mcpServers": {
     "hive-flow": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/v3/@hive-flow/cli/bin/mcp-server.js"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/cli/bin/mcp-server.js"]
     }
   }
 }

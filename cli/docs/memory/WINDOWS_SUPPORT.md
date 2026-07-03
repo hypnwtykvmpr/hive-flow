@@ -131,7 +131,7 @@ class JsonBackend implements IMemoryBackend {
 ## Files Created
 
 ```
-v3/@hive-flow/cli/memory/
+cli/src/memory/
 ├── src/
 │   ├── sqljs-backend.ts           # SQL.js WASM backend
 │   ├── database-provider.ts       # Platform-aware provider

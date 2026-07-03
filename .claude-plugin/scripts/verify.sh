@@ -21,8 +21,8 @@ error() { echo -e "${RED}✗${NC} $1"; }
 #  2. global install on PATH
 #  3. npx fallback
 hf_cli() {
-  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$CLAUDE_PLUGIN_ROOT/v3/@hive-flow/cli/bin/cli.js" ]; then
-    node "$CLAUDE_PLUGIN_ROOT/v3/@hive-flow/cli/bin/cli.js" "$@"
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$CLAUDE_PLUGIN_ROOT/cli/bin/cli.js" ]; then
+    node "$CLAUDE_PLUGIN_ROOT/cli/bin/cli.js" "$@"
   elif command -v hive-flow &>/dev/null; then
     hive-flow "$@"
   else

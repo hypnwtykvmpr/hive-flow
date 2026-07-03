@@ -183,7 +183,7 @@ See `/src/examples/flash-attention-demo.ts` for comprehensive examples:
 
 ```bash
 # Run all examples
-tsx v3/@hive-flow/cli/src/performance/examples/flash-attention-demo.ts
+tsx cli/src/performance/examples/flash-attention-demo.ts
 ```
 
 ## Technical Details

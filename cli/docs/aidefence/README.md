@@ -553,7 +553,7 @@ Pre-scan agent inputs automatically:
 
 ```bash
 # Clone repository
-cd hive-flow/v3/@hive-flow/cli
+cd hive-flow/cli
 
 # Install dependencies
 pnpm install

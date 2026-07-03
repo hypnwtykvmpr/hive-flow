@@ -434,7 +434,7 @@ describe('UnifiedSwarmCoordinator', () => {
 
 ## Getting Help
 
-- **Documentation**: See `v3/@hive-flow/cli/docs/swarm/README.md`
+- **Documentation**: See `cli/docs/swarm/README.md`
 - **Examples**: See `/v3/examples/swarm-coordinator.ts`
 - **Implementation**: See `/v3/docs/ADR-003-implementation-status.md`
 - **Issues**: Report at GitHub

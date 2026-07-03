@@ -78,5 +78,5 @@ training engine.
 
 ## Source
 
-- Source: `v3/@hive-flow/cli/src/neural`
-- API entrypoint: `v3/@hive-flow/cli/src/neural/index.ts`
+- Source: `cli/src/neural`
+- API entrypoint: `cli/src/neural/index.ts`

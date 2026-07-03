@@ -90,6 +90,6 @@ subpath is unavailable, memory learning degrades to a no-op.
 
 ## Source
 
-- Source: `v3/@hive-flow/cli/src/neural`
-- API entrypoint: `v3/@hive-flow/cli/src/neural/index.ts`
-- Tests: `v3/@hive-flow/cli/src/neural/__tests__`
+- Source: `cli/src/neural`
+- API entrypoint: `cli/src/neural/index.ts`
+- Tests: `cli/src/neural/__tests__`

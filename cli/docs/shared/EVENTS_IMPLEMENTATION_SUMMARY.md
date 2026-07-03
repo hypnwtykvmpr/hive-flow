@@ -139,14 +139,14 @@ Complete implementation of Event Store Persistence for V3 Hive Flow, providing e
 ### 6. Module Integration
 
 **Updated Files**:
-- ✅ `/v3/@hive-flow/cli/src/shared/events/index.ts` - Module exports
-- ✅ `/v3/@hive-flow/cli/src/shared/index.ts` - Main module integration
-- ✅ `/v3/@hive-flow/cli/docs/shared/package.json` - Dependencies added
+- ✅ `/cli/src/shared/events/index.ts` - Module exports
+- ✅ `/cli/src/shared/index.ts` - Main module integration
+- ✅ `cli/package.json` - Dependencies added
 
 ## File Structure
 
 ```
-v3/@hive-flow/cli/src/shared/events/
+cli/src/shared/events/
 ├── domain-events.ts           # 439 lines - Event type definitions
 ├── event-store.ts             # 447 lines - Core event store
 ├── projections.ts             # 468 lines - Read model projections
@@ -333,7 +333,7 @@ await eventStore.append(
 npm test -- event-store.test.ts
 
 # Run example
-tsx v3/@hive-flow/cli/src/shared/events/example-usage.ts
+tsx cli/src/shared/events/example-usage.ts
 ```
 
 ## Next Steps

@@ -437,7 +437,7 @@ export default {
 Expose hooks via MCP tools:
 
 ```typescript
-// v3/@hive-flow/cli/src/shared/mcp/tools/hooks.ts
+// cli/src/mcp-tools/hooks-tools.ts
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 export const registerHookTool: Tool = {
