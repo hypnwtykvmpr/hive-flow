@@ -31,7 +31,7 @@ const REPO_ROOT = join(__dirname, '..');
 const SCRIPT = join(REPO_ROOT, '.claude/helpers/enforcement.cjs');
 const require = createRequire(import.meta.url);
 process.env.HIVE_FLOW_HOME = join(REPO_ROOT, '.hive-flow');
-const { isProtectedPath } = require(SCRIPT);
+const { isProtectedPath, getRestrictionGroups } = require(SCRIPT);
 const ENF_DIR = join(REPO_ROOT, '.hive-flow', 'enforcement');
 const GLOBAL_STATE_FILE = join(ENF_DIR, 'global', 'state.json');
 const PROJECT_SCOPE_ID = `project-${createHash('sha256')
@@ -397,36 +397,44 @@ describe('enforcement system', () => {
       assert.equal(s.level, 3, 'should be HALTED');
     });
 
-    it('critical severity jumps NORMAL -> RESTRICTED', () => {
+    // Deny-first model (commit d827a6092 "pattern-gate escalation — deny-first,
+    // escalate on cross-channel repeat"): a first protected/substrate write is
+    // DENIED but deny-only, not an escalation. Escalation is reserved for
+    // cross-channel repeats on the same target (covered by
+    // enforcement-security-property.test.ts). These tests previously asserted
+    // the pre-d827 "protected write = critical => immediate RESTRICTED" model.
+    it('protected-path write is deny-only at NORMAL (no escalation)', () => {
       setState(freshState({ level: 0 }));
-      // Protected path write = critical severity
-      runEnforcement({
+      const r = runEnforcement({
         tool_name: 'Edit',
         tool_input: { file_path: join(REPO_ROOT, '.claude/settings.json') },
       });
       const s = readState();
-      assert.ok(s.level >= 2, 'critical should jump to at least RESTRICTED');
+      assert.ok(isDeny(r.json), 'protected write must be denied');
+      assert.equal(s.level, 0, 'first protected write is deny-only — no escalation');
     });
 
-    it('critical severity jumps WARNED -> RESTRICTED', () => {
+    it('protected-path write is deny-only at WARNED (no escalation)', () => {
       setState(freshState({ level: 1, violations: 1 }));
-      runEnforcement({
+      const r = runEnforcement({
         tool_name: 'Write',
         tool_input: { file_path: join(REPO_ROOT, '.claude/helpers/enforcement.cjs') },
       });
       const s = readState();
-      assert.ok(s.level >= 2);
+      assert.ok(isDeny(r.json), 'protected write must be denied');
+      assert.equal(s.level, 1, 'first protected write is deny-only — level unchanged');
     });
 
-    it('critical at RESTRICTED cascades to HALTED', () => {
+    it('protected-path write is deny-only at RESTRICTED (no cascade)', () => {
       setState(freshState({ level: 2, violations: 2, restrictedGroups: ['exec', 'write'] }));
       setGlobalState(freshState({ level: 2, violations: 2, restrictedGroups: ['exec', 'write'] }));
-      runEnforcement({
+      const r = runEnforcement({
         tool_name: 'Edit',
         tool_input: { file_path: join(REPO_ROOT, '.hive-flow/enforcement/state.json') },
       });
       const s = readState();
-      assert.equal(s.level, 3, 'already RESTRICTED + critical => HALTED');
+      assert.ok(isDeny(r.json), 'protected write must be denied');
+      assert.equal(s.level, 2, 'first protected write is deny-only — no cascade to HALTED');
     });
 
     it('HALTED stays HALTED (ceiling)', () => {
@@ -1396,7 +1404,7 @@ describe('enforcement system', () => {
       const r = runEnforcement({
         tool_name: 'Write',
         tool_input: {
-          file_path: join(REPO_ROOT, 'v3/@hive-flow/cli/dist/src/permission-guard/index.js'),
+          file_path: join(REPO_ROOT, 'cli/dist/src/permission-guard/index.js'),
         },
       });
       assert.ok(isDeny(r.json));
@@ -1407,7 +1415,7 @@ describe('enforcement system', () => {
       const r = runEnforcement({
         tool_name: 'Edit',
         tool_input: {
-          file_path: join(REPO_ROOT, 'v3/@hive-flow/cli/dist/src/mcp-tools/handler.js'),
+          file_path: join(REPO_ROOT, 'cli/dist/src/mcp-tools/handler.js'),
         },
       });
       assert.ok(isDeny(r.json));
@@ -1470,14 +1478,13 @@ describe('enforcement system', () => {
     });
 
     it('Write maps to write + exec groups', () => {
-      setState(freshState());
-      runEnforcement({
-        tool_name: 'Write',
-        tool_input: { file_path: join(REPO_ROOT, '.claude/settings.json') },
-      });
-      const s = readState();
-      assert.ok(s.restrictedGroups.includes('write'));
-      assert.ok(s.restrictedGroups.includes('exec'));
+      // Deny-first: a single protected write is deny-only and adds no restricted
+      // groups (escalation only on cross-channel repeat — see
+      // enforcement-security-property.test.ts), so assert the tool->group
+      // mapping directly. This is the mapping escalation applies when it fires.
+      const groups = getRestrictionGroups('Write');
+      assert.ok(groups.includes('write'));
+      assert.ok(groups.includes('exec'));
     });
 
     it('WebFetch maps to fetch + exec groups', () => {
