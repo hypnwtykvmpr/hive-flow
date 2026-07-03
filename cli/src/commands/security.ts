@@ -8,6 +8,119 @@
 import type { Command, CommandContext, CommandResult } from '../types.js';
 import { output } from '../output.js';
 
+// ---------------------------------------------------------------------------
+// dc69: context-first false-positive suppression for the `security scan`
+// secret + unsafe-pattern matchers.
+//
+// The scanner self-flags its OWN detector definitions, its detector test
+// fixtures, and documented examples. None of those are real committed
+// secrets, yet they keep `security scan` permanently red. `classifySuppression`
+// suppresses a match ONLY when the *line context* proves it is a detector
+// definition, a detector fixture/example input, or a structurally impossible
+// placeholder value.
+//
+// HARD RULES (router note 20260703T181710Z + Codex PLAN_REVIEW_PASS
+// 20260703T181816Z):
+//   - Never suppress on a value *marker substring* (`test`/`fake`/`example`
+//     inside the value). A real high-entropy `sk_test_...` is a real secret.
+//   - Never suppress file-wide by path. Path is corroboration ONLY, and only
+//     for the fixture rule — never for a bare credential on a normal line.
+//   - Weak passwords (`admin123`, `secure_password`) still flag in prod-looking
+//     code unless the line itself proves it is a detector fixture/example.
+// The trade-off is deliberate: prefer a residual false positive over hiding a
+// real committed credential. `--strict` / `--no-suppress` bypasses all of it.
+// ---------------------------------------------------------------------------
+
+export type SuppressionMatchType = 'secret' | 'unsafe';
+
+export interface SuppressionResult {
+  suppress: boolean;
+  /** Rule id that fired, for test assertions and audit evidence. */
+  reason?: 'detector-definition' | 'detector-fixture' | 'placeholder-value';
+}
+
+// The match is part of a detector DEFINITION: a regex-pattern object field, a
+// `new RegExp(...)`, a `must-not-contain` guard, an assigned regex literal, or
+// an argument to a secret-detection API. You never write a real credential
+// inside a detector definition, so this is self-sufficient and path-independent
+// (detector definitions live in production source — this file included).
+const DETECTOR_DEFINITION_LINE =
+  /\b[A-Za-z]*[Pp]attern\s*:|\bnew\s+RegExp\s*\(|must[-_ ]?not[-_ ]?contain|=\s*\/(?:[^/\\\n]|\\.)+\/[gimsuy]*|^\s*\/(?:[^/\\\n]|\\.)+\/[gimsuy]*\s*,?\s*$|\b(?:evaluateSecrets|detectSecrets|scanForSecrets|scanSecrets|redactSecrets|containsSecret|isLikelySecret|detectPii|detectPII)\s*\(/;
+
+// The match is a detector FIXTURE/EXAMPLE input: an object field explicitly
+// named as example/fixture input. Corroborated by a test/fixture/detector path
+// so a production `content:`/`input:` field holding a real credential still
+// flags.
+const FIXTURE_FIELD_LINE =
+  /\b(?:content|input|sample|example|fixture|expected|notContains|mustNotContain|masked|redacted|testCase)\s*:/i;
+const CORROBORATING_FIXTURE_PATH =
+  /\.test\.|\.spec\.|[\\/]__tests__[\\/]|[\\/]__fixtures__[\\/]|[\\/]fixtures?[\\/]|[\\/]examples?[\\/]|\.example\.|security-regression|deep-inspect|[\\/]analyzer\.|manifest-validator/i;
+
+// Explicit fill-in tokens that, as a WHOLE value, instruct the reader to
+// replace them — never a real credential. NOT substring markers.
+const FILL_IN_TOKENS = new Set([
+  'your_key_here', 'your-key-here', 'your_api_key', 'your-api-key',
+  'your_api_key_here', 'your_secret_here', 'your_token_here',
+  'your_password_here', 'yourkeyhere', 'replace_me', 'replaceme',
+  'insert_key_here', 'add_your_key_here', 'placeholder', 'redacted',
+]);
+
+function isPlaceholderValue(matchedValue: string): boolean {
+  let v = matchedValue.trim();
+  // Prefer the innermost quoted literal (the `password = "..."` pattern keeps
+  // the assignment prefix in the match); fall back to stripping one quote pair.
+  const quoted = v.match(/['"`]([^'"`]*)['"`]\s*$/);
+  if (quoted) {
+    v = quoted[1];
+  } else {
+    const q = v[0];
+    if ((q === '"' || q === "'" || q === '`') && v[v.length - 1] === q) {
+      v = v.slice(1, -1);
+    }
+  }
+  v = v.trim();
+  if (v.length === 0) return true;                              // empty
+  if (/^<[^>]*>$/.test(v)) return true;                         // <your-key>
+  if (/\$\{[^}]*\}/.test(v) || /\{\{[^}]*\}\}/.test(v)) return true; // ${..} {{..}}
+  if (/^[*•]+$/.test(v)) return true;                           // **** ••••
+  if (/^x+$/i.test(v)) return true;                             // xxxxxxxx (all-x)
+  if (v === '...' || v === '…') return true;                    // ellipsis
+  if (FILL_IN_TOKENS.has(v.toLowerCase())) return true;
+  return false;
+}
+
+/**
+ * Decide whether a scanner match is a false positive that should be
+ * suppressed, and record which rule fired. Context-first: never suppresses on
+ * value marker substrings or on file path alone. See the header comment.
+ */
+export function classifySuppression(
+  line: string,
+  matchedValue: string,
+  relPath: string,
+  matchType: SuppressionMatchType,
+): SuppressionResult {
+  // 1. Detector definition — self-sufficient, path-independent.
+  if (DETECTOR_DEFINITION_LINE.test(line)) {
+    return { suppress: true, reason: 'detector-definition' };
+  }
+  // 2. Detector fixture/example input — line field + corroborating path.
+  if (FIXTURE_FIELD_LINE.test(line) && CORROBORATING_FIXTURE_PATH.test(relPath)) {
+    return { suppress: true, reason: 'detector-fixture' };
+  }
+  // 3. Structurally-impossible placeholder value (secrets only).
+  if (matchType === 'secret' && isPlaceholderValue(matchedValue)) {
+    return { suppress: true, reason: 'placeholder-value' };
+  }
+  return { suppress: false };
+}
+
+interface SuppressedFinding {
+  type: string;
+  location: string;
+  reason: NonNullable<SuppressionResult['reason']>;
+}
+
 // Scan subcommand
 const scanCommand: Command = {
   name: 'scan',
@@ -18,16 +131,23 @@ const scanCommand: Command = {
     { name: 'type', type: 'string', description: 'Scan type: code, deps, container, all', default: 'all' },
     { name: 'output', short: 'o', type: 'string', description: 'Output format: text, json, sarif', default: 'text' },
     { name: 'fix', short: 'f', type: 'boolean', description: 'Auto-fix vulnerabilities where possible' },
+    { name: 'strict', type: 'boolean', description: 'Disable false-positive suppression (raw findings)' },
+    { name: 'no-suppress', type: 'boolean', description: 'Alias for --strict: report every raw match' },
   ],
   examples: [
     { command: 'hive-flow security scan -t ./src', description: 'Scan source directory' },
     { command: 'hive-flow security scan --depth deep --fix', description: 'Deep scan with auto-fix' },
+    { command: 'hive-flow security scan --strict', description: 'Report raw matches without FP suppression' },
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const target = ctx.flags.target as string || '.';
     const depth = ctx.flags.depth as string || 'standard';
     const scanType = ctx.flags.type as string || 'all';
     const fix = ctx.flags.fix as boolean;
+    // dc69: --strict / --no-suppress bypasses the false-positive classifier and
+    // reproduces the raw match set (audit / detection-preservation baseline).
+    const strict = (ctx.flags.strict as boolean) || (ctx.flags['no-suppress'] as boolean) || false;
+    const suppressed: SuppressedFinding[] = [];
 
     output.writeln();
     output.writeln(output.bold('Security Scan'));
@@ -106,18 +226,26 @@ const scanCommand: Command = {
                 try {
                   const content = fs.readFileSync(fullPath, 'utf-8');
                   const lines = content.split('\n');
+                  const relPath = path.relative(target, fullPath);
                   for (let i = 0; i < lines.length; i++) {
                     for (const { pattern, type } of secretPatterns) {
-                      if (pattern.test(lines[i])) {
-                        highCount++;
-                        findings.push({
-                          severity: output.warning('HIGH'),
-                          type: 'Hardcoded Secret',
-                          location: `${path.relative(target, fullPath)}:${i + 1}`,
-                          description: type,
-                        });
-                        pattern.lastIndex = 0;
+                      const matches = lines[i].match(pattern);
+                      if (!matches) continue;
+                      const cls: SuppressionResult = strict
+                        ? { suppress: false }
+                        : classifySuppression(lines[i], matches[0], relPath, 'secret');
+                      const location = `${relPath}:${i + 1}`;
+                      if (cls.suppress) {
+                        suppressed.push({ type: 'Hardcoded Secret', location, reason: cls.reason! });
+                        continue;
                       }
+                      highCount++;
+                      findings.push({
+                        severity: output.warning('HIGH'),
+                        type: 'Hardcoded Secret',
+                        location,
+                        description: type,
+                      });
                     }
                   }
                 } catch { /* file read error */ }
@@ -154,19 +282,27 @@ const scanCommand: Command = {
                 try {
                   const content = fs.readFileSync(fullPath, 'utf-8');
                   const lines = content.split('\n');
+                  const relPath = path.relative(target, fullPath);
                   for (let i = 0; i < lines.length; i++) {
                     for (const { pattern, type, severity, desc } of codePatterns) {
-                      if (pattern.test(lines[i])) {
-                        if (severity === 'high') highCount++;
-                        else mediumCount++;
-                        findings.push({
-                          severity: severity === 'high' ? output.warning('HIGH') : output.warning('MEDIUM'),
-                          type,
-                          location: `${path.relative(target, fullPath)}:${i + 1}`,
-                          description: desc,
-                        });
-                        pattern.lastIndex = 0;
+                      const matches = lines[i].match(pattern);
+                      if (!matches) continue;
+                      const cls: SuppressionResult = strict
+                        ? { suppress: false }
+                        : classifySuppression(lines[i], matches[0], relPath, 'unsafe');
+                      const location = `${relPath}:${i + 1}`;
+                      if (cls.suppress) {
+                        suppressed.push({ type, location, reason: cls.reason! });
+                        continue;
                       }
+                      if (severity === 'high') highCount++;
+                      else mediumCount++;
+                      findings.push({
+                        severity: severity === 'high' ? output.warning('HIGH') : output.warning('MEDIUM'),
+                        type,
+                        location,
+                        description: desc,
+                      });
                     }
                   }
                 } catch { /* file read error */ }
@@ -209,6 +345,9 @@ const scanCommand: Command = {
         ``,
         `Critical: ${criticalCount}  High: ${highCount}  Medium: ${mediumCount}  Low: ${lowCount}`,
         `Total Issues: ${findings.length}`,
+        strict
+          ? `Suppression: OFF (--strict)`
+          : `Suppressed false positives: ${suppressed.length} (run --strict to see raw)`,
       ].join('\n'), 'Scan Summary');
 
       // Auto-fix if requested
@@ -224,7 +363,20 @@ const scanCommand: Command = {
         }
       }
 
-      return { success: findings.length === 0 || (criticalCount === 0 && highCount === 0) };
+      return {
+        success: findings.length === 0 || (criticalCount === 0 && highCount === 0),
+        data: {
+          total: findings.length,
+          suppressedCount: suppressed.length,
+          criticalCount,
+          highCount,
+          mediumCount,
+          lowCount,
+          strict,
+          findings,
+          suppressed,
+        },
+      };
     } catch (error) {
       spinner.fail('Scan failed');
       output.printError(`Error: ${error}`);
