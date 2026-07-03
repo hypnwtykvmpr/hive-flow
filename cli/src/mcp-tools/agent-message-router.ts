@@ -238,14 +238,32 @@ export async function mediateMessage(
     return { success: false, error: `unknown-mediator: '${mediatorAgentId}' has no persisted ownership record` };
   }
 
-  // The escalation lives in the MEDIATOR's inbox; verify it exists and is
-  // actually mediatable before composing a reply.
-  const mediatorKey = recipientKey({
+  // The escalation lives in the MEDIATOR's inbox. Two candidate addresses
+  // (Codex bounce 20260703T230451Z): the mediator's own agent-addressed inbox
+  // (queen path), then the mediator's OWNER SESSION-LEVEL inbox -- owning-parent
+  // escalations from hiveless senders are addressed to the parent session
+  // (agentId ''), and any persisted agent OWNED BY that session may mediate
+  // them. Both keys derive from the mediator's OWN persisted record, so a
+  // mediator owned by a different session computes a different session key and
+  // structurally cannot see the escalation (cross-session mediation impossible).
+  const messageId = str(input.messageId);
+  const agentAddress = {
     agentId: mediatorAgentId,
     ownerSessionId: mediatorRec.ownerSessionId,
     ownerClientKind: mediatorRec.ownerClientKind,
-  });
-  const original = readInboxMessage(mediatorKey, str(input.messageId), projectRoot);
+  };
+  const sessionAddress = {
+    ownerSessionId: mediatorRec.ownerSessionId,
+    ownerClientKind: mediatorRec.ownerClientKind,
+  };
+  let inboxAddress: { agentId?: string; ownerSessionId: string; ownerClientKind: string } = agentAddress;
+  let original = readInboxMessage(recipientKey(agentAddress), messageId, projectRoot);
+  if (!original.ok && original.reason === 'not-found') {
+    // Only a clean miss falls through; a corrupt agent-inbox record keeps its
+    // own error (never masked by the session-level lookup).
+    inboxAddress = sessionAddress;
+    original = readInboxMessage(recipientKey(sessionAddress), messageId, projectRoot);
+  }
   if (!original.ok) {
     return { success: false, error: `original-not-found: ${original.reason}` };
   }
@@ -277,13 +295,10 @@ export async function mediateMessage(
     }, projectRoot);
     const wakeNotified = writeMessageWakeNotice(reply, projectRoot);
     const delivery = resolveDeliveryPlan(reply.to, projectRoot);
-    // Mediation consumes the escalation: ack it in the mediator's inbox
-    // (at-most-once; a duplicate mediation attempt surfaces alreadyAcked).
-    const ackResult = await ackMessage(
-      { agentId: mediatorAgentId, ownerSessionId: mediatorRec.ownerSessionId, ownerClientKind: mediatorRec.ownerClientKind },
-      originalMessage.messageId,
-      projectRoot,
-    );
+    // Mediation consumes the escalation: ack it at the ADDRESS IT WAS FOUND AT
+    // (agent inbox for queen-path, session-level inbox for owning-parent-path;
+    // at-most-once -- a duplicate mediation attempt surfaces alreadyAcked).
+    const ackResult = await ackMessage(inboxAddress, originalMessage.messageId, projectRoot);
     return { success: true, reply, originalAcked: ackResult.acked, advisory: true, delivery, wakeNotified };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };

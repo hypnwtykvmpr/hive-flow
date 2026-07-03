@@ -37,6 +37,9 @@ const WORKER = { agentId: 'agent-worker', ownerSessionId: 'sess-owner', ownerCli
 const QUEEN_A = { agentId: 'agent-queen-a', ownerSessionId: 'sess-owner', ownerClientKind: 'codex', status: 'active' };
 const QUEEN_B = { agentId: 'agent-queen-b', ownerSessionId: 'sess-queen-b', ownerClientKind: 'claude-code', status: 'terminated' };
 const LONER = { agentId: 'agent-loner', ownerSessionId: 'sess-parent', ownerClientKind: 'claude-code' };
+// Owned by the SAME parent session as LONER: may mediate the session-level
+// owning-parent inbox. QUEEN_B (sess-queen-b) is the cross-session control.
+const PARENT_HELPER = { agentId: 'agent-parent-helper', ownerSessionId: 'sess-parent', ownerClientKind: 'claude-code' };
 
 function tool(name: string) {
   const found = agentMessageRouterTools.find(t => t.name === name);
@@ -55,7 +58,7 @@ function seedFixtures(): void {
   const agentsDir = join(root, '.hive-flow', 'agents');
   mkdirSync(agentsDir, { recursive: true });
   const agents: Record<string, unknown> = {};
-  for (const a of [WORKER, QUEEN_A, QUEEN_B, LONER]) {
+  for (const a of [WORKER, QUEEN_A, QUEEN_B, LONER, PARENT_HELPER]) {
     agents[a.agentId] = {
       agentId: a.agentId,
       agentType: 'coder',
@@ -301,5 +304,92 @@ describe('escalate -> mediate round-trip, advisory-only', () => {
     }, root);
     expect(missing.success).toBe(false);
     if (!missing.success) expect(missing.error).toMatch(/original-not-found/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Owning-parent mediation via the session-level inbox
+// (Codex bounce 20260703T230451Z: the fallback must be mediatable, not a
+// stuck-escalation false success)
+// ---------------------------------------------------------------------------
+
+describe('owning-parent mediation (session-level inbox)', () => {
+  async function escalateFromLoner() {
+    const res = await escalateBlockedMessage({
+      fromAgentId: LONER.agentId,
+      body: 'hiveless worker blocked: provider auth expired',
+      blockerClass: 'needs-mediation',
+      unblockCondition: 'parent session re-authorizes the provider or redirects',
+    }, root);
+    expect(res.success).toBe(true);
+    if (!res.success) throw new Error('escalation failed');
+    expect(res.mediator.kind).toBe('owning-parent');
+    return res;
+  }
+
+  it('a same-owner persisted mediator resumes a session-level escalation end to end', async () => {
+    const escalated = await escalateFromLoner();
+    const sessionInbox = { ownerSessionId: LONER.ownerSessionId, ownerClientKind: LONER.ownerClientKind };
+    expect(listInbox(sessionInbox, root).messages.map(m => m.messageId)).toEqual([escalated.message.messageId]);
+
+    const agentStoreBefore = readFileSync(agentStorePath(), 'utf-8');
+    const res = await mediateMessage({
+      mediatorAgentId: PARENT_HELPER.agentId,
+      messageId: escalated.message.messageId,
+      decision: 'resume',
+      guidance: 'auth restored; continue the original task from the last artifact',
+    }, root);
+    expect(res.success).toBe(true);
+    if (!res.success) return;
+    expect(res.advisory).toBe(true);
+    expect(res.originalAcked).toBe(true);
+
+    // Advisory reply reaches the blocked sender, linked to the escalation.
+    expect(res.reply.replyTo).toBe(escalated.message.messageId);
+    expect(res.reply.from.agentId).toBe(PARENT_HELPER.agentId);
+    const lonerInbox = listInbox(LONER, root);
+    expect(lonerInbox.messages.map(m => m.messageId)).toEqual([res.reply.messageId]);
+
+    // The escalation was consumed AT THE SESSION-LEVEL ADDRESS it lived at.
+    expect(listInbox(sessionInbox, root).messages).toHaveLength(0);
+    const ackedRecord = readInboxMessage(recipientKey(sessionInbox), escalated.message.messageId, root);
+    expect(ackedRecord.ok && ackedRecord.message.deliveryState).toBe('acked');
+
+    // Advisory-only: message state is the ONLY state that changed.
+    expect(readFileSync(agentStorePath(), 'utf-8')).toBe(agentStoreBefore);
+    expect(existsSync(join(root, '.hive-flow', 'tasks'))).toBe(false);
+    expect(existsSync(join(root, '.hive-flow', 'enforcement'))).toBe(false);
+  });
+
+  it('a cross-session persisted mediator cannot see or mediate the escalation', async () => {
+    const escalated = await escalateFromLoner();
+    // QUEEN_B is persisted but owned by sess-queen-b: its derived session key
+    // differs, so the escalation is structurally invisible to it.
+    const res = await mediateMessage({
+      mediatorAgentId: QUEEN_B.agentId,
+      messageId: escalated.message.messageId,
+      decision: 'resume',
+      guidance: 'attempted cross-session mediation',
+    }, root);
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/original-not-found/);
+    // The escalation is still pending for the rightful parent session.
+    const sessionInbox = { ownerSessionId: LONER.ownerSessionId, ownerClientKind: LONER.ownerClientKind };
+    expect(listInbox(sessionInbox, root).messages.map(m => m.messageId)).toEqual([escalated.message.messageId]);
+  });
+
+  it('redirect works on the session-level path with the same mandatory redirectTask', async () => {
+    const escalated = await escalateFromLoner();
+    const res = await mediateMessage({
+      mediatorAgentId: PARENT_HELPER.agentId,
+      messageId: escalated.message.messageId,
+      decision: 'redirect',
+      guidance: 'provider auth will stay down; use the offline fixture path',
+      redirectTask: 'run the suite against tests/fixtures/offline instead',
+    }, root);
+    expect(res.success).toBe(true);
+    if (!res.success) return;
+    expect(res.reply.verb).toBe('redirect');
+    expect(res.reply.body).toContain('redirectTask:');
   });
 });
