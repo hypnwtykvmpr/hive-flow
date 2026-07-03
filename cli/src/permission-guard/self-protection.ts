@@ -636,6 +636,17 @@ const FILE_MODIFYING_COMMANDS: Array<{
   },
 ];
 
+function isGitInternalLockPath(targetPath: string, cwd: string): boolean {
+  if (!targetPath) return false;
+  const gitRoot = resolve(cwd, '.git');
+  const target = resolve(cwd, targetPath);
+  const rel = relative(gitRoot, target);
+  return rel !== ''
+    && !rel.startsWith('..')
+    && !rel.startsWith(sep)
+    && basename(target).endsWith('.lock');
+}
+
 /**
  * Extract non-flag arguments from a command string after the command name.
  * Handles basic quoting (single and double quotes).
@@ -733,6 +744,7 @@ export function checkBashSelfProtection(
       const targets = modifier.extractTargets(match, trimmed);
       for (const target of targets) {
         if (!target) continue;
+        if (modifier.name === 'rm' && isGitInternalLockPath(target, cwd)) continue;
 
         const protection = isProtectedPath(target, cwd);
         if (protection.blocked) {

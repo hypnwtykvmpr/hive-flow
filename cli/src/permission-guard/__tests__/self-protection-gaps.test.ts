@@ -242,6 +242,39 @@ describe('touch on protected paths', () => {
 // ---------------------------------------------------------------------------
 
 describe('rm and mkdir on protected paths', () => {
+  it('allows rm of Git internal lock files for stale-lock recovery', () => {
+    expect(checkBashSelfProtection(`rm -f ${CWD}/.git/index.lock`, CWD)).toBeNull();
+    expect(checkBashSelfProtection('rm .git/refs/heads/main.lock', CWD)).toBeNull();
+  });
+
+  it('still blocks rm of non-lock Git internals', () => {
+    const result = checkBashSelfProtection(
+      `rm ${CWD}/.git/config`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
+  it('still blocks mixed rm commands that include protected non-lock targets', () => {
+    const result = checkBashSelfProtection(
+      `rm -f ${CWD}/.git/index.lock ${CWD}/.claude/settings.json`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+    expect(result!.targetPath).toBe(`${CWD}/.claude/settings.json`);
+  });
+
+  it('keeps non-rm writes to Git lock files protected', () => {
+    const result = checkBashSelfProtection(
+      `touch ${CWD}/.git/index.lock`,
+      CWD,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.blocked).toBe(true);
+  });
+
   it('blocks rm targeting Permission Guard source', () => {
     const result = checkBashSelfProtection(
       `rm ${CWD}/cli/src/permission-guard/gate.ts`,
