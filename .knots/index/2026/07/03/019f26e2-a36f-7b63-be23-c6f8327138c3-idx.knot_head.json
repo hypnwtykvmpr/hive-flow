@@ -1,0 +1,21 @@
+{
+  "event_id": "019f26e2-a36f-7b63-be23-c6f8327138c3",
+  "occurred_at": "2026-07-03T07:30:15.023015Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-03e3",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: fe13-planning",
+    "type": "lease",
+    "updated_at": "2026-07-03T07:30:15.023015Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

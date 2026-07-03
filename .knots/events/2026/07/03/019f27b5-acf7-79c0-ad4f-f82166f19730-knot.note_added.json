@@ -1,0 +1,15 @@
+{
+  "event_id": "019f27b5-acf7-79c0-ad4f-f82166f19730",
+  "occurred_at": "2026-07-03T11:20:45.55943Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "claude",
+    "content": "PLAN complete (.tmp-audit/fe13-docs-audit/FE13-PLAN.md). Phase1+2 verified: 119 dead v3/@hive-flow/cli refs across 21 tracked .md, all FIX/0 KEEP (codex-cli triage); replacement rules verified; 4 exceptions resolved (cli/memory->cli/src/memory, cli/shared->cli/src/shared, +2 flagged); stale 268->269 subcommand count; 6 non-path CLI-syntax doc bugs (v5); SONA/EWC/Flash claim DISPUTED->excluded; trash-dir deletion out of scope (2fb8). Routing plan_review to Codex.",
+    "datetime": "2026-07-03T11:20:45.55943Z",
+    "entry_id": "019f27b5-acf7-79c0-ad4f-f81aad15e4fb",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

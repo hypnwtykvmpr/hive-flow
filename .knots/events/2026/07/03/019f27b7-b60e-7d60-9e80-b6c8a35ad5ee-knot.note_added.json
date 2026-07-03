@@ -1,0 +1,15 @@
+{
+  "event_id": "019f27b7-b60e-7d60-9e80-b6c8a35ad5ee",
+  "occurred_at": "2026-07-03T11:22:58.95875Z",
+  "knot_id": "hive-flow-fe13",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PLAN_REVIEW CLARIFICATION: for .claude-plugin replacements, preserve the literal plugin-root separator: ${CLAUDE_PLUGIN_ROOT}/cli/bin/mcp-server.js or path-join equivalent. Do not generate ${CLAUDE_PLUGIN_ROOT}cli/bin/mcp-server.js.",
+    "datetime": "2026-07-03T11:22:58.95875Z",
+    "entry_id": "019f27b7-b60e-7d60-9e80-b6be688c5165",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
