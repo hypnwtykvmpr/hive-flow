@@ -1,0 +1,21 @@
+{
+  "event_id": "019f27f1-1cd2-7171-ac4f-c561a36bde22",
+  "occurred_at": "2026-07-03T12:25:40.818443Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-fe13",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Audit and update documentation truth, remove trash from active docs",
+    "type": "work",
+    "updated_at": "2026-07-03T12:25:40.818443Z",
+    "workflow_id": "work_sdlc"
+  }
+}

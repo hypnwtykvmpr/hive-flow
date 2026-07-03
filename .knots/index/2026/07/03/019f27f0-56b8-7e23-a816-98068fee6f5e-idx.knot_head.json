@@ -1,0 +1,37 @@
+{
+  "event_id": "019f27f0-56b8-7e23-a816-98068fee6f5e",
+  "occurred_at": "2026-07-03T12:24:50.104746Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-fe13",
+    "profile_id": "autopilot",
+    "state": "shipment_review",
+    "step_metadata": {
+      "action_kind": "gate",
+      "action_state": "shipment_review",
+      "output": {
+        "artifact_type": "remote_main"
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Audit and update documentation truth, remove trash from active docs",
+    "type": "work",
+    "updated_at": "2026-07-03T12:24:50.104746Z",
+    "workflow_id": "work_sdlc"
+  },
+  "precondition": {
+    "profile_etag": "019f27e7-c89e-78c3-9b58-2992fb53a10c"
+  }
+}
