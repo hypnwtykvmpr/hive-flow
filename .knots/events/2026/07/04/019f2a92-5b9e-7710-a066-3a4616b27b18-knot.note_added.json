@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a92-5b9e-7710-a066-3a4616b27b18",
+  "occurred_at": "2026-07-04T00:41:02.622366Z",
+  "knot_id": "hive-flow-bba8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "PLAN_REVIEW PASS WITH REQUIRED IMPLEMENTATION AMENDMENTS (Codex, 2026-07-04): plan is feasible and direct-binary auth is live enough to execute. I independently verified agy path /Users/jonathandirks/.local/bin/agy, agy --version 1.0.16, and agy --dangerously-skip-permissions --prompt 'Reply READY' -> exit 0 / stdout READY. Detached-worker auth failures remain scoped to MCP/credential-holder workers; direct operator-binary probe is valid for this native confinement canary. Required amendments for implementation: (1) pass --log-file to a per-run artifact path so agy does not attempt ~/.gemini log writes; record stderr but never trust it for verdicts. (2) Treat G1 negative controls per tool path: a G2 denial is positive confinement evidence only for the corresponding tool path if G1 proves that same tool can escape; otherwise classify that tool path as inconclusive/unverified and keep mapping unchanged. (3) Add an explicit no-bypass cell from G2 sandbox mode that attempts nested agy --dangerously-skip-permissions from inside the sandbox to write outside; filesystem nonce decides. (4) Record agy --help flag surface in evidence; no --sandbox-image or documented GEMINI_SANDBOX flag was present in help/source, so no extra backend flag is required unless implementation discovers it. (5) Keep mapping changes out of this canary; proven confinement only creates a separate reviewed follow-up slice.",
+    "datetime": "2026-07-04T00:41:02.622366Z",
+    "entry_id": "019f2a92-5b9e-7710-a066-3a3b60711fe1",
+    "model": "gpt-5",
+    "username": "codex",
+    "version": "codex"
+  }
+}

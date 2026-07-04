@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2a92-856a-78e0-aa4b-510b3747d7b6",
+  "occurred_at": "2026-07-04T00:41:13.322868Z",
+  "knot_id": "hive-flow-bba8",
+  "type": "knot.state_set",
+  "data": {
+    "actor_kind": "agent",
+    "agent_model": "gpt-5",
+    "agent_name": "codex",
+    "agent_version": "codex",
+    "force": false,
+    "from": "plan_review",
+    "profile_id": "autopilot",
+    "to": "ready_for_implementation",
+    "workflow_id": "work_sdlc"
+  }
+}

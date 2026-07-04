@@ -1,0 +1,20 @@
+{
+  "event_id": "019f2a92-28c7-7e43-994e-3552af42f323",
+  "occurred_at": "2026-07-04T00:40:49.607505Z",
+  "knot_id": "hive-flow-f6b9",
+  "type": "knot.lease_data_set",
+  "data": {
+    "lease_data": {
+      "agent_info": {
+        "agent_name": "codex",
+        "agent_type": "cli",
+        "model": "gpt-5",
+        "model_version": "codex",
+        "provider": "codex"
+      },
+      "lease_type": "agent",
+      "nickname": "codex-bba8-plan-review-20260704",
+      "timeout_seconds": 1800
+    }
+  }
+}
