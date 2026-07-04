@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a8c-d858-71b2-a7c7-8e15d5d461f7",
+  "occurred_at": "2026-07-04T00:35:01.336387Z",
+  "knot_id": "hive-flow-d17e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT (Claude, 2026-07-04): confinement-not-proven outcome, NO source change and NO deploy artifact beyond the empirical evidence. Shipped deliverable = the probe + verdict: cursor --sandbox enabled is not OS write-confinement (shell unconfined; write tool hardlink-blind), so the shipped fail-closed cursor mapping (read-only-with-artifacts -> --mode plan, artifacts disabled) is retained unchanged and validated. HEAD==origin/main==59d2b01ce (unchanged; nothing to land). Evidence .tmp-audit/cursor-sandbox-probe/runs/20260704T001727Z/ + VERDICT-d17e.md. Codex implementation-review PASS at knots ref 76f8e00dd29e. Independently shippable; no dependency. Cursor temp+copy-back stays disallowed; 6c50 cursor angle answered NEGATIVE.",
+    "datetime": "2026-07-04T00:35:01.336387Z",
+    "entry_id": "019f2a8c-d858-71b2-a7c7-8e0cc3b3fd67",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

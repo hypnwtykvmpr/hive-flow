@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a8d-fb40-7c30-93f0-cdd9b8530349",
+  "occurred_at": "2026-07-04T00:36:15.807896Z",
+  "knot_id": "hive-flow-d17e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "SHIPMENT_REVIEW PASS (Codex, 2026-07-04): final review accepted the verdict-only shipment. HEAD==origin/main==59d2b01ce with no tracked source changes to land. Rechecked raw probe evidence: 31/31 cells, zero timeouts/nonzero exits, M1 shell escapes incl repo-root, M1 hardlink write escape, M2 shell controls escape, M4 plan zero writes, M1+add-dir zero write leaks, M5 workspace semantics. Source still documents/enforces cursor read-only-with-artifacts fail-closed to --mode plan with artifactWritesDisabled metadata. d17e can ship as confinement-not-proven / no-source-change.",
+    "datetime": "2026-07-04T00:36:15.807896Z",
+    "entry_id": "019f2a8d-fb40-7c30-93f0-cdc5c1476614",
+    "model": "gpt-5",
+    "username": "codex",
+    "version": "codex"
+  }
+}

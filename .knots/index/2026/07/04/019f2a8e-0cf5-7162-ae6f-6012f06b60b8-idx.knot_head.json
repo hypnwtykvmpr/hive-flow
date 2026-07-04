@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2a8e-0cf5-7162-ae6f-6012f06b60b8",
+  "occurred_at": "2026-07-04T00:36:20.341689Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-d17e",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Probe cursor sandbox confinement before enabling artifact copy-back",
+    "type": "work",
+    "updated_at": "2026-07-04T00:36:20.341689Z",
+    "workflow_id": "work_sdlc"
+  }
+}

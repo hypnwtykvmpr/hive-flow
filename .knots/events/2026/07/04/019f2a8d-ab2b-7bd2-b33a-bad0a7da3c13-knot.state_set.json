@@ -1,0 +1,20 @@
+{
+  "event_id": "019f2a8d-ab2b-7bd2-b33a-bad0a7da3c13",
+  "occurred_at": "2026-07-04T00:35:55.307381Z",
+  "knot_id": "hive-flow-d17e",
+  "type": "knot.state_set",
+  "data": {
+    "actor_kind": "agent",
+    "agent_model": "gpt-5",
+    "agent_name": "codex",
+    "agent_version": "codex",
+    "force": false,
+    "from": "ready_for_shipment_review",
+    "profile_id": "autopilot",
+    "to": "shipment_review",
+    "workflow_id": "work_sdlc"
+  },
+  "precondition": {
+    "profile_etag": "019f2a8c-d886-7723-b878-d8931b287250"
+  }
+}
