@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2ac2-21b0-7262-9bc4-ff5048e9501c",
+  "occurred_at": "2026-07-04T01:33:13.514482Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.description_set",
+  "data": {
+    "description": "Follow-up from hive-flow-bba8. The live agy 1.0.16 canary proved --sandbox does not provide absolute-path write confinement in restricted modes: warm bare --sandbox wrote to abs-tmp and repo root; --sandbox plus skip-permissions wrote to sibling, parent, abs-tmp, HOME, repo-root, symlink, and hardlink for both write and shell tools. Do not rely on agy --sandbox as a write boundary. Implement a fail-closed provider behavior for gemini restricted/no-write and artifact-confined work: either deny native file-write dispatch or exclude gemini from modes requiring write confinement until a real OS confinement primitive exists."
+  }
+}

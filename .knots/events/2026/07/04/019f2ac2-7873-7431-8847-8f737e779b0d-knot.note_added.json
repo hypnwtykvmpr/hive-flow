@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ac2-7873-7431-8847-8f737e779b0d",
+  "occurred_at": "2026-07-04T01:33:35.731835Z",
+  "knot_id": "hive-flow-bba8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Correction: hive-flow-3771 is a non-blocking follow-up fix slice discovered by bba8, not a child required for bba8 shipment. Removed the parent_of edge so the verdict-only canary can advance; 3771 remains tracked by tags/notes for the gemini restricted-mode safety defect.",
+    "datetime": "2026-07-04T01:33:35.731835Z",
+    "entry_id": "019f2ac2-7873-7431-8847-8f6f6dbfa955",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

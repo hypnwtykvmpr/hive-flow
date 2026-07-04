@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2abe-e9af-7b82-9285-bf89daee2325",
+  "occurred_at": "2026-07-04T01:29:42.575499Z",
+  "knot_id": "hive-flow-bba8",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "regression-flag-restricted-mapping"
+  }
+}

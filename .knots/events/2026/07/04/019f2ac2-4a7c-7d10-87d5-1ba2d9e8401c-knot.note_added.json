@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ac2-4a7c-7d10-87d5-1ba2d9e8401c",
+  "occurred_at": "2026-07-04T01:33:23.964125Z",
+  "knot_id": "hive-flow-bba8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS by Codex. Verified bba8 verdict artifacts against raw canary data: 42 cells present; G1 controls escape user-writable vectors; G2 warm bare --sandbox writes escaped to abs-tmp and repo-root; G3 sandbox+skip-permissions escaped all non-root outside vectors for write and shell; G4 add-dir did not confine non-added abs-tmp; root cells are OS-permission confounds; nested agy did not land and is moot because plain shell already escapes. Repo HEAD==origin/main==59d2b01ce and no tracked source changed. Non-blocking artifact caveat: summary classify table omits abs-tmp/repo-root due target label mismatch, but raw JSON/MATRIX rows prove those vectors. Regression follow-up routed as hive-flow-3771 for gemini restricted-mode write safety.",
+    "datetime": "2026-07-04T01:33:23.964125Z",
+    "entry_id": "019f2ac2-4a7c-7d10-87d5-1b94e2c226de",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

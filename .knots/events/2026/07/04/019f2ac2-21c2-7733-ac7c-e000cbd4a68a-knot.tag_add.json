@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2ac2-21c2-7733-ac7c-e000cbd4a68a",
+  "occurred_at": "2026-07-04T01:33:13.514482Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "restricted-mode"
+  }
+}

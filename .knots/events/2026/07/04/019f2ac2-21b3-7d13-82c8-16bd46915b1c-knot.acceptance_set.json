@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2ac2-21b3-7d13-82c8-16bd46915b1c",
+  "occurred_at": "2026-07-04T01:33:13.514482Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.acceptance_set",
+  "data": {
+    "acceptance": "Gemini/agy restricted modes cannot write outside their allowed contract; read-only work is fail-closed if write confinement cannot be enforced; read-only-with-artifacts is not advertised as artifact-confined unless filesystem-checked canaries prove it; tests cover warm agy sandbox escape evidence and dispatch behavior; no weakening of codex/cursor confinement behavior."
+  }
+}
