@@ -20,6 +20,7 @@ import { GeminiCLIProvider } from '../gemini-cli-provider.js';
 import { CodexCLIProvider, copyCodexArtifactsBack } from '../codex-cli-provider.js';
 import { CursorCLIProvider, computeCursorTimeout, CURSOR_BASE_TIMEOUT_MS, CURSOR_LARGE_PROMPT_THRESHOLD, CURSOR_MAX_TIMEOUT_MS } from '../cursor-cli-provider.js';
 import type { LLMModel, LLMStreamEvent } from '../types.js';
+import { LLMProviderError } from '../types.js';
 
 // Typed mock aliases — eliminates `as any` on mock method access
 // SAFETY: spawn/execFile are vi.mock'd above; the mock returns our mock child, not real ChildProcess
@@ -251,37 +252,66 @@ describe('GeminiCLIProvider', () => {
     await completePromise;
   });
 
-  // F0-A (hive-flow-9331) Slice B: gemini restricted-mode mapping. NOTE: agy headless
-  // sign-in is blocked (F0-C), so these assert the arg mapping only — the live
-  // confinement canary is deferred until agy headless auth is restored.
-  const geminiCleanup = (mockChild: MockChildProcess, p: Promise<unknown>) => {
-    mockChild.stdout.emit('data', Buffer.from(JSON.stringify({ response: 'ok' })));
-    mockChild.emit('close', 0);
-    return p;
-  };
+  // F0-A (hive-flow-3771 / bba8): gemini restricted modes FAIL CLOSED. The live agy canary
+  // proved --sandbox is not a write boundary and agy has no native read-only/no-edit mode,
+  // so restricted (read-only / read-only-with-artifacts) gemini is refused at the provider
+  // entry — before ensureBinary()/spawn — rather than run unconfined.
+  const RESTRICTED_MODES = ['read-only', 'read-only-with-artifacts'] as const;
 
-  it('read-only mode drops --dangerously-skip-permissions and adds --sandbox', async () => {
-    mockBinaryFound('agy');
-    await provider.initialize();
-    const mockChild = createMockChild();
-    mockSpawn.mockReturnValue(mockChild);
-    const p = provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only' } });
-    const args = mockSpawn.mock.calls[0][1] as string[];
-    expect(args).toContain('--sandbox');
-    expect(args).not.toContain('--dangerously-skip-permissions');
-    await geminiCleanup(mockChild, p);
+  it('assertModeSupported throws a non-retryable RESTRICTED_MODE_UNSUPPORTED for restricted modes', () => {
+    const assertMode = (provider as unknown as {
+      assertModeSupported: (s?: { mode: string }) => void;
+    }).assertModeSupported;
+    for (const mode of RESTRICTED_MODES) {
+      let err: unknown;
+      try { assertMode.call(provider, { mode }); } catch (e) { err = e; }
+      expect(err).toBeInstanceOf(LLMProviderError);
+      expect((err as LLMProviderError).code).toBe('RESTRICTED_MODE_UNSUPPORTED');
+      expect((err as LLMProviderError).retryable).toBe(false);
+    }
+    // full mode must NOT throw
+    expect(() => assertMode.call(provider, { mode: 'full' })).not.toThrow();
+    expect(() => assertMode.call(provider, undefined)).not.toThrow();
   });
 
-  it('read-only-with-artifacts also drops skip-permissions and adds --sandbox (fail-closed)', async () => {
-    mockBinaryFound('agy');
-    await provider.initialize();
-    const mockChild = createMockChild();
-    mockSpawn.mockReturnValue(mockChild);
-    const p = provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode: 'read-only-with-artifacts' } });
-    const args = mockSpawn.mock.calls[0][1] as string[];
-    expect(args).toContain('--sandbox');
-    expect(args).not.toContain('--dangerously-skip-permissions');
-    await geminiCleanup(mockChild, p);
+  for (const mode of RESTRICTED_MODES) {
+    it(`complete() fails closed for ${mode} without spawning a child`, async () => {
+      mockBinaryFound('agy');
+      await provider.initialize();
+      const before = mockSpawn.mock.calls.length;
+      await expect(
+        provider.complete({ messages: [{ role: 'user', content: 'test' }], cliSandbox: { mode } }),
+      ).rejects.toThrow(/does not support restricted/i);
+      // Refusal happens before ensureBinary()/spawn — no child process.
+      expect(mockSpawn.mock.calls.length).toBe(before);
+    });
+
+    it(`streamComplete() fails closed for ${mode} without spawning a child`, async () => {
+      mockBinaryFound('agy');
+      await provider.initialize();
+      const before = mockSpawn.mock.calls.length;
+      await expect((async () => {
+        for await (const _event of provider.streamComplete({
+          messages: [{ role: 'user', content: 'test' }],
+          cliSandbox: { mode },
+        })) { /* should never yield */ }
+      })()).rejects.toThrow(/does not support restricted/i);
+      expect(mockSpawn.mock.calls.length).toBe(before);
+    });
+  }
+
+  it('restricted buildCliArgs emits neither --sandbox nor --dangerously-skip-permissions', () => {
+    const build = (provider as unknown as {
+      buildCliArgs: (o: string, m: string, p: string, s?: { mode: string }) => { args: string[] };
+    }).buildCliArgs;
+    for (const mode of RESTRICTED_MODES) {
+      const { args } = build.call(provider, 'json', 'gemini-3.5-flash', 'hi', { mode });
+      expect(args).not.toContain('--sandbox');
+      expect(args).not.toContain('--dangerously-skip-permissions');
+    }
+    // full mode still emits agy's headless auto-approve (unchanged)
+    const { args: fullArgs } = build.call(provider, 'json', 'gemini-3.5-flash', 'hi', undefined);
+    expect(fullArgs).toContain('--dangerously-skip-permissions');
   });
 
   it('passes --sandbox when sandbox=true in config', async () => {

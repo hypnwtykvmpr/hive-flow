@@ -35,6 +35,17 @@ import {
 } from './gemini-cli-constants.js';
 
 const GEMINI_STDIN_PROMPT_THRESHOLD = 24_000;
+
+// F0-A (hive-flow-3771 / bba8): agy/gemini has NO verified OS write-confinement primitive.
+// The live agy 1.0.16 canary proved `--sandbox` is not a write boundary (writes escape to
+// absolute paths incl. the repo root, on both the native write tool and shell), and agy has
+// no native read-only/no-edit mode (unlike cursor `--mode plan` or codex `--sandbox
+// workspace-write`). So gemini restricted modes FAIL CLOSED rather than run unconfined.
+const GEMINI_RESTRICTED_UNSUPPORTED_REASON =
+  'gemini/agy does not support restricted (read-only / read-only-with-artifacts) modes: it has ' +
+  'no verified OS write confinement (agy --sandbox is not a write boundary — see hive-flow-3771/bba8). ' +
+  'Use codex (workspace-write), cursor plan mode, or an API provider for restricted, no-write, or ' +
+  'artifact-confined work.';
 const ANTIGRAVITY_BASE_ENV_KEYS = [
   'PATH',
   'HOME',
@@ -136,6 +147,7 @@ export class GeminiCLIProvider extends BaseProvider {
   }
 
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {
+    this.assertModeSupported(request.cliSandbox);
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
@@ -229,6 +241,7 @@ export class GeminiCLIProvider extends BaseProvider {
   }
 
   protected async *doStreamComplete(request: LLMRequest): AsyncIterable<LLMStreamEvent> {
+    this.assertModeSupported(request.cliSandbox);
     this.ensureBinary();
     const model = request.model || this.config.model;
     const prompt = this.formatMessages(request.messages, request.tools);
@@ -502,6 +515,21 @@ export class GeminiCLIProvider extends BaseProvider {
     }
   }
 
+  /**
+   * F0-A (hive-flow-3771 / bba8): fail closed for restricted modes. agy has no verified
+   * write confinement, so a restricted gemini agent cannot be prevented from writing outside
+   * an allowed area. Refuse BEFORE any binary check or child spawn (non-retryable), so the
+   * refusal is deterministic and does not depend on auth/binary/child-process startup.
+   */
+  private assertModeSupported(cliSandbox?: LLMRequest['cliSandbox']): void {
+    const mode = cliSandbox?.mode;
+    if (mode === 'read-only' || mode === 'read-only-with-artifacts') {
+      throw new LLMProviderError(
+        GEMINI_RESTRICTED_UNSUPPORTED_REASON, 'RESTRICTED_MODE_UNSUPPORTED', 'gemini-cli', undefined, false,
+      );
+    }
+  }
+
   private buildCliArgs(
     _outputFormat: 'json' | 'stream-json',
     model: LLMModel,
@@ -517,20 +545,20 @@ export class GeminiCLIProvider extends BaseProvider {
     // `--dangerously-skip-permissions` (agy's headless auto-approve). The
     // `_outputFormat` arg is retained for call-site compatibility but unused.
     //
-    // F0-A (hive-flow-9331) Slice B: `--dangerously-skip-permissions` auto-approves
-    // ALL tool actions incl. writes — the Phase 0 write-escape surface. For restricted
-    // modes we DROP it (no blanket write auto-approval) and add agy's native
-    // `--sandbox` (terminal restrictions). agy has NO granular headless read-only
-    // mode, and its sandbox write-confinement is UNVERIFIED because agy headless
-    // sign-in is currently blocked (F0-C) — so the live canary is DEFERRED and
-    // read-only-with-artifacts is treated like read-only (no verified dir-confinement,
-    // artifact-write capability not claimed). NEVER emit skip-permissions in
-    // restricted modes.
+    // F0-A (hive-flow-9331 Slice B / hive-flow-3771 / bba8): `--dangerously-skip-permissions`
+    // auto-approves ALL tool actions incl. writes — the Phase 0 write-escape surface. The
+    // live agy canary (bba8) PROVED agy `--sandbox` is not a write boundary (writes escape to
+    // absolute paths incl. repo root, both native write + shell) and cold-hangs to the 5m
+    // print-timeout; agy has no native read-only/no-edit mode. So restricted modes now FAIL
+    // CLOSED at the doComplete/doStreamComplete entry (assertModeSupported) rather than run
+    // unconfined. This restricted branch is defensively unreachable and emits NEITHER
+    // `--sandbox` (not a write boundary) NOR `--dangerously-skip-permissions` (blanket
+    // write auto-approve).
     const mode = cliSandbox?.mode || 'full';
     const restricted = mode === 'read-only' || mode === 'read-only-with-artifacts';
     const args: string[] = [];
     if (restricted) {
-      args.push('--sandbox');
+      // No flags: restricted gemini is refused before this point. See assertModeSupported.
     } else {
       args.push('--dangerously-skip-permissions');
       if (this.config.sandbox === true) args.push('--sandbox');
