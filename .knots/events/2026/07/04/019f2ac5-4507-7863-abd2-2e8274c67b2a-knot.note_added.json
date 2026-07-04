@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ac5-4507-7863-abd2-2e8274c67b2a",
+  "occurred_at": "2026-07-04T01:36:39.175206Z",
+  "knot_id": "hive-flow-bba8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT (Claude, 2026-07-04): confinement-not-proven outcome, NO source change / NO deploy artifact beyond the empirical canary. Shipped deliverable = the live agy canary + verdict: agy --sandbox is not a write boundary in any mode (both write tool and shell escape to absolute outside paths incl. repo-root; only / blocked by OS-perm). Shipped conservative gemini mapping's non-claim of artifact confinement retained/validated; gemini artifact copy-back stays disallowed. Post-review artifact fix: regenerated the per-tool classify table (probe-agy.mjs camelCase-vs-dashed label bug Codex flagged) so summary.json/MATRIX.md now include abs-tmp+repo-root rows; verdict unchanged. Restricted-mode write-safety defect tracked as follow-up hive-flow-3771 (P1, Codex-created), NOT a blocking child. HEAD==origin/main==59d2b01ce unchanged. Evidence .tmp-audit/agy-sandbox-probe/runs/20260704T011624Z/ + VERDICT-bba8.md. Codex implementation-review PASS at knots ref cf89ccbf83ad. Independently shippable.",
+    "datetime": "2026-07-04T01:36:39.175206Z",
+    "entry_id": "019f2ac5-4507-7863-abd2-2e7bd451ea4b",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

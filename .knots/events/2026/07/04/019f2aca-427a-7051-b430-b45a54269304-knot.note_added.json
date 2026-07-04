@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2aca-427a-7051-b430-b45a54269304",
+  "occurred_at": "2026-07-04T01:42:06.202481Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PLAN_REVIEW PASS by Codex. Design decision: Option A is required. Gemini/agy must fail closed for BOTH read-only and read-only-with-artifacts because bba8 proves --sandbox is not a write boundary and there is no native no-edit primitive. Implement provider-entry refusal in gemini-cli-provider.ts at doComplete and doStreamComplete before ensureBinary()/spawn so restricted gemini fails without requiring auth/binary startup. Use a clear non-retryable LLMProviderError code RESTRICTED_MODE_UNSUPPORTED and an honest message directing callers to codex/cursor/API providers. Drop --sandbox from the restricted branch defensively; restricted buildCliArgs must emit neither --sandbox nor --dangerously-skip-permissions. Tests must assert complete() and streamComplete() reject/yield the refusal for both restricted modes, no child spawn occurs for those calls, full mode remains unchanged, and existing codex/cursor confinement behavior is untouched. Bridge pre-refusal is not required unless implementation proves provider-error propagation is not clean; if added, keep it consistent with the provider error and test it.",
+    "datetime": "2026-07-04T01:42:06.202481Z",
+    "entry_id": "019f2aca-427a-7051-b430-b44df877db52",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

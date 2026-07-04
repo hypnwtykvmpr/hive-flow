@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ac6-2dc4-7ab2-9540-e0544b1945f7",
+  "occurred_at": "2026-07-04T01:37:38.756139Z",
+  "knot_id": "hive-flow-bba8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS by Codex. Verified verdict-only shipment at main: HEAD==origin/main==59d2b01ce, no tracked source changes, no deploy artifact to land. Regenerated evidence fix confirmed: summary.json and MATRIX.md now include abs-tmp and repo-root classify rows, all ESCAPE, computed from the existing 42 records; verdict remains agy --sandbox confinement NOT PROVEN. Follow-up write-safety defect remains tracked separately as hive-flow-3771 and is not a blocking child.",
+    "datetime": "2026-07-04T01:37:38.756139Z",
+    "entry_id": "019f2ac6-2dc4-7ab2-9540-e04fb21d8ed5",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
