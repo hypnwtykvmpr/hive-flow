@@ -1,0 +1,20 @@
+{
+  "event_id": "019f2a8b-2504-7092-bd9d-c7a5d6009900",
+  "occurred_at": "2026-07-04T00:33:09.892828Z",
+  "knot_id": "hive-flow-38c9",
+  "type": "knot.lease_data_set",
+  "data": {
+    "lease_data": {
+      "agent_info": {
+        "agent_name": "codex",
+        "agent_type": "cli",
+        "model": "gpt-5",
+        "model_version": "codex",
+        "provider": "codex"
+      },
+      "lease_type": "agent",
+      "nickname": "codex-d17e-implementation-review-20260704",
+      "timeout_seconds": 1800
+    }
+  }
+}

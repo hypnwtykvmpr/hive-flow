@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a8b-5172-7cd2-ac10-0c9f85f1a3a8",
+  "occurred_at": "2026-07-04T00:33:21.266267Z",
+  "knot_id": "hive-flow-d17e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "codex",
+    "content": "IMPLEMENTATION_REVIEW PASS (Codex, 2026-07-04): reviewed handoff 20260704T003019Z and raw .tmp-audit/cursor-sandbox-probe evidence. Probe driver uses filesystem nonce checks only; 31/31 cells completed without timeouts/nonzero exits. Decisive NOT_PROVEN evidence confirmed: M1 --sandbox enabled shell escapes outside workspace including repo-root, M1 write hardlink mutates outside inode, M2 shell controls escape, M4 plan mode has zero writes, M1+add-dir does not expand write scope, M5 proves --workspace root. Current cursor provider mapping remains fail-closed to --mode plan for restricted/read-only-with-artifacts modes; no source change is correct.",
+    "datetime": "2026-07-04T00:33:21.266267Z",
+    "entry_id": "019f2a8b-5172-7cd2-ac10-0c82b8eee846",
+    "model": "gpt-5",
+    "username": "codex",
+    "version": "codex"
+  }
+}

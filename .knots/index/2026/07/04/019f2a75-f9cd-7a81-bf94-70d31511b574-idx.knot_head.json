@@ -1,0 +1,34 @@
+{
+  "event_id": "019f2a75-f9cd-7a81-bf94-70d31511b574",
+  "occurred_at": "2026-07-04T00:10:02.573938Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-2574",
+    "profile_id": "lease",
+    "state": "lease_active",
+    "step_metadata": {
+      "action_kind": "produce",
+      "action_state": "lease_active",
+      "output": {
+        "artifact_type": ""
+      },
+      "owner": {
+        "agent_model": null,
+        "agent_name": null,
+        "agent_version": null,
+        "kind": "agent"
+      }
+    },
+    "terminal": false,
+    "title": "Lease: claim-hive-flow-d17e",
+    "type": "lease",
+    "updated_at": "2026-07-04T00:10:02.573938Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

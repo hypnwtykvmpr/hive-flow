@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2a88-7a36-7070-b5e0-42201fadda32",
+  "occurred_at": "2026-07-04T00:30:15.093882Z",
+  "knot_id": "hive-flow-d17e",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "confinement-not-proven"
+  }
+}
