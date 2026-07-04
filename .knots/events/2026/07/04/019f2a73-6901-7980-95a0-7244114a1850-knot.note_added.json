@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2a73-6901-7980-95a0-7244114a1850",
+  "occurred_at": "2026-07-04T00:07:14.43349Z",
+  "knot_id": "hive-flow-d17e",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "PLAN_REVIEW PASS with amendments. Direct cursor-agent binary probing is acceptable evidence for this provider-mapping decision because the question is native Cursor confinement, not bridge behavior. The probe should run as the d17e implementation step; any provider mapping change after PROVEN must be a separate follow-up implementation slice. Required probe additions before execution: include an absolute repo/project-root write target in addition to TMPDIR/HOME/root; include a hardlink-inside-to-outside vector where the platform allows creating it, with unsupported recorded as skipped not passed; include an explicit --add-dir interaction control so any expansion of writable scope is documented and the future mapping does not emit --add-dir unless separately proven safe. Decision gate otherwise approved: M1 must allow inside workspace writes and deny every outside vector for both native Write and shell; M2 must demonstrate escape or the harness is inconclusive; any hang/non-escape/escape in the wrong cell means NOT PROVEN and shipped fail-closed mapping stays.",
+    "datetime": "2026-07-04T00:07:14.43349Z",
+    "entry_id": "019f2a73-6901-7980-95a0-723274053099",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
