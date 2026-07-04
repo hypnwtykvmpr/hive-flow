@@ -1,0 +1,17 @@
+{
+  "event_id": "019f2acb-66ea-7391-8a9f-b7d1c07cf58c",
+  "occurred_at": "2026-07-04T01:43:21.066077Z",
+  "knot_id": "hive-flow-082b",
+  "type": "knot.created",
+  "data": {
+    "body": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "profile_id": "lease",
+    "state": "lease_ready",
+    "title": "Lease: claim-hive-flow-3771",
+    "type": "lease",
+    "workflow_id": "lease_sdlc"
+  }
+}

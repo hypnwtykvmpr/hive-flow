@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2b00-0218-75b2-b912-81d0f33a4744",
+  "occurred_at": "2026-07-04T02:40:48.664117Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "branch:knots-3771-gemini-restricted-failclosed"
+  }
+}
