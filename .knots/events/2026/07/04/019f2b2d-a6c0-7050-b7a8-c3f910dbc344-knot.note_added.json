@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2b2d-a6c0-7050-b7a8-c3f910dbc344",
+  "occurred_at": "2026-07-04T03:30:39.936699Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS by Codex. At-SHA confirmed: HEAD == origin/main == f75c1d191 after local tracking refresh. git show --stat matches the reviewed two-file slice. Focused gates and Hive Flow verifier remain clean. Shipping closes the bba8/3771 gemini restricted-mode write-safety follow-up.",
+    "datetime": "2026-07-04T03:30:39.936699Z",
+    "entry_id": "019f2b2d-a6c0-7050-b7a8-c3ef171cc201",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

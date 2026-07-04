@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2b2d-67c3-7b81-ac2b-72a249a4c4a6",
+  "occurred_at": "2026-07-04T03:30:23.811157Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT by Codex. Remote main is f75c1d191 (verified by git ls-remote and refreshed origin/main). Exact landed scope: cli/packages/providers/src/gemini-cli-provider.ts and cli/packages/providers/src/__tests__/cli-providers.test.ts. No generated churn; only pre-existing untracked local artifacts remain. Ready for shipment_review/at-SHA confirmation.",
+    "datetime": "2026-07-04T03:30:23.811157Z",
+    "entry_id": "019f2b2d-67c3-7b81-ac2b-7292566eeede",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

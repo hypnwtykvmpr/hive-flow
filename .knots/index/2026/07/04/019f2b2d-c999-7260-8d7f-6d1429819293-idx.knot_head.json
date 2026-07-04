@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2b2d-c999-7260-8d7f-6d1429819293",
+  "occurred_at": "2026-07-04T03:30:48.857409Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-3771",
+    "profile_id": "autopilot",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Fix gemini restricted-mode write safety after bba8 agy sandbox canary",
+    "type": "work",
+    "updated_at": "2026-07-04T03:30:48.857409Z",
+    "workflow_id": "work_sdlc"
+  }
+}

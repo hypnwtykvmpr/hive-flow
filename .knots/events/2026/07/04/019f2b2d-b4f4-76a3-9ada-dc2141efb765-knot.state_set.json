@@ -1,0 +1,14 @@
+{
+  "event_id": "019f2b2d-b4f4-76a3-9ada-dc2141efb765",
+  "occurred_at": "2026-07-04T03:30:43.572598Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.state_set",
+  "data": {
+    "actor_kind": "agent",
+    "force": false,
+    "from": "ready_for_shipment_review",
+    "profile_id": "autopilot",
+    "to": "shipment_review",
+    "workflow_id": "work_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2b2d-084a-7651-a75e-1abeedba5ae1",
+  "occurred_at": "2026-07-04T03:29:59.369821Z",
+  "knot_id": "hive-flow-3771",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS by Codex. Landed and pushed f75c1d191 to main. Reviewed 59d2b01ce..f75c1d191: gemini restricted modes fail closed before ensureBinary/spawn in doComplete and doStreamComplete; non-retryable LLMProviderError code RESTRICTED_MODE_UNSUPPORTED; restricted buildCliArgs emits neither --sandbox nor --dangerously-skip-permissions; full mode remains unchanged; codex/cursor confinement tests untouched. Gates: Hive Flow Codex verifier PASS task-37d287ae-cc0c-4830-bb83-4023bcc897d1; cli-providers 158/158 PASS; providers typecheck PASS; providers build PASS; private-guard clean; diff --check clean. Pre-existing untracked local artifacts left untouched.",
+    "datetime": "2026-07-04T03:29:59.369821Z",
+    "entry_id": "019f2b2d-084a-7651-a75e-1aa19e452e2c",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
