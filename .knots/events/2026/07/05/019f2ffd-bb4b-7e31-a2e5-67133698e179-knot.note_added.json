@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ffd-bb4b-7e31-a2e5-67133698e179",
+  "occurred_at": "2026-07-05T01:56:25.54705Z",
+  "knot_id": "hive-flow-2fb8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS: no tracked source changes and no commit needed. Filesystem verified target paths removed; git status remains clean for tracked files. 2fb8 cleanup shipped.",
+    "datetime": "2026-07-05T01:56:25.54705Z",
+    "entry_id": "019f2ffd-bb4b-7e31-a2e5-670e67bbaa59",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
