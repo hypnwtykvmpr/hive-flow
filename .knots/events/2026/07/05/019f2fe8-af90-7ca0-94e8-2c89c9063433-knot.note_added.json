@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2fe8-af90-7ca0-94e8-2c89c9063433",
+  "occurred_at": "2026-07-05T01:33:26.288325Z",
+  "knot_id": "hive-flow-c882",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "RECONCILED by Codex under deferred-backlog audit. This deferred item is resolved as verdict-only: Codex VERIFY_CLEAN classified the 82 security-scan findings as justified false positives/fixtures/detection literals with zero real secrets or exploitable unsafe patterns, satisfying the af96 security gate. Scanner FP reduction was split to dc69 and already handled separately. Moving stale deferred record to shipped so it no longer appears as active backlog.",
+    "datetime": "2026-07-05T01:33:26.288325Z",
+    "entry_id": "019f2fe8-af90-7ca0-94e8-2c7cf0a1f13e",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2fe9-a717-7f83-a90e-6bdd9e48a3a2",
+  "occurred_at": "2026-07-05T01:34:29.65571Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-86a7",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-deferred-reconcile",
+    "type": "lease",
+    "updated_at": "2026-07-05T01:34:29.65571Z",
+    "workflow_id": "lease_sdlc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2fe8-6f09-7262-8378-50d169eab0ce",
+  "occurred_at": "2026-07-05T01:33:09.769169Z",
+  "knot_id": "hive-flow-29af",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "RECONCILED by Codex under deferred-backlog audit. This deferred item is resolved: af96 Slice D commit bc86aabae is an ancestor of current main and fixed progress-tools path-depth over-climb with resolveCliRoot/PROJECT_ROOT re-anchor. Prior note already recorded Codex land/verification. Moving stale deferred record to shipped so it no longer appears as active backlog.",
+    "datetime": "2026-07-05T01:33:09.769169Z",
+    "entry_id": "019f2fe8-6f09-7262-8378-50ce62dcd3fb",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

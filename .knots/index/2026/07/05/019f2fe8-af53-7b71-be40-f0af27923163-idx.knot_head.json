@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2fe8-af53-7b71-be40-f0af27923163",
+  "occurred_at": "2026-07-05T01:33:26.222416Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-3379",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "progress-tools metrics model stale for post-collapse topology",
+    "type": "work",
+    "updated_at": "2026-07-05T01:33:26.222416Z",
+    "workflow_id": "work_sdlc"
+  }
+}

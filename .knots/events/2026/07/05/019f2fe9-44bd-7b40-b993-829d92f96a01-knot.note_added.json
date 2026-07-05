@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2fe9-44bd-7b40-b993-829d92f96a01",
+  "occurred_at": "2026-07-05T01:34:04.47734Z",
+  "knot_id": "hive-flow-6c50",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "REACTIVATED by Codex after deferred-backlog audit. This is the next concrete implementation lane: provider harness cross-session/project-root defect from af96. Scope: source-ground whether codex-cli provider workers still lose repo readability because read-only-with-artifacts runs in a temp workspace, and whether Claude-spawned provider agents still route owner/session results to Codex. Preserve the 9331 codex artifact confinement model: do not weaken temp-workspace write isolation or .md/.json copy-back. Implement a tested fix or route a VERIFY_BOUNCE with evidence if the defect is already closed or belongs to hive-flow-5799. Claude implements; Codex reviews/lands.",
+    "datetime": "2026-07-05T01:34:04.47734Z",
+    "entry_id": "019f2fe9-44bd-7b40-b993-828faab28d01",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

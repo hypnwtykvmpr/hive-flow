@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2fe8-af65-7cb3-ad56-2e4b8dd66d4a",
+  "occurred_at": "2026-07-05T01:33:26.227621Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-704f",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "af96-unmasked pre-existing test failures (out of v3-ref scope)",
+    "type": "work",
+    "updated_at": "2026-07-05T01:33:26.227621Z",
+    "workflow_id": "work_sdlc"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2fe8-6f13-7791-8892-4b7cd39d1ed2",
+  "occurred_at": "2026-07-05T01:33:09.769169Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-29af",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "progress-tools.ts collapse-induced path-depth over-climb (discovered functional bug)",
+    "type": "work",
+    "updated_at": "2026-07-05T01:33:09.769169Z",
+    "workflow_id": "work_sdlc"
+  }
+}

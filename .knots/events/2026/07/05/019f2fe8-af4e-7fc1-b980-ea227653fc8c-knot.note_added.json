@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2fe8-af4e-7fc1-b980-ea227653fc8c",
+  "occurred_at": "2026-07-05T01:33:26.222416Z",
+  "knot_id": "hive-flow-3379",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "RECONCILED by Codex under deferred-backlog audit. This deferred item is resolved: af96 Slice F commit d64034b8f is an ancestor of current main and recalibrated progress metrics to the post-collapse topology. Prior notes record land/verification and the product decision to keep the tracker recalibrated for now. Moving stale deferred record to shipped so it no longer appears as active backlog.",
+    "datetime": "2026-07-05T01:33:26.222416Z",
+    "entry_id": "019f2fe8-af4e-7fc1-b980-ea1671b918f9",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

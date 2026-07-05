@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2fe8-af53-76b3-8b52-4deb976f8a66",
+  "occurred_at": "2026-07-05T01:33:26.227621Z",
+  "knot_id": "hive-flow-704f",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "RECONCILED by Codex under deferred-backlog audit. This deferred item is resolved: af96 Slice E commit 802577fce is an ancestor of current main and fixed the four unmasked test-truth failures. Prior note records Codex verification: provider-registry, mcp-enforcement-gate, bats, and private-guard clean. Moving stale deferred record to shipped so it no longer appears as active backlog.",
+    "datetime": "2026-07-05T01:33:26.227621Z",
+    "entry_id": "019f2fe8-af53-76b3-8b52-4dd000072ea8",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
