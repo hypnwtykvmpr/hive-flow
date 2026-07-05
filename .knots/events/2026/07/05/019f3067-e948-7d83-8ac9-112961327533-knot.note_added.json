@@ -1,0 +1,15 @@
+{
+  "event_id": "019f3067-e948-7d83-8ac9-112961327533",
+  "occurred_at": "2026-07-05T03:52:24.136335Z",
+  "knot_id": "hive-flow-d571",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "POST-SHIP CORRECTION: Codex failed to run full npm run build before pushing 6bb8e01b7. Human flagged the prerequisite. Remediation: ran npm run build after the fact (PASS), which generated missing built helper artifacts under cli/.claude/helpers. Committed and pushed follow-up a1930f00cdd377e623e80345dfa3a4ba90b21403 with exactly cli/.claude/helpers/enforcement.cjs and cli/.claude/helpers/.engine-manifest.json. HEAD==origin/main after repair. This corrects the build artifact omission; the original push process was non-compliant.",
+    "datetime": "2026-07-05T03:52:24.136335Z",
+    "entry_id": "019f3067-e948-7d83-8ac9-111c5fd2bc2f",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

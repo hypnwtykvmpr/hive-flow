@@ -1,0 +1,21 @@
+{
+  "event_id": "019f3067-e94d-71e2-927e-e92d9a086188",
+  "occurred_at": "2026-07-05T03:52:24.136335Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-d571",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Remove vestigial .hive-flow/enforcement/deferrals directory handling",
+    "type": "work",
+    "updated_at": "2026-07-05T03:52:24.136335Z",
+    "workflow_id": "work_sdlc"
+  }
+}
