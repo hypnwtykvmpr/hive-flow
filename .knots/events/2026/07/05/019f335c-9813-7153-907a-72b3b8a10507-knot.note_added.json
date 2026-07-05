@@ -1,0 +1,15 @@
+{
+  "event_id": "019f335c-9813-7153-907a-72b3b8a10507",
+  "occurred_at": "2026-07-05T17:38:54.099722Z",
+  "knot_id": "hive-flow-44fd",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SUPERSESSION 20260705T173618Z: prior 'Owner: human standing deferral' framing is split. Mandatory debrand/sanitization work is active under the Wave 3 plan; optional provider identity rename remains human-controlled and must be handled as a separate decision before any rename-specific mutation. Do not use this knot as a reason to block sanitization/debrand work.",
+    "datetime": "2026-07-05T17:38:54.099722Z",
+    "entry_id": "019f335c-9813-7153-907a-72ae2d2cb461",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

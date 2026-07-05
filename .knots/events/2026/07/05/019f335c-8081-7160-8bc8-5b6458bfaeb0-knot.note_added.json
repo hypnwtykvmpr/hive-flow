@@ -1,0 +1,15 @@
+{
+  "event_id": "019f335c-8081-7160-8bc8-5b6458bfaeb0",
+  "occurred_at": "2026-07-05T17:38:48.065855Z",
+  "knot_id": "hive-flow-5799",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SUPERSESSION 20260705T173618Z: prior deferred/human-gate framing is superseded by the human-gate-lifted Wave 3 plan in .hive-flow/data/tmux-router/20260705T173618Z-codex-WAVE3-FINAL-PLAN-REVIEW_REQUEST-debrand-5799-to-claude.md. 5799 is active for MCP-child attestation design/implementation; scope includes launcher helpers, direct MCP entrypoints, generated MCP configs, and preventing generated mcp-* transport ids from becoming owner session ids.",
+    "datetime": "2026-07-05T17:38:48.065855Z",
+    "entry_id": "019f335c-8081-7160-8bc8-5b56941e4d0f",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "event_id": "019f335c-9813-7153-907a-72859b151d82",
+  "occurred_at": "2026-07-05T17:38:54.099722Z",
+  "knot_id": "hive-flow-44fd",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "debrand"
+  }
+}
