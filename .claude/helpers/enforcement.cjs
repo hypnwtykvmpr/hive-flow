@@ -3537,18 +3537,6 @@ function resetEnforcement(scope = {}) {
       if (fs.existsSync(fp)) fs.unlinkSync(fp);
     } catch {}
   }
-  // Clear deferral state directory
-  try {
-    const deferralsDir = path.join(ENFORCEMENT_DIR, 'deferrals');
-    if (fs.existsSync(deferralsDir)) {
-      const files = fs.readdirSync(deferralsDir);
-      for (const f of files) {
-        if (f.endsWith('.json')) {
-          try { fs.unlinkSync(path.join(deferralsDir, f)); } catch {}
-        }
-      }
-    }
-  } catch {}
   // Clear per-agent state files
   for (const baseDir of [ENFORCEMENT_DIR, LEGACY_ENFORCEMENT_DIR]) {
     for (const scopeDirName of ['agents', 'hives', 'projects', 'sessions']) {
