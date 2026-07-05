@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2fef-2254-7b43-9a01-b768c50af757",
+  "occurred_at": "2026-07-05T01:40:28.884725Z",
+  "knot_id": "hive-flow-6c50",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "verify-bounce"
+  }
+}
