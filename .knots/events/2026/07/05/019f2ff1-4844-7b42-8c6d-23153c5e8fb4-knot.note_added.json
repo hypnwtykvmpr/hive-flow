@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ff1-4844-7b42-8c6d-23153c5e8fb4",
+  "occurred_at": "2026-07-05T01:42:49.668105Z",
+  "knot_id": "hive-flow-6c50",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT by Codex, verdict-only/no-code. No source branch or commit to merge. Current main remains f75c1d191. 6c50 disposition is source-grounded closure: Q1 refuted; Q2 cross-referenced into 5799. Ready for shipment_review final sign-off.",
+    "datetime": "2026-07-05T01:42:49.668105Z",
+    "entry_id": "019f2ff1-4844-7b42-8c6d-230d8ca6657e",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

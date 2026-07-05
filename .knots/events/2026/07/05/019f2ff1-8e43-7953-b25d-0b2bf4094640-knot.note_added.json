@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ff1-8e43-7953-b25d-0b2bf4094640",
+  "occurred_at": "2026-07-05T01:43:07.587019Z",
+  "knot_id": "hive-flow-6c50",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS by Codex, verdict-only/no-code. Current main remains f75c1d191 and no source files changed. Final disposition: 6c50 is closed; Q1 refuted, Q2 belongs to 5799. 9331 codex artifact confinement remains unchanged.",
+    "datetime": "2026-07-05T01:43:07.587019Z",
+    "entry_id": "019f2ff1-8e43-7953-b25d-0b1398cd4d00",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

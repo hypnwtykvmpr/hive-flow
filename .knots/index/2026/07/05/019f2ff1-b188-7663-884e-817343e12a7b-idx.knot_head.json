@@ -1,0 +1,21 @@
+{
+  "event_id": "019f2ff1-b188-7663-884e-817343e12a7b",
+  "occurred_at": "2026-07-05T01:43:16.616702Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-6c50",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "codex-cli provider workers run in temp workspace; Claude-spawned agents route results to codex session",
+    "type": "work",
+    "updated_at": "2026-07-05T01:43:16.616702Z",
+    "workflow_id": "work_sdlc"
+  }
+}
