@@ -1,0 +1,9 @@
+{
+  "event_id": "019f2ff5-73fb-75b0-9096-ddecf8ecb95b",
+  "occurred_at": "2026-07-05T01:47:23.00357Z",
+  "knot_id": "hive-flow-d571",
+  "type": "knot.tag_add",
+  "data": {
+    "tag": "protected-patch-bundle"
+  }
+}

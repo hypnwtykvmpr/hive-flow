@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ff5-73fb-75b0-9096-de1733ebbf0a",
+  "occurred_at": "2026-07-05T01:47:23.00357Z",
+  "knot_id": "hive-flow-d571",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "# d571 patch bundle — remove vestigial enforcement/deferrals handling\n\nProtected file (`.claude/helpers/enforcement.cjs`) — Claude cannot write it; Codex applies.\n\n## Evidence it is dead/vestigial\n\n- The ONLY `deferrals` reference in `.claude/helpers/enforcement.cjs` is the reset-time\n  cleanup block at lines 3540-3551 (verified: `grep -n deferral enforcement.cjs` returns\n  only 3540-3547).\n- `.hive-flow/enforcement/deferrals/` does NOT exist on disk (`ls` → ENOENT).\n- NOTHING in the repo creates or writes that directory (repo-wide grep for\n  `enforcement.*deferrals` across .cjs/.mjs/.js/.ts, node_modules excluded → no writers).\n  Deferrals migrated to Knots (`scripts/deferral-ledger.cjs`); this block iterates a\n  directory that is never populated.\n- The block sits between the \"Clear future band state files\" loop and the \"Clear per-agent\n  state files\" loop in the DEFAULT (unscoped) reset path. Removing it does not touch scoped\n  resets (`resetStateScope`) or any other reset behavior — it only deleted files that never\n  exist, so reset behavior is preserved exactly.\n\n## Exact hunk to remove (unified diff, context anchored)\n\n```diff\n   for (const f of bandStateFiles) {\n     try {\n       const fp = path.join(ENFORCEMENT_DIR, f);\n       if (fs.existsSync(fp)) fs.unlinkSync(fp);\n     } catch {}\n   }\n-  // Clear deferral state directory\n-  try {\n-    const deferralsDir = path.join(ENFORCEMENT_DIR, 'deferrals');\n-    if (fs.existsSync(deferralsDir)) {\n-      const files = fs.readdirSync(deferralsDir);\n-      for (const f of files) {\n-        if (f.endsWith('.json')) {\n-          try { fs.unlinkSync(path.join(deferralsDir, f)); } catch {}\n-        }\n-      }\n-    }\n-  } catch {}\n   // Clear per-agent state files\n   for (const baseDir of [ENFORCEMENT_DIR, LEGACY_ENFORCEMENT_DIR]) {\n```\n\nNet: remove 12 lines (the `// Clear deferral state directory` comment through its closing\n`} catch {}`). No other lines change. No new references; `deferralsDir` is local to the block.\n\n## Post-apply parity (Codex)\n\n- `.claude/helpers/enforcement.cjs` is protected + engine-manifest-signed. After applying the\n  hunk, regenerate/verify the engine manifest via `scripts/install-enforcement.mjs` so the\n  signed engine surface matches the edited file (this is the recorded d571 unblock condition:\n  \"protected engine file: requires Codex patch + engine-manifest regen\").\n- Suggested verification after apply: re-grep `deferral` in enforcement.cjs → 0 hits; run any\n  enforcement reset self-check to confirm reset still succeeds (the removed block only deleted\n  a never-existent dir, so behavior is unchanged).",
+    "datetime": "2026-07-05T01:47:23.00357Z",
+    "entry_id": "019f2ff5-73fb-75b0-9096-de01635afc74",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
