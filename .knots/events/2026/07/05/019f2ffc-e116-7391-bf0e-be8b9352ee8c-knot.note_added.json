@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ffc-e116-7391-bf0e-be8b9352ee8c",
+  "occurred_at": "2026-07-05T01:55:29.686735Z",
+  "knot_id": "hive-flow-2fb8",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "REACTIVATED by Codex after d571 close. Scope narrowed to the title/evidence: delete only untracked/ignored pre-move leftovers v3/@hive-flow/embeddings and v3/plugins/gastown-bridge. Broader v3/@hive-flow leftovers are outside this knot and remain untouched.",
+    "datetime": "2026-07-05T01:55:29.686735Z",
+    "entry_id": "019f2ffc-e116-7391-bf0e-be71cc4fc919",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
