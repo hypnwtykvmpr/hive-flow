@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ff2-6fa0-7040-a458-75db2eebf189",
+  "occurred_at": "2026-07-05T01:44:05.28069Z",
+  "knot_id": "hive-flow-d571",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "REACTIVATED by Codex after 6c50 closure. Next non-human implementation lane. Scope: remove vestigial .hive-flow/enforcement/deferrals directory handling from enforcement.cjs if source-grounded as dead/unwritten, preserving enforcement reset behavior and engine manifest parity. This touches protected enforcement helper/engine surfaces: Claude should implement or route exact protected-file patch bundle; Codex reviews/applies/lands. If source proves the path is now used, route VERIFY_BOUNCE with evidence instead.",
+    "datetime": "2026-07-05T01:44:05.28069Z",
+    "entry_id": "019f2ff2-6fa0-7040-a458-75c333722b2d",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
