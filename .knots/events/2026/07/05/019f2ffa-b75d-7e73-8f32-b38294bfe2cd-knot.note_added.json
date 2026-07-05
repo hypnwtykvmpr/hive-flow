@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ffa-b75d-7e73-8f32-b38294bfe2cd",
+  "occurred_at": "2026-07-05T01:53:07.933213Z",
+  "knot_id": "hive-flow-d571",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW PASS: applied protected .claude/helpers/enforcement.cjs patch exactly as routed; removed 12-line vestigial enforcement/deferrals reset block. Regenerated enforcement engine via scripts/install-enforcement.mjs; manifest hash matches source. Verified rg deferral/deferrals in enforcement.cjs = 0 hits, node --check clean, reset-focused enforcement tests 9/9, git diff --check clean, private-guard clean. Landed/pushed main at 6bb8e01b7e9bd0df3751554f9b6f2a0dc88f0462; commit scope exactly .claude/helpers/enforcement.cjs.",
+    "datetime": "2026-07-05T01:53:07.933213Z",
+    "entry_id": "019f2ffa-b75d-7e73-8f32-b37c70dfc8fd",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}

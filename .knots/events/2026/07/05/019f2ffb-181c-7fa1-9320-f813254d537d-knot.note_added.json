@@ -1,0 +1,15 @@
+{
+  "event_id": "019f2ffb-181c-7fa1-9320-f813254d537d",
+  "occurred_at": "2026-07-05T01:53:32.700298Z",
+  "knot_id": "hive-flow-d571",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT_REVIEW PASS: at-SHA confirmed HEAD==origin/main==remote main==6bb8e01b7e9bd0df3751554f9b6f2a0dc88f0462. Commit contains exactly .claude/helpers/enforcement.cjs with 12 deletions. Worktree has no tracked changes after land; remaining untracked paths are pre-existing local artifacts. d571 protected deferrals cleanup is complete.",
+    "datetime": "2026-07-05T01:53:32.700298Z",
+    "entry_id": "019f2ffb-181c-7fa1-9320-f801cd2faa50",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
