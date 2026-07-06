@@ -7,8 +7,6 @@ import { pathToFileURL } from 'node:url';
 const repoRoot = process.argv[2] || process.cwd();
 const fixturePath = join(
   repoRoot,
-  'v3',
-  '@hive-flow',
   'cli',
   'src',
   'permission-guard',
@@ -19,8 +17,6 @@ const fixturePath = join(
 
 const gateModule = await import(pathToFileURL(join(
   repoRoot,
-  'v3',
-  '@hive-flow',
   'cli',
   'dist',
   'src',
@@ -29,8 +25,6 @@ const gateModule = await import(pathToFileURL(join(
 )).href);
 const configModule = await import(pathToFileURL(join(
   repoRoot,
-  'v3',
-  '@hive-flow',
   'cli',
   'dist',
   'src',

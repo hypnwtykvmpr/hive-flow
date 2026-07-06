@@ -9,25 +9,25 @@ setup() {
 }
 
 @test "mcp source, tests, and docs live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/mcp/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/mcp/server.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/mcp/transport/http.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/mcp/__tests__/mcp.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/mcp/__tests__/integration.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/mcp/README.md" ]
+  [ -f "$REPO_ROOT/cli/src/mcp/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/mcp/server.ts" ]
+  [ -f "$REPO_ROOT/cli/src/mcp/transport/http.ts" ]
+  [ -f "$REPO_ROOT/cli/src/mcp/__tests__/mcp.test.ts" ]
+  [ -f "$REPO_ROOT/cli/src/mcp/__tests__/integration.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/mcp/README.md" ]
 }
 
 @test "cli publishes mcp subpath export" {
-  run grep -F '"./mcp"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./mcp"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./dist/src/mcp/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./dist/src/mcp/index.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
 @test "cli http transport loads local mcp implementation" {
-  run grep -F "import('./mcp/index.js')" "$REPO_ROOT/v3/@hive-flow/cli/src/mcp-server.ts"
+  run grep -F "import('./mcp/index.js')" "$REPO_ROOT/cli/src/mcp-server.ts"
   [ "$status" -eq 0 ]
-  run grep -F "import('@hive-flow/mcp')" "$REPO_ROOT/v3/@hive-flow/cli/src/mcp-server.ts"
+  run grep -F "import('@hive-flow/mcp')" "$REPO_ROOT/cli/src/mcp-server.ts"
   [ "$status" -eq 1 ]
 }
 
@@ -38,13 +38,13 @@ setup() {
 
 @test "v3 package count reflects retired mcp package" {
   count=0
-  for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
     [ -e "$package_file" ] || continue
     count=$((count + 1))
   done
 
-  [ "$count" -eq 3 ]
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 5 ]
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }
 

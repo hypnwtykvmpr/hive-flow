@@ -4356,7 +4356,7 @@ steps:
 
 ### Getting Started with Flow Nexus
 
-1. Sign up at flow-nexus.io and get an API key.
+1. Sign up at your configured Flow Nexus endpoint and get an API key.
 2. Invoke `/flow-nexus-platform` skill to configure credentials.
 3. Use `/flow-nexus-swarm` to deploy swarms to the cloud.
 

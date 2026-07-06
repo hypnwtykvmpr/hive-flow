@@ -9,27 +9,27 @@ setup() {
 }
 
 @test "browser source, tests, docs, and docker assets live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/browser/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/browser/application/browser-service.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/browser/mcp-tools/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/browser/__tests__/browser-service.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/browser/README.md" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docker/browser/Dockerfile" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docker/browser/test-fixtures/index.html" ]
+  [ -f "$REPO_ROOT/cli/src/browser/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/browser/application/browser-service.ts" ]
+  [ -f "$REPO_ROOT/cli/src/browser/mcp-tools/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/browser/__tests__/browser-service.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/browser/README.md" ]
+  [ -f "$REPO_ROOT/cli/docker/browser/Dockerfile" ]
+  [ -f "$REPO_ROOT/cli/docker/browser/test-fixtures/index.html" ]
 }
 
 @test "cli package publishes browser subpaths and owns agent-browser dependency" {
-  run grep -F '"./browser"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./browser"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./dist/src/browser/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./dist/src/browser/index.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./browser/mcp-tools"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./browser/mcp-tools"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./browser/skill"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./browser/skill"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./browser/agent"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./browser/agent"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"agent-browser": "^0.6.0"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"agent-browser": "^0.6.0"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
@@ -49,13 +49,13 @@ setup() {
 
 @test "v3 package count reflects retired browser package" {
   count=0
-  for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
     [ -e "$package_file" ] || continue
     count=$((count + 1))
   done
 
-  [ "$count" -eq 3 ]
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 5 ]
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }
 
@@ -63,24 +63,24 @@ setup() {
   run grep -R '@hive-flow/browser' \
     "$REPO_ROOT/README.md" \
     "$REPO_ROOT/v3/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/browser/README.md" \
+    "$REPO_ROOT/cli/README.md" \
+    "$REPO_ROOT/cli/docs/browser/README.md" \
     "$REPO_ROOT/v3/plugins/agentic-qe/package.json" \
     "$REPO_ROOT/v3/plugins/agentic-qe/plugin.yaml" \
     "$REPO_ROOT/v3/plugins/agentic-qe/src/index.ts"
   [ "$status" -eq 1 ]
 
-  run grep -F '@hive-flow/cli/browser' "$REPO_ROOT/v3/@hive-flow/cli/docs/browser/README.md"
+  run grep -F '@hive-flow/cli/browser' "$REPO_ROOT/cli/docs/browser/README.md"
   [ "$status" -eq 0 ]
-  run grep -F './v3/@hive-flow/cli/docs/browser/README.md' "$REPO_ROOT/README.md"
+  run grep -F './cli/docs/browser/README.md' "$REPO_ROOT/README.md"
   [ "$status" -eq 0 ]
 }
 
 @test "registered cli browser MCP tools are preserved separately from browser package subpath" {
-  run grep -F "from './mcp-tools/browser-tools.js'" "$REPO_ROOT/v3/@hive-flow/cli/src/mcp-client.ts"
+  run grep -F "from './mcp-tools/browser-tools.js'" "$REPO_ROOT/cli/src/mcp-client.ts"
   [ "$status" -eq 0 ]
-  run grep -F "name: 'browser_open'" "$REPO_ROOT/v3/@hive-flow/cli/src/mcp-tools/browser-tools.ts"
+  run grep -F "name: 'browser_open'" "$REPO_ROOT/cli/src/mcp-tools/browser-tools.ts"
   [ "$status" -eq 0 ]
-  run grep -F "name: 'browser/open'" "$REPO_ROOT/v3/@hive-flow/cli/src/mcp-tools/browser-tools.ts"
+  run grep -F "name: 'browser/open'" "$REPO_ROOT/cli/src/mcp-tools/browser-tools.ts"
   [ "$status" -eq 1 ]
 }

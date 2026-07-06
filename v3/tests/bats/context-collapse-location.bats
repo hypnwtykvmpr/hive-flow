@@ -10,10 +10,10 @@ setup() {
 }
 
 @test "context assembly source lives under the cli package" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/context/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/context/LayeredAssembler.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/context/token-estimator.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/context/__tests__/context-assembly.test.ts" ]
+  [ -f "$REPO_ROOT/cli/src/context/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/context/LayeredAssembler.ts" ]
+  [ -f "$REPO_ROOT/cli/src/context/token-estimator.ts" ]
+  [ -f "$REPO_ROOT/cli/src/context/__tests__/context-assembly.test.ts" ]
 }
 
 @test "root TypeScript project no longer references retired context package" {

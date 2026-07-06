@@ -9,34 +9,34 @@ setup() {
 }
 
 @test "hooks source, tests, docs, and bins live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/registry/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/executor/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/__tests__/hooks.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/__tests__/workers.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/hooks/README.md" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/bin/hooks-daemon.js" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/bin/hooks-statusline.js" ]
+  [ -f "$REPO_ROOT/cli/src/hooks/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/hooks/registry/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/hooks/executor/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/hooks/workers/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/hooks/__tests__/hooks.test.ts" ]
+  [ -f "$REPO_ROOT/cli/src/hooks/__tests__/workers.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/hooks/README.md" ]
+  [ -f "$REPO_ROOT/cli/bin/hooks-daemon.js" ]
+  [ -f "$REPO_ROOT/cli/bin/hooks-statusline.js" ]
 }
 
 @test "cli publishes hooks subpaths and non-conflicting bins" {
-  run grep -F '"./hooks"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./hooks"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./dist/src/hooks/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./dist/src/hooks/index.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./hooks/registry"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./hooks/registry"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"hooks-daemon": "./bin/hooks-daemon.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"hooks-daemon": "./bin/hooks-daemon.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"hooks-statusline": "./bin/hooks-statusline.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"hooks-statusline": "./bin/hooks-statusline.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"statusline": "./bin/hooks-statusline.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"statusline": "./bin/hooks-statusline.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 1 ]
 }
 
 @test "cli no longer depends on retired hooks workspace" {
-  run grep -F '"@hive-flow/hooks"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"@hive-flow/hooks"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 1 ]
 }
 
@@ -56,13 +56,13 @@ setup() {
 
 @test "v3 package count reflects retired hooks package" {
   count=0
-  for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
     [ -e "$package_file" ] || continue
     count=$((count + 1))
   done
 
-  [ "$count" -eq 3 ]
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 5 ]
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }
 
@@ -72,13 +72,13 @@ setup() {
     "$REPO_ROOT/CLAUDE.md" \
     "$REPO_ROOT/v3/README.md" \
     "$REPO_ROOT/v3/CLAUDE.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/src" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/hooks/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/memory/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/shared/README.md"
+    "$REPO_ROOT/cli/README.md" \
+    "$REPO_ROOT/cli/src" \
+    "$REPO_ROOT/cli/docs/hooks/README.md" \
+    "$REPO_ROOT/cli/docs/memory/README.md" \
+    "$REPO_ROOT/cli/docs/shared/README.md"
   [ "$status" -eq 1 ]
 
-  run grep -F '@hive-flow/cli/hooks' "$REPO_ROOT/v3/@hive-flow/cli/docs/hooks/README.md"
+  run grep -F '@hive-flow/cli/hooks' "$REPO_ROOT/cli/docs/hooks/README.md"
   [ "$status" -eq 0 ]
 }

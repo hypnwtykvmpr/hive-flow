@@ -6,7 +6,7 @@ import * as nodePath from 'node:path';
 // ---------------------------------------------------------------------------
 
 const ENFORCEMENT_CJS_PATH = nodePath.resolve(
-  __dirname, '..', '..', '..', '..', '..', '.claude', 'helpers', 'enforcement.cjs',
+  __dirname, '..', '..', '..', '.claude', 'helpers', 'enforcement.cjs',
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

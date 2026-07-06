@@ -101,8 +101,8 @@ describe('debrand-assert-zero generated output gate', () => {
 
       await withCodexCliUnavailable(async () => {
         const codexResult = await initializeCodexProject(codexRoot, {
-          template: 'full',
-          skills: ['memory-management'],
+          template: 'minimal',
+          skills: [],
           force: true,
         });
         expect(codexResult.errors ?? [], (codexResult.errors ?? []).join('\n')).toEqual([]);

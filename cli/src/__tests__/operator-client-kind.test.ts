@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { OPERATOR_CLIENT_KINDS, normalizeClientKind, operatorSessionEnvKeys, resolveClientKindFromEnv } from '../mcp-tools/session-id.js';
 import { propertyRunsFromEnv } from './property-runs.js';
@@ -9,13 +10,18 @@ import { propertyRunsFromEnv } from './property-runs.js';
 const PROPERTY_RUNS = propertyRunsFromEnv(200);
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../../../..');
+const repoRoot = resolve(here, '../../..');
 const requireFromHere = createRequire(import.meta.url);
-const cjsClientKind = requireFromHere(resolve(repoRoot, '.claude/helpers/client-kind.cjs')) as {
+const cjsClientKindPath = resolve(repoRoot, '.claude/helpers/client-kind.cjs');
+const cjsClientKind = requireFromHere(cjsClientKindPath) as {
   normalizeClientKind: (value: unknown) => string | null;
   operatorSessionEnvKeys: (kind?: string | null) => string[];
   clientKindFromEnv: (env?: Record<string, string | undefined>) => string | null;
 };
+
+function normalizedRelative(from: string, to: string): string {
+  return relative(from, to).replaceAll('\\', '/');
+}
 
 const ALIASES: Array<{ alias: string; kind: string }> = [
   { alias: 'claude', kind: 'claude' },
@@ -57,6 +63,13 @@ function randomizeCase(value: string, mask: boolean[]): string {
 }
 
 describe('operator parent client kind aliases', () => {
+  it('loads the CJS helper from this repository root, not an ancestor', () => {
+    expect(normalizedRelative(repoRoot, here)).toBe('cli/src/__tests__');
+    expect(existsSync(resolve(repoRoot, 'cli/package.json'))).toBe(true);
+    expect(normalizedRelative(repoRoot, cjsClientKindPath)).toBe('.claude/helpers/client-kind.cjs');
+    expect(existsSync(cjsClientKindPath)).toBe(true);
+  });
+
   it('normalizes every supported parent alias with TypeScript/CJS parity', () => {
     fc.assert(
       fc.property(

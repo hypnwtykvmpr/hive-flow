@@ -37,23 +37,23 @@ managed_tree() {
   actual="$(managed_tree)"
   [ "$actual" = "$expected" ]
 
-  run "$HOME_DIR/.hive-flow/bin/claude-code-statusline"
+  run "$HOME_DIR/.hive-flow/bin/claude-code-statusline" < /dev/null
   [ "$status" -eq 0 ]
-  [[ "$output" == *"HF_BOARD"* ]]
+  [[ "$output" == *"hive-flow"* ]]
   [[ "$output" != *"CUSTOM"* ]]
 
-  run env HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS=1 "$HOME_DIR/.hive-flow/bin/claude-code-statusline"
+  run env HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS=1 "$HOME_DIR/.hive-flow/bin/claude-code-statusline" < /dev/null
   [ "$status" -eq 0 ]
-  [[ "$output" == *"HF_BOARD"* ]]
+  [[ "$output" == *"hive-flow"* ]]
   [[ "$output" == *"CUSTOM"* ]]
 
   run node "$REPO_ROOT/cli/bin/cli.js" init --global --claude-code --yes --home "$HOME_DIR" --user-settings "$SETTINGS_PATH" --project-root "$PROJECT_ROOT" --format json
   [ "$status" -eq 0 ]
 
-  run "$HOME_DIR/.hive-flow/bin/claude-code-statusline"
+  run "$HOME_DIR/.hive-flow/bin/claude-code-statusline" < /dev/null
   [ "$status" -eq 0 ]
-  [[ "$output" == *"HF_BOARD"* ]]
+  [[ "$output" == *"hive-flow"* ]]
   [[ "$output" != *"CUSTOM"* ]]
-  count="$(printf '%s\n' "$output" | grep -c 'HF_BOARD')"
+  count="$(printf '%s\n' "$output" | grep -c 'hive-flow')"
   [ "$count" -eq 1 ]
 }

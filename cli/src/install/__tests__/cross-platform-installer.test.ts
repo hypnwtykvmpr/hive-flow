@@ -25,6 +25,7 @@ function makeProjectRoot(): string {
   for (const relativePath of [
     '.claude/helpers/layout-paths.cjs',
     '.claude/helpers/hive-flow-mcp-launcher.cjs',
+    '.claude/helpers/mcp-attestation.cjs',
     '.claude/helpers/hive-composition-gate.cjs',
     '.claude/helpers/role-enforcement.cjs',
     '.claude/helpers/enforcement.cjs',
@@ -84,6 +85,7 @@ describe('cross-platform enforcement installer', () => {
       expect(existsSync(join(binDir, 'provider-tracker.cjs'))).toBe(true);
       expect(existsSync(join(binDir, 'client-kind.cjs'))).toBe(true);
       expect(existsSync(join(binDir, 'session-id.cjs'))).toBe(true);
+      expect(existsSync(join(binDir, 'mcp-attestation.cjs'))).toBe(true);
       expect(existsSync(join(binDir, ENGINE_MANIFEST_FILE))).toBe(true);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
@@ -99,6 +101,7 @@ describe('cross-platform enforcement installer', () => {
         for (const relativePath of [
           '.claude/helpers/layout-paths.cjs',
           '.claude/helpers/hive-flow-mcp-launcher.cjs',
+          '.claude/helpers/mcp-attestation.cjs',
           '.claude/helpers/hive-composition-gate.cjs',
           '.claude/helpers/role-enforcement.cjs',
           '.claude/helpers/enforcement.cjs',
@@ -213,7 +216,7 @@ describe('cross-platform enforcement installer', () => {
     })).rejects.toThrow(/credential vault unlock|non-interactive|empty secret/i);
   });
 
-  it('performs engine-only then hooks-only install with the complete 13-file relocated set', async () => {
+  it('performs engine-only then hooks-only install with the complete 14-file relocated set', async () => {
     const projectRoot = makeProjectRoot();
     const homeDir = mkdtempSync(join(tmpdir(), 'hf-p2-e2e-home-'));
     try {
@@ -236,7 +239,7 @@ describe('cross-platform enforcement installer', () => {
       for (const file of ENGINE_TARGET_FILES) {
         expect(existsSync(join(binDir, file)), file).toBe(true);
       }
-      expect(ENGINE_TARGET_FILES).toHaveLength(13);
+      expect(ENGINE_TARGET_FILES).toHaveLength(14);
       expect(existsSync(join(binDir, '.version'))).toBe(true);
       const manifest = JSON.parse(readFileSync(join(binDir, ENGINE_MANIFEST_FILE), 'utf8')) as {
         files: Array<{ name: string; sha256: string }>;

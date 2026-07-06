@@ -8,8 +8,6 @@ const repoRoot = process.argv[2] || process.cwd();
 
 const gateModule = await import(pathToFileURL(join(
   repoRoot,
-  'v3',
-  '@hive-flow',
   'cli',
   'dist',
   'src',
@@ -18,8 +16,6 @@ const gateModule = await import(pathToFileURL(join(
 )).href);
 const resolverModule = await import(pathToFileURL(join(
   repoRoot,
-  'v3',
-  '@hive-flow',
   'cli',
   'dist',
   'src',

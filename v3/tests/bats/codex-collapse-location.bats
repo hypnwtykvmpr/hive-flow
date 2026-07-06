@@ -13,20 +13,20 @@ setup() {
 }
 
 @test "codex adapter source, tests, docs, and compatibility bin live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/cli.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/initializer.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/generators/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/templates/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/migrations/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/dual-mode/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/codex/__tests__/generators.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/codex/README.md" ]
-  [ -x "$REPO_ROOT/v3/@hive-flow/cli/bin/codex.js" ]
+  [ -f "$REPO_ROOT/cli/src/codex/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/codex/cli.ts" ]
+  [ -f "$REPO_ROOT/cli/src/codex/initializer.ts" ]
+  [ -f "$REPO_ROOT/cli/src/codex/generators/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/codex/templates/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/codex/migrations/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/codex/dual-mode/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/codex/__tests__/generators.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/codex/README.md" ]
+  [ -x "$REPO_ROOT/cli/bin/codex.js" ]
 }
 
 @test "cli package owns codex bin, exports, and runtime dependencies" {
-  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/v3/@hive-flow/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const requiredExports = ['./codex','./codex/generators','./codex/templates','./codex/migrations','./codex/dual-mode','./codex/*']; if (pkg.bin?.['hive-flow-codex'] !== './bin/codex.js') process.exit(1); if (requiredExports.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(2); const fields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (fields.some((field) => pkg[field]?.['@hive-flow/codex'])) process.exit(3); const deps = pkg.dependencies || {}; for (const dep of ['commander','chalk','inquirer','yaml','toml']) { if (!deps[dep]) process.exit(4); }"
+  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const requiredExports = ['./codex','./codex/generators','./codex/templates','./codex/migrations','./codex/dual-mode','./codex/*']; if (pkg.bin?.['hive-flow-codex'] !== './bin/codex.js') process.exit(1); if (requiredExports.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(2); const fields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (fields.some((field) => pkg[field]?.['@hive-flow/codex'])) process.exit(3); const deps = pkg.dependencies || {}; for (const dep of ['commander','chalk','inquirer','yaml','toml']) { if (!deps[dep]) process.exit(4); }"
   [ "$status" -eq 0 ]
 }
 
@@ -46,11 +46,13 @@ setup() {
 }
 
 @test "v3 package count reflects retired codex package" {
-  run find "$REPO_ROOT/v3/@hive-flow" -maxdepth 2 -name package.json -print
-  [ "$status" -eq 0 ]
-  count=$(printf "%s\n" "$output" | sed '/^$/d' | wc -l | tr -d ' ')
-  [ "$count" -eq 3 ]
+  count=0
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
+    [ -e "$package_file" ] || continue
+    count=$((count + 1))
+  done
+  [ "$count" -eq 5 ]
 
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

@@ -649,8 +649,8 @@ describe('generateConfigToml', () => {
       const result = await generateConfigToml();
 
       expect(result).toContain('[mcp_servers.hive-flow]');
-      expect(result).toContain('command = "npx"');
-      expect(result).toContain('args = ["-y", "hive-flow@v3alpha"]');
+      expect(result).toContain('command = "hive-flow"');
+      expect(result).toContain('args = ["mcp", "start"]');
       expect(result).toContain('enabled = true');
     });
 

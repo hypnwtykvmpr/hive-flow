@@ -13,18 +13,18 @@ setup() {
 }
 
 @test "memory source, tests, docs, and benchmarks live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/memory/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/memory/hnsw-index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/memory/hybrid-backend.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/memory/database-provider.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/memory/__tests__/hnsw-quantization.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/memory/README.md" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/memory/examples/cross-platform-usage.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/benchmarks/memory/benchmarks/vector-search.bench.ts" ]
+  [ -f "$REPO_ROOT/cli/src/memory/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/memory/hnsw-index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/memory/hybrid-backend.ts" ]
+  [ -f "$REPO_ROOT/cli/src/memory/database-provider.ts" ]
+  [ -f "$REPO_ROOT/cli/src/memory/__tests__/hnsw-quantization.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/memory/README.md" ]
+  [ -f "$REPO_ROOT/cli/docs/memory/examples/cross-platform-usage.ts" ]
+  [ -f "$REPO_ROOT/cli/benchmarks/memory/benchmarks/vector-search.bench.ts" ]
 }
 
 @test "cli package owns memory export and runtime dependencies" {
-  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/v3/@hive-flow/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const requiredExports = ['./memory','./memory/application','./memory/domain','./memory/infrastructure','./memory/*']; if (requiredExports.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(1); const fields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (fields.some((field) => pkg[field]?.['@hive-flow/memory'])) process.exit(2); const deps = pkg.dependencies || {}; if (!deps['sql.js']) process.exit(3); if (!deps.typescript) process.exit(4); if (!pkg.optionalDependencies?.['better-sqlite3']) process.exit(5);"
+  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const requiredExports = ['./memory','./memory/application','./memory/domain','./memory/infrastructure','./memory/*']; if (requiredExports.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(1); const fields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (fields.some((field) => pkg[field]?.['@hive-flow/memory'])) process.exit(2); const deps = pkg.dependencies || {}; if (!deps['sql.js']) process.exit(3); if (!deps.typescript) process.exit(4); if (!pkg.optionalDependencies?.['better-sqlite3']) process.exit(5);"
   [ "$status" -eq 0 ]
 }
 
@@ -44,11 +44,13 @@ setup() {
 }
 
 @test "v3 package count reflects retired memory package" {
-  run find "$REPO_ROOT/v3/@hive-flow" -maxdepth 2 -name package.json -print
-  [ "$status" -eq 0 ]
-  count=$(printf "%s\n" "$output" | sed '/^$/d' | wc -l | tr -d ' ')
-  [ "$count" -eq 3 ]
+  count=0
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
+    [ -e "$package_file" ] || continue
+    count=$((count + 1))
+  done
+  [ "$count" -eq 5 ]
 
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

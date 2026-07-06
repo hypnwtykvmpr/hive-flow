@@ -496,7 +496,8 @@ describe('convertSettingsToToml', () => {
 
     // The implementation adds a default hive-flow server when none specified
     expect(result).toContain('[mcp_servers.hive-flow]');
-    expect(result).toContain('command = "npx"');
+    expect(result).toContain('command = "hive-flow"');
+    expect(result).toContain('args = ["mcp", "start"]');
   });
 
   it('should handle empty settings', () => {

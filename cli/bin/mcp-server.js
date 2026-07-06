@@ -11,6 +11,7 @@
  */
 
 import { repairCacheIntegrity, repairNpxCache } from './npx-repair.js';
+import { fileURLToPath } from 'url';
 
 try {
   repairNpxCache();
@@ -26,6 +27,11 @@ import {
   installStdioClientLifecycle,
   registerMcpServerProcess,
 } from '../dist/src/mcp-server/lifecycle.js';
+import {
+  formatMCPAttestationFailure,
+  isOwnerSensitiveMCPTool,
+  validateMCPAttestation,
+} from '../dist/src/mcp-server/attestation.js';
 
 /**
  * JSON-RPC error codes (MCP / JSON-RPC 2.0 spec)
@@ -41,6 +47,8 @@ const ErrorCodes = {
 
 const VERSION = '3.0.0';
 const sessionId = `mcp-${Date.now()}-${randomUUID().slice(0, 8)}`;
+const entrypointPath = fileURLToPath(import.meta.url);
+const mcpAttestation = validateMCPAttestation({ entrypointPath });
 
 // Log to stderr (doesn't corrupt stdout for MCP protocol)
 console.error(
@@ -111,6 +119,9 @@ async function shutdown(signal) {
   } catch {}
   try {
     mcpRegistration?.stop();
+  } catch {}
+  try {
+    mcpAttestation.success && mcpAttestation.cleanup();
   } catch {}
   if (credentialHolderRuntime) {
     try {
@@ -227,7 +238,21 @@ async function handleMessage(message) {
         }
 
         try {
-          const result = await callMCPTool(toolName, toolParams, { sessionId });
+          if (isOwnerSensitiveMCPTool(toolName) && !mcpAttestation.success) {
+            return {
+              jsonrpc: '2.0',
+              id: message.id,
+              error: {
+                code: ErrorCodes.INTERNAL_ERROR,
+                message: formatMCPAttestationFailure(toolName, mcpAttestation),
+              },
+            };
+          }
+
+          const context = isOwnerSensitiveMCPTool(toolName)
+            ? mcpAttestation.context
+            : { sessionId };
+          const result = await callMCPTool(toolName, toolParams, context);
           return {
             jsonrpc: '2.0',
             id: message.id,

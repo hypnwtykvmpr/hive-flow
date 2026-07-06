@@ -11,15 +11,15 @@ setup() {
 }
 
 @test "shared source and docs live under the cli package" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/core/config/defaults.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/events/binary-event-log.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/shared/workflow/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/shared/README.md" ]
+  [ -f "$REPO_ROOT/cli/src/shared/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/shared/core/config/defaults.ts" ]
+  [ -f "$REPO_ROOT/cli/src/shared/events/binary-event-log.ts" ]
+  [ -f "$REPO_ROOT/cli/src/shared/workflow/index.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/shared/README.md" ]
 }
 
 @test "cli package exports the replacement shared subpaths" {
-  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/v3/@hive-flow/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const required = ['./shared','./shared/types','./shared/core','./shared/core/config/defaults','./shared/events','./shared/hooks','./shared/mcp','./shared/security','./shared/resilience','./shared/utils/*','./shared/workflow']; if (required.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(1); const depFields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (depFields.some((field) => pkg[field]?.['@hive-flow/shared'])) process.exit(2);"
+  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const required = ['./shared','./shared/types','./shared/core','./shared/core/config/defaults','./shared/events','./shared/hooks','./shared/mcp','./shared/security','./shared/resilience','./shared/utils/*','./shared/workflow']; if (required.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(1); const depFields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (depFields.some((field) => pkg[field]?.['@hive-flow/shared'])) process.exit(2);"
   [ "$status" -eq 0 ]
 }
 
@@ -54,11 +54,13 @@ setup() {
 }
 
 @test "v3 package count reflects retired shared package" {
-  run find "$REPO_ROOT/v3/@hive-flow" -maxdepth 2 -name package.json -print
-  [ "$status" -eq 0 ]
-  count=$(printf "%s\n" "$output" | sed '/^$/d' | wc -l | tr -d ' ')
-  [ "$count" -eq 3 ]
+  count=0
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
+    [ -e "$package_file" ] || continue
+    count=$((count + 1))
+  done
+  [ "$count" -eq 5 ]
 
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

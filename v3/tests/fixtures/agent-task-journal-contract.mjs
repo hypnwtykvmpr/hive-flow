@@ -5,7 +5,7 @@ import {
   appendTaskJournalEvent,
   replayTaskJournalEvents,
   taskJournalPath,
-} from '../../@hive-flow/providers/scripts/agent-task-journal.mjs';
+} from '../../../cli/packages/providers/scripts/agent-task-journal.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'hf-agent-task-journal-'));
 const previousHome = process.env.HIVE_FLOW_HOME;

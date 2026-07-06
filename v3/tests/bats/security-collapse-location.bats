@@ -13,15 +13,15 @@ setup() {
 }
 
 @test "security source, tests, and docs live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/security/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/security/input-validator.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/security/password-hasher.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/security/__tests__/input-validator.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/security/README.md" ]
+  [ -f "$REPO_ROOT/cli/src/security/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/security/input-validator.ts" ]
+  [ -f "$REPO_ROOT/cli/src/security/password-hasher.ts" ]
+  [ -f "$REPO_ROOT/cli/src/security/__tests__/input-validator.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/security/README.md" ]
 }
 
 @test "cli package exports security subpaths and owns bcrypt deps" {
-  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/v3/@hive-flow/cli/package.json', 'utf8')); const exports = pkg.exports || {}; if (!exports['./security'] || !exports['./security/application'] || !exports['./security/domain'] || !exports['./security/*']) process.exit(1); if (!pkg.dependencies?.bcrypt) process.exit(2); if (!pkg.devDependencies?.['@types/bcrypt']) process.exit(3);"
+  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/cli/package.json', 'utf8')); const exports = pkg.exports || {}; if (!exports['./security'] || !exports['./security/application'] || !exports['./security/domain'] || !exports['./security/*']) process.exit(1); if (!pkg.dependencies?.bcrypt) process.exit(2); if (!pkg.devDependencies?.['@types/bcrypt']) process.exit(3);"
   [ "$status" -eq 0 ]
 }
 
@@ -41,11 +41,13 @@ setup() {
 }
 
 @test "v3 package count reflects retired security package" {
-  run find "$REPO_ROOT/v3/@hive-flow" -maxdepth 2 -name package.json -print
-  [ "$status" -eq 0 ]
-  count=$(printf "%s\n" "$output" | sed '/^$/d' | wc -l | tr -d ' ')
-  [ "$count" -eq 3 ]
+  count=0
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
+    [ -e "$package_file" ] || continue
+    count=$((count + 1))
+  done
+  [ "$count" -eq 5 ]
 
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

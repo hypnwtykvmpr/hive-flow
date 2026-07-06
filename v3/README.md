@@ -95,39 +95,40 @@ V3 represents a complete architectural overhaul:
 ## Directory Structure
 
 ```
-v3/
-├── @hive-flow/                    # Modular packages (3 packages)
-│   ├── cli/                         # CLI module (40 commands)
-│   │   ├── bin/                     # Executable
-│   │   ├── e2e/                     # CLI-owned integration tests
-│   │   ├── helpers/                 # Cross-platform helper assets
-│   │   ├── docs/                    # CLI-owned package docs
-│   │   └── src/
-│   │       ├── claims/              # Claims-based authorisation
-│   │       ├── commands/            # Command handlers
-│   │       ├── codex/               # Codex adapter and dual-mode binary internals
-│   │       ├── context/             # Internal context assembly helpers
-│   │       ├── deployment/          # Release helper internals
-│   │       ├── guidance/            # Governance control plane
-│   │       ├── hooks/               # 35 CLI hook subcommands + 10 configured workers
-│   │       ├── integration/         # hive-flow integration bridge
-│   │       ├── memory/              # HiveMemory + HNSW vector search
-│   │       ├── mcp/                 # MCP server internals
-│   │       ├── mcp-tools/           # MCP tool definitions
-│   │       ├── neural/              # Deterministic local pattern helpers
-│   │       ├── performance/         # Performance profiling internals
-│   │       ├── plugin-sdk/          # Plugin SDK and examples
-│   │       ├── security/            # Input validation, CVE remediation
-│   │       ├── swarm/               # Swarm coordination internals
-│   │       └── testing/             # CLI-owned testing helpers
-│   ├── embeddings/                  # Vector embeddings (HNSW, hyperbolic)
-│   ├── providers/                   # LLM provider integrations
-│   └── shared/                      # Shared types, events, resilience
-│
-├── docs/                            # Documentation
-├── scripts/                         # Utility scripts
-├── swarm.config.ts                  # Swarm configuration
-├── vitest.config.ts                 # Test configuration
+.
+├── cli/                           # CLI package and package-owned workspaces (5 packages)
+│   ├── bin/                       # Executables
+│   ├── e2e/                       # CLI-owned integration tests
+│   ├── helpers/                   # Cross-platform helper assets
+│   ├── docs/                      # CLI-owned package docs
+│   ├── packages/
+│   │   ├── cli-compat/             # @hive-flow/cli compatibility package
+│   │   ├── embeddings/             # Vector embeddings
+│   │   ├── plugin-gastown-bridge/  # Plugin bridge package
+│   │   └── providers/              # LLM provider integrations
+│   └── src/
+│       ├── claims/                 # Claims-based authorisation
+│       ├── commands/               # Command handlers
+│       ├── codex/                  # Codex adapter and dual-mode binary internals
+│       ├── context/                # Internal context assembly helpers
+│       ├── deployment/             # Release helper internals
+│       ├── guidance/               # Governance control plane
+│       ├── hooks/                  # 35 CLI hook subcommands + 10 configured workers
+│       ├── integration/            # hive-flow integration bridge
+│       ├── memory/                 # HiveMemory + HNSW vector search
+│       ├── mcp/                    # MCP server internals
+│       ├── mcp-tools/              # MCP tool definitions
+│       ├── neural/                 # Deterministic local pattern helpers
+│       ├── performance/            # Performance profiling internals
+│       ├── plugin-sdk/             # Plugin SDK and examples
+│       ├── security/               # Input validation, CVE remediation
+│       ├── swarm/                  # Swarm coordination internals
+│       └── testing/                # CLI-owned testing helpers
+├── v3/                             # V3 config, tests, docs, and compatibility harness
+│   ├── docs/                       # Documentation
+│   ├── scripts/                    # Utility scripts
+│   ├── swarm.config.ts             # Swarm configuration
+│   └── vitest.config.ts            # Test configuration
 └── package.json                     # Monorepo package
 ```
 
@@ -344,7 +345,7 @@ pnpm test:coverage
 | **Search** | HiveMemory vector search | where built |
 | **Attention** | Local attention-style helpers | deterministic utilities |
 | **Memory** | Reduction | Substantially lower |
-| **Code** | Package count | 3 packages |
+| **Code** | Package count | 5 packages |
 | **Startup** | Cold start | <500ms |
 | **Learning** | Local pattern utilities | deterministic |
 

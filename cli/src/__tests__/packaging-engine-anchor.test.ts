@@ -15,6 +15,7 @@ const PACKAGING_TEST_TIMEOUT_MS = 30_000;
 const ENGINE_FILES = [
   { name: 'layout-paths.cjs', source: join(repoRoot, '.claude', 'helpers', 'layout-paths.cjs') },
   { name: 'hive-flow-mcp-launcher.cjs', source: join(repoRoot, '.claude', 'helpers', 'hive-flow-mcp-launcher.cjs') },
+  { name: 'mcp-attestation.cjs', source: join(repoRoot, '.claude', 'helpers', 'mcp-attestation.cjs') },
   { name: 'enforcement.cjs', source: join(repoRoot, '.claude', 'helpers', 'enforcement.cjs') },
   { name: 'role-enforcement.cjs', source: join(repoRoot, '.claude', 'helpers', 'role-enforcement.cjs') },
   { name: 'hive-composition-gate.cjs', source: join(repoRoot, '.claude', 'helpers', 'hive-composition-gate.cjs') },
@@ -100,7 +101,7 @@ function writeInstalledVersion(binDir: string, sourceRoot: string): void {
 }
 
 describe('P1 engine packaging anchor', () => {
-  it('packs the complete 13-file engine anchor and manifest', () => {
+  it('packs the complete 14-file engine anchor and manifest', () => {
     const files = packFileList();
 
     for (const { name } of ENGINE_FILES) {
@@ -129,7 +130,7 @@ describe('P1 engine packaging anchor', () => {
     }
   });
 
-  it('resolves hive-flow/package.json to an anchor containing all 13 files', () => {
+  it('resolves hive-flow/package.json to an anchor containing all 14 files', () => {
     const requireFromCli = createRequire(join(cliRoot, 'dist', 'src', 'index.js'));
     const resolvedPackageJson = requireFromCli.resolve('hive-flow/package.json');
     expect(resolvedPackageJson).toBe(packageJsonPath);

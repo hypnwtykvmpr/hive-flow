@@ -3,10 +3,8 @@
  * Creates .mcp.json for Claude Code MCP server integration
  * Handles cross-platform compatibility (Windows requires cmd /c wrapper)
  *
- * Uses a shell wrapper on Unix to auto-repair npm cache corruption
- * (ENOTEMPTY/ECOMPROMISED) before running npx. This is critical for
- * remote environments like Codespaces where interrupted installs
- * leave stale artifacts that prevent subsequent npx runs.
+ * Generated configs launch the installed command directly instead of
+ * embedding package-manager install guidance in runtime MCP settings.
  */
 
 import type { InitOptions, MCPConfig } from './types.js';
@@ -20,35 +18,27 @@ function isWindows(): boolean {
 
 /**
  * Generate platform-specific MCP server entry
- * - Windows: uses 'cmd /c npx' directly
- * - Unix: uses 'sh -c' with retry-on-failure for npm cache corruption
- *
- * The Unix wrapper tries npx normally first. If it fails with ENOTEMPTY
- * or ECOMPROMISED (common in Codespaces/remote envs), it nukes the
- * corrupted cache and retries once. This adds 0ms on success and ~5s
- * on the retry path — acceptable since MCP servers start once per session.
+ * - Windows: uses cmd /c wrapper for command resolution
+ * - Unix: launches the installed command directly
  */
 function createMCPServerEntry(
-  npxArgs: string[],
+  command: string,
+  args: string[],
   env: Record<string, string>,
   additionalProps: Record<string, unknown> = {}
 ): object {
   if (isWindows()) {
     return {
       command: 'cmd',
-      args: ['/c', 'npx', '-y', ...npxArgs],
+      args: ['/c', command, ...args],
       env,
       ...additionalProps,
     };
   }
 
-  // Unix: npx with automatic retry on cache corruption
-  const npxCmd = ['npx', '-y', ...npxArgs].join(' ');
-  // Try normal launch; on ENOTEMPTY/ECOMPROMISED nuke cache and retry
-  const retryScript = `${npxCmd} 2>/tmp/.cf-err.$$ || { if grep -qE 'ENOTEMPTY|ECOMPROMISED' /tmp/.cf-err.$$ 2>/dev/null; then rm -rf ~/.npm/_npx ~/.npm/_cacache 2>/dev/null; exec ${npxCmd}; else cat /tmp/.cf-err.$$ >&2; exit 1; fi; }`;
   return {
-    command: 'sh',
-    args: ['-c', retryScript],
+    command,
+    args,
     env,
     ...additionalProps,
   };
@@ -72,7 +62,8 @@ export function generateMCPConfig(options: InitOptions): object {
   // Hive Flow MCP server (core)
   if (config.hiveFlow) {
     mcpServers['hive-flow'] = createMCPServerEntry(
-      ['hive-flow@v3alpha', 'mcp', 'start'],
+      'hive-flow',
+      ['mcp', 'start'],
       {
         ...npmCacheEnv,
         HIVE_FLOW_MODE: 'v3',
@@ -88,7 +79,8 @@ export function generateMCPConfig(options: InitOptions): object {
   // Flow Nexus MCP server (cloud features)
   if (config.flowNexus) {
     mcpServers['flow-nexus'] = createMCPServerEntry(
-      ['flow-nexus@latest', 'mcp', 'start'],
+      'flow-nexus',
+      ['mcp', 'start'],
       { ...npmCacheEnv },
       { optional: true, requiresAuth: true }
     );
@@ -107,8 +99,7 @@ export function generateMCPJson(options: InitOptions): string {
 
 /**
  * Generate MCP server add commands for manual setup
- * Unix wraps npx with cache repair to prevent ENOTEMPTY/ECOMPROMISED
- * Windows uses 'cmd /c' wrapper for npx execution
+ * Windows uses a cmd /c wrapper for command resolution
  */
 export function generateMCPCommands(options: InitOptions): string[] {
   const commands: string[] = [];
@@ -146,6 +137,6 @@ export function getPlatformInstructions(): { platform: string; note: string } {
   }
   return {
     platform: process.platform === 'darwin' ? 'macOS' : 'Linux',
-    note: 'MCP configuration uses sh wrapper with automatic npm cache repair for remote environment resilience.',
+    note: 'MCP configuration launches installed commands directly.',
   };
 }

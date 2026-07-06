@@ -76,6 +76,9 @@ setup() {
   #                                   DELETE_ pattern is ABSENT from packs (its
   #                                   JUNK_PATTERNS names DELETE_ to enforce its
   #                                   exclusion — a legitimate mention, not a leak).
+  #   - pack-install-smoke/generate-compat and their unit tests: packaging
+  #                                   junk-pattern guards that reject DELETE_
+  #                                   entries instead of depending on them.
   # Portable (no mapfile/bash4): grep all tracked non-TRASH files via xargs -0.
   hits="$(git ls-files -z | grep -zv '^TRASH/' | xargs -0 grep -nI 'DELETE_' 2>/dev/null \
     | grep -vE '(^|/)\.gitignore:' \
@@ -89,6 +92,9 @@ setup() {
     | grep -vE 'hivememory-ripout\.test\.ts:' \
     | grep -vE 'ewc-architecture-honesty\.test\.ts:' \
     | grep -vE 'ca4-neural-honesty\.test\.ts:' \
+    | grep -vE 'cli/scripts/pack-install-smoke\.mjs:' \
+    | grep -vE 'cli/packages/cli-compat/scripts/generate-compat\.mjs:' \
+    | grep -vE 'phase2b-pack-install-smoke\.test\.ts:' \
     | grep -vE 'BEAD_DELETE_FAILED|GT_BEAD_DELETE_FAILED' \
     || true)"
   if [ -n "$hits" ]; then

@@ -9,17 +9,17 @@ setup() {
 }
 
 @test "e2e tests and fixtures live under the cli package" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/e2e/__tests__/mcp.e2e.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/e2e/__tests__/helpers.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/e2e/__fixtures__/mcp-wire/initialize-response.json" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/e2e/src/anti-mock-theater.ts" ]
+  [ -f "$REPO_ROOT/cli/e2e/__tests__/mcp.e2e.test.ts" ]
+  [ -f "$REPO_ROOT/cli/e2e/__tests__/helpers.ts" ]
+  [ -f "$REPO_ROOT/cli/e2e/__fixtures__/mcp-wire/initialize-response.json" ]
+  [ -f "$REPO_ROOT/cli/e2e/src/anti-mock-theater.ts" ]
 }
 
 @test "integration scripts target cli e2e instead of retired package" {
-  run rg -n "@hive-flow/e2e|--filter @hive-flow/e2e" "$REPO_ROOT/v3/package.json" "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run rg -n "@hive-flow/e2e|--filter @hive-flow/e2e" "$REPO_ROOT/v3/package.json" "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 1 ]
 
-  run rg -n "test:e2e|e2e/vitest.config.ts" "$REPO_ROOT/v3/package.json" "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run rg -n "test:e2e|e2e/vitest.config.ts" "$REPO_ROOT/v3/package.json" "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
@@ -29,6 +29,6 @@ setup() {
 }
 
 @test "moved e2e config resolves the v3 base config" {
-  run rg -n "\"extends\": \"../../../tsconfig.base.json\"" "$REPO_ROOT/v3/@hive-flow/cli/e2e/tsconfig.json"
+  run rg -n "\"extends\": \"../../../tsconfig.base.json\"" "$REPO_ROOT/cli/e2e/tsconfig.json"
   [ "$status" -eq 0 ]
 }

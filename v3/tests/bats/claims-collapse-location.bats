@@ -11,19 +11,19 @@ setup() {
 }
 
 @test "claims source, tests, and docs live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/claims/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/claims/application/claim-service.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/claims/api/mcp-tools.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/claims/__tests__/domain.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/claims/README.md" ]
+  [ -f "$REPO_ROOT/cli/src/claims/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/claims/application/claim-service.ts" ]
+  [ -f "$REPO_ROOT/cli/src/claims/api/mcp-tools.ts" ]
+  [ -f "$REPO_ROOT/cli/src/claims/__tests__/domain.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/claims/README.md" ]
 }
 
 @test "cli package exports claims and declares zod for preserved schemas" {
-  run grep -F '"./claims"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./claims"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./dist/src/claims/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./dist/src/claims/index.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"zod": "^3.25.0"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"zod": "^3.25.0"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
@@ -39,23 +39,23 @@ setup() {
 }
 
 @test "registry and plugin help do not advertise retired claims package" {
-  run grep -F '@hive-flow/claims' "$REPO_ROOT/v3/@hive-flow/cli/src/plugins/store/discovery.ts"
+  run grep -F '@hive-flow/claims' "$REPO_ROOT/cli/src/plugins/store/discovery.ts"
   [ "$status" -eq 1 ]
-  run grep -F '@hive-flow/claims' "$REPO_ROOT/v3/@hive-flow/cli/scripts/publish-registry.ts"
+  run grep -F '@hive-flow/claims' "$REPO_ROOT/cli/scripts/publish-registry.ts"
   [ "$status" -eq 1 ]
-  run grep -F '@hive-flow/claims' "$REPO_ROOT/v3/@hive-flow/cli/src/commands/plugins.ts"
+  run grep -F '@hive-flow/claims' "$REPO_ROOT/cli/src/commands/plugins.ts"
   [ "$status" -eq 1 ]
 }
 
 @test "tracked docs use cli claims subpath instead of retired package" {
   run grep -R '@hive-flow/claims' \
     "$REPO_ROOT/CLAUDE.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/claims/README.md"
+    "$REPO_ROOT/cli/docs/claims/README.md"
   [ "$status" -eq 1 ]
 
   run grep -F '@hive-flow/cli/claims' "$REPO_ROOT/CLAUDE.md"
   [ "$status" -eq 0 ]
-  run grep -F '@hive-flow/cli/claims' "$REPO_ROOT/v3/@hive-flow/cli/docs/claims/README.md"
+  run grep -F '@hive-flow/cli/claims' "$REPO_ROOT/cli/docs/claims/README.md"
   [ "$status" -eq 0 ]
 }
 
@@ -72,12 +72,12 @@ setup() {
 
 @test "v3 package count reflects retired claims package" {
   count=0
-  for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
     [ -e "$package_file" ] || continue
     count=$((count + 1))
   done
 
-  [ "$count" -eq 3 ]
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 5 ]
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

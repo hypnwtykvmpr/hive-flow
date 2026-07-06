@@ -11,28 +11,28 @@ setup() {
 }
 
 @test "integration source, tests, and docs live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/integration/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/integration/token-optimizer.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/integration/swarm-adapter.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/integration/__tests__/token-optimizer.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/integration/README.md" ]
+  [ -f "$REPO_ROOT/cli/src/integration/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/integration/token-optimizer.ts" ]
+  [ -f "$REPO_ROOT/cli/src/integration/swarm-adapter.ts" ]
+  [ -f "$REPO_ROOT/cli/src/integration/__tests__/token-optimizer.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/integration/README.md" ]
 }
 
 @test "cli package exports integration subpaths and no longer depends on retired package" {
-  run grep -F '"./integration"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./integration"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./dist/src/integration/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./dist/src/integration/index.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./integration/*"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./integration/*"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"@hive-flow/integration"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"@hive-flow/integration"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 1 ]
 }
 
 @test "root package no longer bundles retired integration workspace" {
   run grep -F '"@hive-flow/integration"' "$REPO_ROOT/package.json"
   [ "$status" -eq 1 ]
-  run grep -F "{ name: 'integration'" "$REPO_ROOT/v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs"
+  run grep -F "{ name: 'integration'" "$REPO_ROOT/cli/scripts/stage-bundled-workspaces.mjs"
   [ "$status" -eq 1 ]
 }
 
@@ -52,11 +52,11 @@ setup() {
 @test "adjacent packages and workers no longer point at retired integration package" {
   run grep -F '"@hive-flow/integration"' "$REPO_ROOT/cli/packages/embeddings/package.json"
   [ "$status" -eq 1 ]
-  run grep -F "'@hive-flow/cli/integration'" "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts"
+  run grep -F "'@hive-flow/cli/integration'" "$REPO_ROOT/cli/src/hooks/workers/index.ts"
   [ "$status" -eq 0 ]
-  run grep -F "path.join(v3Path, '@hive-flow/cli', 'src', 'integration')" "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts"
+  run grep -F "path.join(projectRoot, 'cli', 'src', 'integration')" "$REPO_ROOT/cli/src/hooks/workers/index.ts"
   [ "$status" -eq 0 ]
-  run grep -F "path.join(v3Path, '@hive-flow/cli/src/integration')" "$REPO_ROOT/v3/@hive-flow/cli/src/hooks/workers/index.ts"
+  run grep -F "path.join(v3Path, '@hive-flow/cli/src/integration')" "$REPO_ROOT/cli/src/hooks/workers/index.ts"
   [ "$status" -eq 1 ]
 }
 
@@ -65,20 +65,20 @@ setup() {
     "$REPO_ROOT/README.md" \
     "$REPO_ROOT/CLAUDE.md" \
     "$REPO_ROOT/v3/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/README.md" \
+    "$REPO_ROOT/cli/README.md" \
     "$REPO_ROOT/v3/CHANGELOG.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/integration/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/shared/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/neural/README.md"
+    "$REPO_ROOT/cli/docs/integration/README.md" \
+    "$REPO_ROOT/cli/docs/shared/README.md" \
+    "$REPO_ROOT/cli/docs/neural/README.md"
   [ "$status" -eq 1 ]
 
-  run grep -F '@hive-flow/cli/integration' "$REPO_ROOT/v3/@hive-flow/cli/docs/integration/README.md"
+  run grep -F '@hive-flow/cli/integration' "$REPO_ROOT/cli/docs/integration/README.md"
   [ "$status" -eq 0 ]
-  run grep -F './v3/@hive-flow/cli/src/integration/' "$REPO_ROOT/README.md"
+  run grep -F './cli/src/integration/' "$REPO_ROOT/README.md"
   [ "$status" -eq 0 ]
-  run grep -F './@hive-flow/cli/src/integration/' "$REPO_ROOT/v3/README.md"
+  run grep -F '../cli/src/integration/' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
-  run grep -F './src/integration/' "$REPO_ROOT/v3/@hive-flow/cli/README.md"
+  run grep -F './src/integration/' "$REPO_ROOT/cli/README.md"
   [ "$status" -eq 0 ]
 }
 
@@ -91,12 +91,12 @@ setup() {
 
 @test "v3 package count reflects retired integration package" {
   count=0
-  for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
     [ -e "$package_file" ] || continue
     count=$((count + 1))
   done
 
-  [ "$count" -eq 3 ]
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 5 ]
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

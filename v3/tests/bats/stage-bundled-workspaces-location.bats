@@ -5,23 +5,23 @@ setup() {
 }
 
 @test "bundled workspace staging script lives under the canonical CLI package path" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs" ]
+  [ -f "$REPO_ROOT/cli/scripts/stage-bundled-workspaces.mjs" ]
   [ ! -e "$REPO_ROOT/scripts/stage-bundled-workspaces.mjs" ]
 }
 
-@test "root prepack invokes the canonical CLI package staging script" {
+@test "cli package prepack invokes the canonical package-local staging script" {
   run node -e '
     const { readFileSync } = require("node:fs");
     const pkg = JSON.parse(readFileSync(process.argv[1], "utf8"));
-    if (pkg.scripts?.prepack !== "node v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs") {
+    if (pkg.scripts?.prepack !== "node scripts/stage-bundled-workspaces.mjs") {
       console.error(pkg.scripts?.prepack);
       process.exit(1);
     }
-  ' "$REPO_ROOT/package.json"
+  ' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
 @test "canonical staging script is syntactically valid from its nested location" {
-  run node --check "$REPO_ROOT/v3/@hive-flow/cli/scripts/stage-bundled-workspaces.mjs"
+  run node --check "$REPO_ROOT/cli/scripts/stage-bundled-workspaces.mjs"
   [ "$status" -eq 0 ]
 }

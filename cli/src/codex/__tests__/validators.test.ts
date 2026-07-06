@@ -123,7 +123,7 @@ Some content`;
 
 ## Setup
 
-api_key = "sk-1234567890abcdefghijklmnopqrstuvwxyz1234"
+api_key = "fake-api-key-for-validator-1234"
 
 ## Code Standards
 
@@ -531,8 +531,8 @@ sandbox_mode = "workspace-write"
 child_agents_md = true
 
 [mcp_servers.hive_flow]
-command = "npx"
-args = ["-y", "hive-flow@v3alpha"]
+command = "hive-flow"
+args = ["mcp", "start"]
 enabled = true
 
 [profiles.dev]
@@ -859,8 +859,8 @@ sandbox_mode = "workspace-write"
 child_agents_md = true
 
 [mcp_servers.hive_flow]
-command = "npx"
-args = ["-y", "hive-flow@v3alpha"]
+command = "hive-flow"
+args = ["mcp", "start"]
 enabled = true
 
 [profiles.dev]

@@ -9,29 +9,29 @@ setup() {
 }
 
 @test "guidance source, tests, docs, script, and wasm assets live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/guidance/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/guidance/compiler.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/guidance/wasm-kernel.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/guidance/wasm-pkg/guidance_kernel.js" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/guidance/wasm-pkg/guidance_kernel_bg.wasm" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/guidance/__tests__/compiler.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/guidance/README.md" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/scripts/guidance/analyze-claude-md.ts" ]
+  [ -f "$REPO_ROOT/cli/src/guidance/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/guidance/compiler.ts" ]
+  [ -f "$REPO_ROOT/cli/src/guidance/wasm-kernel.ts" ]
+  [ -f "$REPO_ROOT/cli/src/guidance/wasm-pkg/guidance_kernel.js" ]
+  [ -f "$REPO_ROOT/cli/src/guidance/wasm-pkg/guidance_kernel_bg.wasm" ]
+  [ -f "$REPO_ROOT/cli/src/guidance/__tests__/compiler.test.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/guidance/README.md" ]
+  [ -f "$REPO_ROOT/cli/scripts/guidance/analyze-claude-md.ts" ]
 }
 
 @test "cli publishes guidance subpath export and copies wasm assets during build" {
-  run grep -F '"./guidance"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./guidance"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./dist/src/guidance/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./dist/src/guidance/index.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"build:guidance-assets"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"build:guidance-assets"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F 'copy-guidance-assets.mjs' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F 'copy-guidance-assets.mjs' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
 @test "root packages no longer bundle or depend on retired guidance workspace" {
-  run grep -F '@hive-flow/guidance' "$REPO_ROOT/package.json" "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '@hive-flow/guidance' "$REPO_ROOT/package.json" "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 1 ]
 }
 
@@ -51,13 +51,13 @@ setup() {
 
 @test "v3 package count reflects retired guidance package" {
   count=0
-  for package_file in "$REPO_ROOT"/v3/@hive-flow/*/package.json; do
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
     [ -e "$package_file" ] || continue
     count=$((count + 1))
   done
 
-  [ "$count" -eq 3 ]
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  [ "$count" -eq 5 ]
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }
 

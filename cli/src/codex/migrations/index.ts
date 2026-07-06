@@ -777,8 +777,8 @@ export function convertSettingsToToml(settings: Record<string, unknown>): string
   } else {
     // Add default hive-flow server
     lines.push('[mcp_servers.hive-flow]');
-    lines.push('command = "npx"');
-    lines.push('args = ["-y", "hive-flow@v3alpha"]');
+    lines.push('command = "hive-flow"');
+    lines.push('args = ["mcp", "start"]');
     lines.push('enabled = true');
     lines.push('');
   }
@@ -853,8 +853,8 @@ export function generateConfigTomlFromParsed(parsed: ParsedClaudeMd): string {
   } else {
     // Default hive-flow server
     lines.push('[mcp_servers.hive_flow]');
-    lines.push('command = "npx"');
-    lines.push('args = ["-y", "hive-flow@v3alpha"]');
+    lines.push('command = "hive-flow"');
+    lines.push('args = ["mcp", "start"]');
     lines.push('enabled = true');
     lines.push('');
   }

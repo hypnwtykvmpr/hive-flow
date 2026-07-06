@@ -7,9 +7,10 @@ setup() {
   mkdir -p "$PROJECT_DIR/.claude/helpers" "$PROJECT_DIR/.hive-flow/enforcement"
   export HIVE_FLOW_HOME="$PROJECT_DIR/global-hive-home"
   cp "$REPO_ROOT/.claude/helpers/enforcement.cjs" "$SCRIPT"
-  mkdir -p "$PROJECT_DIR/v3/@hive-flow/cli/src/permission-guard"
-  cp "$REPO_ROOT/v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs" "$PROJECT_DIR/v3/@hive-flow/cli/src/permission-guard/protected-paths.cjs"
-  cp "$REPO_ROOT/v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json" "$PROJECT_DIR/v3/@hive-flow/cli/src/permission-guard/protected-paths.policy.json"
+  cp "$REPO_ROOT/.claude/helpers/layout-paths.cjs" "$PROJECT_DIR/.claude/helpers/layout-paths.cjs"
+  mkdir -p "$PROJECT_DIR/cli/src/permission-guard"
+  cp "$REPO_ROOT/cli/src/permission-guard/protected-paths.cjs" "$PROJECT_DIR/cli/src/permission-guard/protected-paths.cjs"
+  cp "$REPO_ROOT/cli/src/permission-guard/protected-paths.policy.json" "$PROJECT_DIR/cli/src/permission-guard/protected-paths.policy.json"
   export HIVE_FLOW_PROJECT_ROOT="$PROJECT_DIR"
   export CLAUDE_PROJECT_DIR="$PROJECT_DIR"
   unset CLAUDE_SESSION_ID
@@ -257,6 +258,7 @@ JSON
   relocated_dir="$(mktemp -d)"
   mkdir -p "$relocated_dir"
   cp "$SCRIPT" "$relocated_dir/enforcement.cjs"
+  cp "$PROJECT_DIR/.claude/helpers/layout-paths.cjs" "$relocated_dir/layout-paths.cjs"
 
   run env HIVE_FLOW_PROJECT_ROOT="$PROJECT_DIR" node "$relocated_dir/enforcement.cjs" <<'JSON'
 {"tool_name":"Write","tool_input":{"file_path":".claude/settings.json"}}

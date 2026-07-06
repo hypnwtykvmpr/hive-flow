@@ -31,6 +31,13 @@ import {
   resolveClientKindFromEnv,
   type OperatorClientKind,
 } from './mcp-tools/session-id.js';
+import {
+  formatMCPAttestationFailure,
+  isOwnerSensitiveMCPTool,
+  mintInProcessMCPAttestation,
+  validateMCPAttestation,
+  type MCPAttestationValidation,
+} from './mcp-server/attestation.js';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -521,6 +528,14 @@ export class MCPServerManager extends EventEmitter {
 
     const VERSION = '3.0.0';
     const sessionId = `mcp-${Date.now()}-${randomUUID().slice(0, 8)}`;
+    const mintedAttestation = mintInProcessMCPAttestation({
+      env: process.env,
+      cwd: process.cwd(),
+      mcpPid: process.pid,
+    });
+    const mcpAttestation: MCPAttestationValidation = mintedAttestation.success
+      ? validateMCPAttestation({ env: process.env, cwd: process.cwd(), pid: process.pid })
+      : mintedAttestation;
 
     // Log to stderr to not corrupt stdout
     console.error(
@@ -556,7 +571,7 @@ export class MCPServerManager extends EventEmitter {
             if (message && typeof message === 'object' && message.method === 'initialize') {
               clientKind = classifyMCPClient(message.params, process.env, { trustEnvFallback: false });
             }
-            const response = await this.handleMCPMessage(message, sessionId, clientKind);
+            const response = await this.handleMCPMessage(message, sessionId, clientKind, mcpAttestation);
             if (response) {
               this.stdoutQueue.write(JSON.stringify(response));
             }
@@ -580,6 +595,7 @@ export class MCPServerManager extends EventEmitter {
       console.error(
         `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) stdin closed, shutting down...`
       );
+      if (mcpAttestation.success) mcpAttestation.cleanup();
       process.exit(0);
     });
 
@@ -588,6 +604,7 @@ export class MCPServerManager extends EventEmitter {
       console.error(
         `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Received SIGINT, shutting down...`
       );
+      if (mcpAttestation.success) mcpAttestation.cleanup();
       process.exit(0);
     });
 
@@ -595,6 +612,7 @@ export class MCPServerManager extends EventEmitter {
       console.error(
         `[${new Date().toISOString()}] INFO [hive-flow-mcp] (${sessionId}) Received SIGTERM, shutting down...`
       );
+      if (mcpAttestation.success) mcpAttestation.cleanup();
       process.exit(0);
     });
 
@@ -653,9 +671,12 @@ export class MCPServerManager extends EventEmitter {
 
         // Not terminal — invoke hive_poll_workers to check result files + auto-transition
         try {
+          if (!mcpAttestation.success) {
+            throw new Error(formatMCPAttestationFailure('hive_poll_workers', mcpAttestation));
+          }
           const pollResult = await callMCPTool('hive_poll_workers', { hiveId }, {
-            sessionId,
-            clientKind: clientKindForMCPToolContext(clientKind),
+            ...mcpAttestation.context,
+            clientKind: clientKindForMCPToolContext(mcpAttestation.context.clientKind),
           }) as Record<string, unknown> | null;
           if (pollResult && (pollResult.allWorkersSettled || pollResult.allComplete)) {
             // Re-read hive — hive_poll_workers may have transitioned it to completed
@@ -786,6 +807,7 @@ export class MCPServerManager extends EventEmitter {
       if (pollingInterval) {
         clearInterval(pollingInterval);
       }
+      if (mcpAttestation.success) mcpAttestation.cleanup();
     });
 
     // Mark as ready immediately for stdio
@@ -799,6 +821,7 @@ export class MCPServerManager extends EventEmitter {
     message: { jsonrpc: string; id?: string | number; method?: string; params?: unknown },
     sessionId: string,
     clientKind: MCPClientKind = 'unknown',
+    mcpAttestation: MCPAttestationValidation = { success: false, code: 'missing-env', error: 'MCP attestation was not initialized.' },
   ): Promise<{ jsonrpc: string; id?: string | number; result?: unknown; error?: { code: number; message: string } } | null> {
     const { listMCPTools, callMCPTool, hasTool } = await getMcpClient();
 
@@ -856,10 +879,25 @@ export class MCPServerManager extends EventEmitter {
           }
 
           try {
+            const ownerSensitiveTool = isOwnerSensitiveMCPTool(toolName);
+            if (ownerSensitiveTool && !mcpAttestation.success) {
+              return {
+                jsonrpc: '2.0',
+                id: message.id,
+                error: {
+                  code: ErrorCodes.INTERNAL_ERROR,
+                  message: formatMCPAttestationFailure(toolName, mcpAttestation),
+                },
+              };
+            }
+
+            const context = ownerSensitiveTool && mcpAttestation.success
+              ? mcpAttestation.context
+              : buildMCPToolContextForCall(sessionId, clientKind, toolParams);
             const result = await callMCPTool(
               toolName,
               toolParams,
-              buildMCPToolContextForCall(sessionId, clientKind, toolParams),
+              context,
             );
             
             // Intercept queen_mission_assign success to auto-register hive for monitoring

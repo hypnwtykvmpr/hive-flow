@@ -13,16 +13,16 @@ setup() {
 }
 
 @test "plugin sdk source, tests, examples, and docs live under cli" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/plugin-sdk/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/plugin-sdk/core/plugin-interface.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/plugin-sdk/sdk/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/plugin-sdk/__tests__/plugin-registry.test.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/plugin-sdk/examples/plugin-creator/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/docs/plugin-sdk/README.md" ]
+  [ -f "$REPO_ROOT/cli/src/plugin-sdk/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/plugin-sdk/core/plugin-interface.ts" ]
+  [ -f "$REPO_ROOT/cli/src/plugin-sdk/sdk/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/plugin-sdk/__tests__/plugin-registry.test.ts" ]
+  [ -f "$REPO_ROOT/cli/src/plugin-sdk/examples/plugin-creator/index.ts" ]
+  [ -f "$REPO_ROOT/cli/docs/plugin-sdk/README.md" ]
 }
 
 @test "cli package exports plugin-sdk subpaths and does not depend on retired plugins package" {
-  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/v3/@hive-flow/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const required = ['./plugin-sdk','./plugin-sdk/sdk','./plugin-sdk/workers','./plugin-sdk/hooks','./plugin-sdk/providers','./plugin-sdk/examples/plugin-creator','./plugin-sdk/*']; if (required.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(1); const fields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (fields.some((field) => pkg[field]?.['@hive-flow/plugins'])) process.exit(2);"
+  run node --input-type=module -e "import { readFileSync } from 'node:fs'; const pkg = JSON.parse(readFileSync('$REPO_ROOT/cli/package.json', 'utf8')); const exports = pkg.exports || {}; const required = ['./plugin-sdk','./plugin-sdk/sdk','./plugin-sdk/workers','./plugin-sdk/hooks','./plugin-sdk/providers','./plugin-sdk/examples/plugin-creator','./plugin-sdk/*']; if (required.some((key) => !exports[key]?.types || !exports[key]?.import)) process.exit(1); const fields = ['dependencies','devDependencies','optionalDependencies','peerDependencies']; if (fields.some((field) => pkg[field]?.['@hive-flow/plugins'])) process.exit(2);"
   [ "$status" -eq 0 ]
 }
 
@@ -42,11 +42,13 @@ setup() {
 }
 
 @test "v3 package count reflects retired plugins package" {
-  run find "$REPO_ROOT/v3/@hive-flow" -maxdepth 2 -name package.json -print
-  [ "$status" -eq 0 ]
-  count=$(printf "%s\n" "$output" | sed '/^$/d' | wc -l | tr -d ' ')
-  [ "$count" -eq 3 ]
+  count=0
+  for package_file in "$REPO_ROOT"/cli/package.json "$REPO_ROOT"/cli/packages/*/package.json; do
+    [ -e "$package_file" ] || continue
+    count=$((count + 1))
+  done
+  [ "$count" -eq 5 ]
 
-  run grep -F '3 packages' "$REPO_ROOT/v3/README.md"
+  run grep -F '5 packages' "$REPO_ROOT/v3/README.md"
   [ "$status" -eq 0 ]
 }

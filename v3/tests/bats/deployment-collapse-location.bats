@@ -11,17 +11,17 @@ setup() {
 }
 
 @test "deployment helper source lives under the cli package" {
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/deployment/index.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/deployment/release-manager.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/deployment/publisher.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/deployment/validator.ts" ]
-  [ -f "$REPO_ROOT/v3/@hive-flow/cli/src/deployment/types.ts" ]
+  [ -f "$REPO_ROOT/cli/src/deployment/index.ts" ]
+  [ -f "$REPO_ROOT/cli/src/deployment/release-manager.ts" ]
+  [ -f "$REPO_ROOT/cli/src/deployment/publisher.ts" ]
+  [ -f "$REPO_ROOT/cli/src/deployment/validator.ts" ]
+  [ -f "$REPO_ROOT/cli/src/deployment/types.ts" ]
 }
 
 @test "cli package exports the replacement deployment subpath" {
-  run grep -F '"./deployment"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./deployment"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
-  run grep -F '"./dist/src/deployment/index.js"' "$REPO_ROOT/v3/@hive-flow/cli/package.json"
+  run grep -F '"./dist/src/deployment/index.js"' "$REPO_ROOT/cli/package.json"
   [ "$status" -eq 0 ]
 }
 
@@ -47,8 +47,8 @@ setup() {
   run grep -R '@hive-flow/deployment' \
     "$REPO_ROOT/README.md" \
     "$REPO_ROOT/v3/README.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/README.md" \
+    "$REPO_ROOT/cli/README.md" \
     "$REPO_ROOT/v3/CHANGELOG.md" \
-    "$REPO_ROOT/v3/@hive-flow/cli/docs/shared/README.md"
+    "$REPO_ROOT/cli/docs/shared/README.md"
   [ "$status" -eq 1 ]
 }

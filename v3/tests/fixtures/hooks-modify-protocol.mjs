@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const v3Root = resolve(here, '..', '..');
 const repoRoot = resolve(v3Root, '..');
 const cliBin = process.env.HIVE_FLOW_HOOK_PROTOCOL_CLI
-  || join(repoRoot, 'v3', '@hive-flow', 'cli', 'bin', 'cli.js');
+  || join(repoRoot, 'cli', 'bin', 'cli.js');
 const goldenPath = join(here, 'hooks-modify-protocol.golden.json');
 const golden = JSON.parse(readFileSync(goldenPath, 'utf8'));
 

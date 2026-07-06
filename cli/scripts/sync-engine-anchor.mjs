@@ -35,6 +35,7 @@ const packageJsonPath = join(cliRoot, 'package.json');
 export const ENGINE_FILES = [
   ['.claude/helpers/layout-paths.cjs', 'layout-paths.cjs'],
   ['.claude/helpers/hive-flow-mcp-launcher.cjs', 'hive-flow-mcp-launcher.cjs'],
+  ['.claude/helpers/mcp-attestation.cjs', 'mcp-attestation.cjs'],
   ['.claude/helpers/enforcement.cjs', 'enforcement.cjs'],
   ['.claude/helpers/role-enforcement.cjs', 'role-enforcement.cjs'],
   ['.claude/helpers/hive-composition-gate.cjs', 'hive-composition-gate.cjs'],

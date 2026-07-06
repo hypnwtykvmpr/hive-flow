@@ -22,6 +22,7 @@ export const CORE_PROHIBITED: readonly ProhibitedPattern[] = [
 ];
 
 export const URL_AND_INSTALL_PROHIBITED: readonly ProhibitedPattern[] = [
+  { label: 'bare public Flow Nexus domain', pattern: /\bflow-nexus\.io\b/i },
   {
     label: 'cosmetic URL',
     pattern:

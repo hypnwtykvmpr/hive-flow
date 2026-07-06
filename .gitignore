@@ -318,6 +318,8 @@ v4-plans/*
 **/.audit-probe.cjs
 /.claude/**
 !/.claude/
+!/.claude/helpers/
+!/.claude/helpers/mcp-attestation.cjs
 !/.claude/skills/
 !/.claude/skills/**
 /.agents/**

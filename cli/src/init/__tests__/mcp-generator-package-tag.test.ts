@@ -24,7 +24,12 @@ const REPO_ROOT = findRepoRoot();
 const NEGATIVE_ASSERTION_FIXTURES = new Set([
   'cli/src/init/__tests__/mcp-generator-package-tag.test.ts',
 ]);
-const FORBIDDEN_PACKAGE_TAGS = [
+const FORBIDDEN_GENERATED_MCP_PACKAGE_TAGS = [
+  'hive-flow@v3alpha',
+  'hive-flow@latest',
+  '@hive-flow/cli@latest',
+];
+const FORBIDDEN_LATEST_PACKAGE_TAGS = [
   'hive-flow@latest',
   '@hive-flow/cli@latest',
 ];
@@ -53,34 +58,41 @@ function trackedCliSourceFiles(): string[] {
 function activeForbiddenPackageTagRefs(relativePath: string): string[] {
   if (NEGATIVE_ASSERTION_FIXTURES.has(relativePath)) return [];
   const source = stripComments(readFileSync(resolve(REPO_ROOT, relativePath), 'utf8'));
-  return FORBIDDEN_PACKAGE_TAGS
+  return FORBIDDEN_LATEST_PACKAGE_TAGS
     .filter((tag) => source.includes(tag))
     .map((tag) => `${relativePath}: ${tag}`);
 }
 
 describe('MCP generator package tag', () => {
-  it('uses the v3alpha hive-flow package for generated Hive Flow MCP config', () => {
+  it('uses the installed hive-flow command for generated Hive Flow MCP config', () => {
     const config = generateMCPConfig(DEFAULT_INIT_OPTIONS) as {
       mcpServers: {
         'hive-flow': {
+          command: string;
           args: string[];
         };
       };
     };
 
+    const command = config.mcpServers['hive-flow'].command;
     const args = config.mcpServers['hive-flow'].args.join(' ');
 
-    expect(args).toContain('hive-flow@v3alpha');
-    expect(args).not.toContain('hive-flow@latest');
-    expect(args).not.toContain('@hive-flow/cli@latest');
+    expect(command).toBe(process.platform === 'win32' ? 'cmd' : 'hive-flow');
+    expect(args).toContain(process.platform === 'win32' ? 'hive-flow mcp start' : 'mcp start');
+    for (const tag of FORBIDDEN_GENERATED_MCP_PACKAGE_TAGS) {
+      expect(args).not.toContain(tag);
+    }
   });
 
-  it('serializes generated JSON without the latest tag', () => {
+  it('serializes generated JSON without package tags', () => {
     const json = generateMCPJson(DEFAULT_INIT_OPTIONS);
 
-    expect(json).toContain('hive-flow@v3alpha');
-    expect(json).not.toContain('hive-flow@latest');
-    expect(json).not.toContain('@hive-flow/cli@latest');
+    expect(json).toContain('"hive-flow"');
+    expect(json).toContain('"mcp"');
+    expect(json).toContain('"start"');
+    for (const tag of FORBIDDEN_GENERATED_MCP_PACKAGE_TAGS) {
+      expect(json).not.toContain(tag);
+    }
   });
 
   it('keeps tracked cli/src code free of stale latest-tag Hive Flow package invocations', () => {

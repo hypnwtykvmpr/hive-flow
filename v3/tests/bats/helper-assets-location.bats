@@ -13,20 +13,20 @@ setup() {
   fi
   [ -z "$old_paths" ]
 
-  run test -f v3/@hive-flow/cli/helpers/hive-flow-v3.sh
+  run test -f cli/helpers/hive-flow-v3.sh
   [ "$status" -eq 0 ]
 
-  run test -f v3/@hive-flow/cli/helpers/hive-flow-v3.ps1
+  run test -f cli/helpers/hive-flow-v3.ps1
   [ "$status" -eq 0 ]
 
-  run test -f v3/@hive-flow/cli/helpers/templates/progress-manager.sh
+  run test -f cli/helpers/templates/progress-manager.sh
   [ "$status" -eq 0 ]
 }
 
 @test "package allowlists include canonical helper assets" {
-  run grep -Fn '"v3/@hive-flow/cli/helpers/**"' package.json
-  [ "$status" -eq 0 ]
+  run grep -Fn '"cli/helpers/**"' package.json
+  [ "$status" -eq 1 ]
 
-  run grep -Fn '"helpers/**"' v3/@hive-flow/cli/package.json
+  run grep -Fn '"helpers/**"' cli/package.json
   [ "$status" -eq 0 ]
 }

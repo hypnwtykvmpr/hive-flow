@@ -1,5 +1,5 @@
 {
-  "syncedAt": "2026-07-05T03:50:06.783Z",
+  "syncedAt": "2026-07-05T18:12:52.266Z",
   "version": "3.1.0-alpha.52",
   "files": [
     {
@@ -8,7 +8,11 @@
     },
     {
       "name": "hive-flow-mcp-launcher.cjs",
-      "sha256": "1c7084aa5298202b2af9d50b2e6fb7e87f40b6d79fb9e5bcc881f67ec22a5571"
+      "sha256": "bf3928fa5fa03e77174f90fa74d37feed8e941947a340a27a49e7b863ada8ef0"
+    },
+    {
+      "name": "mcp-attestation.cjs",
+      "sha256": "81bd80c3ad72cd197fdc1ac8234bc3d481f477be53ea6f6907b0946c76e4137a"
     },
     {
       "name": "enforcement.cjs",
