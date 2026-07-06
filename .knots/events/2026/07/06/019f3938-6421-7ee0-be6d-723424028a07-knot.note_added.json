@@ -1,0 +1,15 @@
+{
+  "event_id": "019f3938-6421-7ee0-be6d-723424028a07",
+  "occurred_at": "2026-07-06T20:57:04.801081Z",
+  "knot_id": "hive-flow-5799",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "IMPLEMENTATION_REVIEW VERIFY_CLEAN 2026-07-06: Cursor verified Bats stdin fix and all required gates green via .hive-flow/data/tmux-router/20260706T203000Z-cursor-BATS-STDIN-FIX-GATES-GREEN-VERIFY-to-codex.md. Evidence: cursor Bats log /tmp/cursor-bats-stdin-fix.log ok=247 not_ok=0; global statusline Bats stdin redirects present; git diff --check clean; private-guard clean. No stage/commit/push performed.",
+    "datetime": "2026-07-06T20:57:04.801081Z",
+    "entry_id": "019f3938-6421-7ee0-be6d-722b08d2af72",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
