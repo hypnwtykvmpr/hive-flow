@@ -1,0 +1,15 @@
+{
+  "event_id": "019f39b5-ab14-75c3-ad27-49e23fe9f626",
+  "occurred_at": "2026-07-06T23:13:54.964528Z",
+  "knot_id": "hive-flow-5799",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "SHIPMENT landed 2026-07-06: commit 726d8b007 pushed to origin/main after corrected standing-rule gate rerun. Evidence: full Bats RUN_PACK_CHECK=1 RUN_LIVE_AGY=1 247/247 with no skips; fast-check/property 14/14; debrand 14/14; typecheck clean; testing 8/8; sentinel 41/41; enforcement 225/225; provider hardening 6/6; attestation 5/5; security audit no known vulnerabilities; security suite 460/460; pack install smoke ok; private guard clean; staged pre-commit secret check passed.",
+    "datetime": "2026-07-06T23:13:54.964528Z",
+    "entry_id": "019f39b5-ab14-75c3-ad27-49d100ce58af",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
