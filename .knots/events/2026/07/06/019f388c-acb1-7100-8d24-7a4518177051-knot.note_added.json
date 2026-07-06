@@ -1,0 +1,15 @@
+{
+  "event_id": "019f388c-acb1-7100-8d24-7a4518177051",
+  "occurred_at": "2026-07-06T17:49:31.185911Z",
+  "knot_id": "hive-flow-5799",
+  "type": "knot.note_added",
+  "data": {
+    "agentname": "unknown",
+    "content": "Codex implementation/gate pass recorded 2026-07-06: MCP-child attestation/session-id plumbing updates are in the working tree, not committed. Gates green under Codex: Bats 247/247, debrand assert-zero 14/14, attestation vitest 5/5, fast-check/property 14/14, testing 8/8, sentinel 41/41, enforcement 225/225, provider hardening 6/6, pack:install-smoke ok, private-guard ok, git diff --check clean. Cursor verifier recovery is pending via .hive-flow/data/tmux-router/20260706T174727Z-codex-CURSOR-VERIFY-RECOVERY-to-cursor.md; no human gate identified.",
+    "datetime": "2026-07-06T17:49:31.185911Z",
+    "entry_id": "019f388c-acb1-7100-8d24-7a30fa881fec",
+    "model": "unknown",
+    "username": "unknown",
+    "version": "unknown"
+  }
+}
