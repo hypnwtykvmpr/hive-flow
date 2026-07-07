@@ -1,0 +1,21 @@
+{
+  "event_id": "019f3a12-54c2-7cd3-bbd6-c236e459ca83",
+  "occurred_at": "2026-07-07T00:55:07.714872Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-44fd",
+    "profile_id": "autopilot_no_planning",
+    "state": "shipped",
+    "terminal": true,
+    "title": "Debrand/sanitization sweep (provider rename split)",
+    "type": "work",
+    "updated_at": "2026-07-07T00:55:07.714872Z",
+    "workflow_id": "work_sdlc"
+  }
+}
