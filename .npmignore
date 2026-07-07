@@ -54,6 +54,23 @@ temp/
 *.tmp
 *.log
 
+# Local/private agent runtime and investigation state
+.hive-flow/
+**/.hive-flow/
+.omc/
+**/.omc/
+.tmp-*/
+**/.tmp-*/
+.audit/
+.dox/
+.private/
+.codex/
+.gemini/
+.opencode/
+.qwen/
+.resources/
+.scratch/
+
 # Quarantine — human-marked DELETE_ files (tracked for restore, never shipped)
 TRASH/
 **/TRASH/

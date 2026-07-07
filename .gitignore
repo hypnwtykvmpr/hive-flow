@@ -322,6 +322,7 @@ v4-plans/*
 !/.claude/helpers/mcp-attestation.cjs
 !/.claude/skills/
 !/.claude/skills/**
+/.claude/skills/**/.hive-flow/
 /.agents/**
 !/.agents/
 !/.agents/skills/
