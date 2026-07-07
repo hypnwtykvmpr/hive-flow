@@ -1,0 +1,21 @@
+{
+  "event_id": "019f3e4e-504e-7313-b067-45d4cf7c4184",
+  "occurred_at": "2026-07-07T20:39:07.598012Z",
+  "type": "idx.knot_head",
+  "data": {
+    "blocked_from_state": null,
+    "deferred_from_state": null,
+    "gate": {
+      "owner_kind": "agent"
+    },
+    "invariants": [],
+    "knot_id": "hive-flow-1bf0",
+    "profile_id": "lease",
+    "state": "lease_terminated",
+    "terminal": true,
+    "title": "Lease: codex-8b69-design-ruling",
+    "type": "lease",
+    "updated_at": "2026-07-07T20:39:07.598012Z",
+    "workflow_id": "lease_sdlc"
+  }
+}
