@@ -4,6 +4,33 @@ setup() {
   REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd)"
   SCRIPT="$REPO_ROOT/.claude/helpers/agent-task-rewake.cjs"
   PROJECT_DIR="$(mktemp -d)"
+  OWNER_ENV_UNSETS=(
+    -u CODEX_SESSION_ID
+    -u CODEX_THREAD_ID
+    -u CLAUDE_SESSION_ID
+    -u CLAUDE_CODE_SESSION_ID
+    -u CLAUDE_CODE_ENTRYPOINT
+    -u CLAUDECODE
+    -u CLAUDE_CODE
+    -u CLAUDE_PROJECT_DIR
+    -u GEMINI_SESSION_ID
+    -u GEMINI_THREAD_ID
+    -u CURSOR_SESSION_ID
+    -u CURSOR_THREAD_ID
+    -u AGENT_SESSION_ID
+    -u ANTIGRAVITY_SESSION_ID
+    -u ANTIGRAVITY_THREAD_ID
+    -u AGY_SESSION_ID
+    -u AGY_THREAD_ID
+    -u OPENCODE_SESSION_ID
+    -u OPENCODE_THREAD_ID
+    -u FORGECODE_SESSION_ID
+    -u FORGECODE_THREAD_ID
+    -u FORGE_CODE_SESSION_ID
+    -u FORGE_SESSION_ID
+    -u HIVE_FLOW_SESSION_ID
+    -u HIVE_FLOW_CLIENT_KIND
+  )
   export CLAUDE_PROJECT_DIR="$PROJECT_DIR"
   mkdir -p "$PROJECT_DIR/.hive-flow/tasks"
 }
@@ -32,7 +59,7 @@ JSON
 {"success":true,"result":{"agentId":"agent-bats","content":"done"}}
 JSON
 
-  run env -u CODEX_SESSION_ID -u CODEX_THREAD_ID -u HIVE_FLOW_CLIENT_KIND OPENCODE_SESSION_ID="opencode-bats-session" node "$SCRIPT" <<'JSON'
+  run env "${OWNER_ENV_UNSETS[@]}" CLAUDE_PROJECT_DIR="$PROJECT_DIR" OPENCODE_SESSION_ID="opencode-bats-session" node "$SCRIPT" <<'JSON'
 {"tool_response":"{\"success\":true,\"taskId\":\"task-opencode-parent\",\"status\":\"running\"}"}
 JSON
 

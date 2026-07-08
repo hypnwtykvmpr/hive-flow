@@ -49,7 +49,7 @@ vi.mock('@hive-flow/providers', () => ({
       return model;
     }
     if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
-    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-8';
+    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-5' : 'claude-opus-4-8';
     return model;
   }),
   resolveProviderModelOrOpus: vi.fn((provider: string, model: string | undefined) => {
@@ -66,7 +66,7 @@ vi.mock('@hive-flow/providers', () => ({
       return model;
     }
     if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
-    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-4-6' : 'claude-opus-4-8';
+    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-5' : 'claude-opus-4-8';
     return model;
   }),
 }));

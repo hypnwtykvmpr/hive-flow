@@ -273,10 +273,10 @@ export interface CostTracker {
 // =============================================================================
 
 const DEFAULT_MODELS: ModelConfig[] = [
-  // Anthropic (prices updated March 2026)
+  // Anthropic
   {
-    id: 'claude-sonnet-4-6',
-    name: 'Claude Sonnet 4',
+    id: 'claude-sonnet-5',
+    name: 'Claude Sonnet 5',
     provider: 'anthropic',
     costPer1kInputTokens: 0.003,
     costPer1kOutputTokens: 0.015,
@@ -284,7 +284,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
     qualityScore: 0.95,
     capabilities: {
       // Provider-defined API limit for this model (not a runtime context window detection)
-      contextWindow: 200000,
+      contextWindow: 1000000,
       supportsStreaming: true,
       supportsTools: true,
       supportsVision: true,

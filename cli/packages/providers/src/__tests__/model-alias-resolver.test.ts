@@ -43,8 +43,8 @@ describe('resolveProviderModel', () => {
       expect(resolveProviderModel('codex-cli', 'inherit')).toBe('gpt-5.5');
     });
 
-    it('maps mini to claude-sonnet-4-6 for anthropic-cli', () => {
-      expect(resolveProviderModel('anthropic-cli', 'mini')).toBe('claude-sonnet-4-6');
+    it('maps mini to claude-sonnet-5 for anthropic-cli', () => {
+      expect(resolveProviderModel('anthropic-cli', 'mini')).toBe('claude-sonnet-5');
     });
 
     it('maps mini to gpt-5.5 for codex-cli', () => {
@@ -278,14 +278,14 @@ describe('resolveProviderModel', () => {
     it('real-world: anthropic-cli + opus → claude-opus-4-8', () => {
       expect(resolveProviderModel('anthropic-cli', 'opus')).toBe('claude-opus-4-8');
     });
-    it('real-world: anthropic-cli + sonnet → claude-sonnet-4-6', () => {
-      expect(resolveProviderModel('anthropic-cli', 'sonnet')).toBe('claude-sonnet-4-6');
+    it('real-world: anthropic-cli + sonnet → claude-sonnet-5', () => {
+      expect(resolveProviderModel('anthropic-cli', 'sonnet')).toBe('claude-sonnet-5');
     });
-    it('real-world: anthropic-cli + haiku → claude-sonnet-4-6', () => {
-      expect(resolveProviderModel('anthropic-cli', 'haiku')).toBe('claude-sonnet-4-6');
+    it('real-world: anthropic-cli + haiku → claude-sonnet-5', () => {
+      expect(resolveProviderModel('anthropic-cli', 'haiku')).toBe('claude-sonnet-5');
     });
-    it('real-world: anthropic-cli + mini → claude-sonnet-4-6', () => {
-      expect(resolveProviderModel('anthropic-cli', 'mini')).toBe('claude-sonnet-4-6');
+    it('real-world: anthropic-cli + mini → claude-sonnet-5', () => {
+      expect(resolveProviderModel('anthropic-cli', 'mini')).toBe('claude-sonnet-5');
     });
     it('real-world: anthropic-cli + inherit → claude-opus-4-8', () => {
       expect(resolveProviderModel('anthropic-cli', 'inherit')).toBe('claude-opus-4-8');
@@ -401,13 +401,13 @@ describe('resolveProviderModel', () => {
     // ── Edge cases ──
 
     // Case-insensitive matching for anthropic-cli legacy names
-    it('edge: anthropic-cli case-insensitive match → CLAUDE-3-5-SONNET-20241022 → claude-sonnet-4-6', () => {
-      expect(resolveProviderModel('anthropic-cli', 'CLAUDE-3-5-SONNET-20241022')).toBe('claude-sonnet-4-6');
+    it('edge: anthropic-cli case-insensitive match → CLAUDE-3-5-SONNET-20241022 → claude-sonnet-5', () => {
+      expect(resolveProviderModel('anthropic-cli', 'CLAUDE-3-5-SONNET-20241022')).toBe('claude-sonnet-5');
     });
     // FIX-A1: arbitrary strings containing 'mini' (e.g. cross-provider model
     // names like 'gpt-5-codex-mini') no longer leak into anthropic-cli's
     // sonnet bucket. Only exact aliases or 'claude-'-prefixed legacy names
-    // route to claude-sonnet-4-6; everything else falls through to the
+    // route to claude-sonnet-5; everything else falls through to the
     // opus default.
     it('edge: anthropic-cli ignores stray "mini" in unrelated name → Mini-Some-Model → claude-opus-4-8 (default)', () => {
       expect(resolveProviderModel('anthropic-cli', 'Mini-Some-Model')).toBe('claude-opus-4-8');
@@ -518,7 +518,7 @@ describe('resolveProviderModel', () => {
     });
 
     it('regression: anthropic-cli no longer passes through legacy claude-3-5-sonnet', () => {
-      expect(resolveProviderModel('anthropic-cli', 'claude-3-5-sonnet-20241022')).toBe('claude-sonnet-4-6');
+      expect(resolveProviderModel('anthropic-cli', 'claude-3-5-sonnet-20241022')).toBe('claude-sonnet-5');
     });
 
     it('regression: deepseek no longer passes through deepseek-chat', () => {

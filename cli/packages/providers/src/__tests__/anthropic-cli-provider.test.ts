@@ -514,7 +514,7 @@ describe('AnthropicCLIProvider', () => {
 
   // ── System message formatting ──
 
-  it('formats system messages with System: prefix', async () => {
+  it('passes system messages through Claude CLI system prompt flag', async () => {
     mockBinaryFoundViaWhich();
     await provider.initialize();
 
@@ -528,9 +528,13 @@ describe('AnthropicCLIProvider', () => {
       ],
     });
 
+    const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
+    expect(spawnArgs).toContain('--append-system-prompt');
+    expect(spawnArgs).toContain('You are a helpful assistant');
+
     const writtenPrompt = mockChild.stdin.write.mock.calls[0][0] as string;
-    expect(writtenPrompt).toContain('System:');
-    expect(writtenPrompt).toContain('You are a helpful assistant');
+    expect(writtenPrompt).not.toContain('System:');
+    expect(writtenPrompt).not.toContain('You are a helpful assistant');
     expect(writtenPrompt).toContain('User: Hello');
 
     // Clean up
@@ -544,15 +548,15 @@ describe('AnthropicCLIProvider', () => {
     const models = await provider.listModels();
     expect(Array.isArray(models)).toBe(true);
     expect(models.length).toBeGreaterThan(0);
-    expect(models).toContain('claude-sonnet-4-6');
+    expect(models).toContain('claude-sonnet-5');
   });
 
   // ── getModelInfo ──
 
   it('returns model info with pricing', async () => {
-    const info = await provider.getModelInfo('claude-sonnet-4-6');
-    expect(info.model).toBe('claude-sonnet-4-6');
-    expect(info.contextLength).toBe(200000);
+    const info = await provider.getModelInfo('claude-sonnet-5');
+    expect(info.model).toBe('claude-sonnet-5');
+    expect(info.contextLength).toBe(1000000);
     expect(info.supportedFeatures).toContain('cli-subprocess');
     expect(info.pricing).toBeDefined();
     expect(info.pricing!.promptCostPer1k).toBeGreaterThan(0);

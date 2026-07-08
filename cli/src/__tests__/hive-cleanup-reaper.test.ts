@@ -76,6 +76,7 @@ describe('cleanupStaleBusyAgents — HF-13 D1 reaper', () => {
 
   afterEach(() => {
     delete process.env.HIVE_FLOW_CLEANUP_PROJECT_DIR;
+    delete process.env.HIVE_FLOW_LIVE_TASK_TTL_MS;
     try { rmSync(tmpRoot, { recursive: true, force: true }); } catch { /* ignore */ }
   });
 
@@ -400,5 +401,63 @@ describe('hive cleanup task-family diagnostics', () => {
 
     expect(summary.tasksCleaned).toBe(1);
     expect(existsSync(stderrPath)).toBe(false);
+  });
+
+  it('prunes old result-backed running tracking while preserving the result artifact', () => {
+    const taskId = 'task-c0b1c2d3-e4f5-6789-abcd-ef0123456789';
+    const jsonPath = join(tasksDir, `${taskId}.json`);
+    const resultPath = join(tasksDir, `${taskId}.result.json`);
+    const taskPath = join(tasksDir, `${taskId}.task`);
+    writeFileSync(jsonPath, JSON.stringify({ taskId, status: 'running' }), 'utf-8');
+    writeFileSync(resultPath, JSON.stringify({ success: true }), 'utf-8');
+    writeFileSync(taskPath, 'work', 'utf-8');
+    const oldResult = new Date(Date.now() - 5 * 60 * 60_000);
+    utimesSync(resultPath, oldResult, oldResult);
+
+    const { cleanupOrphanedTasks } = loadReaper();
+    const summary = cleanupOrphanedTasks();
+
+    expect(summary.completedTaskTrackingPruned).toBe(1);
+    expect(existsSync(jsonPath)).toBe(false);
+    expect(existsSync(taskPath)).toBe(false);
+    expect(existsSync(resultPath)).toBe(true);
+  });
+
+  it('prunes stale live task registry entries only when no task-family artifact exists', () => {
+    process.env.HIVE_FLOW_LIVE_TASK_TTL_MS = '1000';
+    const dataDir = join(tmpRoot, '.hive-flow', 'data');
+    mkdirSync(dataDir, { recursive: true });
+    const liveTasksPath = join(dataDir, 'live-tasks.json');
+    const staleNoArtifact = 'task-11111111-1111-4111-8111-111111111111';
+    const staleWithArtifact = 'task-22222222-2222-4222-8222-222222222222';
+    const terminalTask = 'task-33333333-3333-4333-8333-333333333333';
+    const resultTask = 'task-44444444-4444-4444-8444-444444444444';
+    writeTracking(staleWithArtifact, {
+      taskId: staleWithArtifact,
+      status: 'running',
+      startedAt: new Date(Date.now() - 60_000).toISOString(),
+    });
+    writeResult(resultTask, { success: true });
+    writeFileSync(liveTasksPath, JSON.stringify([
+      { taskId: staleNoArtifact, startTime: new Date(Date.now() - 60_000).toISOString(), status: 'running' },
+      { taskId: staleWithArtifact, startTime: new Date(Date.now() - 60_000).toISOString(), status: 'running' },
+      { taskId: terminalTask, startTime: new Date(Date.now() - 60_000).toISOString(), endTime: new Date(Date.now() - 59_000).toISOString(), status: 'completed' },
+      { taskId: resultTask, startTime: new Date(Date.now() - 60_000).toISOString(), status: 'running' },
+      { taskId: 'task-55555555-5555-4555-8555-555555555555', startTime: new Date().toISOString(), status: 'running' },
+    ], null, 2), 'utf-8');
+
+    const { cleanupLiveTaskRegistry } = loadReaper();
+    const summary = cleanupLiveTaskRegistry();
+    const remaining = JSON.parse(readFileSync(liveTasksPath, 'utf-8')).map((task) => task.taskId);
+
+    expect(summary.liveTasksPruned).toBe(3);
+    expect(summary.pruned.map((task) => task.taskId)).toEqual([
+      staleNoArtifact,
+      terminalTask,
+      resultTask,
+    ]);
+    expect(remaining).toContain(staleWithArtifact);
+    expect(remaining).toContain('task-55555555-5555-4555-8555-555555555555');
+    expect(remaining).not.toContain(staleNoArtifact);
   });
 });

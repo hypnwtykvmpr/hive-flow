@@ -33,9 +33,9 @@ export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cu
 export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string | undefined>> = {
   'anthropic-cli': {
     'opus': 'claude-opus-4-8',
-    'sonnet': 'claude-sonnet-4-6',
-    'haiku': 'claude-sonnet-4-6',
-    'mini': 'claude-sonnet-4-6',
+    'sonnet': 'claude-sonnet-5',
+    'haiku': 'claude-sonnet-5',
+    'mini': 'claude-sonnet-5',
     'inherit': undefined,  // Let claude -p use its default
   },
   'gemini-cli': {
@@ -104,13 +104,14 @@ export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
  */
 export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
   'anthropic-cli': new Set([
-    'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6', 'claude-haiku-4-5-20251001',
+    'claude-fable-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6', 'claude-haiku-4-5-20251001',
     'claude-3-5-sonnet-20241022', 'claude-3-5-sonnet-latest',
     'claude-3-opus-20240229', 'claude-3-sonnet-20240229',
     'claude-3-haiku-20240307',
   ]),
   'gemini-cli': new Set([
     'auto', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro',
+    'gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite',
     'gemini-3.1-flash-lite-preview', 'gemini-3.5-flash',
   ]),
   'codex-cli': new Set([
@@ -119,7 +120,14 @@ export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
   ]),
   'cursor-cli': new Set([
     'auto',
+    'composer-2.5', 'composer-2.5-fast',
     'composer-2', 'composer-2-fast', 'composer-1.5', 'composer-1',
+    'claude-fable-5-high', 'claude-fable-5-thinking-high',
+    'claude-opus-4-8-high', 'claude-opus-4-8-thinking-high',
+    'claude-sonnet-5-high', 'claude-sonnet-5-thinking-high',
+    'gpt-5.5-high', 'gpt-5.5-medium',
+    'gpt-5.4-high', 'gpt-5.4-medium',
+    'gemini-3.1-pro', 'gemini-3-flash', 'gemini-3.5-flash',
     'gpt-5.3-codex-xhigh', 'gpt-5.3-codex-xhigh-fast',
     'gpt-5.3-codex-high', 'gpt-5.3-codex-high-fast',
     'gpt-5.3-codex', 'gpt-5.3-codex-fast',
@@ -230,11 +238,11 @@ export function resolveProviderModel(
     const lower = userModel.toLowerCase();
     // Exact alias match
     if (lower === 'sonnet' || lower === 'haiku' || lower === 'mini') {
-      return 'claude-sonnet-4-6';
+      return 'claude-sonnet-5';
     }
     // Legacy Anthropic Sonnet/Haiku names start with 'claude-' AND contain the tier word
     if (lower.startsWith('claude-') && (lower.includes('sonnet') || lower.includes('haiku'))) {
-      return 'claude-sonnet-4-6';
+      return 'claude-sonnet-5';
     }
     return 'claude-opus-4-8';  // default
   }
@@ -306,8 +314,10 @@ export function resolveProviderModelOrOpus(
  */
 export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   // Anthropic
+  'claude-fable-5': 1_000_000,
   'claude-opus-4-8': 1_000_000,
   'claude-opus-4-6': 1_000_000,
+  'claude-sonnet-5': 1_000_000,
   'claude-sonnet-4-6': 200_000,
   'claude-haiku-4-5-20251001': 200_000,
   'claude-3-5-sonnet-20241022': 200_000,
@@ -321,9 +331,14 @@ export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   'gemini-2.5-flash': 1_000_000,
   'gemini-2.5-flash-lite': 1_000_000,
   'gemini-3-flash-preview': 1_000_000,
+  'gemini-3.1-pro-preview': 1_000_000,
+  'gemini-3.1-flash-lite': 1_000_000,
+  'gemini-3.1-flash-lite-preview': 1_000_000,
   // OpenAI / Codex
-  'gpt-5.5': 1_050_000,
-  'gpt-5.4': 256_000,
+  'gpt-5.5': 1_000_000,
+  'gpt-5.4': 1_000_000,
+  'gpt-5.4-mini': 400_000,
+  'gpt-5.4-nano': 400_000,
   'gpt-5.3-codex': 256_000,
   'gpt-5.2-codex': 256_000,
   'gpt-5.1-codex-max': 256_000,

@@ -226,11 +226,11 @@ describe('Dynamic context window lookup', () => {
     it('returns correct value for each provider family', () => {
       // Anthropic
       expect(getModelContextLength('claude-opus-4-6')).toBe(1_000_000);
-      expect(getModelContextLength('claude-sonnet-4-6')).toBe(200_000);
+      expect(getModelContextLength('claude-sonnet-5')).toBe(1_000_000);
       // Gemini
       expect(getModelContextLength('gemini-3.5-flash')).toBe(1_000_000);
       // Codex / OpenAI
-      expect(getModelContextLength('gpt-5.5')).toBe(1_050_000);
+      expect(getModelContextLength('gpt-5.5')).toBe(1_000_000);
       // DeepSeek
       expect(getModelContextLength('deepseek-v4-pro')).toBe(1_000_000);
     });

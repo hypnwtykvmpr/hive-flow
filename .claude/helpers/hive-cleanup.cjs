@@ -34,6 +34,8 @@ const MIN_WORKERS_PER_HIVE = 5; // queen is separate; keep at least 5 workers al
 const PROJECT_DIR = path.resolve(process.env.HIVE_FLOW_CLEANUP_PROJECT_DIR || path.join(__dirname, '..', '..'));
 const HIVES_DIR = path.join(PROJECT_DIR, '.hive-flow', 'hives');
 const TASKS_DIR = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
+const DATA_DIR = path.join(PROJECT_DIR, '.hive-flow', 'data');
+const LIVE_TASKS_PATH = path.join(DATA_DIR, 'live-tasks.json');
 const AGENTS_DIR = path.join(PROJECT_DIR, '.hive-flow', 'agents');
 const AGENT_STORE_PATH = path.join(AGENTS_DIR, 'store.json');
 const LOCK_MAX_WAIT = parseInt(process.env.HIVE_FLOW_CLEANUP_LOCK_MAX_WAIT_MS, 10) || 1500;
@@ -337,9 +339,6 @@ function classifyStaleBusyAgent(agentId, agent, nowMs) {
       const deadlineAt = Date.parse(tracking.deadlineAt);
       if (Number.isFinite(deadlineAt) && nowMs > deadlineAt) {
         const livePid = isPositivePid(trackingPid) ? trackingPid : pid;
-        if (isPositivePid(livePid) && !isPidDefinitelyDead(livePid)) {
-          return { stale: false };
-        }
         return { stale: true, reason: 'past-deadline', taskId, pid: livePid };
       }
     }
@@ -761,6 +760,7 @@ function pruneTerminatedAgents() {
 const TASK_TTL_MS = 3600000; // 1 hour
 const RESULT_TTL_MS = parseInt(process.env.HIVE_FLOW_RESULT_TTL_MS, 10) || 14400000; // 4 hours
 const STUCK_ACTIVE_THRESHOLD_MS = parseInt(process.env.HIVE_FLOW_STUCK_ACTIVE_THRESHOLD_MS, 10) || (12 * 60 * 60_000);
+const LIVE_TASK_TTL_MS = parseInt(process.env.HIVE_FLOW_LIVE_TASK_TTL_MS, 10) || STUCK_ACTIVE_THRESHOLD_MS;
 const LEGACY_WATCHER_TTL_MS = parseInt(process.env.HIVE_FLOW_LEGACY_WATCHER_TTL_MS, 10) || 14400000; // 4 hours
 const AGENT_RECORD_TTL_MS = parseInt(process.env.HIVE_FLOW_AGENT_RECORD_TTL_MS, 10) || (7 * 24 * 60 * 60_000);
 
@@ -895,6 +895,20 @@ function isTerminalRecordStatus(value) {
   return TERMINAL_RECORD_STATUSES.has(normalizeRecordStatus(value));
 }
 
+function taskFamilyHasAnyArtifact(taskId) {
+  const safeTaskId = safeTaskIdForPath(taskId);
+  if (!safeTaskId) return false;
+  for (const suffix of ['.json', '.result.json', '.events.jsonl', '.task', '.stderr.log']) {
+    if (fs.existsSync(path.join(TASKS_DIR, `${safeTaskId}${suffix}`))) return true;
+  }
+  return false;
+}
+
+function taskFamilyHasResult(taskId) {
+  const safeTaskId = safeTaskIdForPath(taskId);
+  return Boolean(safeTaskId) && fs.existsSync(path.join(TASKS_DIR, `${safeTaskId}.result.json`));
+}
+
 function agentRecordHasTerminalResult(agent) {
   if (!agent?.lastResult || typeof agent.lastResult !== 'object') return false;
   if (isTerminalRecordStatus(agent.lastResult.status)) return true;
@@ -982,7 +996,7 @@ async function cleanupAgedAgentStoreRecords(deadline = Date.now() + CLEANUP_MAX_
 }
 
 function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
-  const summary = { tasksCleaned: 0, completedResultsCleaned: 0, cleaned: [], errors: [] };
+  const summary = { tasksCleaned: 0, completedResultsCleaned: 0, completedTaskTrackingPruned: 0, cleaned: [], errors: [] };
   const tasksDir = path.join(PROJECT_DIR, '.hive-flow', 'tasks');
   if (!fs.existsSync(tasksDir)) return summary;
   const now = Date.now();
@@ -1011,6 +1025,14 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
           : { taskId };
         const resultStat = fs.statSync(resultPath);
         if (now - resultStat.mtimeMs < RESULT_TTL_MS) continue;
+        if (fs.existsSync(jsonPath) && !isTerminalRecordStatus(tracking.status)) {
+          try { fs.unlinkSync(jsonPath); } catch { /* ignore */ }
+          try { fs.unlinkSync(taskFilePath); } catch { /* ignore */ }
+          try { fs.unlinkSync(stderrLogPath); } catch { /* ignore */ }
+          summary.completedTaskTrackingPruned++;
+          summary.cleaned.push(taskId);
+          continue;
+        }
         const hive = findHiveByTaskTracking(tracking);
         if (!hive || (hive.status !== 'completed' && hive.status !== 'failed' && hive.status !== 'terminated')) continue;
         try { fs.unlinkSync(jsonPath); } catch { /* ignore */ }
@@ -1060,6 +1082,59 @@ function cleanupOrphanedTasks(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
   return summary;
 }
 
+function cleanupLiveTaskRegistry(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
+  const summary = { liveTasksPruned: 0, pruned: [], errors: [] };
+  if (!fs.existsSync(LIVE_TASKS_PATH)) return summary;
+
+  let tasks;
+  try {
+    tasks = JSON.parse(fs.readFileSync(LIVE_TASKS_PATH, 'utf-8'));
+  } catch (err) {
+    summary.errors.push({ error: err?.message || String(err) });
+    return summary;
+  }
+  if (!Array.isArray(tasks)) return summary;
+
+  const now = Date.now();
+  const retained = [];
+  for (const entry of tasks) {
+    if (deadlineExceeded(deadline)) {
+      summary.errors.push({ error: 'Cleanup runtime budget exceeded while pruning live task registry' });
+      retained.push(entry);
+      continue;
+    }
+
+    const taskId = typeof entry?.taskId === 'string' ? entry.taskId : '';
+    const status = normalizeRecordStatus(entry?.status);
+    const startedAt = parseTimestamp(entry?.startTime);
+    const endedAt = parseTimestamp(entry?.endTime);
+    const lastKnownAt = Number.isFinite(endedAt) ? endedAt : startedAt;
+    const staleAge = Number.isFinite(lastKnownAt) && now - lastKnownAt > LIVE_TASK_TTL_MS;
+    const hasResult = taskFamilyHasResult(taskId);
+    const hasAnyArtifact = taskFamilyHasAnyArtifact(taskId);
+    const terminal = isTerminalRecordStatus(status);
+
+    if (hasResult || terminal || (staleAge && !hasAnyArtifact)) {
+      summary.liveTasksPruned++;
+      summary.pruned.push({
+        taskId,
+        reason: hasResult ? 'result-file-present' : terminal ? 'terminal-status' : 'stale-running-no-artifact',
+      });
+      continue;
+    }
+    retained.push(entry);
+  }
+
+  if (summary.liveTasksPruned > 0) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tmpPath = LIVE_TASKS_PATH + '.tmp.' + process.pid;
+    fs.writeFileSync(tmpPath, JSON.stringify(retained, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, LIVE_TASKS_PATH);
+  }
+
+  return summary;
+}
+
 function cleanupLegacyWatchersDir(deadline = Date.now() + CLEANUP_MAX_RUNTIME_MS) {
   const summary = { watchersPruned: 0, pruned: [], errors: [] };
   const legacyWatchersDir = path.join(PROJECT_DIR, '.hive-flow', 'watchers');
@@ -1106,6 +1181,7 @@ async function runCleanupMain() {
     const pruneResult = pruneTerminatedAgents();
     const agedAgentResult = await cleanupAgedAgentStoreRecords(deadline);
     const taskResult = cleanupOrphanedTasks(deadline);
+    const liveTaskResult = cleanupLiveTaskRegistry(deadline);
     const watcherResult = cleanupLegacyWatchersDir(deadline);
 
     const combined = {
@@ -1120,6 +1196,8 @@ async function runCleanupMain() {
       agedAgentsPruned: agedAgentResult.agedAgentsPruned,
       tasksCleaned: taskResult.tasksCleaned,
       completedResultsCleaned: taskResult.completedResultsCleaned,
+      completedTaskTrackingPruned: taskResult.completedTaskTrackingPruned,
+      liveTasksPruned: liveTaskResult.liveTasksPruned,
       legacyWatchersPruned: watcherResult.watchersPruned,
     };
     if (orphanResult.terminated.length > 0) {
@@ -1140,6 +1218,9 @@ async function runCleanupMain() {
     if (watcherResult.pruned?.length > 0) {
       combined.legacyWatchers = watcherResult.pruned;
     }
+    if (liveTaskResult.pruned?.length > 0) {
+      combined.liveTasks = liveTaskResult.pruned;
+    }
     const allErrors = [
       ...(hiveResult.errors || []),
       ...(staleBusyResult.errors || []),
@@ -1149,6 +1230,7 @@ async function runCleanupMain() {
       ...(pruneResult.errors || []),
       ...(agedAgentResult.errors || []),
       ...(taskResult.errors || []),
+      ...(liveTaskResult.errors || []),
       ...(watcherResult.errors || []),
     ];
     if (allErrors.length > 0) combined.errors = allErrors;
@@ -1156,7 +1238,9 @@ async function runCleanupMain() {
     const totalWork = (combined.workersTerminated || 0) + (combined.orphansTerminated || 0)
       + (combined.hivesAutoFailed || 0) + (combined.hivesArchived || 0) + (combined.agentsPruned || 0)
       + (combined.agedAgentsPruned || 0)
-      + (combined.tasksCleaned || 0) + (combined.completedResultsCleaned || 0) + (combined.legacyWatchersPruned || 0)
+      + (combined.tasksCleaned || 0) + (combined.completedResultsCleaned || 0)
+      + (combined.completedTaskTrackingPruned || 0) + (combined.liveTasksPruned || 0)
+      + (combined.legacyWatchersPruned || 0)
       + (combined.staleBusyReaped || 0) + (combined.hiveWorkersReaped || 0);
     if (totalWork === 0 && allErrors.length === 0) {
       process.stdout.write(JSON.stringify({}));
@@ -1179,6 +1263,7 @@ module.exports = {
   pruneTerminatedAgents,
   cleanupAgedAgentStoreRecords,
   cleanupOrphanedTasks,
+  cleanupLiveTaskRegistry,
   cleanupLegacyWatchersDir,
   runCleanupMain,
 };

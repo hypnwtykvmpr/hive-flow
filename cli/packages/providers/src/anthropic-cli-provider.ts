@@ -25,27 +25,35 @@ const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50MB
 
 /** Supported Claude models with pricing per 1K tokens */
 const ANTHROPIC_CLI_MODELS: LLMModel[] = [
-  'claude-sonnet-4-6',
+  'claude-fable-5',
+  'claude-sonnet-5',
   'claude-opus-4-8',
+  'claude-sonnet-4-6',
   'claude-haiku-4-5-20251001',
 ];
 
 const ANTHROPIC_CLI_MODEL_DESCRIPTIONS: Record<string, string> = {
-  'claude-sonnet-4-6': 'Claude Sonnet 4.6 (current)',
+  'claude-fable-5': 'Claude Fable 5 (frontier, highest capability)',
+  'claude-sonnet-5': 'Claude Sonnet 5 (current balanced agentic model)',
   'claude-opus-4-8': 'Claude Opus 4.8 (current — best agentic coding)',
+  'claude-sonnet-4-6': 'Claude Sonnet 4.6 (legacy)',
   'claude-haiku-4-5-20251001': 'Claude Haiku 4.5 (current)',
 };
 
 const ANTHROPIC_CLI_CAPABILITIES: ProviderCapabilities = {
   supportedModels: ANTHROPIC_CLI_MODELS,
   maxContextLength: {
-    'claude-sonnet-4-6': 200000,
+    'claude-fable-5': 1000000,
+    'claude-sonnet-5': 1000000,
     'claude-opus-4-8': 1000000,
+    'claude-sonnet-4-6': 200000,
     'claude-haiku-4-5-20251001': 200000,
   },
   maxOutputTokens: {
-    'claude-sonnet-4-6': 65536,   // 64K
+    'claude-fable-5': 131072,     // 128K
+    'claude-sonnet-5': 131072,    // 128K
     'claude-opus-4-8': 131072,    // 128K
+    'claude-sonnet-4-6': 65536,   // 64K
     'claude-haiku-4-5-20251001': 65536,   // 64K
   },
   supportsStreaming: false,
@@ -57,8 +65,10 @@ const ANTHROPIC_CLI_CAPABILITIES: ProviderCapabilities = {
   supportsEmbeddings: false,
   supportsBatching: false,
   pricing: {
-    'claude-sonnet-4-6': { promptCostPer1k: 0.003, completionCostPer1k: 0.015, currency: 'USD' },
+    'claude-fable-5': { promptCostPer1k: 0.010, completionCostPer1k: 0.050, currency: 'USD' },
+    'claude-sonnet-5': { promptCostPer1k: 0.003, completionCostPer1k: 0.015, currency: 'USD' },
     'claude-opus-4-8': { promptCostPer1k: 0.005, completionCostPer1k: 0.025, currency: 'USD' },
+    'claude-sonnet-4-6': { promptCostPer1k: 0.003, completionCostPer1k: 0.015, currency: 'USD' },
     'claude-haiku-4-5-20251001': { promptCostPer1k: 0.001, completionCostPer1k: 0.005, currency: 'USD' },
   },
 };
@@ -117,10 +127,12 @@ export class AnthropicCLIProvider extends BaseProvider {
   protected async doComplete(request: LLMRequest): Promise<LLMResponse> {
     this.ensureBinary();
     const model = request.model || this.config.model;
-    const prompt = this.formatMessages(request.messages, request.tools);
+    const systemPrompt = this.extractSystemPrompt(request.messages);
+    const prompt = this.formatMessages(request.messages, request.tools, { includeSystem: false });
     const timeoutMs = request.timeout || this.config.timeout || 300000;
     const args = ['--print', '--output-format', 'json'];
     if (model) args.push('--model', model);
+    if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
 
     // Budget support: if budgetAllocation is set in metadata, pass --max-budget-usd
     const budgetAllocation = request.metadata?.budgetAllocation;
@@ -429,9 +441,22 @@ export class AnthropicCLIProvider extends BaseProvider {
     };
   }
 
-  private formatMessages(messages: LLMMessage[], tools?: LLMTool[]): string {
+  private extractSystemPrompt(messages: LLMMessage[]): string {
+    const systemParts: string[] = [];
+    for (const msg of messages) {
+      if (msg.role !== 'system') continue;
+      const text = typeof msg.content === 'string'
+        ? msg.content
+        : msg.content.filter((p) => p.type === 'text' && p.text).map((p) => p.text!).join('\n');
+      if (text.trim()) systemParts.push(text);
+    }
+    return systemParts.join('\n\n');
+  }
+
+  private formatMessages(messages: LLMMessage[], tools?: LLMTool[], options: { includeSystem?: boolean } = {}): string {
     const systemParts: string[] = [];
     const convParts: string[] = [];
+    const includeSystem = options.includeSystem !== false;
 
     for (const msg of messages) {
       const text = typeof msg.content === 'string'
@@ -439,7 +464,7 @@ export class AnthropicCLIProvider extends BaseProvider {
         : msg.content.filter((p) => p.type === 'text' && p.text).map((p) => p.text!).join('\n');
 
       if (msg.role === 'system') {
-        systemParts.push(text);
+        if (includeSystem) systemParts.push(text);
       } else {
         const label = msg.role === 'assistant' ? 'Assistant' : 'User';
         convParts.push(`${label}: ${text}`);

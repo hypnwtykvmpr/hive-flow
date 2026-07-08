@@ -193,6 +193,11 @@ function taskResultSucceeded(result) {
   return result.status === 'completed' || result.success === true;
 }
 
+function maxSafeBatchSize(largestSuccessfulBatch, safetyMargin) {
+  if (largestSuccessfulBatch <= 0) return 0;
+  return Math.max(1, largestSuccessfulBatch - safetyMargin);
+}
+
 async function runBatch(tools, provider, count, options, context) {
   const spawned = [];
   const tasks = [];
@@ -269,7 +274,7 @@ async function probeProvider(tools, provider, options) {
     return {
       provider,
       kind,
-      maxSafeConcurrentTasks: Math.max(1, max - options.safetyMargin),
+      maxSafeConcurrentTasks: maxSafeBatchSize(max, options.safetyMargin),
       largestSuccessfulBatch: max,
       observedFailureAt: null,
       attempts,
@@ -290,7 +295,7 @@ async function probeProvider(tools, provider, options) {
   return {
     provider,
     kind,
-    maxSafeConcurrentTasks: Math.max(1, low - options.safetyMargin),
+    maxSafeConcurrentTasks: maxSafeBatchSize(low, options.safetyMargin),
     largestSuccessfulBatch: low,
     observedFailureAt: high,
     attempts,
