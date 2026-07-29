@@ -34,8 +34,9 @@
 // the create-once protocol below, and it fabricates nothing: no historical
 // tools, background identities, tasks, or permission state.
 //
-// CLAIM PROTOCOL (create-once winner). The claim is transient and is NEVER the
-// authoritative record:
+// CLAIM PROTOCOL (create-once winner). The claim is RETAINED until SessionEnd
+// and becomes inert as soon as a valid generation exists (it is consulted only
+// when no valid generation is present). It is NEVER the authoritative record:
 //   1. Stage the COMPLETE claim record in a unique staging file.
 //   2. Publish it to the canonical claim path with an atomic, no-clobber
 //      `linkSync`. Publishing an already-complete inode means a crash can never

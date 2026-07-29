@@ -19,6 +19,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   buildCanaryInvocation,
+  CANARY_LAUNCHER_ENV,
   claudeCodeActivityHooksAdapter,
   HOOK_WIRING,
 } from '../claude-code-activity-hooks.js';
@@ -190,36 +191,70 @@ describe('canary invocation is platform-correct (W1)', () => {
   // claim a live Windows process canary from macOS.
   const withSpaces = 'C:\\Users\\Jon Doe\\.hive-flow\\bin\\claude-activity-hook.cmd';
 
-  it('mediates through cmd.exe on win32 with the launcher as a discrete argument', () => {
-    const invocation = buildCanaryInvocation(withSpaces, 'prompt', 'win32');
-    expect(invocation.command.toLowerCase()).toMatch(/cmd\.exe$/);
-    // /d skips AutoRun, /s keeps the remainder verbatim, /c runs then exits.
-    expect(invocation.args.slice(0, 3)).toEqual(['/d', '/s', '/c']);
-    // The path with spaces is its OWN argv entry — never interpolated into a
-    // command string where a space or metacharacter could split it.
-    expect(invocation.args[3]).toBe(withSpaces);
-    expect(invocation.args[4]).toBe('prompt');
-    expect(invocation.args.join(' ')).not.toMatch(/&|\||>|</);
-  });
+  /**
+   * Legal Windows pathnames that are ALSO cmd.exe syntax. `cmd /c` reparses its
+   * command string, and Node does not quote a path with no whitespace, so any
+   * of these would be catastrophic if interpolated into that string.
+   */
+  const hostilePaths = [
+    withSpaces,
+    'C:\\safe&echo PWN\\claude-activity-hook.cmd',
+    'C:\\safe|echo PWN\\claude-activity-hook.cmd',
+    'C:\\safe(x)\\claude-activity-hook.cmd',
+    'C:\\safe^caret\\claude-activity-hook.cmd',
+    'C:\\safe!bang\\claude-activity-hook.cmd',
+    'C:\\%WINDIR%\\claude-activity-hook.cmd',
+    'C:\\a b&c|d(e)^f!g%TMP%\\claude-activity-hook.cmd',
+  ];
 
-  it('executes the shim directly on POSIX', () => {
-    const posix = '/Users/jon doe/.hive-flow/bin/claude-activity-hook';
-    const invocation = buildCanaryInvocation(posix, 'prompt', 'darwin');
-    expect(invocation.command).toBe(posix);
-    expect(invocation.args).toEqual(['prompt']);
-    expect(invocation.windowsVerbatimArguments).toBeUndefined();
-  });
+  it('never places the launcher path in the cmd.exe command string', () => {
+    for (const path of hostilePaths) {
+      const invocation = buildCanaryInvocation(path, 'prompt', 'win32');
+      expect(invocation.command.toLowerCase()).toMatch(/cmd\.exe$/);
+      // /d skips AutoRun; /v:off disables delayed expansion so `!` is inert.
+      expect(invocation.args.slice(0, 3)).toEqual(['/d', '/v:off', '/c']);
 
-  it('never relies on shell interpolation for either platform', () => {
-    for (const platform of ['win32', 'darwin', 'linux'] as NodeJS.Platform[]) {
-      const invocation = buildCanaryInvocation(withSpaces, 'prompt', platform);
-      // The path survives intact as ONE token — the command itself on POSIX, a
-      // discrete argv entry under cmd.exe — never spliced into a command string.
-      const tokens = [invocation.command, ...invocation.args];
-      expect(tokens).toContain(withSpaces);
-      expect(tokens.filter((t) => t.includes(withSpaces))).toHaveLength(1);
-      expect(invocation.windowsVerbatimArguments === true).toBe(false);
+      const commandString = invocation.args[3]!;
+      // THE invariant: the command string is a fixed literal referencing the
+      // env var, and contains NO fragment of the untrusted path.
+      expect(commandString).toBe(`call "%${CANARY_LAUNCHER_ENV}%" prompt`);
+      expect(commandString).not.toContain(path);
+      for (const fragment of ['PWN', 'WINDIR', 'TMP', 'safe']) {
+        expect(commandString).not.toContain(fragment);
+      }
+      // The path travels only in the environment, verbatim.
+      expect(invocation.env?.[CANARY_LAUNCHER_ENV]).toBe(path);
+      // ...and nothing else leaks into argv.
+      expect(invocation.args).toHaveLength(4);
     }
+  });
+
+  it('produces an identical fixed command string regardless of the path', () => {
+    const strings = new Set(
+      hostilePaths.map((p) => buildCanaryInvocation(p, 'prompt', 'win32').args.join('\u0000')),
+    );
+    // A path can never alter the invocation, so every one collapses to one shape.
+    expect(strings.size).toBe(1);
+  });
+
+  it('executes the shim directly on POSIX, unchanged', () => {
+    for (const posix of [
+      '/Users/jon doe/.hive-flow/bin/claude-activity-hook',
+      '/Users/a&b|c(d)/claude-activity-hook',
+    ]) {
+      const invocation = buildCanaryInvocation(posix, 'prompt', 'darwin');
+      // No shell mediation at all: the path is the executable, argv is exact.
+      expect(invocation.command).toBe(posix);
+      expect(invocation.args).toEqual(['prompt']);
+      expect(invocation.env).toBeUndefined();
+    }
+  });
+
+  it('macOS cannot provide a live Windows canary — these assert SHAPE only', () => {
+    // Stated explicitly so the evidence is never read as a live Windows run.
+    expect(process.platform).not.toBe('win32');
+    const invocation = buildCanaryInvocation(withSpaces, 'prompt', 'win32');
+    expect(invocation.command).toBeTruthy();
   });
 });
 

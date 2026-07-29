@@ -26,6 +26,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -401,38 +402,84 @@ function findShapeIssue(
  * so no synthetic record is ever written into real `~/.claude` state.
  */
 /**
+ * Environment variable carrying the launcher path into the Windows canary.
+ * Distinctive enough that it cannot collide with a caller's environment.
+ */
+export const CANARY_LAUNCHER_ENV = 'HIVE_FLOW_ACTIVITY_HOOK_CANARY';
+
+/**
  * Build the child-process invocation for the canary.
  *
- * Node cannot execute `.bat`/`.cmd` files directly on Windows (see
- * https://nodejs.org/api/child_process.html#spawning-bat-and-cmd-files-on-windows),
- * and the managed Windows launcher IS a `.cmd`. We therefore mediate through
- * `cmd.exe /d /s /c` on win32 and execute directly on POSIX.
+ * Node cannot execute `.bat`/`.cmd` directly on Windows
+ * (https://nodejs.org/api/child_process.html#spawning-bat-and-cmd-files-on-windows),
+ * so win32 must mediate through the command processor. That boundary is the
+ * dangerous part:
  *
- * The launcher path is passed as an ARGUMENT, never interpolated into a command
- * string, so spaces and shell metacharacters cannot alter the invocation.
- * `shell: true` is deliberately NOT used for the same reason.
+ *   `cmd.exe /c` consumes everything after it as ONE COMMAND STRING and
+ *   REPARSES it. An argv array protects only the native `cmd.exe` launch — it
+ *   does not make the command language argv-preserving. A launcher path
+ *   containing `&`, `|`, `(`, `)`, `^` or `%NAME%` would therefore be
+ *   interpreted as shell syntax, and Node has no reason to quote a path with
+ *   no whitespace. Interpolating the path into that string is an injection.
  *
- * Exported for tests: the Windows shape can be asserted from any platform,
- * which is honest — we do not claim a live Windows process canary from macOS.
+ * So the path NEVER enters the command string. It travels in a dedicated
+ * environment variable and the command string is a FIXED literal:
+ *
+ *   cmd.exe /d /v:off /c call "%HIVE_FLOW_ACTIVITY_HOOK_CANARY%" prompt
+ *
+ * `/d` skips AutoRun. `/v:off` explicitly disables delayed expansion so `!` in
+ * the value cannot be expanded even where the registry enables it by default.
+ * Environment substitution is NON-RECURSIVE, so a `%` inside the value is not
+ * expanded again. Nothing attacker-influenced is ever parsed as syntax.
+ *
+ * POSIX executes the shim directly and is unaffected.
+ *
+ * Exported for tests: the Windows shape is assertable from any platform, which
+ * is honest — macOS does NOT provide a live Windows process canary.
  */
 export function buildCanaryInvocation(
   launcherPath: string,
   event: string,
   platform: NodeJS.Platform = process.platform,
-): { command: string; args: string[]; windowsVerbatimArguments?: boolean } {
+): { command: string; args: string[]; env?: Record<string, string> } {
   if (platform === 'win32') {
     return {
       command: process.env.COMSPEC ?? 'cmd.exe',
-      // /d skips AutoRun, /s + surrounding quotes keeps the rest verbatim,
-      // /c runs and exits. The launcher path stays a discrete argv entry.
-      args: ['/d', '/s', '/c', launcherPath, event],
-      windowsVerbatimArguments: false,
+      // Fixed literal: contains no caller-controlled text whatsoever.
+      args: ['/d', '/v:off', '/c', `call "%${CANARY_LAUNCHER_ENV}%" ${event}`],
+      env: { [CANARY_LAUNCHER_ENV]: launcherPath },
     };
   }
   return { command: launcherPath, args: [event] };
 }
 
+/**
+ * Memoized canary results, keyed by launcher identity (path + size + mtime).
+ *
+ * The canary spawns a process, so repeating it for an unchanged launcher inside
+ * one CLI invocation is pure cost. Any edit to the shim changes its mtime/size
+ * and re-runs the check, so this cannot mask a broken launcher.
+ */
+const canaryCache = new Map<string, string | null>();
+
+function launcherIdentity(launcherPath: string): string {
+  try {
+    const info = statSync(launcherPath);
+    return `${launcherPath}:${info.size}:${info.mtimeMs}`;
+  } catch {
+    return `${launcherPath}:absent`;
+  }
+}
+
 function runLauncherCanary(launcherPath: string): string | null {
+  const key = launcherIdentity(launcherPath);
+  if (canaryCache.has(key)) return canaryCache.get(key) ?? null;
+  const outcome = executeLauncherCanary(launcherPath);
+  canaryCache.set(key, outcome);
+  return outcome;
+}
+
+function executeLauncherCanary(launcherPath: string): string | null {
   if (!existsSync(launcherPath)) return 'activity hook launcher is missing';
   if (process.platform !== 'win32') {
     // POSIX executes the shim directly, so it must carry the execute bit. On
@@ -451,12 +498,14 @@ function runLauncherCanary(launcherPath: string): string | null {
     const result = spawnSync(invocation.command, invocation.args, {
       input: JSON.stringify({ session_id: sessionId }),
       encoding: 'utf8',
-      timeout: 10_000,
-      ...(invocation.windowsVerbatimArguments !== undefined
-        ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments }
-        : {}),
+      // Bounded: a wedged launcher must not hold `setup --verify` open. The
+      // canary costs well under a second on a healthy machine.
+      timeout: 5_000,
       env: {
+        // Preserve the caller's environment; the launcher path (Windows) rides
+        // in its own variable rather than in the command string.
         ...process.env,
+        ...(invocation.env ?? {}),
         NODE_ENV: 'test',
         CLAUDE_STATUSLINE_TEST_ROOT: canaryRoot,
         CLAUDE_STATUSLINE_TEST_FAULT: '',

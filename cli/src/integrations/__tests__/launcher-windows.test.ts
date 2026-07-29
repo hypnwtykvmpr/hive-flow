@@ -75,6 +75,23 @@ describe('Windows launcher generation', () => {
     expect(readFileSync(launcherPath, 'utf8')).toBe(first);
   });
 
+  it('escapes percent expansion in the activity-hook entrypoint (f16a W1b)', async () => {
+    const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-activity-hook.cmd');
+    // A LEGAL Windows path that is also batch environment-expansion syntax.
+    const entrypoint = 'C:\\%WINDIR%\\hive flow\\bin\\claude-activity-hook.js';
+
+    await writeStableActivityHookLauncher(launcherPath, entrypoint, { platform: 'win32' });
+
+    const contents = readFileSync(launcherPath, 'utf8');
+    // `%` must be doubled so cmd.exe emits it literally instead of substituting
+    // the environment variable when the batch file runs.
+    expect(contents).toContain('node "C:\\%%WINDIR%%\\hive flow\\bin\\claude-activity-hook.js"');
+    expect(contents).not.toContain('"C:\\%WINDIR%\\hive flow');
+    // Fail-open contract is retained.
+    expect(contents).toContain('>NUL 2>NUL');
+    expect(contents).toContain('exit /b 0');
+  });
+
   it('refuses to embed a hostile activity-hook path in a Windows launcher', async () => {
     const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-activity-hook.cmd');
     await expect(
