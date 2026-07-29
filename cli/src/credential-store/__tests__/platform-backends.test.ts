@@ -478,6 +478,226 @@ export function isWindowsHelloUnavailable(error: unknown): boolean {
   return parts.some(part => WINDOWS_HELLO_UNAVAILABLE.test(part));
 }
 
+/**
+ * Linux sibling of `isWindowsHelloUnavailable`, and deliberately built the same
+ * way — the bare `catch {}` this replaces classified *every* store failure as
+ * environmental and could hide missing-path, permission, process, parsing, and
+ * credential-store regressions.
+ *
+ * One structural difference from the Windows case. `Program.cs` owns its
+ * diagnostic sentence, so that matcher anchors on a first-party literal.
+ * `secret-tool` owns nothing: its store failure path prints `"%s: %s\n"` —
+ * program name plus `error->message` — so the text is propagated from GDBus.
+ * The only stable anchor is therefore the complete emitted line, matched on
+ * stderr. `error.message` is deliberately NOT consulted: Node wraps it with
+ * `Command failed: ...`, which is a much weaker substrate for an exact match.
+ *
+ * Everything secret-tool emits from its own literals — "couldn't write
+ * password", "must specify a label for the new item", "password is too long",
+ * "collection must be a full path" — is a genuine failure and must rethrow.
+ */
+const SECRET_SERVICE_UNAVAILABLE_LINE =
+  'secret-tool: The name org.freedesktop.secrets was not provided by any .service files';
+
+/**
+ * Read every field the classifier inspects under ONE fail-closed guard.
+ *
+ * All three reads must be protected together. Guarding only `stderr` would still
+ * let a throwing getter on `status` or `signal` escape, and an exception raised
+ * *inside the classifier* would stop the call site from ever reaching
+ * `throw error` — so the act of classifying would itself destroy the contract to
+ * rethrow the original object unchanged. Returning null on any hostile access
+ * means the classifier answers "not environmental" and the original error is
+ * rethrown intact.
+ */
+function readErrorFields(
+  error: unknown,
+): { status: unknown; signal: unknown; stderr: unknown } | null {
+  if (error === null || typeof error !== 'object') return null;
+  try {
+    const e = error as { status?: unknown; signal?: unknown; stderr?: unknown };
+    return { status: e.status, signal: e.signal, stderr: e.stderr };
+  } catch {
+    return null;
+  }
+}
+
+function stderrText(raw: unknown): string {
+  if (typeof raw === 'string') return raw;
+  if (Buffer.isBuffer(raw)) {
+    try {
+      return raw.toString('utf8');
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
+export function isSecretServiceUnavailable(error: unknown): boolean {
+  const fields = readErrorFields(error);
+  if (fields === null) return false;
+  // Require the expected child-process termination shape. A signal, a spawn
+  // error, an absent status, or any other exit code is not this condition.
+  if (fields.status !== 1) return false;
+  // Explicitly `null` only. An absent/undefined signal is not the documented
+  // clean-exit shape, so it stays red rather than being treated as equivalent.
+  if (fields.signal !== null) return false;
+  // The ENTIRE stderr buffer must be the emitted line, with at most one
+  // trailing newline. No multiline flag, no trim, no substring: the expected
+  // sentence appearing *among* other output means something else also went
+  // wrong, and that must not be classified as environmental.
+  const text = stderrText(fields.stderr);
+  return text === SECRET_SERVICE_UNAVAILABLE_LINE
+    || text === `${SECRET_SERVICE_UNAVAILABLE_LINE}\n`
+    || text === `${SECRET_SERVICE_UNAVAILABLE_LINE}\r\n`;
+}
+
+describe('native Linux Secret Service unavailability is classified narrowly', () => {
+  const UNAVAILABLE = SECRET_SERVICE_UNAVAILABLE_LINE;
+  // execFileSync's thrown error shape: the classifier requires all three parts.
+  const spawnFailure = (stderr: unknown, extra: Record<string, unknown> = {}) =>
+    Object.assign(new Error('Command failed: secret-tool store ...'), {
+      status: 1,
+      signal: null,
+      stderr,
+      ...extra,
+    });
+
+  it.each([
+    ['bare line', UNAVAILABLE],
+    ['trailing LF', `${UNAVAILABLE}\n`],
+    ['trailing CRLF', `${UNAVAILABLE}\r\n`],
+  ])('classifies the exact emitted buffer: %s', (_label, stderr) => {
+    expect(isSecretServiceUnavailable(spawnFailure(stderr))).toBe(true);
+  });
+
+  it.each([
+    ['Buffer, bare', Buffer.from(UNAVAILABLE)],
+    ['Buffer, trailing LF', Buffer.from(`${UNAVAILABLE}\n`)],
+    ['Buffer, trailing CRLF', Buffer.from(`${UNAVAILABLE}\r\n`)],
+  ])('classifies a Buffer stderr: %s', (_label, stderr) => {
+    expect(isSecretServiceUnavailable(spawnFailure(stderr))).toBe(true);
+  });
+
+  // Other D-Bus failures are NOT "no provider registered" and must stay red.
+  // Raised by the read-only verifier as the most realistic uncovered gap: these
+  // are exactly what a misconfigured runner emits, and skipping them would hide
+  // a broken CI environment behind a green run.
+  it.each([
+    ['autolaunch without X11', 'secret-tool: Cannot autolaunch D-Bus without X11 $DISPLAY'],
+    ['bus connection refused', 'secret-tool: Failed to connect to socket /run/dbus/system_bus_socket: Connection refused'],
+    ['closed bus connection', 'secret-tool: The connection is closed'],
+    ['activation access denied', 'secret-tool: Rejected send message, 1 matched rules; type="method_call"'],
+    ['no session bus address', 'secret-tool: Unable to autolaunch a dbus-daemon without a $DISPLAY for X11'],
+  ])('rethrows a different D-Bus failure: %s', (_label, stderr) => {
+    expect(isSecretServiceUnavailable(spawnFailure(stderr))).toBe(false);
+  });
+
+  // Encoding and coercion probes. All must be false; the safe direction for an
+  // unrecognized shape is red, never a silent skip.
+  it.each([
+    ['UTF-16LE buffer', Buffer.from(UNAVAILABLE, 'utf16le')],
+    ['UTF-8 BOM prefix', `${String.fromCharCode(0xfeff)}${UNAVAILABLE}`],
+    ['embedded NUL suffix', `${UNAVAILABLE}${String.fromCharCode(0)}`],
+    ['CR-only terminator', `${UNAVAILABLE}\r`],
+    ['trailing space', `${UNAVAILABLE}${String.fromCharCode(32)}`],
+    ['trailing tab', `${UNAVAILABLE}\t`],
+    ['double LF', `${UNAVAILABLE}\n\n`],
+  ])('rejects an encoding/whitespace variant: %s', (_label, stderr) => {
+    expect(isSecretServiceUnavailable(spawnFailure(stderr))).toBe(false);
+  });
+
+  it.each([
+    ['string status', { status: '1' }],
+    ['boxed Number status', { status: new Number(1) }],
+    ['bigint status', { status: 1n }],
+  ])('rejects a coerced status: %s', (_label, extra) => {
+    expect(isSecretServiceUnavailable(spawnFailure(UNAVAILABLE, extra))).toBe(false);
+  });
+
+  // Every field the classifier reads must be guarded, not just stderr: an
+  // exception from ANY of them would abort classification and stop the call site
+  // from rethrowing the original error unchanged.
+  it.each(['status', 'signal', 'stderr'])(
+    'does not let a throwing %s getter escape the classifier',
+    field => {
+      const error = Object.defineProperty(
+        Object.assign(new Error('Command failed'), {
+          status: 1,
+          signal: null,
+          stderr: SECRET_SERVICE_UNAVAILABLE_LINE,
+        }),
+        field,
+        { get() { throw new Error(`hostile ${field} getter`); } },
+      );
+      expect(() => isSecretServiceUnavailable(error)).not.toThrow();
+      expect(isSecretServiceUnavailable(error)).toBe(false);
+    },
+  );
+
+  it('classifies a null-prototype object by structure only', () => {
+    // Documents the known limit: the classifier matches shape, not provenance.
+    // Reachable only if non-secret-tool code throws this exact structure, which
+    // cannot happen at the call site since the error comes from execFileSync.
+    const forged = Object.assign(Object.create(null), {
+      status: 1,
+      signal: null,
+      stderr: UNAVAILABLE,
+    });
+    expect(isSecretServiceUnavailable(forged)).toBe(true);
+  });
+
+  // Negatives. Each is a real defect this lane exists to catch, and each would
+  // have been silently skipped by the bare `catch {}` this replaces.
+  it.each([
+    ['leading noise before the sentence', `warning: something else\n${UNAVAILABLE}`],
+    ['trailing noise after the sentence', `${UNAVAILABLE}\nwarning: something else`],
+    ['a second copy of the line', `${UNAVAILABLE}\n${UNAVAILABLE}`],
+    ['inline prefix on the same line', `note: ${UNAVAILABLE}`],
+    ['a DIFFERENT dbus service', 'secret-tool: The name org.freedesktop.other was not provided by any .service files'],
+    ['near-miss wording', 'secret-tool: The name org.freedesktop.secrets was not provided'],
+    ['path / secret-tool missing', 'spawnSync secret-tool ENOENT'],
+    ['permission', "Error: EACCES: permission denied, open '/usr/bin/secret-tool'"],
+    ['generic process failure', 'secret-tool: unexpected failure'],
+    ['credential store write failure', "secret-tool: couldn't write password: some backend error"],
+    ['credential store read failure', "secret-tool: couldn't read password: some backend error"],
+    ['parsing / usage', 'secret-tool: must specify a label for the new item'],
+    ['collection misuse', "secret-tool: collection must be a full path, or the 'default' alias"],
+    ['empty stderr', ''],
+  ])('rethrows unrelated failure: %s', (_label, stderr) => {
+    expect(isSecretServiceUnavailable(spawnFailure(stderr))).toBe(false);
+  });
+
+  // Termination shape: the right sentence with the wrong process outcome means
+  // something other than a clean "service not available" exit.
+  it.each([
+    ['exit code 2', { status: 2 }],
+    ['exit code 0', { status: 0 }],
+    ['null status', { status: null }],
+    ['absent status', { status: undefined }],
+    ['killed by signal', { signal: 'SIGTERM' }],
+    ['absent signal', { signal: undefined }],
+  ])('rejects the right sentence with the wrong termination: %s', (_label, extra) => {
+    expect(isSecretServiceUnavailable(spawnFailure(UNAVAILABLE, extra))).toBe(false);
+  });
+
+  it('never classifies from error.message alone', () => {
+    // Node prefixes execFileSync failures with `Command failed: ...`. Matching
+    // there would let a wrapper carrying the phrase bypass the stderr anchor.
+    const error = Object.assign(new Error(`Command failed: ${UNAVAILABLE}`), {
+      status: 1,
+      signal: null,
+    });
+    expect(isSecretServiceUnavailable(error)).toBe(false);
+  });
+
+  it('ignores non-error values', () => {
+    expect(isSecretServiceUnavailable(null)).toBe(false);
+    expect(isSecretServiceUnavailable(UNAVAILABLE)).toBe(false);
+  });
+});
+
 describe('native Windows Hello unavailability is classified narrowly', () => {
   // Positive: every non-Available availability the helper can report.
   it.each(['DeviceNotPresent', 'DeviceBusy', 'DisabledByPolicy', 'NotConfiguredForUser'])(
@@ -532,7 +752,16 @@ describe('native Linux and Windows backend lanes', () => {
       const secret = Buffer.from(`native-linux-secret-${Date.now()}`);
       try {
         await backend.storeSecret(provider, secret);
-      } catch {
+      } catch (error) {
+        // Only "secret-tool ran but no Secret Service provider is reachable" is
+        // environmental. Anything else is a real defect and must fail the run.
+        //
+        // The original error is rethrown unchanged: execFileSync already retains
+        // `status`, `signal`, and `stderr` on it and folds captured stderr into
+        // the message, so preserving the object gives Vitest the strongest
+        // diagnostic. Wrapping it would duplicate the output and hide those
+        // fields behind a synthesized message.
+        if (!isSecretServiceUnavailable(error)) throw error;
         // secret-tool is present but no Secret Service provider (e.g. gnome-keyring with an unlocked
         // collection) is reachable here. Skip rather than fail; the real round-trip runs where a
         // Secret Service actually exists (a Linux dev box, or a keyring-provisioned CI).
