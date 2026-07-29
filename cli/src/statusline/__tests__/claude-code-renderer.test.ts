@@ -59,6 +59,7 @@ async function renderAndPersist(
       mode: meta.mode,
       projectRoot: meta.projectRoot,
       projectKey: meta.projectKey,
+      ...(meta.context !== undefined ? { context: meta.context } : {}),
       ...(meta.snapshot !== undefined ? { snapshot: meta.snapshot } : {}),
     }).catch(() => undefined);
   }
@@ -529,6 +530,13 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const record = await readLastRenderViaCurrentPointer({ env: { HIVE_FLOW_HOME: fix.home } });
     expect(record).toBeDefined();
     expect(record?.mode).toBe('inline-collector');
+    expect(record?.context).toMatchObject({
+      percentage: 45,
+      inputTokens: 82_000,
+      outputTokens: 14_000,
+      contextWindow: 1_000_000,
+      source: 'stdin',
+    });
     expect(record?.snapshot?.context).toMatchObject({
       percentage: 45,
       inputTokens: 82_000,
@@ -619,6 +627,14 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const record = await readLastRenderViaCurrentPointer({ env: { HIVE_FLOW_HOME: fix.home } });
     expect(record).toBeDefined();
     expect(record?.mode).toBe('header-only');
+    expect(record?.snapshot).toBeUndefined();
+    expect(record?.context).toMatchObject({
+      percentage: 45,
+      inputTokens: 82_000,
+      outputTokens: 14_000,
+      contextWindow: 1_000_000,
+      source: 'stdin',
+    });
   });
 
   // -------------------------------------------------------------------------

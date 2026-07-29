@@ -42,7 +42,7 @@ import {
   StatuslineLastRenderSymlinkError,
   type LastRenderRecord,
 } from '../last-render.js';
-import type { StatuslineSnapshotV1 } from '../types.js';
+import type { ContextSummary, StatuslineSnapshotV1 } from '../types.js';
 
 // 16-char lowercase hex projectKey (matches Wave 3 `resolveProjectScope`)
 const KEY_A = '0123456789abcdef';
@@ -79,9 +79,18 @@ describe('statusline last-render', () => {
   // -------------------------------------------------------------------------
   it('round-trips a write -> read via projectKey through the global mirror', async () => {
     const rendered = '\x1b[1;38;5;253mproject\x1b[0m | \x1b[1;34mmain\x1b[0m';
+    const context: ContextSummary = {
+      percentage: 45,
+      inputTokens: 82_000,
+      outputTokens: 14_000,
+      contextWindow: 1_000_000,
+      source: 'stdin',
+      observedAt: '2026-07-29T08:00:00.000Z',
+    };
     await writeLastRender({
       rendered,
       mode: 'snapshot',
+      context,
       env,
       nowMs: 1_700_000_000_000,
       projectRoot,
@@ -93,6 +102,7 @@ describe('statusline last-render', () => {
     expect(got!.rendered).toBe(rendered);
     expect(got!.mode).toBe('snapshot');
     expect(got!.renderedAt).toBe(new Date(1_700_000_000_000).toISOString());
+    expect(got!.context).toEqual(context);
     expect(got!.snapshot).toBeUndefined();
     expect(got!.projectKey).toBe(KEY_A);
     expect(got!.projectRoot).toBe(projectRoot);
@@ -708,6 +718,21 @@ describe('statusline last-render', () => {
     const p = paths();
     mkdirSync(p.projectDir, { recursive: true });
     writeFileSync(p.json, JSON.stringify([{ version: 1 }]), { mode: 0o600 });
+    expect(await readLastRender({ projectKey: KEY_A, env })).toBeUndefined();
+  });
+
+  it('returns undefined when context is present as a primitive', async () => {
+    const p = paths();
+    mkdirSync(p.projectDir, { recursive: true });
+    writeFileSync(p.json, JSON.stringify({
+      version: 1,
+      renderedAt: new Date().toISOString(),
+      mode: 'header-only',
+      rendered: 'ctx',
+      context: 45,
+      projectKey: KEY_A,
+      projectRoot,
+    }), { mode: 0o600 });
     expect(await readLastRender({ projectKey: KEY_A, env })).toBeUndefined();
   });
 

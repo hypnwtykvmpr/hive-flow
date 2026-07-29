@@ -158,6 +158,8 @@ export interface RenderClaudeCodeStatuslineResult {
   readonly rendered: string;
   /** Which rendering path produced this output. */
   readonly mode: LastRenderMode;
+  /** Exact stdin-merged context used to render the context meter, when measured. */
+  readonly context?: ContextSummary;
   /** The snapshot the renderer used, when one was available. */
   readonly snapshot?: StatuslineSnapshotV1;
   /** 16-char lowercase hex sha256 prefix identifying the project. */
@@ -303,6 +305,7 @@ async function renderInternal(
     mode: resolved.mode,
     projectRoot: scope.projectRoot,
     projectKey: scope.projectKey,
+    ...(effectiveContext !== undefined ? { context: effectiveContext } : {}),
     ...(effectiveSnapshot !== undefined ? { snapshot: effectiveSnapshot } : {}),
   };
 }

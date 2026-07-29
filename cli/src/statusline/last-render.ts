@@ -60,7 +60,11 @@
 import { lstat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { MAX_INIT_BUFFER_BYTES, type StatuslineSnapshotV1 } from './types.js';
+import {
+  MAX_INIT_BUFFER_BYTES,
+  type ContextSummary,
+  type StatuslineSnapshotV1,
+} from './types.js';
 import { statuslinePaths } from './paths.js';
 import {
   ensureSafeUserCacheDir,
@@ -101,6 +105,7 @@ export interface LastRenderRecord {
   readonly renderedAt: string;
   readonly mode: LastRenderMode;
   readonly rendered: string;
+  readonly context?: ContextSummary;
   readonly snapshot?: StatuslineSnapshotV1;
   readonly projectKey?: string;
   readonly projectRoot?: string;
@@ -262,6 +267,14 @@ function validateRecord(value: unknown): LastRenderRecord | undefined {
     return undefined;
   }
   if (typeof obj.rendered !== 'string') return undefined;
+  // Optional context: when present, must be an object. The renderer owns the
+  // complete ContextSummary shape; this persistence boundary rejects arrays
+  // and primitives so consumers never receive a falsely typed value.
+  if (obj.context !== undefined) {
+    if (!obj.context || typeof obj.context !== 'object' || Array.isArray(obj.context)) {
+      return undefined;
+    }
+  }
   // Optional snapshot: when present, must be an object. We do not attempt to
   // re-validate the entire snapshot shape (that is the renderer's
   // responsibility); we only refuse non-object values so an attacker cannot
@@ -332,6 +345,8 @@ function projectLocalMirrorPath(projectRoot: string): string {
 export interface WriteLastRenderOptions {
   /** ANSI-decorated rendered output, as produced by the renderer. */
   readonly rendered: string;
+  /** Exact context measurement used by the renderer, independent of mode. */
+  readonly context?: ContextSummary;
   /** Optional snapshot the renderer used. Persisted as-is when present. */
   readonly snapshot?: StatuslineSnapshotV1;
   /** Override the "now" clock; epoch ms. Defaults to `Date.now()`. */
@@ -411,6 +426,7 @@ export async function writeLastRender(opts: WriteLastRenderOptions): Promise<voi
     rendered: opts.rendered,
     projectKey: opts.projectKey,
     projectRoot: opts.projectRoot,
+    ...(opts.context !== undefined ? { context: opts.context } : {}),
     ...(opts.snapshot !== undefined ? { snapshot: opts.snapshot } : {}),
   };
 

@@ -183,6 +183,26 @@ function statuslineRecordContextPercentage(record) {
     return { percentage: pctFromRendered, detail: 'rendered.context-percent' };
   }
 
+  const recordContext = record?.context;
+  const pctFromRecord = normalizeStatuslinePercent(recordContext?.percentage);
+  if (pctFromRecord !== null) {
+    return { percentage: pctFromRecord, detail: 'context.percentage' };
+  }
+
+  const recordTokenEstimate = numericAt(recordContext, ['tokenEstimate']);
+  const recordContextWindow = numericAt(recordContext, ['contextWindow']);
+  if (
+    recordTokenEstimate !== null
+    && recordTokenEstimate >= 0
+    && recordContextWindow !== null
+    && recordContextWindow > 0
+  ) {
+    return {
+      percentage: Math.min(recordTokenEstimate / recordContextWindow, 1),
+      detail: 'context.tokenEstimate/contextWindow',
+    };
+  }
+
   const snapshotContext = record?.snapshot?.context;
   const pctFromSnapshot = normalizeStatuslinePercent(snapshotContext?.percentage);
   if (pctFromSnapshot !== null) {

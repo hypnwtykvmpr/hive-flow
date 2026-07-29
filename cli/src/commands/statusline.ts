@@ -825,6 +825,7 @@ export const statuslineCommand: Command = {
         mode: meta.mode,
         projectRoot: meta.projectRoot,
         projectKey: meta.projectKey,
+        ...(meta.context !== undefined ? { context: meta.context } : {}),
         ...(meta.snapshot !== undefined ? { snapshot: meta.snapshot } : {}),
       }).catch(() => undefined);
     }

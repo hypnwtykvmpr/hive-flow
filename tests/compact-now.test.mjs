@@ -365,15 +365,13 @@ describe('compact-now helper', () => {
       writeFileSync(statuslinePath, JSON.stringify({
         version: 1,
         renderedAt: new Date().toISOString(),
-        mode: 'snapshot',
+        mode: 'header-only',
         projectRoot,
         projectKey: 'fedcba9876543210',
         rendered: 'hive-flow | Opus 4.8 | Working | ctx │███████▋     │',
-        snapshot: {
-          context: {
-            percentage: 64,
-            source: 'stdin',
-          },
+        context: {
+          percentage: 64,
+          source: 'stdin',
         },
       }));
       writeFileSync(fakeClaude, [
@@ -408,7 +406,7 @@ describe('compact-now helper', () => {
       assert.equal(existsSync(requestPath), true);
       const request = JSON.parse(readFileSync(requestPath, 'utf8'));
       assert.equal(request.contextMeasurement.percent, 64);
-      assert.equal(request.contextMeasurement.detail, 'snapshot.context.percentage');
+      assert.equal(request.contextMeasurement.detail, 'context.percentage');
       assert.equal(request.contextMeasurement.source, statuslinePath);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });
