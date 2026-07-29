@@ -270,6 +270,11 @@ async function renderInternal(
   const deadlineMs = startTime + renderBudgetMs;
   const resolved = await resolveModeForRender(scope, stdin, snapshotMaxAgeMs, deadlineMs);
   const enforcementStatus = await collectEnforcementStatus(scope.projectRoot);
+  const effectiveContext = mergeRenderContext(stdin, resolved.snapshot?.context);
+  const effectiveSnapshot =
+    resolved.snapshot !== undefined && effectiveContext !== undefined
+      ? { ...resolved.snapshot, context: effectiveContext }
+      : resolved.snapshot;
 
   // f16a: session-scoped activity from the verified hook tracker. The tracker
   // validates the session id itself and returns null for missing, malformed, or
@@ -280,11 +285,12 @@ async function renderInternal(
   // (rows joined by `\n`, with full-width `─` separator rules between the
   // header / body / footer groups when ≥1 body row is present).
   const rendered = composeStatusline({
-    snapshot: resolved.snapshot,
+    snapshot: effectiveSnapshot,
     mode: resolved.mode,
     palette,
     scope,
     stdin,
+    context: effectiveContext,
     enforcementStatus,
     activity,
   });
@@ -297,7 +303,7 @@ async function renderInternal(
     mode: resolved.mode,
     projectRoot: scope.projectRoot,
     projectKey: scope.projectKey,
-    ...(resolved.snapshot !== undefined ? { snapshot: resolved.snapshot } : {}),
+    ...(effectiveSnapshot !== undefined ? { snapshot: effectiveSnapshot } : {}),
   };
 }
 
@@ -634,6 +640,8 @@ interface ComposeContext {
   readonly palette: PaletteCodes;
   readonly scope: ProjectScope;
   readonly stdin: Record<string, unknown> | undefined;
+  /** Exact stdin-merged context persisted in the last-render snapshot. */
+  readonly context: ContextSummary | undefined;
   readonly enforcementStatus: EnforcementLiveStatus;
   /** Verified session activity projection, or null when untrusted/absent. */
   readonly activity: SessionProjection | null;
@@ -778,9 +786,8 @@ function renderHeader(ctx: ComposeContext): string {
   // before cost/duration. Absent or malformed context omits ONLY this segment;
   // it never produces a blank row. Present-but-unmeasured context renders empty
   // rails rather than claiming zero utilization.
-  const context = mergeRenderContext(ctx.stdin, ctx.snapshot?.context);
-  if (context !== undefined) {
-    parts.push(renderContextMeter(context.percentage, p));
+  if (ctx.context !== undefined) {
+    parts.push(renderContextMeter(ctx.context.percentage, p));
   }
 
   // Cost — only when > 0. Sourced exclusively from stdin (the refresher does

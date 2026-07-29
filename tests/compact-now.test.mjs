@@ -368,7 +368,7 @@ describe('compact-now helper', () => {
         mode: 'snapshot',
         projectRoot,
         projectKey: 'fedcba9876543210',
-        rendered: 'hive-flow | Opus 4.8 | 64% ctx',
+        rendered: 'hive-flow | Opus 4.8 | Working | ctx │███████▋     │',
         snapshot: {
           context: {
             percentage: 64,
@@ -408,7 +408,7 @@ describe('compact-now helper', () => {
       assert.equal(existsSync(requestPath), true);
       const request = JSON.parse(readFileSync(requestPath, 'utf8'));
       assert.equal(request.contextMeasurement.percent, 64);
-      assert.equal(request.contextMeasurement.detail, 'rendered.context-percent');
+      assert.equal(request.contextMeasurement.detail, 'snapshot.context.percentage');
       assert.equal(request.contextMeasurement.source, statuslinePath);
     } finally {
       rmSync(projectRoot, { recursive: true, force: true });

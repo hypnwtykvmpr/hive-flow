@@ -529,6 +529,13 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const record = await readLastRenderViaCurrentPointer({ env: { HIVE_FLOW_HOME: fix.home } });
     expect(record).toBeDefined();
     expect(record?.mode).toBe('inline-collector');
+    expect(record?.snapshot?.context).toMatchObject({
+      percentage: 45,
+      inputTokens: 82_000,
+      outputTokens: 14_000,
+      contextWindow: 1_000_000,
+      source: 'stdin',
+    });
   });
 
   it('inline-collector mode renders all owned live agents regardless of stdin session', async () => {
