@@ -414,6 +414,102 @@ describe('compact-now helper', () => {
     }
   });
 
+  it('preserves every structured context fallback during the statusline upgrade window', () => {
+    const cases = [
+      {
+        name: 'top-level token ratio',
+        mode: 'header-only',
+        context: {
+          tokenEstimate: 64_000,
+          contextWindow: 100_000,
+          source: 'stdin',
+        },
+        expectedDetail: 'context.tokenEstimate/contextWindow',
+      },
+      {
+        name: 'snapshot percentage',
+        mode: 'snapshot',
+        snapshot: {
+          context: {
+            percentage: 64,
+            source: 'stdin',
+          },
+        },
+        expectedDetail: 'snapshot.context.percentage',
+      },
+      {
+        name: 'snapshot token ratio',
+        mode: 'snapshot',
+        snapshot: {
+          context: {
+            tokenEstimate: 64_000,
+            contextWindow: 100_000,
+            source: 'stdin',
+          },
+        },
+        expectedDetail: 'snapshot.context.tokenEstimate/contextWindow',
+      },
+    ];
+
+    for (const [index, testCase] of cases.entries()) {
+      const fixtureSlug = testCase.name.replaceAll(' ', '-');
+      const projectRoot = mkdtempSync(join(tmpdir(), `hf-compact-now-${fixtureSlug}-`));
+      const home = mkdtempSync(join(tmpdir(), 'hf-compact-now-home-'));
+      const dataDir = join(projectRoot, '.hive-flow', 'data');
+      const projectKey = index.toString(16).padStart(16, '0');
+      const statuslineDir = join(home, '.hive-flow', 'statusline', 'projects', projectKey);
+      const statuslinePath = join(statuslineDir, 'last-render.json');
+      const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+      mkdirSync(dataDir, { recursive: true });
+      mkdirSync(statuslineDir, { recursive: true });
+
+      try {
+        writeFileSync(statuslinePath, JSON.stringify({
+          version: 1,
+          renderedAt: new Date().toISOString(),
+          mode: testCase.mode,
+          projectRoot,
+          projectKey,
+          rendered: 'hive-flow | Opus 4.8 | Working | ctx │███████▋     │',
+          ...(testCase.context !== undefined ? { context: testCase.context } : {}),
+          ...(testCase.snapshot !== undefined ? { snapshot: testCase.snapshot } : {}),
+        }));
+        writeFileSync(fakeClaude, [
+          '#!/usr/bin/env node',
+          "process.stdout.write(JSON.stringify({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 640000, trigger: 'manual' } }) + '\\n');",
+        ].join('\n'));
+        chmodSync(fakeClaude, 0o755);
+
+        const result = spawnSync(process.execPath, [
+          helperPath,
+          '--reason', `structured fallback: ${testCase.name}`,
+          '--mode', 'headless',
+          '--resume', `session-structured-fallback-${index}`,
+        ], {
+          cwd: projectRoot,
+          env: {
+            ...process.env,
+            CLAUDE_PROJECT_DIR: projectRoot,
+            CLAUDE_BIN: fakeClaude,
+            HOME: home,
+            USERPROFILE: home,
+            HIVE_FLOW_HOME: '',
+          },
+          encoding: 'utf8',
+        });
+
+        assert.equal(result.status, 0, `${testCase.name}: ${result.stderr || result.stdout}`);
+        const request = JSON.parse(readFileSync(join(dataDir, 'compact-request.json'), 'utf8'));
+        assert.equal(request.contextMeasurement.percent, 64, testCase.name);
+        assert.equal(request.contextMeasurement.detail, testCase.expectedDetail, testCase.name);
+        assert.equal(request.contextMeasurement.source, statuslinePath, testCase.name);
+      } finally {
+        rmSync(projectRoot, { recursive: true, force: true });
+        rmSync(home, { recursive: true, force: true });
+      }
+    }
+  });
+
   it('reads statusline records from HIVE_FLOW_HOME using the writer-compatible path', () => {
     const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-hfhome-floor-'));
     const hiveFlowHome = mkdtempSync(join(tmpdir(), 'hf-compact-now-hfhome-'));
