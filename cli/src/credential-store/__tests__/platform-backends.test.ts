@@ -441,6 +441,87 @@ describe('credential helper resolution honors the configured environment', () =>
   });
 });
 
+/**
+ * The Windows credential helper fails closed when Windows Hello cannot be used
+ * non-interactively, which is the permanent state of a GitHub-hosted runner:
+ *
+ *   Windows Hello unavailable in non-interactive credential helper context: DeviceNotPresent
+ *
+ * That refusal is the *correct* production behavior (`Program.cs`
+ * `FailClosedIfBiometricUnavailable`) and is asserted by its own dedicated test,
+ * which passes on Windows CI. It is not weakened or bypassed here.
+ *
+ * This predicate exists so the native round-trip lane can classify that one
+ * environment-dependent diagnostic as an honest skip while **rethrowing
+ * everything else** — a path, process, credential, parsing, or permission
+ * failure must still turn CI red. It is deliberately stricter than the Linux
+ * lane's bare `catch`, which skips on any error at all.
+ *
+ * Narrowness comes from two things: the full sentence emitted by the helper, and
+ * an enumeration of the non-`Available` `UserConsentVerifierAvailability` values.
+ * A future enum value therefore fails the run rather than being silently
+ * swallowed — failing loudly is the safe direction for a security boundary.
+ */
+const WINDOWS_HELLO_UNAVAILABLE =
+  /Windows Hello unavailable in non-interactive credential helper context: (DeviceNotPresent|DeviceBusy|DisabledByPolicy|NotConfiguredForUser)\b/;
+
+export function isWindowsHelloUnavailable(error: unknown): boolean {
+  if (error === null || typeof error !== 'object') return false;
+  const e = error as { message?: unknown; stderr?: unknown };
+  // Node surfaces the helper's stderr in the thrown message for execFileSync,
+  // but check stderr explicitly too so the classification does not depend on
+  // that formatting detail.
+  const parts = [
+    typeof e.message === 'string' ? e.message : '',
+    typeof e.stderr === 'string' ? e.stderr : Buffer.isBuffer(e.stderr) ? e.stderr.toString('utf8') : '',
+  ];
+  return parts.some(part => WINDOWS_HELLO_UNAVAILABLE.test(part));
+}
+
+describe('native Windows Hello unavailability is classified narrowly', () => {
+  // Positive: every non-Available availability the helper can report.
+  it.each(['DeviceNotPresent', 'DeviceBusy', 'DisabledByPolicy', 'NotConfiguredForUser'])(
+    'treats the explicit non-interactive diagnostic (%s) as skippable',
+    availability => {
+      const error = new Error(
+        'Command failed: HiveFlow.WindowsCredentialHelper.exe store hive-flow-provider-key\n'
+        + `Unhandled exception. System.InvalidOperationException: Windows Hello unavailable in non-interactive credential helper context: ${availability}`,
+      );
+      expect(isWindowsHelloUnavailable(error)).toBe(true);
+    },
+  );
+
+  it('classifies the diagnostic when it arrives only on stderr', () => {
+    const error = Object.assign(new Error('Command failed'), {
+      stderr: Buffer.from(
+        'Unhandled exception. System.InvalidOperationException: Windows Hello unavailable in non-interactive credential helper context: DeviceNotPresent',
+      ),
+    });
+    expect(isWindowsHelloUnavailable(error)).toBe(true);
+  });
+
+  // Negative: the skip must never swallow a real defect. Each of these is a
+  // failure mode the native lane exists to catch.
+  it.each([
+    ['path / helper missing', 'spawnSync hive-flow-windows-credential-helper.exe ENOENT'],
+    ['permission', "Error: EACCES: permission denied, open 'HiveFlow.WindowsCredentialHelper.exe'"],
+    ['process exit without diagnostic', 'Command failed: HiveFlow.WindowsCredentialHelper.exe store x\nUnhandled exception. System.Exception: boom'],
+    ['credential store failure', 'Unhandled exception. System.ComponentModel.Win32Exception: CredWrite failed (1312)'],
+    ['parsing', 'Unhandled exception. System.FormatException: unexpected helper output'],
+    ['consent denied (a real refusal, not unavailability)', 'Unhandled exception. System.InvalidOperationException: Windows Hello consent denied: Canceled'],
+    ['near-miss wording', 'Windows Hello unavailable'],
+    ['sentinel without an availability value', 'Windows Hello unavailable in non-interactive credential helper context: '],
+    ['unknown future availability value', 'Windows Hello unavailable in non-interactive credential helper context: SomeFutureState'],
+  ])('rethrows unrelated failure: %s', (_label, message) => {
+    expect(isWindowsHelloUnavailable(new Error(message))).toBe(false);
+  });
+
+  it('ignores non-error values', () => {
+    expect(isWindowsHelloUnavailable(null)).toBe(false);
+    expect(isWindowsHelloUnavailable('Windows Hello unavailable in non-interactive credential helper context: DeviceNotPresent')).toBe(false);
+  });
+});
+
 describe('native Linux and Windows backend lanes', () => {
   it.skipIf(process.platform !== 'linux' || process.env.HIVE_FLOW_RUN_NATIVE_LINUX_CREDENTIAL_TESTS !== '1')(
     'round-trips against native Secret Service when CI starts a D-Bus session',
@@ -466,17 +547,30 @@ describe('native Linux and Windows backend lanes', () => {
 
   it.skipIf(process.platform !== 'win32' || process.env.HIVE_FLOW_RUN_NATIVE_WINDOWS_CREDENTIAL_TESTS !== '1')(
     'round-trips against native Windows Credential Manager through the helper',
-    async () => {
+    async (ctx) => {
       // No `helperCommand` override: the backend must resolve the helper through
       // its own production path (HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER -> installed
       // -> bare name). Supplying a test-resolved command here would prove only
       // that the fixture can find the helper, not that the shipped code can —
       // which is exactly how CI passed a broken resolver for this lane.
       const backend = new WindowsCredentialManagerCredentialStore({ platform: 'win32' });
+      // `status` still runs unconditionally: the runner must reach and execute
+      // the real workflow-built helper before any skip is permitted. A missing or
+      // unresolvable helper fails here, before the classification below.
       assertCredentialBackendReady(await backend.status());
       const provider = `native-windows-${process.pid}`;
       const secret = Buffer.from(`native-windows-secret-${Date.now()}`);
-      await backend.storeSecret(provider, secret);
+      try {
+        await backend.storeSecret(provider, secret);
+      } catch (error) {
+        // A GitHub-hosted Windows runner has no Windows Hello device, so the
+        // helper fails closed exactly as designed. Classify only that diagnostic
+        // as environmental and rethrow everything else — a broad `catch` here
+        // would silently swallow the very defects this lane exists to catch.
+        if (!isWindowsHelloUnavailable(error)) throw error;
+        ctx.skip();
+        return;
+      }
       await expect(backend.retrieveSecret(provider)).resolves.toEqual(secret);
       await backend.deleteSecret(provider);
       await expect(backend.retrieveSecret(provider)).resolves.toBeNull();
