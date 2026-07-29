@@ -332,9 +332,11 @@ function meter(a: PaceAnalysis, color: string, p: PaletteCodes): string {
 }
 
 /**
- * Render the usage row from the stdin-derived windows. Returns `undefined`
- * only when the caller should omit the row entirely; a present-but-empty
- * `rate_limits` still renders the honest "no usage data" form.
+ * Render the usage row from the stdin-derived windows.
+ *
+ * ALWAYS returns a string: this row never omits. Absent or unusable
+ * `rate_limits` renders the honest "no usage data" form rather than
+ * disappearing, so the row's presence never implies data exists.
  */
 export function renderUsageLine(
   windows: { fiveHour: QuotaWindow | null; week: QuotaWindow | null },

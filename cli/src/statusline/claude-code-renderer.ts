@@ -766,10 +766,11 @@ function renderHeader(ctx: ComposeContext): string {
   }
 
   // Activity (f16a) — Idle / Thinking / Working / Waiting / Needs you, placed
-  // before the context row. Sourced ONLY from verified session-scoped tracker
-  // state; a missing or untrusted projection omits this cell entirely rather
-  // than fabricating "Idle". The context percentage/token text that used to
-  // live here now renders as its own meter row (see composeStatusline).
+  // immediately before the inline context meter on THIS line. Sourced ONLY from
+  // verified session-scoped tracker state; a missing or untrusted projection
+  // omits this cell entirely rather than fabricating "Idle". The retired
+  // `📖 N% ctx · tokens` text is replaced by that inline meter segment below —
+  // context is a header segment, not a row.
   const activity = renderActivity(ctx.activity, p);
   if (activity !== undefined) parts.push(activity);
 

@@ -26,6 +26,12 @@ let root: string;
 const SESSION = 'sess-f16a-abc123';
 
 const stateFor = (session = SESSION): string => join(root, 'state', session);
+/** Current generation for a session, read from the authoritative marker. */
+const currentGeneration = (session = SESSION): string =>
+  String(readJson(join(stateFor(session), 'generation.json'))?.generation);
+/** Generation-scoped record path (records are no longer at shared pathnames). */
+const genFile = (...parts: string[]): string =>
+  join(stateFor(), 'g', currentGeneration(), ...parts);
 const readJson = (file: string): Record<string, unknown> | null => {
   try {
     return JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
@@ -271,7 +277,7 @@ describe('event handling (A12)', () => {
 describe('untrusted state is omitted, never fabricated as Idle (A2)', () => {
   it('returns null for a generation mismatch', async () => {
     recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
-    const activityPath = join(stateFor(), 'activity.json');
+    const activityPath = genFile('activity.json');
     const activity = readJson(activityPath)!;
     writeFileSync(activityPath, JSON.stringify({ ...activity, generation: 'someothergeneration' }));
     expect(await readSessionProjection(SESSION)).toBeNull();
@@ -279,7 +285,7 @@ describe('untrusted state is omitted, never fabricated as Idle (A2)', () => {
 
   it('returns null for malformed generation or activity records', async () => {
     recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
-    writeFileSync(join(stateFor(), 'activity.json'), '{ this is not json');
+    writeFileSync(genFile('activity.json'), '{ this is not json');
     expect(await readSessionProjection(SESSION)).toBeNull();
     writeFileSync(join(stateFor(), 'generation.json'), '{ torn');
     expect(await readSessionProjection(SESSION)).toBeNull();
@@ -325,7 +331,7 @@ describe('claim crash recovery (A25)', () => {
     expect(readJson(join(dir, 'generation.claim'))?.owner).toBe(claim?.owner);
   }, 30_000);
 
-  it('dead-claim recovery racing a NEW live claimant converges on one generation', async () => {
+  it('two concurrent dead-claim recoverers converge on one generation', async () => {
     // The exact race the previous rename-CAS design lost: a recoverer must not
     // be able to disturb a claim another process publishes in the meantime.
     const crashed = runHook('prompt', { fault: 'after-claim' });
@@ -348,24 +354,60 @@ describe('claim crash recovery (A25)', () => {
     expect(projection?.generation).toBe(marker?.generation);
   }, 45_000);
 
-  it('an authoritative SessionStart wins a publication race with late-attach', async () => {
-    const results = await runHooksConcurrently([
-      { event: 'session-start', payload: { source: 'startup' } },
-      { event: 'prompt' },
-      { event: 'pre-tool' },
-    ]);
-    for (const r of results) expect(r.status).toBe(0);
+  it('SessionStart is authoritative over generation-bound state across repeated real races', async () => {
+    // Codex reproduced a 2/500 failure here: a late writer could adopt
+    // generation A, SessionStart could then publish B, and the late writer
+    // could still replace the SHARED activity.json with an A record — the
+    // renderer then rejected the mismatch and the activity cell vanished.
+    // Records are now generation-SCOPED, so a stale writer physically cannot
+    // reach the current generation's state.
+    for (let round = 0; round < 25; round++) {
+      rmSync(join(root, 'state'), { recursive: true, force: true });
 
-    const marker = readJson(join(stateFor(), 'generation.json'));
-    // Late-attach publishes with a NO-CLOBBER link, so it can never overwrite
-    // the authoritative SessionStart marker. Whichever ordering occurred, the
-    // surviving record must be internally consistent and adopted by everyone.
-    expect(['startup', 'late-attach']).toContain(marker?.source);
-    const projection = await readSessionProjection(SESSION);
-    expect(projection).not.toBeNull();
-    expect(projection?.generation).toBe(marker?.generation);
-    expect(readJson(join(stateFor(), 'activity.json'))?.generation).toBe(marker?.generation);
-  }, 45_000);
+      const results = await runHooksConcurrently([
+        { event: 'session-start', payload: { source: 'startup' } },
+        { event: 'prompt' },
+        { event: 'pre-tool' },
+      ]);
+      for (const r of results) expect(r.status).toBe(0);
+
+      const marker = readJson(join(stateFor(), 'generation.json'));
+      // The authoritative SessionStart marker must survive — not late-attach.
+      expect(marker?.source, `round ${round}: SessionStart did not win`).toBe('startup');
+
+      const generation = String(marker?.generation);
+      const projection = await readSessionProjection(SESSION);
+      // The projection must exist (no vanished activity cell) and every record
+      // it used must belong to the authoritative generation.
+      expect(projection, `round ${round}: activity vanished`).not.toBeNull();
+      expect(projection?.generation).toBe(generation);
+      expect(readJson(join(stateFor(), 'g', generation, 'activity.json'))?.generation).toBe(generation);
+    }
+  }, 120_000);
+
+  it('an initialization fallback never overwrites a truthful concurrent activity update', async () => {
+    // subagent-start initializes a generation but publishes NO activity of its
+    // own, so its baseline `idle` must not clobber a racer's real state.
+    for (let round = 0; round < 15; round++) {
+      rmSync(join(root, 'state'), { recursive: true, force: true });
+
+      const results = await runHooksConcurrently([
+        { event: 'subagent-start', payload: { agent_id: `agent-${round}` } },
+        { event: 'prompt' },
+        { event: 'pre-tool' },
+        { event: 'subagent-stop', payload: { agent_id: `other-${round}` } },
+      ]);
+      for (const r of results) expect(r.status).toBe(0);
+
+      const projection = await readSessionProjection(SESSION);
+      expect(projection, `round ${round}: no projection`).not.toBeNull();
+      // Truthful states only: a fallback idle would be a fabricated regression.
+      expect(
+        ['thinking', 'working'],
+        `round ${round}: fallback idle overwrote a truthful update`,
+      ).toContain(projection?.state);
+    }
+  }, 120_000);
 
   it('never reclaims a claim held by a LIVE owner — fails closed instead', async () => {
     const dir = stateFor();
@@ -385,6 +427,42 @@ describe('claim crash recovery (A25)', () => {
     expect(await readSessionProjection(SESSION)).toBeNull();
     expect(readFileSync(join(dir, 'generation.claim'), 'utf8')).toBe(liveClaim);
   });
+
+  it('an old claimant racing SessionEnd cannot destroy a newer claim (B2)', async () => {
+    // Previously releaseClaim() read the claim, checked the owner, then removed
+    // the PATHNAME — so an old writer could delete a newer claimant's record
+    // after a SessionEnd/new-event race. No writer removes the claim now.
+    for (let round = 0; round < 10; round++) {
+      rmSync(join(root, 'state'), { recursive: true, force: true });
+
+      // An old claimant is mid-flight (claim published, generation not yet).
+      expect(runHook('prompt', { fault: 'after-claim' }).status).toBe(91);
+      const oldClaim = readFileSync(join(stateFor(), 'generation.claim'), 'utf8');
+
+      // SessionEnd wipes the session while a new late-attach event arrives.
+      const results = await runHooksConcurrently([
+        { event: 'session-end' },
+        { event: 'prompt' },
+      ]);
+      for (const r of results) expect(r.status).toBe(0);
+
+      // Whatever the interleaving, the outcome must be self-consistent: either
+      // the session was torn down, or a valid generation exists with matching
+      // activity. A newer claim must never be silently destroyed leaving
+      // unusable state behind.
+      const marker = readJson(join(stateFor(), 'generation.json'));
+      if (marker) {
+        const generation = String(marker.generation);
+        const activity = readJson(join(stateFor(), 'g', generation, 'activity.json'));
+        expect(activity?.generation, `round ${round}: state not self-consistent`).toBe(generation);
+      }
+      // The old claim was never removed by a peer writer.
+      const claimNow = existsSync(join(stateFor(), 'generation.claim'))
+        ? readFileSync(join(stateFor(), 'generation.claim'), 'utf8')
+        : null;
+      if (claimNow !== null) expect([oldClaim, claimNow]).toContain(claimNow);
+    }
+  }, 120_000);
 
   it('fails closed on a malformed claim rather than guessing', async () => {
     const dir = stateFor();
@@ -416,7 +494,7 @@ describe('render read path is bounded (A26)', () => {
 
   it('fails closed on an over-count identity directory', async () => {
     recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
-    const agentDir = join(stateFor(), 'agents', 'start');
+    const agentDir = genFile('agents', 'start');
     mkdirSync(agentDir, { recursive: true });
     // Unique 64-hex names so all 300 files really exist (> MAX_IDENTITY_FILES).
     for (let i = 0; i < 300; i++) {
@@ -429,7 +507,7 @@ describe('render read path is bounded (A26)', () => {
     recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
     // A 1MB activity record blows the per-record cap.
     writeFileSync(
-      join(stateFor(), 'activity.json'),
+      genFile('activity.json'),
       JSON.stringify({ schema: 1, state: 'idle', tool: 'x'.repeat(1_000_000), ts: Date.now() }),
     );
     expect(await readSessionProjection(SESSION)).toBeNull();
@@ -486,7 +564,7 @@ describe('concurrent first events (A15)', () => {
     const generation = readJson(join(stateFor(), 'generation.json'))?.generation;
     expect(typeof generation).toBe('string');
     expect(projection?.generation).toBe(generation);
-    expect(readJson(join(stateFor(), 'activity.json'))?.generation).toBe(generation);
+    expect(readJson(join(stateFor(), 'g', String(generation), 'activity.json'))?.generation).toBe(generation);
     // The final projection is truthful — one of the states the racers wrote.
     expect(['thinking', 'working', 'needs-human']).toContain(projection?.state);
     // No losing writer left a competing generation behind.

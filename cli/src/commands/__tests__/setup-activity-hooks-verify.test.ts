@@ -7,10 +7,17 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { runSetup } from '../setup.js';
 import { claudeCodeActivityHooksAdapter, HOOK_WIRING } from '../../integrations/adapters/claude-code-activity-hooks.js';
-import { commandForClaudeSettings, resolveActivityHookLauncherPath } from '../../integrations/launcher.js';
+import {
+  commandForClaudeSettings,
+  resolveActivityHookLauncherPath,
+  resolveActivityHookRuntimeEntrypoint,
+  writeStableActivityHookLauncher,
+} from '../../integrations/launcher.js';
+
+const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
 
 let home: string;
 let projectRoot: string;
@@ -87,6 +94,12 @@ describe('setup --verify covers the activity hooks (A27)', () => {
 
   it('PASSES only when every wired event carries the exact canonical entry', async () => {
     await claudeCodeActivityHooksAdapter.apply(adapterCtx());
+    // verify now also runs an executable canary (B5), so a real launcher shim
+    // reaching the built runtime must exist for the pass case.
+    await writeStableActivityHookLauncher(
+      resolveActivityHookLauncherPath('user', home, projectRoot),
+      resolveActivityHookRuntimeEntrypoint(REPO_ROOT),
+    );
 
     const { results } = (await verifySetup()) as { results: any[] };
     const rows = hookRows(results);

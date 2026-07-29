@@ -5,11 +5,28 @@
 // user had before installation, and hooks they add afterwards, must survive
 // apply, reconcile, and uninstall untouched.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { claudeCodeActivityHooksAdapter, HOOK_WIRING } from '../claude-code-activity-hooks.js';
-import { commandForClaudeSettings, resolveActivityHookLauncherPath } from '../../launcher.js';
+import {
+  commandForClaudeSettings,
+  resolveActivityHookLauncherPath,
+  resolveActivityHookRuntimeEntrypoint,
+  writeStableActivityHookLauncher,
+} from '../../launcher.js';
+
+/** Repo root, so the canary can reach the real built runtime. */
+const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..');
 
 let home: string;
 let projectRoot: string;
@@ -228,11 +245,84 @@ describe('uninstall (A20)', () => {
   });
 });
 
-describe('verify', () => {
-  it('reports ok only when every wired event carries our entry', async () => {
+describe('verify checks the full configured shape and that hooks actually work (B5)', () => {
+  /** Install a REAL launcher shim pointing at the built runtime. */
+  const installLauncher = async (): Promise<void> => {
+    await writeStableActivityHookLauncher(launcher(), resolveActivityHookRuntimeEntrypoint(REPO_ROOT));
+  };
+
+  it('passes only with correct config AND a functional launcher', async () => {
     writeFileSync(settingsPath, JSON.stringify({}, null, 2));
     expect((await claudeCodeActivityHooksAdapter.verify!(ctx())).ok).toBe(false);
+
     await claudeCodeActivityHooksAdapter.apply(ctx());
-    expect((await claudeCodeActivityHooksAdapter.verify!(ctx())).ok).toBe(true);
-  });
+    // Config is right but the launcher does not exist yet.
+    const noLauncher = await claudeCodeActivityHooksAdapter.verify!(ctx());
+    expect(noLauncher.ok).toBe(false);
+    expect(noLauncher.output).toMatch(/launcher is missing/i);
+
+    await installLauncher();
+    const good = await claudeCodeActivityHooksAdapter.verify!(ctx());
+    expect(good.ok, good.output).toBe(true);
+    expect(good.output).toMatch(/functional/i);
+  }, 30_000);
+
+  it('FAILS on a wrong matcher even though the command is canonical', async () => {
+    writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+    await claudeCodeActivityHooksAdapter.apply(ctx());
+    await installLauncher();
+
+    // Park the canonical PreToolUse command under a restrictive matcher: Bash
+    // activity would silently never be tracked.
+    const settings = readSettings();
+    settings.hooks.PreToolUse[0].matcher = 'Read';
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+
+    const result = await claudeCodeActivityHooksAdapter.verify!(ctx());
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/PreToolUse: wrong matcher/);
+  }, 30_000);
+
+  it('FAILS on a wrong managed timeout', async () => {
+    writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+    await claudeCodeActivityHooksAdapter.apply(ctx());
+    await installLauncher();
+
+    const settings = readSettings();
+    settings.hooks.Stop[0].hooks[0].timeout = 999;
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+
+    const result = await claudeCodeActivityHooksAdapter.verify!(ctx());
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/Stop: wrong timeout/);
+  }, 30_000);
+
+  it('FAILS when the launcher exists but its runtime is broken', async () => {
+    writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+    await claudeCodeActivityHooksAdapter.apply(ctx());
+
+    // A shim that exists and is executable but reaches no working runtime.
+    // The shim is intentionally fail-open, so exit status alone proves nothing —
+    // only the absence of a written projection catches this.
+    mkdirSync(join(home, '.hive-flow', 'bin'), { recursive: true });
+    writeFileSync(launcher(), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o755 });
+
+    const result = await claudeCodeActivityHooksAdapter.verify!(ctx());
+    expect(result.ok).toBe(false);
+    expect(result.output).toMatch(/not functional|wrote no generation/i);
+  }, 30_000);
+
+  it('canary writes NOTHING into real ~/.claude state', async () => {
+    writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+    await claudeCodeActivityHooksAdapter.apply(ctx());
+    await installLauncher();
+
+    const realStateDir = join(homedir(), '.claude', 'statusline-state');
+    const before = existsSync(realStateDir) ? readdirSync(realStateDir) : [];
+    await claudeCodeActivityHooksAdapter.verify!(ctx());
+    const after = existsSync(realStateDir) ? readdirSync(realStateDir) : [];
+    // No canary session leaked into the operator's real state directory.
+    expect(after.filter((n) => n.startsWith('canary'))).toHaveLength(0);
+    expect(after.length).toBe(before.length);
+  }, 30_000);
 });

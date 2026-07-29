@@ -232,6 +232,18 @@ describe('fmtDuration', () => {
   });
 });
 
+describe('source integrity (A28)', () => {
+  it('tracked f16a TypeScript contains no literal NUL bytes', () => {
+    // A raw NUL makes git, `file`, and ripgrep classify the source as binary
+    // data. Delimiters must be built (String.fromCharCode(0)), never embedded.
+    for (const name of ['claude-meters.ts', 'claude-activity-state.ts', 'claude-code-renderer.ts']) {
+      const source = readFileSync(join(__dirname, '..', name), 'utf8');
+      const nulCount = [...source].filter((ch) => ch.charCodeAt(0) === 0).length;
+      expect(nulCount, `${name} contains ${nulCount} literal NUL byte(s)`).toBe(0);
+    }
+  });
+});
+
 describe('usage purity (A11)', () => {
   it('has no runtime imports at all — no network, credential, probe, or cache path', () => {
     const source = readFileSync(join(__dirname, '..', 'claude-meters.ts'), 'utf8');

@@ -17,6 +17,17 @@
  * uninstall needs no `previousValue` snapshot: removal is surgical, so there is
  * nothing to restore.
  */
+import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import {
+  accessSync,
+  constants as fsConstants,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { applyEdits, modify, parse, type JSONPath, type ParseError } from 'jsonc-parser';
 import { atomicWrite, copyBackupOnce, readTextIfExists } from '../atomic-merge.js';
@@ -347,6 +358,107 @@ async function uninstall(ctx: AdapterCtx): Promise<AdapterResult> {
   };
 }
 
+/**
+ * Verify the full CONFIGURED SHAPE, not merely ownership identity.
+ *
+ * Ownership identity (which entries we may write/remove) is the exact command.
+ * A correct INSTALLATION additionally requires the owning group's matcher and
+ * the managed timeout — otherwise a canonical `PreToolUse` command parked under
+ * a restrictive matcher like `Read` reports "installed" while Bash activity is
+ * never tracked.
+ */
+function findShapeIssue(
+  root: Record<string, unknown> | undefined,
+  launcherPath: string,
+  wiring: readonly [string, string, string | null],
+): string | null {
+  const [event, arg, matcher] = wiring;
+  for (const group of readEventGroups(root, event)) {
+    if (!Array.isArray(group?.hooks)) continue;
+    const entry = (group.hooks as unknown[]).find((e) => isManagedEntry(e, launcherPath, arg));
+    if (entry === undefined) continue;
+
+    const actualMatcher = (group as HookGroup).matcher;
+    const expected = matcher === null ? undefined : matcher;
+    const actual = actualMatcher === undefined || actualMatcher === null ? undefined : actualMatcher;
+    if (actual !== expected) {
+      return `${event}: wrong matcher (expected ${expected === undefined ? 'none' : `'${expected}'`}, found ${
+        actual === undefined ? 'none' : `'${String(actual)}'`
+      })`;
+    }
+    if ((entry as HookEntry).timeout !== HOOK_TIMEOUT_SECONDS) {
+      return `${event}: wrong timeout (expected ${HOOK_TIMEOUT_SECONDS})`;
+    }
+    return null; // correctly shaped
+  }
+  return `${event}: missing`;
+}
+
+/**
+ * Bounded executable canary. The shim intentionally fails open (`|| true`), so
+ * exit status alone cannot prove the hook works — we must observe a real
+ * projection. Runs entirely inside a throwaway `CLAUDE_STATUSLINE_TEST_ROOT`
+ * so no synthetic record is ever written into real `~/.claude` state.
+ */
+function runLauncherCanary(launcherPath: string): string | null {
+  if (!existsSync(launcherPath)) return 'activity hook launcher is missing';
+  try {
+    accessSync(launcherPath, fsConstants.X_OK);
+  } catch {
+    return 'activity hook launcher is not executable';
+  }
+
+  const canaryRoot = mkdtempSync(join(tmpdir(), 'hf-hook-canary-'));
+  try {
+    const sessionId = `canary${randomBytes(8).toString('hex')}`;
+    const result = spawnSync(launcherPath, ['prompt'], {
+      input: JSON.stringify({ session_id: sessionId }),
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        CLAUDE_STATUSLINE_TEST_ROOT: canaryRoot,
+        CLAUDE_STATUSLINE_TEST_FAULT: '',
+      },
+    });
+    if (result.error) return `activity hook launcher failed to execute: ${result.error.message}`;
+
+    // The launcher is fail-open, so the PROOF is the written projection.
+    const sessionDir = join(canaryRoot, 'state', sessionId);
+    const marker = readCanaryJson(join(sessionDir, 'generation.json'));
+    const generation = typeof marker?.generation === 'string' ? marker.generation : null;
+    if (!generation) return 'activity hook ran but wrote no generation record (runtime unreachable?)';
+    const activity = readCanaryJson(join(sessionDir, 'g', generation, 'activity.json'));
+    if (!activity || activity.generation !== generation) {
+      return 'activity hook wrote no activity record for its generation';
+    }
+    if (activity.state !== 'thinking') {
+      return `activity hook wrote an untruthful state for a prompt event: ${String(activity.state)}`;
+    }
+    return null;
+  } catch (error) {
+    return `activity hook canary failed: ${(error as Error).message}`;
+  } finally {
+    try {
+      rmSync(canaryRoot, { recursive: true, force: true });
+    } catch {
+      /* throwaway root */
+    }
+  }
+}
+
+function readCanaryJson(file: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 async function verify(ctx: AdapterCtx): Promise<{ ok: boolean; output: string }> {
   const filePath = filePathFor(ctx);
   const launcherPath = hookLauncherPathFor(ctx);
@@ -355,23 +467,23 @@ async function verify(ctx: AdapterCtx): Promise<{ ok: boolean; output: string }>
   if (parseErrors(source).length > 0) return { ok: false, output: 'Unable to parse settings.' };
 
   const root = readRoot(source);
-  const missing: string[] = [];
-  let installed = 0;
-  for (const [event, arg] of HOOK_WIRING) {
-    const found = readEventGroups(root, event).some(
-      (group) =>
-        Array.isArray(group?.hooks) &&
-        (group.hooks as unknown[]).some((entry) => isManagedEntry(entry, launcherPath, arg)),
-    );
-    if (found) installed++;
-    else missing.push(event);
+  const issues: string[] = [];
+  for (const wiring of HOOK_WIRING) {
+    const issue = findShapeIssue(root, launcherPath, wiring);
+    if (issue !== null) issues.push(issue);
   }
+  if (issues.length > 0) {
+    return { ok: false, output: `Claude activity hooks misconfigured — ${issues.join('; ')}` };
+  }
+
+  const canaryIssue = runLauncherCanary(launcherPath);
+  if (canaryIssue !== null) {
+    return { ok: false, output: `Claude activity hooks configured but not functional: ${canaryIssue}` };
+  }
+
   return {
-    ok: missing.length === 0,
-    output:
-      missing.length === 0
-        ? `Claude activity hooks present for all ${installed} events.`
-        : `Missing activity hooks for: ${missing.join(', ')}`,
+    ok: true,
+    output: `Claude activity hooks present and functional for all ${HOOK_WIRING.length} events.`,
   };
 }
 

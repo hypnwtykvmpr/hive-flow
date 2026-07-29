@@ -136,6 +136,21 @@ function claimPath(dir: string): string {
   return join(dir, 'generation.claim');
 }
 
+/**
+ * Directory holding every GENERATION-BOUND record.
+ *
+ * All of activity, task ack/snapshot, and identity records live under
+ * `g/<generation>/`. This is the ownership guarantee, not a convention: a writer
+ * that adopted a stale generation A writes into `g/A/...`, which the renderer —
+ * which selects its directory from the authoritative marker — never reads. A
+ * check-then-replace of a shared pathname could not provide this, because an
+ * authoritative SessionStart could publish generation B between the check and
+ * the replace and then have its `activity.json` clobbered by the stale writer.
+ */
+function genDir(dir: string, generation: string): string {
+  return join(dir, 'g', generation);
+}
+
 // ---------------------------------------------------------------------------
 // Fault injection (tests only) + primitive I/O
 // ---------------------------------------------------------------------------
@@ -332,8 +347,12 @@ function readClaim(dir: string): ClaimRecord | null {
  * without either deleting or replacing the canonical claim.
  */
 function generationFromClaim(claim: ClaimRecord): string {
+  // NUL is an unambiguous field delimiter (it cannot appear in any field),
+  // but it must NEVER be embedded literally in tracked source: a raw NUL makes
+  // git, `file`, and ripgrep treat this TypeScript as a binary blob. Build it.
+  const NUL = String.fromCharCode(0);
   return createHash('sha256')
-    .update(`${claim.owner} ${claim.pid} ${claim.ts}`)
+    .update(`${claim.owner}${NUL}${claim.pid}${NUL}${claim.ts}`)
     .digest('hex')
     .slice(0, 32);
 }
@@ -356,13 +375,19 @@ function lateAttachMarker(claim: ClaimRecord): Record<string, unknown> {
  * has already published, a late-attach writer's link fails and it adopts the
  * authoritative record instead of overwriting it.
  */
-function publishGenerationNoClobber(dir: string, marker: Record<string, unknown>): void {
+/**
+ * Publish a COMPLETE record only if the destination does not exist, via a
+ * staged atomic no-clobber link. Never overwrites an existing record, and can
+ * never expose a partial one.
+ */
+function publishIfAbsent(file: string, value: Record<string, unknown>): void {
+  const dir = dirname(file);
   mkdirSync(dir, { recursive: true });
-  const staging = join(dir, `.generation.json.${process.pid}.${randomBytes(8).toString('hex')}.stage`);
+  const staging = join(dir, `.${basename(file)}.${process.pid}.${randomBytes(8).toString('hex')}.stage`);
   try {
-    writeFileSync(staging, JSON.stringify(marker), { encoding: 'utf8', flag: 'wx' });
+    writeFileSync(staging, JSON.stringify(value), { encoding: 'utf8', flag: 'wx' });
     try {
-      linkSync(staging, join(dir, 'generation.json'));
+      linkSync(staging, file);
     } catch {
       /* EEXIST: another writer (or SessionStart) already published. Adopt it. */
     }
@@ -377,15 +402,18 @@ function publishGenerationNoClobber(dir: string, marker: Record<string, unknown>
   }
 }
 
-function releaseClaim(dir: string, owner: string): void {
-  const claim = readClaim(dir);
-  if (!claim || claim.owner !== owner) return; // never drop someone else's claim
-  try {
-    rmSync(claimPath(dir), { force: true });
-  } catch {
-    /* a leftover claim is harmless: consulted only when no generation exists */
-  }
+function publishGenerationNoClobber(dir: string, marker: Record<string, unknown>): void {
+  publishIfAbsent(join(dir, 'generation.json'), marker);
 }
+
+// NOTE (B2): there is deliberately NO releaseClaim(). Reading the claim,
+// checking its owner, and then removing the pathname is a TOCTOU — the path can
+// be removed and recreated by a newer claimant in between, so an old writer
+// could delete a newer claimant's record after a SessionEnd/new-event race.
+// Removal is also unnecessary: once a valid `generation.json` exists the claim
+// is inert (it is consulted ONLY when no valid generation is present), and
+// SessionEnd removes the whole session directory. Lifecycle cleanup belongs to
+// session teardown, not to individual event writers.
 
 /** Bounded wait for a winner's generation publication. */
 function awaitGeneration(dir: string): string | null {
@@ -431,13 +459,14 @@ function ensureGeneration(dir: string, sessionId: string): string | null {
   const published = loadGeneration(dir);
   if (!published) return null;
 
-  if (mine) releaseClaim(dir, mine.owner);
+  // The claim is intentionally left in place — see the B2 note above.
 
-  // Baseline only, and only when this generation has no activity yet. The
+  // Baseline only, published CREATE-ONLY so a racer's truthful `thinking` /
+  // `working` record can never be overwritten by this fallback `idle`. The
   // triggering event writes the truthful state next; no historical tools,
   // identities, or permission state are invented.
-  if (!loadActivity(dir, published.generation)) {
-    writeActivity(dir, published.generation, 'idle');
+  writeActivityIfAbsent(dir, published.generation, 'idle');
+  if (!hasTaskAck(dir, published.generation)) {
     // Acknowledge — never replay — pre-existing tasks, so late-attach cannot
     // resurrect task history this session never observed.
     acknowledgeTasks(dir, published.generation, sessionId);
@@ -450,7 +479,7 @@ function ensureGeneration(dir: string, sessionId: string): string | null {
 // ---------------------------------------------------------------------------
 
 function loadActivity(dir: string, generation: string): Record<string, unknown> | null {
-  return validateActivity(asRecord(readJson(join(dir, 'activity.json'))), generation);
+  return validateActivity(asRecord(readJson(join(genDir(dir, generation), 'activity.json'))), generation);
 }
 
 /** Pure validator shared by the sync (write) and async (render) read paths. */
@@ -466,23 +495,38 @@ function validateActivity(
   return value;
 }
 
+function activityRecord(generation: string, state: ActivityState, tool: unknown): Record<string, unknown> {
+  return {
+    schema: 1,
+    generation,
+    state,
+    tool: typeof tool === 'string' && tool.length > 0 ? tool : null,
+    ts: Date.now(),
+  };
+}
+
 function writeActivity(
   dir: string,
   generation: string,
   state: ActivityState,
   tool: unknown = null,
 ): void {
-  atomicWrite(join(dir, 'activity.json'), {
-    schema: 1,
-    generation,
-    state,
-    tool: typeof tool === 'string' && tool.length > 0 ? tool : null,
-    ts: Date.now(),
-  });
+  atomicWrite(join(genDir(dir, generation), 'activity.json'), activityRecord(generation, state, tool));
 }
 
-function identityFile(dir: string, family: string, phase: string, id: string): string {
-  return join(dir, family, phase, `${createHash('sha256').update(id).digest('hex')}.json`);
+/**
+ * Write the initialization baseline WITHOUT clobbering a truthful concurrent
+ * update. Events that do not themselves publish activity (subagent-start /
+ * subagent-stop) still initialize a generation, and their fallback `idle` must
+ * never overwrite a `thinking`/`working` record another racer just wrote.
+ * Create-only publication makes that structurally impossible.
+ */
+function writeActivityIfAbsent(dir: string, generation: string, state: ActivityState): void {
+  publishIfAbsent(join(genDir(dir, generation), 'activity.json'), activityRecord(generation, state, null));
+}
+
+function identityFile(dir: string, generation: string, family: string, phase: string, id: string): string {
+  return join(genDir(dir, generation), family, phase, `${createHash('sha256').update(id).digest('hex')}.json`);
 }
 
 function writeIdentity(
@@ -494,11 +538,11 @@ function writeIdentity(
 ): void {
   const id = validIdentity(rawId);
   if (!id) return; // unknowable identity: never guess or pop another record
-  atomicWrite(identityFile(dir, family, phase, id), { schema: 1, generation, id, ts: Date.now() });
+  atomicWrite(identityFile(dir, generation, family, phase, id), { schema: 1, generation, id, ts: Date.now() });
 }
 
 function identityRecords(dir: string, family: string, phase: string, generation: string): string[] {
-  const recordDir = join(dir, family, phase);
+  const recordDir = join(genDir(dir, generation), family, phase);
   let names: string[] = [];
   try {
     names = readdirSync(recordDir).filter((name) => name.endsWith('.json'));
@@ -574,7 +618,10 @@ function taskInventory(sessionId: string): TaskInventory {
 }
 
 function readSnapshot(dir: string, generation: string): Record<string, unknown> | null {
-  return validateSnapshot(asRecord(readJson(join(dir, 'tasks', 'snapshot.json'))), generation);
+  return validateSnapshot(
+    asRecord(readJson(join(genDir(dir, generation), 'tasks', 'snapshot.json'))),
+    generation,
+  );
 }
 
 /** Pure validator shared by the sync (write) and async (render) read paths. */
@@ -593,10 +640,16 @@ function validateSnapshot(
   return value;
 }
 
+/** True when this generation already has a task acknowledgement. */
+function hasTaskAck(dir: string, generation: string): boolean {
+  const value = asRecord(readJson(join(genDir(dir, generation), 'tasks', 'ack.json')));
+  return !!value && value.schema === 1 && value.generation === generation;
+}
+
 function acknowledgeTasks(dir: string, generation: string, sessionId: string): void {
   const snapshot = readSnapshot(dir, generation);
   const inventory = taskInventory(sessionId);
-  atomicWrite(join(dir, 'tasks', 'ack.json'), {
+  atomicWrite(join(genDir(dir, generation), 'tasks', 'ack.json'), {
     schema: 1,
     generation,
     fingerprint: inventory.fingerprint,
@@ -608,7 +661,7 @@ function acknowledgeTasks(dir: string, generation: string, sessionId: string): v
 
 function writeTaskSnapshot(dir: string, generation: string, sessionId: string): void {
   const inventory = taskInventory(sessionId);
-  atomicWrite(join(dir, 'tasks', 'snapshot.json'), {
+  atomicWrite(join(genDir(dir, generation), 'tasks', 'snapshot.json'), {
     schema: 1,
     generation,
     snapshotId: randomUUID().replace(/-/g, ''),
@@ -684,7 +737,7 @@ async function identityRecordsAsync(
   generation: string,
   budget: Budget,
 ): Promise<string[] | null> {
-  const recordDir = join(dir, family, phase);
+  const recordDir = join(genDir(dir, generation), family, phase);
   let names: string[] = [];
   try {
     names = (await readdir(recordDir)).filter((name) => name.endsWith('.json'));
@@ -764,7 +817,7 @@ export async function readSessionProjection(
   const marker = validateGeneration(markerValue);
   if (!marker) return null;
   const activity = validateActivity(
-    asRecord(await readJsonBounded(join(dir, 'activity.json'), budget)),
+    asRecord(await readJsonBounded(join(genDir(dir, marker.generation), 'activity.json'), budget)),
     marker.generation,
   );
   if (!activity) return null;
@@ -776,7 +829,9 @@ export async function readSessionProjection(
   const shells = await activeIdentityIdsAsync(dir, 'shells', marker.generation, budget);
   if (shells === null) return null;
 
-  const ackValue = asRecord(await readJsonBounded(join(dir, 'tasks', 'ack.json'), budget));
+  const ackValue = asRecord(
+    await readJsonBounded(join(genDir(dir, marker.generation), 'tasks', 'ack.json'), budget),
+  );
   const ack =
     ackValue &&
     ackValue.schema === 1 &&
@@ -785,7 +840,7 @@ export async function readSessionProjection(
       ? ackValue
       : null;
   const snapshot = validateSnapshot(
-    asRecord(await readJsonBounded(join(dir, 'tasks', 'snapshot.json'), budget)),
+    asRecord(await readJsonBounded(join(genDir(dir, marker.generation), 'tasks', 'snapshot.json'), budget)),
     marker.generation,
   );
   const inventory = await taskInventoryAtAsync(join(tasksDir(), sessionId), budget);
@@ -824,16 +879,21 @@ export async function readSessionProjection(
 
 function startFreshSession(dir: string, sessionId: string, source: string): void {
   // A real SessionStart is authoritative and outranks any late-attach state.
-  try {
-    rmSync(claimPath(dir), { force: true });
-  } catch {
-    /* stale claim removal is best effort */
-  }
+  //
+  // The claim is deliberately NOT removed here (B2): removing a pathname whose
+  // contents may have been replaced by a newer claimant is the same TOCTOU.
+  // It is inert anyway once a valid generation exists.
   const marker = newGeneration(source);
-  atomicWrite(join(dir, 'generation.json'), marker);
   const generation = String(marker.generation);
+
+  // Populate this generation's records BEFORE publishing its marker. Publishing
+  // last means the marker only ever becomes authoritative once the state it
+  // points at already exists, so a reader can never observe a fresh marker with
+  // no activity. Because every record is generation-scoped, no stale writer can
+  // reach into this directory.
   writeActivity(dir, generation, 'idle');
   acknowledgeTasks(dir, generation, sessionId);
+  atomicWrite(join(dir, 'generation.json'), marker);
 }
 
 /**
