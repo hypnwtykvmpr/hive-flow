@@ -455,9 +455,43 @@ const LIVE_OWNER_WAIT_DELAY_MS = 5;
  * Resolve the generation for a validated session, creating one via late-attach
  * when absent. Returns null when the caller must fail closed and write nothing.
  */
+/**
+ * One-way, bounded migration from the PRE-generation-directory layout.
+ *
+ * An earlier f16a build wrote `activity.json` at the session root. After records
+ * moved under `g/<generation>/`, those sessions were permanently stuck: every
+ * event's `loadActivity()` guard reads only the scoped path, finds nothing, and
+ * returns without writing — so the session could never self-recover and its
+ * activity cell stayed blank forever.
+ *
+ * This promotes a legacy record ONLY when all of the following hold:
+ *   - `generation.json` validates (caller already established this);
+ *   - no scoped activity exists yet;
+ *   - the legacy root record passes the SAME strict activity validator,
+ *     including a generation match.
+ * Publication is create-only, so it can never overwrite a scoped record a racer
+ * just wrote. An absent, malformed, or generation-mismatched legacy record
+ * migrates NOTHING — no activity is fabricated. Unrelated files are untouched.
+ *
+ * Deliberately narrow: only the activity record. Legacy identity records are
+ * per-generation lifecycle facts of unknown staleness, and the triggering event
+ * rewrites task ack/snapshot anyway.
+ */
+function migrateLegacyActivity(dir: string, generation: string): void {
+  if (loadActivity(dir, generation)) return; // scoped record already wins
+  const legacy = validateActivity(asRecord(readJson(join(dir, 'activity.json'))), generation);
+  if (!legacy) return; // absent / malformed / generation-mismatched -> fabricate nothing
+  publishIfAbsent(join(genDir(dir, generation), 'activity.json'), legacy);
+}
+
 function ensureGeneration(dir: string, sessionId: string): string | null {
   const existing = loadGeneration(dir);
-  if (existing) return existing.generation;
+  if (existing) {
+    // Upgrade path: a session initialized by the pre-`g/<generation>/` build
+    // would otherwise be unable to ever record activity again.
+    migrateLegacyActivity(dir, existing.generation);
+    return existing.generation;
+  }
 
   // 1) Try to become the claimant.
   const mine = tryAcquireClaim(dir);

@@ -507,6 +507,118 @@ describe('claim crash recovery (A25)', () => {
   });
 });
 
+describe('upgrade from the pre-generation-directory layout (B4)', () => {
+  // An earlier f16a build wrote activity.json at the SESSION ROOT. Once records
+  // moved under g/<generation>/, those sessions were permanently stuck: every
+  // event's loadActivity() guard found nothing scoped and returned without
+  // writing, so the activity cell stayed blank forever.
+  const writeLegacyLayout = (activity: Record<string, unknown>, generation = 'a'.repeat(32)) => {
+    const dir = stateFor();
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, 'generation.json'),
+      JSON.stringify({ schema: 1, generation, source: 'late-attach', createdAt: Date.now() }),
+    );
+    writeFileSync(join(dir, 'activity.json'), JSON.stringify(activity));
+    return generation;
+  };
+
+  it('recovers: a real event yields a scoped projection from a valid legacy record', async () => {
+    const generation = writeLegacyLayout({
+      schema: 1,
+      generation: 'a'.repeat(32),
+      state: 'working',
+      tool: 'Bash',
+      ts: Date.now(),
+    });
+    // Pre-condition: the stuck state — valid marker, NO scoped activity.
+    expect(existsSync(join(stateFor(), 'g', generation, 'activity.json'))).toBe(false);
+    expect(await readSessionProjection(SESSION)).toBeNull();
+
+    recordHookEvent('stop', { session_id: SESSION });
+
+    const projection = await readSessionProjection(SESSION);
+    expect(projection).not.toBeNull();
+    expect(projection?.generation).toBe(generation);
+    // The triggering event applied normally on top of the migrated record.
+    expect(projection?.state).toBe('idle');
+    expect(readJson(join(stateFor(), 'g', generation, 'activity.json'))?.generation).toBe(generation);
+  });
+
+  it('an existing scoped record WINS; the legacy record cannot overwrite it', async () => {
+    const generation = writeLegacyLayout({
+      schema: 1,
+      generation: 'a'.repeat(32),
+      state: 'working',
+      tool: 'LegacyTool',
+      ts: Date.now() - 10_000,
+    });
+    // A scoped record already exists and is authoritative.
+    mkdirSync(join(stateFor(), 'g', generation), { recursive: true });
+    writeFileSync(
+      join(stateFor(), 'g', generation, 'activity.json'),
+      JSON.stringify({
+        schema: 1,
+        generation,
+        state: 'needs-human',
+        tool: null,
+        ts: Date.now(),
+      }),
+    );
+
+    recordHookEvent('subagent-start', { session_id: SESSION, agent_id: 'a1' });
+
+    // subagent-start writes no activity of its own, so the scoped record stands.
+    const projection = await readSessionProjection(SESSION);
+    expect(projection?.state).toBe('needs-human');
+    expect(readJson(join(stateFor(), 'g', generation, 'activity.json'))?.tool).toBeNull();
+  });
+
+  it('does NOT migrate a malformed or generation-mismatched legacy record', async () => {
+    // Mismatched generation.
+    const generation = writeLegacyLayout({
+      schema: 1,
+      generation: 'b'.repeat(32), // != marker
+      state: 'working',
+      tool: 'Bash',
+      ts: Date.now(),
+    });
+    recordHookEvent('subagent-start', { session_id: SESSION, agent_id: 'a1' });
+    expect(existsSync(join(stateFor(), 'g', generation, 'activity.json'))).toBe(false);
+    expect(await readSessionProjection(SESSION)).toBeNull();
+
+    // Malformed legacy record.
+    rmSync(join(root, 'state'), { recursive: true, force: true });
+    const gen2 = 'c'.repeat(32);
+    mkdirSync(stateFor(), { recursive: true });
+    writeFileSync(
+      join(stateFor(), 'generation.json'),
+      JSON.stringify({ schema: 1, generation: gen2, source: 'late-attach', createdAt: Date.now() }),
+    );
+    writeFileSync(join(stateFor(), 'activity.json'), '{ not json');
+    recordHookEvent('subagent-start', { session_id: SESSION, agent_id: 'a1' });
+    expect(existsSync(join(stateFor(), 'g', gen2, 'activity.json'))).toBe(false);
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('leaves unrelated files in the session directory untouched', async () => {
+    const generation = writeLegacyLayout({
+      schema: 1,
+      generation: 'a'.repeat(32),
+      state: 'thinking',
+      tool: null,
+      ts: Date.now(),
+    });
+    writeFileSync(join(stateFor(), 'unrelated.json'), '{"keep":true}');
+
+    recordHookEvent('prompt', { session_id: SESSION });
+
+    expect(readJson(join(stateFor(), 'unrelated.json'))?.keep).toBe(true);
+    // The legacy root record is left in place (migration is a copy, not a move).
+    expect(readJson(join(stateFor(), 'activity.json'))?.generation).toBe(generation);
+  });
+});
+
 describe('render read path is bounded (A26)', () => {
   // The renderer has a sub-200ms end-to-end contract. Pathological state must
   // fail closed (activity omitted) instead of being read to completion.
