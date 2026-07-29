@@ -312,8 +312,9 @@ function measuredContextPercentage(projectRoot, sessionId) {
   const state = readJsonFileIfPresent(statePath);
   if (!state || typeof state !== 'object') return null;
 
+  const callerSession = sanitizeLine(sessionId || '', 200);
   const stateSession = sanitizeLine(state.sessionId || '', 200);
-  if (stateSession && sessionId && stateSession !== sessionId) return null;
+  if (!callerSession || !stateSession || stateSession !== callerSession) return null;
 
   const tokens = Number(state.lastTokenEstimate);
   const contextWindow = Number(state.contextWindow);

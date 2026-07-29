@@ -135,6 +135,208 @@ describe('compact-now helper', () => {
     }
   });
 
+  // hive-flow-9543. `autopilot-state.json` is the last-resort measurement and has
+  // no freshness check, so it may only be trusted when it provably belongs to the
+  // caller's own session. The prior guard short-circuited when either session id
+  // was absent, so `--mode inplace` (which passes no `--resume`) trusted a stale
+  // cross-session file. Every fixture below stores 0.9 — deliberately ABOVE the
+  // 50% floor — so a regression does not merely fail differently, it would ACCEPT
+  // a bogus measurement and compact. That is the real incident.
+  const staleFallbackCases = [
+    {
+      name: 'no caller session id — the --mode inplace incident',
+      stateSessionId: 'session-belonging-to-someone-else',
+      resume: null,
+    },
+    {
+      name: 'missing persisted session id',
+      stateSessionId: null,
+      resume: 'session-caller',
+    },
+    {
+      name: 'mismatched session ids',
+      stateSessionId: 'session-a',
+      resume: 'session-b',
+    },
+    {
+      name: 'whitespace-only caller session id',
+      stateSessionId: 'session-a',
+      resume: '   ',
+    },
+  ];
+
+  for (const testCase of staleFallbackCases) {
+    it(`refuses the autopilot fallback: ${testCase.name}`, () => {
+      const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-fallback-'));
+      const home = mkdtempSync(join(tmpdir(), 'hf-compact-now-home-'));
+      const dataDir = join(projectRoot, '.hive-flow', 'data');
+      const handoffPath = join(dataDir, 'compaction-handoff.md');
+      const requestPath = join(dataDir, 'compact-request.json');
+      const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+      mkdirSync(dataDir, { recursive: true });
+
+      try {
+        writeFileSync(join(dataDir, 'autopilot-state.json'), JSON.stringify({
+          ...(testCase.stateSessionId === null ? {} : { sessionId: testCase.stateSessionId }),
+          lastPercentage: 0.9,
+          lastTokenEstimate: 900000,
+          contextWindow: 1000000,
+          lastCheck: Date.now(),
+        }));
+        // A regressed guard would treat 0.9 as above the floor and proceed to
+        // launch. Without a local binary that would invoke the machine's REAL
+        // Claude and start an external session, making failure slow and
+        // nondeterministic. This fake succeeds deterministically instead, so a
+        // regression turns these assertions red immediately and offline.
+        writeFileSync(fakeClaude, [
+          '#!/usr/bin/env node',
+          "process.stdout.write(JSON.stringify({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 900000, trigger: 'manual' } }) + '\\n');",
+        ].join('\n'));
+        chmodSync(fakeClaude, 0o755);
+
+        const result = spawnSync(process.execPath, [
+          helperPath,
+          '--reason', `stale fallback: ${testCase.name}`,
+          '--mode', 'headless',
+          ...(testCase.resume === null ? [] : ['--resume', testCase.resume]),
+        ], {
+          cwd: projectRoot,
+          // Empty statusline home: force the autopilot fallback to be the only
+          // candidate, so this asserts the fallback guard and not precedence.
+          env: {
+            ...process.env,
+            CLAUDE_PROJECT_DIR: projectRoot,
+            CLAUDE_BIN: fakeClaude,
+            // The helper defaults its caller session to CLAUDE_SESSION_ID, so an
+            // ambient value would turn the "no caller session id" case into a
+            // mismatch case and pass for the wrong reason. Pin it empty.
+            CLAUDE_SESSION_ID: '',
+            HOME: home,
+            USERPROFILE: home,
+            HIVE_FLOW_HOME: home,
+          },
+          encoding: 'utf8',
+        });
+
+        assert.equal(result.status, 1, `${testCase.name}: ${result.stdout}`);
+        assert.match(result.stderr, /unable to measure current context usage/);
+        // Never silently accept the stale 90%.
+        assert.doesNotMatch(result.stderr, /below the 50% compaction request floor/);
+        assert.equal(existsSync(handoffPath), false);
+        assert.equal(existsSync(requestPath), false);
+      } finally {
+        rmSync(projectRoot, { recursive: true, force: true });
+        rmSync(home, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it('still accepts the autopilot fallback when the persisted session matches the caller', () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-fallback-match-'));
+    const home = mkdtempSync(join(tmpdir(), 'hf-compact-now-home-'));
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const requestPath = join(dataDir, 'compact-request.json');
+    const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+    mkdirSync(dataDir, { recursive: true });
+
+    try {
+      writeFileSync(join(dataDir, 'autopilot-state.json'), JSON.stringify({
+        sessionId: 'session-owned',
+        lastPercentage: 0.9,
+        lastTokenEstimate: 900000,
+        contextWindow: 1000000,
+        lastCheck: Date.now(),
+      }));
+      writeFileSync(fakeClaude, [
+        '#!/usr/bin/env node',
+        "process.stdout.write(JSON.stringify({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 900000, trigger: 'manual' } }) + '\\n');",
+      ].join('\n'));
+      chmodSync(fakeClaude, 0o755);
+
+      const result = spawnSync(process.execPath, [
+        helperPath,
+        '--reason', 'matching session may use the fallback',
+        '--mode', 'headless',
+        '--resume', 'session-owned',
+      ], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+          CLAUDE_BIN: fakeClaude,
+          HOME: home,
+          USERPROFILE: home,
+          HIVE_FLOW_HOME: home,
+        },
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      const request = JSON.parse(readFileSync(requestPath, 'utf8'));
+      assert.equal(request.contextMeasurement.detail, 'autopilot-state');
+      assert.equal(request.contextMeasurement.percent, 90);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('measures from a statusline record with no --resume, so inplace runs still work', () => {
+    // Requirement 1: statusline precedence is unaffected by the fallback
+    // tightening, and `--mode inplace` (which never passes `--resume`) must
+    // still be able to measure.
+    const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-noresume-'));
+    const home = mkdtempSync(join(tmpdir(), 'hf-compact-now-home-'));
+    const dataDir = join(projectRoot, '.hive-flow', 'data');
+    const statuslineDir = join(home, '.hive-flow', 'statusline', 'projects', 'abcdef0123456789');
+    const requestPath = join(dataDir, 'compact-request.json');
+    const fakeClaude = join(projectRoot, 'fake-claude.cjs');
+    mkdirSync(dataDir, { recursive: true });
+    mkdirSync(statuslineDir, { recursive: true });
+
+    try {
+      writeFileSync(join(statuslineDir, 'last-render.json'), JSON.stringify({
+        version: 1,
+        renderedAt: new Date().toISOString(),
+        mode: 'header-only',
+        projectRoot,
+        projectKey: 'abcdef0123456789',
+        rendered: 'hive-flow | Opus 4.8 | Working | ctx │███████▋     │',
+        context: { percentage: 71, source: 'stdin' },
+      }));
+      writeFileSync(fakeClaude, [
+        '#!/usr/bin/env node',
+        "process.stdout.write(JSON.stringify({ type: 'system', subtype: 'compact_boundary', compact_metadata: { pre_tokens: 710000, trigger: 'manual' } }) + '\\n');",
+      ].join('\n'));
+      chmodSync(fakeClaude, 0o755);
+
+      const result = spawnSync(process.execPath, [
+        helperPath,
+        '--reason', 'statusline measurement without resume',
+        '--mode', 'headless',
+      ], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          CLAUDE_PROJECT_DIR: projectRoot,
+          CLAUDE_BIN: fakeClaude,
+          HOME: home,
+          USERPROFILE: home,
+          HIVE_FLOW_HOME: home,
+        },
+        encoding: 'utf8',
+      });
+
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      const request = JSON.parse(readFileSync(requestPath, 'utf8'));
+      assert.equal(request.contextMeasurement.detail, 'context.percentage');
+      assert.equal(request.contextMeasurement.percent, 71);
+    } finally {
+      rmSync(projectRoot, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   it('launches headless compaction through the configured Claude binary after writing the recovery note', () => {
     const projectRoot = mkdtempSync(join(tmpdir(), 'hf-compact-now-headless-'));
     const dataDir = join(projectRoot, '.hive-flow', 'data');

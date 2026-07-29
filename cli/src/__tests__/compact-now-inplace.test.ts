@@ -1,11 +1,24 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const repoRoot = resolve(__dirname, '..', '..', '..', '..', '..');
+// `__dirname` is <repo>/cli/src/__tests__, so the repo root is three levels up.
+// This previously used five, a leftover from when the package lived at
+// v3/@hive-flow/cli/. After the CLI promotion it resolved outside the repo and
+// both tests died with MODULE_NOT_FOUND before exercising compact-now at all —
+// the same stale-depth class as the credential workflow repair.
+const repoRoot = resolve(__dirname, '..', '..', '..');
 const helperPath = join(repoRoot, '.claude', 'helpers', 'compact-now.cjs');
+
+// Fail loudly and specifically if the anchor ever drifts again, instead of
+// surfacing an opaque MODULE_NOT_FOUND from inside a spawned process.
+if (!existsSync(helperPath)) {
+  throw new Error(
+    `compact-now helper not found at ${helperPath}; the repoRoot anchor in this test is stale`,
+  );
+}
 const roots: string[] = [];
 
 function makeRoot(): string {
@@ -15,12 +28,32 @@ function makeRoot(): string {
   return root;
 }
 
-function writeMeasuredContext(root: string, percentage = 0.6): void {
-  writeFileSync(join(root, '.hive-flow', 'data', 'autopilot-state.json'), JSON.stringify({
-    lastPercentage: percentage,
-    lastTokenEstimate: Math.round(percentage * 1000000),
-    contextWindow: 1000000,
-    lastCheck: Date.now(),
+/**
+ * Provide a measurement the way a real `--mode inplace` run gets one.
+ *
+ * These tests previously wrote `autopilot-state.json` with **no** `sessionId`
+ * and passed no `--resume`, which only measured because the old fallback guard
+ * short-circuited when either session id was absent. That is the hive-flow-9543
+ * defect, so the fixture encoded the bug: it would keep passing even if the
+ * fallback trusted an arbitrary foreign session's state.
+ *
+ * `--mode inplace` never passes `--resume`, so post-fix it can never legitimately
+ * reach the autopilot fallback. Its real measurement source is the statusline
+ * record, which wins on precedence and requires no session id — so that is what
+ * these tests now supply.
+ */
+function writeMeasuredContext(root: string, percentage = 60): void {
+  const projectKey = 'fedcba9876543210';
+  const dir = join(root, '.hive-flow', 'statusline', 'projects', projectKey);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'last-render.json'), JSON.stringify({
+    version: 1,
+    renderedAt: new Date().toISOString(),
+    mode: 'header-only',
+    projectRoot: root,
+    projectKey,
+    rendered: 'hive-flow | Opus 4.8 | Working | ctx │███████▋     │',
+    context: { percentage, source: 'stdin' },
   }), 'utf8');
 }
 
@@ -70,6 +103,10 @@ describe('compact-now current-session in-place compaction', () => {
         ...process.env,
         PATH: `${binDir}${delimiter}${process.env.PATH || ''}`,
         CLAUDE_PROJECT_DIR: root,
+        // Scope the statusline record lookup to this fixture, so the measurement
+        // comes from the record written above rather than the operator's real
+        // statusline cache.
+        HIVE_FLOW_HOME: root,
         TMUX: '/tmp/tmux-test',
         TMUX_PANE: '%claude',
         HF_FAKE_TMUX_LOG: tmuxLog,
@@ -126,6 +163,10 @@ describe('compact-now current-session in-place compaction', () => {
         ...process.env,
         PATH: `${binDir}${delimiter}${process.env.PATH || ''}`,
         CLAUDE_PROJECT_DIR: root,
+        // Scope the statusline record lookup to this fixture, so the measurement
+        // comes from the record written above rather than the operator's real
+        // statusline cache.
+        HIVE_FLOW_HOME: root,
         TMUX: '/tmp/tmux-test',
         TMUX_PANE: '%codex',
         HF_FAKE_TMUX_LOG: tmuxLog,
