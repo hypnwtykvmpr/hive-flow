@@ -12,12 +12,20 @@
 // statusline omits activity rather than fabricating "Idle".
 //
 // Files under <claude-data>/statusline-state/<validated-session-id>/:
-//   generation.json                    (authoritative; atomic temp+rename only)
-//   generation.claim                   (transient; published by hard link)
-//   activity.json
-//   agents/{start,stop}/<sha256(identity)>.json
-//   shells/{start,stop}/<sha256(identity)>.json
-//   tasks/{ack,snapshot}.json
+//   generation.json                          (authoritative marker)
+//   generation.claim                         (create-once; RETAINED until SessionEnd)
+//   g/<generation>/activity.json
+//   g/<generation>/agents/{start,stop}/<sha256(identity)>.json
+//   g/<generation>/shells/{start,stop}/<sha256(identity)>.json
+//   g/<generation>/tasks/{ack,snapshot}.json
+//
+// GENERATION-SCOPED RECORDS. Every generation-bound record lives under
+// `g/<generation>/`, and the reader selects that directory from the
+// authoritative marker. This is the ownership guarantee: a writer holding a
+// stale generation A writes into `g/A/...`, which is never read, so it cannot
+// clobber the current generation's state. Shared record pathnames could not
+// provide this — an authoritative SessionStart could publish B between a
+// stale writer's check and its replace.
 //
 // LATE-ATTACH (f16a amendment). The portable tracker initializes only on
 // SessionStart, so a session already running when hooks are installed would
@@ -34,9 +42,14 @@
 //      leave a malformed canonical claim (a direct `writeFileSync(...,'wx')`
 //      can, and that would wedge the session permanently).
 //   3. Remove the staging file on every success/failure path.
-// Losers re-read the winner's generation under a bounded retry. A dead owner is
-// recovered through a rename-CAS so a live writer's claim can never be deleted.
-// Any ambiguity fails closed: write nothing and let a later event retry.
+// Losers re-read the winner's generation under a bounded retry (a LIVE owner
+// gets a longer wait, because a healthy-but-slow winner is not a fault). A dead
+// owner is recovered WITHOUT touching the claim at all: the late-attach
+// generation is derived deterministically from the complete claim record, so a
+// recoverer republishes the identical marker via a no-clobber link. No writer
+// ever removes or renames the claim — that was a pathname TOCTOU, and the claim
+// is inert once a valid generation exists. Any ambiguity fails closed: write
+// nothing and let a later event retry.
 //
 // Every path is synchronous, bounded by Claude Code's hook timeout, tolerant of
 // malformed/torn files, and the hook entrypoint always exits 0.
@@ -416,14 +429,26 @@ function publishGenerationNoClobber(dir: string, marker: Record<string, unknown>
 // session teardown, not to individual event writers.
 
 /** Bounded wait for a winner's generation publication. */
-function awaitGeneration(dir: string): string | null {
-  for (let i = 0; i < 5; i++) {
+function awaitGeneration(dir: string, attempts = 5, delayMs = 2): string | null {
+  for (let i = 0; i < attempts; i++) {
     const marker = loadGeneration(dir);
     if (marker) return marker.generation;
-    sleepMs(2);
+    sleepMs(delayMs);
   }
   return loadGeneration(dir)?.generation ?? null;
 }
+
+/**
+ * How long a loser waits for a LIVE claim owner to publish before giving up.
+ *
+ * Failing closed is the response to an ambiguous or dead owner, not to a
+ * healthy-but-slow one. A ~10ms wait was too short under load: the winner had
+ * not published yet, the loser saw a live owner, wrote nothing, and a truthful
+ * `thinking`/`working` update was silently dropped until a later event repaired
+ * it. This budget stays far inside Claude Code's hook timeout.
+ */
+const LIVE_OWNER_WAIT_ATTEMPTS = 50;
+const LIVE_OWNER_WAIT_DELAY_MS = 5;
 
 /**
  * Resolve the generation for a validated session, creating one via late-attach
@@ -445,7 +470,17 @@ function ensureGeneration(dir: string, sessionId: string): string | null {
     // 3) Still nothing. Inspect the claim, failing closed on ANY ambiguity.
     const existingClaim = readClaim(dir);
     if (!existingClaim) return null; // malformed/missing -> write nothing
-    if (pidAlive(existingClaim.pid) !== false) return null; // alive or unknown -> write nothing
+    if (pidAlive(existingClaim.pid) !== false) {
+      // A LIVE owner is mid-publication, not a fault. Give it a longer bounded
+      // wait before giving up, otherwise a healthy-but-slow winner causes this
+      // event's truthful state to be dropped. Only then fail closed.
+      const adoptedFromLiveOwner = awaitGeneration(
+        dir,
+        LIVE_OWNER_WAIT_ATTEMPTS,
+        LIVE_OWNER_WAIT_DELAY_MS,
+      );
+      return adoptedFromLiveOwner; // null -> still nothing published, write nothing
+    }
     // Dead owner. We do NOT delete or rename the claim (that was a pathname
     // TOCTOU); we simply publish the generation that claim deterministically
     // implies. A concurrent recoverer computes the identical marker.

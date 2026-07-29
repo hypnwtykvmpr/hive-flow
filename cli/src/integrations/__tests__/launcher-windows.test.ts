@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   commandForClaudeSettings,
+  resolveActivityHookLauncherPath,
   resolveLauncherPath,
   resolveStatuslineLauncherPath,
+  writeStableActivityHookLauncher,
   writeStableLauncher,
   writeStableStatuslineLauncher,
 } from '../launcher.js';
@@ -35,6 +37,49 @@ describe('Windows launcher generation', () => {
     expect(commandForClaudeSettings(join(homeDir, '.hive-flow', 'bin', 'claude-code-statusline.cmd'), 'win32')).toBe(
       `"${join(homeDir, '.hive-flow', 'bin', 'claude-code-statusline.cmd')}"`,
     );
+    // f16a: the activity-hook launcher is a third managed Windows binary.
+    expect(resolveActivityHookLauncherPath('user', homeDir, projectRoot, 'win32')).toBe(
+      join(homeDir, '.hive-flow', 'bin', 'claude-activity-hook.cmd'),
+    );
+  });
+
+  it('writes a Windows activity-hook launcher that is fail-open and silent (f16a)', async () => {
+    const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-activity-hook.cmd');
+    const entrypoint = join(root, 'project with spaces', 'bin', 'claude-activity-hook.js');
+
+    await writeStableActivityHookLauncher(launcherPath, entrypoint, { platform: 'win32' });
+
+    const contents = readFileSync(launcherPath, 'utf8');
+    expect(existsSync(launcherPath)).toBe(true);
+    // No bash: a .cmd wrapper Windows can run.
+    expect(contents).not.toContain('#!/usr/bin/env bash');
+    expect(contents).toContain('@echo off');
+    // The entrypoint (containing spaces) must be quoted.
+    expect(contents).toContain(`node "${entrypoint}"`);
+    // Forwards the event argument.
+    expect(contents).toContain('%*');
+    // FAIL-OPEN: never surfaces output or a non-zero status to Claude Code.
+    expect(contents).toContain('>NUL 2>NUL');
+    expect(contents).toContain('exit /b 0');
+    // CRLF line endings for cmd.exe.
+    expect(contents).toContain('\r\n');
+  });
+
+  it('rewrites the Windows activity-hook launcher idempotently', async () => {
+    const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-activity-hook.cmd');
+    const entrypoint = join(root, 'project', 'bin', 'claude-activity-hook.js');
+
+    await writeStableActivityHookLauncher(launcherPath, entrypoint, { platform: 'win32' });
+    const first = readFileSync(launcherPath, 'utf8');
+    await writeStableActivityHookLauncher(launcherPath, entrypoint, { platform: 'win32' });
+    expect(readFileSync(launcherPath, 'utf8')).toBe(first);
+  });
+
+  it('refuses to embed a hostile activity-hook path in a Windows launcher', async () => {
+    const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-activity-hook.cmd');
+    await expect(
+      writeStableActivityHookLauncher(launcherPath, 'C:\\evil"path\\hook.js', { platform: 'win32' }),
+    ).rejects.toThrow(/cannot be embedded/i);
   });
 
   it('writes a Windows MCP launcher that does not require bash', async () => {

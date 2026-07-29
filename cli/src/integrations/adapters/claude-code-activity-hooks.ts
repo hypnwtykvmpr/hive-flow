@@ -400,21 +400,61 @@ function findShapeIssue(
  * projection. Runs entirely inside a throwaway `CLAUDE_STATUSLINE_TEST_ROOT`
  * so no synthetic record is ever written into real `~/.claude` state.
  */
+/**
+ * Build the child-process invocation for the canary.
+ *
+ * Node cannot execute `.bat`/`.cmd` files directly on Windows (see
+ * https://nodejs.org/api/child_process.html#spawning-bat-and-cmd-files-on-windows),
+ * and the managed Windows launcher IS a `.cmd`. We therefore mediate through
+ * `cmd.exe /d /s /c` on win32 and execute directly on POSIX.
+ *
+ * The launcher path is passed as an ARGUMENT, never interpolated into a command
+ * string, so spaces and shell metacharacters cannot alter the invocation.
+ * `shell: true` is deliberately NOT used for the same reason.
+ *
+ * Exported for tests: the Windows shape can be asserted from any platform,
+ * which is honest — we do not claim a live Windows process canary from macOS.
+ */
+export function buildCanaryInvocation(
+  launcherPath: string,
+  event: string,
+  platform: NodeJS.Platform = process.platform,
+): { command: string; args: string[]; windowsVerbatimArguments?: boolean } {
+  if (platform === 'win32') {
+    return {
+      command: process.env.COMSPEC ?? 'cmd.exe',
+      // /d skips AutoRun, /s + surrounding quotes keeps the rest verbatim,
+      // /c runs and exits. The launcher path stays a discrete argv entry.
+      args: ['/d', '/s', '/c', launcherPath, event],
+      windowsVerbatimArguments: false,
+    };
+  }
+  return { command: launcherPath, args: [event] };
+}
+
 function runLauncherCanary(launcherPath: string): string | null {
   if (!existsSync(launcherPath)) return 'activity hook launcher is missing';
-  try {
-    accessSync(launcherPath, fsConstants.X_OK);
-  } catch {
-    return 'activity hook launcher is not executable';
+  if (process.platform !== 'win32') {
+    // POSIX executes the shim directly, so it must carry the execute bit. On
+    // Windows executability is not expressed this way and cmd.exe mediates.
+    try {
+      accessSync(launcherPath, fsConstants.X_OK);
+    } catch {
+      return 'activity hook launcher is not executable';
+    }
   }
 
   const canaryRoot = mkdtempSync(join(tmpdir(), 'hf-hook-canary-'));
   try {
     const sessionId = `canary${randomBytes(8).toString('hex')}`;
-    const result = spawnSync(launcherPath, ['prompt'], {
+    const invocation = buildCanaryInvocation(launcherPath, 'prompt');
+    const result = spawnSync(invocation.command, invocation.args, {
       input: JSON.stringify({ session_id: sessionId }),
       encoding: 'utf8',
       timeout: 10_000,
+      ...(invocation.windowsVerbatimArguments !== undefined
+        ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments }
+        : {}),
       env: {
         ...process.env,
         NODE_ENV: 'test',

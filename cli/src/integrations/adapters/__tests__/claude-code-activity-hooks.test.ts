@@ -17,7 +17,11 @@ import {
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { claudeCodeActivityHooksAdapter, HOOK_WIRING } from '../claude-code-activity-hooks.js';
+import {
+  buildCanaryInvocation,
+  claudeCodeActivityHooksAdapter,
+  HOOK_WIRING,
+} from '../claude-code-activity-hooks.js';
 import {
   commandForClaudeSettings,
   resolveActivityHookLauncherPath,
@@ -176,6 +180,46 @@ describe('coexistence with third-party hooks (A19)', () => {
     const final = readSettings();
     const remaining = (final.hooks.Stop ?? []).flatMap((g: any) => g.hooks ?? []);
     expect(remaining).toContainEqual({ type: 'command', command: '/opt/other/stop.sh' });
+  });
+});
+
+describe('canary invocation is platform-correct (W1)', () => {
+  // Node cannot execute .bat/.cmd directly on Windows, and the managed Windows
+  // launcher IS a .cmd — so a correct Windows install would otherwise fail
+  // verify. These assert the invocation SHAPE from any platform; they do not
+  // claim a live Windows process canary from macOS.
+  const withSpaces = 'C:\\Users\\Jon Doe\\.hive-flow\\bin\\claude-activity-hook.cmd';
+
+  it('mediates through cmd.exe on win32 with the launcher as a discrete argument', () => {
+    const invocation = buildCanaryInvocation(withSpaces, 'prompt', 'win32');
+    expect(invocation.command.toLowerCase()).toMatch(/cmd\.exe$/);
+    // /d skips AutoRun, /s keeps the remainder verbatim, /c runs then exits.
+    expect(invocation.args.slice(0, 3)).toEqual(['/d', '/s', '/c']);
+    // The path with spaces is its OWN argv entry — never interpolated into a
+    // command string where a space or metacharacter could split it.
+    expect(invocation.args[3]).toBe(withSpaces);
+    expect(invocation.args[4]).toBe('prompt');
+    expect(invocation.args.join(' ')).not.toMatch(/&|\||>|</);
+  });
+
+  it('executes the shim directly on POSIX', () => {
+    const posix = '/Users/jon doe/.hive-flow/bin/claude-activity-hook';
+    const invocation = buildCanaryInvocation(posix, 'prompt', 'darwin');
+    expect(invocation.command).toBe(posix);
+    expect(invocation.args).toEqual(['prompt']);
+    expect(invocation.windowsVerbatimArguments).toBeUndefined();
+  });
+
+  it('never relies on shell interpolation for either platform', () => {
+    for (const platform of ['win32', 'darwin', 'linux'] as NodeJS.Platform[]) {
+      const invocation = buildCanaryInvocation(withSpaces, 'prompt', platform);
+      // The path survives intact as ONE token — the command itself on POSIX, a
+      // discrete argv entry under cmd.exe — never spliced into a command string.
+      const tokens = [invocation.command, ...invocation.args];
+      expect(tokens).toContain(withSpaces);
+      expect(tokens.filter((t) => t.includes(withSpaces))).toHaveLength(1);
+      expect(invocation.windowsVerbatimArguments === true).toBe(false);
+    }
   });
 });
 
