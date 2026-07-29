@@ -92,6 +92,28 @@ describe('Windows launcher generation', () => {
     expect(contents).toContain('exit /b 0');
   });
 
+  it('disables delayed expansion before using the entrypoint (f16a B3)', async () => {
+    const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-activity-hook.cmd');
+    // A LEGAL Windows path containing `!`, which is rewritten by a command
+    // processor that has delayed expansion enabled.
+    const entrypoint = 'C:\\hive!flow\\bin\\claude-activity-hook.js';
+
+    await writeStableActivityHookLauncher(launcherPath, entrypoint, { platform: 'win32' });
+
+    const contents = readFileSync(launcherPath, 'utf8');
+    expect(contents).toContain('setlocal DisableDelayedExpansion');
+    // The directive MUST precede any use of the entrypoint, or it protects nothing.
+    expect(contents.indexOf('setlocal DisableDelayedExpansion')).toBeLessThan(
+      contents.indexOf(entrypoint),
+    );
+    // The bang survives literally in the emitted command.
+    expect(contents).toContain(`node "${entrypoint}"`);
+    // Fail-open contract and CRLF retained alongside the new directive.
+    expect(contents).toContain('>NUL 2>NUL');
+    expect(contents).toContain('exit /b 0');
+    expect(contents).toContain('\r\n');
+  });
+
   it('refuses to embed a hostile activity-hook path in a Windows launcher', async () => {
     const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'claude-activity-hook.cmd');
     await expect(

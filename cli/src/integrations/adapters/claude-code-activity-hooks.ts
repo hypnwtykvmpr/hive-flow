@@ -26,7 +26,6 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  statSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -408,6 +407,12 @@ function findShapeIssue(
 export const CANARY_LAUNCHER_ENV = 'HIVE_FLOW_ACTIVITY_HOOK_CANARY';
 
 /**
+ * The ONLY event the canary may probe. Hardcoded into the fixed Windows command
+ * string so no caller-supplied text can ever reach the command language.
+ */
+export const CANARY_EVENT = 'prompt';
+
+/**
  * Build the child-process invocation for the canary.
  *
  * Node cannot execute `.bat`/`.cmd` directly on Windows
@@ -425,14 +430,21 @@ export const CANARY_LAUNCHER_ENV = 'HIVE_FLOW_ACTIVITY_HOOK_CANARY';
  * So the path NEVER enters the command string. It travels in a dedicated
  * environment variable and the command string is a FIXED literal:
  *
- *   cmd.exe /d /v:off /c call "%HIVE_FLOW_ACTIVITY_HOOK_CANARY%" prompt
+ *   cmd.exe /d /v:off /c "%HIVE_FLOW_ACTIVITY_HOOK_CANARY%" prompt
  *
- * `/d` skips AutoRun. `/v:off` explicitly disables delayed expansion so `!` in
- * the value cannot be expanded even where the registry enables it by default.
- * Environment substitution is NON-RECURSIVE, so a `%` inside the value is not
- * expanded again. Nothing attacker-influenced is ever parsed as syntax.
+ * `/d` skips AutoRun. `/v:off` disables delayed expansion so `!` in the value
+ * cannot be expanded even where the registry enables it by default.
  *
- * POSIX executes the shim directly and is unaffected.
+ * There is deliberately NO `call`. `call` is unnecessary for direct `cmd /c`
+ * execution of a `.cmd` and introduces an ADDITIONAL command-expansion context,
+ * which would invalidate the argument that a `%...%` sequence inside the
+ * environment value cannot be expanded again.
+ *
+ * The event is hardcoded, not interpolated: the command string contains no
+ * caller-controlled text of any kind. A non-canonical event is rejected rather
+ * than being allowed to reach the command language.
+ *
+ * POSIX executes the shim directly (argv, no shell) and is unaffected.
  *
  * Exported for tests: the Windows shape is assertable from any platform, which
  * is honest — macOS does NOT provide a live Windows process canary.
@@ -442,44 +454,34 @@ export function buildCanaryInvocation(
   event: string,
   platform: NodeJS.Platform = process.platform,
 ): { command: string; args: string[]; env?: Record<string, string> } {
+  if (event !== CANARY_EVENT) {
+    throw new Error(
+      `Canary event must be the canonical ${JSON.stringify(CANARY_EVENT)}; refusing ${JSON.stringify(event)}.`,
+    );
+  }
   if (platform === 'win32') {
     return {
       command: process.env.COMSPEC ?? 'cmd.exe',
-      // Fixed literal: contains no caller-controlled text whatsoever.
-      args: ['/d', '/v:off', '/c', `call "%${CANARY_LAUNCHER_ENV}%" ${event}`],
+      // Fixed literal. No `call`, no interpolation, no caller-controlled text.
+      args: ['/d', '/v:off', '/c', `"%${CANARY_LAUNCHER_ENV}%" ${CANARY_EVENT}`],
       env: { [CANARY_LAUNCHER_ENV]: launcherPath },
     };
   }
-  return { command: launcherPath, args: [event] };
+  return { command: launcherPath, args: [CANARY_EVENT] };
 }
 
 /**
- * Memoized canary results, keyed by launcher identity (path + size + mtime).
+ * The canary is deliberately NOT memoized.
  *
- * The canary spawns a process, so repeating it for an unchanged launcher inside
- * one CLI invocation is pure cost. Any edit to the shim changes its mtime/size
- * and re-runs the check, so this cannot mask a broken launcher.
+ * A previous revision cached the result by launcher path + size + mtime. That
+ * key does not identify the behaviour under test: the launcher only DELEGATES
+ * to a separate runtime entrypoint, so replacing the runtime while leaving the
+ * shim untouched produced a cached `ok:true` for an installation that no longer
+ * worked. Fingerprinting the whole dependency graph would be complex and easy
+ * to get subtly wrong for no real gain at this frequency — `setup --verify` is
+ * an explicit, infrequent user action costing well under a second. Always run.
  */
-const canaryCache = new Map<string, string | null>();
-
-function launcherIdentity(launcherPath: string): string {
-  try {
-    const info = statSync(launcherPath);
-    return `${launcherPath}:${info.size}:${info.mtimeMs}`;
-  } catch {
-    return `${launcherPath}:absent`;
-  }
-}
-
 function runLauncherCanary(launcherPath: string): string | null {
-  const key = launcherIdentity(launcherPath);
-  if (canaryCache.has(key)) return canaryCache.get(key) ?? null;
-  const outcome = executeLauncherCanary(launcherPath);
-  canaryCache.set(key, outcome);
-  return outcome;
-}
-
-function executeLauncherCanary(launcherPath: string): string | null {
   if (!existsSync(launcherPath)) return 'activity hook launcher is missing';
   if (process.platform !== 'win32') {
     // POSIX executes the shim directly, so it must carry the execute bit. On

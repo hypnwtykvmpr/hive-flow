@@ -17,8 +17,10 @@ import {
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   buildCanaryInvocation,
+  CANARY_EVENT,
   CANARY_LAUNCHER_ENV,
   claudeCodeActivityHooksAdapter,
   HOOK_WIRING,
@@ -217,7 +219,7 @@ describe('canary invocation is platform-correct (W1)', () => {
       const commandString = invocation.args[3]!;
       // THE invariant: the command string is a fixed literal referencing the
       // env var, and contains NO fragment of the untrusted path.
-      expect(commandString).toBe(`call "%${CANARY_LAUNCHER_ENV}%" prompt`);
+      expect(commandString).toBe(`"%${CANARY_LAUNCHER_ENV}%" ${CANARY_EVENT}`);
       expect(commandString).not.toContain(path);
       for (const fragment of ['PWN', 'WINDIR', 'TMP', 'safe']) {
         expect(commandString).not.toContain(fragment);
@@ -227,6 +229,31 @@ describe('canary invocation is platform-correct (W1)', () => {
       // ...and nothing else leaks into argv.
       expect(invocation.args).toHaveLength(4);
     }
+  });
+
+  it('uses NO `call` — it would add another expansion context', () => {
+    // `call` is unnecessary for direct `cmd /c` execution of a .cmd, and it
+    // reparses its argument, which would defeat the non-recursive-expansion
+    // argument for `%` inside the environment value.
+    for (const path of hostilePaths) {
+      const commandString = buildCanaryInvocation(path, 'prompt', 'win32').args[3]!;
+      expect(commandString.toLowerCase()).not.toMatch(/(^|\s)call(\s|$)/);
+    }
+  });
+
+  it('refuses any non-canonical event so none can reach the command language', () => {
+    for (const hostileEvent of ['prompt & echo PWN', 'prompt|x', '', 'stop', 'prompt%TMP%']) {
+      expect(() => buildCanaryInvocation(withSpaces, hostileEvent, 'win32')).toThrow(
+        /canonical/i,
+      );
+      // POSIX must refuse identically — argv is safe there, but the builder has
+      // one contract.
+      expect(() => buildCanaryInvocation(withSpaces, hostileEvent, 'darwin')).toThrow();
+    }
+    // The canonical event is hardcoded into the fixed string, not interpolated.
+    expect(buildCanaryInvocation(withSpaces, CANARY_EVENT, 'win32').args[3]).toBe(
+      `"%${CANARY_LAUNCHER_ENV}%" ${CANARY_EVENT}`,
+    );
   });
 
   it('produces an identical fixed command string regardless of the path', () => {
@@ -390,6 +417,46 @@ describe('verify checks the full configured shape and that hooks actually work (
     expect(result.ok).toBe(false);
     expect(result.output).toMatch(/not functional|wrote no generation/i);
   }, 30_000);
+
+  it('FAILS a second verify when the RUNTIME breaks after a success (no caching)', async () => {
+    // The launcher only DELEGATES to a runtime entrypoint, so keying any cache
+    // on the shim's path/size/mtime cannot identify the behaviour being
+    // verified: swapping the runtime leaves the shim byte-identical. A cached
+    // `ok:true` would then outlive a broken installation.
+    writeFileSync(settingsPath, JSON.stringify({}, null, 2));
+    await claudeCodeActivityHooksAdapter.apply(ctx());
+
+    // A working runtime that behaves like the real hook entrypoint.
+    const runtime = join(home, 'runtime.mjs');
+    const distModule = pathToFileURL(
+      join(REPO_ROOT, 'cli', 'dist', 'src', 'statusline', 'claude-activity-state.js'),
+    ).href;
+    writeFileSync(
+      runtime,
+      [
+        "import { readFileSync } from 'node:fs';",
+        `const { recordHookEvent } = await import(${JSON.stringify(distModule)});`,
+        "let raw = ''; try { raw = readFileSync(0, 'utf8'); } catch {}",
+        "recordHookEvent(process.argv[2] ?? '', JSON.parse(raw || '{}'));",
+        'process.exit(0);',
+        '',
+      ].join('\n'),
+    );
+    await writeStableActivityHookLauncher(launcher(), runtime);
+
+    const first = await claudeCodeActivityHooksAdapter.verify!(ctx());
+    expect(first.ok, first.output).toBe(true);
+
+    // Break ONLY the runtime. The launcher shim is untouched — same path, same
+    // size, same mtime.
+    const shimBefore = readFileSync(launcher(), 'utf8');
+    writeFileSync(runtime, 'process.exit(0);\n');
+    expect(readFileSync(launcher(), 'utf8')).toBe(shimBefore);
+
+    const second = await claudeCodeActivityHooksAdapter.verify!(ctx());
+    expect(second.ok, 'stale cached success survived a broken runtime').toBe(false);
+    expect(second.output).toMatch(/not functional|wrote no generation/i);
+  }, 60_000);
 
   it('canary writes NOTHING into real ~/.claude state', async () => {
     writeFileSync(settingsPath, JSON.stringify({}, null, 2));
