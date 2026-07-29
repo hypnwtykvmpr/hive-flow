@@ -7,7 +7,7 @@ import type { KekProvider, SealedKek } from './kek.js';
 import { assertValidKek } from './kek.js';
 import {
   HELPER_BINARIES,
-  installedHelperPath,
+  configuredOrInstalledHelperPath,
 } from './helper-paths.js';
 
 type ExecOptions = {
@@ -155,8 +155,12 @@ export class MacOSKeychainCredentialStore extends BaseCredentialStore {
   constructor(options: PlatformCredentialStoreOptions = {}) {
     super(options);
     this.accountName = options.accountName ?? this.env.USER ?? 'user';
+    // Resolution order: explicit override -> HIVE_FLOW_MACOS_KEYCHAIN_HELPER from
+    // the injected env -> installed helper under ~/.hive-flow/bin -> bare name on
+    // PATH. `helper-paths.ts` advertises the env var, so an env-blind lookup here
+    // would silently ignore an operator- or CI-provided helper path.
     this.helperCommand = options.helperCommand
-      ?? installedHelperPath(HELPER_BINARIES.macosKeychain)
+      ?? configuredOrInstalledHelperPath(HELPER_BINARIES.macosKeychain, homedir(), this.env)
       ?? HELPER_BINARIES.macosKeychain;
   }
 
@@ -285,8 +289,12 @@ export class WindowsCredentialManagerCredentialStore extends BaseCredentialStore
 
   constructor(options: PlatformCredentialStoreOptions = {}) {
     super(options);
+    // Same resolution order as the macOS store, via
+    // HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER. The env-blind form here is what made
+    // the CI Windows lane fail closed with ENOENT on the bare binary name even
+    // though the workflow had built the helper and exported its path.
     this.helperCommand = options.helperCommand
-      ?? installedHelperPath(HELPER_BINARIES.winCredential)
+      ?? configuredOrInstalledHelperPath(HELPER_BINARIES.winCredential, homedir(), this.env)
       ?? HELPER_BINARIES.winCredential;
   }
 

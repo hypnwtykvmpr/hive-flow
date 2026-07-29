@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { generateKek } from '../kek.js';
 import {
   HELPER_BINARIES,
-  installedHelperPath,
 } from '../helper-paths.js';
 import {
   MacOSKeychainCredentialStore,
@@ -386,6 +385,62 @@ describe('macOS Keychain backend', () => {
   );
 });
 
+describe('credential helper resolution honors the configured environment', () => {
+  // Regression for the red Windows CI lane in Credential Backend Matrix run
+  // 30437766596: the workflow built the helper and exported
+  // HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER, but the constructor resolved with the
+  // env-blind `installedHelperPath`, ignored the exported path, and fell through
+  // to the bare binary name on PATH -> ENOENT. `helper-paths.ts` advertises these
+  // env vars, so honoring them is the shipped contract, not a test convenience.
+  function recordingRunner() {
+    const files: string[] = [];
+    const runner: Runner = (file) => {
+      files.push(file);
+      return Buffer.from('available\n');
+    };
+    return { files, runner };
+  }
+
+  it('resolves the Windows helper from HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER', async () => {
+    const configured = 'C:\\ci\\out\\HiveFlow.WindowsCredentialHelper.exe';
+    const { files, runner } = recordingRunner();
+    const backend = new WindowsCredentialManagerCredentialStore({
+      platform: 'win32',
+      env: { HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER: configured },
+      execFileSync: runner,
+    });
+    await expect(backend.status()).resolves.toEqual({ available: true });
+    expect(files).toEqual([configured]);
+    expect(files).not.toContain(HELPER_BINARIES.winCredential);
+  });
+
+  it('resolves the macOS helper from HIVE_FLOW_MACOS_KEYCHAIN_HELPER', async () => {
+    const configured = '/opt/ci/hive-flow-macos-keychain-helper';
+    const { files, runner } = recordingRunner();
+    const backend = new MacOSKeychainCredentialStore({
+      platform: 'darwin',
+      env: { HIVE_FLOW_MACOS_KEYCHAIN_HELPER: configured },
+      execFileSync: runner,
+    });
+    await expect(backend.status()).resolves.toEqual({ available: true });
+    expect(files).toEqual([configured]);
+    expect(files).not.toContain(HELPER_BINARIES.macosKeychain);
+  });
+
+  it('keeps an explicit helperCommand override ahead of the environment', async () => {
+    const override = 'C:\\explicit\\override.exe';
+    const { files, runner } = recordingRunner();
+    const backend = new WindowsCredentialManagerCredentialStore({
+      platform: 'win32',
+      helperCommand: override,
+      env: { HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER: 'C:\\ci\\ignored.exe' },
+      execFileSync: runner,
+    });
+    await expect(backend.status()).resolves.toEqual({ available: true });
+    expect(files).toEqual([override]);
+  });
+});
+
 describe('native Linux and Windows backend lanes', () => {
   it.skipIf(process.platform !== 'linux' || process.env.HIVE_FLOW_RUN_NATIVE_LINUX_CREDENTIAL_TESTS !== '1')(
     'round-trips against native Secret Service when CI starts a D-Bus session',
@@ -412,8 +467,12 @@ describe('native Linux and Windows backend lanes', () => {
   it.skipIf(process.platform !== 'win32' || process.env.HIVE_FLOW_RUN_NATIVE_WINDOWS_CREDENTIAL_TESTS !== '1')(
     'round-trips against native Windows Credential Manager through the helper',
     async () => {
-      const helperCommand = installedHelperPath(HELPER_BINARIES.winCredential) ?? HELPER_BINARIES.winCredential;
-      const backend = new WindowsCredentialManagerCredentialStore({ platform: 'win32', helperCommand });
+      // No `helperCommand` override: the backend must resolve the helper through
+      // its own production path (HIVE_FLOW_WINDOWS_CREDENTIAL_HELPER -> installed
+      // -> bare name). Supplying a test-resolved command here would prove only
+      // that the fixture can find the helper, not that the shipped code can —
+      // which is exactly how CI passed a broken resolver for this lane.
+      const backend = new WindowsCredentialManagerCredentialStore({ platform: 'win32' });
       assertCredentialBackendReady(await backend.status());
       const provider = `native-windows-${process.pid}`;
       const secret = Buffer.from(`native-windows-secret-${Date.now()}`);

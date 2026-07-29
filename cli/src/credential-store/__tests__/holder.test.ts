@@ -44,6 +44,24 @@ afterEach(async () => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+/**
+ * Gate for tests whose contract is intrinsically Unix-domain-socket specific.
+ *
+ * These bind a real Unix socket through `tempSocketPath()` and assert POSIX-only
+ * semantics: `lstat(...).isSocket()`, socket mode 0600, and parent directory mode
+ * 0700. Windows named pipes have no filesystem mode, so there is nothing to
+ * translate — porting them would mean inventing different assertions, not the
+ * same ones. On win32 `CredentialHolderService.start()` correctly refuses a
+ * filesystem path and demands a `\\.\pipe\` name, which is what these fixtures
+ * tripped over in Credential Backend Matrix run 30437766596.
+ *
+ * Windows holder behavior stays covered by the injected hardened named-pipe
+ * bridge test, the native `HIVE_FLOW_RUN_NATIVE_WINDOWS_PEER_CRED_TESTS` lane,
+ * and the production non-pipe-path rejection itself. None of those are gated
+ * here, and no production validation is weakened.
+ */
+const itUnixSocket = it.skipIf(process.platform === 'win32');
+
 describe('credential USE-not-KNOW boundary gate', () => {
   it('keeps PR3 green and verifies PR5 strict provider bootstrap is green', () => {
     expect(getCredentialBoundaryGate('credential-use-not-know')).toMatchObject({
@@ -78,7 +96,7 @@ describe('credential holder option surface', () => {
 });
 
 describe('credential holder socket lifecycle', () => {
-  it('claims the per-user socket atomically with 0700 dir and 0600 socket permissions', async () => {
+  itUnixSocket('claims the per-user socket atomically with 0700 dir and 0600 socket permissions', async () => {
     const socketPath = tempSocketPath();
     const holder = new CredentialHolderService({
       socketPath,
@@ -99,9 +117,7 @@ describe('credential holder socket lifecycle', () => {
     expect(existsSync(socketPath)).toBe(false);
   });
 
-  it('binds the Unix socket while a private umask is active', async () => {
-    if (process.platform === 'win32') return;
-
+  itUnixSocket('binds the Unix socket while a private umask is active', async () => {
     const socketPath = tempSocketPath();
     const holder = new CredentialHolderService({
       socketPath,
@@ -128,7 +144,7 @@ describe('credential holder socket lifecycle', () => {
     }
   });
 
-  it('refuses socket squat attempts when the socket path pre-exists', async () => {
+  itUnixSocket('refuses socket squat attempts when the socket path pre-exists', async () => {
     const socketPath = tempSocketPath();
     mkdirSync(join(socketPath, '..'), { recursive: true });
     writeFileSync(socketPath, 'attacker');
@@ -140,7 +156,7 @@ describe('credential holder socket lifecycle', () => {
     await expect(holder.start()).rejects.toThrow(/pre-existing|socket squat|not a socket/i);
   });
 
-  it('unlinks a dead pre-existing Unix socket and binds a fresh holder', async () => {
+  itUnixSocket('unlinks a dead pre-existing Unix socket and binds a fresh holder', async () => {
     const socketPath = tempSocketPath();
     await createDeadSocketPath(socketPath);
 
@@ -159,7 +175,7 @@ describe('credential holder socket lifecycle', () => {
     }
   });
 
-  it('does not report a dead Unix socket file as an available holder', async () => {
+  itUnixSocket('does not report a dead Unix socket file as an available holder', async () => {
     const socketPath = tempSocketPath();
     await createDeadSocketPath(socketPath);
 
@@ -182,8 +198,9 @@ describe('credential holder socket lifecycle', () => {
     })).rejects.toThrow(/holder identity|not a socket/i);
   });
 
-  it('keeps the POSIX identity gate for a backslash-pipe-spelled path on non-win32 (skip is platform-gated)', async () => {
-    if (process.platform === 'win32') return; // on a real Windows host the named-pipe skip is correct
+  // On a real Windows host the named-pipe path is the correct behavior, so this
+  // POSIX identity gate is skipped rather than silently early-returning as a pass.
+  itUnixSocket('keeps the POSIX identity gate for a backslash-pipe-spelled path on non-win32', async () => {
     const cwd = process.cwd();
     const root = mkdtempSync(join(tmpdir(), 'hf-pipe-spell-'));
     roots.push(root);
@@ -307,7 +324,7 @@ describe('credential holder socket lifecycle', () => {
 });
 
 describe('credential holder same-user USE grants', () => {
-  it('accepts holder-owned provider_call commands without issuing reusable tokens', async () => {
+  itUnixSocket('accepts holder-owned provider_call commands without issuing reusable tokens', async () => {
     const invocations: unknown[] = [];
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
@@ -357,7 +374,7 @@ describe('credential holder same-user USE grants', () => {
     await holder.stop();
   });
 
-  it('zeroizes the per-request secret buffer after holder-owned provider calls', async () => {
+  itUnixSocket('zeroizes the per-request secret buffer after holder-owned provider calls', async () => {
     let handedSecret: Buffer | undefined;
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
@@ -388,7 +405,7 @@ describe('credential holder same-user USE grants', () => {
     await holder.stop();
   });
 
-  it.each(['sub-agent', 'provider-worker'] as const)(
+  itUnixSocket.each(['sub-agent', 'provider-worker'] as const)(
     'allows holder-owned provider_call commands from same-user %s-shaped peers without issuing raw keys',
     async (role) => {
       let invoked = false;
@@ -421,7 +438,7 @@ describe('credential holder same-user USE grants', () => {
     },
   );
 
-  it('grants and redeems same-user USE over the socket without returning raw key material', async () => {
+  itUnixSocket('grants and redeems same-user USE over the socket without returning raw key material', async () => {
     let resolverCall = 0;
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
@@ -469,7 +486,7 @@ describe('credential holder same-user USE grants', () => {
     await holder.stop();
   });
 
-  it('rejects a stolen token redeemed over a different socket identity', async () => {
+  itUnixSocket('rejects a stolen token redeemed over a different socket identity', async () => {
     const identities: PeerCredential[] = [
       { pid: 42, uid: 501, startTime: 'pid-start-1' },
       { pid: 43, uid: 501, startTime: 'pid-start-2' },
@@ -512,7 +529,7 @@ describe('credential holder same-user USE grants', () => {
     expect((holder as unknown as { useProviderGrant?: unknown }).useProviderGrant).toBeUndefined();
   });
 
-  it('does not require advisory role metadata for same-user USE grants', async () => {
+  itUnixSocket('does not require advisory role metadata for same-user USE grants', async () => {
     const holder = new CredentialHolderService({
       socketPath: tempSocketPath(),
       uid: 501,
@@ -531,7 +548,7 @@ describe('credential holder same-user USE grants', () => {
     await holder.stop();
   });
 
-  it('denies ambiguous and different-user socket peers', async () => {
+  itUnixSocket('denies ambiguous and different-user socket peers', async () => {
     const responses: Array<PeerCredential | null> = [
       null,
       { pid: 2, uid: 999, startTime: 'foreign' },
