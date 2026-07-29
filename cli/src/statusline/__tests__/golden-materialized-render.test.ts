@@ -147,7 +147,8 @@ describe('statusline golden render from materialized producer files', () => {
     const output = await renderClaudeCodeStatusline(stdinPayload(projectRoot), projectRoot);
     const plainLines = stripAnsi(output).split('\n');
 
-    expect(plainLines).toHaveLength(8);
+    // f16a: +1 row for the standalone usage meter (context is inline on header).
+    expect(plainLines).toHaveLength(9);
     const memoryRow = plainLines.find((line) => line.includes('Memory'));
     expect(memoryRow).toBeDefined();
     expect(memoryRow).toContain('Embeddings 12');

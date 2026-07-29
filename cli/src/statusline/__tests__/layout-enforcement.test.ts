@@ -386,7 +386,15 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     // -> attention -> rule -> footer. Separators within rows are `  │  ` and
     // the inter-row rules are 65 box-drawing horizontals.
     const golden = [
-      '▊ fixture-project  │  main +2 ~3 ↑3 ↓1  │  Opus 4.8 1M  │  📖 45% ctx · 82000 in/14000 out',
+      // f16a: the old `📖 N% ctx · tokens` text is gone; the portable context
+      // meter renders INLINE on this same line after activity. Activity itself
+      // is absent here because the fixture has no verified tracker state —
+      // omitted, never faked as Idle.
+      // 45% of 13 cells = 5.85 -> 5 solid blocks + one 6/8 partial.
+      '▊ fixture-project  │  main +2 ~3 ↑3 ↓1  │  Opus 4.8 1M  │  ctx │█████▊       │',
+      // No rate_limits on this fixture: the usage row states that truthfully
+      // rather than disappearing. It is the only net-new standalone row.
+      '5h no usage data',
       RULE,
       '🤖 Claude Opus 7 · Sonnet 4  │  Codex 3',
       '🪪 Swarm ◉ [ 7/150]  ♛2',
@@ -406,10 +414,11 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     const plain = stripAnsi(output);
     const lines = plain.split('\n');
 
-    expect(lines.length).toBe(8);
-    expect(lines[1]).toBe(RULE);
-    expect(lines[6]).toBe(RULE);
-    expect(lines[4]).toBe(
+    // f16a: header(+inline ctx) + usage + rule + 4 body rows + rule + footer = 9.
+    expect(lines.length).toBe(9);
+    expect(lines[2]).toBe(RULE);
+    expect(lines[7]).toBe(RULE);
+    expect(lines[5]).toBe(
       '📊 Memory  Embeddings 290  │  Memories 41.1k  │  💾 333KB  │  🧪 Tests 142  │  🔌 MCP 5/7',
     );
     expect(plain).toContain('🤖 Claude Opus 7 · Sonnet 4  │  Codex 3');
@@ -434,8 +443,10 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     expect(output).toContain('\x1b[0;31m↓1');
     // Model — magenta.
     expect(output).toContain('\x1b[0;35mOpus 4.8 1M');
-    // Context <70% — safe green.
-    expect(output).toContain('\x1b[1;32m📖 45% ctx');
+    // Context <70% — safe green, now carried by the inline meter's fill.
+    expect(output).toContain('\x1b[1;32m█████▊');
+    // The retired text form must never reappear.
+    expect(output).not.toContain('📖');
     // Inter-row rule — separator colour (256-color = 38;5;240).
     expect(output).toContain(`\x1b[38;5;240m${RULE}`);
     // Executing swarm indicator — bright green `◉`.
@@ -460,8 +471,10 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     const goldenHeader =
       '▊ ' +
       plain.split('  │  ')[0].replace('▊ ', '') + // dynamic basename of the tmp dir
-      '  │  Opus 4.8 1M  │  📖 45% ctx · 82000 in/14000 out';
-    expect(lines).toEqual([goldenHeader, '► ⛔ ENFORCEMENT OFF']);
+      '  │  Opus 4.8 1M  │  ctx │█████▊       │';
+    // f16a: the usage row is standalone and NEVER omits, so even a header-only
+    // project shows the truthful no-data form. Still no body rows or rules.
+    expect(lines).toEqual([goldenHeader, '5h no usage data', '► ⛔ ENFORCEMENT OFF']);
     // No fabricated body rows / separators.
     expect(plain).not.toContain('🤖');
     expect(plain).not.toContain('🪪');
@@ -502,12 +515,13 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     const output = await renderClaudeCodeStatusline(canonicalStdin(), fix.projectRoot);
     const lines = stripAnsi(output).split('\n');
 
-    // header, rule, scoreboard, rule, footer = 5 lines.
-    expect(lines.length).toBe(5);
-    expect(lines[1]).toBe(RULE);
-    expect(lines[2]).toBe('🤖 Gemini 1');
-    expect(lines[3]).toBe(RULE);
-    expect(lines[4]).toBe('► ⛔ ENFORCEMENT OFF · daemon on · data fresh 0s');
+    // f16a: header, usage, rule, scoreboard, rule, footer = 6 lines.
+    expect(lines.length).toBe(6);
+    expect(lines[1]).toBe('5h no usage data');
+    expect(lines[2]).toBe(RULE);
+    expect(lines[3]).toBe('🤖 Gemini 1');
+    expect(lines[4]).toBe(RULE);
+    expect(lines[5]).toBe('► ⛔ ENFORCEMENT OFF · daemon on · data fresh 0s');
     // No swarm / memory / attention markers fabricated.
     expect(output).not.toContain('🪪');
     expect(output).not.toContain('📊');
@@ -594,6 +608,9 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
   // Documented per-row format regexes (stripped-ANSI). These pin segment shape
   // without pinning content, so the property tests can vary the data freely.
   const HEADER_RE = /^▊ .+/u;
+  // f16a usage row: either the live five-hour/weekly meters or the truthful
+  // no-data form. This row never omits, so it is always one of the two.
+  const USAGE_RE = /^5h (?:no usage data|n\/a|│)/u;
   const RULE_RE = /^─+$/u;
   const SCOREBOARD_RE = /^🤖 .+/u;
   const SWARM_RE = /^🪪 Swarm [◉○] \[\s*\d+\/\d+\]/u;
@@ -713,6 +730,8 @@ describe('statusline LAYOUT ENFORCEMENT (locked multi-row box)', () => {
     const lines = stripAnsi(output).split('\n');
     for (const line of lines) {
       const matchesSomeRow =
+        // f16a: the usage row is a documented standalone row.
+        USAGE_RE.test(line) ||
         HEADER_RE.test(line) ||
         RULE_RE.test(line) ||
         SCOREBOARD_RE.test(line) ||

@@ -30,10 +30,14 @@ import {
   resolveStatuslineLauncherPath,
   resolveStatuslineRuntimeEntrypoint,
   writeStableStatuslineLauncher,
+  resolveActivityHookLauncherPath,
+  resolveActivityHookRuntimeEntrypoint,
+  writeStableActivityHookLauncher,
 } from '../integrations/launcher.js';
 import { statePathFor } from '../integrations/state.js';
 import { ADAPTERS, type AdapterId, claudeCodeStatuslineAdapter } from '../integrations/adapters/index.js';
 import { previousStatusLineCommandForLauncher } from '../integrations/adapters/claude-code-statusline.js';
+import { claudeCodeActivityHooksAdapter } from '../integrations/adapters/claude-code-activity-hooks.js';
 import { loadAdapter, isKnownTarget } from '../integrations/adapter-registry.js';
 import { diagnoseConnectors } from '../integrations/diagnose.js';
 import { shellPromptAdapter } from '../integrations/adapters/shell-prompt.js';
@@ -727,6 +731,11 @@ async function runReadOnly(opts: any) {
         feature: 'statusline' as const,
         ...(await claudeCodeStatuslineAdapter.plan(ctx)),
       });
+      results.push({
+        agent: id as AdapterId,
+        feature: 'statusline' as const,
+        ...(await claudeCodeActivityHooksAdapter.plan(ctx)),
+      });
     }
     if (id === 'claude-code' && features.has('statusline') && ctx.shellProfilePath) {
       results.push({
@@ -815,6 +824,12 @@ async function runMutating(opts: any) {
         statePath,
       });
       await writeStableStatuslineLauncher(statuslineLauncherPath, statuslineEntrypoint, { previousCommand });
+      // f16a: the activity-tracker hook shim ships with the statusline feature —
+      // the activity cell is inert without it.
+      await writeStableActivityHookLauncher(
+        resolveActivityHookLauncherPath(opts.scope, homeDir, projectRoot),
+        resolveActivityHookRuntimeEntrypoint(projectRoot),
+      );
     }
 
     const chosen = chooseAgents(opts.agents);
@@ -834,6 +849,10 @@ async function runMutating(opts: any) {
           ? await claudeCodeStatuslineAdapter.uninstall(ctx)
           : await claudeCodeStatuslineAdapter.apply(ctx);
         results.push({ agent: id as AdapterId, feature: 'statusline' as const, ...r });
+        const hooksResult = opts.action === 'uninstall'
+          ? await claudeCodeActivityHooksAdapter.uninstall(ctx)
+          : await claudeCodeActivityHooksAdapter.apply(ctx);
+        results.push({ agent: id as AdapterId, feature: 'statusline' as const, ...hooksResult });
       }
       if (id === 'claude-code' && features.has('statusline') && ctx.shellProfilePath) {
         const r = opts.action === 'uninstall'

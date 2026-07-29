@@ -60,6 +60,8 @@ import { sessionKeyFor } from '../shared/index.js';
 
 import { resolveSessionId } from '../mcp-tools/session-id.js';
 import { parseStatuslineConfig, type StatuslineConfig } from './config.js';
+import { readSessionProjection, type SessionProjection } from './claude-activity-state.js';
+import { fromPayload, renderContextMeter, renderUsageLine } from './claude-meters.js';
 import { collectInlineSnapshot } from './inline-collectors.js';
 import { collectSwarm } from './collectors/swarm.js';
 import { collectEnforcementStatus, type EnforcementLiveStatus } from './enforcement-installed.js';
@@ -261,6 +263,11 @@ async function renderInternal(
   const resolved = await resolveModeForRender(scope, stdin, snapshotMaxAgeMs, deadlineMs);
   const enforcementStatus = await collectEnforcementStatus(scope.projectRoot);
 
+  // f16a: session-scoped activity from the verified hook tracker. The tracker
+  // validates the session id itself and returns null for missing, malformed, or
+  // generation-mismatched state, so activity is omitted rather than fabricated.
+  const activity = await readActivityProjection(stdin);
+
   // 6) Render rows per locked visual design — composed into a MULTI-ROW box
   // (rows joined by `\n`, with full-width `─` separator rules between the
   // header / body / footer groups when ≥1 body row is present).
@@ -271,6 +278,7 @@ async function renderInternal(
     scope,
     stdin,
     enforcementStatus,
+    activity,
   });
 
   // 7) Return meta for the COMMAND WRAPPER to persist the last-render mirror.
@@ -619,6 +627,29 @@ interface ComposeContext {
   readonly scope: ProjectScope;
   readonly stdin: Record<string, unknown> | undefined;
   readonly enforcementStatus: EnforcementLiveStatus;
+  /** Verified session activity projection, or null when untrusted/absent. */
+  readonly activity: SessionProjection | null;
+}
+
+/**
+ * Read the verified activity projection for this session. Never throws: a
+ * tracker failure degrades to "no activity row", never to a fabricated state.
+ */
+async function readActivityProjection(
+  stdin: Record<string, unknown> | undefined,
+): Promise<SessionProjection | null> {
+  if (stdin === undefined) return null;
+  try {
+    return await readSessionProjection(stdin.session_id ?? stdin.sessionId);
+  } catch {
+    return null;
+  }
+}
+
+/** Raw `rate_limits` block off the stdin payload (stdin is the ONLY source). */
+function readRateLimits(stdin: Record<string, unknown> | undefined): unknown {
+  if (stdin === undefined) return undefined;
+  return stdin.rate_limits ?? stdin.rateLimits;
 }
 
 /**
@@ -651,9 +682,15 @@ function composeStatusline(ctx: ComposeContext): string {
   const p = ctx.palette;
   const rows: string[] = [];
 
-  // 1) Header — always rendered. Project anchor + git + model + context.
+  // 1) Header — always rendered. Project anchor + git + model + activity.
   const header = renderHeader(ctx);
   if (header.length > 0) rows.push(header);
+
+  // 1a) Usage row (f16a) — the five-hour and weekly subscription windows, read
+  // exclusively from the stdin `rate_limits` block (no network, credential,
+  // probe, or cache). This row NEVER omits: absent or unusable usage data
+  // renders the truthful "no usage data" form instead of disappearing.
+  rows.push(renderUsageLine(fromPayload(readRateLimits(ctx.stdin)), p));
 
   // 2) Scoreboard / Swarm / Memory / Attention rows render only when there
   // is backing snapshot data. Header-only mode falls through this block and
@@ -712,11 +749,21 @@ function renderHeader(ctx: ComposeContext): string {
     parts.push(`${p.model}${model.value.modelDisplay}${p.reset}`);
   }
 
-  // Context (ADR-051) — stdin-first merge with snapshot.context.
+  // Activity (f16a) — Idle / Thinking / Working / Waiting / Needs you, placed
+  // before the context row. Sourced ONLY from verified session-scoped tracker
+  // state; a missing or untrusted projection omits this cell entirely rather
+  // than fabricating "Idle". The context percentage/token text that used to
+  // live here now renders as its own meter row (see composeStatusline).
+  const activity = renderActivity(ctx.activity, p);
+  if (activity !== undefined) parts.push(activity);
+
+  // Context meter (f16a) — INLINE on this line, immediately after activity and
+  // before cost/duration. Absent or malformed context omits ONLY this segment;
+  // it never produces a blank row. Present-but-unmeasured context renders empty
+  // rails rather than claiming zero utilization.
   const context = mergeRenderContext(ctx.stdin, ctx.snapshot?.context);
   if (context !== undefined) {
-    const ctxLine = renderContext(context, ctx.stdin, p);
-    if (ctxLine !== undefined) parts.push(ctxLine);
+    parts.push(renderContextMeter(context.percentage, p));
   }
 
   // Cost — only when > 0. Sourced exclusively from stdin (the refresher does
@@ -840,32 +887,58 @@ function normalizePercentage(raw: number | undefined): number | undefined {
   return scaled;
 }
 
-function renderContext(
-  context: ContextSummary,
-  stdin: Record<string, unknown> | undefined,
+/**
+ * Render the activity cell from a verified session projection (f16a).
+ *
+ * Returns `undefined` for a missing/untrusted projection so the caller omits
+ * the cell — the tracker cannot distinguish "idle" from "no state", and
+ * claiming Idle for an unknown session would be a fabrication.
+ *
+ * Colors are graded by intensity through the palette; red is reserved
+ * exclusively for "a human is required".
+ */
+function renderActivity(
+  activity: SessionProjection | null,
   p: PaletteCodes,
 ): string | undefined {
-  const pct = context.percentage;
-  if (pct === undefined) return undefined;
-  const color = contextColor(pct, p);
-  const pctText = `${color}📖 ${Math.round(pct)}% ctx${p.reset}`;
-  // Token detail — prefer stdin's raw input/output counts when present so the
-  // header surfaces the live numbers, falling back to the cached context.
-  const inputTokens = context.inputTokens;
-  const outputTokens = context.outputTokens;
-  if (typeof inputTokens === 'number' || typeof outputTokens === 'number') {
-    const tokens = `${inputTokens ?? 0} in/${outputTokens ?? 0} out`;
-    return `${pctText} ${p.gray}· ${tokens}${p.reset}`;
+  if (activity === null) return undefined;
+
+  const pending: string[] = [];
+  if (activity.pendingAgents > 0) {
+    pending.push(`${activity.pendingAgents} agent${activity.pendingAgents > 1 ? 's' : ''}`);
   }
-  // Mark `stdin` as referenced so an unused-parameter lint cannot escalate.
-  void stdin;
-  return pctText;
+  if (activity.bgShells > 0) {
+    pending.push(`${activity.bgShells} shell${activity.bgShells > 1 ? 's' : ''}`);
+  }
+
+  switch (activity.state) {
+    case 'needs-human':
+      return `${p.critical}Needs you${p.reset}`;
+    case 'working': {
+      const tool = activity.tool;
+      const detail = typeof tool === 'string' && tool.length > 0 ? ` · ${clipDetail(tool, 20)}` : '';
+      return `${p.active}Working${detail}${p.reset}`;
+    }
+    case 'thinking':
+      return `${p.branch}Thinking${p.reset}`;
+    case 'waiting':
+      return `${p.memory}Waiting · ${pending.join(' + ') || 'background work'}${p.reset}`;
+    case 'idle':
+      return pending.length > 0
+        ? `${p.memory}Waiting · ${pending.join(' + ')}${p.reset}`
+        : `${p.gray}Idle${p.reset}`;
+    default:
+      return undefined;
+  }
 }
 
-function contextColor(pct: number, p: PaletteCodes): string {
-  if (pct > 85) return p.critical;
-  if (pct >= 70) return p.warn;
-  return p.safe;
+/**
+ * Bound an untrusted display string. Strips control/format characters (which
+ * are invisible but can consume budget or corrupt the row) and truncates.
+ */
+function clipDetail(value: string, max: number): string {
+  const cleaned = value.replace(/[\p{Cc}\p{Cf}]/gu, '');
+  return cleaned.length <= max ? cleaned : `${cleaned.slice(0, Math.max(0, max - 1))}…`;
 }
 
 // ---------------------------------------------------------------------------

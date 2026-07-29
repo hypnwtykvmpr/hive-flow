@@ -295,7 +295,9 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(plain).toContain('fixture-project');
     expect(plain).toContain('main');
     expect(plain).toContain('Opus 4.8');
-    expect(plain).toContain('45% ctx');
+    // f16a: the context reading is the inline meter now, not `📖 N% ctx` text.
+    expect(plain).toContain('ctx │');
+    expect(plain).not.toContain('📖');
     expect(plain).toContain('Swarm');
     expect(plain).toMatch(/\[\s*7\/150\]/);
     expect(plain).toContain('♛2');
@@ -597,7 +599,9 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     const { rendered } = await renderAndPersist(stdinPayload(), fix.projectRoot);
     const plain = stripAnsi(rendered);
     expect(plain).toContain('Opus 4.8');
-    expect(plain).toContain('45% ctx');
+    // f16a: the context reading is the inline meter now, not `📖 N% ctx` text.
+    expect(plain).toContain('ctx │');
+    expect(plain).not.toContain('📖');
     // No swarm / memory / scoreboard rows.
     expect(plain).not.toContain('Swarm');
     expect(plain).not.toContain('Memory');
@@ -880,9 +884,9 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     expect(output.includes('\r')).toBe(false);
 
     const plainLines = stripAnsi(output).split('\n');
-    // Header + 2 separator rules + 4 body rows + footer = 8 rows for this
-    // fully-populated fixture.
-    expect(plainLines.length).toBe(8);
+    // f16a: header(+inline ctx) + usage + 2 separator rules + 4 body rows +
+    // footer = 9 rows for this fully-populated fixture.
+    expect(plainLines.length).toBe(9);
 
     // Row 0 = header (project anchor + branch + model + ctx).
     expect(plainLines[0]).toContain('fixture-project');
@@ -917,9 +921,12 @@ describe('claude-code statusline renderer (Phase 12)', () => {
     try {
       const output = await renderClaudeCodeStatusline(stdinPayload(), cleanProj);
       const plainLines = stripAnsi(output).split('\n');
-      expect(plainLines.length).toBe(2);
+      // f16a: header + usage + footer. The usage row never omits, so it is
+      // present even in header-only mode with its truthful no-data form.
+      expect(plainLines.length).toBe(3);
       expect(plainLines[0]).toContain('Opus 4.8');
-      expect(plainLines[1]).toContain('ENFORCEMENT OFF');
+      expect(plainLines[1]).toBe('5h no usage data');
+      expect(plainLines[2]).toContain('ENFORCEMENT OFF');
       // No separator rules when there are no body rows.
       expect(output).not.toMatch(/─+/);
     } finally {

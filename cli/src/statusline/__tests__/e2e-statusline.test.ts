@@ -198,7 +198,9 @@ describe('statusline E2E recorder -> refresh -> render', () => {
 
     expect(plain).toContain(scope.displayName);
     expect(plain).toContain('Opus 4.8');
-    expect(plain).toContain('42% ctx');
+    // f16a: 42% renders as the inline meter (5 solid + a 3/8 partial), not text.
+    expect(plain).toContain('ctx │█████▍');
+    expect(plain).not.toContain('📖');
     expect(plain).toMatch(/Codex\s+1/);
     expect(plain).toMatch(/Tests\s+3/);
     expect(plain).toContain('review statusline e2e');
