@@ -778,6 +778,14 @@ async function runVerify(opts: any) {
         feature: 'statusline' as const,
         ...(await claudeCodeStatuslineAdapter.verify(ctx)),
       });
+      // f16a: the activity hooks feed the statusline activity cell, so verify
+      // must cover them too — otherwise `--verify` reports ok while the hook
+      // family is missing or partially installed.
+      results.push({
+        agent: id as AdapterId,
+        feature: 'statusline' as const,
+        ...(await claudeCodeActivityHooksAdapter.verify!(ctx)),
+      });
     }
     if (id === 'claude-code' && features.has('statusline') && ctx.shellProfilePath) {
       results.push({

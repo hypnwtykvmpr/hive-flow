@@ -9,7 +9,7 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync, mkdirSy
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { claudeCodeActivityHooksAdapter, HOOK_WIRING } from '../claude-code-activity-hooks.js';
-import { resolveActivityHookLauncherPath } from '../../launcher.js';
+import { commandForClaudeSettings, resolveActivityHookLauncherPath } from '../../launcher.js';
 
 let home: string;
 let projectRoot: string;
@@ -30,9 +30,21 @@ const ctx = () => ({
 
 const readSettings = (): Record<string, any> => JSON.parse(readFileSync(settingsPath, 'utf8'));
 const launcher = (): string => resolveActivityHookLauncherPath('user', home, projectRoot);
+/**
+ * Count entries that are OURS by the same exact-canonical rule the adapter
+ * uses. Deliberately NOT a substring test: a substring helper would make the
+ * decoy regressions below vacuous.
+ */
+const canonicalFor = (event: string): string => {
+  const wiring = HOOK_WIRING.find(([name]) => name === event);
+  if (!wiring) throw new Error(`unwired event ${event}`);
+  return `${commandForClaudeSettings(launcher())} ${wiring[1]}`;
+};
 const ourEntries = (settings: Record<string, any>, event: string): unknown[] =>
   (settings.hooks?.[event] ?? []).flatMap((g: any) =>
-    (g.hooks ?? []).filter((h: any) => typeof h?.command === 'string' && h.command.includes(launcher())),
+    (g.hooks ?? []).filter(
+      (h: any) => h?.type === 'command' && typeof h?.command === 'string' && h.command.trim() === canonicalFor(event),
+    ),
   );
 
 beforeEach(() => {
@@ -147,6 +159,43 @@ describe('coexistence with third-party hooks (A19)', () => {
     const final = readSettings();
     const remaining = (final.hooks.Stop ?? []).flatMap((g: any) => g.hooks ?? []);
     expect(remaining).toContainEqual({ type: 'command', command: '/opt/other/stop.sh' });
+  });
+});
+
+describe('foreign decoys that merely MENTION our launcher path (A19)', () => {
+  // Ownership must be the exact canonical command for the event. A substring
+  // test would silently adopt — and later delete — these third-party entries.
+  const decoys = () => [
+    { type: 'command', command: `echo '${launcher()}'` },
+    { type: 'command', command: `/opt/wrapper/run.sh ${launcher()} prompt` },
+    { type: 'command', command: `${launcher()}-other prompt` },
+    // Right executable, but an argument we never install.
+    { type: 'command', command: `${launcher()} not-an-event` },
+  ];
+
+  it('survive apply, reconcile, uninstall, and are not counted by verify', async () => {
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ hooks: { UserPromptSubmit: [{ hooks: decoys() }] } }, null, 2),
+    );
+
+    // verify must NOT count decoys as our installation.
+    expect((await claudeCodeActivityHooksAdapter.verify!(ctx())).ok).toBe(false);
+
+    await claudeCodeActivityHooksAdapter.apply(ctx());
+    let entries = (readSettings().hooks.UserPromptSubmit ?? []).flatMap((g: any) => g.hooks ?? []);
+    for (const decoy of decoys()) expect(entries).toContainEqual(decoy);
+
+    // Reconcile leaves them alone.
+    await claudeCodeActivityHooksAdapter.apply(ctx());
+    entries = (readSettings().hooks.UserPromptSubmit ?? []).flatMap((g: any) => g.hooks ?? []);
+    for (const decoy of decoys()) expect(entries).toContainEqual(decoy);
+
+    // Uninstall removes ONLY the exact canonical entry.
+    await claudeCodeActivityHooksAdapter.uninstall(ctx());
+    entries = (readSettings().hooks.UserPromptSubmit ?? []).flatMap((g: any) => g.hooks ?? []);
+    for (const decoy of decoys()) expect(entries).toContainEqual(decoy);
+    expect(ourEntries(readSettings(), 'UserPromptSubmit')).toHaveLength(0);
   });
 });
 

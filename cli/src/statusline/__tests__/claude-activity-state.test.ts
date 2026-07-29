@@ -3,7 +3,7 @@
 // The concurrency regression (A15) spawns REAL separate processes against the
 // compiled tracker, because create-once behaviour cannot be proven in-process.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -33,6 +33,86 @@ const readJson = (file: string): Record<string, unknown> | null => {
     return null;
   }
 };
+
+const DIST_MODULE = resolve(
+  __dirname, '..', '..', '..', 'dist', 'src', 'statusline', 'claude-activity-state.js',
+);
+const RUNNER = join(__dirname, 'fixtures', 'activity-hook-runner.mjs');
+
+function childEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
+  expect(
+    existsSync(DIST_MODULE),
+    `compiled tracker missing at ${DIST_MODULE} — run "npm run build" first`,
+  ).toBe(true);
+  return {
+    ...process.env,
+    NODE_ENV: 'test',
+    CLAUDE_STATUSLINE_TEST_ROOT: root,
+    HF_TRACKER_MODULE: pathToFileURL(DIST_MODULE).href,
+    ...extra,
+  };
+}
+
+/** Run the REAL hook in its own process, optionally crashing at a fault point. */
+function runHook(
+  event: string,
+  opts: { fault?: string; payload?: Record<string, unknown> } = {},
+): { status: number | null } {
+  const r = spawnSync(
+    process.execPath,
+    [RUNNER, event, JSON.stringify({ session_id: SESSION, tool_name: 'Bash', ...opts.payload })],
+    {
+      encoding: 'utf8',
+      env: childEnv(opts.fault ? { CLAUDE_STATUSLINE_TEST_FAULT: opts.fault } : {}),
+    },
+  );
+  return { status: r.status };
+}
+
+/**
+ * Spawn every hook ASYNCHRONOUSLY, wait until all of them are parked on the
+ * barrier, then release them so they genuinely contend.
+ */
+async function runHooksConcurrently(
+  specs: Array<{ event: string; payload?: Record<string, unknown> }>,
+): Promise<Array<{ status: number | null }>> {
+  const barrier = join(root, `barrier-${Math.random().toString(36).slice(2)}`);
+  const readyFiles = specs.map((_, i) => join(root, `ready-${i}-${Math.random().toString(36).slice(2)}`));
+
+  const children = specs.map((spec, i) =>
+    spawn(
+      process.execPath,
+      [RUNNER, spec.event, JSON.stringify({ session_id: SESSION, tool_name: 'Bash', ...spec.payload })],
+      { env: childEnv({ HF_BARRIER: barrier, HF_READY: readyFiles[i]! }), stdio: 'ignore' },
+    ),
+  );
+
+  let exited = 0;
+  const exits = children.map(
+    (child) =>
+      new Promise<number | null>((res) =>
+        child.once('exit', (code) => {
+          exited++;
+          res(code);
+        }),
+      ),
+  );
+
+  // Wait for real readiness rather than sleeping.
+  const deadline = Date.now() + 30_000;
+  while (readyFiles.some((f) => !existsSync(f))) {
+    if (Date.now() > deadline) throw new Error('children never reached the barrier');
+    await new Promise((res) => setTimeout(res, 5));
+  }
+
+  // SELF-VERIFYING CONTENTION: every child must still be alive, parked on the
+  // barrier. If any had already exited, they were not contending and this
+  // regression would be proving nothing (the defect Codex bounced).
+  expect(exited, 'a child exited before the barrier was released — not concurrent').toBe(0);
+
+  writeFileSync(barrier, 'go'); // release them all at once
+  return (await Promise.all(exits)).map((status) => ({ status }));
+}
 
 /** A PID that is guaranteed dead: spawn a short-lived process and reuse its id. */
 function deadPid(): number {
@@ -207,40 +287,85 @@ describe('untrusted state is omitted, never fabricated as Idle (A2)', () => {
 });
 
 describe('claim crash recovery (A25)', () => {
-  it('boundary 1 — crash after staging, before publication: a later event initializes', async () => {
-    // A crashed writer leaves an orphan staging file but NO canonical claim.
+  it('boundary 1 — REAL crash after staging (fault=after-stage) leaves no claim; a later event initializes', () => {
+    // Drive the ACTUAL hook and kill it at the real fault point rather than
+    // hand-forging on-disk state.
+    const crashed = runHook('prompt', { fault: 'after-stage' });
+    expect(crashed.status).toBe(91); // the fault point fired
+
     const dir = stateFor();
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(
-      join(dir, '.generation.claim.99999.deadbeefdeadbeef.stage'),
-      JSON.stringify({ schema: 1, owner: 'a'.repeat(32), pid: 99999, ts: Date.now() }),
-    );
-
-    recordHookEvent('prompt', { session_id: SESSION });
-
-    // No claim existed, so initialization proceeds normally.
-    expect((await readSessionProjection(SESSION))?.state).toBe('thinking');
-    expect(readJson(join(dir, 'generation.json'))?.source).toBe('late-attach');
-  });
-
-  it('boundary 2 — crash after claim, before publication: a later event reclaims', async () => {
-    const dir = stateFor();
-    mkdirSync(dir, { recursive: true });
-    // A COMPLETE claim owned by a process that is definitively gone.
-    writeFileSync(
-      join(dir, 'generation.claim'),
-      JSON.stringify({ schema: 1, owner: 'b'.repeat(32), pid: deadPid(), ts: Date.now() }),
-    );
+    // A crash before publication must leave NO canonical claim behind.
+    expect(existsSync(join(dir, 'generation.claim'))).toBe(false);
     expect(existsSync(join(dir, 'generation.json'))).toBe(false);
 
-    recordHookEvent('prompt', { session_id: SESSION });
+    // Recovery: a later event initializes normally.
+    const recovered = runHook('prompt');
+    expect(recovered.status).toBe(0);
+    expect(readJson(join(dir, 'generation.json'))?.source).toBe('late-attach');
+  }, 30_000);
 
+  it('boundary 2 — REAL crash after claim (fault=after-claim) leaves a dead claim; a later event recovers', () => {
+    const crashed = runHook('prompt', { fault: 'after-claim' });
+    expect(crashed.status).toBe(91);
+
+    const dir = stateFor();
+    // A COMPLETE claim exists, owned by a now-dead process, with no generation.
+    const claim = readJson(join(dir, 'generation.claim'));
+    expect(claim?.schema).toBe(1);
+    expect(typeof claim?.owner).toBe('string');
+    expect(existsSync(join(dir, 'generation.json'))).toBe(false);
+
+    const recovered = runHook('prompt');
+    expect(recovered.status).toBe(0);
+
+    const marker = readJson(join(dir, 'generation.json'));
+    expect(marker?.source).toBe('late-attach');
+    // The recoverer republishes the DEAD claim's deterministic generation
+    // instead of deleting or renaming the claim (which was a pathname TOCTOU).
+    expect(readJson(join(dir, 'generation.claim'))?.owner).toBe(claim?.owner);
+  }, 30_000);
+
+  it('dead-claim recovery racing a NEW live claimant converges on one generation', async () => {
+    // The exact race the previous rename-CAS design lost: a recoverer must not
+    // be able to disturb a claim another process publishes in the meantime.
+    const crashed = runHook('prompt', { fault: 'after-claim' });
+    expect(crashed.status).toBe(91);
+    const deadClaimOwner = readJson(join(stateFor(), 'generation.claim'))?.owner;
+
+    // Two processes now contend over the same dead claim, released together.
+    const results = await runHooksConcurrently([
+      { event: 'prompt' },
+      { event: 'pre-tool' },
+    ]);
+    for (const r of results) expect(r.status).toBe(0);
+
+    const dir = stateFor();
+    const marker = readJson(join(dir, 'generation.json'));
+    expect(typeof marker?.generation).toBe('string');
+    // One authoritative generation, and the original claim is untouched.
+    expect(readJson(join(dir, 'generation.claim'))?.owner).toBe(deadClaimOwner);
+    const projection = await readSessionProjection(SESSION);
+    expect(projection?.generation).toBe(marker?.generation);
+  }, 45_000);
+
+  it('an authoritative SessionStart wins a publication race with late-attach', async () => {
+    const results = await runHooksConcurrently([
+      { event: 'session-start', payload: { source: 'startup' } },
+      { event: 'prompt' },
+      { event: 'pre-tool' },
+    ]);
+    for (const r of results) expect(r.status).toBe(0);
+
+    const marker = readJson(join(stateFor(), 'generation.json'));
+    // Late-attach publishes with a NO-CLOBBER link, so it can never overwrite
+    // the authoritative SessionStart marker. Whichever ordering occurred, the
+    // surviving record must be internally consistent and adopted by everyone.
+    expect(['startup', 'late-attach']).toContain(marker?.source);
     const projection = await readSessionProjection(SESSION);
     expect(projection).not.toBeNull();
-    expect(projection?.state).toBe('thinking');
-    // Exactly one valid generation was published.
-    expect(readJson(join(dir, 'generation.json'))?.source).toBe('late-attach');
-  });
+    expect(projection?.generation).toBe(marker?.generation);
+    expect(readJson(join(stateFor(), 'activity.json'))?.generation).toBe(marker?.generation);
+  }, 45_000);
 
   it('never reclaims a claim held by a LIVE owner — fails closed instead', async () => {
     const dir = stateFor();
@@ -270,34 +395,89 @@ describe('claim crash recovery (A25)', () => {
   });
 });
 
-describe('concurrent first events (A15)', () => {
-  const distModule = resolve(__dirname, '..', '..', '..', 'dist', 'src', 'statusline', 'claude-activity-state.js');
-  const runner = join(__dirname, 'fixtures', 'activity-hook-runner.mjs');
+describe('render read path is bounded (A26)', () => {
+  // The renderer has a sub-200ms end-to-end contract. Pathological state must
+  // fail closed (activity omitted) instead of being read to completion.
+  it('fails closed on an over-count task directory instead of reading it all', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const taskDir = join(root, 'tasks', SESSION);
+    mkdirSync(taskDir, { recursive: true });
+    for (let i = 0; i < 600; i++) {
+      writeFileSync(join(taskDir, `t${i}.json`), JSON.stringify({ status: 'pending' }));
+    }
 
-  it('create-once: N concurrent first events converge on ONE generation and one valid projection', async () => {
-    // Requires the compiled tracker; the gate builds before running tests.
-    expect(
-      existsSync(distModule),
-      `compiled tracker missing at ${distModule} — run "npm run build" first`,
-    ).toBe(true);
+    const started = Date.now();
+    const projection = await readSessionProjection(SESSION);
+    const elapsed = Date.now() - started;
 
-    const events = ['prompt', 'pre-tool', 'permission-request', 'prompt', 'pre-tool', 'prompt', 'prompt', 'pre-tool'];
-    const children = events.map((event) =>
-      spawnSync(
-        process.execPath,
-        [runner, event, JSON.stringify({ session_id: SESSION, tool_name: 'Bash' })],
-        {
-          encoding: 'utf8',
-          env: {
-            ...process.env,
-            NODE_ENV: 'test',
-            CLAUDE_STATUSLINE_TEST_ROOT: root,
-            HF_TRACKER_MODULE: pathToFileURL(distModule).href,
-          },
-        },
-      ),
+    expect(projection).toBeNull(); // omitted, never a slow partial truth
+    expect(elapsed).toBeLessThan(200);
+  });
+
+  it('fails closed on an over-count identity directory', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const agentDir = join(stateFor(), 'agents', 'start');
+    mkdirSync(agentDir, { recursive: true });
+    // Unique 64-hex names so all 300 files really exist (> MAX_IDENTITY_FILES).
+    for (let i = 0; i < 300; i++) {
+      writeFileSync(join(agentDir, `${i.toString(16).padStart(64, '0')}.json`), JSON.stringify({ schema: 1 }));
+    }
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('refuses an oversized record rather than loading it', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    // A 1MB activity record blows the per-record cap.
+    writeFileSync(
+      join(stateFor(), 'activity.json'),
+      JSON.stringify({ schema: 1, state: 'idle', tool: 'x'.repeat(1_000_000), ts: Date.now() }),
     );
-    for (const child of children) expect(child.status).toBe(0);
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('honours an exhausted budget by omitting activity', async () => {
+    recordHookEvent('prompt', { session_id: SESSION });
+    expect(await readSessionProjection(SESSION)).not.toBeNull();
+    // Zero budget: nothing may be read.
+    expect(await readSessionProjection(SESSION, { budgetMs: 0 })).toBeNull();
+  });
+
+  it('stays fast on a realistic state directory', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const taskDir = join(root, 'tasks', SESSION);
+    mkdirSync(taskDir, { recursive: true });
+    for (let i = 0; i < 50; i++) {
+      writeFileSync(join(taskDir, `t${i}.json`), JSON.stringify({ status: i % 3 === 0 ? 'completed' : 'pending' }));
+    }
+    // An explicit budget keeps this about READ CORRECTNESS rather than ambient
+    // scheduler noise: under heavy parallel test load even a small directory
+    // can outrun a tight default, and that path is already covered by the
+    // exhausted-budget case above.
+    const started = Date.now();
+    const projection = await readSessionProjection(SESSION, { budgetMs: 1_000 });
+    // Still far inside the renderer's sub-200ms end-to-end contract.
+    expect(Date.now() - started).toBeLessThan(200);
+    expect(projection).not.toBeNull();
+    expect(projection?.state).toBe('idle');
+  });
+});
+
+describe('concurrent first events (A15)', () => {
+  it('create-once: 8 TRULY concurrent first events converge on ONE generation', async () => {
+    // All children are spawned asynchronously and park on a barrier; releasing
+    // the barrier makes them contend for real. (spawnSync would serialise them
+    // and prove nothing about concurrency.)
+    const results = await runHooksConcurrently([
+      { event: 'prompt' },
+      { event: 'pre-tool' },
+      { event: 'permission-request' },
+      { event: 'prompt' },
+      { event: 'pre-tool' },
+      { event: 'prompt' },
+      { event: 'prompt' },
+      { event: 'pre-tool' },
+    ]);
+    for (const r of results) expect(r.status).toBe(0);
 
     const projection = await readSessionProjection(SESSION);
     expect(projection).not.toBeNull();
@@ -307,8 +487,12 @@ describe('concurrent first events (A15)', () => {
     expect(typeof generation).toBe('string');
     expect(projection?.generation).toBe(generation);
     expect(readJson(join(stateFor(), 'activity.json'))?.generation).toBe(generation);
+    // The final projection is truthful — one of the states the racers wrote.
+    expect(['thinking', 'working', 'needs-human']).toContain(projection?.state);
     // No losing writer left a competing generation behind.
-    const stray = readdirSync(stateFor()).filter((n) => n.startsWith('generation.') && n !== 'generation.json');
+    const stray = readdirSync(stateFor()).filter(
+      (n) => n.startsWith('generation.') && n !== 'generation.json' && n !== 'generation.claim',
+    );
     expect(stray).toHaveLength(0);
-  }, 30_000);
+  }, 60_000);
 });

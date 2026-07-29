@@ -107,6 +107,14 @@ const MAX_STATUSLINE_STDIN_BYTES = 256 * 1024;
 const DEFAULT_SNAPSHOT_MAX_AGE_MS = 5 * 60 * 1000;
 
 /**
+ * Maximum slice of the render budget the activity projection may consume
+ * (hive-flow-f16a). The projection reads small session-scoped records; a
+ * pathological state directory must fail closed rather than eat the renderer's
+ * sub-200ms end-to-end contract.
+ */
+const ACTIVITY_PROJECTION_BUDGET_MS = 50;
+
+/**
  * Read parsed JSON from stdin with a hard byte cap. Returns `undefined` on
  * TTY input, empty input, oversize input, or unparseable JSON. Never throws.
  *
@@ -266,7 +274,7 @@ async function renderInternal(
   // f16a: session-scoped activity from the verified hook tracker. The tracker
   // validates the session id itself and returns null for missing, malformed, or
   // generation-mismatched state, so activity is omitted rather than fabricated.
-  const activity = await readActivityProjection(stdin);
+  const activity = await readActivityProjection(stdin, deadlineMs - Date.now());
 
   // 6) Render rows per locked visual design — composed into a MULTI-ROW box
   // (rows joined by `\n`, with full-width `─` separator rules between the
@@ -637,10 +645,18 @@ interface ComposeContext {
  */
 async function readActivityProjection(
   stdin: Record<string, unknown> | undefined,
+  remainingBudgetMs: number,
 ): Promise<SessionProjection | null> {
   if (stdin === undefined) return null;
+  // Honour the renderer's remaining deadline: the projection may consume at
+  // most a small slice of it, and never more than what is actually left.
+  const budgetMs = Math.min(
+    ACTIVITY_PROJECTION_BUDGET_MS,
+    Number.isFinite(remainingBudgetMs) ? Math.max(0, remainingBudgetMs) : 0,
+  );
+  if (budgetMs <= 0) return null; // already out of budget -> omit activity
   try {
-    return await readSessionProjection(stdin.session_id ?? stdin.sessionId);
+    return await readSessionProjection(stdin.session_id ?? stdin.sessionId, { budgetMs });
   } catch {
     return null;
   }

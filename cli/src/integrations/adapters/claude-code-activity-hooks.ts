@@ -100,11 +100,25 @@ function readEventGroups(root: Record<string, unknown> | undefined, event: strin
   return Array.isArray(groups) ? (groups as HookGroup[]) : [];
 }
 
-/** True when this entry is one of OURS (identified solely by launcher path). */
-function isManagedEntry(entry: unknown, launcherPath: string): boolean {
+/** The exact command we install for one event. */
+function canonicalCommandFor(launcherPath: string, arg: string): string {
+  return `${commandForClaudeSettings(launcherPath)} ${arg}`;
+}
+
+/**
+ * True when this entry is one of OURS.
+ *
+ * Identity is the EXACT canonical command for this event, not a substring
+ * match. A substring test would silently adopt (and later delete) foreign
+ * entries that merely mention our launcher path — for example
+ * `echo '<launcherPath>'` or a third-party wrapper receiving the path as an
+ * argument. Those must survive apply, reconcile, uninstall, and verify.
+ */
+function isManagedEntry(entry: unknown, launcherPath: string, arg: string): boolean {
   if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false;
-  const command = (entry as HookEntry).command;
-  return typeof command === 'string' && command.includes(launcherPath);
+  const { type, command } = entry as HookEntry;
+  if (type !== 'command' || typeof command !== 'string') return false;
+  return command.trim() === canonicalCommandFor(launcherPath, arg);
 }
 
 /**
@@ -129,7 +143,7 @@ function nextEventGroups(
       out.push(group); // untouched: unrelated shape
       continue;
     }
-    const kept = (group.hooks as unknown[]).filter((entry) => !isManagedEntry(entry, launcherPath));
+    const kept = (group.hooks as unknown[]).filter((entry) => !isManagedEntry(entry, launcherPath, arg));
     if (kept.length === (group.hooks as unknown[]).length) {
       out.push(group); // no entry of ours here — carry through untouched
       continue;
@@ -141,8 +155,11 @@ function nextEventGroups(
 
   if (mode === 'remove') return out;
 
-  const command = `${commandForClaudeSettings(launcherPath)} ${arg}`;
-  const entry: HookEntry = { type: 'command', command, timeout: HOOK_TIMEOUT_SECONDS };
+  const entry: HookEntry = {
+    type: 'command',
+    command: canonicalCommandFor(launcherPath, arg),
+    timeout: HOOK_TIMEOUT_SECONDS,
+  };
   out.push(matcher !== null ? { matcher, hooks: [entry] } : { hooks: [entry] });
   return out;
 }
@@ -340,11 +357,11 @@ async function verify(ctx: AdapterCtx): Promise<{ ok: boolean; output: string }>
   const root = readRoot(source);
   const missing: string[] = [];
   let installed = 0;
-  for (const [event] of HOOK_WIRING) {
+  for (const [event, arg] of HOOK_WIRING) {
     const found = readEventGroups(root, event).some(
       (group) =>
         Array.isArray(group?.hooks) &&
-        (group.hooks as unknown[]).some((entry) => isManagedEntry(entry, launcherPath)),
+        (group.hooks as unknown[]).some((entry) => isManagedEntry(entry, launcherPath, arg)),
     );
     if (found) installed++;
     else missing.push(event);

@@ -51,7 +51,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
@@ -235,6 +235,12 @@ interface GenerationMarker {
   readonly source: string;
 }
 
+interface ClaimRecord {
+  readonly owner: string;
+  readonly pid: number;
+  readonly ts: number;
+}
+
 /** Pure validator shared by the sync (write) and async (render) read paths. */
 function validateGeneration(value: Record<string, unknown> | null): GenerationMarker | null {
   if (!value || value.schema !== 1) return null;
@@ -266,11 +272,15 @@ function newGeneration(source: string): Record<string, unknown> {
  * leave a permanently malformed claim, which the liveness check would treat as
  * ambiguous forever and wedge the session.
  */
-function tryAcquireClaim(dir: string): string | null {
+function tryAcquireClaim(dir: string): ClaimRecord | null {
   mkdirSync(dir, { recursive: true });
-  const owner = randomBytes(16).toString('hex');
+  const claim: ClaimRecord = {
+    owner: randomBytes(16).toString('hex'),
+    pid: process.pid,
+    ts: Date.now(),
+  };
   const staging = join(dir, `.generation.claim.${process.pid}.${randomBytes(8).toString('hex')}.stage`);
-  const record = JSON.stringify({ schema: 1, owner, pid: process.pid, ts: Date.now() });
+  const record = JSON.stringify({ schema: 1, ...claim });
   try {
     writeFileSync(staging, record, { encoding: 'utf8', flag: 'wx' });
     // Boundary 1: crash here leaves NO canonical claim; a later event sees no
@@ -284,9 +294,9 @@ function tryAcquireClaim(dir: string): string | null {
       return null;
     }
     // Boundary 2: crash here leaves a COMPLETE dead-owner claim; a later event
-    // recovers it through the rename-CAS below.
+    // republishes that claim's DETERMINISTIC generation without mutating it.
     testFault('after-claim');
-    return owner;
+    return claim;
   } catch {
     return null;
   } finally {
@@ -298,42 +308,83 @@ function tryAcquireClaim(dir: string): string | null {
   }
 }
 
-function releaseClaim(dir: string, owner: string): void {
+/**
+ * Read and validate the canonical claim record.
+ *
+ * The claim is NEVER mutated by a recoverer — see {@link ensureGeneration}. An
+ * earlier design renamed it away, which was a pathname TOCTOU: between reading
+ * a dead claim and renaming that path, another process could publish a fresh
+ * LIVE claim there, and the rename would move the live one.
+ */
+function readClaim(dir: string): ClaimRecord | null {
   const value = asRecord(readJson(claimPath(dir)));
-  if (!value || value.owner !== owner) return; // never drop someone else's claim
+  if (!value || value.schema !== 1) return null;
+  if (typeof value.owner !== 'string' || !OWNER_TOKEN.test(value.owner)) return null;
+  if (typeof value.pid !== 'number' || !Number.isInteger(value.pid) || value.pid <= 0) return null;
+  if (typeof value.ts !== 'number' || !Number.isFinite(value.ts)) return null;
+  return { owner: value.owner, pid: value.pid, ts: value.ts };
+}
+
+/**
+ * Derive the late-attach generation DETERMINISTICALLY from the complete claim
+ * record. Any process that reads the same claim computes the same value, so a
+ * dead-owner recoverer and the original claimant converge on one generation
+ * without either deleting or replacing the canonical claim.
+ */
+function generationFromClaim(claim: ClaimRecord): string {
+  return createHash('sha256')
+    .update(`${claim.owner} ${claim.pid} ${claim.ts}`)
+    .digest('hex')
+    .slice(0, 32);
+}
+
+/** The late-attach marker is a pure function of the claim, so it is byte-identical
+ *  no matter which process publishes it. */
+function lateAttachMarker(claim: ClaimRecord): Record<string, unknown> {
+  return {
+    schema: 1,
+    generation: generationFromClaim(claim),
+    source: LATE_ATTACH_SOURCE,
+    createdAt: claim.ts,
+  };
+}
+
+/**
+ * Publish `generation.json` with a staged, atomic, NO-CLOBBER link.
+ *
+ * No-clobber is what keeps an authoritative SessionStart safe: if SessionStart
+ * has already published, a late-attach writer's link fails and it adopts the
+ * authoritative record instead of overwriting it.
+ */
+function publishGenerationNoClobber(dir: string, marker: Record<string, unknown>): void {
+  mkdirSync(dir, { recursive: true });
+  const staging = join(dir, `.generation.json.${process.pid}.${randomBytes(8).toString('hex')}.stage`);
+  try {
+    writeFileSync(staging, JSON.stringify(marker), { encoding: 'utf8', flag: 'wx' });
+    try {
+      linkSync(staging, join(dir, 'generation.json'));
+    } catch {
+      /* EEXIST: another writer (or SessionStart) already published. Adopt it. */
+    }
+  } catch {
+    /* staging failure: the caller re-reads and fails closed if nothing exists */
+  } finally {
+    try {
+      rmSync(staging, { force: true });
+    } catch {
+      /* best effort on every path */
+    }
+  }
+}
+
+function releaseClaim(dir: string, owner: string): void {
+  const claim = readClaim(dir);
+  if (!claim || claim.owner !== owner) return; // never drop someone else's claim
   try {
     rmSync(claimPath(dir), { force: true });
   } catch {
     /* a leftover claim is harmless: consulted only when no generation exists */
   }
-}
-
-type ReclaimOutcome = 'reclaimed' | 'retry' | 'ambiguous';
-
-/**
- * Recover an abandoned claim WITHOUT ever deleting a live writer's claim.
- * `renameSync` is the atomic arbiter: exactly one process can move a given
- * claim away and thereby earn the right to reclaim.
- */
-function reclaimDeadClaim(dir: string): ReclaimOutcome {
-  const value = asRecord(readJson(claimPath(dir)));
-  if (!value || value.schema !== 1) return 'ambiguous';
-  if (typeof value.owner !== 'string' || !OWNER_TOKEN.test(value.owner)) return 'ambiguous';
-  if (pidAlive(value.pid) !== false) return 'ambiguous'; // alive or unknown -> fail closed
-
-  const dead = `${claimPath(dir)}.${randomBytes(8).toString('hex')}.dead`;
-  try {
-    renameSync(claimPath(dir), dead);
-  } catch {
-    // ENOENT: someone else already moved it. Restart the protocol.
-    return 'retry';
-  }
-  try {
-    rmSync(dead, { force: true });
-  } catch {
-    /* orphaned dead file is inert */
-  }
-  return 'reclaimed';
 }
 
 /** Bounded wait for a winner's generation publication. */
@@ -354,30 +405,44 @@ function ensureGeneration(dir: string, sessionId: string): string | null {
   const existing = loadGeneration(dir);
   if (existing) return existing.generation;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const owner = tryAcquireClaim(dir);
-    if (owner) {
-      const marker = newGeneration(LATE_ATTACH_SOURCE);
-      atomicWrite(join(dir, 'generation.json'), marker);
-      const generation = String(marker.generation);
-      // Baseline only. The triggering event writes the truthful state next, and
-      // no historical tools/identities/permission state are invented.
-      writeActivity(dir, generation, 'idle');
-      // Acknowledge — never replay — pre-existing tasks, so late-attach cannot
-      // resurrect task history this session never observed.
-      acknowledgeTasks(dir, generation, sessionId);
-      releaseClaim(dir, owner);
-      return generation;
-    }
+  // 1) Try to become the claimant.
+  const mine = tryAcquireClaim(dir);
+  let claim: ClaimRecord | null = mine;
 
+  if (!claim) {
+    // 2) Someone else holds the claim: give them a bounded chance to publish.
     const adopted = awaitGeneration(dir);
     if (adopted) return adopted;
 
-    const outcome = reclaimDeadClaim(dir);
-    if (outcome === 'ambiguous') return null;
-    // 'reclaimed' | 'retry' -> loop and try again
+    // 3) Still nothing. Inspect the claim, failing closed on ANY ambiguity.
+    const existingClaim = readClaim(dir);
+    if (!existingClaim) return null; // malformed/missing -> write nothing
+    if (pidAlive(existingClaim.pid) !== false) return null; // alive or unknown -> write nothing
+    // Dead owner. We do NOT delete or rename the claim (that was a pathname
+    // TOCTOU); we simply publish the generation that claim deterministically
+    // implies. A concurrent recoverer computes the identical marker.
+    claim = existingClaim;
   }
-  return null;
+
+  publishGenerationNoClobber(dir, lateAttachMarker(claim));
+
+  // Adopt whatever is authoritative now. A concurrent SessionStart wins here,
+  // because our publication is no-clobber and its is an authoritative replace.
+  const published = loadGeneration(dir);
+  if (!published) return null;
+
+  if (mine) releaseClaim(dir, mine.owner);
+
+  // Baseline only, and only when this generation has no activity yet. The
+  // triggering event writes the truthful state next; no historical tools,
+  // identities, or permission state are invented.
+  if (!loadActivity(dir, published.generation)) {
+    writeActivity(dir, published.generation, 'idle');
+    // Acknowledge — never replay — pre-existing tasks, so late-attach cannot
+    // resurrect task history this session never observed.
+    acknowledgeTasks(dir, published.generation, sessionId);
+  }
+  return published.generation;
 }
 
 // ---------------------------------------------------------------------------
@@ -565,6 +630,45 @@ function writeTaskSnapshot(dir: string, generation: string, sessionId: string): 
 // design: hooks are short-lived processes whose atomicity and crash semantics
 // depend on ordered synchronous publication.
 
+/**
+ * Hard bounds for the RENDER read path. The statusline has a sub-200ms
+ * end-to-end contract, so a pathological state directory must never be able to
+ * stall the line: over-count, over-size, non-regular, or over-budget state
+ * fails closed (activity omitted) instead of being read to completion.
+ */
+const MAX_IDENTITY_FILES = 256;
+const MAX_TASK_FILES = 512;
+const MAX_RECORD_BYTES = 64 * 1024;
+/**
+ * Default slice of the render budget this projection may consume. 25ms proved
+ * too tight: on a loaded machine a legitimate ~50-task session lost its
+ * activity cell. 50ms still leaves the sub-200ms end-to-end contract intact
+ * while tolerating normal scheduler noise.
+ */
+const DEFAULT_PROJECTION_BUDGET_MS = 50;
+
+class Budget {
+  private readonly deadline: number;
+  constructor(ms: number) {
+    this.deadline = Date.now() + Math.max(0, ms);
+  }
+  expired(): boolean {
+    return Date.now() >= this.deadline;
+  }
+}
+
+/** Read one bounded JSON record: non-regular or oversized files are refused. */
+async function readJsonBounded(file: string, budget: Budget): Promise<unknown> {
+  if (budget.expired()) return null;
+  try {
+    const info = await stat(file);
+    if (!info.isFile() || info.size > MAX_RECORD_BYTES) return null;
+    return JSON.parse(await readFile(file, 'utf8')) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 async function readJsonAsync(file: string): Promise<unknown> {
   try {
     return JSON.parse(await readFile(file, 'utf8')) as unknown;
@@ -578,7 +682,8 @@ async function identityRecordsAsync(
   family: string,
   phase: string,
   generation: string,
-): Promise<string[]> {
+  budget: Budget,
+): Promise<string[] | null> {
   const recordDir = join(dir, family, phase);
   let names: string[] = [];
   try {
@@ -586,9 +691,12 @@ async function identityRecordsAsync(
   } catch {
     return [];
   }
+  // Fail closed rather than read an unbounded directory on the render path.
+  if (names.length > MAX_IDENTITY_FILES) return null;
   const out: string[] = [];
   for (const name of names) {
-    const value = asRecord(await readJsonAsync(join(recordDir, name)));
+    if (budget.expired()) return null;
+    const value = asRecord(await readJsonBounded(join(recordDir, name), budget));
     if (!value || value.schema !== 1 || value.generation !== generation) continue;
     const id = validIdentity(value.id);
     if (!id || typeof value.ts !== 'number' || !Number.isFinite(value.ts)) continue;
@@ -602,22 +710,29 @@ async function activeIdentityIdsAsync(
   dir: string,
   family: string,
   generation: string,
-): Promise<string[]> {
-  const starts = await identityRecordsAsync(dir, family, 'start', generation);
-  const stopped = new Set(await identityRecordsAsync(dir, family, 'stop', generation));
+  budget: Budget,
+): Promise<string[] | null> {
+  const starts = await identityRecordsAsync(dir, family, 'start', generation, budget);
+  if (starts === null) return null;
+  const stops = await identityRecordsAsync(dir, family, 'stop', generation, budget);
+  if (stops === null) return null;
+  const stopped = new Set(stops);
   return [...new Set(starts.filter((id) => !stopped.has(id)))].sort();
 }
 
-async function taskInventoryAtAsync(dir: string): Promise<TaskInventory> {
+async function taskInventoryAtAsync(dir: string, budget: Budget): Promise<TaskInventory | null> {
   let names: string[] = [];
   try {
     names = (await readdir(dir)).filter((name) => name.endsWith('.json')).sort();
   } catch {
     /* no task dir yet */
   }
+  // Fail closed rather than read an unbounded task directory on the render path.
+  if (names.length > MAX_TASK_FILES) return null;
   const tasks: Array<{ name: string; value: Record<string, unknown> }> = [];
   for (const name of names) {
-    const value = asRecord(await readJsonAsync(join(dir, name)));
+    if (budget.expired()) return null;
+    const value = asRecord(await readJsonBounded(join(dir, name), budget));
     if (!value || typeof value.status !== 'string') continue;
     tasks.push({ name, value });
   }
@@ -638,21 +753,30 @@ async function taskInventoryAtAsync(dir: string): Promise<TaskInventory> {
  */
 export async function readSessionProjection(
   rawSessionId: unknown,
+  options: { budgetMs?: number } = {},
 ): Promise<SessionProjection | null> {
   const sessionId = validSessionId(rawSessionId);
   if (!sessionId) return null;
   const dir = sessionDir(sessionId);
+  const budget = new Budget(options.budgetMs ?? DEFAULT_PROJECTION_BUDGET_MS);
 
-  const markerValue = asRecord(await readJsonAsync(join(dir, 'generation.json')));
+  const markerValue = asRecord(await readJsonBounded(join(dir, 'generation.json'), budget));
   const marker = validateGeneration(markerValue);
   if (!marker) return null;
-  const activity = validateActivity(asRecord(await readJsonAsync(join(dir, 'activity.json'))), marker.generation);
+  const activity = validateActivity(
+    asRecord(await readJsonBounded(join(dir, 'activity.json'), budget)),
+    marker.generation,
+  );
   if (!activity) return null;
 
-  const agents = await activeIdentityIdsAsync(dir, 'agents', marker.generation);
-  const shells = await activeIdentityIdsAsync(dir, 'shells', marker.generation);
+  // Any bound breach (count, size, non-regular file, or elapsed budget) omits
+  // activity entirely rather than delaying the statusline.
+  const agents = await activeIdentityIdsAsync(dir, 'agents', marker.generation, budget);
+  if (agents === null) return null;
+  const shells = await activeIdentityIdsAsync(dir, 'shells', marker.generation, budget);
+  if (shells === null) return null;
 
-  const ackValue = asRecord(await readJsonAsync(join(dir, 'tasks', 'ack.json')));
+  const ackValue = asRecord(await readJsonBounded(join(dir, 'tasks', 'ack.json'), budget));
   const ack =
     ackValue &&
     ackValue.schema === 1 &&
@@ -661,10 +785,11 @@ export async function readSessionProjection(
       ? ackValue
       : null;
   const snapshot = validateSnapshot(
-    asRecord(await readJsonAsync(join(dir, 'tasks', 'snapshot.json'))),
+    asRecord(await readJsonBounded(join(dir, 'tasks', 'snapshot.json'), budget)),
     marker.generation,
   );
-  const inventory = await taskInventoryAtAsync(join(tasksDir(), sessionId));
+  const inventory = await taskInventoryAtAsync(join(tasksDir(), sessionId), budget);
+  if (inventory === null) return null;
 
   let tasks: TaskView | null = null;
   // A missing/malformed ack makes task history untrustworthy. Fail closed: do
