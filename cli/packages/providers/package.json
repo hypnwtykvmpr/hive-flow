@@ -58,7 +58,7 @@
   "author": "Hive Flow Team",
   "license": "MIT",
   "dependencies": {
-    "undici": "^7.26.0"
+    "undici": "^7.29.0"
   },
   "devDependencies": {
     "dotenv": "^16.4.5",
