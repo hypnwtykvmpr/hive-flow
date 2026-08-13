@@ -3,7 +3,7 @@ type: blue-team
 description: Defender counterpart that hardens designs and code against verified adversarial findings.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: opus-4.1
+defaultModel: claude-opus-5
 phases:
   - 7
   - 8

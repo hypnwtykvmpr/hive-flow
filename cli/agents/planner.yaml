@@ -3,7 +3,7 @@ type: planner
 description: Implementation planner that turns verified designs into sequenced, testable work packages.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: opus-4.1
+defaultModel: claude-opus-5
 phases:
   - 3
 capabilities:

@@ -109,7 +109,7 @@ export interface AgentRecord {
   domain?: string;
   model?: AgentModel;  // Model tier assigned to this agent
   provider?: AgentProvider;  // LLM provider (anthropic, CLI/API providers, local providers)
-  resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.5-flash, gpt-5.5)
+  resolvedModel?: string;  // Provider-native model name (e.g. gemini-3.6-flash-high, gpt-5.6-sol)
   modelRoutedBy?: 'explicit' | 'router' | 'agent-booster' | 'default';  // How model was determined (ADR-026)
   ownerSessionId?: string;  // Session that spawned/owns this agent for statusline scoping
   ownerClientKind?: Exclude<OperatorClientKind, 'unknown'>;  // Owning operator lane for completion routing

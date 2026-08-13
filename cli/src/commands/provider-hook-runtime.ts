@@ -7,13 +7,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import { CODEX_CLI_DEFAULT_MODEL, GEMINI_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 
 const CACHE_TTL = 30 * 60 * 1000;
 
 const PROVIDER_PATTERNS = [
   {
     provider: 'gemini-cli',
-    model: 'gemini-3.5-flash',
+    model: GEMINI_CLI_DEFAULT_MODEL,
     patterns: [
       /\buse\s+gemini\b/i,
       /\bask\s+gemini\b/i,
@@ -24,7 +25,7 @@ const PROVIDER_PATTERNS = [
   },
   {
     provider: 'codex-cli',
-    model: 'gpt-5.5',
+    model: CODEX_CLI_DEFAULT_MODEL,
     patterns: [
       /\buse\s+codex\b/i,
       /\bask\s+codex\b/i,

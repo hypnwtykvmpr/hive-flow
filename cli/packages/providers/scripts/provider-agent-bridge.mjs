@@ -1160,13 +1160,13 @@ const RUN_SHELL_MAX_OUTPUT_LIMIT_BYTES = 1024 * 1024;
 const RUN_SHELL_SANDBOX_UNAVAILABLE = 'sandbox-unavailable:no-verified-backend';
 
 // Per-provider context token limits (tokens, not bytes)
-// Sources: deepseek=1M (DeepSeek-V4 unified window), gemini-3.1-pro=1M, sonnet=200K, opus=1M, gpt-5.5=400K, cursor=200K
+// Sources: DeepSeek=1M, Gemini=1M, Claude Opus=1M, Codex 5.6=1.05M, Cursor=200K.
 // anthropic-cli can be sonnet (200K) or opus (1M) — use model-aware routing below
-// codex-cli uses gpt-5.5 (400K context)
+// codex-cli uses GPT-5.6 Sol (1.05M context).
 const PROVIDER_TOKEN_LIMITS = {
   'anthropic-cli': { maxTokens: 1000000, maxEntries: 100 },
   'gemini-cli':    { maxTokens: 1000000, maxEntries: 100 },
-  'codex-cli':     { maxTokens: 400000,  maxEntries: 50 },
+  'codex-cli':     { maxTokens: 1050000, maxEntries: 100 },
   'cursor-cli':    { maxTokens: 200000,  maxEntries: 50 },
   'deepseek':      { maxTokens: 1000000, maxEntries: 100 },
   'openrouter':    { maxTokens: 128000,  maxEntries: 30 },
@@ -1193,6 +1193,7 @@ const TOOL_CHOICE_REQUIRED_UNSUPPORTED = new Set(['deepseek', 'openrouter']);
 const MODEL_LIMITS = {
   // Anthropic
   'opus':                       { maxTokens: 1000000, maxEntries: 100 },
+  'claude-opus-5':               { maxTokens: 1000000, maxEntries: 100 },
   'claude-opus-4-8':             { maxTokens: 1000000, maxEntries: 100 },
   'claude-opus-4-6':             { maxTokens: 1000000, maxEntries: 100 },
   'sonnet':                      { maxTokens: 200000,  maxEntries: 50 },
@@ -1204,6 +1205,9 @@ const MODEL_LIMITS = {
   'claude-3-sonnet-20240229':    { maxTokens: 200000,  maxEntries: 50 },
   'claude-3-haiku-20240307':     { maxTokens: 200000,  maxEntries: 50 },
   // OpenAI / Codex
+  'gpt-5.6-sol':                 { maxTokens: 1050000, maxEntries: 100 },
+  'gpt-5.6-terra':               { maxTokens: 1050000, maxEntries: 100 },
+  'gpt-5.6-luna':                { maxTokens: 1050000, maxEntries: 100 },
   'gpt-5.5':                     { maxTokens: 400000,  maxEntries: 50 },
   'gpt-5.3-codex':               { maxTokens: 256000,  maxEntries: 50 },
   'gpt-5.2-codex':               { maxTokens: 256000,  maxEntries: 50 },
@@ -1212,6 +1216,9 @@ const MODEL_LIMITS = {
   'gpt-5-codex':                 { maxTokens: 256000,  maxEntries: 50 },
   'gpt-5-codex-mini':            { maxTokens: 128000,  maxEntries: 30 },
   // Gemini
+  'gemini-3.6-flash-high':       { maxTokens: 1048576, maxEntries: 100 },
+  'gemini-3.6-flash-medium':     { maxTokens: 1048576, maxEntries: 100 },
+  'gemini-3.6-flash-low':        { maxTokens: 1048576, maxEntries: 100 },
   'gemini-3.5-flash':            { maxTokens: 1000000, maxEntries: 100 },
   'gemini-2.5-pro':              { maxTokens: 1000000, maxEntries: 100 },
   'gemini-2.5-flash':            { maxTokens: 1000000, maxEntries: 100 },
@@ -1226,6 +1233,8 @@ const MODEL_LIMITS = {
   'minimax/minimax-m3':                         { maxTokens: 1048576, maxEntries: 100 },
   'moonshotai/kimi-k2.6':                       { maxTokens: 262144,  maxEntries: 50 },
   'qwen/qwen3.7-plus':                          { maxTokens: 1000000, maxEntries: 100 },
+  'qwen3.7-plus':                               { maxTokens: 1000000, maxEntries: 100 },
+  'qwen3.7-max':                                { maxTokens: 1000000, maxEntries: 100 },
   'z-ai/glm-5.2':                               { maxTokens: 1000000, maxEntries: 100 },
   'qwen/qwen3.6-plus':                          { maxTokens: 1000000, maxEntries: 100 },
   'nvidia/nemotron-3-super-120b-a12b:free':     { maxTokens: 262144,  maxEntries: 50 },
@@ -2318,6 +2327,18 @@ export function prepareForProvider(messages, limits, ctx = {}) {
 
 // ===== Provider Default Models (loaded from model-alias-resolver if available) =====
 
+export const BRIDGE_PROVIDER_DEFAULTS_FALLBACK = Object.freeze({
+  'anthropic-cli': 'claude-opus-5',
+  'gemini-cli': 'gemini-3.6-flash-high',
+  'codex-cli': 'gpt-5.6-sol',
+  'cursor-cli': 'auto',
+  'deepseek': 'deepseek-v4-pro',
+  // DO-NOT-REVERT: human-selected OpenRouter default is MiniMax M3. Xiaomi
+  // may remain an allowlisted fallback, but it is not the default.
+  'openrouter': 'minimax/minimax-m3',
+  'lm-studio': 'local-model',
+});
+
 let _providerDefaults = null;
 
 async function getProviderDefaults() {
@@ -2338,17 +2359,7 @@ async function getProviderDefaults() {
   } catch { /* fallback below */ }
 
   // Fallback — only used if providers package isn't built
-  _providerDefaults = {
-    'anthropic-cli': 'claude-opus-4-8',
-    'gemini-cli': 'gemini-3.5-flash',
-    'codex-cli': 'gpt-5.5',
-    'cursor-cli': 'auto',
-    'deepseek': 'deepseek-v4-pro',
-    // DO-NOT-REVERT: human-selected OpenRouter default is MiniMax M3. Xiaomi
-    // may remain an allowlisted fallback, but it is not the default.
-    'openrouter': 'minimax/minimax-m3',
-    'lm-studio': 'local-model',
-  };
+  _providerDefaults = BRIDGE_PROVIDER_DEFAULTS_FALLBACK;
   return _providerDefaults;
 }
 

@@ -16,6 +16,7 @@ import type {
   ApprovalPolicy,
   SandboxMode,
 } from '../types.js';
+import { CODEX_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 
 /**
  * Parsed CLAUDE.md structure
@@ -712,7 +713,7 @@ export function convertSettingsToToml(settings: Record<string, unknown>): string
   if (settings.model) {
     lines.push(`model = "${settings.model}"`);
   } else {
-    lines.push('model = "gpt-5.5"');
+    lines.push(`model = "${CODEX_CLI_DEFAULT_MODEL}"`);
   }
   lines.push('');
 
@@ -814,7 +815,7 @@ export function generateConfigTomlFromParsed(parsed: ParsedClaudeMd): string {
   lines.push('');
 
   // Model
-  lines.push(`model = "${parsed.settings.model || 'gpt-5.5'}"`);
+  lines.push(`model = "${parsed.settings.model || CODEX_CLI_DEFAULT_MODEL}"`);
   lines.push('');
 
   // Approval policy

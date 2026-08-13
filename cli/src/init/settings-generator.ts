@@ -5,6 +5,7 @@
 
 import type { InitOptions, HooksConfig } from './types.js';
 import { buildRelocatedCommand } from '../install/enforcement-installer.js';
+import { ANTHROPIC_CLI_DEFAULT_MODEL, ANTHROPIC_SONNET_MODEL } from '@hive-flow/providers';
 
 interface HookCommand {
   type: 'command';
@@ -193,8 +194,8 @@ export function generateSettings(options: InitOptions): object {
     version: '3.0.0',
     enabled: true,
     modelPreferences: {
-      default: 'claude-opus-4-8',
-      routing: 'claude-sonnet-5',
+      default: ANTHROPIC_CLI_DEFAULT_MODEL,
+      routing: ANTHROPIC_SONNET_MODEL,
     },
     agentTeams: {
       enabled: true,

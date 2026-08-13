@@ -2584,7 +2584,20 @@ describe('CodexCLIProvider — listModels & getModelInfo', () => {
     });
     const models = await provider.listModels();
     expect(models.length).toBeGreaterThan(0);
+    expect(models).toContain('gpt-5.6-sol');
     expect(models).toContain('gpt-5.3-codex');
+    provider.destroy();
+  });
+
+  it('getModelInfo reports the current Codex default limits', async () => {
+    const provider = new CodexCLIProvider({
+      config: { provider: 'codex-cli', model: 'gpt-5.6-sol' },
+      logger: noopLogger,
+    });
+    const info = await provider.getModelInfo('gpt-5.6-sol');
+    expect(info.contextLength).toBe(1_050_000);
+    expect(info.maxOutputTokens).toBe(128_000);
+    expect(info.supportedFeatures).toContain('subscription-included');
     provider.destroy();
   });
 
@@ -2975,6 +2988,19 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
     });
     const models = await provider.listModels();
     expect(models.length).toBeGreaterThan(0);
+    expect(models).toContain('gemini-3.6-flash-high');
+    provider.destroy();
+  });
+
+  it('getModelInfo reports the current Antigravity default limits', async () => {
+    const provider = new GeminiCLIProvider({
+      config: { provider: 'gemini-cli', model: 'gemini-3.6-flash-high' },
+      logger: noopLogger,
+    });
+    const info = await provider.getModelInfo('gemini-3.6-flash-high');
+    expect(info.contextLength).toBe(1_048_576);
+    expect(info.maxOutputTokens).toBe(65_536);
+    expect(info.pricing).toBeUndefined();
     provider.destroy();
   });
 
@@ -3007,7 +3033,7 @@ describe('GeminiCLIProvider — listModels & getModelInfo', () => {
 // ============================================================
 
 describe('GeminiCLIProvider — validateConfig', () => {
-  it('sets model to gemini-3.5-flash when model is not provided', async () => {
+  it('sets the current Antigravity model when model is not provided', async () => {
     vi.clearAllMocks();
     mockBinaryFound('agy');
     const provider = new GeminiCLIProvider({
@@ -3015,7 +3041,7 @@ describe('GeminiCLIProvider — validateConfig', () => {
       logger: noopLogger,
     });
     await provider.initialize();
-    expect(provider.config.model).toBe('gemini-3.5-flash');
+    expect(provider.config.model).toBe('gemini-3.6-flash-high');
     provider.destroy();
   });
 

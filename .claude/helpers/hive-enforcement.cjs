@@ -63,9 +63,9 @@ const STALE_LOCK_MS = 30000; // 30s
 // Provider round-robin cycle
 const PROVIDERS = ['gemini-cli', 'codex-cli', 'anthropic-cli'];
 const PROVIDER_MODELS = {
-  'gemini-cli': 'gemini-3.1-pro-preview',
-  'codex-cli': 'gpt-5.5',
-  'anthropic-cli': 'sonnet',
+  'gemini-cli': 'gemini-3.6-flash-high',
+  'codex-cli': 'gpt-5.6-sol',
+  'anthropic-cli': 'claude-opus-5',
 };
 
 // Triggered tool names

@@ -8,7 +8,7 @@
 #     code: 404  ModelNotFoundError: Requested entity was not found.
 #
 # Antigravity (binary `agy`, a Go rewrite) is the live replacement and ships
-# gemini-3.5-flash as its base model. The provider MUST resolve `agy` and build
+# the Gemini 3.6 Flash family. The provider MUST resolve `agy` and build
 # headless args with --prompt/--model/--dangerously-skip-permissions, NOT the
 # dead gemini flags --output-format / --skip-trust (which agy rejects).
 #
@@ -65,9 +65,12 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
-@test "model gate accepts gemini-3.5-flash (the Antigravity base model)" {
+@test "model gate uses the canonical current Antigravity default" {
   [ -f "$GATE_SRC" ]
-  run grep -F -- "normInput.model !== 'gemini-3.5-flash'" "$GATE_SRC"
+  run grep -F -- "normInput.model !== GEMINI_CLI_DEFAULT_MODEL" "$GATE_SRC"
+  [ "$status" -eq 0 ]
+  run grep -F -- "export const GEMINI_CLI_DEFAULT_MODEL = 'gemini-3.6-flash-high'" \
+    "$REPO_ROOT/cli/packages/providers/src/model-alias-resolver.ts"
   [ "$status" -eq 0 ]
 }
 
@@ -89,7 +92,7 @@ setup() {
   if ! command -v agy >/dev/null 2>&1; then
     skip "agy (Antigravity CLI) not installed"
   fi
-  run timeout 120 agy -p "reply with the single word READY" --model gemini-3.5-flash
+  run timeout 120 agy -p "reply with the single word READY" --model gemini-3.6-flash-high
   [ "$status" -eq 0 ]
   [[ "$output" == *READY* ]]
 }

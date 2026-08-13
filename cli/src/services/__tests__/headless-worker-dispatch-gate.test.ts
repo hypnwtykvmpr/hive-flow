@@ -18,7 +18,8 @@ vi.mock('child_process', () => ({
   execSync: childProcessMock.execSync,
 }));
 
-import { HeadlessWorkerExecutor } from '../headless-worker-executor.js';
+import { ANTHROPIC_CLI_DEFAULT_MODEL, ANTHROPIC_SONNET_MODEL } from '@hive-flow/providers';
+import { HeadlessWorkerExecutor, getModelId } from '../headless-worker-executor.js';
 
 const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
 const originalHiveFlowHome = process.env.HIVE_FLOW_HOME;
@@ -112,6 +113,11 @@ afterEach(() => {
 });
 
 describe('HW-1: headless worker dispatch gate', () => {
+  it('maps worker tiers to the canonical Anthropic models', () => {
+    expect(getModelId('opus')).toBe(ANTHROPIC_CLI_DEFAULT_MODEL);
+    expect(getModelId('sonnet')).toBe(ANTHROPIC_SONNET_MODEL);
+  });
+
   it('blocks headless claude spawn at HALTED before launching the process', async () => {
     writeSignedState(3);
     const result = await makeExecutor().execute('audit', { timeoutMs: 250 });

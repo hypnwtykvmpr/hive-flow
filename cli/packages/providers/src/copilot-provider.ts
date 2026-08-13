@@ -39,11 +39,19 @@ interface CopilotResponse {
 
 const ZERO_COST = { promptCost: 0, completionCost: 0, totalCost: 0, currency: 'USD' };
 
+/** Conservative fallback only; copilot-api /models is authoritative when reachable. */
+export const COPILOT_FALLBACK_MODEL: LLMModel = 'claude-sonnet-4.6';
+
 export class CopilotProvider extends BaseProvider {
   readonly name: LLMProvider = 'copilot';
   readonly capabilities: ProviderCapabilities = {
-    supportedModels: ['gpt-4o', 'claude-3.5-sonnet'],
-    maxContextLength: { 'gpt-4o': 128000, 'claude-3.5-sonnet': 200000 },
+    supportedModels: [COPILOT_FALLBACK_MODEL, 'gpt-5.4', 'gpt-4o', 'claude-3.5-sonnet'],
+    maxContextLength: {
+      [COPILOT_FALLBACK_MODEL]: 1_000_000,
+      'gpt-5.4': 1_000_000,
+      'gpt-4o': 128000,
+      'claude-3.5-sonnet': 200000,
+    },
     maxOutputTokens: { 'gpt-4o': 16384, 'claude-3.5-sonnet': 8192 },
     supportsStreaming: true,
     supportsToolCalling: true,
@@ -55,6 +63,8 @@ export class CopilotProvider extends BaseProvider {
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 100, tokensPerMinute: 1000000, concurrentRequests: 10 },
     pricing: {
+      [COPILOT_FALLBACK_MODEL]: { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' },
+      'gpt-5.4': { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' },
       'gpt-4o': { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' },
       'claude-3.5-sonnet': { promptCostPer1k: 0, completionCostPer1k: 0, currency: 'USD' },
     },

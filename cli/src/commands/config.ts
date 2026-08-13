@@ -10,6 +10,11 @@ import { select, confirm, input } from '../prompt.js';
 import { callMCPTool, MCPClientError } from '../mcp-client.js';
 import { DEFAULT_MAX_AGENTS } from '../shared/core/config/defaults.js';
 import {
+  ANTHROPIC_CLI_DEFAULT_MODEL,
+  GEMINI_API_DEFAULT_MODEL,
+  PROVIDER_DEFAULTS,
+} from '@hive-flow/providers';
+import {
   inspectCredentialKeyStatus,
   removeProviderCredential,
   repairCredentialVault,
@@ -265,10 +270,10 @@ const providersCommand: Command = {
   ],
   action: async (ctx: CommandContext): Promise<CommandResult> => {
     const providers = [
-      { name: 'anthropic', model: 'claude-3-5-sonnet-20241022', priority: 1, enabled: true, status: 'Active' },
-      { name: 'openrouter', model: 'claude-3.5-sonnet', priority: 2, enabled: false, status: 'Disabled' },
-      { name: 'ollama', model: 'llama3.2', priority: 3, enabled: false, status: 'Disabled' },
-      { name: 'gemini', model: 'gemini-2.0-flash', priority: 4, enabled: false, status: 'Disabled' }
+      { name: 'anthropic', model: ANTHROPIC_CLI_DEFAULT_MODEL, priority: 1, enabled: true, status: 'Active' },
+      { name: 'openrouter', model: PROVIDER_DEFAULTS.openrouter, priority: 2, enabled: false, status: 'Disabled' },
+      { name: 'ollama', model: '(local catalog)', priority: 3, enabled: false, status: 'Disabled' },
+      { name: 'gemini', model: GEMINI_API_DEFAULT_MODEL, priority: 4, enabled: false, status: 'Disabled' }
     ];
 
     if (ctx.flags.format === 'json') {

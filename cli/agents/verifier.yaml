@@ -3,7 +3,7 @@ type: verifier
 description: Independent adversarial verifier with loop-back authority over prior phase claims.
 soloExempt: false
 defaultProvider: openrouter
-defaultModel: claude-opus-4.1
+defaultModel: minimax/minimax-m3
 phases:
   - 2
   - 4

@@ -544,11 +544,29 @@ describe('AnthropicCLIProvider', () => {
 
   // ── listModels ──
 
+  it('defaults missing model configuration to Opus 5', () => {
+    const defaulted = new AnthropicCLIProvider({
+      config: { provider: 'anthropic-cli', model: undefined as never },
+      logger: noopLogger,
+    });
+    (defaulted as unknown as { validateConfig(): void }).validateConfig();
+    expect(defaulted.config.model).toBe('claude-opus-5');
+    defaulted.destroy();
+  });
+
   it('returns list of supported models', async () => {
     const models = await provider.listModels();
     expect(Array.isArray(models)).toBe(true);
     expect(models.length).toBeGreaterThan(0);
+    expect(models).toContain('claude-opus-5');
     expect(models).toContain('claude-sonnet-5');
+  });
+
+  it('reports the verified Opus 5 context and output limits', async () => {
+    const info = await provider.getModelInfo('claude-opus-5');
+    expect(info.contextLength).toBe(1_000_000);
+    expect(info.maxOutputTokens).toBe(65_536);
+    expect(info.pricing).toBeUndefined();
   });
 
   // ── getModelInfo ──

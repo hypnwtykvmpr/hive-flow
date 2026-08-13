@@ -3,7 +3,7 @@ type: debugger
 description: Root-cause and fix agent for accumulated verified bugs from implementation onward.
 soloExempt: true
 defaultProvider: gemini
-defaultModel: gemini-2.5-pro
+defaultModel: gemini-3.6-flash-high
 phases:
   - 6
   - 7

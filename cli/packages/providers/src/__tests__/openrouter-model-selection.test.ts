@@ -259,9 +259,9 @@ describe('OpenRouter config-driven model selection', () => {
       expect(DEFAULT_CONFIG.tiers.opus).toContain(result);
     });
 
-    it('leaves non-OpenRouter CLI providers unchanged (codex-cli enforces gpt-5.5)', () => {
+    it('leaves non-OpenRouter CLI providers on their provider default', () => {
       const result = resolveProviderModelOrOpus('codex-cli', 'minimax/minimax-m3');
-      expect(result).toBe('gpt-5.5');
+      expect(result).toBe(PROVIDER_DEFAULTS['codex-cli']);
     });
 
     it('does not inject opus for non-OpenRouter unresolved providers (openai → undefined)', () => {

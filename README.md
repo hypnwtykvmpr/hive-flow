@@ -497,7 +497,7 @@ hive-flow init --dual
 | Skill Syntax | `/skill-name` | `$skill-name` |
 | Settings | `settings.json` | `config.toml` |
 | MCP | Native | Via `codex mcp add` |
-| Default Model | claude-sonnet | gpt-5.5 |
+| Default Model | claude-opus-5 | gpt-5.6-sol |
 
 ### Key Concept: Execution Model
 
@@ -1802,7 +1802,7 @@ hive-flow hooks worker status
 
 | Provider | Models | Access | Notes |
 |----------|--------|--------|-------|
-| **Anthropic** (`anthropic`) | claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-20251001 | API key | Native streaming, tool calling, extended thinking |
+| **Anthropic** (`anthropic`) | claude-opus-5, Claude 3.x compatibility models | API key | Native streaming, tool calling, extended thinking |
 | **DeepSeek** (`deepseek`) | deepseek-v4-pro, deepseek-v4-flash | API key | Fast inference, code-optimized |
 | **OpenRouter** (`openrouter`) | MiniMax M3, Grok 4.3, MiMo v2.5 Pro, Kimi K2.6, Qwen 3.7 Plus, GLM 5.2, Qwen 3.6 Plus, Nemotron 3 Super, DeepSeek V4 Flash | API key | Multi-model proxy; tier pools per task complexity |
 
@@ -1812,10 +1812,10 @@ hive-flow hooks worker status
 
 | Provider | Default Model | Notes |
 |----------|--------------|-------|
-| `codex-cli` | gpt-5.5 | OpenAI Codex headless agent |
-| `gemini-cli` | gemini-3.5-flash | Google Gemini headless agent |
+| `codex-cli` | gpt-5.6-sol | OpenAI Codex headless agent |
+| `gemini-cli` | gemini-3.6-flash-high | Google Gemini headless agent |
 | `cursor-cli` | auto | Cursor headless agent |
-| `anthropic-cli` | claude-opus-4-8 | Claude headless agent |
+| `anthropic-cli` | claude-opus-5 | Claude headless agent |
 
 **Credential Vault:** Use `hive-flow install --global --credentials` to create a per-machine KEK and encrypted credential vault, avoiding plain-text API key exposure in config files.
 
@@ -6133,11 +6133,11 @@ Hive Flow looks for configuration in this order:
     "default": "anthropic",
     "fallback": ["openai", "google"],
     "anthropic": {
-      "model": "claude-sonnet-4-20250514",
+      "model": "claude-opus-5",
       "maxTokens": 8192
     },
     "openai": {
-      "model": "gpt-4o",
+      "model": "gpt-5.6-sol",
       "maxTokens": 4096
     }
   },

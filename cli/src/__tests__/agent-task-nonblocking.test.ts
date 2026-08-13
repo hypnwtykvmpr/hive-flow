@@ -43,6 +43,7 @@ vi.mock('../hivector/enhanced-model-router.js', () => ({
 
 import { appendFileSync, existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, rmdirSync, rmSync, renameSync, unlinkSync, openSync, closeSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { CODEX_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 import { AGENT_TASK_RETRY_CONTEXT, agentTools } from '../mcp-tools/agent-tools.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -558,7 +559,7 @@ describe('agent_task handler', () => {
     expect(result.success).toBe(false);
     expect(result.agentId).toBe(agent.agentId);
     expect(typeof result.error).toBe('string');
-    expect(result.error as string).toMatch(/codex-cli requires gpt-5\.5/i);
+    expect(result.error as string).toContain(`codex-cli requires ${CODEX_CLI_DEFAULT_MODEL}`);
     expect(getPersistedStore().agents[agent.agentId].status).toBe('idle');
     expect((spawn as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
   });

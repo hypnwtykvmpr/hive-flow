@@ -9,7 +9,7 @@
  * Google deprecated/killed "Gemini CLI"; its API returns HTTP 404
  * `ModelNotFoundError: Requested entity was not found` for current models
  * (e.g. gemini-3.5-flash). Antigravity (`agy`, a Go rewrite) is the live
- * replacement and ships gemini-3.5-flash as its base model.
+ * replacement and exposes the current Gemini 3.6 Flash family.
  * Reverting the binary name, install hint, or CLI flags here to `gemini` /
  * `@google/gemini-cli` reintroduces the 404 regression. Confirmed live by
  * running `agy -p "..."` (returns content) vs
@@ -20,6 +20,7 @@
  */
 
 import { LLMModel, ProviderCapabilities } from './types.js';
+import { GEMINI_CLI_DEFAULT_MODEL } from './model-alias-resolver.js';
 
 /**
  * Shape returned by older `gemini --output-format json` (batch mode).
@@ -53,6 +54,7 @@ export const GEMINI_EXIT_CODES = {
 export const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50 MB
 
 export const GEMINI_MODELS: LLMModel[] = [
+  GEMINI_CLI_DEFAULT_MODEL, 'gemini-3.6-flash-medium', 'gemini-3.6-flash-low',
   'auto',
   'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro',
   'gemini-3-flash-preview', 'gemini-3.1-pro-preview',
@@ -61,6 +63,9 @@ export const GEMINI_MODELS: LLMModel[] = [
 ];
 
 export const GEMINI_MODEL_DESCRIPTIONS: Record<string, string> = {
+  'gemini-3.6-flash-high': 'Gemini 3.6 Flash (High) - current high-reasoning Flash model',
+  'gemini-3.6-flash-medium': 'Gemini 3.6 Flash (Medium) - current balanced Flash model',
+  'gemini-3.6-flash-low': 'Gemini 3.6 Flash (Low) - current low-latency Flash model',
   'auto': 'Auto - Gemini CLI selects optimal model',
   'gemini-2.5-flash': 'Gemini 2.5 Flash - Fast and cost-effective (GA)',
   'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite - Ultra-lightweight (GA)',
@@ -79,6 +84,9 @@ function makePricing(prompt: number, completion: number) {
 export const GEMINI_CAPABILITIES: ProviderCapabilities = {
   supportedModels: GEMINI_MODELS,
   maxContextLength: {
+    'gemini-3.6-flash-high': 1048576,
+    'gemini-3.6-flash-medium': 1048576,
+    'gemini-3.6-flash-low': 1048576,
     'auto': 1048576,
     'gemini-2.5-flash': 1048576, 'gemini-2.5-flash-lite': 1048576,
     'gemini-2.5-pro': 1048576,
@@ -89,6 +97,9 @@ export const GEMINI_CAPABILITIES: ProviderCapabilities = {
     'gemini-3.5-flash': 1048576,
   },
   maxOutputTokens: {
+    'gemini-3.6-flash-high': 65536,
+    'gemini-3.6-flash-medium': 65536,
+    'gemini-3.6-flash-low': 65536,
     'auto': 65536,
     'gemini-2.5-flash': 65536, 'gemini-2.5-flash-lite': 65536,
     'gemini-2.5-pro': 65536,

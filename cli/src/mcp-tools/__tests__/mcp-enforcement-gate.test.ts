@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { CODEX_CLI_DEFAULT_MODEL, GEMINI_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 import { checkModelEnforcement, classifyTool, ToolRisk } from '../mcp-enforcement-gate.js';
 
 describe('checkModelEnforcement', () => {
@@ -26,18 +27,18 @@ describe('checkModelEnforcement', () => {
   it('blocks gpt-5.4 for codex-cli (rollout exception removed)', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: 'gpt-5.4' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
-  it('allows gpt-5.5 for codex-cli', () => {
-    const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: 'gpt-5.5' });
+  it('allows the shared current Codex default', () => {
+    const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: CODEX_CLI_DEFAULT_MODEL });
     expect(r.allowed).toBe(true);
   });
 
   it('blocks unknown model for gemini-cli', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: 'gpt-4o' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gemini-3\.5-flash/i);
+    expect(r.reason).toMatch(/gemini-3\.6-flash-high/i);
   });
 
   it('allows alias values for gemini-cli', () => {
@@ -116,7 +117,7 @@ describe('expanded coverage (real-world + edge + regression)', () => {
   it('queen_spawn_worker is also subject to enforcement', () => {
     const r = checkModelEnforcement('queen_spawn_worker', { provider: 'codex-cli', model: 'gpt-4o' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('OpenRouter with allow-listed direct model passes', () => {
@@ -136,31 +137,31 @@ describe('expanded coverage (real-world + edge + regression)', () => {
   it('regression: codex-cli + gpt-5.4 is blocked (rollout exception removed)', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: 'gpt-5.4' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('regression: codex-cli + gpt-5.3-codex is blocked', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: 'gpt-5.3-codex' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
-  it('regression: gemini-cli + gpt-5.5 is blocked (cross-provider)', () => {
-    const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: 'gpt-5.5' });
+  it('regression: gemini-cli + gpt-5.6-sol is blocked (cross-provider)', () => {
+    const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: 'gpt-5.6-sol' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gemini-3\.5-flash/i);
+    expect(r.reason).toMatch(/gemini-3\.6-flash-high/i);
   });
 
-  it('regression: gemini-cli error mentions gemini-3.5-flash', () => {
+  it('regression: gemini-cli error names the shared current default', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: 'foobar' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gemini-3\.5-flash/i);
+    expect(r.reason).toContain(GEMINI_CLI_DEFAULT_MODEL);
   });
 
-  it('regression: codex-cli error mentions gpt-5.5', () => {
+  it('regression: codex-cli error names the shared current default', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: 'foobar' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toContain(CODEX_CLI_DEFAULT_MODEL);
   });
 
   it('regression: OpenRouter missing-model error mentions mini', () => {
@@ -189,19 +190,19 @@ describe('FIX-C1: provider/model normalization (case + whitespace bypass defeats
   it('blocks uppercase provider CODEX-CLI with non-top-tier model', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'CODEX-CLI', model: 'gpt-3.5-turbo' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('blocks whitespace-padded provider " codex-cli " with non-top-tier model', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: ' codex-cli ', model: 'gpt-3.5-turbo' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('blocks uppercase provider GEMINI-CLI with non-top-tier model', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'GEMINI-CLI', model: 'gpt-4o' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gemini-3\.5-flash/i);
+    expect(r.reason).toMatch(/gemini-3\.6-flash-high/i);
   });
 
   it('blocks mixed-case haiku model "HAIKU"', () => {
@@ -241,19 +242,19 @@ describe('FIX-C2: empty-string model no longer counts as a valid alias', () => {
   it('blocks gemini-cli with empty-string model (was bug, now closed)', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: '' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gemini-3\.5-flash/i);
+    expect(r.reason).toMatch(/gemini-3\.6-flash-high/i);
   });
 
   it('blocks codex-cli with empty-string model', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: '' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('blocks gemini-cli with whitespace-only model', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: '   ' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gemini-3\.5-flash/i);
+    expect(r.reason).toMatch(/gemini-3\.6-flash-high/i);
   });
 
   it('deepseek with empty-string model still gets defaulted to deepseek-v4-pro', () => {
@@ -282,7 +283,7 @@ describe('FIX-C3: queen_mission_assign classification', () => {
   it('queen_mission_assign is also subject to model enforcement', () => {
     const r = checkModelEnforcement('queen_mission_assign', { provider: 'codex-cli', model: 'gpt-4o' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('queen_mission_assign blocks haiku', () => {
@@ -309,7 +310,7 @@ describe('G2: agent_task dispatch gating', () => {
   it('agent_task is subject to model enforcement', () => {
     const r = checkModelEnforcement('agent_task', { provider: 'codex-cli', model: 'gpt-4o' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('mcp__hive-flow__agent_task is subject to model enforcement', () => {
@@ -331,49 +332,49 @@ describe('FIX-S5: Unicode-hyphen normalization (no enforcement bypass via homogl
     // 'codex‐cli' uses U+2010; would have bypassed prior to FIX-S5
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex‐cli', model: 'gpt-3.5-turbo' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/codex-cli requires gpt-5\.5/i);
+    expect(r.reason).toMatch(/codex-cli requires gpt-5\.6-sol/i);
   });
 
   it('SEC-5: rejects en-dash (U+2013) provider variant for codex-cli', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex–cli', model: 'gpt-3.5-turbo' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('SEC-5: rejects minus-sign (U+2212) provider variant for codex-cli', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex−cli', model: 'gpt-3.5-turbo' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('SEC-5: rejects Unicode-hyphen variant for gemini-cli', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'gemini‐cli', model: 'gpt-4o' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gemini-3\.5-flash/i);
+    expect(r.reason).toMatch(/gemini-3\.6-flash-high/i);
   });
 
   it('SEC-5: rejects em-dash (U+2014) provider variant for codex-cli', () => {
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex—cli', model: 'gpt-3.5-turbo' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('SEC-5: rejects Unicode-hyphen in model string ("gpt‐5.4" for codex-cli)', () => {
     // Attacker tries to obfuscate a stale top-tier name by using a homoglyph
     // hyphen inside the model. After normalization this becomes "gpt-5.4"
-    // which is still NOT the allowed top tier ("gpt-5.5"), so it's blocked.
+    // which is still NOT the allowed top tier ("gpt-5.6-sol"), so it's blocked.
     const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: 'gpt‐5.4' });
     expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/gpt-5\.5/i);
+    expect(r.reason).toMatch(/gpt-5\.6-sol/i);
   });
 
   it('SEC-5: still allows ASCII codex-cli (regression — normalization must not break the happy path)', () => {
-    const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: 'gpt-5.5' });
+    const r = checkModelEnforcement('agent_spawn', { provider: 'codex-cli', model: CODEX_CLI_DEFAULT_MODEL });
     expect(r.allowed).toBe(true);
   });
 
   it('SEC-5: still allows ASCII gemini-cli (regression — normalization must not break the happy path)', () => {
-    const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: 'gemini-3.5-flash' });
+    const r = checkModelEnforcement('agent_spawn', { provider: 'gemini-cli', model: GEMINI_CLI_DEFAULT_MODEL });
     expect(r.allowed).toBe(true);
   });
 });

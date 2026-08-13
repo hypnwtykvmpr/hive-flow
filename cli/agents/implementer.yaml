@@ -3,7 +3,7 @@ type: implementer
 description: Code implementer that executes approved plans and edits the repository under verification.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: sonnet-4.6
+defaultModel: claude-sonnet-5
 phases:
   - 6
 capabilities:

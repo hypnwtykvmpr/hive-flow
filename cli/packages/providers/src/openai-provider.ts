@@ -21,6 +21,7 @@ import {
   ModelNotFoundError,
   LLMProviderError,
 } from './types.js';
+import { OPENAI_API_DEFAULT_MODEL } from './model-alias-resolver.js';
 
 interface OpenAIRequest {
   model: string;
@@ -82,6 +83,7 @@ export class OpenAIProvider extends BaseProvider {
   readonly name: LLMProvider = 'openai';
   readonly capabilities: ProviderCapabilities = {
     supportedModels: [
+      OPENAI_API_DEFAULT_MODEL,
       'gpt-4o',
       'gpt-4o-mini',
       'gpt-4-turbo',
@@ -92,6 +94,7 @@ export class OpenAIProvider extends BaseProvider {
       'o3-mini',
     ],
     maxContextLength: {
+      [OPENAI_API_DEFAULT_MODEL]: 1050000,
       'gpt-4o': 128000,
       'gpt-4o-mini': 128000,
       'gpt-4-turbo': 128000,
@@ -102,6 +105,7 @@ export class OpenAIProvider extends BaseProvider {
       'o3-mini': 200000,
     },
     maxOutputTokens: {
+      [OPENAI_API_DEFAULT_MODEL]: 128000,
       'gpt-4o': 16384,
       'gpt-4o-mini': 16384,
       'gpt-4-turbo': 4096,
@@ -125,6 +129,11 @@ export class OpenAIProvider extends BaseProvider {
       concurrentRequests: 500,
     },
     pricing: {
+      [OPENAI_API_DEFAULT_MODEL]: {
+        promptCostPer1k: 0.005,
+        completionCostPer1k: 0.03,
+        currency: 'USD',
+      },
       'gpt-4o': {
         promptCostPer1k: 0.0025,
         completionCostPer1k: 0.01,

@@ -18,13 +18,15 @@ import {
   LLMProviderError, ProviderUnavailableError,
 } from './types.js';
 import { parseToolCallsFromContent, formatToolInstructions } from './tool-call-utils.js';
+import { ANTHROPIC_CLI_DEFAULT_MODEL } from './model-alias-resolver.js';
 
 // ===== Constants =====
 
 const MAX_STDOUT_BYTES = 50 * 1024 * 1024; // 50MB
 
-/** Supported Claude models with pricing per 1K tokens */
+/** Supported Claude models; pricing is populated only where independently known. */
 const ANTHROPIC_CLI_MODELS: LLMModel[] = [
+  ANTHROPIC_CLI_DEFAULT_MODEL,
   'claude-fable-5',
   'claude-sonnet-5',
   'claude-opus-4-8',
@@ -33,9 +35,10 @@ const ANTHROPIC_CLI_MODELS: LLMModel[] = [
 ];
 
 const ANTHROPIC_CLI_MODEL_DESCRIPTIONS: Record<string, string> = {
+  'claude-opus-5': 'Claude Opus 5 (current flagship agentic model)',
   'claude-fable-5': 'Claude Fable 5 (frontier, highest capability)',
   'claude-sonnet-5': 'Claude Sonnet 5 (current balanced agentic model)',
-  'claude-opus-4-8': 'Claude Opus 4.8 (current — best agentic coding)',
+  'claude-opus-4-8': 'Claude Opus 4.8 (legacy flagship)',
   'claude-sonnet-4-6': 'Claude Sonnet 4.6 (legacy)',
   'claude-haiku-4-5-20251001': 'Claude Haiku 4.5 (current)',
 };
@@ -43,6 +46,7 @@ const ANTHROPIC_CLI_MODEL_DESCRIPTIONS: Record<string, string> = {
 const ANTHROPIC_CLI_CAPABILITIES: ProviderCapabilities = {
   supportedModels: ANTHROPIC_CLI_MODELS,
   maxContextLength: {
+    'claude-opus-5': 1000000,
     'claude-fable-5': 1000000,
     'claude-sonnet-5': 1000000,
     'claude-opus-4-8': 1000000,
@@ -50,6 +54,7 @@ const ANTHROPIC_CLI_CAPABILITIES: ProviderCapabilities = {
     'claude-haiku-4-5-20251001': 200000,
   },
   maxOutputTokens: {
+    'claude-opus-5': 65536,       // 64K, verified from the running client
     'claude-fable-5': 131072,     // 128K
     'claude-sonnet-5': 131072,    // 128K
     'claude-opus-4-8': 131072,    // 128K
@@ -101,7 +106,7 @@ export class AnthropicCLIProvider extends BaseProvider {
 
   protected validateConfig(): void {
     if (!this.config.model) {
-      this.config.model = 'claude-opus-4-8';
+      this.config.model = ANTHROPIC_CLI_DEFAULT_MODEL;
     }
     if (!this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by ${this.name}`);

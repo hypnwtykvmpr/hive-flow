@@ -31,7 +31,9 @@ export type LLMProvider =
   | 'custom';
 
 export type LLMModel =
-  // Anthropic Models (2024-2025)
+  // Anthropic Models (2024-2026)
+  | 'claude-opus-5'
+  | 'claude-sonnet-5'
   | 'claude-3-5-sonnet-20241022'
   | 'claude-3-5-sonnet-latest'
   | 'claude-3-opus-20240229'
@@ -47,6 +49,10 @@ export type LLMModel =
   | 'o1-mini'
   | 'o3-mini'
   // Google Models
+  | 'gemini-3.6-flash'
+  | 'gemini-3.6-flash-high'
+  | 'gemini-3.6-flash-medium'
+  | 'gemini-3.6-flash-low'
   | 'gemini-2.5-flash'
   | 'gemini-2.5-flash-lite'
   | 'gemini-2.5-pro'
@@ -57,6 +63,8 @@ export type LLMModel =
   | 'gemini-1.5-flash'
   | 'gemini-pro'
   // Cohere Models
+  | 'command-a-plus-05-2026'
+  | 'command-a-03-2025'
   | 'command-r-plus'
   | 'command-r'
   | 'command-light'
@@ -70,6 +78,9 @@ export type LLMModel =
   | 'phi-4'
   | 'deepseek-coder'
   // Codex/OpenAI Models
+  | 'gpt-5.6-sol'
+  | 'gpt-5.6-terra'
+  | 'gpt-5.6-luna'
   | 'gpt-5.5'
   | 'gpt-5.4'
   | 'gpt-5.3-codex'
@@ -78,10 +89,14 @@ export type LLMModel =
   | 'gpt-5.1-codex'
   | 'gpt-5-codex'
   | 'gpt-5-codex-mini'
+  // GitHub Copilot fallback catalog (live /models discovery remains authoritative)
+  | 'claude-sonnet-4.6'
   // DeepSeek Models
   | 'deepseek-v4-pro'
   | 'deepseek-v4-flash'
   // Qwen Models
+  | 'qwen3.7-plus'
+  | 'qwen3.7-max'
   | 'qwen-max'
   | 'qwen-plus'
   | 'qwen-turbo'

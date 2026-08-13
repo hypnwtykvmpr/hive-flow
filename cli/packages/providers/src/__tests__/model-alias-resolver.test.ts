@@ -8,47 +8,64 @@ import {
 } from '../model-alias-resolver.js';
 import { DEFAULT_CONFIG } from '../openrouter-model-config.js';
 
+describe('current provider defaults (2026-08)', () => {
+  const expectedDefaults = {
+    'anthropic-cli': 'claude-opus-5',
+    'gemini-cli': 'gemini-3.6-flash-high',
+    'codex-cli': 'gpt-5.6-sol',
+  } as const;
+
+  for (const [provider, model] of Object.entries(expectedDefaults)) {
+    it(`${provider} resolves its default and flagship alias to the current model`, () => {
+      expect(PROVIDER_DEFAULTS[provider as keyof typeof expectedDefaults]).toBe(model);
+      expect(KNOWN_PROVIDER_MODELS[provider as keyof typeof expectedDefaults].has(model)).toBe(true);
+      expect(resolveProviderModel(provider, 'opus')).toBe(model);
+      expect(resolveProviderModel(provider, 'inherit')).toBe(model);
+    });
+  }
+});
+
 describe('resolveProviderModel', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   describe('Claude alias mapping', () => {
-    it('maps opus to gemini-3.5-flash for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'opus')).toBe('gemini-3.5-flash');
+    it('maps opus to gemini-3.6-flash-high for gemini-cli', () => {
+      expect(resolveProviderModel('gemini-cli', 'opus')).toBe('gemini-3.6-flash-high');
     });
 
-    it('maps sonnet to gemini-3.5-flash for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'sonnet')).toBe('gemini-3.5-flash');
+    it('maps sonnet to gemini-3.6-flash-high for gemini-cli', () => {
+      expect(resolveProviderModel('gemini-cli', 'sonnet')).toBe('gemini-3.6-flash-high');
     });
 
-    it('maps haiku to gemini-3.5-flash for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'haiku')).toBe('gemini-3.5-flash');
+    it('maps haiku to gemini-3.6-flash-high for gemini-cli', () => {
+      expect(resolveProviderModel('gemini-cli', 'haiku')).toBe('gemini-3.6-flash-high');
     });
 
-    it('maps opus to gpt-5.5 for codex-cli', () => {
-      expect(resolveProviderModel('codex-cli', 'opus')).toBe('gpt-5.5');
+    it('maps opus to gpt-5.6-sol for codex-cli', () => {
+      expect(resolveProviderModel('codex-cli', 'opus')).toBe('gpt-5.6-sol');
     });
 
-    it('maps sonnet to gpt-5.5 for codex-cli', () => {
-      expect(resolveProviderModel('codex-cli', 'sonnet')).toBe('gpt-5.5');
+    it('maps sonnet to gpt-5.6-sol for codex-cli', () => {
+      expect(resolveProviderModel('codex-cli', 'sonnet')).toBe('gpt-5.6-sol');
     });
 
-    it('maps haiku to gpt-5.5 for codex-cli', () => {
-      expect(resolveProviderModel('codex-cli', 'haiku')).toBe('gpt-5.5');
+    it('maps haiku to gpt-5.6-sol for codex-cli', () => {
+      expect(resolveProviderModel('codex-cli', 'haiku')).toBe('gpt-5.6-sol');
     });
 
-    it('maps inherit to undefined for codex-cli (use config.toml)', () => {
-      // codex-cli enforces gpt-5.5 regardless of input
-      expect(resolveProviderModel('codex-cli', 'inherit')).toBe('gpt-5.5');
+    it('maps inherit to the enforced Codex default', () => {
+      // codex-cli enforces gpt-5.6-sol regardless of input
+      expect(resolveProviderModel('codex-cli', 'inherit')).toBe('gpt-5.6-sol');
     });
 
     it('maps mini to claude-sonnet-5 for anthropic-cli', () => {
       expect(resolveProviderModel('anthropic-cli', 'mini')).toBe('claude-sonnet-5');
     });
 
-    it('maps mini to gpt-5.5 for codex-cli', () => {
-      expect(resolveProviderModel('codex-cli', 'mini')).toBe('gpt-5.5');
+    it('maps mini to gpt-5.6-sol for codex-cli', () => {
+      expect(resolveProviderModel('codex-cli', 'mini')).toBe('gpt-5.6-sol');
     });
 
     it('maps mini to auto for cursor-cli', () => {
@@ -63,8 +80,8 @@ describe('resolveProviderModel', () => {
       expect(resolveProviderModel('lm-studio', 'mini')).toBe('local-model');
     });
 
-    it('maps mini to gemini-3.5-flash for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'mini')).toBe('gemini-3.5-flash');
+    it('maps mini to gemini-3.6-flash-high for gemini-cli', () => {
+      expect(resolveProviderModel('gemini-cli', 'mini')).toBe('gemini-3.6-flash-high');
     });
 
     it('maps all aliases to auto for cursor-cli', () => {
@@ -102,12 +119,12 @@ describe('resolveProviderModel', () => {
   });
 
   describe('provider defaults (no model specified)', () => {
-    it('returns gemini-3.5-flash for gemini-cli with undefined model', () => {
-      expect(resolveProviderModel('gemini-cli', undefined)).toBe('gemini-3.5-flash');
+    it('returns gemini-3.6-flash-high for gemini-cli with undefined model', () => {
+      expect(resolveProviderModel('gemini-cli', undefined)).toBe('gemini-3.6-flash-high');
     });
 
-    it('returns gpt-5.5 for codex-cli with undefined model (enforcement, not undefined)', () => {
-      expect(resolveProviderModel('codex-cli', undefined)).toBe('gpt-5.5');
+    it('returns gpt-5.6-sol for codex-cli with undefined model (enforcement, not undefined)', () => {
+      expect(resolveProviderModel('codex-cli', undefined)).toBe('gpt-5.6-sol');
     });
 
     it('returns auto for cursor-cli with undefined model', () => {
@@ -115,7 +132,7 @@ describe('resolveProviderModel', () => {
     });
 
     it('returns provider default for empty string model', () => {
-      expect(resolveProviderModel('gemini-cli', '')).toBe('gemini-3.5-flash');
+      expect(resolveProviderModel('gemini-cli', '')).toBe('gemini-3.6-flash-high');
     });
 
     it('returns local-model for lm-studio with undefined or empty model', () => {
@@ -126,11 +143,11 @@ describe('resolveProviderModel', () => {
 
   describe('auto model handling', () => {
     it('maps auto to provider default for gemini-cli', () => {
-      expect(resolveProviderModel('gemini-cli', 'auto')).toBe('gemini-3.5-flash');
+      expect(resolveProviderModel('gemini-cli', 'auto')).toBe('gemini-3.6-flash-high');
     });
 
-    it('maps auto to gpt-5.5 for codex-cli (model input ignored)', () => {
-      expect(resolveProviderModel('codex-cli', 'auto')).toBe('gpt-5.5');
+    it('maps auto to gpt-5.6-sol for codex-cli (model input ignored)', () => {
+      expect(resolveProviderModel('codex-cli', 'auto')).toBe('gpt-5.6-sol');
     });
 
     it('maps auto to auto for cursor-cli', () => {
@@ -139,18 +156,18 @@ describe('resolveProviderModel', () => {
   });
 
   describe('provider-hardcoded enforcement (no passthrough)', () => {
-    it('returns gpt-5.5 for codex-cli regardless of input model', () => {
-      expect(resolveProviderModel('codex-cli', 'gpt-5.3-codex')).toBe('gpt-5.5');
-      expect(resolveProviderModel('codex-cli', 'gpt-5.4')).toBe('gpt-5.5');
-      expect(resolveProviderModel('codex-cli', 'gemini-2.5-pro')).toBe('gpt-5.5');
-      expect(resolveProviderModel('codex-cli', 'some-unknown-model')).toBe('gpt-5.5');
+    it('returns gpt-5.6-sol for codex-cli regardless of input model', () => {
+      expect(resolveProviderModel('codex-cli', 'gpt-5.3-codex')).toBe('gpt-5.6-sol');
+      expect(resolveProviderModel('codex-cli', 'gpt-5.4')).toBe('gpt-5.6-sol');
+      expect(resolveProviderModel('codex-cli', 'gemini-2.5-pro')).toBe('gpt-5.6-sol');
+      expect(resolveProviderModel('codex-cli', 'some-unknown-model')).toBe('gpt-5.6-sol');
     });
 
-    it('returns gemini-3.5-flash for gemini-cli regardless of input model', () => {
-      expect(resolveProviderModel('gemini-cli', 'gemini-2.5-pro')).toBe('gemini-3.5-flash');
-      expect(resolveProviderModel('gemini-cli', 'gemini-3-flash-preview')).toBe('gemini-3.5-flash');
-      expect(resolveProviderModel('gemini-cli', 'gpt-5.3-codex')).toBe('gemini-3.5-flash');
-      expect(resolveProviderModel('gemini-cli', 'some-unknown-model')).toBe('gemini-3.5-flash');
+    it('returns gemini-3.6-flash-high for gemini-cli regardless of input model', () => {
+      expect(resolveProviderModel('gemini-cli', 'gemini-2.5-pro')).toBe('gemini-3.6-flash-high');
+      expect(resolveProviderModel('gemini-cli', 'gemini-3-flash-preview')).toBe('gemini-3.6-flash-high');
+      expect(resolveProviderModel('gemini-cli', 'gpt-5.3-codex')).toBe('gemini-3.6-flash-high');
+      expect(resolveProviderModel('gemini-cli', 'some-unknown-model')).toBe('gemini-3.6-flash-high');
     });
 
     it('returns auto for cursor-cli regardless of input model', () => {
@@ -166,12 +183,12 @@ describe('resolveProviderModel', () => {
   });
 
   describe('provider-native model passthrough (legacy — now enforced)', () => {
-    it('codex-cli always returns gpt-5.5 (enforcement overrides passthrough)', () => {
-      expect(resolveProviderModel('codex-cli', 'gpt-5.3-codex')).toBe('gpt-5.5');
+    it('codex-cli always returns gpt-5.6-sol (enforcement overrides passthrough)', () => {
+      expect(resolveProviderModel('codex-cli', 'gpt-5.3-codex')).toBe('gpt-5.6-sol');
     });
 
-    it('gemini-cli always returns gemini-3.5-flash (enforcement overrides passthrough)', () => {
-      expect(resolveProviderModel('gemini-cli', 'gemini-2.5-pro')).toBe('gemini-3.5-flash');
+    it('gemini-cli always returns gemini-3.6-flash-high (enforcement overrides passthrough)', () => {
+      expect(resolveProviderModel('gemini-cli', 'gemini-2.5-pro')).toBe('gemini-3.6-flash-high');
     });
 
     it('cursor-cli always returns auto (enforcement overrides passthrough)', () => {
@@ -180,14 +197,14 @@ describe('resolveProviderModel', () => {
   });
 
   describe('cross-provider model detection (enforcement — no warnings needed)', () => {
-    it('returns gpt-5.5 when gemini model used with codex provider', () => {
+    it('returns gpt-5.6-sol when gemini model used with codex provider', () => {
       const result = resolveProviderModel('codex-cli', 'gemini-2.5-pro');
-      expect(result).toBe('gpt-5.5'); // codex enforcement (not undefined)
+      expect(result).toBe('gpt-5.6-sol'); // codex enforcement (not undefined)
     });
 
-    it('returns gemini-3.5-flash when codex model used with gemini provider', () => {
+    it('returns gemini-3.6-flash-high when codex model used with gemini provider', () => {
       const result = resolveProviderModel('gemini-cli', 'gpt-5.3-codex');
-      expect(result).toBe('gemini-3.5-flash'); // gemini enforcement
+      expect(result).toBe('gemini-3.6-flash-high'); // gemini enforcement
     });
   });
 
@@ -208,7 +225,7 @@ describe('resolveProviderModel', () => {
   describe('unknown model handling (enforcement — no passthrough)', () => {
     it('returns enforced model, not unknown string', () => {
       const result = resolveProviderModel('gemini-cli', 'some-unknown-model');
-      expect(result).toBe('gemini-3.5-flash'); // enforced, not passed through
+      expect(result).toBe('gemini-3.6-flash-high'); // enforced, not passed through
     });
   });
 
@@ -275,8 +292,8 @@ describe('resolveProviderModel', () => {
     // ── Real-world coverage: every provider × every alias ──
 
     // anthropic-cli (5)
-    it('real-world: anthropic-cli + opus → claude-opus-4-8', () => {
-      expect(resolveProviderModel('anthropic-cli', 'opus')).toBe('claude-opus-4-8');
+    it('real-world: anthropic-cli + opus → claude-opus-5', () => {
+      expect(resolveProviderModel('anthropic-cli', 'opus')).toBe('claude-opus-5');
     });
     it('real-world: anthropic-cli + sonnet → claude-sonnet-5', () => {
       expect(resolveProviderModel('anthropic-cli', 'sonnet')).toBe('claude-sonnet-5');
@@ -287,42 +304,42 @@ describe('resolveProviderModel', () => {
     it('real-world: anthropic-cli + mini → claude-sonnet-5', () => {
       expect(resolveProviderModel('anthropic-cli', 'mini')).toBe('claude-sonnet-5');
     });
-    it('real-world: anthropic-cli + inherit → claude-opus-4-8', () => {
-      expect(resolveProviderModel('anthropic-cli', 'inherit')).toBe('claude-opus-4-8');
+    it('real-world: anthropic-cli + inherit → claude-opus-5', () => {
+      expect(resolveProviderModel('anthropic-cli', 'inherit')).toBe('claude-opus-5');
     });
 
     // gemini-cli (5)
-    it('real-world: gemini-cli + opus → gemini-3.5-flash', () => {
-      expect(resolveProviderModel('gemini-cli', 'opus')).toBe('gemini-3.5-flash');
+    it('real-world: gemini-cli + opus → gemini-3.6-flash-high', () => {
+      expect(resolveProviderModel('gemini-cli', 'opus')).toBe('gemini-3.6-flash-high');
     });
-    it('real-world: gemini-cli + sonnet → gemini-3.5-flash', () => {
-      expect(resolveProviderModel('gemini-cli', 'sonnet')).toBe('gemini-3.5-flash');
+    it('real-world: gemini-cli + sonnet → gemini-3.6-flash-high', () => {
+      expect(resolveProviderModel('gemini-cli', 'sonnet')).toBe('gemini-3.6-flash-high');
     });
-    it('real-world: gemini-cli + haiku → gemini-3.5-flash', () => {
-      expect(resolveProviderModel('gemini-cli', 'haiku')).toBe('gemini-3.5-flash');
+    it('real-world: gemini-cli + haiku → gemini-3.6-flash-high', () => {
+      expect(resolveProviderModel('gemini-cli', 'haiku')).toBe('gemini-3.6-flash-high');
     });
-    it('real-world: gemini-cli + mini → gemini-3.5-flash', () => {
-      expect(resolveProviderModel('gemini-cli', 'mini')).toBe('gemini-3.5-flash');
+    it('real-world: gemini-cli + mini → gemini-3.6-flash-high', () => {
+      expect(resolveProviderModel('gemini-cli', 'mini')).toBe('gemini-3.6-flash-high');
     });
-    it('real-world: gemini-cli + inherit → gemini-3.5-flash', () => {
-      expect(resolveProviderModel('gemini-cli', 'inherit')).toBe('gemini-3.5-flash');
+    it('real-world: gemini-cli + inherit → gemini-3.6-flash-high', () => {
+      expect(resolveProviderModel('gemini-cli', 'inherit')).toBe('gemini-3.6-flash-high');
     });
 
     // codex-cli (5)
-    it('real-world: codex-cli + opus → gpt-5.5', () => {
-      expect(resolveProviderModel('codex-cli', 'opus')).toBe('gpt-5.5');
+    it('real-world: codex-cli + opus → gpt-5.6-sol', () => {
+      expect(resolveProviderModel('codex-cli', 'opus')).toBe('gpt-5.6-sol');
     });
-    it('real-world: codex-cli + sonnet → gpt-5.5', () => {
-      expect(resolveProviderModel('codex-cli', 'sonnet')).toBe('gpt-5.5');
+    it('real-world: codex-cli + sonnet → gpt-5.6-sol', () => {
+      expect(resolveProviderModel('codex-cli', 'sonnet')).toBe('gpt-5.6-sol');
     });
-    it('real-world: codex-cli + haiku → gpt-5.5', () => {
-      expect(resolveProviderModel('codex-cli', 'haiku')).toBe('gpt-5.5');
+    it('real-world: codex-cli + haiku → gpt-5.6-sol', () => {
+      expect(resolveProviderModel('codex-cli', 'haiku')).toBe('gpt-5.6-sol');
     });
-    it('real-world: codex-cli + mini → gpt-5.5', () => {
-      expect(resolveProviderModel('codex-cli', 'mini')).toBe('gpt-5.5');
+    it('real-world: codex-cli + mini → gpt-5.6-sol', () => {
+      expect(resolveProviderModel('codex-cli', 'mini')).toBe('gpt-5.6-sol');
     });
-    it('real-world: codex-cli + inherit → gpt-5.5', () => {
-      expect(resolveProviderModel('codex-cli', 'inherit')).toBe('gpt-5.5');
+    it('real-world: codex-cli + inherit → gpt-5.6-sol', () => {
+      expect(resolveProviderModel('codex-cli', 'inherit')).toBe('gpt-5.6-sol');
     });
 
     // cursor-cli (5)
@@ -409,11 +426,11 @@ describe('resolveProviderModel', () => {
     // sonnet bucket. Only exact aliases or 'claude-'-prefixed legacy names
     // route to claude-sonnet-5; everything else falls through to the
     // opus default.
-    it('edge: anthropic-cli ignores stray "mini" in unrelated name → Mini-Some-Model → claude-opus-4-8 (default)', () => {
-      expect(resolveProviderModel('anthropic-cli', 'Mini-Some-Model')).toBe('claude-opus-4-8');
+    it('edge: anthropic-cli ignores stray "mini" in unrelated name → Mini-Some-Model → claude-opus-5 (default)', () => {
+      expect(resolveProviderModel('anthropic-cli', 'Mini-Some-Model')).toBe('claude-opus-5');
     });
-    it('edge: anthropic-cli blocks cross-provider leak → gpt-5-codex-mini → claude-opus-4-8 (default)', () => {
-      expect(resolveProviderModel('anthropic-cli', 'gpt-5-codex-mini')).toBe('claude-opus-4-8');
+    it('edge: anthropic-cli blocks cross-provider leak → gpt-5-codex-mini → claude-opus-5 (default)', () => {
+      expect(resolveProviderModel('anthropic-cli', 'gpt-5-codex-mini')).toBe('claude-opus-5');
     });
 
     // Case-insensitive matching for deepseek legacy names
@@ -432,17 +449,17 @@ describe('resolveProviderModel', () => {
     });
 
     // Empty-string model for each CLI provider
-    it('edge: anthropic-cli + empty string → claude-opus-4-8', () => {
-      expect(resolveProviderModel('anthropic-cli', '')).toBe('claude-opus-4-8');
+    it('edge: anthropic-cli + empty string → claude-opus-5', () => {
+      expect(resolveProviderModel('anthropic-cli', '')).toBe('claude-opus-5');
     });
     it('edge: deepseek + empty string → deepseek-v4-pro', () => {
       expect(resolveProviderModel('deepseek', '')).toBe('deepseek-v4-pro');
     });
-    it('edge: gemini-cli + empty string → gemini-3.5-flash', () => {
-      expect(resolveProviderModel('gemini-cli', '')).toBe('gemini-3.5-flash');
+    it('edge: gemini-cli + empty string → gemini-3.6-flash-high', () => {
+      expect(resolveProviderModel('gemini-cli', '')).toBe('gemini-3.6-flash-high');
     });
-    it('edge: codex-cli + empty string → gpt-5.5', () => {
-      expect(resolveProviderModel('codex-cli', '')).toBe('gpt-5.5');
+    it('edge: codex-cli + empty string → gpt-5.6-sol', () => {
+      expect(resolveProviderModel('codex-cli', '')).toBe('gpt-5.6-sol');
     });
     it('edge: cursor-cli + empty string → auto', () => {
       expect(resolveProviderModel('cursor-cli', '')).toBe('auto');
@@ -473,17 +490,17 @@ describe('resolveProviderModel', () => {
     });
 
     // Undefined model for each CLI provider
-    it('edge: anthropic-cli + undefined → claude-opus-4-8', () => {
-      expect(resolveProviderModel('anthropic-cli', undefined)).toBe('claude-opus-4-8');
+    it('edge: anthropic-cli + undefined → claude-opus-5', () => {
+      expect(resolveProviderModel('anthropic-cli', undefined)).toBe('claude-opus-5');
     });
     it('edge: deepseek + undefined → deepseek-v4-pro', () => {
       expect(resolveProviderModel('deepseek', undefined)).toBe('deepseek-v4-pro');
     });
-    it('edge: gemini-cli + undefined → gemini-3.5-flash', () => {
-      expect(resolveProviderModel('gemini-cli', undefined)).toBe('gemini-3.5-flash');
+    it('edge: gemini-cli + undefined → gemini-3.6-flash-high', () => {
+      expect(resolveProviderModel('gemini-cli', undefined)).toBe('gemini-3.6-flash-high');
     });
-    it('edge: codex-cli + undefined → gpt-5.5', () => {
-      expect(resolveProviderModel('codex-cli', undefined)).toBe('gpt-5.5');
+    it('edge: codex-cli + undefined → gpt-5.6-sol', () => {
+      expect(resolveProviderModel('codex-cli', undefined)).toBe('gpt-5.6-sol');
     });
     it('edge: cursor-cli + undefined → auto', () => {
       expect(resolveProviderModel('cursor-cli', undefined)).toBe('auto');
@@ -506,11 +523,11 @@ describe('resolveProviderModel', () => {
     // ── Regression prevention ──
 
     it('regression: codex-cli no longer passes through gpt-5.3-codex', () => {
-      expect(resolveProviderModel('codex-cli', 'gpt-5.3-codex')).toBe('gpt-5.5');
+      expect(resolveProviderModel('codex-cli', 'gpt-5.3-codex')).toBe('gpt-5.6-sol');
     });
 
     it('regression: gemini-cli no longer passes through gemini-2.5-pro', () => {
-      expect(resolveProviderModel('gemini-cli', 'gemini-2.5-pro')).toBe('gemini-3.5-flash');
+      expect(resolveProviderModel('gemini-cli', 'gemini-2.5-pro')).toBe('gemini-3.6-flash-high');
     });
 
     it('regression: cursor-cli no longer passes through composer-1.5', () => {
@@ -530,8 +547,8 @@ describe('resolveProviderModel', () => {
     });
 
     it('regression: cross-provider warning loop removed for CLI providers', () => {
-      // codex-cli with a gemini model name must enforce gpt-5.5 (not fall back to undefined)
-      expect(resolveProviderModel('codex-cli', 'gemini-2.5-pro')).toBe('gpt-5.5');
+      // codex-cli with a gemini model name must enforce gpt-5.6-sol (not fall back to undefined)
+      expect(resolveProviderModel('codex-cli', 'gemini-2.5-pro')).toBe('gpt-5.6-sol');
     });
 
     it('regression: OpenRouter default (no/empty/inherit) selects from opus pool, not sonnet', () => {
@@ -542,12 +559,12 @@ describe('resolveProviderModel', () => {
       }
     });
 
-    it('regression: codex-cli inherit returns gpt-5.5 (not undefined)', () => {
-      expect(resolveProviderModel('codex-cli', 'inherit')).toBe('gpt-5.5');
+    it('regression: codex-cli inherit returns gpt-5.6-sol (not undefined)', () => {
+      expect(resolveProviderModel('codex-cli', 'inherit')).toBe('gpt-5.6-sol');
     });
 
-    it('regression: PROVIDER_DEFAULTS.codex-cli is gpt-5.5 (not undefined)', () => {
-      expect(PROVIDER_DEFAULTS['codex-cli']).toBe('gpt-5.5');
+    it('regression: PROVIDER_DEFAULTS.codex-cli is gpt-5.6-sol (not undefined)', () => {
+      expect(PROVIDER_DEFAULTS['codex-cli']).toBe('gpt-5.6-sol');
     });
 
     it('regression: deepseek-chat removed from KNOWN_PROVIDER_MODELS', () => {

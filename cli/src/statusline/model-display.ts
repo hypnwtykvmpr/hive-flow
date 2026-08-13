@@ -24,10 +24,10 @@ export interface ModelDisplayInput {
 
 export interface ModelDisplayResult {
   value: {
-    /** Human-readable model label, e.g. "Opus 4.8" or "Opus 4.8 1M".
+    /** Human-readable model label, e.g. "Opus 5" or "Opus 5 1M".
      *  Empty string when no source is available — renderer must omit row. */
     modelDisplay: string;
-    /** Raw model id as reported by the source, e.g. "claude-opus-4-8[1m]". */
+    /** Raw model id as reported by the source, e.g. "claude-opus-5". */
     id?: string;
   };
   /** 'live'   — resolved directly from stdin data present in this invocation.

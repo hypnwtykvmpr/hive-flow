@@ -8,6 +8,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { dirname, isAbsolute, join, resolve } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { CODEX_CLI_DEFAULT_MODEL, GEMINI_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 import { resolveProjectRoot } from '../permission-guard/protected-paths.js';
 import { resolveSessionId } from './session-id.js';
 
@@ -599,32 +600,30 @@ export function checkModelEnforcement(
   // correctly falls through to the per-provider top-tier check and is blocked.
   const ALLOWED_ALIASES = new Set(['opus', 'sonnet', 'mini', 'inherit', undefined]);
 
-  // Rule 2: gemini-cli requires gemini-3.5-flash (top tier) or an alias.
+  // Rule 2: gemini-cli requires the current Antigravity default or an alias.
   // DO-NOT-REVERT (2026-06): The `gemini-cli` provider now drives Google's
-  // ANTIGRAVITY CLI (`agy`), and `gemini-3.5-flash` is Antigravity's live base
-  // model (confirmed: `agy models` lists "Gemini 3.5 Flash" and
-  // `agy -p "..." --model gemini-3.5-flash` succeeds). This gate value is
-  // therefore correct and must NOT be changed to a legacy/dead model id.
+  // ANTIGRAVITY CLI (`agy`), not the legacy `gemini` binary. The shared
+  // provider constant is verified against `agy models` and a bounded live probe.
   if (
     normInput.provider === 'gemini-cli' &&
-    normInput.model !== 'gemini-3.5-flash' &&
+    normInput.model !== GEMINI_CLI_DEFAULT_MODEL &&
     !ALLOWED_ALIASES.has(normInput.model)
   ) {
     return {
       allowed: false,
-      reason: 'MODEL ENFORCEMENT: gemini-cli requires gemini-3.5-flash (top tier, Antigravity base model).',
+      reason: `MODEL ENFORCEMENT: gemini-cli requires ${GEMINI_CLI_DEFAULT_MODEL} (current Antigravity default).`,
     };
   }
 
-  // Rule 3: codex-cli requires gpt-5.5 (top tier) or an alias. No gpt-5.4 rollout exception.
+  // Rule 3: codex-cli requires the current Codex default or an alias.
   if (
     normInput.provider === 'codex-cli' &&
-    normInput.model !== 'gpt-5.5' &&
+    normInput.model !== CODEX_CLI_DEFAULT_MODEL &&
     !ALLOWED_ALIASES.has(normInput.model)
   ) {
     return {
       allowed: false,
-      reason: 'MODEL ENFORCEMENT: codex-cli requires gpt-5.5 (top tier).',
+      reason: `MODEL ENFORCEMENT: codex-cli requires ${CODEX_CLI_DEFAULT_MODEL} (current default).`,
     };
   }
 

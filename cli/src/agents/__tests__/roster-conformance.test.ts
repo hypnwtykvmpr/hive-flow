@@ -2,6 +2,13 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  ANTHROPIC_CLI_DEFAULT_MODEL,
+  ANTHROPIC_SONNET_MODEL,
+  CODEX_CLI_DEFAULT_MODEL,
+  GEMINI_CLI_DEFAULT_MODEL,
+  PROVIDER_DEFAULTS,
+} from '@hive-flow/providers';
+import {
   CANONICAL_AGENT_TYPES,
   getCanonicalAgentTypes,
   loadCanonicalRoster,
@@ -82,6 +89,28 @@ describe('canonical agent roster', () => {
 
     for (const governanceType of GOVERNANCE_TYPES) {
       expect(types.has(governanceType)).toBe(false);
+    }
+  });
+
+  it('uses current canonical defaults for every provider-backed role', () => {
+    const expectedByProvider: Record<string, string> = {
+      'anthropic-cli': ANTHROPIC_CLI_DEFAULT_MODEL,
+      'codex-cli': CODEX_CLI_DEFAULT_MODEL,
+      'gemini-cli': GEMINI_CLI_DEFAULT_MODEL,
+      'gemini': GEMINI_CLI_DEFAULT_MODEL,
+      'openrouter': PROVIDER_DEFAULTS.openrouter!,
+      'deepseek': PROVIDER_DEFAULTS.deepseek!,
+    };
+
+    for (const record of loadCanonicalRoster()) {
+      if (record.defaultProvider === 'claude-code') {
+        expect(
+          [ANTHROPIC_CLI_DEFAULT_MODEL, ANTHROPIC_SONNET_MODEL],
+          `${record.type} model`,
+        ).toContain(record.defaultModel);
+        continue;
+      }
+      expect(record.defaultModel, `${record.type} model`).toBe(expectedByProvider[record.defaultProvider]);
     }
   });
 

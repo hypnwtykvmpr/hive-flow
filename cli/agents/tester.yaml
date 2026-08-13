@@ -3,7 +3,7 @@ type: tester
 description: Test author and verifier for unit, integration, edge-case, and regression coverage.
 soloExempt: false
 defaultProvider: codex-cli
-defaultModel: gpt-5.5
+defaultModel: gpt-5.6-sol
 phases:
   - 6
   - 7

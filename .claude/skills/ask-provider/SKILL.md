@@ -1,11 +1,11 @@
 ---
 name: ask-provider
-description: Send prompts to alternative LLM providers (Gemini, Codex, Cursor) via CLI
+description: Send prompts to alternative LLM providers (Claude, Gemini, Codex, Cursor) via CLI
 ---
 
 ## Quick Provider Prompting
 
-Send prompts to Gemini, Codex, or Cursor CLI providers using the `provider_complete` MCP tool.
+Send prompts to Claude, Gemini, Codex, or Cursor CLI providers using the `provider_complete` MCP tool.
 
 ### Examples
 
@@ -30,7 +30,7 @@ Use Claude aliases for portable model selection:
 - `sonnet` -- balanced
 - `opus` -- most capable
 
-Or use provider-native names directly (e.g., `gemini-3.1-pro-preview`, `gpt-5.4`).
+Or use provider-native names directly (e.g., `gemini-3.6-flash-high`, `gpt-5.6-sol`).
 
 ### With System Prompt
 
@@ -62,7 +62,7 @@ agent_task { "agentId": "gemini-investigator", "task": "Are there any unhandled 
 agent_status { "agentId": "gemini-investigator" }
 ```
 
-Provider agents maintain conversation history across tasks. Default models: gemini-cli uses `gemini-3.1-pro-preview`, codex-cli uses `gpt-5.4`, cursor-cli uses `auto`. See `/provider-agents` for full documentation.
+Provider agents maintain conversation history across tasks. Default models: anthropic-cli uses `claude-opus-5`, gemini-cli uses `gemini-3.6-flash-high`, codex-cli uses `gpt-5.6-sol`, and cursor-cli uses `auto`. See `/provider-agents` for full documentation.
 
 ### Prerequisites
 

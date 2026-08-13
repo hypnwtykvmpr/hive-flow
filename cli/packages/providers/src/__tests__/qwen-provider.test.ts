@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QwenCLIProvider } from '../qwen-cli-provider.js';
 import { QwenProvider } from '../qwen-provider.js';
 
 const noopLogger = {
@@ -19,6 +20,32 @@ describe('QwenProvider', () => {
     else process.env.DASHSCOPE_API_KEY = originalDashscopeKey;
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ['qwen', QwenProvider],
+    ['qwen-cli', QwenCLIProvider],
+  ] as const)('%s defaults to the current recommended Qwen model', (_name, Provider) => {
+    const provider = new Provider({
+      config: { provider: _name, model: undefined as never },
+      logger: noopLogger,
+    });
+    (provider as unknown as { validateConfig(): void }).validateConfig();
+
+    expect(provider.config.model).toBe('qwen3.7-plus');
+    expect(provider.capabilities.supportedModels).toContain('qwen3.7-plus');
+    expect(provider.capabilities.maxContextLength['qwen3.7-plus']).toBe(1_000_000);
+    expect(provider.capabilities.maxOutputTokens['qwen3.7-plus']).toBe(65_536);
+    expect(provider.capabilities.pricing['qwen3.7-plus']).toMatchObject({
+      promptCostPer1k: 0.0012,
+      completionCostPer1k: 0.0048,
+      currency: 'USD',
+    });
+    expect(provider.capabilities.pricing['qwen3.7-max']).toMatchObject({
+      promptCostPer1k: 0.0025,
+      completionCostPer1k: 0.0075,
+      currency: 'USD',
+    });
   });
 
   it('ignores ambient QWEN_API_KEY and DASHSCOPE_API_KEY when strict config has no apiKey', async () => {

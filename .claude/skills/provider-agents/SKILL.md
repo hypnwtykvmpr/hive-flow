@@ -1,18 +1,19 @@
 ---
 name: provider-agents
-description: Spawn and manage persistent agents backed by Gemini, Codex, or Cursor CLI providers
+description: Spawn and manage persistent agents backed by Claude, Gemini, Codex, or Cursor CLI providers
 ---
 
 ## Persistent Provider Agents
 
-Provider agents are long-lived agents backed by external CLI providers (Gemini, Codex, Cursor). Unlike one-off completions (`provider_complete`), provider agents maintain conversation history across tasks, accumulate context, and appear in agent status/list.
+Provider agents are long-lived agents backed by external CLI providers (Claude, Gemini, Codex, Cursor). Unlike one-off completions (`provider_complete`), provider agents maintain conversation history across tasks, accumulate context, and appear in agent status/list.
 
 ### Default Models
 
 | Provider | Default Model |
 |----------|--------------|
-| `gemini-cli` | `gemini-3.1-pro-preview` |
-| `codex-cli` | `gpt-5.4` |
+| `anthropic-cli` | `claude-opus-5` |
+| `gemini-cli` | `gemini-3.6-flash-high` |
+| `codex-cli` | `gpt-5.6-sol` |
 | `cursor-cli` | `auto` |
 
 ### Spawn a Provider Agent
@@ -83,11 +84,11 @@ Use provider agents for investigation and analysis tasks. Use Claude agents when
 
 ### Troubleshooting
 
-- **"binary not found"** -- The provider CLI is not installed. Install it:
-  - Gemini: `npm i -g @google/gemini-cli`
+- **"binary not found"** -- The provider CLI is not installed. Install or repair it:
+  - Gemini: install Antigravity and ensure its `agy` CLI is on `PATH`
   - Codex: `npm i -g @openai/codex`
 - **"not authenticated"** -- Run the provider's auth flow:
-  - Gemini: `gemini auth`
+  - Gemini: run or repair `agy` in a real terminal or the Antigravity app
   - Codex: Set `CODEX_API_KEY` env var or run `codex auth`
   - Cursor: Set `CURSOR_API_KEY` env var
 - **Timeout** -- Long responses may time out. The system uses streaming internally to mitigate this. If timeouts persist, try breaking the task into smaller prompts.

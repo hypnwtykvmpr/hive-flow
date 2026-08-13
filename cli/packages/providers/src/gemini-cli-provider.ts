@@ -9,7 +9,7 @@
  * `gemini` binary's backend returns HTTP 404
  * `ModelNotFoundError: Requested entity was not found` for current models —
  * THAT is the recurring regression. Antigravity `agy` is signed in and live.
- * Headless usage (confirmed live): `agy -p "<prompt>" --model gemini-3.5-flash`.
+ * Headless usage (confirmed live): `agy -p "<prompt>" --model gemini-3.6-flash-high`.
  * NOTE: `agy` has NO `--output-format` / `--skip-trust` flags and emits PLAIN
  * TEXT (no JSON). Do NOT re-add `--output-format`, `--skip-trust`, or switch
  * the binary back to `gemini` / install `@google/gemini-cli` — doing so
@@ -28,6 +28,7 @@ import {
   LLMProviderError, AuthenticationError, ProviderUnavailableError,
 } from './types.js';
 import { parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
+import { GEMINI_CLI_DEFAULT_MODEL } from './model-alias-resolver.js';
 import {
   GEMINI_EXIT_CODES as EXIT, MAX_STDOUT_BYTES,
   GEMINI_MODELS, GEMINI_MODEL_DESCRIPTIONS, GEMINI_CAPABILITIES,
@@ -116,7 +117,7 @@ export class GeminiCLIProvider extends BaseProvider {
 
   protected validateConfig(): void {
     if (!this.config.model) {
-      this.config.model = 'gemini-3.5-flash';
+      this.config.model = GEMINI_CLI_DEFAULT_MODEL;
     }
     if (!this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by ${this.name}`);
@@ -457,7 +458,7 @@ export class GeminiCLIProvider extends BaseProvider {
   private findBinary(): Promise<string | null> {
     // DO-NOT-REVERT (2026-06): Resolve the ANTIGRAVITY binary `agy`, NOT `gemini`.
     // The dead `@google/gemini-cli` (`gemini`) returns HTTP 404 ModelNotFoundError
-    // for gemini-3.5-flash. `agy` is Google's live replacement. Reverting this
+    // for current Gemini models. `agy` is Google's live replacement. Reverting this
     // lookup to 'gemini' reintroduces the 404 regression.
     const cmd = process.platform === 'win32' ? 'where' : 'which';
     return new Promise((resolve) => {

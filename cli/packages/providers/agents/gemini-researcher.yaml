@@ -1,7 +1,7 @@
 name: gemini-researcher
 description: Research agent powered by Google Gemini CLI
 provider: gemini-cli
-defaultModel: gemini-3.5-flash
+defaultModel: gemini-3.6-flash-high
 capabilities:
   - code-analysis
   - architecture-review

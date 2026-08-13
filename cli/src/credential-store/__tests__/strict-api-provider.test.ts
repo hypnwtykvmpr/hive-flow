@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createStrictApiProviderInvoker, defaultCredentialHolderSocketPath } from '../strict-api-provider.js';
+import { CODEX_CLI_DEFAULT_MODEL, QWEN_DEFAULT_MODEL } from '@hive-flow/providers';
 
 describe('credential holder socket path resolution', () => {
   it('keeps explicit holder socket ahead of all defaults', () => {
@@ -40,6 +41,38 @@ describe('credential holder socket path resolution', () => {
 });
 
 describe('strict API provider holder invoker', () => {
+  it.each([
+    ['openai', CODEX_CLI_DEFAULT_MODEL],
+    ['qwen', QWEN_DEFAULT_MODEL],
+  ])('uses the canonical %s model when the caller omits one', async (provider, expectedModel) => {
+    let observedBody: Record<string, unknown> | undefined;
+    const fetchImpl = vi.fn(async (_url, init) => {
+      observedBody = JSON.parse(String(init?.body || '{}'));
+      return new Response(JSON.stringify({
+        model: expectedModel,
+        choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    const invoker = createStrictApiProviderInvoker({ fetchImpl });
+
+    await invoker({
+      provider,
+      taskId: `task-default-${provider}`,
+      secret: Buffer.from('holder-owned-secret'),
+      peer: { pid: 42, uid: 501, startTime: 'peer-start' },
+      request: {
+        action: 'complete',
+        payload: {
+          messages: [{ role: 'user', content: 'hello' }],
+          timeout: 1_000,
+        },
+      },
+    });
+
+    expect(observedBody?.model).toBe(expectedModel);
+  });
+
   it('forwards OpenAI-compatible tools, tool_choice, and tool-result messages without exposing holder-owned secrets', async () => {
     let observedBody: Record<string, unknown> | undefined;
     const fetchImpl = vi.fn(async (_url, init) => {

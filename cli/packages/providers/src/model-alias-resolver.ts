@@ -20,6 +20,17 @@ export type ClaudeAlias = typeof CLAUDE_ALIASES[number];
 /** Provider names that support alias resolution */
 export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cursor-cli' | 'deepseek' | 'openrouter' | 'lm-studio';
 
+/** Current provider-enforced defaults, verified against the installed CLIs. */
+export const ANTHROPIC_CLI_DEFAULT_MODEL = 'claude-opus-5';
+export const ANTHROPIC_SONNET_MODEL = 'claude-sonnet-5';
+export const ANTHROPIC_HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+export const GEMINI_CLI_DEFAULT_MODEL = 'gemini-3.6-flash-high';
+export const GEMINI_API_DEFAULT_MODEL = 'gemini-3.6-flash';
+export const CODEX_CLI_DEFAULT_MODEL = 'gpt-5.6-sol';
+export const OPENAI_API_DEFAULT_MODEL = CODEX_CLI_DEFAULT_MODEL;
+export const DEEPSEEK_DEFAULT_MODEL = 'deepseek-v4-pro';
+export const DEEPSEEK_FLASH_MODEL = 'deepseek-v4-flash';
+
 /**
  * Maps Claude aliases to provider-native model names.
  *
@@ -32,25 +43,25 @@ export type CLIProviderName = 'anthropic-cli' | 'gemini-cli' | 'codex-cli' | 'cu
  */
 export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string | undefined>> = {
   'anthropic-cli': {
-    'opus': 'claude-opus-4-8',
-    'sonnet': 'claude-sonnet-5',
-    'haiku': 'claude-sonnet-5',
-    'mini': 'claude-sonnet-5',
+    'opus': ANTHROPIC_CLI_DEFAULT_MODEL,
+    'sonnet': ANTHROPIC_SONNET_MODEL,
+    'haiku': ANTHROPIC_SONNET_MODEL,
+    'mini': ANTHROPIC_SONNET_MODEL,
     'inherit': undefined,  // Let claude -p use its default
   },
   'gemini-cli': {
-    'opus': 'gemini-3.5-flash',
-    'sonnet': 'gemini-3.5-flash',
-    'haiku': 'gemini-3.5-flash',  // haiku alias → same as sonnet
-    'mini': 'gemini-3.5-flash',   // mini alias → same as sonnet
-    'inherit': 'gemini-3.5-flash',
+    'opus': GEMINI_CLI_DEFAULT_MODEL,
+    'sonnet': GEMINI_CLI_DEFAULT_MODEL,
+    'haiku': GEMINI_CLI_DEFAULT_MODEL,  // haiku alias → same as sonnet
+    'mini': GEMINI_CLI_DEFAULT_MODEL,   // mini alias → same as sonnet
+    'inherit': GEMINI_CLI_DEFAULT_MODEL,
   },
   'codex-cli': {
-    'opus': 'gpt-5.5',
-    'sonnet': 'gpt-5.5',
-    'haiku': 'gpt-5.5',  // haiku alias → same as sonnet
-    'mini': 'gpt-5.5',   // mini alias → same as sonnet
-    'inherit': 'gpt-5.5',
+    'opus': CODEX_CLI_DEFAULT_MODEL,
+    'sonnet': CODEX_CLI_DEFAULT_MODEL,
+    'haiku': CODEX_CLI_DEFAULT_MODEL,  // haiku alias → same as sonnet
+    'mini': CODEX_CLI_DEFAULT_MODEL,   // mini alias → same as sonnet
+    'inherit': CODEX_CLI_DEFAULT_MODEL,
   },
   'cursor-cli': {
     'opus': 'auto',
@@ -60,11 +71,11 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
     'inherit': 'auto',
   },
   'deepseek': {
-    'opus': 'deepseek-v4-pro',
-    'sonnet': 'deepseek-v4-pro',
-    'haiku': 'deepseek-v4-flash',   // flash tier for haiku
-    'mini': 'deepseek-v4-flash',    // mini alias → same as haiku (flash)
-    'inherit': 'deepseek-v4-pro',
+    'opus': DEEPSEEK_DEFAULT_MODEL,
+    'sonnet': DEEPSEEK_DEFAULT_MODEL,
+    'haiku': DEEPSEEK_FLASH_MODEL,   // flash tier for haiku
+    'mini': DEEPSEEK_FLASH_MODEL,    // mini alias → same as haiku (flash)
+    'inherit': DEEPSEEK_DEFAULT_MODEL,
   },
   'openrouter': {
     'opus': undefined,
@@ -84,11 +95,11 @@ export const PROVIDER_ALIAS_MAP: Record<CLIProviderName, Record<string, string |
 
 /** Default models when no model is specified at all */
 export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
-  'anthropic-cli': 'claude-opus-4-8',
-  'gemini-cli': 'gemini-3.5-flash',
-  'codex-cli': 'gpt-5.5',
+  'anthropic-cli': ANTHROPIC_CLI_DEFAULT_MODEL,
+  'gemini-cli': GEMINI_CLI_DEFAULT_MODEL,
+  'codex-cli': CODEX_CLI_DEFAULT_MODEL,
   'cursor-cli': 'auto',
-  'deepseek': 'deepseek-v4-pro',
+  'deepseek': DEEPSEEK_DEFAULT_MODEL,
   // DO-NOT-REVERT: human-selected OpenRouter default is MiniMax M3.
   // Xiaomi may remain an allowlisted fallback, but it is not the default.
   'openrouter': 'minimax/minimax-m3',
@@ -104,17 +115,19 @@ export const PROVIDER_DEFAULTS: Record<CLIProviderName, string | undefined> = {
  */
 export const KNOWN_PROVIDER_MODELS: Record<CLIProviderName, Set<string>> = {
   'anthropic-cli': new Set([
-    'claude-fable-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6', 'claude-haiku-4-5-20251001',
+    ANTHROPIC_CLI_DEFAULT_MODEL, 'claude-fable-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-opus-4-6', 'claude-haiku-4-5-20251001',
     'claude-3-5-sonnet-20241022', 'claude-3-5-sonnet-latest',
     'claude-3-opus-20240229', 'claude-3-sonnet-20240229',
     'claude-3-haiku-20240307',
   ]),
   'gemini-cli': new Set([
+    GEMINI_CLI_DEFAULT_MODEL, 'gemini-3.6-flash-medium', 'gemini-3.6-flash-low',
     'auto', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro',
     'gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite',
     'gemini-3.1-flash-lite-preview', 'gemini-3.5-flash',
   ]),
   'codex-cli': new Set([
+    CODEX_CLI_DEFAULT_MODEL, 'gpt-5.6-terra', 'gpt-5.6-luna',
     'gpt-5.5', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
     'gpt-5.1-codex', 'gpt-5-codex', 'gpt-5-codex-mini', 'auto',
   ]),
@@ -224,17 +237,17 @@ export function resolveProviderModel(
     return 'auto';
   }
   if (cliProvider === 'gemini-cli') {
-    return 'gemini-3.5-flash';
+    return GEMINI_CLI_DEFAULT_MODEL;
   }
   if (cliProvider === 'codex-cli') {
-    return 'gpt-5.5';
+    return CODEX_CLI_DEFAULT_MODEL;
   }
 
   // anthropic-cli → token-anchored alias / legacy-name resolution
   // Tightened to block cross-provider leaks (e.g. 'gpt-5-codex-mini') while still
   // mapping canonical aliases and legacy Anthropic names to the sonnet tier.
   if (cliProvider === 'anthropic-cli') {
-    if (!userModel || userModel === '') return 'claude-opus-4-8'; // default
+    if (!userModel || userModel === '') return ANTHROPIC_CLI_DEFAULT_MODEL;
     const lower = userModel.toLowerCase();
     // Exact alias match
     if (lower === 'sonnet' || lower === 'haiku' || lower === 'mini') {
@@ -244,7 +257,7 @@ export function resolveProviderModel(
     if (lower.startsWith('claude-') && (lower.includes('sonnet') || lower.includes('haiku'))) {
       return 'claude-sonnet-5';
     }
-    return 'claude-opus-4-8';  // default
+    return ANTHROPIC_CLI_DEFAULT_MODEL;
   }
 
   // deepseek → token-anchored alias / legacy-name resolution
@@ -314,6 +327,7 @@ export function resolveProviderModelOrOpus(
  */
 export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   // Anthropic
+  'claude-opus-5': 1_000_000,
   'claude-fable-5': 1_000_000,
   'claude-opus-4-8': 1_000_000,
   'claude-opus-4-6': 1_000_000,
@@ -326,6 +340,9 @@ export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   'claude-3-sonnet-20240229': 200_000,
   'claude-3-haiku-20240307': 200_000,
   // Gemini
+  'gemini-3.6-flash-high': 1_048_576,
+  'gemini-3.6-flash-medium': 1_048_576,
+  'gemini-3.6-flash-low': 1_048_576,
   'gemini-3.5-flash': 1_000_000,
   'gemini-2.5-pro': 1_000_000,
   'gemini-2.5-flash': 1_000_000,
@@ -335,6 +352,9 @@ export const DEFAULT_CONTEXT_WINDOWS: Record<string, number> = {
   'gemini-3.1-flash-lite': 1_000_000,
   'gemini-3.1-flash-lite-preview': 1_000_000,
   // OpenAI / Codex
+  'gpt-5.6-sol': 1_050_000,
+  'gpt-5.6-terra': 1_050_000,
+  'gpt-5.6-luna': 1_050_000,
   'gpt-5.5': 1_000_000,
   'gpt-5.4': 1_000_000,
   'gpt-5.4-mini': 400_000,

@@ -660,7 +660,7 @@
     "version": "3.0.0",
     "enabled": true,
     "modelPreferences": {
-      "default": "claude-opus-4-8",
+      "default": "claude-opus-5",
       "routing": "claude-sonnet-5"
     },
     "agentTeams": {

@@ -205,6 +205,9 @@ describe('gemini-cli binary-surface guard (static / offline)', () => {
     const src = readSource(join('scripts', 'setup-provider-agents.ts'));
     expect(src).toMatch(/name:\s*'gemini-cli',\s*binary:\s*'agy'/);
     expect(src).not.toMatch(/name:\s*'gemini-cli',\s*binary:\s*'gemini'/);
+    expect(src).toContain('defaultModel: GEMINI_CLI_DEFAULT_MODEL');
+    expect(src).toContain('defaultModel: CODEX_CLI_DEFAULT_MODEL');
+    expect(src).toMatch(/import\s*\{[\s\S]*CODEX_CLI_DEFAULT_MODEL,[\s\S]*GEMINI_CLI_DEFAULT_MODEL,[\s\S]*\}\s*from '\.\.\/src\/model-alias-resolver\.js'/);
   });
 
   it('provider hook runtime maps gemini-cli to agy, never gemini', () => {

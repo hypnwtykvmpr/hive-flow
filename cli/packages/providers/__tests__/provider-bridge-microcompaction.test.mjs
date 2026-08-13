@@ -158,7 +158,7 @@ describe('Slice A microcompaction budget heuristic', () => {
     const cases = [
       { provider: 'openrouter', maxTokens: 128_000 },
       { provider: 'cursor-cli', maxTokens: 200_000 },
-      { provider: 'codex-cli', maxTokens: 400_000 },
+      { provider: 'codex-cli', maxTokens: 1_050_000 },
       { provider: 'deepseek', maxTokens: 1_000_000 },
       { provider: 'anthropic-cli', maxTokens: 1_000_000 },
     ];

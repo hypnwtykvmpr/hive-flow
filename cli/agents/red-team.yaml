@@ -3,7 +3,7 @@ type: red-team
 description: Adversarial attacker for enforcement gates, escapes, bypasses, and abuse cases.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: opus-4.1
+defaultModel: claude-opus-5
 phases:
   - 7
   - 8

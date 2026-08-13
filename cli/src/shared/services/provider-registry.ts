@@ -17,6 +17,11 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { IEventBus } from '../core/interfaces/event.interface.js';
+import {
+  ANTHROPIC_CLI_DEFAULT_MODEL,
+  CODEX_CLI_DEFAULT_MODEL,
+  GEMINI_API_DEFAULT_MODEL,
+} from '@hive-flow/providers';
 
 // =============================================================================
 // Types
@@ -118,7 +123,7 @@ const BUILTIN_PROVIDERS: ProviderModule[] = [
       version: '1.0.0',
       description: 'Anthropic Claude models (Opus, Sonnet, Haiku)',
       priority: 1,
-      models: ['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5-20251001'],
+      models: [ANTHROPIC_CLI_DEFAULT_MODEL, 'claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5-20251001'],
       capabilities: {
         streaming: true,
         toolUse: true,
@@ -139,14 +144,14 @@ const BUILTIN_PROVIDERS: ProviderModule[] = [
       version: '1.0.0',
       description: 'OpenAI GPT and Codex models',
       priority: 2,
-      models: ['gpt-4o', 'gpt-4-turbo', 'o3-mini'],
+      models: [CODEX_CLI_DEFAULT_MODEL, 'gpt-4o', 'gpt-4-turbo', 'o3-mini'],
       capabilities: {
         streaming: true,
         toolUse: true,
         vision: true,
         codeExecution: true,
-        contextWindow: 128000,
-        maxOutputTokens: 16384,
+        contextWindow: 1050000,
+        maxOutputTokens: 128000,
       },
       apiKeyEnvVar: 'OPENAI_API_KEY',
       baseUrl: 'https://api.openai.com',
@@ -160,14 +165,14 @@ const BUILTIN_PROVIDERS: ProviderModule[] = [
       version: '1.0.0',
       description: 'Google Gemini models',
       priority: 3,
-      models: ['gemini-2.0-flash', 'gemini-2.0-pro'],
+      models: [GEMINI_API_DEFAULT_MODEL, 'gemini-2.0-flash', 'gemini-2.0-pro'],
       capabilities: {
         streaming: true,
         toolUse: true,
         vision: true,
         codeExecution: true,
-        contextWindow: 1000000,
-        maxOutputTokens: 8192,
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
       },
       apiKeyEnvVar: 'GOOGLE_API_KEY',
       baseUrl: 'https://generativelanguage.googleapis.com',

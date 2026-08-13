@@ -1,8 +1,8 @@
 /**
  * V3 Qwen CLI Subprocess Provider
  *
- * Wraps the `qwen` CLI binary (Qwen Code v0.10.6+) as a subprocess provider.
- * Auth: Local Qwen OAuth — no API key needed.
+ * Wraps the `qwen` CLI binary (verified with Qwen Code v0.21.7) as a subprocess provider.
+ * Auth: the installed Qwen Code configuration or provider API-key environment.
  *
  * Invocation patterns:
  * - Non-streaming: qwen "prompt" --output-format json -m <model>
@@ -19,29 +19,21 @@ import {
   LLMMessage, ModelInfo, ProviderCapabilities, HealthCheckResult,
   LLMProviderError, ProviderUnavailableError,
 } from './types.js';
-
-const SUPPORTED_MODELS: LLMModel[] = ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen-long'];
-
-const MODEL_DESC: Record<string, string> = {
-  'qwen-max': 'Qwen Max via CLI - Flagship model',
-  'qwen-plus': 'Qwen Plus via CLI - Balanced',
-  'qwen-turbo': 'Qwen Turbo via CLI - Fast',
-  'qwen-long': 'Qwen Long via CLI - Ultra-long context',
-};
-
-const p = (prompt: number, completion: number) =>
-  ({ promptCostPer1k: prompt, completionCostPer1k: completion, currency: 'USD' });
+import {
+  QWEN_CONTEXT_WINDOWS,
+  QWEN_DEFAULT_MODEL,
+  QWEN_MODEL_DESCRIPTIONS,
+  QWEN_MODELS,
+  QWEN_OUTPUT_LIMITS,
+  QWEN_PRICING,
+} from './qwen-model-constants.js';
 
 export class QwenCLIProvider extends BaseProvider {
   readonly name: LLMProvider = 'qwen-cli';
   readonly capabilities: ProviderCapabilities = {
-    supportedModels: SUPPORTED_MODELS,
-    maxContextLength: {
-      'qwen-max': 32768, 'qwen-plus': 131072, 'qwen-turbo': 131072, 'qwen-long': 10000000,
-    },
-    maxOutputTokens: {
-      'qwen-max': 8192, 'qwen-plus': 8192, 'qwen-turbo': 8192, 'qwen-long': 8192,
-    },
+    supportedModels: QWEN_MODELS,
+    maxContextLength: QWEN_CONTEXT_WINDOWS,
+    maxOutputTokens: QWEN_OUTPUT_LIMITS,
     supportsStreaming: true,
     supportsToolCalling: false,
     supportsSystemMessages: true,
@@ -51,12 +43,7 @@ export class QwenCLIProvider extends BaseProvider {
     supportsEmbeddings: false,
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 2000000, concurrentRequests: 5 },
-    pricing: {
-      'qwen-max': p(0.0016, 0.0064),
-      'qwen-plus': p(0.0004, 0.0012),
-      'qwen-turbo': p(0.0002, 0.0006),
-      'qwen-long': p(0.00005, 0.0002),
-    },
+    pricing: QWEN_PRICING,
   };
 
   private binaryPath: string | null = null;
@@ -65,7 +52,7 @@ export class QwenCLIProvider extends BaseProvider {
   constructor(options: BaseProviderOptions) { super(options); }
 
   protected validateConfig(): void {
-    if (!this.config.model) this.config.model = 'qwen-turbo';
+    if (!this.config.model) this.config.model = QWEN_DEFAULT_MODEL;
     if (!this.validateModel(this.config.model)) {
       this.logger.warn(`Model ${this.config.model} may not be supported by ${this.name}`);
     }
@@ -218,13 +205,13 @@ export class QwenCLIProvider extends BaseProvider {
     }
   }
 
-  async listModels(): Promise<LLMModel[]> { return [...SUPPORTED_MODELS]; }
+  async listModels(): Promise<LLMModel[]> { return [...QWEN_MODELS]; }
 
   async getModelInfo(model: LLMModel): Promise<ModelInfo> {
     const pr = this.capabilities.pricing[model];
     return {
       model, name: model,
-      description: MODEL_DESC[model] || 'Qwen CLI model',
+      description: QWEN_MODEL_DESCRIPTIONS[model] || 'Qwen CLI model',
       contextLength: this.capabilities.maxContextLength[model] || 32768,
       maxOutputTokens: this.capabilities.maxOutputTokens[model] || 8192,
       supportedFeatures: ['chat', 'completion', 'cli-subprocess'],
@@ -241,7 +228,7 @@ export class QwenCLIProvider extends BaseProvider {
     try {
       const version = await this.runVersion();
       return { healthy: true, timestamp: new Date(),
-        details: { binary: this.binaryPath, version, authMethod: 'qwen-oauth' } };
+        details: { binary: this.binaryPath, version, authMethod: 'qwen-cli-config' } };
     } catch (error) {
       return { healthy: false, error: error instanceof Error ? error.message : 'Failed to run qwen --version',
         timestamp: new Date(), details: { binary: this.binaryPath } };

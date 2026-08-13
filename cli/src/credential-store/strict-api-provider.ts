@@ -11,6 +11,11 @@ import {
 } from './holder.js';
 import { createPeerCredentialResolver, type PeerCredentialResolver } from './peer-credentials.js';
 import { redactCredentialMaterial } from './safe-serialization.js';
+import {
+  CODEX_CLI_DEFAULT_MODEL,
+  DEEPSEEK_DEFAULT_MODEL,
+  QWEN_DEFAULT_MODEL,
+} from '@hive-flow/providers';
 
 export const STRICT_API_PROVIDERS = new Set(['openrouter', 'deepseek', 'openai', 'qwen']);
 export const ENV_ONLY_CLI_PROVIDERS = new Set(['codex-cli', 'gemini-cli', 'cursor-cli', 'anthropic-cli']);
@@ -326,11 +331,11 @@ function defaultStrictApiModel(provider: string): string {
     case 'openrouter':
       return 'auto';
     case 'deepseek':
-      return 'deepseek-v4-pro';
+      return DEEPSEEK_DEFAULT_MODEL;
     case 'openai':
-      return 'gpt-5';
+      return CODEX_CLI_DEFAULT_MODEL;
     case 'qwen':
-      return 'qwen-plus';
+      return QWEN_DEFAULT_MODEL;
     default:
       return 'auto';
   }

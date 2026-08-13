@@ -26,6 +26,7 @@ import { join, relative } from 'path';
 import type { WorkerType } from './worker-daemon.js';
 import { assertSubagentIdentityMarker } from '../mcp-tools/subagent-markers.js';
 import { assertDispatchAllowed } from '../mcp-tools/mcp-enforcement-gate.js';
+import { ANTHROPIC_CLI_DEFAULT_MODEL, ANTHROPIC_SONNET_MODEL } from '@hive-flow/providers';
 
 // ============================================
 // Type Definitions
@@ -277,8 +278,8 @@ export const LOCAL_WORKER_TYPES: LocalWorkerType[] = [
  * Model ID mapping
  */
 const MODEL_IDS: Record<ModelType, string> = {
-  sonnet: 'claude-sonnet-5',
-  opus: 'claude-opus-4-8',
+  sonnet: ANTHROPIC_SONNET_MODEL,
+  opus: ANTHROPIC_CLI_DEFAULT_MODEL,
 };
 
 /**
