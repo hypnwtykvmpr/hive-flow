@@ -20,6 +20,7 @@ export const MCP_ATTESTATION_MAX_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type MCPAttestationPidMode = 'spawned-child' | 'in-process';
 export type MCPAttestationEntrypoint = 'bin/mcp-server.js' | 'cli/mcp-stdio-inprocess';
+export type MCPAttestationOwnerSessionProvenance = 'environment' | 'codex-parent-rollout';
 export type AttestedMCPToolContext = {
   sessionId: string;
   clientKind: Exclude<OperatorClientKind, 'unknown'>;
@@ -35,6 +36,7 @@ export interface MCPAttestationRecord {
   ownerClientKind: Exclude<OperatorClientKind, 'unknown'>;
   ownerSessionId: string;
   sessionEnvKey: string;
+  ownerSessionProvenance?: MCPAttestationOwnerSessionProvenance;
   createdAt: string;
   expiresAt: string;
   epoch: number;
@@ -129,6 +131,7 @@ interface OperatorIdentity {
   ownerClientKind: Exclude<OperatorClientKind, 'unknown'>;
   ownerSessionId: string;
   sessionEnvKey: string;
+  ownerSessionProvenance: MCPAttestationOwnerSessionProvenance;
 }
 
 interface EpochState {
@@ -191,6 +194,7 @@ export function mintMCPAttestation(options: MintOptions): MCPAttestationMintResu
     ownerClientKind: identity.ownerClientKind,
     ownerSessionId: identity.ownerSessionId,
     sessionEnvKey: identity.sessionEnvKey,
+    ownerSessionProvenance: identity.ownerSessionProvenance,
     createdAt: created.toISOString(),
     expiresAt: expires.toISOString(),
     epoch,
@@ -341,6 +345,14 @@ function validateCommonRecord(
   if (!nonEmpty(record.sessionEnvKey)) {
     return { success: false, code: 'invalid-owner', error: 'MCP attestation did not record the owner session env key.' };
   }
+  const provenance = record.ownerSessionProvenance ?? 'environment';
+  if (provenance !== 'environment' && provenance !== 'codex-parent-rollout') {
+    return { success: false, code: 'invalid-owner', error: 'MCP attestation owner session provenance is not recognized.' };
+  }
+  if (provenance === 'codex-parent-rollout'
+    && (record.ownerClientKind !== 'codex' || record.sessionEnvKey !== 'CODEX_THREAD_ID')) {
+    return { success: false, code: 'invalid-owner', error: 'Codex parent rollout provenance used an incompatible owner identity.' };
+  }
   const nowMs = (options.now ?? (() => new Date()))().getTime();
   const createdMs = Date.parse(record.createdAt);
   const expiresMs = Date.parse(record.expiresAt);
@@ -373,7 +385,12 @@ function resolveOperatorIdentity(env: Env): OperatorIdentity | null {
     if (!raw || isGeneratedMcpSessionId(raw)) continue;
     const sanitized = sanitizeSessionId(raw);
     if (sanitized) {
-      return { ownerClientKind: kind, ownerSessionId: sanitized, sessionEnvKey: key };
+      return {
+        ownerClientKind: kind,
+        ownerSessionId: sanitized,
+        sessionEnvKey: key,
+        ownerSessionProvenance: 'environment',
+      };
     }
   }
   return null;

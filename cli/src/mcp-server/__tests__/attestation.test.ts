@@ -1,5 +1,5 @@
 import fc from 'fast-check';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -76,6 +76,7 @@ describe('MCP stdio attestation', () => {
       attested: true,
       attestationEntryPoint: 'bin/mcp-server.js',
     });
+    expect(valid.record.ownerSessionProvenance).toBe('environment');
 
     const wrongParent = validateMCPAttestation({
       env: validationEnv(env, minted),
@@ -208,6 +209,49 @@ describe('MCP stdio attestation', () => {
     expect(formatMCPAttestationFailure('agent_spawn', failure)).toContain('requires an attested operator session');
   });
 
+  it('accepts the explicit Codex parent provenance grammar and rejects incompatible provenance', () => {
+    const projectRoot = makeProjectRoot();
+    const env = codexEnv(projectRoot);
+    const entrypointPath = join(projectRoot, 'cli', 'bin', 'mcp-server.js');
+    const minted = mintMCPAttestation({
+      env,
+      cwd: projectRoot,
+      entrypoint: 'bin/mcp-server.js',
+      pidMode: 'spawned-child',
+      launcherPid: 4242,
+      entrypointPath,
+      now: () => new Date('2026-07-05T18:00:00.000Z'),
+    });
+    expect(minted.success).toBe(true);
+    if (!minted.success) return;
+
+    const parentRecord = {
+      ...minted.record,
+      sessionEnvKey: 'CODEX_THREAD_ID',
+      ownerSessionProvenance: 'codex-parent-rollout' as const,
+    };
+    writeFileSync(minted.attestationPath, `${JSON.stringify(parentRecord)}\n`);
+    expect(validateMCPAttestation({
+      env: validationEnv(env, minted),
+      cwd: projectRoot,
+      ppid: 4242,
+      entrypointPath,
+      now: () => new Date('2026-07-05T18:01:00.000Z'),
+    })).toMatchObject({ success: true });
+
+    writeFileSync(minted.attestationPath, `${JSON.stringify({
+      ...parentRecord,
+      ownerClientKind: 'claude',
+    })}\n`);
+    expect(validateMCPAttestation({
+      env: validationEnv(env, minted),
+      cwd: projectRoot,
+      ppid: 4242,
+      entrypointPath,
+      now: () => new Date('2026-07-05T18:01:00.000Z'),
+    })).toMatchObject({ success: false, code: 'invalid-owner' });
+  });
+
   it('keeps the owner-sensitive stdio guard registry complete', () => {
     expect([...OWNER_SENSITIVE_MCP_TOOLS].sort()).toEqual([
       'agent_message_ack',
@@ -252,6 +296,7 @@ describe('MCP stdio attestation', () => {
             expect(minted.record.ownerSessionId).toBe(sessionId.slice(0, 64));
             expect(minted.record.ownerClientKind).toBe('codex');
             expect(minted.record.sessionEnvKey).toBe('HIVE_FLOW_SESSION_ID');
+            expect(minted.record.ownerSessionProvenance).toBe('environment');
           }
         },
       ),
