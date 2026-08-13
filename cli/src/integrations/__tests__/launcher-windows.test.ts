@@ -1,5 +1,5 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -121,18 +121,93 @@ describe('Windows launcher generation', () => {
     ).rejects.toThrow(/cannot be embedded/i);
   });
 
+  /**
+   * Create a fixture as a REAL readable file.
+   *
+   * `writeStableLauncher` validates that both entrypoints are readable regular
+   * files whenever the TARGET platform equals the HOST platform. A POSIX host
+   * generating a win32 wrapper skips that check, so a fake path passes locally
+   * and then fails on a Windows runner, where the same test targets its own
+   * platform. Fixtures must therefore be valid on the target platform, not just
+   * on the machine that happens to run the suite.
+   */
+  function seedFixture(file: string): string {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, '// fixture\n');
+    return file;
+  }
+
   it('writes a Windows MCP launcher that does not require bash', async () => {
     const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'hive-flow-mcp-server.cmd');
-    const entrypoint = join(root, 'project with spaces', 'bin', 'mcp-server.js');
+    const entrypoint = seedFixture(join(root, 'project with spaces', 'bin', 'mcp-server.js'));
 
-    await writeStableLauncher(launcherPath, entrypoint, { platform: 'win32' });
+    // A launcher path carrying every cmd metacharacter that could be reparsed.
+    // Each of these characters is legal in a Windows filename, so this fixture
+    // is creatable on the target platform as well as on POSIX.
+    const attesting = seedFixture(
+      join(root, 'helpers (x86) & co ^ !var! %PATH%', 'hive-flow-mcp-launcher.cjs'),
+    );
+
+    await writeStableLauncher(launcherPath, entrypoint, attesting, { platform: 'win32' });
 
     expect(existsSync(launcherPath)).toBe(true);
     const source = readFileSync(launcherPath, 'utf8');
     expect(source).toContain('@echo off');
-    expect(source).toContain('node "%HIVE_FLOW_MCP_SERVER_ENTRYPOINT%" %*');
-    expect(source).toContain(`set "HIVE_FLOW_MCP_SERVER_ENTRYPOINT=${entrypoint}"`);
     expect(source).not.toContain('/usr/bin/env bash');
+
+    // Invoke the ATTESTING LAUNCHER, not the MCP server directly.
+    expect(source).toContain('node "%HIVE_FLOW_MCP_LAUNCHER%" %*');
+    expect(source).not.toContain('node "%HIVE_FLOW_MCP_SERVER_ENTRYPOINT%" %*');
+
+    // Both paths travel in env vars, so metacharacters in them are never
+    // reparsed as command syntax. `%` is doubled for batch, and delayed
+    // expansion is disabled so `!` cannot expand inside the quoted set.
+    expect(source).toContain(`set "HIVE_FLOW_MCP_SERVER_ENTRYPOINT=${entrypoint.replace(/%/g, '%%')}"`);
+    expect(source).toContain(`set "HIVE_FLOW_MCP_LAUNCHER=${attesting.replace(/%/g, '%%')}"`);
+    expect(source).toContain('setlocal DisableDelayedExpansion');
+    // The raw `%PATH%` form must not survive, or cmd would expand it.
+    expect(source).not.toContain('%PATH%\\hive-flow-mcp-launcher.cjs');
+  });
+
+  it('refuses a Windows attesting launcher path containing a double quote', async () => {
+    const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'hive-flow-mcp-server.cmd');
+    const entrypoint = seedFixture(join(root, 'project', 'bin', 'mcp-server.js'));
+    // A double quote is ILLEGAL in a Windows filename, so this path can never be
+    // a real file and the assertion depends on the encoder running BEFORE the
+    // filesystem checks. That ordering is what makes the reported error the same
+    // on a POSIX host and on a Windows runner; with the checks first, a Windows
+    // runner reported "not a readable file" here instead.
+    await expect(
+      writeStableLauncher(launcherPath, entrypoint, 'C:\\evil"path\\launcher.cjs', { platform: 'win32' }),
+    ).rejects.toThrow(/cannot be embedded/i);
+  });
+
+  it('applies filesystem validation when the target platform equals the host', async () => {
+    // Exercises the `platform === process.platform` branch directly. Every other
+    // win32 case in this file targets a platform the POSIX host does not match,
+    // so that branch is skipped locally — which is exactly why a suite green on
+    // macOS was red on windows-latest. Targeting the HOST platform reproduces
+    // the runner-matches-target condition on any machine, including Windows CI.
+    const launcherPath = join(root, 'home', '.hive-flow', 'bin', 'host-target-launcher');
+    const entrypoint = seedFixture(join(root, 'host target', 'bin', 'mcp-server.js'));
+    const attesting = seedFixture(join(root, 'host target', 'helpers', 'hive-flow-mcp-launcher.cjs'));
+
+    // Real fixtures: the now-active checks must ACCEPT them.
+    await expect(
+      writeStableLauncher(launcherPath, entrypoint, attesting, { platform: process.platform }),
+    ).resolves.toBeUndefined();
+    expect(existsSync(launcherPath)).toBe(true);
+
+    // Absent entrypoint: the same active checks must REJECT it, so the test
+    // proves discrimination rather than merely that the happy path runs.
+    await expect(
+      writeStableLauncher(
+        launcherPath,
+        join(root, 'host target', 'bin', 'absent-server.js'),
+        attesting,
+        { platform: process.platform },
+      ),
+    ).rejects.toThrow(/not a readable file/i);
   });
 
   it('writes a Windows statusline launcher and Node companion with the prior prompt preserved but not chained by default', async () => {

@@ -59,6 +59,10 @@ describe('relocated enforcement installer helpers', () => {
       for (const relativePath of [
         '.claude/helpers/layout-paths.cjs',
         '.claude/helpers/hive-flow-mcp-launcher.cjs',
+        // The attesting launcher cannot run without this sibling, so the
+        // installer requires it and the fixture must provide it. Its absence is
+        // why this test was already red before the a541 fix.
+        '.claude/helpers/mcp-attestation.cjs',
         '.claude/helpers/hive-composition-gate.cjs',
         '.claude/helpers/role-enforcement.cjs',
         '.claude/helpers/enforcement.cjs',
@@ -81,6 +85,7 @@ describe('relocated enforcement installer helpers', () => {
       for (const targetName of [
         'layout-paths.cjs',
         'hive-flow-mcp-launcher.cjs',
+        'mcp-attestation.cjs',
         'hive-composition-gate.cjs',
         'role-enforcement.cjs',
         'enforcement.cjs',

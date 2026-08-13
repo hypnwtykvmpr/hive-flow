@@ -6,15 +6,42 @@ const { requireHiveFlowCliFile } = require('./layout-paths.cjs');
 const { mintMCPAttestation } = require('./mcp-attestation.cjs');
 
 let entrypoint;
-try {
-  entrypoint = requireHiveFlowCliFile('bin/mcp-server.js', {
-    env: process.env,
-    cwd: process.cwd(),
-    helperDir: __dirname,
-  });
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+// Prefer the exact entrypoint the generated wrapper verified, so the resolved
+// path cannot differ from the one setup checked. The layout resolver remains as
+// a compatibility fallback for wrappers generated before a541.
+const explicit = process.env.HIVE_FLOW_MCP_SERVER_ENTRYPOINT;
+if (typeof explicit === 'string' && explicit.length > 0) {
+  const path = require('node:path');
+  const fs = require('node:fs');
+  if (/[\u0000-\u001f\u007f]/.test(explicit)) {
+    console.error('[hive-flow-mcp-launcher] HIVE_FLOW_MCP_SERVER_ENTRYPOINT contains control characters');
+    process.exit(1);
+  }
+  if (!path.isAbsolute(explicit)) {
+    console.error('[hive-flow-mcp-launcher] HIVE_FLOW_MCP_SERVER_ENTRYPOINT must be absolute');
+    process.exit(1);
+  }
+  let valid = false;
+  try {
+    valid = fs.statSync(explicit).isFile();
+    if (valid) fs.accessSync(explicit, fs.constants.R_OK);
+  } catch {}
+  if (!valid) {
+    console.error('[hive-flow-mcp-launcher] HIVE_FLOW_MCP_SERVER_ENTRYPOINT is not a readable file');
+    process.exit(1);
+  }
+  entrypoint = explicit;
+} else {
+  try {
+    entrypoint = requireHiveFlowCliFile('bin/mcp-server.js', {
+      env: process.env,
+      cwd: process.cwd(),
+      helperDir: __dirname,
+    });
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }
 
 const attestation = mintMCPAttestation({

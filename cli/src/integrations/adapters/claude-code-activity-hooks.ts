@@ -415,10 +415,8 @@ export const CANARY_EVENT = 'prompt';
 /**
  * Build the child-process invocation for the canary.
  *
- * Node cannot execute `.bat`/`.cmd` directly on Windows
- * (https://nodejs.org/api/child_process.html#spawning-bat-and-cmd-files-on-windows),
- * so win32 must mediate through the command processor. That boundary is the
- * dangerous part:
+ * Node cannot execute `.bat`/`.cmd` directly on Windows, so win32 must mediate
+ * through the command processor. That boundary is the dangerous part:
  *
  *   `cmd.exe /c` consumes everything after it as ONE COMMAND STRING and
  *   REPARSES it. An argv array protects only the native `cmd.exe` launch — it

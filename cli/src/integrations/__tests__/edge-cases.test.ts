@@ -38,7 +38,12 @@ vi.mock('../../commands/setup.js', async (importOriginal) => {
   };
 });
 
-import { writeStableLauncher } from '../launcher.js';
+import {
+  MCP_LAUNCHER_BUNDLE_FILES,
+  MCP_LAUNCHER_POLICY_FILES,
+  resolveMcpLauncherPath,
+  writeStableLauncher,
+} from '../launcher.js';
 import { withSetupLock } from '../lockfile.js';
 import { upsertTomlBlock } from '../toml-block.js';
 import { upsertJsonPath } from '../atomic-merge.js';
@@ -105,13 +110,203 @@ beforeEach(async () => {
 describe('edge cases', () => {
   it('path with spaces and apostrophes round-trips in the launcher shim', async () => {
     const path = join(dir, "hive's spaces", 'launcher');
-    await writeStableLauncher(path, "/path with spaces/and 'quotes'/server.js");
+    // REAL files: the generator requires readable regular files, so a fake path
+    // fixture would assert nothing about the contract it claims to cover.
+    const serverDir = join(dir, "path with spaces/and 'quotes'");
+    const helperDir = join(dir, "opt/hive's helpers");
+    mkdirSync(serverDir, { recursive: true });
+    mkdirSync(helperDir, { recursive: true });
+    const server = join(serverDir, 'server.js');
+    const attesting = join(helperDir, 'hive-flow-mcp-launcher.cjs');
+    writeFileSync(server, '// server\n');
+    writeFileSync(attesting, '// launcher\n');
+
+    await writeStableLauncher(path, server, attesting);
     expect(existsSync(path)).toBe(true);
-    // Shim is executable and lacks shell-injection vectors
     const content = readFileSync(path, 'utf8');
+    const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "'\\\\''");
+
+    // The wrapper must exec the ATTESTING LAUNCHER, never the MCP server
+    // directly — execing the server is the bypass that leaves the connection
+    // unattested and makes owner-sensitive tools fail closed.
+    expect(content).toMatch(new RegExp(`^exec node '${esc(attesting)}' "\\$@"$`, 'm'));
+    expect(content).not.toMatch(new RegExp(`^exec node '${esc(server)}'`, 'm'));
+
+    // The exact server entrypoint is forwarded, quoted, for the launcher to
+    // prefer over its own layout resolution.
     expect(content).toMatch(
-      /^exec node '\/path with spaces\/and '\\''quotes'\\''\/server\.js' "\$@"$/m,
+      new RegExp(`^export HIVE_FLOW_MCP_SERVER_ENTRYPOINT='${esc(server)}'$`, 'm'),
     );
+  });
+
+  it('refuses launcher paths that are relative, control-bearing, or not real files', async () => {
+    const path = join(dir, 'launcher-guard');
+    const realServer = join(dir, 'guard-server.js');
+    const realLauncher = join(dir, 'guard-launcher.cjs');
+    writeFileSync(realServer, '// server\n');
+    writeFileSync(realLauncher, '// launcher\n');
+
+    await expect(
+      writeStableLauncher(path, realServer, 'relative/launcher.cjs'),
+    ).rejects.toThrow(/must be absolute/i);
+    await expect(
+      writeStableLauncher(path, realServer, '/abs/laun\ncher.cjs'),
+    ).rejects.toThrow(/control characters/i);
+    await expect(
+      writeStableLauncher(path, 'relative/server.js', realLauncher),
+    ).rejects.toThrow(/must be absolute/i);
+    // Absolute but nonexistent, and absolute but a directory: both must be
+    // refused rather than baked into a wrapper that fails at connect time.
+    await expect(
+      writeStableLauncher(path, realServer, join(dir, 'no-such-launcher.cjs')),
+    ).rejects.toThrow(/not a readable file/i);
+    await expect(
+      writeStableLauncher(path, realServer, dir),
+    ).rejects.toThrow(/not a readable file/i);
+    await expect(
+      writeStableLauncher(path, join(dir, 'no-such-server.js'), realLauncher),
+    ).rejects.toThrow(/not a readable file/i);
+  });
+
+  // Permission bits are meaningless as root and absent on Windows, so the
+  // unreadable-file cases below would pass vacuously there.
+  const permissionsApply = process.platform !== 'win32' && process.getuid?.() !== 0;
+
+  it.skipIf(process.platform === 'win32')('reconcile restores the executable bit when text is already canonical', async () => {
+    // The verifier rejects a wrapper without X_OK and tells the operator to run
+    // `setup reconcile`. If the writer returned early on matching content, that
+    // instruction could never be satisfied and the wrapper would stay unusable.
+    const launcherPath = join(dir, 'reconcile-mode', 'hive-flow-mcp-server');
+    const server = join(dir, 'reconcile-server.js');
+    const attesting = join(dir, 'reconcile-launcher.cjs');
+    writeFileSync(server, '// server\n');
+    writeFileSync(attesting, '// launcher\n');
+
+    await writeStableLauncher(launcherPath, server, attesting);
+    const canonical = readFileSync(launcherPath, 'utf8');
+    chmodSync(launcherPath, 0o644);
+
+    // Identical inputs: this is exactly what `setup reconcile` re-runs.
+    await writeStableLauncher(launcherPath, server, attesting);
+
+    expect(statSync(launcherPath).mode & 0o777).toBe(0o755);
+    // Content idempotence is preserved, not traded away for the mode repair.
+    expect(readFileSync(launcherPath, 'utf8')).toBe(canonical);
+  });
+
+  it('refuses paths containing DEL, matching the attesting launcher runtime guard', async () => {
+    // The launcher rejects /[\x00-\x1f\x7f]/ at runtime. A writer that accepted
+    // DEL would install a wrapper that only fails later, at connect time.
+    const launcherPath = join(dir, 'del-guard');
+    const server = join(dir, 'del-server.js');
+    const attesting = join(dir, 'del-launcher.cjs');
+    writeFileSync(server, '// server\n');
+    writeFileSync(attesting, '// launcher\n');
+
+    await expect(
+      writeStableLauncher(launcherPath, `${server}\x7f`, attesting),
+    ).rejects.toThrow(/control characters/i);
+    await expect(
+      writeStableLauncher(launcherPath, server, `${attesting}\x7f`),
+    ).rejects.toThrow(/control characters/i);
+    await expect(
+      writeStableLauncher(launcherPath, server, attesting, { platform: 'win32' as NodeJS.Platform }),
+    ).resolves.toBeUndefined();
+    await expect(
+      writeStableLauncher(launcherPath, `C:\\srv\\mcp\x7f.js`, 'C:\\h\\launcher.cjs', { platform: 'win32' as NodeJS.Platform }),
+    ).rejects.toThrow(/control characters/i);
+  });
+
+  it.skipIf(!permissionsApply)('refuses an entrypoint that is a regular file but unreadable', async () => {
+    // `statSync().isFile()` succeeds on a mode-000 file (stat needs search
+    // permission on the parent, not read on the file), so an isFile()-only check
+    // would bake an unreadable path into the wrapper and fail at connect time.
+    const path = join(dir, 'launcher-unreadable');
+    const realLauncher = join(dir, 'ur-launcher.cjs');
+    const unreadableServer = join(dir, 'ur-server.js');
+    writeFileSync(realLauncher, '// launcher\n');
+    writeFileSync(unreadableServer, '// server\n');
+    chmodSync(unreadableServer, 0o000);
+    try {
+      expect(statSync(unreadableServer).isFile()).toBe(true);   // the trap isFile() alone falls into
+      await expect(
+        writeStableLauncher(path, unreadableServer, realLauncher),
+      ).rejects.toThrow(/not a readable file/i);
+    } finally {
+      chmodSync(unreadableServer, 0o644);   // let temp cleanup remove it
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Bundle layout selection (hive-flow-a541)
+  //
+  // Only two layouts ship. Both are proven here with real files, because the
+  // resolver's whole job is to refuse a bundle that would fail at spawn time.
+  // -------------------------------------------------------------------------
+
+  /** Write every named file into `target` as a real regular file. */
+  function seedBundle(target: string, files: readonly string[]): void {
+    mkdirSync(target, { recursive: true });
+    for (const file of files) writeFileSync(join(target, file), '// fixture\n');
+  }
+
+  const ALL_BUNDLE_FILES = [...MCP_LAUNCHER_BUNDLE_FILES, ...MCP_LAUNCHER_POLICY_FILES];
+
+  it('selects the flat layout used by the published package and the relocated install', () => {
+    const home = join(dir, 'flat-home');
+    const binDir = join(home, '.hive-flow', 'enforcement', 'bin');
+    seedBundle(binDir, ALL_BUNDLE_FILES);
+
+    expect(resolveMcpLauncherPath(home, join(dir, 'flat-unused-project')))
+      .toBe(join(binDir, MCP_LAUNCHER_BUNDLE_FILES[0]));
+  });
+
+  it('selects the source-checkout layout with policy under cli/src/permission-guard', () => {
+    // The repo-root `.claude/helpers/` deliberately carries no flat policy copy,
+    // so this layout is the one a source checkout actually presents.
+    const project = join(dir, 'src-project');
+    const helpers = join(project, '.claude', 'helpers');
+    seedBundle(helpers, MCP_LAUNCHER_BUNDLE_FILES);
+    seedBundle(join(project, 'cli', 'src', 'permission-guard'), MCP_LAUNCHER_POLICY_FILES);
+
+    expect(resolveMcpLauncherPath(join(dir, 'src-empty-home'), project))
+      .toBe(join(helpers, MCP_LAUNCHER_BUNDLE_FILES[0]));
+  });
+
+  it('never selects a bundle missing a transitively required helper', () => {
+    // `mcp-attestation.cjs` requires `client-kind.cjs` at load, so a bundle
+    // without it yields a launcher that dies at spawn — the exact failure the
+    // completeness check exists to prevent.
+    const home = join(dir, 'partial-home');
+    const binDir = join(home, '.hive-flow', 'enforcement', 'bin');
+    seedBundle(binDir, ALL_BUNDLE_FILES.filter((f) => f !== 'client-kind.cjs'));
+
+    expect(resolveMcpLauncherPath(home, join(dir, 'partial-unused-project')))
+      .not.toBe(join(binDir, MCP_LAUNCHER_BUNDLE_FILES[0]));
+  });
+
+  it('never selects a bundle whose member is a directory', () => {
+    const home = join(dir, 'dir-member-home');
+    const binDir = join(home, '.hive-flow', 'enforcement', 'bin');
+    seedBundle(binDir, ALL_BUNDLE_FILES.filter((f) => f !== 'layout-paths.cjs'));
+    mkdirSync(join(binDir, 'layout-paths.cjs'), { recursive: true });   // exists, but not a file
+
+    expect(resolveMcpLauncherPath(home, join(dir, 'dir-member-project')))
+      .not.toBe(join(binDir, MCP_LAUNCHER_BUNDLE_FILES[0]));
+  });
+
+  it.skipIf(!permissionsApply)('never selects a bundle whose member is unreadable', () => {
+    const home = join(dir, 'unreadable-member-home');
+    const binDir = join(home, '.hive-flow', 'enforcement', 'bin');
+    seedBundle(binDir, ALL_BUNDLE_FILES);
+    const blinded = join(binDir, 'mcp-attestation.cjs');
+    chmodSync(blinded, 0o000);
+    try {
+      expect(resolveMcpLauncherPath(home, join(dir, 'unreadable-member-project')))
+        .not.toBe(join(binDir, MCP_LAUNCHER_BUNDLE_FILES[0]));
+    } finally {
+      chmodSync(blinded, 0o644);
+    }
   });
 
   it('concurrent setup invocations: second returns busy:locked', async () => {

@@ -27,6 +27,9 @@ import { withSetupLock } from '../integrations/lockfile.js';
 import {
   writeStableLauncher,
   resolveLauncherPath,
+  resolveMcpLauncherPath,
+  verifyMcpLauncherChain,
+  MCP_LAUNCHER_BUNDLE_FILES,
   resolveStatuslineLauncherPath,
   resolveStatuslineRuntimeEntrypoint,
   writeStableStatuslineLauncher,
@@ -763,6 +766,18 @@ async function runVerify(opts: any) {
   const features = parseFeatures(opts.features);
   const chosen = chooseAgents(opts.agents);
   const results: any[] = [];
+  // a541: the launcher-chain check MUST run before any MCP adapter verifier.
+  // Adapter verification shells out to the agent CLI (`claude mcp get
+  // hive-flow`), which can execute and connect the installed wrapper — so
+  // running it first would launch a direct-server bypass before anything
+  // rejected it, defeating the chain check's own structural-first contract.
+  // The row is global (every agent shares one wrapper), so it is emitted once.
+  let mcpChainOk = true;
+  if (features.has('mcp')) {
+    const chain = await verifyMcpLauncherChain(launcherPath);
+    mcpChainOk = chain.ok;
+    results.push({ agent: 'launcher-chain' as AdapterId, feature: 'mcp' as const, ...chain });
+  }
   for (const id of chosen) {
     const ctx = {
       projectRoot, homeDir, scope: opts.scope, launcherPath, statuslineLauncherPath,
@@ -770,7 +785,16 @@ async function runVerify(opts: any) {
       shellProfilePath: process.platform === 'win32' ? undefined : profilePathFor(homeDir, process.env),
     };
     if (features.has('mcp')) {
-      results.push({ agent: id as AdapterId, feature: 'mcp' as const, ...(await verifyAdapter(id, ctx)) });
+      // Fail closed: never probe the MCP endpoint through a wrapper already
+      // shown to be unsafe. Unrelated features still verify normally below.
+      results.push(mcpChainOk
+        ? { agent: id as AdapterId, feature: 'mcp' as const, ...(await verifyAdapter(id, ctx)) }
+        : {
+          agent: id as AdapterId,
+          feature: 'mcp' as const,
+          ok: false,
+          output: 'Skipped: the installed launcher chain is invalid, so the MCP endpoint was not probed.',
+        });
     }
     if (id === 'claude-code' && features.has('statusline')) {
       results.push({
@@ -816,7 +840,19 @@ async function runMutating(opts: any) {
 
     if (!opts.dryRun && opts.action !== 'uninstall' && features.has('mcp')) {
       const mcpServerEntry = resolveMcpServerEntry(projectRoot);
-      await writeStableLauncher(launcherPath, mcpServerEntry);
+      const attestingLauncher = resolveMcpLauncherPath(homeDir, projectRoot);
+      if (!attestingLauncher) {
+        // Refuse rather than regenerate the direct-server bypass. Writing a
+        // wrapper that execs the MCP server directly "works" right up until the
+        // server declines an owner-sensitive tool for missing attestation, which
+        // reads as a permissions problem rather than an incomplete install.
+        throw new Error(
+          'MCP launcher bundle is incomplete: could not find a directory containing all of '
+          + `${MCP_LAUNCHER_BUNDLE_FILES.join(', ')}. `
+          + 'Run the enforcement installer to relocate the launcher bundle, then re-run setup.',
+        );
+      }
+      await writeStableLauncher(launcherPath, mcpServerEntry, attestingLauncher);
     }
     if (!opts.dryRun && opts.action !== 'uninstall' && features.has('statusline')) {
       const statuslineEntrypoint = resolveStatuslineRuntimeEntrypoint(projectRoot);

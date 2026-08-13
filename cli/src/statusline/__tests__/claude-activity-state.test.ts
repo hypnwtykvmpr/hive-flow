@@ -5,22 +5,29 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { spawn, spawnSync } from 'node:child_process';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { realpathSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import fc from 'fast-check';
 
 // The tracker resolves its roots per CALL (not at import time), so a single
 // static import correctly observes each test's CLAUDE_STATUSLINE_TEST_ROOT.
 import { readSessionProjection, recordHookEvent } from '../claude-activity-state.js';
+
+/** Property run count, overridable for deeper local/CI sweeps. */
+const PROPERTY_RUNS = Number(process.env.HIVE_FLOW_PROPERTY_RUNS || process.env.HF_PROPERTY_RUNS || 50);
 
 let root: string;
 const SESSION = 'sess-f16a-abc123';
@@ -226,16 +233,21 @@ describe('SessionStart authority (A17)', () => {
 });
 
 describe('event handling (A12)', () => {
-  it('tracks background shells and subagents, with a stop tombstone winning', async () => {
+  it('tracks background shells from the Stop inventory, and subagents by identity', async () => {
     recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
     recordHookEvent('pre-tool', {
       session_id: SESSION,
       tool_name: 'Bash',
       tool_input: { run_in_background: true },
-      tool_use_id: 'shell-1',
+      // A REAL tool_use_id. Note it is NOT the background task id; the previous
+      // design keyed a start on this value and could never cancel it.
+      tool_use_id: 'toolu_01Atqvh4TgA4MxXzVfFiCemn',
     });
     recordHookEvent('subagent-start', { session_id: SESSION, agent_id: 'agent-1' });
-    recordHookEvent('stop', { session_id: SESSION });
+    recordHookEvent('stop', {
+      session_id: SESSION,
+      background_tasks: [{ id: 'b7tcpuznr', type: 'shell', status: 'running' }],
+    });
 
     // Turn is over but background work is outstanding -> Waiting, not Idle.
     let projection = await readSessionProjection(SESSION);
@@ -244,17 +256,486 @@ describe('event handling (A12)', () => {
     expect(projection?.pendingAgents).toBe(1);
 
     recordHookEvent('subagent-stop', { session_id: SESSION, agent_id: 'agent-1' });
-    recordHookEvent('post-tool', {
-      session_id: SESSION,
-      tool_name: 'TaskStop',
-      tool_input: { task_id: 'shell-1' },
-    });
-    recordHookEvent('stop', { session_id: SESSION });
+    // Natural completion: the next turn's inventory is empty.
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: [] });
 
     projection = await readSessionProjection(SESSION);
     expect(projection?.state).toBe('idle');
     expect(projection?.bgShells).toBe(0);
     expect(projection?.pendingAgents).toBe(0);
+  });
+
+  // The defect that produced a live `Waiting · 14 shells` while all fourteen
+  // tasks had completed. The old test reused `shell-1` for BOTH fields, so the
+  // namespaces appeared to match and the leak was invisible.
+  it('does not leak a shell when tool_use_id and the background task id differ', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    for (let i = 0; i < 14; i++) {
+      recordHookEvent('pre-tool', {
+        session_id: SESSION,
+        tool_name: 'Bash',
+        tool_input: { run_in_background: true },
+        tool_use_id: `toolu_${i}aBcDeFgHiJkLmNoPqRsT`,
+      });
+      // The real completion path reports a DIFFERENT id namespace.
+      recordHookEvent('post-tool', {
+        session_id: SESSION,
+        tool_name: 'TaskStop',
+        tool_input: { task_id: `b${i}xyzabcd` },
+      });
+    }
+    // Assert the leak is gone AT SOURCE, before any inventory can mask it. The
+    // final projection alone is not sufficient evidence: an authoritative empty
+    // inventory overrides legacy records, so this would read zero even if all
+    // fourteen stale `shells/start` files were still being written.
+    const startDir = genFile('shells', 'start');
+    expect(existsSync(startDir) ? readdirSync(startDir) : []).toEqual([]);
+
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: [] });
+
+    const projection = await readSessionProjection(SESSION);
+    expect(projection?.bgShells).toBe(0);
+    expect(projection?.state).toBe('idle');
+  });
+
+  it('refuses an inventory whose serialization would exceed the read bound', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    recordHookEvent('stop', {
+      session_id: SESSION,
+      background_tasks: [{ id: 'b1', type: 'shell', status: 'running' }],
+    });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+
+    // Structurally valid: 200 unique ids, each well under the 1024-byte identity
+    // limit, and under the 256-entry cap — but together they serialize past the
+    // 64 KiB record bound the reader enforces.
+    const huge = Array.from({ length: 200 }, (_, i) => ({
+      id: `b${String(i).padStart(4, '0')}${'x'.repeat(400)}`,
+      type: 'shell',
+      status: 'running',
+    }));
+    expect(JSON.stringify(huge).length).toBeGreaterThan(64 * 1024);
+
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: huge });
+
+    // The unreadable record is never published — but the previous inventory is
+    // not left standing in for it either, because we positively know it is now
+    // wrong. The truthful answer is "unknown", so the projection is omitted.
+    expect(await readSessionProjection(SESSION)).toBeNull();
+
+    // Assert the WRITER bound at the file level, not just the projection. The
+    // reader's own size check would also yield null if a giant record were
+    // written, so projection alone cannot tell "refused to write it" from
+    // "wrote it and rejected it on read". What must not happen is a >64 KiB
+    // blob being rewritten on every Stop.
+    const persisted = readFileSync(genFile('shells', 'inventory.json'), 'utf8');
+    expect(Buffer.byteLength(persisted, 'utf8')).toBeLessThan(1024);
+    expect(JSON.parse(persisted).overflow).toBe(true);
+  });
+
+  // Raised by the read-only verifier as HIGH. Preserving the previous inventory
+  // is only correct while it is still plausibly true. When the previous record
+  // was a valid EMPTY one, silently keeping it reports zero shells while
+  // hundreds are in flight — a confident lie, which is worse than the stale
+  // over-count this knot set out to fix.
+  it('an over-byte inventory does not leave a stale EMPTY inventory asserting zero', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: [] });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(0);
+
+    const huge = Array.from({ length: 200 }, (_, i) => ({
+      id: `b${String(i).padStart(4, '0')}${'x'.repeat(400)}`,
+      type: 'shell',
+      status: 'running',
+    }));
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: huge });
+
+    // Truthful outcome is "unknown", not "zero": fail closed and omit.
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('does not count prototype-inherited type/id as a shell entry', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    // No OWN `type`/`id`: reading through the prototype chain would inflate the
+    // count from an entry carrying no real data.
+    const ghost = Object.create({ type: 'shell', id: 'b-ghost' }) as Record<string, unknown>;
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: [ghost] });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(0);
+  });
+
+  it('a momentarily absent inventory does not resurrect legacy starts', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const gen = currentGeneration(SESSION);
+
+    // Stale legacy starts, as the live session carries.
+    const startDir = genFile('shells', 'start');
+    mkdirSync(startDir, { recursive: true });
+    for (let i = 0; i < 14; i++) {
+      const id = `toolu_stale_${i}`;
+      writeFileSync(
+        join(startDir, `${createHash('sha256').update(id).digest('hex')}.json`),
+        JSON.stringify({ schema: 1, generation: gen, id, ts: Date.now() }),
+      );
+    }
+    // An inventory HAS been established and healed them.
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: [] });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(0);
+
+    // Simulate the atomicWrite replacement window: the record is briefly gone.
+    const invFile = genFile('shells', 'inventory.json');
+    const saved = readFileSync(invFile, 'utf8');
+    rmSync(invFile);
+    // Authority was already established, so absence is UNKNOWN, never a licence
+    // to resurrect the fourteen. An earlier version of this test asserted 14
+    // here, which documented the defect as if it were the contract.
+    expect(await readSessionProjection(SESSION)).toBeNull();
+    // Once the replacement lands, the inventory is authoritative again.
+    writeFileSync(invFile, saved);
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(0);
+  });
+
+  it('a writer that dies after establishing authority never falls back to legacy', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const gen = currentGeneration(SESSION);
+    const startDir = genFile('shells', 'start');
+    mkdirSync(startDir, { recursive: true });
+    const id = 'toolu_stale_crash';
+    writeFileSync(
+      join(startDir, `${createHash('sha256').update(id).digest('hex')}.json`),
+      JSON.stringify({ schema: 1, generation: gen, id, ts: Date.now() }),
+    );
+    // Sentinel published, inventory never written — the crash window.
+    const authority = genFile('shells', 'authority.json');
+    mkdirSync(dirname(authority), { recursive: true });
+    writeFileSync(authority, JSON.stringify({ schema: 1, generation: gen, ts: Date.now() }));
+
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('legacy fallback applies only when BOTH inventory and authority are absent', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const gen = currentGeneration(SESSION);
+    const startDir = genFile('shells', 'start');
+    mkdirSync(startDir, { recursive: true });
+    const id = 'toolu_compat_only';
+    writeFileSync(
+      join(startDir, `${createHash('sha256').update(id).digest('hex')}.json`),
+      JSON.stringify({ schema: 1, generation: gen, id, ts: Date.now() }),
+    );
+    expect(existsSync(genFile('shells', 'authority.json'))).toBe(false);
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+  });
+
+  it('a valid empty inventory heals stale legacy start records', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    // Simulate the live session: legacy starts written by the old design.
+    const gen = currentGeneration(SESSION);
+    const startDir = genFile('shells', 'start');
+    mkdirSync(startDir, { recursive: true });
+    for (let i = 0; i < 14; i++) {
+      const id = `toolu_stale_${i}`;
+      writeFileSync(
+        join(startDir, `${createHash('sha256').update(id).digest('hex')}.json`),
+        JSON.stringify({ schema: 1, generation: gen, id, ts: Date.now() }),
+      );
+    }
+    // Legacy records alone still project the stale count.
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(14);
+
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: [] });
+    const healed = await readSessionProjection(SESSION);
+    expect(healed?.bgShells).toBe(0);
+    expect(healed?.state).toBe('idle');
+    // Self-heals by overriding, NOT by deleting unrelated session state.
+    expect(readdirSync(startDir).length).toBe(14);
+  });
+
+  it('counts only shell entries and deduplicates them', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    recordHookEvent('stop', {
+      session_id: SESSION,
+      background_tasks: [
+        { id: 'b1', type: 'shell', status: 'running' },
+        { id: 'b1', type: 'shell', status: 'running' },
+        { id: 'b2', type: 'shell', status: 'running' },
+        { id: 'a1', type: 'subagent', status: 'running' },
+        { id: 'm1', type: 'monitor', status: 'running' },
+        { id: 'w1', type: 'workflow', status: 'running' },
+      ],
+    });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(2);
+  });
+
+  // PRESENT but unrepresentable. Preserving the prior record would assert a
+  // number we positively know is no longer the answer — and had the prior record
+  // been empty, that is a confident `Idle` while shells are running. The
+  // truthful outcome is "unknown", so the projection is omitted.
+  it.each([
+    ['present undefined', undefined],
+    ['null', null],
+    ['non-array', { id: 'b1', type: 'shell' }],
+    ['non-object entry', ['b1']],
+    ['shell entry without an id', [{ type: 'shell', status: 'running' }]],
+    ['shell entry with a non-string id', [{ id: 7, type: 'shell' }]],
+    ['over the entry cap', Array.from({ length: 257 }, (_, i) => ({ id: `b${i}`, type: 'shell' }))],
+  ])('a present-but-invalid inventory (%s) poisons the record and omits the projection', async (_label, tasks) => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    recordHookEvent('stop', {
+      session_id: SESSION,
+      background_tasks: [{ id: 'b1', type: 'shell', status: 'running' }],
+    });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: tasks });
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  // The ONLY preserve path: the registry gave no answer at all. `StopFailure`
+  // naturally takes this route and must not poison a good inventory.
+  it('a truly absent background_tasks field preserves the last valid inventory', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    recordHookEvent('stop', {
+      session_id: SESSION,
+      background_tasks: [{ id: 'b1', type: 'shell', status: 'running' }],
+    });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+
+    // No `background_tasks` key at all — not present-and-undefined.
+    recordHookEvent('stop', { session_id: SESSION });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+    recordHookEvent('stop-failed', { session_id: SESSION });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+  });
+
+  // Absence and corruption are different answers. If they collapsed into one,
+  // a corrupt inventory would silently fall back to the legacy starts the
+  // inventory exists to supersede — resurrecting the stale count.
+  it.each([
+    ['unparseable json', () => 'not json at all'],
+    ['wrong schema', () => JSON.stringify({ schema: 99, generation: 'x', ids: [], ts: 1 })],
+    ['ids not an array', (gen: string) => JSON.stringify({ schema: 1, generation: gen, ids: 'b1', ts: 1 })],
+    ['a non-string id', (gen: string) => JSON.stringify({ schema: 1, generation: gen, ids: [7], ts: 1 })],
+    ['missing ts', (gen: string) => JSON.stringify({ schema: 1, generation: gen, ids: [] })],
+  ])('a persisted %s inventory fails closed and does NOT fall back to legacy starts', async (_label, body) => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const gen = currentGeneration(SESSION);
+
+    // Legacy starts exist and would be resurrected by an incorrect fallback.
+    const startDir = genFile('shells', 'start');
+    mkdirSync(startDir, { recursive: true });
+    const id = 'toolu_stale_legacy';
+    writeFileSync(
+      join(startDir, `${createHash('sha256').update(id).digest('hex')}.json`),
+      JSON.stringify({ schema: 1, generation: gen, id, ts: Date.now() }),
+    );
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+
+    // Corrupt the authoritative inventory.
+    const invFile = genFile('shells', 'inventory.json');
+    mkdirSync(dirname(invFile), { recursive: true });
+    writeFileSync(invFile, body(gen));
+
+    // Fail closed: omit the projection entirely rather than fall back.
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('a non-regular inventory path fails closed rather than falling back', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    // A directory where the record belongs is corruption, not absence.
+    mkdirSync(genFile('shells', 'inventory.json'), { recursive: true });
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('a symlinked inventory fails closed even when its target is valid', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const gen = currentGeneration(SESSION);
+    const invFile = genFile('shells', 'inventory.json');
+    mkdirSync(dirname(invFile), { recursive: true });
+    // A perfectly valid record, reached through a symlink. `stat` would follow
+    // it and report a regular file; only `lstat` sees the link itself.
+    const target = join(dirname(invFile), 'real-inventory.json');
+    writeFileSync(target, JSON.stringify({ schema: 1, generation: gen, ids: ['b1'], ts: Date.now() }));
+    symlinkSync(target, invFile);
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  it('an unreadable inventory directory fails closed rather than reading as absent', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const invFile = genFile('shells', 'inventory.json');
+    mkdirSync(dirname(invFile), { recursive: true });
+    writeFileSync(invFile, JSON.stringify({ schema: 1, generation: currentGeneration(SESSION), ids: [], ts: Date.now() }));
+    // Deny traversal so lstat fails with EACCES, not ENOENT. Skipped when
+    // running as root, where mode bits do not deny.
+    if (process.getuid?.() === 0) return;
+    const shellsDir = dirname(invFile);
+    chmodSync(shellsDir, 0o000);
+    try {
+      expect(await readSessionProjection(SESSION)).toBeNull();
+    } finally {
+      chmodSync(shellsDir, 0o700);
+    }
+  });
+
+  it('a truly absent inventory still permits the legacy fallback', async () => {
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    const gen = currentGeneration(SESSION);
+    const startDir = genFile('shells', 'start');
+    mkdirSync(startDir, { recursive: true });
+    const id = 'toolu_legacy_only';
+    writeFileSync(
+      join(startDir, `${createHash('sha256').update(id).digest('hex')}.json`),
+      JSON.stringify({ schema: 1, generation: gen, id, ts: Date.now() }),
+    );
+    // No inventory file was ever written, so the bounded legacy read applies.
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(1);
+  });
+
+  it('an over-bound inventory poisons the record rather than preserving a stale count', async () => {
+    // Retained separately from the table for the empty-prior case, which is the
+    // dangerous one: preserving an empty prior reports Idle while shells run.
+    recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: [] });
+    expect((await readSessionProjection(SESSION))?.bgShells).toBe(0);
+
+    const huge = Array.from({ length: 257 }, (_, i) => ({ id: `b${i}`, type: 'shell' }));
+    recordHookEvent('stop', { session_id: SESSION, background_tasks: huge });
+    expect(await readSessionProjection(SESSION)).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
+  // Properties over arbitrary bounded inventories (hive-flow-ae28).
+  //
+  // The table cases above pin known shapes; these prove the invariants hold
+  // across generated inventories rather than only the shapes I thought to write.
+  // -------------------------------------------------------------------------
+  const shellId = fc.string({ minLength: 1, maxLength: 24 })
+    .filter((s) => s.length > 0 && s.length <= 1024);
+  const shellEntry = fc.record({ id: shellId, type: fc.constant('shell') });
+  const otherEntry = fc.record({
+    id: shellId,
+    type: fc.constantFrom('subagent', 'monitor', 'workflow', 'task', ''),
+  });
+
+  it('property: bgShells equals the unique validated shell ids of the last valid inventory', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(fc.oneof(shellEntry, otherEntry), { maxLength: 40 }), async (tasks) => {
+        recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+        recordHookEvent('stop', { session_id: SESSION, background_tasks: tasks });
+        const expected = new Set(
+          tasks.filter((t) => t.type === 'shell').map((t) => t.id),
+        ).size;
+        expect((await readSessionProjection(SESSION))?.bgShells).toBe(expected);
+      }),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('property: non-shell entries never increase bgShells', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(otherEntry, { maxLength: 40 }), async (tasks) => {
+        recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+        recordHookEvent('stop', { session_id: SESSION, background_tasks: tasks });
+        expect((await readSessionProjection(SESSION))?.bgShells).toBe(0);
+      }),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('property: a present-but-invalid inventory never reports a stale count', async () => {
+    const invalid = fc.oneof(
+      fc.constant(undefined),
+      fc.constant(null),
+      fc.constant('not-an-array'),
+      fc.integer(),
+      fc.array(fc.integer(), { minLength: 1, maxLength: 5 }),
+      fc.array(fc.record({ type: fc.constant('shell') }), { minLength: 1, maxLength: 5 }),
+    );
+    await fc.assert(
+      fc.asyncProperty(fc.array(shellEntry, { minLength: 1, maxLength: 10 }), invalid, async (good, bad) => {
+        recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+        recordHookEvent('stop', { session_id: SESSION, background_tasks: good });
+        expect((await readSessionProjection(SESSION))?.bgShells)
+          .toBe(new Set(good.map((t) => t.id)).size);
+        // The field is PRESENT and unrepresentable, so the prior count is known
+        // to be stale: report unknown rather than a number we know is wrong.
+        recordHookEvent('stop', { session_id: SESSION, background_tasks: bad });
+        expect(await readSessionProjection(SESSION)).toBeNull();
+      }),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it('property: a valid empty inventory always defeats arbitrary legacy starts', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.array(shellId, { maxLength: 30 }), async (legacyIds) => {
+        recordHookEvent('session-start', { session_id: SESSION, source: 'startup' });
+        const gen = currentGeneration(SESSION);
+        const startDir = genFile('shells', 'start');
+        mkdirSync(startDir, { recursive: true });
+        for (const id of legacyIds) {
+          writeFileSync(
+            join(startDir, `${createHash('sha256').update(id).digest('hex')}.json`),
+            JSON.stringify({ schema: 1, generation: gen, id, ts: Date.now() }),
+          );
+        }
+        recordHookEvent('stop', { session_id: SESSION, background_tasks: [] });
+        expect((await readSessionProjection(SESSION))?.bgShells).toBe(0);
+      }),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  // The in-process tests above call `recordHookEvent` directly, and the
+  // concurrency runner imports the compiled module. Neither proves that the
+  // PRODUCTION entrypoint's stdin parsing carries `background_tasks` through to
+  // the inventory — so this drives the real bin, on stdin, end to end.
+  //
+  // The entrypoint is fail-open and exits 0 unconditionally, so exit status
+  // alone cannot prove the wiring worked; the projection assertions are the real
+  // evidence, and exit 0 only proves it never broke the turn.
+  it('the real claude-activity-hook entrypoint carries Stop.background_tasks into the inventory', async () => {
+    const ENTRYPOINT = resolve(__dirname, '..', '..', '..', 'bin', 'claude-activity-hook.js');
+    expect(
+      existsSync(ENTRYPOINT),
+      `production entrypoint missing at ${ENTRYPOINT}`,
+    ).toBe(true);
+
+    const runEntrypoint = (event: string, payload: Record<string, unknown>) => {
+      const r = spawnSync(process.execPath, [ENTRYPOINT, event], {
+        input: JSON.stringify(payload),
+        encoding: 'utf8',
+        // childEnv asserts the compiled tracker exists and scopes all writes to
+        // this test's temp root.
+        env: childEnv(),
+      });
+      expect(r.status, `entrypoint ${event} failed: ${r.stderr}`).toBe(0);
+      return r;
+    };
+
+    runEntrypoint('session-start', { session_id: SESSION, source: 'startup' });
+
+    // Negative control FIRST, so the positive assertion below cannot pass for
+    // some reason other than the wiring under test: a Stop carrying no
+    // inventory must not produce a waiting shell.
+    runEntrypoint('stop', { session_id: SESSION });
+    const noInventory = await readSessionProjection(SESSION);
+    expect(noInventory?.bgShells).toBe(0);
+    expect(noInventory?.state).toBe('idle');
+
+    // One in-flight background shell.
+    runEntrypoint('stop', {
+      session_id: SESSION,
+      background_tasks: [{ id: 'b7tcpuznr', type: 'shell', status: 'running' }],
+    });
+    const waiting = await readSessionProjection(SESSION);
+    expect(waiting?.bgShells).toBe(1);
+    expect(waiting?.state).toBe('waiting');
+
+    // Natural completion reported by the next turn's inventory.
+    runEntrypoint('stop', { session_id: SESSION, background_tasks: [] });
+    const idle = await readSessionProjection(SESSION);
+    expect(idle?.bgShells).toBe(0);
+    expect(idle?.state).toBe('idle');
   });
 
   it('only human-required notifications reach Needs you', async () => {

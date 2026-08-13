@@ -5,18 +5,43 @@
 // into canonical Hive Flow source.
 //
 // Hook processes never coordinate through shared arrays or locks. Activity is
-// one replace-on-write record; every background identity gets independent
-// start/stop records and a stop tombstone always wins. The renderer reads only
-// records whose generation matches generation.json — missing, malformed, or
-// generation-mismatched state is UNTRUSTED and yields no projection, so the
-// statusline omits activity rather than fabricating "Idle".
+// one replace-on-write record. The renderer reads only records whose generation
+// matches generation.json — missing, malformed, or generation-mismatched state
+// is UNTRUSTED and yields no projection, so the statusline omits activity rather
+// than fabricating "Idle".
+//
+// TWO KINDS OF BACKGROUND STATE (hive-flow-ae28). They are not interchangeable:
+//
+//   SUBAGENTS use paired start/stop identity records and a stop tombstone always
+//   wins. This is sound because `agent_id` is a real identity in ONE namespace,
+//   so a stop can always be matched to its start.
+//
+//   BACKGROUND SHELLS use whole-inventory snapshots instead, because pairing is
+//   impossible for them: `PreToolUse.tool_use_id` (`toolu_*`) identifies a tool
+//   call while `TaskStop.tool_input.task_id` (`b*`) identifies a background task.
+//   A start keyed on the former can never be cancelled by a stop keyed on the
+//   latter, so every launched shell leaked — this is what produced a live
+//   `Waiting · 14 shells` with all fourteen tasks long completed. Shells are now
+//   reconciled from the authoritative `Stop.background_tasks` inventory, which
+//   is a full end-of-turn snapshot rather than a delta and therefore cannot
+//   drift. A valid EMPTY inventory is a positive statement that nothing is
+//   running, which is what heals stale records.
 //
 // Files under <claude-data>/statusline-state/<validated-session-id>/:
 //   generation.json                          (authoritative marker)
 //   generation.claim                         (create-once; RETAINED until SessionEnd)
 //   g/<generation>/activity.json
 //   g/<generation>/agents/{start,stop}/<sha256(identity)>.json
-//   g/<generation>/shells/{start,stop}/<sha256(identity)>.json
+//   g/<generation>/shells/authority.json     (create-once; this generation has
+//                                             authoritative shell inventory)
+//   g/<generation>/shells/inventory.json     (latest reconciled shell inventory,
+//                                             or an explicit invalid/overflow
+//                                             marker that fails closed)
+//   g/<generation>/shells/{start,stop}/...   (LEGACY COMPATIBILITY ONLY — never
+//                                             written any more; read solely for
+//                                             sessions that predate the
+//                                             inventory, and unreachable once
+//                                             shells/authority.json exists)
 //   g/<generation>/tasks/{ack,snapshot}.json
 //
 // GENERATION-SCOPED RECORDS. Every generation-bound record lives under
@@ -65,7 +90,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { lstat, readdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
@@ -640,6 +665,200 @@ function activeIdentityIds(dir: string, family: string, generation: string): str
 }
 
 // ---------------------------------------------------------------------------
+// Background shell inventory
+// ---------------------------------------------------------------------------
+//
+// Background shells are reconciled from `Stop.background_tasks`, NOT from a
+// start/stop pair, because the two hook payloads speak different id namespaces
+// and can never be matched to each other:
+//
+//   PreToolUse  -> tool_use_id        e.g. `toolu_01Atqvh4...`  (a tool call)
+//   TaskStop    -> tool_input.task_id e.g. `b7tcpuznr`          (a background task)
+//
+// Keying a start on `tool_use_id` and a stop on `task_id` means no stop can
+// ever cancel a start, so every launched shell leaks forever. That is what
+// produced a live `Waiting · 14 shells` while all fourteen tasks had in fact
+// completed.
+//
+// `Stop.background_tasks` is authoritative as of Claude Code v2.1.145+: it is
+// the full in-flight inventory at the end of a turn, and a valid EMPTY array is
+// a positive statement that nothing is running — which is precisely what heals
+// stale legacy records. Because it is a whole-inventory snapshot rather than a
+// delta, it cannot drift the way paired events can.
+const SHELL_INVENTORY_SCHEMA = 1;
+
+function shellInventoryFile(dir: string, generation: string): string {
+  return join(genDir(dir, generation), 'shells', 'inventory.json');
+}
+
+/**
+ * Create-once marker recording that this generation has authoritative shell
+ * inventory, published BEFORE any inventory write.
+ *
+ * `atomicWrite`'s Windows replacement path removes the destination before
+ * renaming the replacement in, so `inventory.json` can be observed as ENOENT
+ * mid-update. Without this sentinel that reads as "absent", which permits the
+ * legacy fallback and resurrects precisely the stale starts an established
+ * inventory had already superseded. A re-probe only narrows that window;
+ * it cannot establish the invariant.
+ *
+ * The sentinel makes it structural: once authority exists for a generation, the
+ * legacy fallback is unreachable forever, so a missing inventory is "unknown"
+ * (omit the projection) rather than "fall back". It is never removed during
+ * replacement — only by generation/session teardown, which removes the whole
+ * generation directory.
+ */
+function shellAuthorityFile(dir: string, generation: string): string {
+  return join(genDir(dir, generation), 'shells', 'authority.json');
+}
+
+/**
+ * Has this generation ever had authoritative inventory?
+ *
+ * Anything other than a clean ENOENT counts as established: a malformed,
+ * symlinked, non-regular, or unreadable sentinel must fail closed rather than
+ * re-open the legacy path.
+ */
+async function shellAuthorityEstablished(dir: string, generation: string): Promise<boolean> {
+  try {
+    await lstat(shellAuthorityFile(dir, generation));
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException | null)?.code !== 'ENOENT';
+  }
+}
+
+/**
+ * Extract the unique validated shell ids from a raw `background_tasks` value.
+ *
+ * Returns null — fail closed — for anything that is not a well-formed
+ * inventory. A malformed inventory must never be coerced into an empty one,
+ * because an empty inventory is authoritative and would wrongly clear real
+ * in-flight shells.
+ */
+function shellIdsFromBackgroundTasks(raw: unknown): string[] | null {
+  if (!Array.isArray(raw)) return null; // missing or non-array: unknowable
+  if (raw.length > MAX_IDENTITY_FILES) return null; // over-bound: fail closed
+  const ids = new Set<string>();
+  const own = (rec: Record<string, unknown>, key: string): unknown =>
+    // Own properties only. A prototype-shaped entry (`Object.create({type:
+    // 'shell', id: 'x'})`) has no own `type`/`id`, and inheriting them through
+    // the chain would let a caller of the exported `recordHookEvent` surface
+    // inflate the shell count with an entry that carries no real data.
+    Object.prototype.hasOwnProperty.call(rec, key) ? rec[key] : undefined;
+  for (const entry of raw) {
+    const rec = asRecord(entry);
+    if (!rec) return null; // a non-object entry means the shape is not understood
+    // Only exact `type: "shell"` counts. Other background task types are valid
+    // inventory members but must never inflate the shell count.
+    if (own(rec, 'type') !== 'shell') continue;
+    const id = validIdentity(own(rec, 'id'));
+    if (!id) return null; // a shell entry without a usable id is malformed
+    ids.add(id);
+  }
+  return [...ids].sort();
+}
+
+/**
+ * Reconcile the inventory from a Stop payload.
+ *
+ * Three outcomes, and the distinction between the first two is the whole point:
+ *
+ *  - the field is not an OWN property of the payload -> the task registry gave
+ *    no answer. Preserve the last valid inventory. `StopFailure` naturally takes
+ *    this path.
+ *  - present and a valid array -> publish it.
+ *  - present but null, non-array, malformed, over-cap, or over-byte -> publish an
+ *    explicit invalid marker so the reader fails closed.
+ *
+ * `rec.background_tasks ?? rec.backgroundTasks` cannot express this: `??`
+ * collapses "absent" and "present but null" into the same value, and preserving
+ * a prior EMPTY inventory when the current answer is known to be unrepresentable
+ * reports Idle while shells are actually running — the same stale-truth bug in a
+ * new disguise.
+ */
+function writeShellInventory(dir: string, generation: string, rec: Record<string, unknown>): void {
+  const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(rec, key);
+  const present = has('background_tasks') || has('backgroundTasks');
+  if (!present) return; // no answer from the registry: keep the last valid inventory
+  const raw = has('background_tasks') ? rec.background_tasks : rec.backgroundTasks;
+
+  // Establish authority BEFORE publishing, so a crash between the two still
+  // forecloses the legacy fallback: a missing inventory with authority present
+  // is "unknown", never "fall back to stale starts".
+  publishIfAbsent(shellAuthorityFile(dir, generation), {
+    schema: SHELL_INVENTORY_SCHEMA,
+    generation,
+    ts: Date.now(),
+  });
+
+  const ids = shellIdsFromBackgroundTasks(raw);
+  if (ids === null) {
+    // Present but unrepresentable. Poison the record rather than leave a stale
+    // one authoritative.
+    atomicWrite(shellInventoryFile(dir, generation), {
+      schema: SHELL_INVENTORY_SCHEMA,
+      generation,
+      invalid: true,
+      ts: Date.now(),
+    });
+    return;
+  }
+  const record = {
+    schema: SHELL_INVENTORY_SCHEMA,
+    generation,
+    ids,
+    ts: Date.now(),
+  };
+  // The writer must never publish a record its own reader would reject. The
+  // entry bounds alone do not guarantee this: 256 ids of 1024 bytes serialize
+  // far past the 64 KiB read bound, so a perfectly valid Stop payload could
+  // publish an "authoritative" inventory that every later render treats as
+  // corrupt and fails closed on.
+  //
+  // Simply returning here is NOT safe either. Leaving the previous record in
+  // place makes a stale inventory authoritative for a turn whose real inventory
+  // we could not persist — and if that stale record was a valid EMPTY one, the
+  // statusline confidently reports zero shells while hundreds are in flight.
+  // Preserving the old answer is only correct when the old answer is still
+  // plausibly true; here we positively know it is not.
+  //
+  // So publish an explicit overflow marker instead. It is deliberately shaped so
+  // `validShellInventory` rejects it (no `ids` array), which makes the reader
+  // classify the inventory as present-but-invalid and fail closed — omitting the
+  // activity projection rather than asserting a number known to be wrong.
+  if (Buffer.byteLength(JSON.stringify(record), 'utf8') > MAX_RECORD_BYTES) {
+    atomicWrite(shellInventoryFile(dir, generation), {
+      schema: SHELL_INVENTORY_SCHEMA,
+      generation,
+      overflow: true,
+      count: ids.length,
+      ts: record.ts,
+    });
+    return;
+  }
+  atomicWrite(shellInventoryFile(dir, generation), record);
+}
+
+/** Validate a persisted inventory record. Null means "no authoritative answer". */
+function validShellInventory(value: unknown, generation: string): string[] | null {
+  const rec = asRecord(value);
+  if (!rec || rec.schema !== SHELL_INVENTORY_SCHEMA) return null;
+  // Generation-scoped like every other record: a stale writer's inventory is
+  // never adopted by a renderer reading a newer generation.
+  if (rec.generation !== generation) return null;
+  if (typeof rec.ts !== 'number' || !Number.isFinite(rec.ts)) return null;
+  if (!Array.isArray(rec.ids) || rec.ids.length > MAX_IDENTITY_FILES) return null;
+  const ids = new Set<string>();
+  for (const entry of rec.ids) {
+    const id = validIdentity(entry);
+    if (!id) return null;
+    ids.add(id);
+  }
+  return [...ids].sort();
+}
+
+// ---------------------------------------------------------------------------
 // Tasks
 // ---------------------------------------------------------------------------
 
@@ -843,6 +1062,82 @@ async function activeIdentityIdsAsync(
   return [...new Set(starts.filter((id) => !stopped.has(id)))].sort();
 }
 
+/**
+ * Tri-state read of the authoritative inventory.
+ *
+ * Absence and corruption are NOT the same answer and must not collapse into one
+ * null. `readJsonBounded` returns null for both, so reading through it alone
+ * would silently fall back to legacy records whenever the inventory file was
+ * malformed, oversized, or not a regular file — resurrecting exactly the stale
+ * starts this design exists to heal. Presence is therefore probed separately.
+ */
+type InventoryRead =
+  | { kind: 'absent' }
+  | { kind: 'valid'; ids: string[] }
+  | { kind: 'invalid' };
+
+async function readShellInventory(
+  dir: string,
+  generation: string,
+  budget: Budget,
+): Promise<InventoryRead> {
+  const file = shellInventoryFile(dir, generation);
+  if (budget.expired()) return { kind: 'invalid' }; // no answer: never guess
+  let info;
+  try {
+    // `lstat`, not `stat`: `stat` follows symlinks, so a symlinked inventory
+    // would report as a regular file and be trusted. The record must be a real
+    // regular file at its own path.
+    info = await lstat(file);
+  } catch (error) {
+    // ONLY "no such file" means absent. Every other failure — EACCES, EIO,
+    // ELOOP, ENOTDIR — means the answer is unknowable, and treating it as
+    // absence would fall back to the very legacy records this supersedes.
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    return code === 'ENOENT' ? { kind: 'absent' } : { kind: 'invalid' };
+  }
+  // Present but unusable: a directory, symlink, socket, or an over-bound file is
+  // corruption, not absence.
+  if (!info.isFile() || info.size > MAX_RECORD_BYTES) return { kind: 'invalid' };
+  let raw: unknown;
+  try {
+    raw = JSON.parse(await readFile(file, 'utf8')) as unknown;
+  } catch {
+    return { kind: 'invalid' };
+  }
+  const ids = validShellInventory(raw, generation);
+  return ids === null ? { kind: 'invalid' } : { kind: 'valid', ids };
+}
+
+/**
+ * Project background shells, preferring the authoritative Stop inventory.
+ *
+ * A valid inventory wins outright and overrides legacy start/stop records, so a
+ * session carrying stale unmatched starts self-heals on the next real Stop
+ * without deleting any unrelated session state. The legacy pair-based read is
+ * reached ONLY on true absence; a present-but-corrupt inventory fails closed and
+ * omits the projection rather than falling back to records the inventory was
+ * meant to supersede.
+ */
+async function activeShellIdsAsync(
+  dir: string,
+  generation: string,
+  budget: Budget,
+): Promise<string[] | null> {
+  const read = await readShellInventory(dir, generation, budget);
+  if (read.kind === 'valid') return read.ids;
+  if (read.kind === 'invalid') return null; // fail closed
+
+  // The inventory read as absent. That is only a legitimate reason to consult
+  // legacy records if this generation has NEVER had authoritative inventory.
+  // Once it has, absence means the record is mid-replacement or its writer died
+  // — "unknown", not "fall back to the stale starts authority already
+  // superseded". This is structural, not probabilistic: no retry can establish
+  // an invariant that a create-once sentinel gives outright.
+  if (await shellAuthorityEstablished(dir, generation)) return null;
+  return activeIdentityIdsAsync(dir, 'shells', generation, budget);
+}
+
 async function taskInventoryAtAsync(dir: string, budget: Budget): Promise<TaskInventory | null> {
   let names: string[] = [];
   try {
@@ -896,7 +1191,7 @@ export async function readSessionProjection(
   // activity entirely rather than delaying the statusline.
   const agents = await activeIdentityIdsAsync(dir, 'agents', marker.generation, budget);
   if (agents === null) return null;
-  const shells = await activeIdentityIdsAsync(dir, 'shells', marker.generation, budget);
+  const shells = await activeShellIdsAsync(dir, marker.generation, budget);
   if (shells === null) return null;
 
   const ackValue = asRecord(
@@ -1002,8 +1297,6 @@ export function recordHookEvent(event: string, payload: unknown): void {
   if (!generation) return;
 
   const toolName = rec.tool_name ?? rec.toolName ?? null;
-  const toolInput = asRecord(rec.tool_input ?? rec.toolInput) ?? {};
-  const toolUseId = rec.tool_use_id ?? rec.toolUseId ?? null;
   const agentId = rec.agent_id ?? rec.agentId ?? null;
 
   switch (event) {
@@ -1016,22 +1309,22 @@ export function recordHookEvent(event: string, payload: unknown): void {
       break;
 
     case 'pre-tool':
-      // Identity records are independent of the last-writer-wins activity
-      // record, so they are written first: a concurrent atomic replacement may
-      // briefly omit activity but must never suppress an independently
-      // knowable background lifecycle fact.
-      if (toolName === 'Bash' && toolInput.run_in_background === true) {
-        writeIdentity(dir, generation, 'shells', 'start', toolUseId);
-      }
+      // No background-shell record is written here. `tool_use_id` identifies a
+      // TOOL CALL, not a background task, so a start keyed on it could never be
+      // cancelled by any stop and leaked on every launch. Background shells are
+      // reconciled from the authoritative `Stop.background_tasks` inventory
+      // instead. Subagent identities are unaffected: `agent_id` is a real
+      // identity in a single namespace.
       if (!loadActivity(dir, generation)) return;
       writeActivity(dir, generation, 'working', toolName);
       break;
 
     case 'post-tool':
-      if (toolName === 'TaskStop') {
-        // Hooks see the canonical name; only the canonical task_id is accepted.
-        writeIdentity(dir, generation, 'shells', 'stop', toolInput.task_id);
-      }
+      // `TaskStop.tool_input.task_id` IS a real background task id, but writing
+      // it as a tombstone is now inert: there are no `tool_use_id`-keyed starts
+      // left for it to cancel, and the Stop inventory supersedes pair matching
+      // entirely. Recording it would only accumulate records that can never
+      // match, so it is deliberately not written.
       if (!loadActivity(dir, generation)) return;
       writeActivity(dir, generation, 'working');
       break;
@@ -1053,6 +1346,14 @@ export function recordHookEvent(event: string, payload: unknown): void {
 
     case 'stop':
     case 'stop-failed':
+      // Reconcile background shells from the authoritative end-of-turn
+      // inventory. Written before the activity record for the same reason
+      // identity records were: it is an independently knowable lifecycle fact
+      // that a concurrent activity replacement must not suppress. A valid empty
+      // array is authoritative and clears stale legacy starts. A field that is
+      // PRESENT but unrepresentable poisons the record so the projection reads
+      // unknown; only a genuinely ABSENT field preserves the prior inventory.
+      writeShellInventory(dir, generation, rec);
       writeTaskSnapshot(dir, generation, sessionId);
       if (!loadActivity(dir, generation)) return;
       writeActivity(dir, generation, 'idle');

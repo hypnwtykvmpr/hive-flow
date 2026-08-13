@@ -160,6 +160,14 @@ const RELOCATED_HELPER_FILES = [
   'provider-tracker.cjs',
   'client-kind.cjs',
   'session-id.cjs',
+  // The attesting MCP launcher chain. All three are required together: the
+  // launcher `require`s both siblings at load, so relocating it without them
+  // produces a bundle that fails at spawn time rather than at install time.
+  // Their omission here is why the main init path could not produce a complete
+  // launcher bundle while the standalone installer could.
+  'hive-flow-mcp-launcher.cjs',
+  'layout-paths.cjs',
+  'mcp-attestation.cjs',
 ];
 
 const RELOCATED_POLICY_FILES = [
