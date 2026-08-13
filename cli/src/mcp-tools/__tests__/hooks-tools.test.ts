@@ -68,6 +68,7 @@ vi.mock('../services/worker-daemon.js', () => ({
 }));
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { CODEX_CLI_DEFAULT_MODEL, GEMINI_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 import { hooksTools } from '../hooks-tools.js';
 
 // ── Tool lookup helpers ──────────────────────────────────────────────────────
@@ -497,6 +498,10 @@ describe('hooks-tools', () => {
       const providers = alts.map((a) => a.provider as string);
       expect(providers).toContain('gemini-cli');
       expect(providers).toContain('codex-cli');
+      expect(alts).toEqual(expect.arrayContaining([
+        expect.objectContaining({ provider: 'gemini-cli', model: GEMINI_CLI_DEFAULT_MODEL }),
+        expect.objectContaining({ provider: 'codex-cli', model: CODEX_CLI_DEFAULT_MODEL }),
+      ]));
     });
   });
 
@@ -1387,6 +1392,10 @@ describe('hooks-tools', () => {
       const providers = result.suggestedProviders as AnyResult[];
       expect(providers.length).toBeGreaterThan(0);
       expect(typeof providers[0].provider).toBe('string');
+      expect(providers).toEqual(expect.arrayContaining([
+        expect.objectContaining({ provider: 'gemini-cli', model: GEMINI_CLI_DEFAULT_MODEL }),
+        expect.objectContaining({ provider: 'codex-cli', model: CODEX_CLI_DEFAULT_MODEL }),
+      ]));
     });
   });
 

@@ -113,7 +113,7 @@ All enforcement is deterministic, file-based, and persists across compaction. No
 ### Model Gate (mcp-enforcement-gate.ts)
 
 - **Haiku prohibited**: Always blocked for agent tasks (`agent_spawn`, `queen_spawn_worker`)
-- **Top-tier enforcement**: gemini-cli requires `gemini-3.1-pro-preview`, codex-cli requires `gpt-5.5`
+- **Top-tier enforcement**: gemini-cli requires `gemini-3.6-flash-high`, codex-cli requires `gpt-5.6-sol`
 - **Auto-default**: Claude provider without explicit model defaults to `sonnet`
 - **Location**: `cli/src/mcp-tools/mcp-enforcement-gate.ts` (`checkModelEnforcement`)
 
@@ -258,8 +258,8 @@ mcp__hive-flow__agent_task({ agentId: "agent-id", task: "Review the error handli
 
 | Provider | Headless | Tool Calling | Streaming | Model Selection |
 |----------|----------|-------------|-----------|-----------------|
-| `gemini-cli` | Yes | Yes | Yes | gemini-3.1-pro-preview |
-| `codex-cli` | Yes | Yes | Yes | gpt-5.5 |
+| `gemini-cli` | Yes | Yes | Yes | gemini-3.6-flash-high |
+| `codex-cli` | Yes | Yes | Yes | gpt-5.6-sol |
 | `cursor-cli` | Yes | Yes | Yes | auto |
 
 ### When to Use External Agents

@@ -1,7 +1,7 @@
 /**
  * V3 Cohere Provider
  *
- * Supports Command R+, Command R, and Command Light models.
+ * Supports current Command A models and legacy Command R compatibility IDs.
  *
  * @module @hive-flow/providers/cohere-provider
  */
@@ -20,6 +20,8 @@ import {
   RateLimitError,
   LLMProviderError,
 } from './types.js';
+
+export const COHERE_DEFAULT_MODEL: LLMModel = 'command-a-plus-05-2026';
 
 interface CohereRequest {
   model: string;
@@ -65,18 +67,24 @@ export class CohereProvider extends BaseProvider {
   readonly name: LLMProvider = 'cohere';
   readonly capabilities: ProviderCapabilities = {
     supportedModels: [
+      COHERE_DEFAULT_MODEL,
+      'command-a-03-2025',
       'command-r-plus',
       'command-r',
       'command-light',
       'command',
     ],
     maxContextLength: {
+      [COHERE_DEFAULT_MODEL]: 128000,
+      'command-a-03-2025': 256000,
       'command-r-plus': 128000,
       'command-r': 128000,
       'command-light': 4096,
       'command': 4096,
     },
     maxOutputTokens: {
+      [COHERE_DEFAULT_MODEL]: 64000,
+      'command-a-03-2025': 8000,
       'command-r-plus': 4096,
       'command-r': 4096,
       'command-light': 4096,
@@ -254,6 +262,8 @@ export class CohereProvider extends BaseProvider {
 
   async getModelInfo(model: LLMModel): Promise<ModelInfo> {
     const descriptions: Record<string, string> = {
+      [COHERE_DEFAULT_MODEL]: 'Current Command A+ model for agentic, reasoning, multilingual, and vision tasks',
+      'command-a-03-2025': 'Command A model for agents, RAG, tool use, and multilingual tasks',
       'command-r-plus': 'Most capable Cohere model with 128K context',
       'command-r': 'Balanced Cohere model with 128K context',
       'command-light': 'Fast and efficient Cohere model',

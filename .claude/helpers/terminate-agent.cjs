@@ -29,9 +29,9 @@ const TERMINATE_STEPS_LOG_FILE = path.join(SESSION_DIR, 'terminate-steps.log.jso
 
 // Model ID mapping for settings.json "model" field
 const MODEL_IDS = {
-  opus: 'claude-opus-4-6',
-  sonnet: 'claude-sonnet-4-6',
-  haiku: 'claude-sonnet-4-6',
+  opus: 'claude-opus-5',
+  sonnet: 'claude-sonnet-5',
+  haiku: 'claude-sonnet-5',
 };
 
 function getJsonlProjectDir() {
@@ -686,6 +686,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  MODEL_IDS,
   parseHookInput,
   readHookInput,
   isTerminatePrompt,

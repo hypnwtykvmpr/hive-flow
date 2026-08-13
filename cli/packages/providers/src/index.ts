@@ -32,7 +32,7 @@ export type { BaseProviderOptions, ILogger } from './base-provider.js';
 export { AnthropicProvider } from './anthropic-provider.js';
 export { OpenAIProvider } from './openai-provider.js';
 export { GoogleProvider } from './google-provider.js';
-export { CohereProvider } from './cohere-provider.js';
+export { CohereProvider, COHERE_DEFAULT_MODEL } from './cohere-provider.js';
 export { OllamaProvider } from './ollama-provider.js';
 export { LMStudioProvider } from './lm-studio-provider.js';
 export { OpenRouterProvider } from './openrouter-provider.js';
@@ -42,8 +42,12 @@ export { DeepSeekProvider } from './deepseek-provider.js';
 export { QwenProvider } from './qwen-provider.js';
 export { QwenCLIProvider } from './qwen-cli-provider.js';
 export { CursorCLIProvider } from './cursor-cli-provider.js';
-export { CopilotProvider } from './copilot-provider.js';
+export { CopilotProvider, COPILOT_FALLBACK_MODEL } from './copilot-provider.js';
 export { AnthropicCLIProvider } from './anthropic-cli-provider.js';
+export {
+  QWEN_DEFAULT_MODEL, QWEN_MODELS, QWEN_MODEL_DESCRIPTIONS,
+  QWEN_CONTEXT_WINDOWS, QWEN_OUTPUT_LIMITS,
+} from './qwen-model-constants.js';
 
 // Export provider manager
 export { ProviderManager, createProviderManager } from './provider-manager.js';
@@ -59,7 +63,15 @@ export { bufferStreamResponse } from './streaming-buffer.js';
 export { escapeXml, parseToolCallPayload, parseToolCallsFromContent, formatToolInstructions, flushToolCallsFromBuffer } from './tool-call-utils.js';
 
 // Export model alias resolver
-export { resolveProviderModel, resolveProviderModelOrOpus, PROVIDER_ALIAS_MAP, KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS, DEFAULT_CONTEXT_WINDOWS, getModelContextLength } from './model-alias-resolver.js';
+export {
+  resolveProviderModel, resolveProviderModelOrOpus, PROVIDER_ALIAS_MAP,
+  KNOWN_PROVIDER_MODELS, CLAUDE_ALIASES, PROVIDER_DEFAULTS,
+  ANTHROPIC_CLI_DEFAULT_MODEL, ANTHROPIC_SONNET_MODEL, ANTHROPIC_HAIKU_MODEL,
+  GEMINI_CLI_DEFAULT_MODEL, GEMINI_API_DEFAULT_MODEL,
+  CODEX_CLI_DEFAULT_MODEL, OPENAI_API_DEFAULT_MODEL,
+  DEEPSEEK_DEFAULT_MODEL, DEEPSEEK_FLASH_MODEL,
+  DEFAULT_CONTEXT_WINDOWS, getModelContextLength,
+} from './model-alias-resolver.js';
 export type { ClaudeAlias, CLIProviderName } from './model-alias-resolver.js';
 
 // Export OpenRouter model config

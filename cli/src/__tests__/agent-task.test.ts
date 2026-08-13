@@ -35,21 +35,31 @@ vi.mock('../hivector/enhanced-model-router.js', () => ({
   }),
 }));
 vi.mock('@hive-flow/providers', () => ({
+  ANTHROPIC_CLI_DEFAULT_MODEL: 'claude-opus-5',
+  ANTHROPIC_SONNET_MODEL: 'claude-sonnet-5',
+  ANTHROPIC_HAIKU_MODEL: 'claude-haiku-4-5-20251001',
+  GEMINI_CLI_DEFAULT_MODEL: 'gemini-3.6-flash-high',
+  GEMINI_API_DEFAULT_MODEL: 'gemini-3.6-flash',
+  CODEX_CLI_DEFAULT_MODEL: 'gpt-5.6-sol',
+  OPENAI_API_DEFAULT_MODEL: 'gpt-5.6-sol',
+  DEEPSEEK_DEFAULT_MODEL: 'deepseek-v4-pro',
+  DEEPSEEK_FLASH_MODEL: 'deepseek-v4-flash',
+  QWEN_DEFAULT_MODEL: 'qwen3.7-plus',
   resolveProviderModel: vi.fn((provider: string, model: string | undefined) => {
     if (provider === 'openrouter') {
       if (model === 'xiaomi/mimo-v2.5-pro') return 'xiaomi/mimo-v2.5-pro';
       if (model === 'mini' || model === 'sonnet') return 'moonshotai/kimi-k2.6';
       return undefined;
     }
-    if (provider === 'codex-cli') return 'gpt-5.5';
-    if (provider === 'gemini-cli') return 'gemini-3.5-flash';
+    if (provider === 'codex-cli') return 'gpt-5.6-sol';
+    if (provider === 'gemini-cli') return 'gemini-3.6-flash-high';
     if (provider === 'cursor-cli') return 'auto';
     if (provider === 'lm-studio') {
       if (!model || model === 'mini' || model === 'sonnet' || model === 'opus' || model === 'inherit') return 'local-model';
       return model;
     }
     if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
-    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-5' : 'claude-opus-4-8';
+    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-5' : 'claude-opus-5';
     return model;
   }),
   resolveProviderModelOrOpus: vi.fn((provider: string, model: string | undefined) => {
@@ -58,15 +68,15 @@ vi.mock('@hive-flow/providers', () => ({
       if (model === 'mini' || model === 'sonnet') return 'moonshotai/kimi-k2.6';
       return 'moonshotai/kimi-k2.6';
     }
-    if (provider === 'codex-cli') return 'gpt-5.5';
-    if (provider === 'gemini-cli') return 'gemini-3.5-flash';
+    if (provider === 'codex-cli') return 'gpt-5.6-sol';
+    if (provider === 'gemini-cli') return 'gemini-3.6-flash-high';
     if (provider === 'cursor-cli') return 'auto';
     if (provider === 'lm-studio') {
       if (!model || model === 'mini' || model === 'sonnet' || model === 'opus' || model === 'inherit') return 'local-model';
       return model;
     }
     if (provider === 'deepseek') return model === 'mini' ? 'deepseek-v4-flash' : 'deepseek-v4-pro';
-    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-5' : 'claude-opus-4-8';
+    if (provider === 'anthropic-cli') return model === 'mini' || model === 'sonnet' ? 'claude-sonnet-5' : 'claude-opus-5';
     return model;
   }),
 }));
@@ -290,11 +300,11 @@ describe('agent_spawn handler model normalization', () => {
 
     expect(result.success).toBe(true);
     expect(result.provider).toBe('codex-cli');
-    expect(result.resolvedModel).toBe('gpt-5.5');
+    expect(result.resolvedModel).toBe('gpt-5.6-sol');
     const persisted = Object.values(getPersistedStore().agents)[0] as AgentRecord;
     expect(persisted.provider).toBe('codex-cli');
     expect(persisted.model).toBe('opus');
-    expect(persisted.resolvedModel).toBe('gpt-5.5');
+    expect(persisted.resolvedModel).toBe('gpt-5.6-sol');
   });
 
   it('accepts LM Studio as a local provider and persists exact local ids as resolvedModel', async () => {

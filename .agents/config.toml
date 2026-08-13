@@ -12,8 +12,8 @@
 # =============================================================================
 
 # Model selection - the AI model to use for code generation
-# Options: gpt-5.4, gpt-4o, claude-sonnet, claude-opus
-model = "gpt-5.4"
+# Current Codex default; provider-specific alternatives remain available through routing.
+model = "gpt-5.6-sol"
 
 # Approval policy determines when human approval is required
 # - untrusted: Always require approval

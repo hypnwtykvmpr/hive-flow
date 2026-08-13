@@ -3,7 +3,7 @@ type: performance-engineer
 description: Performance specialist for profiling, benchmarks, runtime targets, and scalability risks.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: sonnet-4.6
+defaultModel: claude-sonnet-5
 phases:
   - 3
   - 6

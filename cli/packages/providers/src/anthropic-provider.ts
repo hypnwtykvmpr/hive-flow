@@ -20,6 +20,7 @@ import {
   RateLimitError,
   LLMProviderError,
 } from './types.js';
+import { ANTHROPIC_CLI_DEFAULT_MODEL } from './model-alias-resolver.js';
 
 interface AnthropicRequest {
   model: string;
@@ -58,6 +59,7 @@ export class AnthropicProvider extends BaseProvider {
   readonly name: LLMProvider = 'anthropic';
   readonly capabilities: ProviderCapabilities = {
     supportedModels: [
+      ANTHROPIC_CLI_DEFAULT_MODEL,
       'claude-3-5-sonnet-20241022',
       'claude-3-5-sonnet-latest',
       'claude-3-opus-20240229',
@@ -65,6 +67,7 @@ export class AnthropicProvider extends BaseProvider {
       'claude-3-haiku-20240307',
     ],
     maxContextLength: {
+      [ANTHROPIC_CLI_DEFAULT_MODEL]: 1000000,
       'claude-3-5-sonnet-20241022': 200000,
       'claude-3-5-sonnet-latest': 200000,
       'claude-3-opus-20240229': 200000,
@@ -72,6 +75,7 @@ export class AnthropicProvider extends BaseProvider {
       'claude-3-haiku-20240307': 200000,
     },
     maxOutputTokens: {
+      [ANTHROPIC_CLI_DEFAULT_MODEL]: 128000,
       'claude-3-5-sonnet-20241022': 8192,
       'claude-3-5-sonnet-latest': 8192,
       'claude-3-opus-20240229': 4096,
@@ -92,6 +96,11 @@ export class AnthropicProvider extends BaseProvider {
       concurrentRequests: 100,
     },
     pricing: {
+      [ANTHROPIC_CLI_DEFAULT_MODEL]: {
+        promptCostPer1k: 0.005,
+        completionCostPer1k: 0.025,
+        currency: 'USD',
+      },
       'claude-3-5-sonnet-20241022': {
         promptCostPer1k: 0.003,
         completionCostPer1k: 0.015,

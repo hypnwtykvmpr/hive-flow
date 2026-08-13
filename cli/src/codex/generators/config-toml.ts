@@ -5,6 +5,7 @@
  */
 
 import type { ConfigTomlOptions, McpServerConfig, SkillConfig, ConfigProfile } from '../types.js';
+import { CODEX_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 
 /**
  * Security configuration options
@@ -57,7 +58,7 @@ interface ExtendedConfigTomlOptions extends ConfigTomlOptions {
  */
 export async function generateConfigToml(options: ExtendedConfigTomlOptions = {}): Promise<string> {
   const {
-    model = 'gpt-5.5',
+    model = CODEX_CLI_DEFAULT_MODEL,
     approvalPolicy = 'on-request',
     sandboxMode = 'workspace-write',
     webSearch = 'cached',
@@ -90,7 +91,7 @@ export async function generateConfigToml(options: ExtendedConfigTomlOptions = {}
   lines.push('# =============================================================================');
   lines.push('');
   lines.push('# Model selection - the AI model to use for code generation');
-  lines.push('# Options: gpt-5.5, gpt-4o, claude-sonnet, claude-opus');
+  lines.push(`# Default: ${CODEX_CLI_DEFAULT_MODEL}; custom provider-supported model IDs are also accepted`);
   lines.push(`model = "${model}"`);
   lines.push('');
   lines.push('# Approval policy determines when human approval is required');
@@ -521,7 +522,7 @@ function generateProfile(name: string, profile: ConfigProfile): string[] {
  */
 export async function generateMinimalConfigToml(options: ConfigTomlOptions = {}): Promise<string> {
   const {
-    model = 'gpt-5.5',
+    model = CODEX_CLI_DEFAULT_MODEL,
     approvalPolicy = 'on-request',
     sandboxMode = 'workspace-write',
   } = options;
@@ -550,7 +551,7 @@ export async function generateCIConfigToml(): Promise<string> {
 # No interactive approvals, ephemeral history, minimal overhead
 # =============================================================================
 
-model = "gpt-5.5"
+model = "${CODEX_CLI_DEFAULT_MODEL}"
 approval_policy = "never"
 sandbox_mode = "workspace-write"
 web_search = "disabled"
@@ -619,7 +620,7 @@ export async function generateEnterpriseConfigToml(): Promise<string> {
 # Suitable for enterprise environments with strict security requirements
 # =============================================================================
 
-model = "gpt-5.5"
+model = "${CODEX_CLI_DEFAULT_MODEL}"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 web_search = "cached"
@@ -834,7 +835,7 @@ export async function generateDevConfigToml(): Promise<string> {
 # Auto-approve most actions, full access, live web search
 # =============================================================================
 
-model = "gpt-5.5"
+model = "${CODEX_CLI_DEFAULT_MODEL}"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 web_search = "live"
@@ -915,7 +916,7 @@ export async function generateSecureConfigToml(): Promise<string> {
 # All actions require approval, read-only access, no web search
 # =============================================================================
 
-model = "gpt-5.5"
+model = "${CODEX_CLI_DEFAULT_MODEL}"
 approval_policy = "untrusted"
 sandbox_mode = "read-only"
 web_search = "disabled"

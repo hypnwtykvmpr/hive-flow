@@ -10,9 +10,11 @@ import {
   migrateFromClaudeCode,
   convertSkillSyntax,
   convertSettingsToToml,
+  generateConfigTomlFromParsed,
   generateMigrationReport,
   FEATURE_MAPPINGS,
 } from '../migrations/index.js';
+import { CODEX_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 import type { MigrationResult } from '../types.js';
 
 // =============================================================================
@@ -425,6 +427,30 @@ describe('convertSettingsToToml', () => {
     const result = convertSettingsToToml(settings);
 
     expect(result).toContain('model = "claude-3-opus"');
+  });
+
+  it('uses the canonical Codex model when settings omit a model', () => {
+    const result = convertSettingsToToml({});
+
+    expect(result).toContain(`model = "${CODEX_CLI_DEFAULT_MODEL}"`);
+    expect(result).not.toContain('model = "gpt-5.5"');
+  });
+
+  it('uses the canonical Codex model when parsed guidance omits a model', async () => {
+    const result = generateConfigTomlFromParsed({
+      title: 'Project guidance',
+      sections: [],
+      skills: [],
+      hooks: [],
+      customInstructions: [],
+      codeBlocks: [],
+      mcpServers: [],
+      settings: {},
+      warnings: [],
+    });
+
+    expect(result).toContain(`model = "${CODEX_CLI_DEFAULT_MODEL}"`);
+    expect(result).not.toContain('model = "gpt-5.5"');
   });
 
   it('should convert autoApprove true to never policy', () => {

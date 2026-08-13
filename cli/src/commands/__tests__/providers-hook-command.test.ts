@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { GEMINI_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 import { providersCommand } from '../providers.js';
 import {
   collectProviderStatuses,
@@ -50,7 +51,7 @@ describe('providers hook command surface', () => {
 
     expect(output).toContain('[PROVIDER_SUGGESTION] gemini-cli available (agy 1.2.3)');
     expect(output).toContain('provider: "gemini-cli"');
-    expect(output).toContain('model: "gemini-3.5-flash"');
+    expect(output).toContain(`model: "${GEMINI_CLI_DEFAULT_MODEL}"`);
   });
 
   it('detects provider status with agy as the gemini-cli binary and writes the status cache', () => {

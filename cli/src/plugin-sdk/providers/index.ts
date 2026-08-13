@@ -19,6 +19,10 @@ import type {
   ILogger,
   IEventBus,
 } from '../types/index.js';
+import {
+  ANTHROPIC_CLI_DEFAULT_MODEL,
+  CODEX_CLI_DEFAULT_MODEL,
+} from '@hive-flow/providers';
 
 // ============================================================================
 // Provider Events
@@ -533,6 +537,7 @@ export class ProviderFactory {
       name: 'anthropic',
       displayName: options?.displayName ?? 'Anthropic Claude',
       models: options?.models ?? [
+        ANTHROPIC_CLI_DEFAULT_MODEL,
         'claude-fable-5',
         'claude-opus-4-8',
         'claude-sonnet-5',
@@ -571,6 +576,7 @@ export class ProviderFactory {
       name: 'openai',
       displayName: options?.displayName ?? 'OpenAI',
       models: options?.models ?? [
+        CODEX_CLI_DEFAULT_MODEL,
         'gpt-4o',
         'gpt-4o-mini',
         'gpt-4-turbo',

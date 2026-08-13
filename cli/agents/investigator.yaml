@@ -3,7 +3,7 @@ type: investigator
 description: Live-code investigator that reads files, traces paths, and grounds plans in repository facts.
 soloExempt: false
 defaultProvider: codex-cli
-defaultModel: gpt-5.5
+defaultModel: gpt-5.6-sol
 phases:
   - 1
 capabilities:

@@ -3,7 +3,7 @@ type: security-reviewer
 description: Security reviewer for audits, CVE-style checks, and red-line review of implemented code.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: opus-4.1
+defaultModel: claude-opus-5
 phases:
   - 7
   - 10

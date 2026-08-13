@@ -26,6 +26,7 @@ import {
   formatToolInstructions,
   flushToolCallsFromBuffer,
 } from './tool-call-utils.js';
+import { CODEX_CLI_DEFAULT_MODEL } from './model-alias-resolver.js';
 
 // ===== JSONL Event Types =====
 
@@ -51,11 +52,15 @@ interface CodexErrorEvent extends CodexEvent {
 // ===== Static Data =====
 
 const CODEX_MODELS: LLMModel[] = [
+  CODEX_CLI_DEFAULT_MODEL, 'gpt-5.6-terra', 'gpt-5.6-luna',
   'gpt-5.5', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2-codex', 'gpt-5.1-codex-max',
   'gpt-5.1-codex', 'gpt-5-codex', 'gpt-5-codex-mini',
 ];
 
 const MODEL_INFO: Record<string, { desc: string; ctx: number; out: number }> = {
+  'gpt-5.6-sol':       { desc: 'GPT-5.6 Sol - Latest frontier agentic coding model', ctx: 1050000, out: 128000 },
+  'gpt-5.6-terra':     { desc: 'GPT-5.6 Terra - Frontier general agentic model',     ctx: 1050000, out: 128000 },
+  'gpt-5.6-luna':      { desc: 'GPT-5.6 Luna - Frontier agentic model',             ctx: 1050000, out: 128000 },
   'gpt-5.5':           { desc: 'GPT-5.5 - Smartest flagship, best agentic coding',   ctx: 1050000, out: 128000 },
   'gpt-5.4':           { desc: 'GPT-5.4 - Previous flagship model',                  ctx: 1000000, out: 32768 },
   'gpt-5.3-codex':     { desc: 'GPT-5.3 Codex - High-capability code model',         ctx: 200000, out: 32768 },
@@ -209,6 +214,7 @@ export class CodexCLIProvider extends BaseProvider {
     supportsEmbeddings: false, supportsBatching: false,
     rateLimit: { requestsPerMinute: 60, tokensPerMinute: 1000000, concurrentRequests: 5 },
     pricing: {
+      'gpt-5.6-sol': FREE, 'gpt-5.6-terra': FREE, 'gpt-5.6-luna': FREE,
       'gpt-5.4': FREE, 'gpt-5.3-codex': FREE, 'gpt-5.2-codex': FREE, 'gpt-5.1-codex-max': FREE,
       'gpt-5.1-codex': FREE, 'gpt-5-codex': FREE,
       'gpt-5-codex-mini': { promptCostPer1k: 0.0015, completionCostPer1k: 0.006, currency: 'USD' },
@@ -566,7 +572,7 @@ export class CodexCLIProvider extends BaseProvider {
       '--sandbox', plan.sandboxMode,       // F0-A: derived from the agent's bridge mode
     ];
     // Only include --model if explicitly set (not 'auto' or undefined)
-    // Omitting --model lets Codex use config.toml default (typically gpt-5.5)
+    // Omitting --model lets Codex use its configured default (currently gpt-5.6-sol).
     if (model && model !== 'auto') {
       args.push('--model', String(model));
     }

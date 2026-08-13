@@ -335,6 +335,10 @@ describe('context window detection', () => {
   });
 
   it('should resolve known models through MODEL_CONTEXT_WINDOWS', () => {
+    assert.equal(MODEL_CONTEXT_WINDOWS.has('claude-opus-5'), true);
+    assert.equal(MODEL_CONTEXT_WINDOWS.has('claude-sonnet-5'), true);
+    assert.equal(modelIdToWindowSize('claude-opus-5'), 1000000);
+    assert.equal(modelIdToWindowSize('claude-sonnet-5'), 1000000);
     assert.equal(MODEL_CONTEXT_WINDOWS.has('claude-sonnet-4-6'), true);
     assert.equal(modelIdToWindowSize('claude-sonnet-4-6'), 200000);
   });

@@ -13,6 +13,10 @@
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  CODEX_CLI_DEFAULT_MODEL,
+  GEMINI_CLI_DEFAULT_MODEL,
+} from '../src/model-alias-resolver.js';
 
 // ===== Constants =====
 
@@ -21,14 +25,14 @@ const PROVIDER_AGENT_TYPES = [
     name: 'gemini-researcher',
     description: 'Research agent powered by Google Gemini CLI',
     provider: 'gemini-cli',
-    defaultModel: 'gemini-3.5-flash',
+    defaultModel: GEMINI_CLI_DEFAULT_MODEL,
     capabilities: ['code-analysis', 'architecture-review', 'documentation', 'research'],
   },
   {
     name: 'codex-researcher',
     description: 'Research agent powered by OpenAI Codex CLI',
     provider: 'codex-cli',
-    defaultModel: 'gpt-5.5',
+    defaultModel: CODEX_CLI_DEFAULT_MODEL,
     capabilities: ['code-analysis', 'architecture-review', 'documentation', 'research'],
   },
   {

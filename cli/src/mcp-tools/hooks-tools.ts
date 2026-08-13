@@ -6,6 +6,7 @@
 import { mkdirSync, writeFileSync, existsSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import type { MCPTool } from './types.js';
+import { CODEX_CLI_DEFAULT_MODEL, GEMINI_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 
 const SIMULATED_HOOKS_SOURCE = 'simulated-hooks-placeholder';
 const SIMULATED_HOOKS_WARNING =
@@ -1041,8 +1042,8 @@ function buildProviderAlternatives(
   const costByComplexity = { low: '$0.001-0.01', medium: '$0.01-0.05', high: '$0.05-0.15' };
   const cost = costByComplexity[complexity];
   return [
-    { provider: 'gemini-cli', model: 'gemini-3.5-flash', estimatedCost: cost, availabilityStatus: 'unchecked' },
-    { provider: 'codex-cli', model: 'gpt-5.5', estimatedCost: cost, availabilityStatus: 'unchecked' },
+    { provider: 'gemini-cli', model: GEMINI_CLI_DEFAULT_MODEL, estimatedCost: cost, availabilityStatus: 'unchecked' },
+    { provider: 'codex-cli', model: CODEX_CLI_DEFAULT_MODEL, estimatedCost: cost, availabilityStatus: 'unchecked' },
     { provider: 'cursor-cli', model: 'auto', estimatedCost: cost, availabilityStatus: 'unchecked' },
   ];
 }
@@ -3232,15 +3233,15 @@ function buildProviderSuggestions(
   if (complexity <= 0.4) {
     // Tier 2 tasks — suggest all 3 providers
     suggestions.push(
-      { provider: 'gemini-cli', model: 'gemini-3.5-flash', reason: `Alternative to ${claudeModel} for low-complexity task`, confidence: 0.75, tier: 2 },
-      { provider: 'codex-cli', model: 'gpt-5.5', reason: `Code-specialized alternative for low-complexity task`, confidence: 0.7, tier: 2 },
+      { provider: 'gemini-cli', model: GEMINI_CLI_DEFAULT_MODEL, reason: `Alternative to ${claudeModel} for low-complexity task`, confidence: 0.75, tier: 2 },
+      { provider: 'codex-cli', model: CODEX_CLI_DEFAULT_MODEL, reason: `Code-specialized alternative for low-complexity task`, confidence: 0.7, tier: 2 },
       { provider: 'cursor-cli', model: 'auto', reason: `IDE-integrated alternative for low-complexity task`, confidence: 0.65, tier: 2 },
     );
   } else {
     // Tier 3 tasks — suggest gemini + codex (higher capability needed)
     suggestions.push(
-      { provider: 'gemini-cli', model: 'gemini-3.5-flash', reason: `High-capability alternative to ${claudeModel} for complex task`, confidence: 0.7, tier: 3 },
-      { provider: 'codex-cli', model: 'gpt-5.5', reason: `Code-specialized alternative for complex task`, confidence: 0.65, tier: 3 },
+      { provider: 'gemini-cli', model: GEMINI_CLI_DEFAULT_MODEL, reason: `High-capability alternative to ${claudeModel} for complex task`, confidence: 0.7, tier: 3 },
+      { provider: 'codex-cli', model: CODEX_CLI_DEFAULT_MODEL, reason: `Code-specialized alternative for complex task`, confidence: 0.65, tier: 3 },
     );
   }
 

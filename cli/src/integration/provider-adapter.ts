@@ -21,6 +21,7 @@
 
 import { EventEmitter } from 'events';
 import type { Task } from './worker-task-types.js';
+import { ANTHROPIC_CLI_DEFAULT_MODEL, CODEX_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 
 /**
  * Provider interface for AI model providers
@@ -1053,6 +1054,13 @@ export function createDefaultProviders(): Provider[] {
       type: 'anthropic',
       models: [
         {
+          id: ANTHROPIC_CLI_DEFAULT_MODEL,
+          name: 'Claude Opus 5',
+          maxContextLength: 1000000,
+          maxOutputTokens: 128000,
+          capabilities: ['chat', 'code-generation', 'vision', 'long-context', 'streaming', 'function-calling'],
+        },
+        {
           id: 'claude-3-opus-20240229',
           name: 'Claude 3 Opus',
           // Provider-defined API limit for this model (not a runtime context window detection)
@@ -1087,8 +1095,8 @@ export function createDefaultProviders(): Provider[] {
         resetAt: Date.now() + 60000,
       },
       costPerToken: {
-        inputPer1K: 0.015,
-        outputPer1K: 0.075,
+        inputPer1K: 0.005,
+        outputPer1K: 0.025,
         currency: 'USD',
       },
     },
@@ -1097,6 +1105,13 @@ export function createDefaultProviders(): Provider[] {
       name: 'OpenAI GPT-4',
       type: 'openai',
       models: [
+        {
+          id: CODEX_CLI_DEFAULT_MODEL,
+          name: 'GPT-5.6 Sol',
+          maxContextLength: 1050000,
+          maxOutputTokens: 128000,
+          capabilities: ['chat', 'code-generation', 'vision', 'function-calling', 'streaming', 'long-context'],
+        },
         {
           id: 'gpt-4-turbo',
           name: 'GPT-4 Turbo',
@@ -1122,7 +1137,7 @@ export function createDefaultProviders(): Provider[] {
         resetAt: Date.now() + 60000,
       },
       costPerToken: {
-        inputPer1K: 0.01,
+        inputPer1K: 0.005,
         outputPer1K: 0.03,
         currency: 'USD',
       },

@@ -29,6 +29,12 @@
  */
 
 import { EventEmitter } from 'events';
+import {
+  ANTHROPIC_CLI_DEFAULT_MODEL,
+  ANTHROPIC_SONNET_MODEL,
+  CODEX_CLI_DEFAULT_MODEL,
+  GEMINI_API_DEFAULT_MODEL,
+} from '@hive-flow/providers';
 
 // =============================================================================
 // Types & Interfaces
@@ -275,7 +281,24 @@ export interface CostTracker {
 const DEFAULT_MODELS: ModelConfig[] = [
   // Anthropic
   {
-    id: 'claude-sonnet-5',
+    id: ANTHROPIC_CLI_DEFAULT_MODEL,
+    name: 'Claude Opus 5',
+    provider: 'anthropic',
+    costPer1kInputTokens: 0.005,
+    costPer1kOutputTokens: 0.025,
+    latencyMs: 1000,
+    qualityScore: 0.99,
+    capabilities: {
+      contextWindow: 1000000,
+      supportsStreaming: true,
+      supportsTools: true,
+      supportsVision: true,
+      supportsJson: true,
+      maxOutputTokens: 128000,
+    },
+  },
+  {
+    id: ANTHROPIC_SONNET_MODEL,
     name: 'Claude Sonnet 5',
     provider: 'anthropic',
     costPer1kInputTokens: 0.003,
@@ -289,7 +312,7 @@ const DEFAULT_MODELS: ModelConfig[] = [
       supportsTools: true,
       supportsVision: true,
       supportsJson: true,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 128000,
     },
   },
   {
@@ -329,6 +352,23 @@ const DEFAULT_MODELS: ModelConfig[] = [
     },
   },
   // OpenAI (prices updated March 2026)
+  {
+    id: CODEX_CLI_DEFAULT_MODEL,
+    name: 'GPT-5.6 Sol',
+    provider: 'openai',
+    costPer1kInputTokens: 0.005,
+    costPer1kOutputTokens: 0.03,
+    latencyMs: 1000,
+    qualityScore: 0.99,
+    capabilities: {
+      contextWindow: 1050000,
+      supportsStreaming: true,
+      supportsTools: true,
+      supportsVision: true,
+      supportsJson: true,
+      maxOutputTokens: 128000,
+    },
+  },
   {
     id: 'gpt-4o',
     name: 'GPT-4o',
@@ -417,6 +457,23 @@ const DEFAULT_MODELS: ModelConfig[] = [
     },
   },
   // Google (prices updated March 2026)
+  {
+    id: GEMINI_API_DEFAULT_MODEL,
+    name: 'Gemini 3.6 Flash',
+    provider: 'gemini',
+    costPer1kInputTokens: 0.0015,
+    costPer1kOutputTokens: 0.0075,
+    latencyMs: 500,
+    qualityScore: 0.96,
+    capabilities: {
+      contextWindow: 1048576,
+      supportsStreaming: true,
+      supportsTools: true,
+      supportsVision: true,
+      supportsJson: true,
+      maxOutputTokens: 65536,
+    },
+  },
   {
     id: 'gemini-2.5-pro',
     name: 'Gemini 2.5 Pro',
@@ -772,8 +829,8 @@ export class MultiModelRouter extends EventEmitter {
     );
     const outputTokens = Math.min(inputTokens * 0.5, 4096);
 
-    // Default cost (using Claude 3 Sonnet as baseline)
-    const defaultModel = this.models.get('claude-3-5-sonnet-20241022')!;
+    // Compare optimization against the current balanced Anthropic baseline.
+    const defaultModel = this.models.get(ANTHROPIC_SONNET_MODEL)!;
     const defaultCost =
       (inputTokens / 1000) * defaultModel.costPer1kInputTokens +
       (outputTokens / 1000) * defaultModel.costPer1kOutputTokens;

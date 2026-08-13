@@ -1,9 +1,5 @@
 /**
- * Regression: d7rA-006 — PROVIDER_MODELS['codex-cli'] must be 'gpt-5.5'
- *
- * The MCP enforcement gate blocks codex-cli+gpt-5.4; auto-spawned deficit
- * workers were silently rejected. This test asserts the corrected model value
- * and that it does not match the previously-blocked value.
+ * Keep the standalone enforcement helper aligned with current provider defaults.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,11 +17,11 @@ const { PROVIDER_MODELS, PROVIDERS } = _require(
 );
 
 describe('hive-enforcement PROVIDER_MODELS regression (d7rA-006)', () => {
-  it('PROVIDER_MODELS[codex-cli] is gpt-5.5 (not the gate-blocked gpt-5.4)', () => {
+  it('uses the current Codex CLI model', () => {
     assert.equal(
       PROVIDER_MODELS['codex-cli'],
-      'gpt-5.5',
-      'codex-cli model must be gpt-5.5 to pass the MCP enforcement gate'
+      'gpt-5.6-sol',
+      'codex-cli model must match the canonical provider default'
     );
   });
 
@@ -46,7 +42,11 @@ describe('hive-enforcement PROVIDER_MODELS regression (d7rA-006)', () => {
     }
   });
 
-  it('gemini-cli model is unchanged (gemini-3.1-pro-preview)', () => {
-    assert.equal(PROVIDER_MODELS['gemini-cli'], 'gemini-3.1-pro-preview');
+  it('uses the current Gemini CLI model', () => {
+    assert.equal(PROVIDER_MODELS['gemini-cli'], 'gemini-3.6-flash-high');
+  });
+
+  it('uses the current Anthropic CLI model', () => {
+    assert.equal(PROVIDER_MODELS['anthropic-cli'], 'claude-opus-5');
   });
 });

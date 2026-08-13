@@ -39,7 +39,7 @@ managed_tree() {
 
   run "$HOME_DIR/.hive-flow/bin/claude-code-statusline" < /dev/null
   [ "$status" -eq 0 ]
-  [[ "$output" == *"hive-flow"* ]]
+  [[ "$output" == *"ENFORCEMENT "* ]]
   [[ "$output" != *"CUSTOM"* ]]
 
   run env HIVE_FLOW_STATUSLINE_CHAIN_PREVIOUS=1 "$HOME_DIR/.hive-flow/bin/claude-code-statusline" < /dev/null
@@ -52,8 +52,7 @@ managed_tree() {
 
   run "$HOME_DIR/.hive-flow/bin/claude-code-statusline" < /dev/null
   [ "$status" -eq 0 ]
-  [[ "$output" == *"hive-flow"* ]]
   [[ "$output" != *"CUSTOM"* ]]
-  count="$(printf '%s\n' "$output" | grep -c 'hive-flow')"
+  count="$(printf '%s\n' "$output" | grep -c 'ENFORCEMENT ')"
   [ "$count" -eq 1 ]
 }

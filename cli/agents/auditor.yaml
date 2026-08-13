@@ -3,7 +3,7 @@ type: auditor
 description: Whole-of-work auditor for prompt compliance, logic errors, shortcuts, and blind spots.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: opus-4.1
+defaultModel: claude-opus-5
 phases:
   - 10
   - 11

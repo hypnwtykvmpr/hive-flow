@@ -3,7 +3,7 @@ type: memory-specialist
 description: Memory and vector-store specialist for retrieval, indexing, persistence, and migration work.
 soloExempt: false
 defaultProvider: claude-code
-defaultModel: opus-4.1
+defaultModel: claude-opus-5
 phases:
   - 3
   - 6

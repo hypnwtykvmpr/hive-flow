@@ -5,6 +5,10 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { ProviderRegistry, ProviderEvents } from '../../cli/src/shared/services/provider-registry.js';
+import {
+  ANTHROPIC_CLI_DEFAULT_MODEL,
+  CODEX_CLI_DEFAULT_MODEL,
+} from '../../cli/packages/providers/src/index.js';
 import type { ProviderModule, ProviderHealthResult } from '../../cli/src/shared/services/provider-registry.js';
 import type { IEventBus } from '../../cli/src/shared/core/interfaces/event.interface.js';
 
@@ -331,6 +335,17 @@ describe('ProviderRegistry', () => {
       await freshRegistry.initialize(false);
 
       expect(freshRegistry.getDefault()?.metadata.id).toBe('anthropic');
+    });
+
+    it('advertises current API models without removing compatibility models', async () => {
+      const freshRegistry = new ProviderRegistry(eventBus, { discoveryDir: '/nonexistent' });
+      await freshRegistry.initialize(false);
+
+      expect(freshRegistry.get('anthropic')?.metadata.models[0]).toBe(ANTHROPIC_CLI_DEFAULT_MODEL);
+      expect(freshRegistry.get('openai')?.metadata.models[0]).toBe(CODEX_CLI_DEFAULT_MODEL);
+      expect(freshRegistry.get('google')?.metadata.models[0]).toBe('gemini-3.6-flash');
+      expect(freshRegistry.get('openai')?.metadata.models).toContain('gpt-4o');
+      expect(freshRegistry.get('google')?.metadata.models).toContain('gemini-2.0-flash');
     });
   });
 

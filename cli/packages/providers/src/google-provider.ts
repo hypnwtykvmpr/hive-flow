@@ -23,6 +23,7 @@ import {
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { GEMINI_API_DEFAULT_MODEL } from './model-alias-resolver.js';
 
 interface GeminiRequest {
   contents: Array<{
@@ -67,6 +68,7 @@ export class GoogleProvider extends BaseProvider {
   readonly name: LLMProvider = 'google';
   readonly capabilities: ProviderCapabilities = {
     supportedModels: [
+      GEMINI_API_DEFAULT_MODEL,
       'gemini-2.0-flash',
       'gemini-2.5-flash',
       'gemini-2.5-pro',
@@ -75,6 +77,7 @@ export class GoogleProvider extends BaseProvider {
       'gemini-pro',
     ],
     maxContextLength: {
+      [GEMINI_API_DEFAULT_MODEL]: 1048576,
       'gemini-2.0-flash': 1000000,
       'gemini-2.5-flash': 1000000,
       'gemini-2.5-pro': 1000000,
@@ -83,6 +86,7 @@ export class GoogleProvider extends BaseProvider {
       'gemini-pro': 32000,
     },
     maxOutputTokens: {
+      [GEMINI_API_DEFAULT_MODEL]: 65536,
       'gemini-2.0-flash': 8192,
       'gemini-2.5-flash': 65536,
       'gemini-2.5-pro': 65536,
@@ -104,6 +108,11 @@ export class GoogleProvider extends BaseProvider {
       concurrentRequests: 100,
     },
     pricing: {
+      [GEMINI_API_DEFAULT_MODEL]: {
+        promptCostPer1k: 0.0015,
+        completionCostPer1k: 0.0075,
+        currency: 'USD',
+      },
       'gemini-2.0-flash': {
         promptCostPer1k: 0.0,  // Free tier available
         completionCostPer1k: 0.0,

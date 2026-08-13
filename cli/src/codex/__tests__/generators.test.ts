@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { CODEX_CLI_DEFAULT_MODEL } from '@hive-flow/providers';
 import {
   generateAgentsMd,
   generateSkillMd,
@@ -14,6 +15,9 @@ import { generateBuiltInSkill } from '../generators/skill-md.js';
 import {
   generateMinimalConfigToml,
   generateCIConfigToml,
+  generateEnterpriseConfigToml,
+  generateDevConfigToml,
+  generateSecureConfigToml,
 } from '../generators/config-toml.js';
 import type {
   AgentsMdOptions,
@@ -620,7 +624,7 @@ describe('generateConfigToml', () => {
       const result = await generateConfigToml();
 
       expect(result).toContain('# Core Settings');
-      expect(result).toContain('model = "gpt-5.5"');
+      expect(result).toContain(`model = "${CODEX_CLI_DEFAULT_MODEL}"`);
       expect(result).toContain('approval_policy = "on-request"');
       expect(result).toContain('sandbox_mode = "workspace-write"');
       expect(result).toContain('web_search = "cached"');
@@ -878,7 +882,7 @@ describe('generateMinimalConfigToml', () => {
     const result = await generateMinimalConfigToml();
 
     expect(result).toContain('# Hive Flow V3 - Minimal Codex Configuration');
-    expect(result).toContain('model = "gpt-5.5"');
+    expect(result).toContain(`model = "${CODEX_CLI_DEFAULT_MODEL}"`);
     expect(result).toContain('approval_policy = "on-request"');
     expect(result).toContain('sandbox_mode = "workspace-write"');
     expect(result).toContain('[mcp_servers.hive-flow]');
@@ -901,6 +905,24 @@ describe('generateMinimalConfigToml', () => {
     const full = await generateConfigToml();
 
     expect(minimal.length).toBeLessThan(full.length / 3);
+  });
+});
+
+describe('built-in Codex configuration models', () => {
+  it('uses the current Codex model in every generated profile', async () => {
+    const generated = await Promise.all([
+      generateConfigToml(),
+      generateMinimalConfigToml(),
+      generateCIConfigToml(),
+      generateEnterpriseConfigToml(),
+      generateDevConfigToml(),
+      generateSecureConfigToml(),
+    ]);
+
+    for (const config of generated) {
+      expect(config).toContain(`model = "${CODEX_CLI_DEFAULT_MODEL}"`);
+      expect(config).not.toContain('model = "gpt-5.5"');
+    }
   });
 });
 

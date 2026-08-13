@@ -3,7 +3,7 @@ type: researcher
 description: Source researcher for external references, documentation, prior art, and local resource material.
 soloExempt: false
 defaultProvider: gemini
-defaultModel: gemini-2.5-pro
+defaultModel: gemini-3.6-flash-high
 phases:
   - 1
   - 3

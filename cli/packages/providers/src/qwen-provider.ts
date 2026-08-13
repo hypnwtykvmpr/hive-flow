@@ -14,6 +14,14 @@ import {
   ModelInfo, ProviderCapabilities, HealthCheckResult,
   AuthenticationError, RateLimitError, ModelNotFoundError, LLMProviderError,
 } from './types.js';
+import {
+  QWEN_CONTEXT_WINDOWS,
+  QWEN_DEFAULT_MODEL,
+  QWEN_MODEL_DESCRIPTIONS,
+  QWEN_MODELS,
+  QWEN_OUTPUT_LIMITS,
+  QWEN_PRICING,
+} from './qwen-model-constants.js';
 
 interface QwenResponse {
   id: string;
@@ -27,21 +35,12 @@ interface QwenResponse {
   usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
-const QWEN_MODELS: LLMModel[] = ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen-long'];
-
-const p = (prompt: number, completion: number) =>
-  ({ promptCostPer1k: prompt, completionCostPer1k: completion, currency: 'USD' });
-
 export class QwenProvider extends BaseProvider {
   readonly name: LLMProvider = 'qwen';
   readonly capabilities: ProviderCapabilities = {
     supportedModels: QWEN_MODELS,
-    maxContextLength: {
-      'qwen-max': 32768, 'qwen-plus': 131072, 'qwen-turbo': 131072, 'qwen-long': 10000000,
-    },
-    maxOutputTokens: {
-      'qwen-max': 8192, 'qwen-plus': 8192, 'qwen-turbo': 8192, 'qwen-long': 8192,
-    },
+    maxContextLength: QWEN_CONTEXT_WINDOWS,
+    maxOutputTokens: QWEN_OUTPUT_LIMITS,
     supportsStreaming: true,
     supportsToolCalling: true,
     supportsSystemMessages: true,
@@ -51,18 +50,18 @@ export class QwenProvider extends BaseProvider {
     supportsEmbeddings: false,
     supportsBatching: false,
     rateLimit: { requestsPerMinute: 120, tokensPerMinute: 2000000, concurrentRequests: 10 },
-    pricing: {
-      'qwen-max': p(0.0016, 0.0064),
-      'qwen-plus': p(0.0004, 0.0012),
-      'qwen-turbo': p(0.0002, 0.0006),
-      'qwen-long': p(0.00005, 0.0002),
-    },
+    pricing: QWEN_PRICING,
   };
 
   private baseUrl = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
   private headers: Record<string, string> = {};
 
   constructor(options: BaseProviderOptions) { super(options); }
+
+  protected validateConfig(): void {
+    if (!this.config.model) this.config.model = QWEN_DEFAULT_MODEL;
+    super.validateConfig();
+  }
 
   protected async doInitialize(): Promise<void> {
     const apiKey = this.config.apiKey;
@@ -163,15 +162,9 @@ export class QwenProvider extends BaseProvider {
   async listModels(): Promise<LLMModel[]> { return [...QWEN_MODELS]; }
 
   async getModelInfo(model: LLMModel): Promise<ModelInfo> {
-    const desc: Record<string, string> = {
-      'qwen-max': 'Qwen Max - Flagship model with best performance',
-      'qwen-plus': 'Qwen Plus - Balanced performance and cost',
-      'qwen-turbo': 'Qwen Turbo - Fast and cost-effective',
-      'qwen-long': 'Qwen Long - Ultra-long context (10M tokens)',
-    };
     return {
       model, name: model,
-      description: desc[model] || 'Qwen model',
+      description: QWEN_MODEL_DESCRIPTIONS[model] || 'Qwen model',
       contextLength: this.capabilities.maxContextLength[model] || 32768,
       maxOutputTokens: this.capabilities.maxOutputTokens[model] || 8192,
       supportedFeatures: ['chat', 'completion', 'tool_calling'],

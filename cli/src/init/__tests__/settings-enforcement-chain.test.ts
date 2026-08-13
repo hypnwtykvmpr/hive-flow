@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ANTHROPIC_CLI_DEFAULT_MODEL, ANTHROPIC_SONNET_MODEL } from '@hive-flow/providers';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
@@ -18,6 +19,12 @@ interface HookEntry {
 
 interface GeneratedSettings {
   hooks?: Record<string, HookEntry[]>;
+  hiveFlow?: {
+    modelPreferences?: {
+      default?: string;
+      routing?: string;
+    };
+  };
 }
 
 const guardedMatcherTools = [
@@ -137,6 +144,10 @@ describe('init settings enforcement chain', () => {
     expectSettingsReconciler(settings);
     expect(JSON.stringify(settings)).not.toContain('$HOME');
     expect(JSON.stringify(settings)).not.toContain('%USERPROFILE%');
+    expect(settings.hiveFlow?.modelPreferences).toEqual({
+      default: ANTHROPIC_CLI_DEFAULT_MODEL,
+      routing: ANTHROPIC_SONNET_MODEL,
+    });
   });
 
   it('fresh init writes a governed settings.json to disk', async () => {

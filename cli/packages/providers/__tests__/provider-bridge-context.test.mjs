@@ -2,6 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  ANTHROPIC_CLI_DEFAULT_MODEL,
+  CODEX_CLI_DEFAULT_MODEL,
+  GEMINI_CLI_DEFAULT_MODEL,
+} from '../src/model-alias-resolver.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bridgePath = resolve(here, '../scripts/provider-agent-bridge.mjs');
@@ -303,11 +308,41 @@ describe('provider bridge context helpers', () => {
       maxTokens: 1_000_000,
       maxEntries: 100,
     });
+    expect(bridge.getProviderLimits('qwen', 'qwen3.7-plus')).toMatchObject({
+      maxTokens: 1_000_000,
+      maxEntries: 100,
+    });
+    expect(bridge.getProviderLimits('qwen', 'qwen3.7-max')).toMatchObject({
+      maxTokens: 1_000_000,
+      maxEntries: 100,
+    });
     expect(bridge.getProviderLimits('lm-studio')).toMatchObject({ maxTokens: 32_000, maxEntries: 30 });
-    expect(bridge.getProviderLimits('codex-cli')).toMatchObject({ maxTokens: 400_000, maxEntries: 50 });
+    expect(bridge.getProviderLimits('anthropic-cli', ANTHROPIC_CLI_DEFAULT_MODEL)).toMatchObject({
+      maxTokens: 1_000_000,
+      maxEntries: 100,
+    });
+    expect(bridge.getProviderLimits('gemini-cli', GEMINI_CLI_DEFAULT_MODEL)).toMatchObject({
+      maxTokens: 1_048_576,
+      maxEntries: 100,
+    });
+    expect(bridge.getProviderLimits('codex-cli', CODEX_CLI_DEFAULT_MODEL)).toMatchObject({
+      maxTokens: 1_050_000,
+      maxEntries: 100,
+    });
     expect(bridge.getProviderLimits('unknown-provider', 'unknown-model')).toMatchObject({
       maxTokens: 128_000,
       maxEntries: 50,
+    });
+  });
+
+  it('keeps the self-contained bridge fallback aligned with canonical defaults', () => {
+    expect(bridge.BRIDGE_PROVIDER_DEFAULTS_FALLBACK).toMatchObject({
+      'anthropic-cli': ANTHROPIC_CLI_DEFAULT_MODEL,
+      'gemini-cli': GEMINI_CLI_DEFAULT_MODEL,
+      'codex-cli': CODEX_CLI_DEFAULT_MODEL,
+      'cursor-cli': 'auto',
+      'deepseek': 'deepseek-v4-pro',
+      'openrouter': 'minimax/minimax-m3',
     });
   });
 

@@ -37,6 +37,20 @@ function captureStdout(fn) {
 }
 
 describe('terminate-agent internals', () => {
+  it('switches only between current Anthropic models', () => {
+    const cwd = withTempDir();
+    try {
+      const mod = loadModule(cwd);
+      assert.deepEqual(mod.MODEL_IDS, {
+        opus: 'claude-opus-5',
+        sonnet: 'claude-sonnet-5',
+        haiku: 'claude-sonnet-5',
+      });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('parseHookInput handles JSON and raw payloads', () => {
     const cwd = withTempDir();
     try {
