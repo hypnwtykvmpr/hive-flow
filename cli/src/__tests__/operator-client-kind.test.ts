@@ -43,6 +43,9 @@ const ALIASES: Array<{ alias: string; kind: string }> = [
   { alias: 'forgecode', kind: 'forgecode' },
   { alias: 'forge-code', kind: 'forgecode' },
   { alias: 'forge', kind: 'forgecode' },
+  { alias: 'devin', kind: 'devin' },
+  { alias: 'devin-cli', kind: 'devin' },
+  { alias: 'chisel', kind: 'devin' },
 ];
 
 const EXPECTED_SESSION_ENV_KEYS: Record<string, string[]> = {
@@ -53,6 +56,7 @@ const EXPECTED_SESSION_ENV_KEYS: Record<string, string[]> = {
   antigravity: ['ANTIGRAVITY_SESSION_ID', 'ANTIGRAVITY_THREAD_ID', 'AGY_SESSION_ID', 'AGY_THREAD_ID'],
   opencode: ['OPENCODE_SESSION_ID', 'OPENCODE_THREAD_ID'],
   forgecode: ['FORGECODE_SESSION_ID', 'FORGECODE_THREAD_ID', 'FORGE_CODE_SESSION_ID', 'FORGE_SESSION_ID'],
+  devin: ['DEVIN_SESSION_ID', 'TERM_SESSION_ID', 'WT_SESSION'],
 };
 
 function randomizeCase(value: string, mask: boolean[]): string {
@@ -107,6 +111,7 @@ describe('operator parent client kind aliases', () => {
       'FORGECODE_THREAD_ID',
       'FORGE_CODE_SESSION_ID',
       'FORGE_SESSION_ID',
+      'DEVIN_SESSION_ID',
       'ANTIGRAVITY_SESSION_ID',
       'ANTIGRAVITY_THREAD_ID',
       'AGY_SESSION_ID',
@@ -118,6 +123,8 @@ describe('operator parent client kind aliases', () => {
       'CLAUDE_SESSION_ID',
       'CLAUDE_CODE_SESSION_ID',
       'AGENT_SESSION_ID',
+      'TERM_SESSION_ID',
+      'WT_SESSION',
       'HIVE_FLOW_SESSION_ID',
     ]);
   });
@@ -160,5 +167,26 @@ describe('operator parent client kind aliases', () => {
     };
     expect(resolveClientKindFromEnv(codexReconnectInClaudeRuntimeEnv)).toBe('claude');
     expect(cjsClientKind.clientKindFromEnv(codexReconnectInClaudeRuntimeEnv)).toBe('claude');
+  });
+
+  it('recognizes a Devin MCP connection only with Chisel runtime and terminal-session evidence', () => {
+    const macDevinEnv = {
+      CHISEL_SESSION_DB: '/home/operator/.local/share/devin/cli/sessions.db',
+      TERM_SESSION_ID: '904966B0-AC61-4EC1-A65A-24D71739BC3C',
+    };
+    expect(resolveClientKindFromEnv(macDevinEnv)).toBe('devin');
+    expect(cjsClientKind.clientKindFromEnv(macDevinEnv)).toBe('devin');
+
+    const windowsDevinEnv = {
+      CHISEL_SESSION_DB: 'C:\\Users\\operator\\AppData\\Local\\devin\\sessions.db',
+      WT_SESSION: 'windows-terminal-session',
+    };
+    expect(resolveClientKindFromEnv(windowsDevinEnv)).toBe('devin');
+    expect(cjsClientKind.clientKindFromEnv(windowsDevinEnv)).toBe('devin');
+
+    expect(resolveClientKindFromEnv({ TERM_SESSION_ID: 'ordinary-terminal' })).toBe('unknown');
+    expect(cjsClientKind.clientKindFromEnv({ TERM_SESSION_ID: 'ordinary-terminal' })).toBe(null);
+    expect(resolveClientKindFromEnv({ CHISEL_SESSION_DB: '/tmp/sessions.db' })).toBe('unknown');
+    expect(cjsClientKind.clientKindFromEnv({ CHISEL_SESSION_DB: '/tmp/sessions.db' })).toBe(null);
   });
 });

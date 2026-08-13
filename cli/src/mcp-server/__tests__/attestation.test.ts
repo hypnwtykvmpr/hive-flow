@@ -121,6 +121,49 @@ describe('MCP stdio attestation', () => {
     expect(wrongPid).toMatchObject({ success: false, code: 'invalid-pid' });
   });
 
+  it('mints a launcher attestation for a Devin MCP connection from Chisel and terminal-session markers', () => {
+    const projectRoot = makeProjectRoot();
+    const entrypointPath = join(projectRoot, 'cli', 'bin', 'mcp-server.js');
+    const env = {
+      HIVE_FLOW_PROJECT_ROOT: projectRoot,
+      CHISEL_SESSION_DB: join(projectRoot, 'devin', 'sessions.db'),
+      TERM_SESSION_ID: 'devin-terminal-session',
+    };
+    const minted = mintMCPAttestation({
+      env,
+      cwd: projectRoot,
+      entrypoint: 'bin/mcp-server.js',
+      pidMode: 'spawned-child',
+      launcherPid: 4242,
+      entrypointPath,
+      now: () => new Date('2026-08-13T11:00:00.000Z'),
+    });
+
+    expect(minted.success).toBe(true);
+    if (!minted.success) return;
+    expect(minted.record).toMatchObject({
+      ownerClientKind: 'devin',
+      ownerSessionId: 'devin-terminal-session',
+      sessionEnvKey: 'TERM_SESSION_ID',
+    });
+
+    const valid = validateMCPAttestation({
+      env: validationEnv(env, minted),
+      cwd: projectRoot,
+      ppid: 4242,
+      entrypointPath,
+      now: () => new Date('2026-08-13T11:01:00.000Z'),
+    });
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(valid.context).toMatchObject({
+        sessionId: 'devin-terminal-session',
+        clientKind: 'devin',
+        attested: true,
+      });
+    }
+  });
+
   it('rejects missing tokens, mismatched tokens, and stale epochs for owner-sensitive calls', () => {
     const projectRoot = makeProjectRoot();
     const env = codexEnv(projectRoot);

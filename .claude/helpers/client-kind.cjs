@@ -15,6 +15,7 @@ const CLIENT_KIND_ALIASES = Object.freeze({
   antigravity: ['antigravity', 'antigravity-cli', 'agy'],
   opencode: ['opencode', 'open-code'],
   forgecode: ['forgecode', 'forge-code', 'forge'],
+  devin: ['devin', 'devin-cli', 'chisel'],
 });
 
 const CLIENT_KIND_BY_ALIAS = new Map();
@@ -30,6 +31,7 @@ const SESSION_ENV_KEYS_BY_KIND = Object.freeze({
   antigravity: ['ANTIGRAVITY_SESSION_ID', 'ANTIGRAVITY_THREAD_ID', 'AGY_SESSION_ID', 'AGY_THREAD_ID'],
   opencode: ['OPENCODE_SESSION_ID', 'OPENCODE_THREAD_ID'],
   forgecode: ['FORGECODE_SESSION_ID', 'FORGECODE_THREAD_ID', 'FORGE_CODE_SESSION_ID', 'FORGE_SESSION_ID'],
+  devin: ['DEVIN_SESSION_ID', 'TERM_SESSION_ID', 'WT_SESSION'],
 });
 
 const SESSION_ENV_KEY_PRIORITY = Object.freeze([
@@ -41,6 +43,7 @@ const SESSION_ENV_KEY_PRIORITY = Object.freeze([
   ['FORGECODE_THREAD_ID', 'forgecode'],
   ['FORGE_CODE_SESSION_ID', 'forgecode'],
   ['FORGE_SESSION_ID', 'forgecode'],
+  ['DEVIN_SESSION_ID', 'devin'],
   ['ANTIGRAVITY_SESSION_ID', 'antigravity'],
   ['ANTIGRAVITY_THREAD_ID', 'antigravity'],
   ['AGY_SESSION_ID', 'antigravity'],
@@ -62,6 +65,7 @@ const OPERATOR_CLIENT_KINDS = Object.freeze([
   'antigravity',
   'opencode',
   'forgecode',
+  'devin',
 ]);
 
 function normalizeClientKind(value) {
@@ -79,6 +83,17 @@ function hasClaudeRuntimeEnv(env = process.env) {
   );
 }
 
+function hasDevinRuntimeEnv(env = process.env) {
+  return Boolean(
+    stringValue(env && env.CHISEL_SESSION_DB)
+    && (
+      stringValue(env && env.DEVIN_SESSION_ID)
+      || stringValue(env && env.TERM_SESSION_ID)
+      || stringValue(env && env.WT_SESSION)
+    )
+  );
+}
+
 function operatorSessionEnvKeys(kind = null) {
   const normalized = normalizeClientKind(kind) || kind;
   if (normalized && SESSION_ENV_KEYS_BY_KIND[normalized]) {
@@ -86,6 +101,8 @@ function operatorSessionEnvKeys(kind = null) {
   }
   return [
     ...SESSION_ENV_KEY_PRIORITY.map(([key]) => key),
+    'TERM_SESSION_ID',
+    'WT_SESSION',
     'HIVE_FLOW_SESSION_ID',
   ];
 }
@@ -127,12 +144,14 @@ function clientKindFromEnv(env = process.env) {
       if (stringValue(env && env[key])) sessionKinds.add(kind);
     }
     if (sessionKinds.size === 1) return Array.from(sessionKinds)[0] || explicit;
+    if (hasDevinRuntimeEnv(env)) return 'devin';
     return null;
   }
   for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
     if (stringValue(env && env[key])) return kind;
   }
   if (stringValue(env && env.CLAUDE_PROJECT_DIR)) return 'claude';
+  if (hasDevinRuntimeEnv(env)) return 'devin';
   return null;
 }
 

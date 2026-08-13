@@ -7,7 +7,7 @@ import { CANONICAL_AGENT_TYPES } from '../../agents/roster.js';
 import { agentCommand } from '../../commands/agent.js';
 import { buildMCPToolContextForCall } from '../../mcp-server.js';
 import { agentTools } from '../agent-tools.js';
-import { operatorSessionEnvKeys } from '../session-id.js';
+import { OPERATOR_CLIENT_KINDS, operatorSessionEnvKeys } from '../session-id.js';
 
 const spawnTool = agentTools.find(tool => tool.name === 'agent_spawn')!;
 const poolTool = agentTools.find(tool => tool.name === 'agent_pool')!;
@@ -17,11 +17,13 @@ const updateTool = agentTools.find(tool => tool.name === 'agent_update')!;
 const ORIGINAL_CWD = process.cwd();
 const OWNER_ENV_KEYS = Array.from(new Set([
   ...operatorSessionEnvKeys(),
+  ...OPERATOR_CLIENT_KINDS.flatMap(kind => operatorSessionEnvKeys(kind)),
   'HIVE_FLOW_CLIENT_KIND',
   'CLAUDE_CODE_ENTRYPOINT',
   'CLAUDECODE',
   'CLAUDE_CODE',
   'CLAUDE_PROJECT_DIR',
+  'CHISEL_SESSION_DB',
   'HIVE_FLOW_AGENT_ID',
   'CLAUDE_AGENT_ID',
 ]));
@@ -29,7 +31,7 @@ const ORIGINAL_ENV = Object.fromEntries(
   OWNER_ENV_KEYS.map(key => [key, process.env[key]]),
 ) as Record<string, string | undefined>;
 
-const PARENT_KINDS = ['claude', 'codex', 'gemini', 'cursor', 'antigravity', 'opencode', 'forgecode'] as const;
+const PARENT_KINDS = ['claude', 'codex', 'gemini', 'cursor', 'antigravity', 'opencode', 'forgecode', 'devin'] as const;
 type ParentKind = typeof PARENT_KINDS[number];
 
 function clearOwnerEnv(): void {
@@ -1166,6 +1168,7 @@ describe('agent_spawn canonical roster whitelist', () => {
               break;
             case 'env-complete':
               process.env[envKey] = ownerSessionId;
+              if (kind === 'devin') process.env.CHISEL_SESSION_DB = '/tmp/devin-sessions.db';
               process.env.HIVE_FLOW_CLIENT_KIND = mismatchLabel ? mismatchedKind : kind;
               shouldPersist = true;
               break;

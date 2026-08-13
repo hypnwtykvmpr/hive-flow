@@ -9,6 +9,7 @@ export type OperatorClientKind =
   | 'antigravity'
   | 'opencode'
   | 'forgecode'
+  | 'devin'
   | 'unknown';
 
 export interface OwnerStamp {
@@ -36,6 +37,7 @@ const CLIENT_KIND_ALIASES: Record<Exclude<OperatorClientKind, 'unknown'>, readon
   antigravity: ['antigravity', 'antigravity-cli', 'agy'],
   opencode: ['opencode', 'open-code'],
   forgecode: ['forgecode', 'forge-code', 'forge'],
+  devin: ['devin', 'devin-cli', 'chisel'],
 };
 
 const CLIENT_KIND_BY_ALIAS = new Map<string, Exclude<OperatorClientKind, 'unknown'>>();
@@ -51,6 +53,7 @@ const SESSION_ENV_KEYS_BY_KIND: Record<Exclude<OperatorClientKind, 'unknown'>, r
   antigravity: ['ANTIGRAVITY_SESSION_ID', 'ANTIGRAVITY_THREAD_ID', 'AGY_SESSION_ID', 'AGY_THREAD_ID'],
   opencode: ['OPENCODE_SESSION_ID', 'OPENCODE_THREAD_ID'],
   forgecode: ['FORGECODE_SESSION_ID', 'FORGECODE_THREAD_ID', 'FORGE_CODE_SESSION_ID', 'FORGE_SESSION_ID'],
+  devin: ['DEVIN_SESSION_ID', 'TERM_SESSION_ID', 'WT_SESSION'],
 };
 
 const SESSION_ENV_KEY_PRIORITY = Object.freeze([
@@ -62,6 +65,7 @@ const SESSION_ENV_KEY_PRIORITY = Object.freeze([
   ['FORGECODE_THREAD_ID', 'forgecode'],
   ['FORGE_CODE_SESSION_ID', 'forgecode'],
   ['FORGE_SESSION_ID', 'forgecode'],
+  ['DEVIN_SESSION_ID', 'devin'],
   ['ANTIGRAVITY_SESSION_ID', 'antigravity'],
   ['ANTIGRAVITY_THREAD_ID', 'antigravity'],
   ['AGY_SESSION_ID', 'antigravity'],
@@ -83,12 +87,15 @@ export const OPERATOR_CLIENT_KINDS = Object.freeze([
   'antigravity',
   'opencode',
   'forgecode',
+  'devin',
 ] as const satisfies ReadonlyArray<Exclude<OperatorClientKind, 'unknown'>>);
 
 export function operatorSessionEnvKeys(kind?: OperatorClientKind): readonly string[] {
   if (!kind || kind === 'unknown') {
     return [
       ...SESSION_ENV_KEY_PRIORITY.map(([key]) => key),
+      'TERM_SESSION_ID',
+      'WT_SESSION',
       'HIVE_FLOW_SESSION_ID',
     ];
   }
@@ -168,6 +175,17 @@ function hasClaudeRuntimeEnv(env: SessionEnv): boolean {
   );
 }
 
+function hasDevinRuntimeEnv(env: SessionEnv): boolean {
+  return Boolean(
+    asNonEmptyString(env.CHISEL_SESSION_DB)
+    && (
+      asNonEmptyString(env.DEVIN_SESSION_ID)
+      || asNonEmptyString(env.TERM_SESSION_ID)
+      || asNonEmptyString(env.WT_SESSION)
+    )
+  );
+}
+
 export function resolveClientKindFromEnv(env: SessionEnv = process.env): OperatorClientKind {
   if (
     hasClaudeRuntimeEnv(env)
@@ -187,12 +205,14 @@ export function resolveClientKindFromEnv(env: SessionEnv = process.env): Operato
       if (asNonEmptyString(env[key])) sessionKinds.add(kind);
     }
     if (sessionKinds.size === 1) return [...sessionKinds][0] ?? explicit;
+    if (hasDevinRuntimeEnv(env)) return 'devin';
     return 'unknown';
   }
   for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
     if (asNonEmptyString(env[key])) return kind;
   }
   if (asNonEmptyString(env.CLAUDE_PROJECT_DIR)) return 'claude';
+  if (hasDevinRuntimeEnv(env)) return 'devin';
   return 'unknown';
 }
 
@@ -204,6 +224,21 @@ export function resolveClientKindForSessionId(
   if (!ownerSessionId) return 'unknown';
   for (const [key, kind] of SESSION_ENV_KEY_PRIORITY) {
     if (sanitizeSessionId(env[key]) === ownerSessionId) return kind;
+  }
+  const explicitKind = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);
+  if (
+    explicitKind !== 'unknown'
+    && operatorSessionEnvKeys(explicitKind)
+      .some((key) => sanitizeSessionId(env[key]) === ownerSessionId)
+  ) {
+    return explicitKind;
+  }
+  if (
+    hasDevinRuntimeEnv(env)
+    && [env.TERM_SESSION_ID, env.WT_SESSION]
+      .some((value) => sanitizeSessionId(value) === ownerSessionId)
+  ) {
+    return 'devin';
   }
   if (sanitizeSessionId(env.HIVE_FLOW_SESSION_ID) === ownerSessionId) {
     const explicit = normalizeClientKind(env.HIVE_FLOW_CLIENT_KIND);

@@ -147,6 +147,16 @@ function deterministicEnv(): NodeJS.ProcessEnv {
   };
 }
 
+function deterministicDevinEnv(): NodeJS.ProcessEnv {
+  return {
+    PATH: process.env.PATH ?? '',
+    HOME: process.env.HOME ?? '',
+    HIVE_FLOW_PROJECT_ROOT: root,
+    CHISEL_SESSION_DB: join(root, 'devin', 'sessions.db'),
+    TERM_SESSION_ID: 'devin-a541-canary-session',
+  };
+}
+
 describe.skipIf(process.platform === 'win32')('a541 launcher chain canary (POSIX)', () => {
   it('runs the generated wrapper through the real attesting launcher and attests the child', async () => {
     const helperDir = seedRealBundle();
@@ -236,6 +246,44 @@ describe.skipIf(process.platform === 'win32')('a541 launcher chain canary (POSIX
       existsSync(captured.attestationPath as string),
       'attestation record survived wrapper exit',
     ).toBe(false);
+  });
+
+  it('attests a Devin-launched MCP connection from Chisel and terminal-session evidence', async () => {
+    const helperDir = seedRealBundle();
+    const capturePath = join(root, 'devin-child-env.json');
+    const fakeServer = join(root, 'fake-devin-mcp-server.js');
+    writeFakeServer(fakeServer, capturePath);
+
+    const wrapper = join(root, 'hive-flow-mcp-server');
+    await writeStableLauncher(
+      wrapper,
+      fakeServer,
+      join(helperDir, MCP_LAUNCHER_BUNDLE_FILES[0]),
+    );
+    chmodSync(wrapper, 0o755);
+
+    const result = spawnSync(wrapper, [], {
+      encoding: 'utf8',
+      timeout: 30_000,
+      cwd: root,
+      env: deterministicDevinEnv(),
+    });
+
+    expect(result.error, `wrapper failed to start: ${result.error?.message}`).toBeUndefined();
+    expect(existsSync(capturePath), `child never ran; stderr: ${result.stderr}`).toBe(true);
+
+    const captured = JSON.parse(readFileSync(capturePath, 'utf8')) as Capture;
+    expect(captured.recordReadError).toBeNull();
+    expect(captured.record).toMatchObject({
+      ownerClientKind: 'devin',
+      ownerSessionId: 'devin-a541-canary-session',
+      sessionEnvKey: 'TERM_SESSION_ID',
+      pidMode: 'spawned-child',
+      launcherPid: captured.ppid,
+    });
+    expect(captured.attestationPath).toBeTruthy();
+    expect(captured.attestationToken).toBeTruthy();
+    expect(existsSync(captured.attestationPath as string)).toBe(false);
   });
 
   // -------------------------------------------------------------------------
