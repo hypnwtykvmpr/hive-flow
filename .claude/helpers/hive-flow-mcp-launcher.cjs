@@ -3,7 +3,7 @@
 
 const { spawn } = require('node:child_process');
 const { requireHiveFlowCliFile } = require('./layout-paths.cjs');
-const { mintMCPAttestation } = require('./mcp-attestation.cjs');
+const { mintRuntimeMCPAttestation } = require('./mcp-attestation.cjs');
 
 let entrypoint;
 // Prefer the exact entrypoint the generated wrapper verified, so the resolved
@@ -44,15 +44,7 @@ if (typeof explicit === 'string' && explicit.length > 0) {
   }
 }
 
-const attestation = mintMCPAttestation({
-  entrypoint: 'bin/mcp-server.js',
-  pidMode: 'spawned-child',
-  launcherPid: process.pid,
-  entrypointPath: entrypoint,
-  env: process.env,
-  cwd: process.cwd(),
-  helperDir: __dirname,
-});
+const attestation = mintRuntimeMCPAttestation(entrypoint);
 
 if (!attestation.success) {
   console.error(`[hive-flow-mcp-launcher] MCP operator attestation unavailable: ${attestation.error}`);
