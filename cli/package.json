@@ -468,7 +468,7 @@
     "yaml": "^2.8.2",
     "zod": "^3.25.0",
     "@hive-flow/providers": "workspace:*",
-    "undici": "^7.28.0"
+    "undici": "^7.29.0"
   },
   "optionalDependencies": {
     "@hive-flow/embeddings": "workspace:*",
